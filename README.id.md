@@ -80,7 +80,6 @@ Ditambah beberapa hal yang kamu tak tahu kamu inginkan:
 
 - Sebuah **Dashboard** tempat kamu menyuruh AI *"buatkan widget yang ping router-ku tiap 30 detik"* lalu ia muncul, dalam sandbox-nya sendiri, di grid-mu.
 - **Panel SSH yang menyambung kembali ke sesi remote `claude` / `codex`-mu** setelah setiap amukan Wi-Fi, agar kerja enam jam selamat dari putusnya koneksi.
-- Sebuah **modul IT Ops** yang menyebarkan sebuah skrip atau playbook interaktif ke satu grup host sekaligus, plus **otomatisasi watchdog** yang melakukan ping, mengawasi, dan mengirimimu email saat ada yang melenceng.
 - **Workspaces** yang menjaga homelab, pekerjaan kantor, dan server klien itu dalam wadah-wadah terpisah yang bisa kamu tukar dengan sekali klik.
 - Sebuah **pengukur penggunaan AI** agar kamu berhenti menabrak tembok rate limit secara mengejutkan pukul 3 pagi.
 - Sebuah **Install Helper** yang menemukan, memasang, memperbarui, dan menjalankan alat dev Windows yang biasanya kamu kejar lewat sepuluh tab browser.
@@ -276,22 +275,6 @@ Agen coding menagih per jendela paket, bukan per bulan, dan mereka dengan senang
 
 <p align="center"><sub><em>📸 <strong>Placeholder tangkapan layar</strong> — widget penggunaan menampilkan Claude Code dan Codex berdampingan, plus cermin ringkas di bilah status.</em></sub></p>
 
-### Operasi armada tanpa meninggalkan jendela
-
-Saat "satu server" menjadi "empat puluh server", alur kerja panel tunggal berhenti menskala. **Modul IT Ops** adalah tempat KKTerm tumbuh dewasa:
-
-- **Host Groups (grup host)** — sebuah seleksi Connections bernama (dengan filter dinamis opsional), dipakai ulang sebagai target untuk semua di bawah ini.
-- **Batch Runs (eksekusi batch)** — sebarkan sebuah skrip sekali jalan *atau* sebuah **Playbook** interaktif bergaya expect ke satu grup host via SSH, WinRM, atau PsExec, dengan progres langsung per host dan laporan terkonsolidasi yang bisa dibuka lagi.
-- **Automations & Watchdog** — pasang sebuah aturan (ping, keterjangkauan TCP, sebuah performance counter, atau sebuah sesi SSH yang mendadak sunyi) lalu pilih apa yang terjadi saat terpicu: notifikasi, popup, email, webhook, menjalankan sebuah Batch Run, atau serahkan ke AI. Aturan yang awet bertahan melewati restart; Watchdog yang aktif muncul di bilah status.
-
-Ini bukan pengganti NOC. Ini alat "aku harus patch dua belas mesin ini sebelum makan siang" yang selama ini kamu harap ada di terminalmu.
-
-<p align="center">
-  <img src="docs/assets/screenshots/it-ops.png" alt="Modul IT Ops menjalankan batch run pada sebuah grup host" width="720" />
-</p>
-
-<p align="center"><sub><em>📸 <strong>Placeholder tangkapan layar</strong> — grid Batch Run yang mengalirkan output per host secara langsung, dengan otomatisasi Watchdog yang aktif di panel sebelahnya.</em></sub></p>
-
 ### Pisahkan dunia-duniamu dengan Workspaces
 
 Homelab, pekerjaan kantor, dan server klien itu tidak pantas berada di daftar yang sama. **Workspaces** adalah wadah Connections bernama dan terisolasi yang kamu tukar dari Activity Rail. Menukar hanya menata ulang cakupan pohon koneksi — Sessions yang terbuka, Dashboard, dan Pengaturanmu tetap di tempat — jadi berganti konteks cukup satu klik, bukan restart.
@@ -380,7 +363,6 @@ Penyiapan lengkap, struktur proyek, dan checklist PR ada di [`CONTRIBUTING.md`](
 - [Manual pengguna](docs/manual/INDEX.md) — keliling fitur demi fitur
 - [Roadmap](docs/ROADMAP.md)
 - [Arsitektur Dashboard](docs/DASHBOARD.md)
-- [Modul IT Ops](docs/ITOPS.md)
 - [Server MCP bawaan](docs/MCP.md)
 - [Panduan penyedia AI](docs/AI_PROVIDERS.md)
 

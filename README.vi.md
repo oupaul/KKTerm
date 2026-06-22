@@ -80,7 +80,6 @@ Cộng thêm vài thứ bạn không biết là mình muốn:
 
 - Một **Dashboard** nơi bạn bảo AI *"dựng cho tôi một widget ping router của tôi mỗi 30 giây"* và nó hiện ra, trong sandbox riêng, trên lưới của bạn.
 - **Các pane SSH tự gắn lại vào phiên `claude` / `codex` từ xa của bạn** sau mỗi cơn dỗi của Wi-Fi, để một công việc sáu tiếng sống sót qua một lần rớt mạng.
-- Một **module IT Ops** rải một script hoặc một playbook tương tác ra cả một nhóm host, cùng các **tự động hóa watchdog** ping, canh chừng và gửi email cho bạn khi có gì đó trật đường ray.
 - **Workspaces** giữ homelab, công việc chính và đám server của khách hàng kia trong những hộp chứa riêng biệt, chuyển đổi chỉ bằng một cú nhấp.
 - Một **đồng hồ đo mức dùng AI** để bạn thôi đâm sầm vào bức tường rate limit một cách bất ngờ lúc 3 giờ sáng.
 - Một **Install Helper** tìm, cài, cập nhật và mở các công cụ dev Windows mà thường bạn phải lùng qua mười tab trình duyệt.
@@ -276,22 +275,6 @@ Các agent lập trình tính tiền theo cửa sổ gói, không theo tháng, v
 
 <p align="center"><sub><em>📸 <strong>Ảnh chụp màn hình tạm</strong> — widget mức dùng hiện Claude Code và Codex cạnh nhau, cùng bản phản chiếu gọn trên thanh trạng thái.</em></sub></p>
 
-### Vận hành cả đội máy mà không rời cửa sổ
-
-Khi "một server" trở thành "bốn mươi server", luồng làm việc một pane hết co giãn nổi. **Module IT Ops** là nơi KKTerm trưởng thành:
-
-- **Host Groups (nhóm host)** — một tập hợp Connections có tên (kèm bộ lọc động tùy chọn), dùng lại làm đích cho mọi thứ bên dưới.
-- **Batch Runs (chạy hàng loạt)** — rải một script chạy một lần *hoặc* một **Playbook** tương tác kiểu expect ra một nhóm host qua SSH, WinRM hoặc PsExec, với tiến độ trực tiếp theo từng host và một báo cáo tổng hợp có thể mở lại.
-- **Automations & Watchdog** — cài một quy tắc (ping, khả năng tiếp cận TCP, một performance counter, hoặc một phiên SSH bỗng im bặt) rồi chọn điều gì xảy ra khi nó kích hoạt: thông báo, popup, email, webhook, khởi chạy một Batch Run, hoặc giao cho AI. Quy tắc bền vững sống sót qua khởi động lại; Watchdog đang chạy hiện trên thanh trạng thái.
-
-Nó không phải bản thay thế NOC. Nó là công cụ "tôi phải vá mười hai cái máy này trước giờ ăn trưa" mà bạn luôn ước có trong terminal của mình.
-
-<p align="center">
-  <img src="docs/assets/screenshots/it-ops.png" alt="Module IT Ops đang chạy một batch run trên một nhóm host" width="720" />
-</p>
-
-<p align="center"><sub><em>📸 <strong>Ảnh chụp màn hình tạm</strong> — một lưới Batch Run đang truyền trực tiếp đầu ra theo từng host, với một tự động hóa Watchdog đã lên nòng ở bảng bên cạnh.</em></sub></p>
-
 ### Tách biệt các thế giới của bạn bằng Workspaces
 
 Homelab, công việc chính và đám server của khách hàng kia không thuộc về cùng một danh sách. **Workspaces** là các hộp chứa Connections có tên, biệt lập, mà bạn chuyển đổi từ Activity Rail. Chuyển đổi chỉ định lại phạm vi cho cây kết nối — các Sessions đang mở, Dashboard và Cài đặt của bạn vẫn nguyên chỗ — nên đổi ngữ cảnh tốn một cú nhấp, không phải khởi động lại.
@@ -380,7 +363,6 @@ Toàn bộ thiết lập, cấu trúc dự án và checklist PR nằm trong [`CO
 - [Sổ tay người dùng](docs/manual/INDEX.md) — đi qua từng tính năng một
 - [Roadmap](docs/ROADMAP.md)
 - [Kiến trúc Dashboard](docs/DASHBOARD.md)
-- [Module IT Ops](docs/ITOPS.md)
 - [Server MCP tích hợp](docs/MCP.md)
 - [Hướng dẫn nhà cung cấp AI](docs/AI_PROVIDERS.md)
 

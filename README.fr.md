@@ -80,7 +80,6 @@ Plus quelques trucs que vous ne saviez pas vouloir :
 
 - Un **Dashboard** où vous dites à une IA *« construis-moi un widget qui ping mon routeur toutes les 30 secondes »* et il apparaît, dans son propre bac à sable, sur votre grille.
 - **Des panneaux SSH qui se rattachent à votre session distante `claude` / `codex`** après chaque caprice du Wi-Fi, pour qu'un travail de six heures survive à une coupure.
-- Un **module IT Ops** qui déploie un script ou un playbook interactif sur tout un groupe d'hôtes, et des **automatisations watchdog** qui pingent, surveillent et vous envoient un e-mail quand quelque chose dérape.
 - Des **espaces de travail (Workspaces)** qui gardent votre homelab, le boulot et les serveurs de ce client-là dans des conteneurs séparés et commutables.
 - Une **jauge d'utilisation IA** pour ne plus heurter le mur des quotas par surprise à 3 h du matin.
 - Un **Install Helper** qui trouve, installe, met à jour et lance les outils dev Windows que vous traquez d'habitude à travers dix onglets de navigateur.
@@ -276,22 +275,6 @@ Les agents de code facturent à la fenêtre de forfait, pas au mois, et ils dév
 
 <p align="center"><sub><em>📸 <strong>Capture d'écran à venir</strong> — le widget d'utilisation montrant Claude Code et Codex côte à côte, plus le reflet compact dans la barre d'état.</em></sub></p>
 
-### L'exploitation de parc sans quitter la fenêtre
-
-Quand « un serveur » devient « quarante serveurs », le workflow à volet unique ne tient plus. Le **module IT Ops** est l'endroit où KKTerm grandit :
-
-- **Host Groups (groupes d'hôtes)** — une sélection nommée de Connections (avec un filtre dynamique optionnel), réutilisée comme cible pour tout ce qui suit.
-- **Batch Runs (exécutions par lot)** — déployez un script ponctuel *ou* un **Playbook** interactif de type expect sur un groupe d'hôtes via SSH, WinRM ou PsExec, avec une progression en direct par hôte et un rapport consolidé que l'on peut rouvrir.
-- **Automatisations et Watchdog** — armez une règle (ping, accessibilité TCP, un compteur de performance, ou une session SSH devenue silencieuse) et choisissez ce qui se passe quand elle se déclenche : notification, popup, e-mail, webhook, lancement d'un Batch Run, ou transmission à l'IA. La règle durable survit aux redémarrages ; le Watchdog en direct apparaît dans la barre d'état.
-
-Ce n'est pas un remplaçant de NOC. C'est l'outil « il faut que je patche ces douze machines avant midi » que vous regrettiez de ne pas avoir dans votre terminal.
-
-<p align="center">
-  <img src="docs/assets/screenshots/it-ops.png" alt="Le module IT Ops exécutant un batch run sur un groupe d'hôtes" width="720" />
-</p>
-
-<p align="center"><sub><em>📸 <strong>Capture d'écran à venir</strong> — une grille de Batch Run diffusant la sortie en direct par hôte, avec une automatisation Watchdog armée dans le panneau d'à côté.</em></sub></p>
-
 ### Séparer vos mondes avec les espaces de travail
 
 Le homelab, le boulot et les serveurs de ce client-là n'ont pas leur place dans la même liste. Les **espaces de travail (Workspaces)** sont des conteneurs de Connections nommés et isolés que vous commutez depuis l'Activity Rail. Commuter ne re-cadre que l'arbre des connexions — vos Sessions ouvertes, le Dashboard et les réglages restent en place — donc changer de contexte coûte un clic, pas un redémarrage.
@@ -380,7 +363,6 @@ L'installation complète, la structure du projet et la checklist de PR sont dans
 - [Manuel utilisateur](docs/manual/INDEX.md) — un tour fonctionnalité par fonctionnalité
 - [Feuille de route](docs/ROADMAP.md)
 - [Architecture du Dashboard](docs/DASHBOARD.md)
-- [Module IT Ops](docs/ITOPS.md)
 - [Serveur MCP intégré](docs/MCP.md)
 - [Guide des fournisseurs IA](docs/AI_PROVIDERS.md)
 

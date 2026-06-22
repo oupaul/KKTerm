@@ -80,7 +80,6 @@ Dazu ein paar Dinge, von denen du nicht wusstest, dass du sie wolltest:
 
 - Ein **Dashboard**, in dem du einer KI sagst *„bau mir ein Widget, das meinen Router alle 30 Sekunden anpingt"*, und es erscheint, in seiner eigenen Sandbox, auf deinem Raster.
 - **SSH-Panes, die sich nach jedem WLAN-Anfall wieder an deine entfernte `claude` / `codex`-Session anhängen**, damit ein Sechs-Stunden-Job eine Verbindungsunterbrechung überlebt.
-- Ein **IT-Ops-Modul**, das ein Skript oder ein interaktives Playbook über eine ganze Gruppe von Hosts ausrollt, plus **Watchdog-Automatisierungen**, die pingen, überwachen und dir eine E-Mail schicken, wenn etwas aus dem Ruder läuft.
 - **Workspaces**, die dein Homelab, den Hauptjob und die Server dieses einen Kunden in getrennten, umschaltbaren Containern halten.
 - Eine **KI-Nutzungsanzeige**, damit du nicht um 3 Uhr morgens überraschend gegen die Rate-Limit-Wand fährst.
 - Ein **Install Helper**, der die Windows-Dev-Tools, die du sonst durch zehn Browser-Tabs jagst, findet, installiert, aktualisiert und startet.
@@ -276,22 +275,6 @@ Coding-Agenten rechnen nach Plan-Fenster ab, nicht pro Monat, und sie fressen de
 
 <p align="center"><sub><em>📸 <strong>Screenshot-Platzhalter</strong> — das Nutzungs-Widget mit Claude Code und Codex nebeneinander, plus die kompakte Statusleisten-Spiegelung.</em></sub></p>
 
-### Flottenbetrieb, ohne das Fenster zu verlassen
-
-Wenn aus „einem Server" „vierzig Server" werden, skaliert der Einzel-Pane-Workflow nicht mehr. Das **IT-Ops-Modul** ist der Ort, an dem KKTerm erwachsen wird:
-
-- **Host Groups (Host-Gruppen)** — eine benannte Auswahl von Connections (mit optionalem dynamischem Filter), die als Ziel für alles Folgende wiederverwendet wird.
-- **Batch Runs (Stapelläufe)** — roll ein einmaliges Skript *oder* ein interaktives Playbook im Expect-Stil über eine Host-Gruppe via SSH, WinRM oder PsExec aus, mit Live-Fortschritt pro Host und einem konsolidierten, wieder öffenbaren Bericht.
-- **Automatisierungen & der Watchdog** — schärfe eine Regel (Ping, TCP-Erreichbarkeit, ein Performance-Counter oder eine still gewordene SSH-Session) und wähle, was beim Auslösen passiert: Benachrichtigung, Popup, E-Mail, Webhook, Start eines Batch Run oder Übergabe an die KI. Die dauerhafte Regel übersteht Neustarts; der laufende Watchdog erscheint in der Statusleiste.
-
-Es ist kein NOC-Ersatz. Es ist das „ich muss diese zwölf Kisten vor dem Mittagessen patchen"-Werkzeug, das du dir in deinem Terminal immer gewünscht hast.
-
-<p align="center">
-  <img src="docs/assets/screenshots/it-ops.png" alt="Das IT-Ops-Modul führt einen Batch Run über eine Host-Gruppe aus" width="720" />
-</p>
-
-<p align="center"><sub><em>📸 <strong>Screenshot-Platzhalter</strong> — ein Batch-Run-Raster, das die Ausgabe pro Host live streamt, mit einer scharfgeschalteten Watchdog-Automatisierung im Panel daneben.</em></sub></p>
-
 ### Mit Workspaces deine Welten trennen
 
 Das Homelab, der Hauptjob und die Server dieses einen Kunden gehören nicht in dieselbe Liste. **Workspaces** sind benannte, isolierte Container von Connections, zwischen denen du über das Activity Rail umschaltest. Das Umschalten re-skopiert nur den Verbindungsbaum — deine offenen Sessions, das Dashboard und die Einstellungen bleiben, wo sie sind — also kostet ein Kontextwechsel einen Klick, keinen Neustart.
@@ -380,7 +363,6 @@ Komplettes Setup, Projektstruktur und PR-Checkliste stehen in [`CONTRIBUTING.md`
 - [Benutzerhandbuch](docs/manual/INDEX.md) — ein Rundgang Funktion für Funktion
 - [Roadmap](docs/ROADMAP.md)
 - [Dashboard-Architektur](docs/DASHBOARD.md)
-- [IT-Ops-Modul](docs/ITOPS.md)
 - [Eingebauter MCP-Server](docs/MCP.md)
 - [KI-Provider-Leitfaden](docs/AI_PROVIDERS.md)
 

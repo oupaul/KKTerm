@@ -80,7 +80,6 @@ Plus a few things you didn't know you wanted:
 
 - A **Dashboard** where you tell an AI *"build me a widget that pings my router every 30 seconds"* and it appears, in its own sandbox, on your grid.
 - **SSH panes that reattach to your remote `claude` / `codex` session** after every Wi-Fi tantrum, so a six-hour job survives a dropped connection.
-- An **IT Ops module** that fans a script or interactive playbook out across a whole group of hosts, and **watchdog automations** that ping, watch, and email you when something goes sideways.
 - **Workspaces** that keep your home lab, the day job, and that one client's servers in separate, switchable containers.
 - An **AI usage meter** so you stop hitting the rate-limit wall at 3 AM by surprise.
 - An **Install Helper** that finds, installs, updates, and launches the Windows dev tools you usually chase through ten browser tabs.
@@ -276,22 +275,6 @@ Coding agents charge by plan window, not by month, and they'll happily eat your 
 
 <p align="center"><sub><em>📸 <strong>Screenshot placeholder</strong> — the usage widget showing Claude Code and Codex side by side, plus the compact status-bar mirror.</em></sub></p>
 
-### Fleet ops without leaving the window
-
-When "a server" becomes "forty servers," the single-pane workflow stops scaling. The **IT Ops Module** is where KKTerm grows up:
-
-- **Host Groups** — a named selection of Connections (with an optional dynamic filter), reused as the target for everything below.
-- **Batch Runs** — fan a one-shot script *or* an interactive, expect-style **Playbook** out across a Host Group over SSH, WinRM, or PsExec, with live per-host progress and a consolidated, reopenable report.
-- **Automations & the Watchdog** — arm a rule (ping, TCP reachability, a performance counter, or an SSH session going silent) and pick what happens when it trips: notify, popup, email, webhook, kick off a Batch Run, or hand it to the AI. The durable rule survives restarts; the live Watchdog shows up in the status bar.
-
-It is not a NOC replacement. It is the "I need to patch these twelve boxes before lunch" tool you keep wishing your terminal had.
-
-<p align="center">
-  <img src="docs/assets/screenshots/it-ops.png" alt="The IT Ops module running a batch run across a host group" width="720" />
-</p>
-
-<p align="center"><sub><em>📸 <strong>Screenshot placeholder</strong> — a Batch Run grid streaming live per-host output, with an armed Watchdog automation in the panel beside it.</em></sub></p>
-
 ### Keep your worlds apart with Workspaces
 
 The home lab, the day job, and that one client's servers do not belong in the same list. **Workspaces** are named, isolated containers of Connections you switch between from the Activity Rail. Switching re-scopes the Connection Tree only — your open Sessions, Dashboard, and Settings stay put — so changing context costs one click, not a relaunch.
@@ -380,7 +363,6 @@ Full setup, project layout, and the PR checklist live in [`CONTRIBUTING.md`](CON
 - [User manual](docs/manual/INDEX.md) — feature-by-feature walkthrough
 - [Roadmap](docs/ROADMAP.md)
 - [Dashboard architecture](docs/DASHBOARD.md)
-- [IT Ops module](docs/ITOPS.md)
 - [Built-in MCP server](docs/MCP.md)
 - [AI provider guide](docs/AI_PROVIDERS.md)
 

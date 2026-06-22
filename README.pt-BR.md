@@ -80,7 +80,6 @@ Mais umas coisas que você não sabia que queria:
 
 - Um **Dashboard** onde você fala pra uma IA *«monta um widget que dá ping no meu roteador a cada 30 segundos»* e ele aparece, na própria sandbox, na sua grade.
 - **Painéis SSH que se reconectam à sua sessão remota `claude` / `codex`** depois de cada chilique do Wi-Fi, pra um trabalho de seis horas sobreviver a uma queda.
-- Um **módulo IT Ops** que dispara um script ou um playbook interativo sobre um grupo inteiro de hosts, e **automações de watchdog** que dão ping, vigiam e te mandam um e-mail quando algo sai dos trilhos.
 - **Workspaces** que mantêm o seu homelab, o trabalho e os servidores daquele cliente em contêineres separados e alternáveis.
 - Um **medidor de uso de IA** pra você parar de bater de surpresa no muro do limite de uso às 3 da manhã.
 - Um **Install Helper** que acha, instala, atualiza e abre as ferramentas pra dev do Windows que você normalmente caça por dez abas do navegador.
@@ -276,22 +275,6 @@ Os agentes de programação cobram por janela do plano, não por mês, e devoram
 
 <p align="center"><sub><em>📸 <strong>Espaço para screenshot</strong> — o widget de uso mostrando Claude Code e Codex lado a lado, mais o espelho compacto na barra de status.</em></sub></p>
 
-### Operações de frota sem sair da janela
-
-Quando «um servidor» vira «quarenta servidores», o fluxo de painel único deixa de escalar. O **módulo IT Ops** é onde o KKTerm cresce:
-
-- **Host Groups (grupos de hosts)** — uma seleção nomeada de Connections (com um filtro dinâmico opcional), reutilizada como alvo para tudo abaixo.
-- **Batch Runs (execuções em lote)** — dispare um script pontual *ou* um **Playbook** interativo no estilo expect sobre um grupo de hosts via SSH, WinRM ou PsExec, com progresso ao vivo por host e um relatório consolidado que dá pra reabrir.
-- **Automações e o Watchdog** — arme uma regra (ping, alcançabilidade TCP, um contador de desempenho, ou uma sessão SSH que ficou em silêncio) e escolha o que acontece quando ela dispara: notificação, popup, e-mail, webhook, iniciar um Batch Run, ou repassar pra IA. A regra durável sobrevive a reinícios; o Watchdog ao vivo aparece na barra de status.
-
-Não é um substituto de NOC. É a ferramenta «preciso aplicar patch nessas doze máquinas antes do almoço» que você sempre quis ter no seu terminal.
-
-<p align="center">
-  <img src="docs/assets/screenshots/it-ops.png" alt="O módulo IT Ops executando um batch run sobre um grupo de hosts" width="720" />
-</p>
-
-<p align="center"><sub><em>📸 <strong>Espaço para screenshot</strong> — uma grade de Batch Run transmitindo ao vivo a saída por host, com uma automação Watchdog armada no painel ao lado.</em></sub></p>
-
 ### Mantenha seus mundos separados com Workspaces
 
 O homelab, o trabalho e os servidores daquele cliente não pertencem à mesma lista. **Workspaces** são contêineres de Connections nomeados e isolados entre os quais você alterna pela Activity Rail. Alternar reescopa só a árvore de conexões — suas Sessions abertas, o Dashboard e as configurações ficam onde estão — então mudar de contexto custa um clique, não um reinício.
@@ -380,7 +363,6 @@ Setup completo, estrutura do projeto e checklist de PR estão em [`CONTRIBUTING.
 - [Manual do usuário](docs/manual/INDEX.md) — um passeio recurso por recurso
 - [Roadmap](docs/ROADMAP.md)
 - [Arquitetura do Dashboard](docs/DASHBOARD.md)
-- [Módulo IT Ops](docs/ITOPS.md)
 - [Servidor MCP embutido](docs/MCP.md)
 - [Guia de provedores de IA](docs/AI_PROVIDERS.md)
 

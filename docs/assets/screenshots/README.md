@@ -14,7 +14,6 @@ placeholders with real captures (PNG, ~720px wide recommended).
 | `backgrounds.png` | Animated dashboard backgrounds |
 | `tmux-reattach.png` | Keep remote AI agents alive |
 | `usage-meter.png` | AI usage meter |
-| `it-ops.png` | IT Ops — fleet operations |
 | `file-viewer.png` | File Explorer & Document viewer |
 | `workspaces.png` | Workspaces |
 | `mcp-server.png` | Built-in MCP server |

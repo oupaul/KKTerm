@@ -80,7 +80,6 @@
 
 - 一個 **Dashboard**，你可以對 AI 說 *「幫我做一個每 30 秒 ping 一次路由器的 widget」*，它就會在你的網格上憑空出現，而且關在自己的沙箱裡。
 - **能自動 attach 回遠端 `claude` / `codex` session 的 SSH pane**，這樣每次 Wi-Fi 鬧脾氣，你那個跑了六小時的工作也不會陣亡。
-- 一個 **IT Ops 模組**，能把一段腳本或互動式 playbook 一次撒到一整群主機上，再加上會 ping、會盯、出事就 email 你的 **watchdog 自動化**。
 - **工作區（Workspaces）**，把你的 homelab、正職工作、還有那個客戶的伺服器分別關在可以一鍵切換的獨立容器裡。
 - 一個 **AI 用量計**，讓你不會凌晨三點才被 rate-limit 牆撞個正著。
 - 一個 **Install Helper**，幫你找到、安裝、更新並啟動那些平常得翻十個瀏覽器分頁才找得到的 Windows 開發工具。
@@ -276,22 +275,6 @@ Dashboard 是一個可拖曳、可縮放的 widget 網格。它不是給你做 P
 
 <p align="center"><sub><em>📸 <strong>截圖佔位</strong> — 用量 widget 把 Claude Code 和 Codex 並排顯示，再加上精簡的狀態列鏡像。</em></sub></p>
 
-### 不用離開視窗就能管整批主機
-
-當「一台伺服器」變成「四十台伺服器」，單窗格的工作流就撐不住了。**IT Ops 模組**就是 KKTerm 長大的地方：
-
-- **Host Groups（主機群組）** — 一份命名的 Connection 選集（可加上動態篩選），下面所有功能都拿它當目標。
-- **Batch Runs（批次執行）** — 把一段一次性腳本*或*一份互動式、expect 風格的 **Playbook**，透過 SSH、WinRM 或 PsExec 撒到一個主機群組上，附即時的每台主機進度，以及一份可重新打開的彙整報告。
-- **Automations 與 Watchdog** — 設一條規則（ping、TCP 可達性、效能計數器，或某個 SSH session 安靜下來），再決定它觸發時要做什麼：通知、彈窗、email、webhook、啟動一個 Batch Run，或交給 AI 處理。規則本身撐得過重啟；live 的 Watchdog 會出現在狀態列。
-
-它不是 NOC 的替代品。它是那個「午餐前我得把這十二台機器更新完」的工具，你的終端機一直缺的就是它。
-
-<p align="center">
-  <img src="docs/assets/screenshots/it-ops.png" alt="IT Ops 模組正在對一個主機群組跑批次執行" width="720" />
-</p>
-
-<p align="center"><sub><em>📸 <strong>截圖佔位</strong> — Batch Run 格線即時串流每台主機的輸出，旁邊面板是一條已武裝的 Watchdog 自動化。</em></sub></p>
-
 ### 用工作區把不同世界分開
 
 homelab、正職工作、還有那個客戶的伺服器，本來就不該擠在同一份清單裡。**工作區（Workspaces）**是命名、彼此隔離的 Connection 容器，你可以從 Activity Rail 一鍵切換。切換只會重新框定連線樹 — 你打開的 Sessions、Dashboard 和設定都原地不動 — 所以換情境只花一下點擊，而不是重開 app。
@@ -380,7 +363,6 @@ KKTerm 內建自己的 MCP 伺服器，所以外部編程 agent（Claude Code、
 - [使用手冊](docs/manual/INDEX.md) — 一個功能一個功能走過一遍
 - [Roadmap](docs/ROADMAP.md)
 - [Dashboard 架構](docs/DASHBOARD.md)
-- [IT Ops 模組](docs/ITOPS.md)
 - [內建 MCP 伺服器](docs/MCP.md)
 - [AI provider 指南](docs/AI_PROVIDERS.md)
 
