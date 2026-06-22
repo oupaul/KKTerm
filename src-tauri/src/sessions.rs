@@ -2406,15 +2406,31 @@ fn is_powershell_family_program(program: &str) -> bool {
     matches!(name, "powershell.exe" | "pwsh.exe" | "powershell" | "pwsh")
 }
 
-/// Builds the `new-session -e PATH=<value>` arguments that refresh PATH into a
-/// freshly created psmux pane. Returned empty when no PATH is available so the
-/// pane simply inherits the server environment. Kept separate (and taking PATH
-/// as an argument) so the wiring is unit-testable without psmux installed.
-fn psmux_pane_environment_args(path: Option<OsString>) -> Vec<OsString> {
+/// Builds `new-session -e NAME=<value>` arguments that refresh critical
+/// environment variables into a freshly created psmux pane. A psmux server is
+/// persistent and may otherwise leave new panes with the stale environment it
+/// captured when the server started.
+fn psmux_pane_environment_args(
+    command: &CommandBuilder,
+    managed_variables: &[ManagedTerminalEnvironmentVariable],
+) -> Vec<OsString> {
+    let mut names = vec!["PATH".to_string()];
+    for variable in managed_variables {
+        if !names
+            .iter()
+            .any(|name| name.eq_ignore_ascii_case(&variable.name))
+        {
+            names.push(variable.name.clone());
+        }
+    }
+
     let mut args = Vec::new();
-    if let Some(path) = path.filter(|value| !value.is_empty()) {
-        let mut entry = OsString::from("PATH=");
-        entry.push(path);
+    for name in names {
+        let Some(value) = command.get_env(&name).filter(|value| !value.is_empty()) else {
+            continue;
+        };
+        let mut entry = OsString::from(format!("{name}="));
+        entry.push(value);
         args.push(OsString::from("-e"));
         args.push(entry);
     }
@@ -2520,21 +2536,23 @@ fn command_for(request: &StartTerminalSessionRequest) -> Result<CommandBuilder, 
                 .flatten()
                 .filter(|_| is_powershell_family_program(&resolved_program))
                 .filter(|_| local_shell_available(PSMUX_PROGRAM));
-            let mut command = if let Some(session_id) = psmux_session_id {
-                let mut command =
-                    CommandBuilder::new(resolved_local_shell_program(PSMUX_PROGRAM.to_string()));
+            let mut command = if psmux_session_id.is_some() {
+                CommandBuilder::new(resolved_local_shell_program(PSMUX_PROGRAM.to_string()))
+            } else {
+                CommandBuilder::new(resolved_program.clone())
+            };
+            sanitize_windows_local_environment(&mut command);
+            set_terminal_environment(&mut command);
+            apply_managed_terminal_environment(&mut command, &request.environment_variables)?;
+            if let Some(session_id) = psmux_session_id {
                 command.arg("new-session");
                 command.arg("-A");
                 command.arg("-s");
                 command.arg(&session_id);
-                // Refresh PATH into the new pane. A psmux server is persistent and
-                // (like tmux) only refreshes its `update-environment` variables on
-                // attach — PATH is not among them — so a session created on an
-                // already-running server otherwise inherits the stale PATH the
-                // server captured at start and cannot find executables added to
-                // PATH afterwards (e.g. `claude`). `new-session -e` sets the
-                // pane's PATH explicitly from the current process environment.
-                for arg in psmux_pane_environment_args(std::env::var_os("PATH")) {
+                // Push the effective launch environment across the psmux server
+                // boundary. This uses the already-sanitized command environment
+                // rather than KKTerm's stale long-lived process environment.
+                for arg in psmux_pane_environment_args(&command, &request.environment_variables) {
                     command.arg(arg);
                 }
                 command.arg("--");
@@ -2542,20 +2560,14 @@ fn command_for(request: &StartTerminalSessionRequest) -> Result<CommandBuilder, 
                 for arg in &parsed.args {
                     command.arg(arg);
                 }
-                command
             } else {
-                let mut command = CommandBuilder::new(resolved_program);
                 if is_cmd {
                     command.arg("/D");
                 }
                 for arg in &parsed.args {
                     command.arg(arg);
                 }
-                command
-            };
-            sanitize_windows_local_environment(&mut command);
-            set_terminal_environment(&mut command);
-            apply_managed_terminal_environment(&mut command, &request.environment_variables)?;
+            }
             if let Some(directory) = initial_directory_for(request) {
                 command.cwd(OsString::from(directory));
             }
@@ -2838,7 +2850,9 @@ fn sanitize_windows_local_environment(command: &mut CommandBuilder) {
 fn windows_user_environment_block() -> Vec<(String, String)> {
     use windows_sys::Win32::Foundation::{CloseHandle, HANDLE};
     use windows_sys::Win32::Security::TOKEN_QUERY;
-    use windows_sys::Win32::System::Environment::{CreateEnvironmentBlock, DestroyEnvironmentBlock};
+    use windows_sys::Win32::System::Environment::{
+        CreateEnvironmentBlock, DestroyEnvironmentBlock,
+    };
     use windows_sys::Win32::System::Threading::{GetCurrentProcess, OpenProcessToken};
 
     let mut entries = Vec::new();
@@ -3704,7 +3718,9 @@ mod tests {
         // PowerShell family; cmd / bash / wsl shells are launched plainly.
         assert!(is_powershell_family_program("powershell.exe"));
         assert!(is_powershell_family_program("pwsh.exe"));
-        assert!(is_powershell_family_program(r"C:\Program Files\PowerShell\7\pwsh.exe"));
+        assert!(is_powershell_family_program(
+            r"C:\Program Files\PowerShell\7\pwsh.exe"
+        ));
         assert!(!is_powershell_family_program("cmd.exe"));
         assert!(!is_powershell_family_program("bash.exe"));
         assert!(!is_powershell_family_program("wsl.exe"));
@@ -3724,18 +3740,74 @@ mod tests {
 
     #[test]
     fn psmux_pane_environment_refreshes_current_path() {
+        let mut command = CommandBuilder::new("psmux.exe");
+        command.env("PATH", "C:\\a;C:\\b");
+
         // A stale psmux server would otherwise leave the pane with an outdated
-        // PATH; `new-session -e PATH=...` pins the current process PATH so tools
-        // like `claude` stay discoverable.
-        let args = psmux_pane_environment_args(Some(OsString::from("C:\\a;C:\\b")))
+        // PATH; `new-session -e PATH=...` pins the effective launch PATH so
+        // tools like `claude` stay discoverable.
+        let args = psmux_pane_environment_args(&command, &[])
             .iter()
             .map(|value| value.to_string_lossy().into_owned())
             .collect::<Vec<_>>();
         assert_eq!(args, vec!["-e".to_string(), "PATH=C:\\a;C:\\b".to_string()]);
 
         // No PATH (or an empty one) means nothing to refresh.
-        assert!(psmux_pane_environment_args(None).is_empty());
-        assert!(psmux_pane_environment_args(Some(OsString::new())).is_empty());
+        let mut empty_command = CommandBuilder::new("psmux.exe");
+        empty_command.env_clear();
+        assert!(psmux_pane_environment_args(&empty_command, &[]).is_empty());
+        command.env("PATH", OsString::new());
+        assert!(psmux_pane_environment_args(&command, &[]).is_empty());
+    }
+
+    #[test]
+    fn psmux_pane_environment_refreshes_managed_cli_account_vars() {
+        let mut command = CommandBuilder::new("psmux.exe");
+        command.env("PATH", "C:\\Windows\\System32");
+        command.env(
+            "CODEX_HOME",
+            "C:\\Users\\example\\AppData\\Local\\KKTerm\\cli-accounts\\codex\\work",
+        );
+        command.env(
+            "CLAUDE_CONFIG_DIR",
+            "C:\\Users\\example\\AppData\\Local\\KKTerm\\cli-accounts\\claude-code\\work",
+        );
+        let variables = vec![
+            ManagedTerminalEnvironmentVariable {
+                name: "CODEX_HOME".to_string(),
+                value: "$env:LOCALAPPDATA\\KKTerm\\cli-accounts\\codex\\work".to_string(),
+                source: "cliAccount".to_string(),
+            },
+            ManagedTerminalEnvironmentVariable {
+                name: "CODEX_HOME".to_string(),
+                value: "$env:LOCALAPPDATA\\KKTerm\\cli-accounts\\codex\\work".to_string(),
+                source: "cliAccount".to_string(),
+            },
+            ManagedTerminalEnvironmentVariable {
+                name: "CLAUDE_CONFIG_DIR".to_string(),
+                value: "$env:LOCALAPPDATA\\KKTerm\\cli-accounts\\claude-code\\work".to_string(),
+                source: "cliAccount".to_string(),
+            },
+        ];
+
+        let args = psmux_pane_environment_args(&command, &variables)
+            .iter()
+            .map(|value| value.to_string_lossy().into_owned())
+            .collect::<Vec<_>>();
+
+        assert_eq!(
+            args,
+            vec![
+                "-e".to_string(),
+                "PATH=C:\\Windows\\System32".to_string(),
+                "-e".to_string(),
+                "CODEX_HOME=C:\\Users\\example\\AppData\\Local\\KKTerm\\cli-accounts\\codex\\work"
+                    .to_string(),
+                "-e".to_string(),
+                "CLAUDE_CONFIG_DIR=C:\\Users\\example\\AppData\\Local\\KKTerm\\cli-accounts\\claude-code\\work"
+                    .to_string(),
+            ]
+        );
     }
 
     #[test]
