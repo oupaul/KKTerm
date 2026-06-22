@@ -1370,6 +1370,7 @@ function tmuxConnectionRequest(connection: Connection) {
     ...resolveSshSocksProxyRequest(connection, sshSettings),
     authMethod: connection.authMethod,
     secretOwnerId: connectionPasswordOwnerId(connection),
+    passphraseOwnerId: connection.id,
   };
 }
 
@@ -2025,6 +2026,7 @@ function TerminalPaneView({
             ...resolveSshSocksProxyRequest(connection, sshSettings),
             authMethod: connection.authMethod,
             secretOwnerId: connectionPasswordOwnerId(connection),
+            passphraseOwnerId: connection.type === "ssh" ? connection.id : undefined,
             shell,
             serialLine: connection.type === "serial" ? connection.serialLine ?? connection.host : undefined,
             serialSpeed: connection.type === "serial" ? connection.serialSpeed ?? 9600 : undefined,

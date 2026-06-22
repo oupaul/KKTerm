@@ -66,6 +66,8 @@ export function SshSettings() {
   const [sshDraft, setSshDraft] = useState(sshSettings);
   const [keyEmailDialogOpen, setKeyEmailDialogOpen] = useState(false);
   const [keyEmailDraft, setKeyEmailDraft] = useState("");
+  const [keyPassphraseDraft, setKeyPassphraseDraft] = useState("");
+  const [keyPassphraseConfirmDraft, setKeyPassphraseConfirmDraft] = useState("");
   const [sshSocksProxyPasswordDraft, setSshSocksProxyPasswordDraft] = useState("");
   const [hasSavedSshSocksProxyPassword, setHasSavedSshSocksProxyPassword] = useState(false);
   const [isGeneratingKey, setIsGeneratingKey] = useState(false);
@@ -123,6 +125,8 @@ export function SshSettings() {
   function handleOpenKeyEmailDialog() {
     setError("");
     setKeyEmailDraft("");
+    setKeyPassphraseDraft("");
+    setKeyPassphraseConfirmDraft("");
     setKeyEmailDialogOpen(true);
   }
 
@@ -135,7 +139,7 @@ export function SshSettings() {
       setIsGeneratingKey(true);
       setError("");
       const generated = await invokeCommand("generate_ssh_key_pair", {
-        request: { email },
+        request: { email, passphrase: keyPassphraseDraft || undefined },
       });
       const nextSettings = {
         ...sshDraft,
@@ -551,6 +555,8 @@ export function SshSettings() {
           email={keyEmailDraft}
           error={error}
           isGenerating={isGeneratingKey}
+          passphrase={keyPassphraseDraft}
+          passphraseConfirm={keyPassphraseConfirmDraft}
           onCancel={() => {
             if (isGeneratingKey) {
               return;
@@ -559,6 +565,8 @@ export function SshSettings() {
             setKeyEmailDraft("");
           }}
           onChange={setKeyEmailDraft}
+          onPassphraseChange={setKeyPassphraseDraft}
+          onPassphraseConfirmChange={setKeyPassphraseConfirmDraft}
           onSubmit={(email) => void handleGenerateKeyPair(email)}
         />
       ) : null}
@@ -570,20 +578,28 @@ function SshKeyEmailDialog({
   email,
   error,
   isGenerating,
+  passphrase,
+  passphraseConfirm,
   onCancel,
   onChange,
+  onPassphraseChange,
+  onPassphraseConfirmChange,
   onSubmit,
 }: {
   email: string;
   error: string;
   isGenerating: boolean;
+  passphrase: string;
+  passphraseConfirm: string;
   onCancel: () => void;
   onChange: (email: string) => void;
+  onPassphraseChange: (passphrase: string) => void;
+  onPassphraseConfirmChange: (passphrase: string) => void;
   onSubmit: (email: string) => void;
 }) {
   const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
-  const canSubmit = Boolean(email.trim()) && !isGenerating;
+  const canSubmit = Boolean(email.trim()) && passphrase === passphraseConfirm && !isGenerating;
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -626,6 +642,27 @@ function SshKeyEmailDialog({
             value={email}
           />
         </label>
+        <label>
+          <span>{t("settings.sshKeyPassphraseOptional")}</span>
+          <input
+            autoComplete="new-password"
+            onChange={(event) => onPassphraseChange(event.currentTarget.value)}
+            type="password"
+            value={passphrase}
+          />
+        </label>
+        <label>
+          <span>{t("settings.sshKeyPassphraseConfirm")}</span>
+          <input
+            autoComplete="new-password"
+            onChange={(event) => onPassphraseConfirmChange(event.currentTarget.value)}
+            type="password"
+            value={passphraseConfirm}
+          />
+        </label>
+        {passphrase !== passphraseConfirm ? (
+          <p className="form-error">{t("settings.sshKeyPassphraseMismatch")}</p>
+        ) : null}
         <LegacyDialogActions
           primary={<button className="approve-button" disabled={!canSubmit} type="submit">
             <KeyRound size={15} />

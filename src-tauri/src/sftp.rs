@@ -52,6 +52,7 @@ pub struct StartSftpSessionRequest {
     pub ssh_socks_proxy_secret_owner_id: Option<String>,
     pub auth_method: Option<String>,
     pub secret_owner_id: Option<String>,
+    pub passphrase_owner_id: Option<String>,
     pub path: Option<String>,
 }
 
@@ -1766,6 +1767,12 @@ fn auth_for(
     match auth_method {
         SftpAuthMethod::KeyFile => Ok(ssh::NativeSshAuth::KeyFile {
             key_path: request.key_path.clone().unwrap_or_default(),
+            passphrase: request.passphrase_owner_id.as_ref().and_then(|owner_id| {
+                secrets
+                    .read_connection_passphrase(owner_id.clone())
+                    .ok()
+                    .flatten()
+            }),
         }),
         SftpAuthMethod::Password => {
             let owner_id = request
@@ -2491,6 +2498,7 @@ mod tests {
             ssh_socks_proxy_secret_owner_id: None,
             auth_method: None,
             secret_owner_id: None,
+            passphrase_owner_id: None,
             path: None,
         }
     }

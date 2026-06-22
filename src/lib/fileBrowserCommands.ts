@@ -104,6 +104,7 @@ export function sftpBrowserCommands(connection: Connection): FileBrowserCommands
           ...resolveSshSocksProxyRequest(connection, useWorkspaceStore.getState().sshSettings),
           authMethod: connection.authMethod,
           secretOwnerId: connectionPasswordOwnerId(connection),
+          passphraseOwnerId: connection.id,
           path,
         },
       }),

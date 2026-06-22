@@ -245,6 +245,7 @@ function sshConnectionRequest(connection: Connection) {
     ...resolveSshSocksProxyRequest(connection, sshSettings),
     authMethod: connection.authMethod,
     secretOwnerId: connectionPasswordOwnerId(connection),
+    passphraseOwnerId: connection.id,
   };
 }
 

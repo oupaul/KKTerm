@@ -69,6 +69,14 @@ impl StoreSecretRequest {
         }
     }
 
+    pub(crate) fn connection_passphrase(owner_id: String, secret: String) -> Self {
+        Self {
+            kind: SecretKind::ConnectionPassphrase,
+            owner_id,
+            secret,
+        }
+    }
+
     pub(crate) fn url_password(owner_id: String, secret: String) -> Self {
         Self {
             kind: SecretKind::UrlPassword,
@@ -97,6 +105,13 @@ impl SecretReferenceRequest {
     pub(crate) fn connection_password(owner_id: String) -> Self {
         Self {
             kind: SecretKind::ConnectionPassword,
+            owner_id,
+        }
+    }
+
+    pub(crate) fn connection_passphrase(owner_id: String) -> Self {
+        Self {
+            kind: SecretKind::ConnectionPassphrase,
             owner_id,
         }
     }
@@ -478,6 +493,13 @@ impl Secrets {
         })
     }
 
+    pub(crate) fn read_connection_passphrase(
+        &self,
+        owner_id: String,
+    ) -> Result<Option<String>, String> {
+        self.read_secret(SecretReferenceRequest::connection_passphrase(owner_id))
+    }
+
     pub(crate) fn read_url_password(&self, owner_id: String) -> Result<Option<String>, String> {
         self.read_secret(SecretReferenceRequest {
             kind: SecretKind::UrlPassword,
@@ -814,6 +836,35 @@ mod tests {
             .read_url_password(owner_id)
             .expect("URL password can be read by backend");
         assert_eq!(secret.as_deref(), Some("browser-login-password"));
+    }
+
+    #[test]
+    fn stores_connection_passphrases_separately_from_login_passwords() {
+        let _guard = test_keychain_lock().lock().expect("test keychain lock");
+        let secrets = Secrets::new_for_test();
+        let owner_id = "ssh-key-connection".to_string();
+
+        secrets
+            .store_secret(StoreSecretRequest {
+                kind: SecretKind::ConnectionPassphrase,
+                owner_id: owner_id.clone(),
+                secret: "key-passphrase".to_string(),
+            })
+            .expect("passphrase is stored");
+
+        assert_eq!(
+            secrets
+                .read_connection_passphrase(owner_id.clone())
+                .expect("passphrase can be read")
+                .as_deref(),
+            Some("key-passphrase")
+        );
+        assert_eq!(
+            secrets
+                .read_connection_password(owner_id)
+                .expect("login password lookup succeeds"),
+            None
+        );
     }
 
     #[test]

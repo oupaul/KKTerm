@@ -282,7 +282,10 @@ pub(crate) struct NativeSshCommandRequest {
 
 #[derive(Clone)]
 pub enum NativeSshAuth {
-    KeyFile { key_path: String },
+    KeyFile {
+        key_path: String,
+        passphrase: Option<String>,
+    },
     Password { password: Option<String> },
     Agent,
 }
@@ -1722,12 +1725,18 @@ fn remembered_rejection(rejection: &Arc<std::sync::Mutex<Option<String>>>) -> Op
 
 fn normalize_native_ssh_auth(auth: NativeSshAuth) -> Result<NativeSshAuth, String> {
     match auth {
-        NativeSshAuth::KeyFile { key_path } => {
+        NativeSshAuth::KeyFile {
+            key_path,
+            passphrase,
+        } => {
             let key_path = key_path.trim().to_string();
             if key_path.is_empty() {
                 Err("key path is required for SSH key-file authentication".to_string())
             } else {
-                Ok(NativeSshAuth::KeyFile { key_path })
+                Ok(NativeSshAuth::KeyFile {
+                    key_path,
+                    passphrase: passphrase.and_then(|value| (!value.is_empty()).then_some(value)),
+                })
             }
         }
         NativeSshAuth::Password { password } => Ok(NativeSshAuth::Password {
@@ -2219,9 +2228,30 @@ async fn authenticate_native_ssh(
 ) -> Result<(), String> {
     let mut prompt = prompt;
     let auth_result = match auth {
-        NativeSshAuth::KeyFile { key_path } => {
-            let key_pair = load_secret_key(key_path, None)
-                .map_err(|error| format!("failed to load SSH key: {error}"))?;
+        NativeSshAuth::KeyFile {
+            key_path,
+            passphrase,
+        } => {
+            let key_result = load_secret_key(key_path, passphrase.as_deref()).or_else(|error| {
+                if passphrase.is_some() {
+                    load_secret_key(key_path, None)
+                } else {
+                    Err(error)
+                }
+            });
+            let key_pair = match key_result {
+                Ok(key_pair) => key_pair,
+                Err(error)
+                    if prompt.is_some()
+                        && should_prompt_for_key_passphrase(&error.to_string(), passphrase.is_some()) =>
+                {
+                    let prompt = prompt.as_deref_mut().expect("prompt checked above");
+                    let entered = read_terminal_prompt(prompt, "SSH key passphrase: ", false).await?;
+                    load_secret_key(key_path, Some(&entered))
+                        .map_err(|error| format!("failed to decrypt SSH key: {error}"))?
+                }
+                Err(error) => return Err(format!("failed to load SSH key: {error}")),
+            };
             session
                 .authenticate_publickey(
                     user.to_string(),
@@ -2276,6 +2306,11 @@ async fn authenticate_native_ssh(
     }
 
     Ok(())
+}
+
+fn should_prompt_for_key_passphrase(error: &str, had_saved_passphrase: bool) -> bool {
+    let normalized = error.to_lowercase();
+    had_saved_passphrase || normalized.contains("encrypt") || normalized.contains("decrypt")
 }
 
 enum TerminalAuthOutcome {
@@ -2704,7 +2739,50 @@ async fn wait_for_substring(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::{env, fs, io::Write};
+    use std::{env, fs, io::Write, process::Command, time::SystemTime};
+
+    #[test]
+    fn unencrypted_key_ignores_an_extra_passphrase() {
+        let path = temporary_ssh_key_path("unencrypted");
+        generate_test_ssh_key(&path, "");
+
+        assert!(load_secret_key(&path, Some("unused-passphrase")).is_ok());
+
+        let _ = fs::remove_file(&path);
+        let _ = fs::remove_file(format!("{}.pub", path.display()));
+    }
+
+    #[test]
+    fn encrypted_key_load_errors_request_a_terminal_passphrase_prompt() {
+        let path = temporary_ssh_key_path("encrypted");
+        generate_test_ssh_key(&path, "correct-passphrase");
+
+        let missing = load_secret_key(&path, None).expect_err("encrypted key needs a passphrase");
+        assert!(should_prompt_for_key_passphrase(&missing.to_string(), false));
+        let wrong = load_secret_key(&path, Some("wrong-passphrase"))
+            .expect_err("wrong passphrase cannot decrypt key");
+        assert!(should_prompt_for_key_passphrase(&wrong.to_string(), true));
+
+        let _ = fs::remove_file(&path);
+        let _ = fs::remove_file(format!("{}.pub", path.display()));
+    }
+
+    fn temporary_ssh_key_path(label: &str) -> PathBuf {
+        let unique = SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("system clock")
+            .as_nanos();
+        std::env::temp_dir().join(format!("kkterm-{label}-{unique}"))
+    }
+
+    fn generate_test_ssh_key(path: &std::path::Path, passphrase: &str) {
+        let status = Command::new("ssh-keygen")
+            .args(["-q", "-t", "ed25519", "-N", passphrase, "-f"])
+            .arg(path)
+            .status()
+            .expect("ssh-keygen is available");
+        assert!(status.success(), "ssh-keygen creates the test key");
+    }
 
     #[test]
     fn milestone_b_prefers_in_process_rust_ssh() {
@@ -3234,6 +3312,7 @@ mod tests {
             "agent" | "sshAgent" | "ssh-agent" => Ok(NativeSshAuth::Agent),
             "keyFile" | "key-file" | "key" => Ok(NativeSshAuth::KeyFile {
                 key_path: required_measurement_env("KKTERM_SSH_KEY_PATH")?,
+                passphrase: optional_measurement_env("KKTERM_SSH_KEY_PASSPHRASE"),
             }),
             "password" => Ok(NativeSshAuth::Password {
                 password: Some(required_measurement_env("KKTERM_SSH_PASSWORD")?),

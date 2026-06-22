@@ -1,5 +1,6 @@
 type ConnectionSecretRequest = {
   password?: string;
+  keyPassphrase?: string;
   passwordCredentialId?: string;
   sshSocksProxyPassword?: string;
   urlPassword?: string;
@@ -17,7 +18,7 @@ export function connectionRequestNeedsCredentialStoreUnlock(
   request: ConnectionSecretRequest,
 ) {
   return Boolean(
-    request.password || request.urlPassword || request.sshSocksProxyPassword,
+    request.password || request.keyPassphrase || request.urlPassword || request.sshSocksProxyPassword,
   );
 }
 

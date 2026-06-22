@@ -323,6 +323,10 @@ fn resolve_one_ssh_spec(
     let auth = if key_path_present {
         NativeSshAuth::KeyFile {
             key_path: key_path.unwrap_or_default(),
+            passphrase: secrets
+                .read_connection_passphrase(host.connection_id.clone())
+                .ok()
+                .flatten(),
         }
     } else if auth_method == "password" {
         let password = password_credential_id

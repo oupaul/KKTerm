@@ -328,6 +328,15 @@ fn collect_connection_secrets(
                     });
                 }
             }
+            if connection_type == "ssh" {
+                if let Some(secret) = secrets.read_connection_passphrase(id.to_string())? {
+                    entries.push(SecretEntry {
+                        kind: "connectionPassphrase".to_string(),
+                        owner_id: id.to_string(),
+                        secret,
+                    });
+                }
+            }
             let has_socks = row
                 .get("ssh_socks_proxy")
                 .and_then(Value::as_str)
@@ -657,6 +666,7 @@ fn write_secrets(
     for entry in entries {
         let (table, kind) = match entry.kind.as_str() {
             "connectionPassword" => ("connection_password_credentials", "connectionPassword"),
+            "connectionPassphrase" => ("connections", "connectionPassphrase"),
             "urlPassword" => ("connections", "urlPassword"),
             "sshSocksProxyPassword" => ("connections", "sshSocksProxyPassword"),
             other => {
@@ -674,6 +684,9 @@ fn write_secrets(
         let request = match kind {
             "connectionPassword" => {
                 StoreSecretRequest::connection_password(owner, entry.secret.clone())
+            }
+            "connectionPassphrase" => {
+                StoreSecretRequest::connection_passphrase(owner, entry.secret.clone())
             }
             "urlPassword" => StoreSecretRequest::url_password(owner, entry.secret.clone()),
             _ => StoreSecretRequest::ssh_socks_proxy_password(owner, entry.secret.clone()),

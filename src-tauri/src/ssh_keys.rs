@@ -12,6 +12,7 @@ use tauri::AppHandle;
 #[serde(rename_all = "camelCase")]
 pub struct GenerateSshKeyPairRequest {
     email: String,
+    passphrase: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -65,7 +66,7 @@ pub fn generate_key_pair(
         .arg("-f")
         .arg(&private_key_path)
         .arg("-N")
-        .arg("")
+        .arg(request.passphrase.unwrap_or_default())
         .stdin(Stdio::null())
         .output()
         .map_err(|error| format!("failed to run ssh-keygen: {error}"))?;

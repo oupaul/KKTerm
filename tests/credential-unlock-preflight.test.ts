@@ -46,6 +46,10 @@ test("connection save preflights encrypted credential unlock before storing new 
     true,
   );
   assert.equal(
+    connectionRequestNeedsCredentialStoreUnlock({ keyPassphrase: "key-passphrase" }),
+    true,
+  );
+  assert.equal(
     connectionRequestNeedsCredentialStoreUnlock({ urlPassword: "url-password" }),
     true,
   );

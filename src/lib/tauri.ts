@@ -142,6 +142,7 @@ export interface StartTerminalSessionRequest {
   sshCompression?: boolean;
   authMethod?: "keyFile" | "password" | "agent";
   secretOwnerId?: string;
+  passphraseOwnerId?: string;
   shell?: string;
   serialLine?: string;
   serialSpeed?: number;
@@ -234,6 +235,7 @@ export interface StartSftpSessionRequest {
   sshSocksProxyInheritDefaults?: boolean;
   authMethod?: "keyFile" | "password" | "agent";
   secretOwnerId?: string;
+  passphraseOwnerId?: string;
   path?: string;
 }
 
@@ -1405,7 +1407,7 @@ type CommandMap = {
     };
   };
   generate_ssh_key_pair: {
-    args: { request: { email: string } };
+    args: { request: { email: string; passphrase?: string } };
     result: GeneratedSshKeyPair;
   };
   transfer_ssh_public_key: {
@@ -1837,6 +1839,7 @@ type CommandMap = {
   sshSocksProxyInheritDefaults?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
+        passphraseOwnerId?: string;
       };
     };
     result: TmuxSession[];
@@ -1855,6 +1858,7 @@ type CommandMap = {
   sshSocksProxyInheritDefaults?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
+        passphraseOwnerId?: string;
         tmuxSessionId: string;
         enabled: boolean;
       };
@@ -1875,6 +1879,7 @@ type CommandMap = {
   sshSocksProxyInheritDefaults?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
+        passphraseOwnerId?: string;
         tmuxSessionId: string;
         lines: number;
       };
@@ -1895,6 +1900,7 @@ type CommandMap = {
   sshSocksProxyInheritDefaults?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
+        passphraseOwnerId?: string;
         tmuxSessionId: string;
       };
     };
@@ -1914,6 +1920,7 @@ type CommandMap = {
   sshSocksProxyInheritDefaults?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
+        passphraseOwnerId?: string;
         tmuxSessionId: string;
         newTmuxSessionId: string;
       };
@@ -1934,6 +1941,7 @@ type CommandMap = {
   sshSocksProxyInheritDefaults?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
+        passphraseOwnerId?: string;
         tmuxSessionId: string;
         bufferLines?: number;
       };
@@ -1970,6 +1978,7 @@ type CommandMap = {
   sshSocksProxyInheritDefaults?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
+        passphraseOwnerId?: string;
       };
     };
     result: string;
@@ -1988,6 +1997,7 @@ type CommandMap = {
         sshSocksProxyInheritDefaults?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
+        passphraseOwnerId?: string;
       };
       sessionId?: string;
     };
@@ -2007,6 +2017,7 @@ type CommandMap = {
   sshSocksProxyInheritDefaults?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
+        passphraseOwnerId?: string;
       };
     };
     result: RemoteLoopbackPort[];
@@ -2025,6 +2036,7 @@ type CommandMap = {
         sshSocksProxyInheritDefaults?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
+        passphraseOwnerId?: string;
       };
       sessionId?: string;
     };
@@ -2049,6 +2061,7 @@ type CommandMap = {
   sshSocksProxyInheritDefaults?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
+        passphraseOwnerId?: string;
         forwardId?: string;
         mode?: "L" | "R" | "D";
         bind?: string;

@@ -7,6 +7,7 @@ import { createStoredSecretMask } from "../connectionSidebarState";
 export function PasswordField({
   autoComplete = "current-password",
   hasStoredSecret,
+  initialValue = "",
   label,
   name,
   placeholder,
@@ -14,12 +15,13 @@ export function PasswordField({
 }: {
   autoComplete?: string;
   hasStoredSecret: boolean;
+  initialValue?: string;
   label: string;
   name: string;
   placeholder: string;
   required?: boolean;
 }) {
-  const [value, setValue] = useState("");
+  const [value, setValue] = useState(initialValue);
   const [isFocused, setIsFocused] = useState(false);
   const [storedSecretMask, setStoredSecretMask] = useState(createStoredSecretMask);
   const shouldShowStoredSecretMask = hasStoredSecret && !isFocused && value.length === 0;
@@ -29,6 +31,10 @@ export function PasswordField({
       setStoredSecretMask(createStoredSecretMask());
     }
   }, [hasStoredSecret]);
+
+  useEffect(() => {
+    setValue(initialValue);
+  }, [initialValue]);
 
   return (
     <label>

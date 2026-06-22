@@ -9,8 +9,10 @@ import { PasswordCredentialSelect, PasswordField } from "./ConnectionPasswordFie
 export function SshConnectionFields({
   authMethod,
   hasStoredConnectionPassword,
+  hasStoredConnectionPassphrase,
   initialConnection,
   isEditMode,
+  keyPassphraseDraft,
   keyPath,
   matchingPasswordCredentials,
   onAuthMethodChange,
@@ -25,8 +27,10 @@ export function SshConnectionFields({
 }: {
   authMethod: "keyFile" | "password" | "agent";
   hasStoredConnectionPassword: boolean;
+  hasStoredConnectionPassphrase: boolean;
   initialConnection?: Connection;
   isEditMode: boolean;
+  keyPassphraseDraft: string;
   keyPath: string;
   matchingPasswordCredentials: StoredCredentialSummary[];
   onAuthMethodChange: (authMethod: "keyFile" | "password" | "agent") => void;
@@ -144,25 +148,34 @@ export function SshConnectionFields({
             />
           </>
         ) : authMethod === "keyFile" ? (
-          <label>
-            <span>{t("connections.keyPath")}</span>
-            <div className="input-with-button ssh-key-input-actions">
-              <input
-                name="keyPath"
-                {...technicalInputProps}
-                onChange={(event) => onKeyPathChange(event.currentTarget.value)}
-                placeholder={t("connections.keyPathExample")}
-                value={keyPath}
-              />
-              <button className="toolbar-button" onClick={onBrowseKeyFile} type="button">
-                {t("connections.browse")}
-              </button>
-              <button className="toolbar-button" onClick={onOpenKeyEmailDialog} type="button">
-                <KeyRound size={15} />
-                {t("settings.generateSshKey")}
-              </button>
-            </div>
-          </label>
+          <>
+            <label>
+              <span>{t("connections.keyPath")}</span>
+              <div className="input-with-button ssh-key-input-actions">
+                <input
+                  name="keyPath"
+                  {...technicalInputProps}
+                  onChange={(event) => onKeyPathChange(event.currentTarget.value)}
+                  placeholder={t("connections.keyPathExample")}
+                  value={keyPath}
+                />
+                <button className="toolbar-button" onClick={onBrowseKeyFile} type="button">
+                  {t("connections.browse")}
+                </button>
+                <button className="toolbar-button" onClick={onOpenKeyEmailDialog} type="button">
+                  <KeyRound size={15} />
+                  {t("settings.generateSshKey")}
+                </button>
+              </div>
+            </label>
+            <PasswordField
+              hasStoredSecret={isEditMode && hasStoredConnectionPassphrase}
+              initialValue={keyPassphraseDraft}
+              label={t("connections.keyPassphraseOptional")}
+              name="keyPassphrase"
+              placeholder={isEditMode ? t("connections.leaveBlankPassphrase") : t("connections.keyPassphraseHint")}
+            />
+          </>
         ) : null}
       </div>
     </>
@@ -270,17 +283,6 @@ export function SshConnectionOptions({
             />
           </label>
         </div>
-        <label className="connection-session-toggle">
-          <Layers className="option-glyph" size={17} aria-hidden />
-          <span>{t("connections.useTmux")}</span>
-          <input
-            checked={displayedUseTmuxSessions}
-            disabled={sshInheritsSettingsDefaults}
-            name="useTmuxSessions"
-            onChange={(event) => setUseTmuxSessionsDraft(event.currentTarget.checked)}
-            type="checkbox"
-          />
-        </label>
         <label className="connection-proxy-row">
           <span>{t("connections.sshCompression")}</span>
           <select
@@ -292,6 +294,17 @@ export function SshConnectionOptions({
             <option value="fast">{t("settings.sshCompressionFast")}</option>
             <option value="off">{t("settings.sshCompressionOff")}</option>
           </select>
+        </label>
+        <label className="connection-session-toggle">
+          <Layers className="option-glyph" size={17} aria-hidden />
+          <span>{t("connections.useTmux")}</span>
+          <input
+            checked={displayedUseTmuxSessions}
+            disabled={sshInheritsSettingsDefaults}
+            name="useTmuxSessions"
+            onChange={(event) => setUseTmuxSessionsDraft(event.currentTarget.checked)}
+            type="checkbox"
+          />
         </label>
       </div>
     </fieldset>

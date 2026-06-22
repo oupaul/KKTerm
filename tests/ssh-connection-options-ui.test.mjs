@@ -37,13 +37,33 @@ assert.match(
 const inheritDefaultsIndex = optionsSection.indexOf('name="sshSocksProxyInheritDefaults"');
 const proxyJumpIndex = optionsSection.indexOf('name="proxyJump"');
 const tmuxIndex = optionsSection.indexOf('name="useTmuxSessions"');
+const compressionIndex = optionsSection.indexOf('name="sshCompression"');
 assert.ok(
-  inheritDefaultsIndex !== -1 && proxyJumpIndex !== -1 && tmuxIndex !== -1,
-  "SSH option fields should include inherit defaults, ProxyJump, and tmux controls.",
+  inheritDefaultsIndex !== -1 && proxyJumpIndex !== -1 && compressionIndex !== -1 && tmuxIndex !== -1,
+  "SSH option fields should include inherit defaults, ProxyJump, compression, and tmux controls.",
 );
 assert.ok(
-  inheritDefaultsIndex < proxyJumpIndex && proxyJumpIndex < tmuxIndex,
-  "per-Connection tmux management should appear under default options and below ProxyJump.",
+  inheritDefaultsIndex < proxyJumpIndex && proxyJumpIndex < compressionIndex && compressionIndex < tmuxIndex,
+  "SSH compression should appear below ProxyJump and above per-Connection tmux management.",
+);
+
+const keyPathIndex = fieldsSection.indexOf('name="keyPath"');
+const keyPassphraseIndex = fieldsSection.indexOf('name="keyPassphrase"');
+assert.ok(
+  keyPathIndex !== -1 && keyPassphraseIndex > keyPathIndex,
+  "key-file authentication should show an optional passphrase field below the key path.",
+);
+
+assert.match(
+  sidebarSource,
+  /kind: "connectionPassphrase"[\s\S]*ownerId: connection\.id[\s\S]*secret: keyPassphrase/,
+  "the SSH key passphrase should be stored as a per-Connection secret.",
+);
+
+assert.match(
+  sidebarSource,
+  /request: \{ email, passphrase: keyGenerationPassphrase \|\| undefined \}/,
+  "generated SSH keys should receive the optional passphrase from the generation dialog.",
 );
 
 assert.match(

@@ -75,6 +75,7 @@ pub struct StartTerminalSessionRequest {
     pub ssh_compression: Option<bool>,
     pub auth_method: Option<String>,
     pub secret_owner_id: Option<String>,
+    pub passphrase_owner_id: Option<String>,
     pub shell: Option<String>,
     pub serial_line: Option<String>,
     pub serial_speed: Option<u32>,
@@ -113,6 +114,7 @@ pub struct TmuxConnectionRequest {
     pub ssh_socks_proxy_secret_owner_id: Option<String>,
     pub auth_method: Option<String>,
     pub secret_owner_id: Option<String>,
+    pub passphrase_owner_id: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -833,7 +835,8 @@ impl SessionManager {
         let auth_method = ssh_auth_method_for(&request, password.as_deref())?;
         if uses_native_ssh(&request, password.as_deref(), &auth_method, true) {
             let known_hosts_path = ssh::app_known_hosts_path(&app)?;
-            let auth = native_ssh_auth_for(&request, password, &auth_method)?;
+            let passphrase = connection_passphrase_for(secrets, &request);
+            let auth = native_ssh_auth_for(&request, password, passphrase, &auth_method)?;
             match ssh::start_native_terminal(
                 app.clone(),
                 ssh::NativeSshTerminalRequest {
@@ -1662,15 +1665,29 @@ fn ssh_auth_method_for(
 fn native_ssh_auth_for(
     request: &StartTerminalSessionRequest,
     password: Option<String>,
+    passphrase: Option<String>,
     auth_method: &SshAuthMethod,
 ) -> Result<ssh::NativeSshAuth, String> {
     match auth_method {
         SshAuthMethod::KeyFile => Ok(ssh::NativeSshAuth::KeyFile {
             key_path: request.key_path.clone().unwrap_or_default(),
+            passphrase,
         }),
         SshAuthMethod::Password => Ok(ssh::NativeSshAuth::Password { password }),
         SshAuthMethod::Agent => Ok(ssh::NativeSshAuth::Agent),
     }
+}
+
+fn connection_passphrase_for(
+    secrets: &secrets::Secrets,
+    request: &StartTerminalSessionRequest,
+) -> Option<String> {
+    request.passphrase_owner_id.as_ref().and_then(|owner_id| {
+        secrets
+            .read_connection_passphrase(owner_id.clone())
+            .ok()
+            .flatten()
+    })
 }
 
 fn should_fallback_to_interactive_ssh(error: &str) -> bool {
@@ -1756,7 +1773,12 @@ fn run_ssh_command(
             host: terminal_request.host.clone(),
             user: terminal_request.user.clone(),
             port: terminal_request.port.unwrap_or(22),
-            auth: native_ssh_auth_for(&terminal_request, password, &auth_method)?,
+            auth: native_ssh_auth_for(
+                &terminal_request,
+                password,
+                connection_passphrase_for(secrets, &terminal_request),
+                &auth_method,
+            )?,
             known_hosts_path: ssh::app_known_hosts_path(&app)?,
             command,
             timeout_seconds: timeout.map(|duration| duration.as_secs().max(1)),
@@ -1960,6 +1982,7 @@ fn terminal_request_for_tmux(request: &TmuxConnectionRequest) -> StartTerminalSe
         ssh_compression: None,
         auth_method: request.auth_method.clone(),
         secret_owner_id: request.secret_owner_id.clone(),
+        passphrase_owner_id: request.passphrase_owner_id.clone(),
         shell: None,
         serial_line: None,
         serial_speed: None,
@@ -3304,6 +3327,7 @@ mod tests {
             ssh_compression: None,
             auth_method: None,
             secret_owner_id: None,
+            passphrase_owner_id: None,
             shell: None,
             serial_line: None,
             serial_speed: None,
@@ -3442,6 +3466,7 @@ mod tests {
             ssh_compression: None,
             auth_method: None,
             secret_owner_id: None,
+            passphrase_owner_id: None,
             shell: None,
             serial_line: None,
             serial_speed: None,

@@ -27,6 +27,8 @@ This is not a `window.confirm`. Users explicitly approve the new key; the truste
 
 `terminal.selectKeyFile` is used by the keyfile picker when authenticating with a private key file. `terminal.sshContextUnavailable` is shown when the SSH transport cannot be reached (rare; surface to user as transport error, not a bug to silently retry).
 
+Add/Edit Connection places `connections.keyPassphraseOptional` directly below the private-key path. A value is stored as a per-Connection `connectionPassphrase` secret in the configured secret store, never in the Connection row or plaintext settings data. Leaving the field blank while editing preserves an existing passphrase. When an encrypted key has no stored passphrase, or the stored passphrase cannot decrypt it, the terminal prompts for `SSH key passphrase:` interactively before authentication. This fallback applies to terminal Sessions; non-interactive fresh connections such as SFTP and one-shot tmux/IT Ops commands require the saved passphrase. An entered passphrase does not prevent an unencrypted key from loading; it is ignored for that key.
+
 ## Idle behaviour
 
 A live SSH Session has **no app-side idle timeout**. Quiet and unfocused Sessions stay connected until the remote, network, or an explicit user close ends them.

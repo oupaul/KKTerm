@@ -1014,6 +1014,7 @@ export function AssistantPanel({
             ...resolveSshSocksProxyRequest(pane.connection, useWorkspaceStore.getState().sshSettings),
             authMethod: pane.connection.authMethod,
             secretOwnerId: connectionPasswordOwnerId(pane.connection),
+            passphraseOwnerId: pane.connection.type === "ssh" ? pane.connection.id : undefined,
             tmuxSessionId: pane.tmuxSessionId,
             bufferLines: useWorkspaceStore.getState().sshSettings.bufferLines,
           },

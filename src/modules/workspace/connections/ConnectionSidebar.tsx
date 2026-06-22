@@ -212,6 +212,7 @@ type ConnectionDialogRequest = CreateConnectionRequest & {
   iconBackgroundColor?: string | null;
   password?: string;
   passwordCredentialId?: string;
+  keyPassphrase?: string;
   sshSocksProxyPassword?: string;
   urlCredentialUsername?: string;
   urlPassword?: string;
@@ -504,7 +505,7 @@ export function ConnectionSidebar({
   // error to the appropriate surface. Returns the opened connection.
   async function quickConnect(
     candidate: Connection,
-    creds?: { password?: string; passwordCredentialId?: string | null; sshSocksProxyPassword?: string },
+    creds?: { password?: string; passwordCredentialId?: string | null; keyPassphrase?: string; sshSocksProxyPassword?: string },
   ): Promise<Connection> {
     if (!isTauriRuntime()) {
       openConnection(candidate);
@@ -534,6 +535,7 @@ export function ConnectionSidebar({
         await reloadConnectionGroups();
       }
       await saveSshSocksProxyPassword(connection, creds?.sshSocksProxyPassword);
+      await saveConnectionPassphrase(connection, creds?.keyPassphrase);
       openConnection(connection);
       rememberConnection(connection);
       return connection;
@@ -552,6 +554,7 @@ export function ConnectionSidebar({
       connection = await assignConnectionPasswordCredential(connection.id, creds.passwordCredentialId);
     }
     await saveSshSocksProxyPassword(connection, creds?.sshSocksProxyPassword);
+    await saveConnectionPassphrase(connection, creds?.keyPassphrase);
     await reloadConnectionGroups();
     notifyConnectionTreeInvalidated();
     openConnection(connection);
@@ -1191,9 +1194,22 @@ export function ConnectionSidebar({
     }
   }
 
+  async function saveConnectionPassphrase(connection: Connection, keyPassphrase?: string) {
+    if (!isTauriRuntime() || connection.type !== "ssh" || !keyPassphrase) {
+      return;
+    }
+    await invokeCommand("store_secret", {
+      request: {
+        kind: "connectionPassphrase",
+        ownerId: connection.id,
+        secret: keyPassphrase,
+      },
+    });
+  }
+
   async function handleConnectionSubmit(request: ConnectionDialogRequest) {
     setFormError("");
-    const { iconDataUrl, iconBackgroundColor, password, passwordCredentialId, sshSocksProxyPassword, urlCredentialUsername, urlPassword, ...connectionRequest } = request;
+    const { iconDataUrl, iconBackgroundColor, password, passwordCredentialId, keyPassphrase, sshSocksProxyPassword, urlCredentialUsername, urlPassword, ...connectionRequest } = request;
     const appearance = supportsTerminalAppearanceDefaults(connectionRequest.type)
       ? resolveDefaultTerminalAppearance(connectionRequest.type, sshSettings, terminalSettings)
       : null;
@@ -1227,6 +1243,7 @@ export function ConnectionSidebar({
           connection = await assignConnectionPasswordCredential(connection.id, passwordCredentialId);
         }
         await saveSshSocksProxyPassword(connection, sshSocksProxyPassword);
+        await saveConnectionPassphrase(connection, keyPassphrase);
         if (connection.type === "url" && urlCredentialUsername && urlPassword) {
           await storeUrlPassword(connection.id, urlPassword);
           await upsertUrlCredential(connection.id, urlCredentialUsername);
@@ -1273,7 +1290,7 @@ export function ConnectionSidebar({
       if (!(await ensureCredentialStoreReadyForConnectionRequest(request))) {
         return;
       }
-      await quickConnect(candidate, { password, passwordCredentialId, sshSocksProxyPassword });
+      await quickConnect(candidate, { password, passwordCredentialId, keyPassphrase, sshSocksProxyPassword });
       setFormMode(null);
       setNewConnectionType(null);
       setFormError("");
@@ -1293,7 +1310,7 @@ export function ConnectionSidebar({
       setFormError(t("connections.connectionNotFound"));
       return;
     }
-    const { iconDataUrl, iconBackgroundColor, password, passwordCredentialId, sshSocksProxyPassword, urlCredentialUsername, urlPassword, ...connectionRequest } = request;
+    const { iconDataUrl, iconBackgroundColor, password, passwordCredentialId, keyPassphrase, sshSocksProxyPassword, urlCredentialUsername, urlPassword, ...connectionRequest } = request;
     const updateRequest: UpdateConnectionRequest = {
       ...connectionRequest,
       id: currentConnection.connection.id,
@@ -1314,6 +1331,7 @@ export function ConnectionSidebar({
         connection = await assignConnectionPasswordCredential(connection.id, passwordCredentialId);
       }
       await saveSshSocksProxyPassword(connection, sshSocksProxyPassword);
+      await saveConnectionPassphrase(connection, keyPassphrase);
       if (connection.type === "url" && urlPassword) {
         await storeUrlPassword(connection.id, urlPassword);
       }
@@ -3918,11 +3936,15 @@ function ConnectionDialog({
   const [localFilesHomeDirectory, setLocalFilesHomeDirectory] = useState("");
   const [keyEmailDialogOpen, setKeyEmailDialogOpen] = useState(false);
   const [keyEmailDraft, setKeyEmailDraft] = useState("");
+  const [keyGenerationPassphrase, setKeyGenerationPassphrase] = useState("");
+  const [keyGenerationPassphraseConfirm, setKeyGenerationPassphraseConfirm] = useState("");
+  const [keyPassphraseDraft, setKeyPassphraseDraft] = useState("");
   const [isGeneratingKey, setIsGeneratingKey] = useState(false);
   const [keyGenerationError, setKeyGenerationError] = useState("");
   const [hasStoredConnectionPassword, setHasStoredConnectionPassword] = useState(
     Boolean(initialConnection?.hasPassword || initialConnection?.passwordCredentialId),
   );
+  const [hasStoredConnectionPassphrase, setHasStoredConnectionPassphrase] = useState(false);
   const [hasStoredUrlPassword, setHasStoredUrlPassword] = useState(
     Boolean(initialConnection?.hasUrlCredential),
   );
@@ -4016,6 +4038,18 @@ function ConnectionDialog({
         }
       })
       .catch(() => undefined);
+
+    if (initialConnection.type === "ssh") {
+      void invokeCommand("secret_exists", {
+        request: { kind: "connectionPassphrase", ownerId: initialConnection.id },
+      })
+        .then((presence) => {
+          if (!disposed) {
+            setHasStoredConnectionPassphrase(presence.exists);
+          }
+        })
+        .catch(() => undefined);
+    }
 
     return () => {
       disposed = true;
@@ -4117,6 +4151,7 @@ function ConnectionDialog({
         ? String(ftpPortForProtocolSelection(ftpProtocolSelection, rawPortValue, ftpTlsModeSelection))
         : rawPortValue;
     const password = String(form.get("password") ?? "");
+    const keyPassphrase = String(form.get("keyPassphrase") ?? "");
     const passwordCredentialId = password ? "" : String(form.get("passwordCredentialId") ?? "").trim();
     const keyPath = String(form.get("keyPath") ?? "").trim();
     const formProxyJump = String(form.get("proxyJump") ?? "").trim();
@@ -4173,6 +4208,7 @@ function ConnectionDialog({
       sshCompression: usesSshDefaults ? sshCompression : undefined,
       sshSocksProxyPassword: usesSshDefaults && !sshUsesDefaultOptions ? sshSocksProxyPassword || undefined : undefined,
       authMethod: usesSshDefaults ? authMethod : undefined,
+      keyPassphrase: usesSshDefaults && authMethod === "keyFile" ? keyPassphrase || undefined : undefined,
       useTmuxSessions: usesSshDefaults ? useTmuxSessions : undefined,
       usePsmuxSessions: connectionType === "local" ? usePsmuxSessions : undefined,
       localShell: connectionType === "local" ? selectedLocalShell || undefined : undefined,
@@ -4330,6 +4366,8 @@ function ConnectionDialog({
   function handleOpenKeyEmailDialog() {
     setKeyGenerationError("");
     setKeyEmailDraft("");
+    setKeyGenerationPassphrase("");
+    setKeyGenerationPassphraseConfirm("");
     setKeyEmailDialogOpen(true);
   }
 
@@ -4363,9 +4401,10 @@ function ConnectionDialog({
       setIsGeneratingKey(true);
       setKeyGenerationError("");
       const generated = await invokeCommand("generate_ssh_key_pair", {
-        request: { email },
+        request: { email, passphrase: keyGenerationPassphrase || undefined },
       });
       setKeyPath(generated.privateKeyPath);
+      setKeyPassphraseDraft(keyGenerationPassphrase);
       onGeneratedSshKey?.(generated);
       setKeyEmailDialogOpen(false);
       setKeyEmailDraft("");
@@ -4434,9 +4473,11 @@ function ConnectionDialog({
           <SshConnectionFields
             authMethod={authMethod}
             hasStoredConnectionPassword={hasStoredConnectionPassword}
+            hasStoredConnectionPassphrase={hasStoredConnectionPassphrase}
             initialConnection={initialConnection}
             isEditMode={isEditMode}
             keyPath={keyPath}
+            keyPassphraseDraft={keyPassphraseDraft}
             matchingPasswordCredentials={matchingPasswordCredentials}
             onAuthMethodChange={setAuthMethod}
             onBrowseKeyFile={() => void handleBrowseKeyFile()}
@@ -4657,6 +4698,8 @@ function ConnectionDialog({
           email={keyEmailDraft}
           error={keyGenerationError}
           isGenerating={isGeneratingKey}
+          passphrase={keyGenerationPassphrase}
+          passphraseConfirm={keyGenerationPassphraseConfirm}
           onCancel={() => {
             if (isGeneratingKey) {
               return;
@@ -4665,6 +4708,8 @@ function ConnectionDialog({
             setKeyEmailDraft("");
           }}
           onChange={setKeyEmailDraft}
+          onPassphraseChange={setKeyGenerationPassphrase}
+          onPassphraseConfirmChange={setKeyGenerationPassphraseConfirm}
           onSubmit={(email) => void handleGenerateKeyPair(email)}
         />
       ) : null}
@@ -4677,20 +4722,28 @@ function ConnectionSshKeyEmailDialog({
   email,
   error,
   isGenerating,
+  passphrase,
+  passphraseConfirm,
   onCancel,
   onChange,
+  onPassphraseChange,
+  onPassphraseConfirmChange,
   onSubmit,
 }: {
   email: string;
   error: string;
   isGenerating: boolean;
+  passphrase: string;
+  passphraseConfirm: string;
   onCancel: () => void;
   onChange: (email: string) => void;
+  onPassphraseChange: (passphrase: string) => void;
+  onPassphraseConfirmChange: (passphrase: string) => void;
   onSubmit: (email: string) => void;
 }) {
   const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
-  const canSubmit = Boolean(email.trim()) && !isGenerating;
+  const canSubmit = Boolean(email.trim()) && passphrase === passphraseConfirm && !isGenerating;
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -4734,6 +4787,27 @@ function ConnectionSshKeyEmailDialog({
             value={email}
           />
         </label>
+        <label>
+          <span>{t("settings.sshKeyPassphraseOptional")}</span>
+          <input
+            autoComplete="new-password"
+            onChange={(event) => onPassphraseChange(event.currentTarget.value)}
+            type="password"
+            value={passphrase}
+          />
+        </label>
+        <label>
+          <span>{t("settings.sshKeyPassphraseConfirm")}</span>
+          <input
+            autoComplete="new-password"
+            onChange={(event) => onPassphraseConfirmChange(event.currentTarget.value)}
+            type="password"
+            value={passphraseConfirm}
+          />
+        </label>
+        {passphrase !== passphraseConfirm ? (
+          <p className="form-error">{t("settings.sshKeyPassphraseMismatch")}</p>
+        ) : null}
         <LegacyDialogActions
           primary={<button className="approve-button" disabled={!canSubmit} type="submit">
             <KeyRound size={15} />
