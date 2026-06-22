@@ -6,7 +6,7 @@ import { invokeCommand, isTauriRuntime, selectKeyFile } from "../../lib/tauri";
 import { LegacyDialogActions } from "../../app/ui/dialog";
 import { SSH_SETTINGS_SOCKS_PROXY_PASSWORD_OWNER_ID } from "../workspace/connections/utils";
 import { useWorkspaceStore } from "../../store";
-import type { SshSettings as SshSettingsType } from "../../types";
+import type { SshCompressionMode, SshSettings as SshSettingsType } from "../../types";
 import { SettingsSectionHeader, useSettingsSaveRegistration } from "./shared";
 import { ToggleSwitch } from "./ToggleSwitch";
 
@@ -45,6 +45,7 @@ function normalizeSshSettingsDraft(settings: SshSettingsType, t: TFunction): Ssh
     defaultProxyJump,
     defaultSshSocksProxy,
     defaultSshSocksProxyUsername,
+    defaultSshCompression: settings.defaultSshCompression ?? "fast",
     bufferLines,
     defaultTransparency,
     defaultUseTmuxSessions: settings.defaultUseTmuxSessions ?? true,
@@ -331,6 +332,23 @@ export function SshSettings() {
               value={sshSocksProxyPasswordDraft}
             />
             <small className="field-hint">{t("settings.sshSocksProxyPasswordHint")}</small>
+          </label>
+          <label>
+            <span>{t("settings.sshCompression")}</span>
+            <select
+              onChange={(event) => {
+                const defaultSshCompression = event.currentTarget.value as SshCompressionMode;
+                setSshDraft((settings) => ({
+                  ...settings,
+                  defaultSshCompression,
+                }));
+              }}
+              value={sshDraft.defaultSshCompression ?? "fast"}
+            >
+              <option value="fast">{t("settings.sshCompressionFast")}</option>
+              <option value="off">{t("settings.sshCompressionOff")}</option>
+            </select>
+            <small className="field-hint">{t("settings.sshCompressionHint")}</small>
           </label>
         </div>
       </fieldset>

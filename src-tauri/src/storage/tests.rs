@@ -50,6 +50,7 @@ fn create_test_ssh_connection(
             ssh_socks_proxy: None,
             ssh_socks_proxy_username: None,
             ssh_socks_proxy_inherit_defaults: None,
+            ssh_compression: None,
             auth_method: Some("agent".to_string()),
             local_shell: None,
             local_startup_directory: None,
@@ -89,6 +90,7 @@ fn create_test_ssh_connection_in_workspace(
             ssh_socks_proxy: None,
             ssh_socks_proxy_username: None,
             ssh_socks_proxy_inherit_defaults: None,
+            ssh_compression: None,
             auth_method: Some("agent".to_string()),
             local_shell: None,
             local_startup_directory: None,
@@ -142,6 +144,7 @@ fn create_test_local_connection(storage: &Storage, name: &str, shell: &str) -> S
             ssh_socks_proxy: None,
             ssh_socks_proxy_username: None,
             ssh_socks_proxy_inherit_defaults: None,
+            ssh_compression: None,
             auth_method: Some("keyFile".to_string()),
             local_shell: Some(shell.to_string()),
             local_startup_directory: None,
@@ -230,6 +233,7 @@ fn create_connection_can_persist_root_ssh_connection() {
             ssh_socks_proxy: None,
             ssh_socks_proxy_username: None,
             ssh_socks_proxy_inherit_defaults: None,
+            ssh_compression: None,
             auth_method: Some("keyFile".to_string()),
             local_shell: None,
             local_startup_directory: None,
@@ -267,6 +271,94 @@ fn create_connection_can_persist_root_ssh_connection() {
 }
 
 #[test]
+fn ssh_compression_override_round_trips_and_validates() {
+    let storage = Storage::open(temp_db_path("ssh-compression")).expect("storage opens");
+
+    // Default (no override) persists as NULL so the connection inherits the
+    // global SSH compression default at launch.
+    let inheriting = create_test_ssh_connection(&storage, "Inherits", "inherit.internal", None);
+    assert_eq!(inheriting.ssh_compression, None);
+
+    // An explicit override is stored verbatim and survives a reload.
+    let overridden = storage
+        .create_connection(CreateConnectionRequest {
+            name: "No Compression".to_string(),
+            host: "raw.internal".to_string(),
+            user: "admin".to_string(),
+            connection_type: "ssh".to_string(),
+            folder_id: None,
+            port: None,
+            key_path: None,
+            proxy_jump: None,
+            ssh_socks_proxy: None,
+            ssh_socks_proxy_username: None,
+            ssh_socks_proxy_inherit_defaults: None,
+            ssh_compression: Some("off".to_string()),
+            auth_method: Some("agent".to_string()),
+            local_shell: None,
+            local_startup_directory: None,
+            local_startup_script: None,
+            url: None,
+            data_partition: None,
+            use_tmux_sessions: None,
+            use_psmux_sessions: None,
+            serial_line: None,
+            serial_speed: None,
+            rdp_options: None,
+            vnc_options: None,
+            ftp_options: None,
+            file_view_open_external: false,
+            ssh_port_forwardings: None,
+            workspace_id: None,
+        })
+        .expect("connection is created");
+    assert_eq!(overridden.ssh_compression.as_deref(), Some("off"));
+
+    let reloaded = storage
+        .list_connection_tree()
+        .expect("connection tree loads");
+    let reloaded = reloaded
+        .connections
+        .iter()
+        .find(|connection| connection.host == "raw.internal")
+        .expect("override connection exists");
+    assert_eq!(reloaded.ssh_compression.as_deref(), Some("off"));
+
+    // Only 'off' and 'fast' are accepted.
+    let invalid = storage.create_connection(CreateConnectionRequest {
+        name: "Bad".to_string(),
+        host: "bad.internal".to_string(),
+        user: "admin".to_string(),
+        connection_type: "ssh".to_string(),
+        folder_id: None,
+        port: None,
+        key_path: None,
+        proxy_jump: None,
+        ssh_socks_proxy: None,
+        ssh_socks_proxy_username: None,
+        ssh_socks_proxy_inherit_defaults: None,
+        ssh_compression: Some("turbo".to_string()),
+        auth_method: Some("agent".to_string()),
+        local_shell: None,
+        local_startup_directory: None,
+        local_startup_script: None,
+        url: None,
+        data_partition: None,
+        use_tmux_sessions: None,
+        use_psmux_sessions: None,
+        serial_line: None,
+        serial_speed: None,
+        rdp_options: None,
+        vnc_options: None,
+        ftp_options: None,
+        file_view_open_external: false,
+        ssh_port_forwardings: None,
+        workspace_id: None,
+    });
+    assert!(invalid.is_err(), "invalid compression value must be rejected");
+}
+
+#[test]
 fn ssh_socks_proxy_username_round_trips_without_storing_passwords_in_sqlite() {
     let storage =
         Storage::open(temp_db_path("ssh-socks-proxy-credentials")).expect("storage opens");
@@ -284,6 +376,7 @@ fn ssh_socks_proxy_username_round_trips_without_storing_passwords_in_sqlite() {
             ssh_socks_proxy: Some("  127.0.0.1:1080  ".to_string()),
             ssh_socks_proxy_username: Some("  proxy-user  ".to_string()),
             ssh_socks_proxy_inherit_defaults: Some(false),
+            ssh_compression: None,
             auth_method: Some("agent".to_string()),
             local_shell: None,
             local_startup_directory: None,
@@ -368,6 +461,7 @@ fn local_connection_persists_startup_directory_and_script() {
             ssh_socks_proxy: None,
             ssh_socks_proxy_username: None,
             ssh_socks_proxy_inherit_defaults: None,
+            ssh_compression: None,
             auth_method: None,
             local_shell: Some("powershell.exe".to_string()),
             local_startup_directory: Some("  C:\\Work\\KKTerm  ".to_string()),
@@ -431,6 +525,7 @@ fn local_connection_persists_psmux_preference() {
             ssh_socks_proxy: None,
             ssh_socks_proxy_username: None,
             ssh_socks_proxy_inherit_defaults: None,
+            ssh_compression: None,
             auth_method: None,
             local_shell: Some("pwsh.exe".to_string()),
             local_startup_directory: None,
@@ -474,6 +569,7 @@ fn local_connection_persists_psmux_preference() {
             ssh_socks_proxy: None,
             ssh_socks_proxy_username: None,
             ssh_socks_proxy_inherit_defaults: None,
+            ssh_compression: None,
             auth_method: Some("agent".to_string()),
             local_shell: None,
             local_startup_directory: None,
@@ -512,6 +608,7 @@ fn local_files_connection_can_be_created_with_starting_directory() {
             ssh_socks_proxy: None,
             ssh_socks_proxy_username: None,
             ssh_socks_proxy_inherit_defaults: None,
+            ssh_compression: None,
             auth_method: None,
             local_shell: None,
             local_startup_directory: Some("  C:\\Users\\user\\.claude  ".to_string()),
@@ -557,6 +654,7 @@ fn file_view_connection_persists_file_path_and_no_host() {
             ssh_socks_proxy: None,
             ssh_socks_proxy_username: None,
             ssh_socks_proxy_inherit_defaults: None,
+            ssh_compression: None,
             auth_method: None,
             local_shell: None,
             // The Document reuses the local-path slot to store the target
@@ -620,6 +718,7 @@ fn create_connection_can_persist_remote_desktop_connections() {
             ssh_socks_proxy: None,
             ssh_socks_proxy_username: None,
             ssh_socks_proxy_inherit_defaults: None,
+            ssh_compression: None,
             auth_method: Some("password".to_string()),
             local_shell: None,
             local_startup_directory: None,
@@ -660,6 +759,7 @@ fn create_connection_can_persist_remote_desktop_connections() {
             ssh_socks_proxy: None,
             ssh_socks_proxy_username: None,
             ssh_socks_proxy_inherit_defaults: None,
+            ssh_compression: None,
             auth_method: None,
             local_shell: None,
             local_startup_directory: None,
@@ -701,6 +801,7 @@ fn create_connection_can_persist_telnet_and_serial_connections() {
             ssh_socks_proxy: None,
             ssh_socks_proxy_username: None,
             ssh_socks_proxy_inherit_defaults: None,
+            ssh_compression: None,
             auth_method: Some("agent".to_string()),
             local_shell: None,
             local_startup_directory: None,
@@ -739,6 +840,7 @@ fn create_connection_can_persist_telnet_and_serial_connections() {
             ssh_socks_proxy: None,
             ssh_socks_proxy_username: None,
             ssh_socks_proxy_inherit_defaults: None,
+            ssh_compression: None,
             auth_method: None,
             local_shell: None,
             local_startup_directory: None,
@@ -782,6 +884,7 @@ fn url_credentials_round_trip_without_storing_passwords_in_sqlite() {
             ssh_socks_proxy: None,
             ssh_socks_proxy_username: None,
             ssh_socks_proxy_inherit_defaults: None,
+            ssh_compression: None,
             auth_method: None,
             local_shell: None,
             local_startup_directory: None,
@@ -997,6 +1100,7 @@ fn stored_credential_candidates_include_connection_url_and_widget_metadata() {
             ssh_socks_proxy: None,
             ssh_socks_proxy_username: None,
             ssh_socks_proxy_inherit_defaults: None,
+            ssh_compression: None,
             auth_method: Some("password".to_string()),
             local_shell: None,
             local_startup_directory: None,
@@ -1028,6 +1132,7 @@ fn stored_credential_candidates_include_connection_url_and_widget_metadata() {
             ssh_socks_proxy: None,
             ssh_socks_proxy_username: None,
             ssh_socks_proxy_inherit_defaults: None,
+            ssh_compression: None,
             auth_method: None,
             local_shell: None,
             local_startup_directory: None,
@@ -1145,6 +1250,7 @@ fn assigning_connection_password_credential_requires_matching_type() {
             ssh_socks_proxy: None,
             ssh_socks_proxy_username: None,
             ssh_socks_proxy_inherit_defaults: None,
+            ssh_compression: None,
             auth_method: None,
             local_shell: None,
             local_startup_directory: None,
@@ -1283,6 +1389,7 @@ fn update_connection_edits_fields_and_moves_folder() {
             ssh_socks_proxy: None,
             ssh_socks_proxy_username: None,
             ssh_socks_proxy_inherit_defaults: None,
+            ssh_compression: None,
             auth_method: Some("keyFile".to_string()),
             local_shell: None,
             local_startup_directory: None,
@@ -1344,6 +1451,7 @@ fn update_connection_preserves_existing_tmux_preference_when_omitted() {
             ssh_socks_proxy: connection.ssh_socks_proxy.clone(),
             ssh_socks_proxy_username: connection.ssh_socks_proxy_username.clone(),
             ssh_socks_proxy_inherit_defaults: Some(connection.ssh_socks_proxy_inherit_defaults),
+            ssh_compression: None,
             auth_method: Some(connection.auth_method.clone()),
             local_shell: None,
             local_startup_directory: None,
@@ -1376,6 +1484,7 @@ fn update_connection_preserves_existing_tmux_preference_when_omitted() {
             ssh_socks_proxy: disabled.ssh_socks_proxy.clone(),
             ssh_socks_proxy_username: disabled.ssh_socks_proxy_username.clone(),
             ssh_socks_proxy_inherit_defaults: Some(disabled.ssh_socks_proxy_inherit_defaults),
+            ssh_compression: None,
             auth_method: Some(disabled.auth_method.clone()),
             local_shell: None,
             local_startup_directory: None,
@@ -1632,6 +1741,7 @@ fn deleting_folder_removes_connections_in_that_folder() {
             ssh_socks_proxy: None,
             ssh_socks_proxy_username: None,
             ssh_socks_proxy_inherit_defaults: None,
+            ssh_compression: None,
             auth_method: Some("agent".to_string()),
             local_shell: None,
             local_startup_directory: None,
@@ -2627,6 +2737,7 @@ fn remote_desktop_connection_options_are_optional_protocol_overrides() {
             ssh_socks_proxy: None,
             ssh_socks_proxy_username: None,
             ssh_socks_proxy_inherit_defaults: None,
+            ssh_compression: None,
             auth_method: None,
             local_shell: None,
             local_startup_directory: None,
@@ -2679,6 +2790,7 @@ fn remote_desktop_connection_options_are_optional_protocol_overrides() {
             ssh_socks_proxy: None,
             ssh_socks_proxy_username: None,
             ssh_socks_proxy_inherit_defaults: None,
+            ssh_compression: None,
             auth_method: None,
             local_shell: None,
             local_startup_directory: None,

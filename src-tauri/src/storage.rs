@@ -54,6 +54,7 @@ CREATE TABLE IF NOT EXISTS connections (
     ssh_socks_proxy TEXT,
     ssh_socks_proxy_username TEXT,
     ssh_socks_proxy_inherit_defaults INTEGER NOT NULL DEFAULT 1,
+    ssh_compression TEXT,
     auth_method TEXT NOT NULL DEFAULT 'keyFile',
     local_shell TEXT,
     local_startup_directory TEXT,
@@ -1091,6 +1092,8 @@ pub struct SavedConnection {
     ssh_socks_proxy: Option<String>,
     ssh_socks_proxy_username: Option<String>,
     ssh_socks_proxy_inherit_defaults: bool,
+    #[serde(default)]
+    ssh_compression: Option<String>,
     auth_method: String,
     local_shell: Option<String>,
     local_startup_directory: Option<String>,
@@ -1190,6 +1193,8 @@ pub struct CreateConnectionRequest {
     #[serde(default)]
     ssh_socks_proxy_username: Option<String>,
     ssh_socks_proxy_inherit_defaults: Option<bool>,
+    #[serde(default)]
+    ssh_compression: Option<String>,
     auth_method: Option<String>,
     local_shell: Option<String>,
     #[serde(default)]
@@ -1232,6 +1237,8 @@ pub struct UpdateConnectionRequest {
     #[serde(default)]
     ssh_socks_proxy_username: Option<String>,
     ssh_socks_proxy_inherit_defaults: Option<bool>,
+    #[serde(default)]
+    ssh_compression: Option<String>,
     auth_method: Option<String>,
     local_shell: Option<String>,
     #[serde(default)]
@@ -2086,6 +2093,12 @@ impl Storage {
             "file_view_open_external",
             "INTEGER NOT NULL DEFAULT 0",
         )?;
+        // Per-connection SSH transport compression override (`ssh -XC` parity).
+        // Added after the v25 rebuild — which freezes its own column list — so
+        // it must be ensured here, past every connections-table rebuild, or a
+        // fresh install (still at user_version 0 when v25 runs) loses it. NULL
+        // inherits the global SSH default; 'off'/'fast' force a choice.
+        ensure_column(&connection, "connections", "ssh_compression", "TEXT")?;
         // v26: imported Dashboard script widgets get a durable origin marker
         // so the catalog can badge them after restart. SQLite cannot alter a
         // CHECK constraint in place, so rebuild just this table to admit the
@@ -2931,7 +2944,7 @@ fn list_root_connections_for_workspace(
     let mut statement = connection
         .prepare(
             "SELECT connections.id, name, tab_title, host, connections.username, port, key_path, proxy_jump, ssh_socks_proxy, ssh_socks_proxy_username, ssh_socks_proxy_inherit_defaults, auth_method, local_shell, local_startup_directory, local_startup_script, url, data_partition, use_tmux_sessions, tmux_connection_id, connection_type, serial_line, serial_speed, rdp_options, vnc_options, ftp_options, icon_data_url, icon_background_color, terminal_opacity, terminal_background_json, password_credential_id,
-                    url_credentials.username, file_browser_view_options_json, file_view_open_external, ssh_port_forwardings_json, use_psmux_sessions
+                    url_credentials.username, file_browser_view_options_json, file_view_open_external, ssh_port_forwardings_json, use_psmux_sessions, ssh_compression
              FROM connections
              LEFT JOIN url_credentials ON url_credentials.connection_id = connections.id
              WHERE folder_id IS NULL AND workspace_id = ?1
@@ -2994,7 +3007,7 @@ fn list_connections_for_folder(
     let mut statement = connection
         .prepare(&format!(
             "SELECT connections.id, name, tab_title, host, connections.username, port, key_path, proxy_jump, ssh_socks_proxy, ssh_socks_proxy_username, ssh_socks_proxy_inherit_defaults, auth_method, local_shell, local_startup_directory, local_startup_script, url, data_partition, use_tmux_sessions, tmux_connection_id, connection_type, serial_line, serial_speed, rdp_options, vnc_options, ftp_options, icon_data_url, icon_background_color, terminal_opacity, terminal_background_json, password_credential_id,
-                    url_credentials.username, file_browser_view_options_json, file_view_open_external, ssh_port_forwardings_json, use_psmux_sessions
+                    url_credentials.username, file_browser_view_options_json, file_view_open_external, ssh_port_forwardings_json, use_psmux_sessions, ssh_compression
              FROM connections
              LEFT JOIN url_credentials ON url_credentials.connection_id = connections.id
              WHERE {where_clause}
@@ -3370,7 +3383,7 @@ fn get_connection_by_id(
     let saved_connection = connection
         .query_row(
             "SELECT connections.id, name, tab_title, host, connections.username, port, key_path, proxy_jump, ssh_socks_proxy, ssh_socks_proxy_username, ssh_socks_proxy_inherit_defaults, auth_method, local_shell, local_startup_directory, local_startup_script, url, data_partition, use_tmux_sessions, tmux_connection_id, connection_type, serial_line, serial_speed, rdp_options, vnc_options, ftp_options, icon_data_url, icon_background_color, terminal_opacity, terminal_background_json, password_credential_id,
-                    url_credentials.username, file_browser_view_options_json, file_view_open_external, ssh_port_forwardings_json, use_psmux_sessions
+                    url_credentials.username, file_browser_view_options_json, file_view_open_external, ssh_port_forwardings_json, use_psmux_sessions, ssh_compression
              FROM connections
              LEFT JOIN url_credentials ON url_credentials.connection_id = connections.id
              WHERE connections.id = ?1",
@@ -3390,6 +3403,7 @@ fn get_connection_by_id(
                     ssh_socks_proxy: row.get(8)?,
                     ssh_socks_proxy_username: row.get(9)?,
                     ssh_socks_proxy_inherit_defaults: row.get(10)?,
+                    ssh_compression: row.get(35)?,
                     auth_method: row.get(11)?,
                     local_shell: row.get(12)?,
                     local_startup_directory: row.get(13)?,
@@ -3445,6 +3459,7 @@ fn saved_connection_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<SavedC
         ssh_socks_proxy: row.get(8)?,
         ssh_socks_proxy_username: row.get(9)?,
         ssh_socks_proxy_inherit_defaults: row.get(10)?,
+        ssh_compression: row.get(35)?,
         auth_method: row.get(11)?,
         local_shell: row.get(12)?,
         local_startup_directory: row.get(13)?,
@@ -3667,6 +3682,27 @@ fn normalize_ssh_optional_field(value: Option<String>, connection_type: &str) ->
     value
         .map(|value| value.trim().to_string())
         .filter(|value| !value.is_empty())
+}
+
+/// Normalize a per-connection SSH compression override. Only SSH connections
+/// carry it; `None` (or any non-SSH type) means "inherit the global default".
+/// The only meaningful explicit values are `off` and `fast` (russh's zlib level
+/// is fixed at `fast`), so anything else is rejected.
+fn normalize_ssh_compression(
+    value: Option<String>,
+    connection_type: &str,
+) -> Result<Option<String>, String> {
+    if connection_type != "ssh" {
+        return Ok(None);
+    }
+    match value.map(|value| value.trim().to_string()) {
+        None => Ok(None),
+        Some(value) if value.is_empty() => Ok(None),
+        Some(value) if value == "off" || value == "fast" => Ok(Some(value)),
+        Some(other) => Err(format!(
+            "invalid SSH compression value '{other}': expected 'off' or 'fast'"
+        )),
+    }
 }
 
 fn normalize_connection_port(value: Option<u16>, connection_type: &str) -> Option<u16> {

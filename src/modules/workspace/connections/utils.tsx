@@ -286,6 +286,20 @@ export function resolveSshSocksProxy(
   return trimmed ? trimmed : undefined;
 }
 
+/**
+ * Resolve the effective SSH transport compression for a launch: the
+ * per-Connection override when set, otherwise the global SSH default. Returns
+ * `true` when zlib compression (russh's fast level, i.e. `ssh -XC`) should be
+ * negotiated.
+ */
+export function resolveSshCompression(
+  connection: Pick<Connection, "sshCompression">,
+  sshSettings: Pick<SshSettings, "defaultSshCompression">,
+): boolean {
+  const mode = connection.sshCompression ?? sshSettings.defaultSshCompression ?? "fast";
+  return mode === "fast";
+}
+
 export function resolveSshSocksProxyRequest(
   connection: Pick<Connection, "id" | "sshSocksProxy" | "sshSocksProxyUsername" | "sshSocksProxyInheritDefaults">,
   sshSettings: Pick<SshSettings, "defaultSshSocksProxy" | "defaultSshSocksProxyUsername">,

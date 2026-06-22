@@ -139,6 +139,7 @@ export interface StartTerminalSessionRequest {
   sshSocksProxyUsername?: string;
   sshSocksProxySecretOwnerId?: string;
   sshSocksProxyInheritDefaults?: boolean;
+  sshCompression?: boolean;
   authMethod?: "keyFile" | "password" | "agent";
   secretOwnerId?: string;
   shell?: string;

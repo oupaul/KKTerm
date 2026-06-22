@@ -107,6 +107,7 @@ export const defaultSshSettings: SshSettings = {
   defaultProxyJump: "",
   defaultSshSocksProxy: "",
   defaultSshSocksProxyUsername: "",
+  defaultSshCompression: "fast",
   bufferLines: 5000,
   defaultTransparency: 50,
   defaultUseTmuxSessions: true,

@@ -71,6 +71,8 @@ pub struct StartTerminalSessionRequest {
     pub ssh_socks_proxy: Option<String>,
     pub ssh_socks_proxy_username: Option<String>,
     pub ssh_socks_proxy_secret_owner_id: Option<String>,
+    #[serde(default)]
+    pub ssh_compression: Option<bool>,
     pub auth_method: Option<String>,
     pub secret_owner_id: Option<String>,
     pub shell: Option<String>,
@@ -850,6 +852,7 @@ impl SessionManager {
                     x11_forwarding: managed_x_server_display
                         .map(|display| ssh::NativeSshX11Forwarding { display }),
                     socks_proxy: request.ssh_socks_proxy.clone(),
+                    compression: request.ssh_compression.unwrap_or(true),
                 },
             ) {
                 Ok(session) => {
@@ -1951,6 +1954,7 @@ fn terminal_request_for_tmux(request: &TmuxConnectionRequest) -> StartTerminalSe
         ssh_socks_proxy: request.ssh_socks_proxy.clone(),
         ssh_socks_proxy_username: request.ssh_socks_proxy_username.clone(),
         ssh_socks_proxy_secret_owner_id: request.ssh_socks_proxy_secret_owner_id.clone(),
+        ssh_compression: None,
         auth_method: request.auth_method.clone(),
         secret_owner_id: request.secret_owner_id.clone(),
         shell: None,
@@ -3171,6 +3175,7 @@ mod tests {
             ssh_socks_proxy: None,
             ssh_socks_proxy_username: None,
             ssh_socks_proxy_secret_owner_id: None,
+            ssh_compression: None,
             auth_method: None,
             secret_owner_id: None,
             shell: None,
@@ -3308,6 +3313,7 @@ mod tests {
             ssh_socks_proxy: None,
             ssh_socks_proxy_username: None,
             ssh_socks_proxy_secret_owner_id: None,
+            ssh_compression: None,
             auth_method: None,
             secret_owner_id: None,
             shell: None,
