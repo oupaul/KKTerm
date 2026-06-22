@@ -1,4 +1,7 @@
 {
+  "build": {
+    "beforeBundleCommand": "zsh scripts/prepare-macos-sidecars.sh"
+  },
   "bundle": {
     "createUpdaterArtifacts": true
   },
