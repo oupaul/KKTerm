@@ -3,6 +3,68 @@
 All notable changes to KKTerm are documented here.
 
 ## Direct Downloads
+* 💻 [Download for Windows (64-bit)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.100/kkterm-0.1.100-windows-x64-setup.exe)
+* 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.100/kkterm-0.1.100-windows-arm64-setup.exe)
+
+## Highlights
+
+- **Session Status Bar notice no longer gets buried** behind dialog backdrops—your “up to date” / notice popups stay on top (fix in [#412](https://github.com/ryantsai/KKTerm/pull/412) by @ryantsai).
+- **SSH connections with compression** now negotiate more like `ssh -XC`, with a **per-host toggle** (feat in [#414](https://github.com/ryantsai/KKTerm/pull/414) by @ryantsai).
+- **SSH key passphrases supported** end-to-end in the connection flow (codex support in [#425](https://github.com/ryantsai/KKTerm/pull/425) by @ryantsai; reported by @catyku).
+- **macOS universal build**: one macOS download for both **Intel + Apple Silicon** (release in [#413](https://github.com/ryantsai/KKTerm/pull/413) by @ryantsai).
+
+## New
+
+- **Per-host SSH compression toggle** for Connections (feat in [#414](https://github.com/ryantsai/KKTerm/pull/414) by @ryantsai).
+- **SSH key passphrase support** for Connections (codex support in [#425](https://github.com/ryantsai/KKTerm/pull/425) by @ryantsai; issue reporter: @catyku).
+
+## Improved
+
+- **Localized SSH compression & IT Ops / settings strings** across **all 13 locales** (localize in [#421](https://github.com/ryantsai/KKTerm/pull/421) by @ryantsai).
+- **Connection dialog text + URL option labels** refreshed via localization updates (feat in [#414](https://github.com/ryantsai/KKTerm/pull/414) and related work in [#421](https://github.com/ryantsai/KKTerm/pull/421) by @ryantsai).
+- **README feature highlights refreshed** with per-section screenshot placeholders (docs in [#416](https://github.com/ryantsai/KKTerm/pull/416) by @ryantsai).
+
+## Fixed
+
+- **Windows local shell env now built from the registry** so local PowerShell/pwsh sessions pick up user-defined variables correctly (fix in [#424](https://github.com/ryantsai/KKTerm/pull/424) by @ryantsai; issue reporter: @JosephCLJ).
+- **Status Bar transient popup stacking fixed** so it stays above dialog backdrops (fix in [#412](https://github.com/ryantsai/KKTerm/pull/412) by @ryantsai).
+
+## Internal
+
+- **macOS universal build guard**: clearer local build behavior when the `x86_64` Rust target isn’t installed (build guard in [#415](https://github.com/ryantsai/KKTerm/pull/415) by @ryantsai).
+- **Release packaging updated for macOS universal distribution** (release in [#413](https://github.com/ryantsai/KKTerm/pull/413) by @ryantsai).
+
+---
+
+## 亮點
+
+- **工作階段（Session）的狀態列（Status Bar）通知不再被對話框遮住**： 「已是最新」/通知彈出會維持在最上層（修復於 [#412](https://github.com/ryantsai/KKTerm/pull/412)，作者 @ryantsai）。
+- **SSH 連線的壓縮（compression）協商**更貼近 `ssh -XC`，並提供**每台主機（per-host）切換**（功能於 [#414](https://github.com/ryantsai/KKTerm/pull/414)，作者 @ryantsai）。
+- **支援 SSH 金鑰密碼（passphrase）**：連線流程中的輸入/處理完整到位（codex 於 [#425](https://github.com/ryantsai/KKTerm/pull/425)，作者 @ryantsai；問題回報者 @catyku）。
+- **macOS 通用版（Universal）發佈**：同一個 macOS 下載同時適用 **Intel + Apple Silicon**（發佈於 [#413](https://github.com/ryantsai/KKTerm/pull/413)，作者 @ryantsai）。
+
+## 新增
+
+- **每台主機的 SSH 壓縮切換**（Connections）（功能於 [#414](https://github.com/ryantsai/KKTerm/pull/414)，作者 @ryantsai）。
+- **支援 SSH 金鑰密碼**（Connections）（codex 於 [#425](https://github.com/ryantsai/KKTerm/pull/425)，作者 @ryantsai；問題回報者 @catyku）。
+
+## 改進
+
+- **SSH 壓縮與 IT Ops / 設定字串**已翻譯到**全部 13 個語系**（localize 於 [#421](https://github.com/ryantsai/KKTerm/pull/421)，作者 @ryantsai）。
+- **連線對話框（Connection dialog）文字與 URL 選項標籤**透過在地化更新整理（與 [#414](https://github.com/ryantsai/KKTerm/pull/414) 及 [#421](https://github.com/ryantsai/KKTerm/pull/421) 的相關工作一起完成）。
+- **README 功能亮點更新**並加入各章節的截圖佔位區（docs 於 [#416](https://github.com/ryantsai/KKTerm/pull/416)，作者 @ryantsai）。
+
+## 修正
+
+- **Windows 本機 shell 環境改由登錄檔（registry）建置**：讓本機 PowerShell/pwsh 會正確取得使用者自訂變數（修復於 [#424](https://github.com/ryantsai/KKTerm/pull/424)，作者 @ryantsai；問題回報者 @JosephCLJ）。
+- **修正 Status Bar 彈出層級堆疊（stacking）**：確保不會被對話框底幕（dialog backdrops）蓋住（修復於 [#412](https://github.com/ryantsai/KKTerm/pull/412)，作者 @ryantsai）。
+
+## Internal
+
+- **macOS 通用版本機建置保護（guard）**：當 `x86_64` Rust target 尚未安裝時，建置行為會更清楚（build guard 於 [#415](https://github.com/ryantsai/KKTerm/pull/415)，作者 @ryantsai）。
+- **macOS 通用版發佈封裝流程更新**（發佈於 [#413](https://github.com/ryantsai/KKTerm/pull/413)，作者 @ryantsai）。
+
+## Direct Downloads
 * 💻 [Download for Windows (64-bit)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.99/kkterm-0.1.99-windows-x64-setup.exe)
 * 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.99/kkterm-0.1.99-windows-arm64-setup.exe)
 
