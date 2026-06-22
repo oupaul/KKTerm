@@ -544,10 +544,37 @@
       "hash": "ハッシュ"
     },
     "convertersTitle": "変換ツール",
-    "convertersSummary": "メートル法、ヤード・ポンド法、ローカル単位で単位と通貨を変換します。",
+    "convertersSummary": "単位、通貨、画像を 1 つのウィジェットで変換します。",
     "convertersTab": {
       "unit": "単位",
-      "currency": "通貨"
+      "currency": "通貨",
+      "image": "画像"
+    },
+    "imageConverter": {
+      "imageFiles": "画像ファイル",
+      "chooseImage": "画像を選択",
+      "outputFormat": "出力形式",
+      "quality": "品質 {{value}}%",
+      "pngLossless": "PNG は可逆圧縮です",
+      "resizeMode": "サイズ変更モード",
+      "exact": "指定サイズ",
+      "percentage": "パーセント",
+      "width": "幅",
+      "height": "高さ",
+      "lockAspectRatio": "縦横比を固定",
+      "outputDimensions": "出力：{{width}} × {{height}} px",
+      "selectHint": "JPG、PNG、または WebP 画像を選択してください。",
+      "convertAndSave": "変換して保存",
+      "converting": "変換中…",
+      "desktopOnly": "画像変換はデスクトップアプリで利用できます。",
+      "fileTooLarge": "画像ファイルが入力上限の 100 MB を超えています。",
+      "dimensionLimit": "幅と高さは 16,384 px 以下にしてください。",
+      "pixelLimit": "画像は 50 メガピクセル以下にしてください。",
+      "invalidDimensions": "有効な出力サイズを入力してください。",
+      "unsupportedFormat": "このシステムでは {{format}} 画像をエンコードできません。",
+      "openFailed": "画像を開けませんでした。",
+      "convertFailed": "画像の変換に失敗しました。",
+      "saved": "{{name}} を保存しました"
     },
     "unitCategoryLabel": "単位カテゴリ",
     "unitCategory": {

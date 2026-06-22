@@ -14,8 +14,9 @@ import {
   type CurrencyRates,
   type UnitCategory,
 } from "./converterTools";
+import { ImageConverterPanel } from "./ImageConverterPanel";
 
-type ConverterMode = "unit" | "currency";
+type ConverterMode = "unit" | "currency" | "image";
 
 interface ConvertersConfig {
   mode: ConverterMode;
@@ -57,7 +58,7 @@ function normalizeConfig(value: unknown): ConvertersConfig {
   const unitCategory = isUnitCategory(candidate.unitCategory) ? candidate.unitCategory : "length";
   const units = UNIT_DEFINITIONS[unitCategory];
   return {
-    mode: candidate.mode === "currency" ? "currency" : "unit",
+    mode: candidate.mode === "currency" || candidate.mode === "image" ? candidate.mode : "unit",
     unitCategory,
     amount: typeof candidate.amount === "string" ? candidate.amount : "1",
     targetAmount: typeof candidate.targetAmount === "string" ? candidate.targetAmount : "1",
@@ -129,6 +130,9 @@ export function ConvertersBody({ instance }: BuiltInWidgetBodyProps) {
         <button type="button" role="tab" aria-selected={config.mode === "currency"} className={config.mode === "currency" ? "is-active" : ""} onClick={() => setConfig({ ...config, mode: "currency" })}>
           {t("dashboard.convertersTab.currency")}
         </button>
+        <button type="button" role="tab" aria-selected={config.mode === "image"} className={config.mode === "image" ? "is-active" : ""} onClick={() => setConfig({ ...config, mode: "image" })}>
+          {t("dashboard.convertersTab.image")}
+        </button>
       </div>
       {config.mode === "unit" ? (
         <div className="dw-converter-panel">
@@ -173,7 +177,7 @@ export function ConvertersBody({ instance }: BuiltInWidgetBodyProps) {
             </div>
           </div>
         </div>
-      ) : (
+      ) : config.mode === "currency" ? (
         <div className="dw-converter-panel">
           <div className="dw-converter-grid">
             <div className="dw-converter-row">
@@ -217,7 +221,10 @@ export function ConvertersBody({ instance }: BuiltInWidgetBodyProps) {
             </button>
           </div>
         </div>
-      )}
+      ) : null}
+      <div className="dw-image-tab-panel" hidden={config.mode !== "image"}>
+        <ImageConverterPanel />
+      </div>
     </div>
   );
 }

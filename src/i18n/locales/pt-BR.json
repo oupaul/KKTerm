@@ -544,10 +544,37 @@
       "hash": "Hash"
     },
     "convertersTitle": "Conversores",
-    "convertersSummary": "Conversão de unidades e moedas com unidades métricas, imperiais e locais.",
+    "convertersSummary": "Conversão de unidades, moedas e imagens em um só widget.",
     "convertersTab": {
       "unit": "Unidade",
-      "currency": "Moeda"
+      "currency": "Moeda",
+      "image": "Imagem"
+    },
+    "imageConverter": {
+      "imageFiles": "Arquivos de imagem",
+      "chooseImage": "Escolher imagem",
+      "outputFormat": "Formato de saída",
+      "quality": "Qualidade {{value}}%",
+      "pngLossless": "PNG não tem perda",
+      "resizeMode": "Modo de redimensionamento",
+      "exact": "Exato",
+      "percentage": "Porcentagem",
+      "width": "Largura",
+      "height": "Altura",
+      "lockAspectRatio": "Bloquear proporção",
+      "outputDimensions": "Saída: {{width}} × {{height}} px",
+      "selectHint": "Escolha uma imagem JPG, PNG ou WebP.",
+      "convertAndSave": "Converter e salvar",
+      "converting": "Convertendo…",
+      "desktopOnly": "A conversão de imagens está disponível no aplicativo para desktop.",
+      "fileTooLarge": "O arquivo excede o limite de entrada de 100 MB.",
+      "dimensionLimit": "A largura e a altura não podem ultrapassar 16.384 px.",
+      "pixelLimit": "A imagem não pode ultrapassar 50 megapixels.",
+      "invalidDimensions": "Informe dimensões de saída válidas.",
+      "unsupportedFormat": "Este sistema não pode codificar imagens {{format}}.",
+      "openFailed": "Não foi possível abrir a imagem.",
+      "convertFailed": "Falha na conversão da imagem.",
+      "saved": "{{name}} foi salvo"
     },
     "unitCategoryLabel": "Categoria de unidade",
     "unitCategory": {

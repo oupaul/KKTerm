@@ -544,10 +544,37 @@
       "hash": "Hash"
     },
     "convertersTitle": "Converters",
-    "convertersSummary": "Unit and currency conversion with metric, imperial, and local units.",
+    "convertersSummary": "Unit, currency, and image conversion in one widget.",
     "convertersTab": {
       "unit": "Unit",
-      "currency": "Currency"
+      "currency": "Currency",
+      "image": "Image"
+    },
+    "imageConverter": {
+      "imageFiles": "Image files",
+      "chooseImage": "Choose image",
+      "outputFormat": "Output format",
+      "quality": "Quality {{value}}%",
+      "pngLossless": "PNG is lossless",
+      "resizeMode": "Resize mode",
+      "exact": "Exact",
+      "percentage": "Percentage",
+      "width": "Width",
+      "height": "Height",
+      "lockAspectRatio": "Lock aspect ratio",
+      "outputDimensions": "Output: {{width}} × {{height}} px",
+      "selectHint": "Choose a JPG, PNG, or WebP image.",
+      "convertAndSave": "Convert & Save",
+      "converting": "Converting…",
+      "desktopOnly": "Image conversion is available in the desktop app.",
+      "fileTooLarge": "The image file exceeds the 100 MB input limit.",
+      "dimensionLimit": "Width and height must not exceed 16,384 px.",
+      "pixelLimit": "The image must not exceed 50 megapixels.",
+      "invalidDimensions": "Enter valid output dimensions.",
+      "unsupportedFormat": "This system cannot encode {{format}} images.",
+      "openFailed": "Could not open the image.",
+      "convertFailed": "Image conversion failed.",
+      "saved": "Saved {{name}}"
     },
     "unitCategoryLabel": "Unit category",
     "unitCategory": {

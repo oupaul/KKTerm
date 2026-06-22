@@ -544,10 +544,37 @@
       "hash": "雜湊"
     },
     "convertersTitle": "換算器",
-    "convertersSummary": "使用公制、英制和本地單位進行單位與貨幣換算。",
+    "convertersSummary": "在一個小工具中換算單位、貨幣與影像格式。",
     "convertersTab": {
       "unit": "單位",
-      "currency": "貨幣"
+      "currency": "貨幣",
+      "image": "影像"
+    },
+    "imageConverter": {
+      "imageFiles": "影像檔案",
+      "chooseImage": "選擇影像",
+      "outputFormat": "輸出格式",
+      "quality": "品質 {{value}}%",
+      "pngLossless": "PNG 為無損格式",
+      "resizeMode": "調整尺寸模式",
+      "exact": "精確尺寸",
+      "percentage": "百分比",
+      "width": "寬度",
+      "height": "高度",
+      "lockAspectRatio": "鎖定長寬比",
+      "outputDimensions": "輸出：{{width}} × {{height}} px",
+      "selectHint": "請選擇 JPG、PNG 或 WebP 影像。",
+      "convertAndSave": "轉換並儲存",
+      "converting": "正在轉換…",
+      "desktopOnly": "影像轉換功能可在桌面版應用程式中使用。",
+      "fileTooLarge": "影像檔案超過 100 MB 輸入限制。",
+      "dimensionLimit": "寬度與高度不得超過 16,384 px。",
+      "pixelLimit": "影像不得超過 5,000 萬畫素。",
+      "invalidDimensions": "請輸入有效的輸出尺寸。",
+      "unsupportedFormat": "此系統無法編碼 {{format}} 影像。",
+      "openFailed": "無法開啟影像。",
+      "convertFailed": "影像轉換失敗。",
+      "saved": "已儲存 {{name}}"
     },
     "unitCategoryLabel": "單位類別",
     "unitCategory": {

@@ -37,7 +37,7 @@ AI Created Widget text is UTF-8 end to end. Titles, summaries, labels, placehold
 
 | Kind | Body source | Execution model |
 | --- | --- | --- |
-| `builtIn` | TypeScript component in `src/modules/dashboard/widgets/` registered in `builtInRegistry.ts` | Normal React render. Current built-ins are App Launcher, Connection, Notes, AI Coding Usage, Network Tools (subnet / DNS / speedtest / ping / whois tabs), Generators (QR / cron / password / time / hash tabs), and Converters (unit / currency tabs). |
+| `builtIn` | TypeScript component in `src/modules/dashboard/widgets/` registered in `builtInRegistry.ts` | Normal React render. Current built-ins are App Launcher, Connection, Notes, AI Coding Usage, Network Tools (subnet / DNS / speedtest / ping / whois tabs), Generators (QR / cron / password / time / hash tabs), and Converters (unit / currency / image tabs). |
 | `script` | JavaScript source string in `dashboard_custom_widgets.body_json` | Hosted inside an isolated `iframe srcdoc` via `ScriptWidgetHost.tsx`. Has `document`, `fetch`, `setInterval`, and a minimal `KK` postMessage bridge. Permissions (`network`, `pollSeconds`) declared per widget. Fault-isolation boundary — a bad script breaks one widget, not the dashboard. |
 
 **Visual Preset** — one of three framing styles applied per widget instance: `panel`, `ambient`, `hero`. Implemented in `presetRegistry.tsx` as thin CSS-driven chrome wrappers. Each preset reads `--w-accent` and `--w-accent-soft` for the widget's accent color; presets do not encode their own palette. Ambient supports optional frosted-glass background and hides its title bar by default.

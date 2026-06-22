@@ -102,7 +102,7 @@ export const BUILT_IN_WIDGETS: BuiltInWidgetEntry[] = [
     defaultPreset: "panel",
     defaultAccent: "emerald",
     defaultIcon: "Gauge",
-    defaultSize: { w: 4, h: 4 },
+    defaultSize: { w: 4, h: 5 },
     Body: ConvertersBody,
   },
 ];

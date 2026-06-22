@@ -114,7 +114,7 @@ For operational measurement records see `docs/PERFORMANCE.md`. For packaging and
 
 - [x] Dashboard Module: SQLite-backed views/instances/AI Created Widgets, three visual presets (`panel`, `ambient`, `hero`), per-widget accent/icon/title customization, drag-and-drop layout via `react-grid-layout`, dynamic backgrounds.
 - [x] Two-kind widget model: `builtIn` and `script` with `iframe srcdoc` script hosting.
-- [x] Built-in widgets: App Launcher (local app/shortcut/script/file entries), Connection (embedded SSH/RDP/VNC/SFTP surfaces), Notes (sticky note), AI Coding Usage (Codex / Claude Code quota), Network Tools (subnet / DNS / speedtest / ping / whois tabs), Generators (QR / cron / password / time / hash tabs), and Converters (unit / currency tabs).
+- [x] Built-in widgets: App Launcher (local app/shortcut/script/file entries), Connection (embedded SSH/RDP/VNC/SFTP surfaces), Notes (sticky note), AI Coding Usage (Codex / Claude Code quota), Network Tools (subnet / DNS / speedtest / ping / whois tabs), Generators (QR / cron / password / time / hash tabs), and Converters (unit / currency / image tabs).
 - [x] AI Created script widgets.
 
 ### Install Helper

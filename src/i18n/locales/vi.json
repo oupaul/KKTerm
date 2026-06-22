@@ -544,10 +544,37 @@
       "hash": "Hash"
     },
     "convertersTitle": "Bộ chuyển đổi",
-    "convertersSummary": "Chuyển đổi đơn vị và tiền tệ với đơn vị hệ mét, hệ Anh và đơn vị địa phương.",
+    "convertersSummary": "Chuyển đổi đơn vị, tiền tệ và hình ảnh trong một tiện ích.",
     "convertersTab": {
       "unit": "Đơn vị",
-      "currency": "Tiền tệ"
+      "currency": "Tiền tệ",
+      "image": "Hình ảnh"
+    },
+    "imageConverter": {
+      "imageFiles": "Tệp hình ảnh",
+      "chooseImage": "Chọn hình ảnh",
+      "outputFormat": "Định dạng đầu ra",
+      "quality": "Chất lượng {{value}}%",
+      "pngLossless": "PNG không làm mất dữ liệu",
+      "resizeMode": "Chế độ đổi kích thước",
+      "exact": "Chính xác",
+      "percentage": "Phần trăm",
+      "width": "Chiều rộng",
+      "height": "Chiều cao",
+      "lockAspectRatio": "Khóa tỷ lệ khung hình",
+      "outputDimensions": "Đầu ra: {{width}} × {{height}} px",
+      "selectHint": "Chọn hình ảnh JPG, PNG hoặc WebP.",
+      "convertAndSave": "Chuyển đổi và lưu",
+      "converting": "Đang chuyển đổi…",
+      "desktopOnly": "Chuyển đổi hình ảnh khả dụng trong ứng dụng máy tính.",
+      "fileTooLarge": "Tệp hình ảnh vượt quá giới hạn đầu vào 100 MB.",
+      "dimensionLimit": "Chiều rộng và chiều cao không được vượt quá 16.384 px.",
+      "pixelLimit": "Hình ảnh không được vượt quá 50 megapixel.",
+      "invalidDimensions": "Nhập kích thước đầu ra hợp lệ.",
+      "unsupportedFormat": "Hệ thống này không thể mã hóa hình ảnh {{format}}.",
+      "openFailed": "Không thể mở hình ảnh.",
+      "convertFailed": "Chuyển đổi hình ảnh thất bại.",
+      "saved": "Đã lưu {{name}}"
     },
     "unitCategoryLabel": "Danh mục đơn vị",
     "unitCategory": {

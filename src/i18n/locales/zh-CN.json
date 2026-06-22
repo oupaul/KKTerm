@@ -544,10 +544,37 @@
       "hash": "哈希"
     },
     "convertersTitle": "换算器",
-    "convertersSummary": "使用公制、英制和本地单位进行单位和货币换算。",
+    "convertersSummary": "在一个小组件中转换单位、货币和图像。",
     "convertersTab": {
       "unit": "单位",
-      "currency": "货币"
+      "currency": "货币",
+      "image": "图像"
+    },
+    "imageConverter": {
+      "imageFiles": "图像文件",
+      "chooseImage": "选择图像",
+      "outputFormat": "输出格式",
+      "quality": "质量 {{value}}%",
+      "pngLossless": "PNG 为无损格式",
+      "resizeMode": "调整大小模式",
+      "exact": "精确尺寸",
+      "percentage": "百分比",
+      "width": "宽度",
+      "height": "高度",
+      "lockAspectRatio": "锁定宽高比",
+      "outputDimensions": "输出：{{width}} × {{height}} px",
+      "selectHint": "请选择 JPG、PNG 或 WebP 图像。",
+      "convertAndSave": "转换并保存",
+      "converting": "正在转换…",
+      "desktopOnly": "图像转换功能可在桌面应用中使用。",
+      "fileTooLarge": "图像文件超过 100 MB 输入限制。",
+      "dimensionLimit": "宽度和高度不得超过 16,384 px。",
+      "pixelLimit": "图像不得超过 5,000 万像素。",
+      "invalidDimensions": "请输入有效的输出尺寸。",
+      "unsupportedFormat": "此系统无法编码 {{format}} 图像。",
+      "openFailed": "无法打开图像。",
+      "convertFailed": "图像转换失败。",
+      "saved": "已保存 {{name}}"
     },
     "unitCategoryLabel": "单位类别",
     "unitCategory": {

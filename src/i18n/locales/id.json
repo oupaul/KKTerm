@@ -544,10 +544,37 @@
       "hash": "Hash"
     },
     "convertersTitle": "Konverter",
-    "convertersSummary": "Konversi satuan dan mata uang dengan satuan metrik, imperial, dan lokal.",
+    "convertersSummary": "Konversi satuan, mata uang, dan gambar dalam satu widget.",
     "convertersTab": {
       "unit": "Satuan",
-      "currency": "Mata uang"
+      "currency": "Mata uang",
+      "image": "Gambar"
+    },
+    "imageConverter": {
+      "imageFiles": "File gambar",
+      "chooseImage": "Pilih gambar",
+      "outputFormat": "Format keluaran",
+      "quality": "Kualitas {{value}}%",
+      "pngLossless": "PNG bersifat lossless",
+      "resizeMode": "Mode ubah ukuran",
+      "exact": "Tepat",
+      "percentage": "Persentase",
+      "width": "Lebar",
+      "height": "Tinggi",
+      "lockAspectRatio": "Kunci rasio aspek",
+      "outputDimensions": "Keluaran: {{width}} × {{height}} px",
+      "selectHint": "Pilih gambar JPG, PNG, atau WebP.",
+      "convertAndSave": "Konversi & simpan",
+      "converting": "Mengonversi…",
+      "desktopOnly": "Konversi gambar tersedia di aplikasi desktop.",
+      "fileTooLarge": "File gambar melebihi batas masukan 100 MB.",
+      "dimensionLimit": "Lebar dan tinggi tidak boleh melebihi 16.384 px.",
+      "pixelLimit": "Gambar tidak boleh melebihi 50 megapiksel.",
+      "invalidDimensions": "Masukkan dimensi keluaran yang valid.",
+      "unsupportedFormat": "Sistem ini tidak dapat menyandikan gambar {{format}}.",
+      "openFailed": "Gambar tidak dapat dibuka.",
+      "convertFailed": "Konversi gambar gagal.",
+      "saved": "{{name}} disimpan"
     },
     "unitCategoryLabel": "Kategori satuan",
     "unitCategory": {

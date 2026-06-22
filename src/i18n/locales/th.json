@@ -544,10 +544,37 @@
       "hash": "แฮช"
     },
     "convertersTitle": "ตัวแปลง",
-    "convertersSummary": "แปลงหน่วยและสกุลเงินด้วยหน่วยเมตริก อิมพีเรียล และหน่วยท้องถิ่น",
+    "convertersSummary": "แปลงหน่วย สกุลเงิน และรูปภาพในวิดเจ็ตเดียว",
     "convertersTab": {
       "unit": "หน่วย",
-      "currency": "สกุลเงิน"
+      "currency": "สกุลเงิน",
+      "image": "รูปภาพ"
+    },
+    "imageConverter": {
+      "imageFiles": "ไฟล์รูปภาพ",
+      "chooseImage": "เลือกรูปภาพ",
+      "outputFormat": "รูปแบบผลลัพธ์",
+      "quality": "คุณภาพ {{value}}%",
+      "pngLossless": "PNG ไม่มีการสูญเสียข้อมูล",
+      "resizeMode": "โหมดปรับขนาด",
+      "exact": "ขนาดที่แน่นอน",
+      "percentage": "เปอร์เซ็นต์",
+      "width": "ความกว้าง",
+      "height": "ความสูง",
+      "lockAspectRatio": "ล็อกอัตราส่วนภาพ",
+      "outputDimensions": "ผลลัพธ์: {{width}} × {{height}} px",
+      "selectHint": "เลือกรูปภาพ JPG, PNG หรือ WebP",
+      "convertAndSave": "แปลงและบันทึก",
+      "converting": "กำลังแปลง…",
+      "desktopOnly": "การแปลงรูปภาพพร้อมใช้งานในแอปเดสก์ท็อป",
+      "fileTooLarge": "ไฟล์รูปภาพเกินขีดจำกัดอินพุต 100 MB",
+      "dimensionLimit": "ความกว้างและความสูงต้องไม่เกิน 16,384 px",
+      "pixelLimit": "รูปภาพต้องไม่เกิน 50 เมกะพิกเซล",
+      "invalidDimensions": "ป้อนขนาดผลลัพธ์ที่ถูกต้อง",
+      "unsupportedFormat": "ระบบนี้ไม่สามารถเข้ารหัสรูปภาพ {{format}} ได้",
+      "openFailed": "ไม่สามารถเปิดรูปภาพได้",
+      "convertFailed": "การแปลงรูปภาพล้มเหลว",
+      "saved": "บันทึก {{name}} แล้ว"
     },
     "unitCategoryLabel": "หมวดหมู่หน่วย",
     "unitCategory": {

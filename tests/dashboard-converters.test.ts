@@ -9,6 +9,12 @@ import {
   formatConvertedValue,
   normalizeFrankfurterRates,
 } from "../src/modules/dashboard/widgets/builtin/converters/converterTools";
+import {
+  calculateExactDimensions,
+  calculatePercentageDimensions,
+  outputFilename,
+  validateImageDimensions,
+} from "../src/modules/dashboard/widgets/builtin/converters/imageConverterTools";
 
 test("convertUnit converts length, mass, area, and Taiwan ping units", () => {
   assert.equal(formatConvertedValue(convertUnit("length", 1, "meter", "foot")), "3.28084");
@@ -76,4 +82,46 @@ test("currency amounts can be edited from either side", () => {
     source: "10",
     target: "8",
   });
+});
+
+test("percentage image resizing preserves aspect ratio and rounds to whole pixels", () => {
+  assert.deepEqual(calculatePercentageDimensions(1920, 1080, 50), {
+    width: 960,
+    height: 540,
+  });
+  assert.deepEqual(calculatePercentageDimensions(1920, 1080, 33), {
+    width: 634,
+    height: 356,
+  });
+});
+
+test("exact image resizing follows the edited dimension while aspect ratio is locked", () => {
+  assert.deepEqual(
+    calculateExactDimensions(1920, 1080, 1000, 1080, "width", true),
+    { width: 1000, height: 563 },
+  );
+  assert.deepEqual(
+    calculateExactDimensions(1920, 1080, 1920, 720, "height", true),
+    { width: 1280, height: 720 },
+  );
+});
+
+test("exact image resizing accepts independent dimensions when aspect ratio is unlocked", () => {
+  assert.deepEqual(
+    calculateExactDimensions(1920, 1080, 640, 640, "width", false),
+    { width: 640, height: 640 },
+  );
+});
+
+test("image dimension validation rejects zero, oversized dimensions, and more than 50 megapixels", () => {
+  assert.equal(validateImageDimensions(4000, 3000), null);
+  assert.equal(validateImageDimensions(0, 3000), "invalid");
+  assert.equal(validateImageDimensions(20_000, 100), "dimension");
+  assert.equal(validateImageDimensions(10_000, 5_001), "pixels");
+});
+
+test("image converter output filenames replace known extensions", () => {
+  assert.equal(outputFilename("photo.jpeg", "png"), "photo.png");
+  assert.equal(outputFilename("archive.preview.webp", "jpg"), "archive.preview.jpg");
+  assert.equal(outputFilename("image", "webp"), "image.webp");
 });
