@@ -522,6 +522,10 @@
   background: var(--border);
 }
 
+.connections-collapsed .connection-collapsed-separator {
+  display: none;
+}
+
 .panel-resize-handle:hover,
 .panel-resize-handle:focus-visible {
   color: var(--text);

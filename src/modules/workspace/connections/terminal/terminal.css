@@ -19,6 +19,10 @@
   gap: 0;
 }
 
+.connections-collapsed .terminal-workspace {
+  padding: 0;
+}
+
 .terminal-workspace.quick-command-bar-visible {
   grid-template-rows: minmax(0, 1fr) auto;
   gap: 10px;

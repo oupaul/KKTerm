@@ -308,7 +308,7 @@ export function useAppShellAppearance({
       "--connection-panel-width",
       connectionPanelVisibleForLayout ? `${connectionPanelLayout.width}px` : "0px",
     );
-    node.style.setProperty("--connection-resize-width", "3px");
+    node.style.setProperty("--connection-resize-width", connectionPanelVisibleForLayout ? "3px" : "0px");
     node.style.setProperty("--ai-panel-width", aiPanelVisibleForLayout ? `${aiPanelLayout.width}px` : "0px");
     node.style.setProperty("--ai-resize-width", aiPanelLayout.collapsed ? "0px" : "3px");
     node.style.removeProperty("--app-ui-font-family");
