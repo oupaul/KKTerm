@@ -58,7 +58,10 @@ import { resolveDefaultTerminalAppearance } from "./modules/workspace/connection
 import type { LocalShellOption } from "./modules/workspace/connections/utils";
 import type { GitBrowserTarget } from "./modules/git/gitTypes";
 import { markPanesForRuntimeMove } from "./modules/workspace/paneRegistry";
-import { focusedPaneIdForChildLayout } from "./modules/workspace/connections/childConnections";
+import {
+  collectPreservedParentPanes,
+  focusedPaneIdForChildLayout,
+} from "./modules/workspace/connections/childConnections";
 
 const LAYOUT_STORAGE_PREFIX = "kkterm.layout.";
 const TMUX_SESSION_STORAGE_PREFIX = "kkterm.tmuxSessions.";
@@ -1861,7 +1864,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     }
     const movedPaneIds = new Set<string>();
     const newPanes: WorkspacePane[] = [];
-    const childPanes = uniqueChildren
+    const namedChildPanes = uniqueChildren
       .map((child) => {
         const groupPane = groupPaneByChildId.get(child.id);
         if (groupPane) {
@@ -1903,6 +1906,20 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
         return pane;
       })
       .filter((pane): pane is WorkspacePane => Boolean(pane));
+    // Preserve the parent's original session and any in-panorama split Panes so a
+    // layout rebuild from the children list never orphans them (issue #430).
+    const { carriedGroupPanes, adoptedOrphanPanes } = collectPreservedParentPanes({
+      parentConnectionId: connection.id,
+      activeWorkspaceId,
+      defaultWorkspaceId: DEFAULT_WORKSPACE_ID,
+      existingGroupTab,
+      tabs: state.tabs,
+      excludedPaneIds: movedPaneIds,
+    });
+    for (const pane of adoptedOrphanPanes) {
+      movedPaneIds.add(pane.id);
+    }
+    const childPanes = [...namedChildPanes, ...carriedGroupPanes, ...adoptedOrphanPanes];
     if (childPanes.length === 0) {
       get().openConnection(connection);
       return;
