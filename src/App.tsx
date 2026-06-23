@@ -45,11 +45,6 @@ import { currentPlatform, supportsInstallerHelper } from "./lib/platform";
 import { useBootstrapSettings } from "./lib/settings";
 import { CREDENTIAL_UNLOCK_REQUIRED_EVENT, invokeCommand } from "./lib/tauri";
 import type { CredentialUnlockRequestDetail } from "./lib/credentialUnlock";
-import {
-  readLastEncryptedStoreUnlockAt,
-  recordEncryptedStoreUnlockAt,
-  shouldPromptForEncryptedStoreOnLaunch,
-} from "./lib/encryptedStoreLaunchPromptPolicy";
 import { EncryptedSecretStoreDialog } from "./modules/settings/EncryptedSecretStoreDialog";
 import { SettingsPage } from "./modules/settings/SettingsPage";
 import type { SettingsAssistantContext } from "./modules/settings/settingsAssistantContext";
@@ -86,7 +81,6 @@ function App() {
   const [credentialUnlockBusy, setCredentialUnlockBusy] = useState(false);
   const [credentialUnlockError, setCredentialUnlockError] = useState<string | null>(null);
   const credentialUnlockCompletionsRef = useRef<Array<(unlocked: boolean) => void>>([]);
-  const encryptedStoreLaunchPromptCheckedRef = useRef(false);
 
   function isOverlayPage(page: ActivePage): page is "settings" {
     return page === "settings";
@@ -179,7 +173,6 @@ function App() {
   const hideTopTabButtons = useWorkspaceStore((state) => state.generalSettings.hideTopTabButtons);
   const statusBarEnabled = useWorkspaceStore((state) => state.generalSettings.statusBarEnabled);
   const showItOps = useWorkspaceStore((state) => state.generalSettings.showItOps);
-  const credentialSettings = useWorkspaceStore((state) => state.credentialSettings);
   const resetAllLayouts = useWorkspaceStore((state) => state.resetAllLayouts);
   const appShellRef = useRef<HTMLDivElement | null>(null);
   const {
@@ -200,7 +193,7 @@ function App() {
     shouldExpandConnectionPanelOnLaunch(launchPageRef.current),
   );
 
-  const { credentialSettingsReady, generalSettingsReady } = useBootstrapSettings();
+  const { generalSettingsReady } = useBootstrapSettings();
   useDashboardBackendInvalidation();
   useDebugFrontendHeartbeat();
   useFrontendLaunchTimestamp();
@@ -240,35 +233,6 @@ function App() {
     };
   }, []);
 
-  useEffect(() => {
-    if (!credentialSettingsReady || encryptedStoreLaunchPromptCheckedRef.current) {
-      return;
-    }
-    encryptedStoreLaunchPromptCheckedRef.current = true;
-    if (
-      credentialSettings.secretStore !== "file" ||
-      !shouldPromptForEncryptedStoreOnLaunch({
-        policy: credentialSettings.encryptedStoreLaunchPrompt,
-        lastUnlockAt: readLastEncryptedStoreUnlockAt(),
-        launchedAt: Date.now(),
-      })
-    ) {
-      return;
-    }
-    void invokeCommand("credential_secret_store_status", undefined)
-      .then((status) => {
-        if (status.selectedStore !== "file" || !status.encryptedStoreExists) {
-          return;
-        }
-        if (status.unlocked) {
-          recordEncryptedStoreUnlockAt();
-          return;
-        }
-        window.dispatchEvent(new CustomEvent(CREDENTIAL_UNLOCK_REQUIRED_EVENT));
-      })
-      .catch(() => undefined);
-  }, [credentialSettings, credentialSettingsReady]);
-
   function completeCredentialUnlockRequests(unlocked: boolean) {
     for (const complete of credentialUnlockCompletionsRef.current.splice(0)) {
       complete(unlocked);
@@ -284,7 +248,6 @@ function App() {
       setCredentialUnlockBusy(true);
       setCredentialUnlockError(null);
       await invokeCommand("configure_encrypted_file_secret_store", { request });
-      recordEncryptedStoreUnlockAt();
       setCredentialUnlockDialogOpen(false);
       setCredentialUnlockStoreExists(true);
       window.dispatchEvent(new CustomEvent("kkterm:credential-store-status-changed"));

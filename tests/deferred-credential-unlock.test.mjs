@@ -29,14 +29,20 @@ test("encrypted credential storage unlock is deferred until a secret operation r
   assert.match(appSource, /completeCredentialUnlockRequests\(false\)/);
 
   assert.doesNotMatch(settingsSource, /shouldPromptForEncryptedFileSetup/);
-  assert.match(settingsSource, /encryptedStoreLaunchPrompt/);
-  assert.match(defaultsSource, /encryptedStoreLaunchPrompt:\s*"never"/);
-  assert.match(appSource, /shouldPromptForEncryptedStoreOnLaunch/);
+  assert.doesNotMatch(settingsSource, /encryptedStoreLaunchPrompt/);
+  assert.doesNotMatch(defaultsSource, /encryptedStoreLaunchPrompt/);
+  assert.doesNotMatch(appSource, /shouldPromptForEncryptedStoreOnLaunch/);
 
   assert.match(statusBarSource, /CredentialStoreStatusButton/);
   assert.match(statusBarSource, /credential_secret_store_status/);
   assert.match(statusBarSource, /lock_encrypted_file_secret_store/);
   assert.match(statusBarSource, /configure_encrypted_file_secret_store/);
+  assert.doesNotMatch(statusBarSource, /recordEncryptedStoreUnlockAt/);
+  assert.match(
+    statusBarSource,
+    /if \(unlocked\) \{[\s\S]*void lockStore\(\);[\s\S]*\} else \{[\s\S]*setDialogOpen\(true\);[\s\S]*\}/,
+    "manual Status Bar unlock should open the password dialog",
+  );
 
   const submitHandler = connectionSidebarSource.slice(
     connectionSidebarSource.indexOf("async function handleConnectionSubmit("),

@@ -402,8 +402,6 @@ pub struct GeneralSettings {
 #[derive(Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CredentialSettings {
-    #[serde(default = "default_encrypted_store_launch_prompt")]
-    pub encrypted_store_launch_prompt: String,
     #[serde(default = "default_secret_store")]
     pub secret_store: String,
 }
@@ -4385,13 +4383,8 @@ pub(crate) fn secret_store_options() -> Vec<&'static str> {
 
 fn default_credential_settings() -> CredentialSettings {
     CredentialSettings {
-        encrypted_store_launch_prompt: default_encrypted_store_launch_prompt(),
         secret_store: default_secret_store(),
     }
-}
-
-fn default_encrypted_store_launch_prompt() -> String {
-    "never".to_string()
 }
 
 fn default_use_directx_screen_capture() -> bool {
@@ -4929,15 +4922,6 @@ fn validate_general_settings(mut settings: GeneralSettings) -> Result<GeneralSet
 fn validate_credential_settings(
     mut settings: CredentialSettings,
 ) -> Result<CredentialSettings, String> {
-    settings.encrypted_store_launch_prompt =
-        match settings.encrypted_store_launch_prompt.trim() {
-            "everyTime" => "everyTime".to_string(),
-            "oneHour" => "oneHour".to_string(),
-            "fourHours" => "fourHours".to_string(),
-            "twentyFourHours" => "twentyFourHours".to_string(),
-            "never" => "never".to_string(),
-            _ => default_encrypted_store_launch_prompt(),
-        };
     let normalized = settings.secret_store.trim().to_lowercase();
     settings.secret_store = if secret_store_options().contains(&normalized.as_str()) {
         normalized

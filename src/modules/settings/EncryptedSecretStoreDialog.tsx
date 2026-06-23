@@ -125,6 +125,11 @@ export function EncryptedSecretStoreDialog({
               {t("settings.encryptedSecretStorePasswordGuidance")}
             </p>
           ) : null}
+          {!createIfMissing ? (
+            <p className="field-hint">
+              {t("settings.encryptedSecretStoreEnvironmentHint")}
+            </p>
+          ) : null}
           <Field label={t("settings.encryptedSecretStorePassword")} req>
             <TextInput
               autoFocus

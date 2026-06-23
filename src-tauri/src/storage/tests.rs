@@ -2187,37 +2187,25 @@ fn credential_settings_round_trip_and_platform_defaults() {
     } else {
         assert_eq!(defaults.secret_store, "os");
     }
-    assert_eq!(defaults.encrypted_store_launch_prompt, "never");
 
     let file_settings = storage
         .update_credential_settings(CredentialSettings {
-            encrypted_store_launch_prompt: " oneHour ".to_string(),
             secret_store: " file ".to_string(),
         })
         .expect("credential settings update");
     assert_eq!(file_settings.secret_store, "file");
-    assert_eq!(file_settings.encrypted_store_launch_prompt, "oneHour");
 
     let invalid_settings = storage
         .update_credential_settings(CredentialSettings {
-            encrypted_store_launch_prompt: "sometimes".to_string(),
             secret_store: "external".to_string(),
         })
         .expect("invalid credential settings normalize");
     assert_eq!(invalid_settings.secret_store, default_secret_store());
-    assert_eq!(
-        invalid_settings.encrypted_store_launch_prompt,
-        "never"
-    );
 
     let reloaded = storage
         .credential_settings()
         .expect("credential settings reload");
     assert_eq!(reloaded.secret_store, default_secret_store());
-    assert_eq!(
-        reloaded.encrypted_store_launch_prompt,
-        "never"
-    );
 }
 
 #[test]
