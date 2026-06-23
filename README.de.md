@@ -126,9 +126,6 @@ Ein echtes Tütchen Kuai Kuai mit dem Installer auszuliefern, haben wir noch nic
 
 <p align="center"><sub><em>(Das Demo-GIF. Ein Bild sagt mehr als tausend Aufzählungspunkte, und uns gehen die Aufzählungspunkte aus.)</em></sub></p>
 
-<p align="center">
-  <img src="docs/assets/screenshots/hero.png" alt="Das gesamte KKTerm-Fenster: Verbindungsbaum, ein Raster aus Live-Panes und der KI-Assistent" width="720" />
-</p>
 
 
 ---
@@ -331,11 +328,12 @@ Aus dem Quellcode bauen oder mitmachen? Alles, was du brauchst, steht in [`CONTR
 
 ## Roadmap (Kurzfassung)
 
-- macOS- + Linux-Builds
-- Signierter Installer + Auto-Update
+- Feinschliff für plattformübergreifende Releases
+- Feinschliff für Release-Signierung
 - Mehr Dateiübertragungs-Power (Fortsetzen, Ordner-Sync, Archivieren/Entpacken)
 - Reichere Zwischenablage- und Geräte-Freigabe fürs Remotedesktop
 - Mehr eingebaute Dashboard-Widgets
+- Mehr IT-Ops-Automatisierungsfunktionen
 
 Vollständige, häufig aktualisierte Version: [`docs/ROADMAP.md`](docs/ROADMAP.md).
 

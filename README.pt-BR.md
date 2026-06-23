@@ -126,9 +126,6 @@ Ainda não conseguimos enviar um saquinho de Kuai Kuai de verdade junto com o in
 
 <p align="center"><sub><em>(O GIF de demonstração. Uma imagem vale mais que mil bullet points, e nossos bullet points acabaram.)</em></sub></p>
 
-<p align="center">
-  <img src="docs/assets/screenshots/hero.png" alt="A janela completa do KKTerm: árvore de conexões, uma grade de Panes ao vivo e o assistente de IA" width="720" />
-</p>
 
 
 ---
@@ -331,11 +328,12 @@ Quer compilar do código-fonte ou contribuir? Tudo que você precisa está em [`
 
 ## Roadmap (versão curta)
 
-- Builds macOS + Linux
-- Instalador assinado + atualização automática
+- Polimento de releases multiplataforma
+- Polimento da assinatura de releases
 - Mais poder na transferência de arquivos (retomar, sync de pastas, arquivar/extrair)
 - Compartilhamento de área de transferência e dispositivos mais rico na Área de Trabalho Remota
 - Mais widgets de painel embutidos
+- Mais funcionalidade de automação de IT Ops
 
 Versão completa e atualizada com frequência: [`docs/ROADMAP.md`](docs/ROADMAP.md).
 

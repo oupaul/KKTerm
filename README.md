@@ -126,9 +126,6 @@ We have not yet been able to ship an actual bag of Kuai Kuai with the installer.
 
 <p align="center"><sub><em>(Demo GIF. A picture is worth a thousand bullet points, and we ran out of bullet points.)</em></sub></p>
 
-<p align="center">
-  <img src="docs/assets/screenshots/hero.png" alt="The full KKTerm window: connection tree, a grid of live panes, and the AI assistant" width="720" />
-</p>
 
 
 ---
@@ -332,10 +329,11 @@ Want to build from source or contribute? Everything you need is in [`CONTRIBUTIN
 ## Roadmap (the short version)
 
 - Cross-platform release polish
-- Signed installer + auto-update
+- Release signing polish
 - More file-transfer power (resume, folder sync, archive/extract)
 - Richer remote-desktop clipboard and device sharing
 - More built-in dashboard widgets
+- More IT Ops automation functionality
 
 Full and frequently-updated version: [`docs/ROADMAP.md`](docs/ROADMAP.md).
 

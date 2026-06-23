@@ -212,13 +212,12 @@ For operational measurement records see `docs/PERFORMANCE.md`. For packaging and
 
 ### IT Ops Center
 
-Design accepted: see `docs/ADR/0011-it-ops-module.md`, `docs/ADR/0012-winrm-transport-library.md` (WinRM transport for Windows Update playbooks), and `docs/ITOPS.md`. No runtime module is wired up yet.
+Design accepted: see `docs/ADR/0011-it-ops-module.md`, `docs/ADR/0012-winrm-transport-library.md` (WinRM transport for Windows Update playbooks), `docs/ITOPS.md`, and `docs/manual/12-it-ops.md`. The first runtime module is wired up with Host Groups, Batch Runs, Automations, run history, and Run Reports; the remaining work is deeper IT Ops automation functionality.
 
-- [ ] Batch command broadcast to multiple Connections with per-host output panes and consolidated result view.
-- [ ] Simple workflow engine for IT operations against selected Connections with explicit per-run approval.
+- [ ] More IT Ops automation actions, conditions, and reusable workflow templates.
 - [ ] Automated server-update playbooks (apt, dnf, yum, Windows Update via WinRM) with dry-run preview and rollback-aware sequencing.
 - [ ] AI-enabled triggers watching terminal output, SFTP changes, or scheduled probes.
-- [ ] Reusable workflow library with durable run history (local-first, no telemetry).
+- [ ] Richer cross-transport Batch Runs beyond the current implemented paths.
 
 ### Future Scope Evaluations
 

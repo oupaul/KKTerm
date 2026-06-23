@@ -126,9 +126,6 @@ On n'a pas encore réussi à livrer un vrai sachet de Kuai Kuai avec l'installat
 
 <p align="center"><sub><em>(Le GIF de démo. Une image vaut mille puces, et on est à court de puces.)</em></sub></p>
 
-<p align="center">
-  <img src="docs/assets/screenshots/hero.png" alt="La fenêtre complète de KKTerm : arbre des connexions, grille de Panes en direct et assistant IA" width="720" />
-</p>
 
 
 ---
@@ -331,11 +328,12 @@ Envie de compiler depuis les sources ou de contribuer ? Tout ce qu'il vous faut 
 
 ## Feuille de route (version courte)
 
-- Builds macOS + Linux
-- Installateur signé + mise à jour automatique
+- Finition des versions multiplateformes
+- Finition de la signature des versions
 - Transferts de fichiers plus puissants (reprise, synchro de dossiers, archive/extraction)
 - Partage presse-papiers et périphériques plus riche pour le Bureau à distance
 - Plus de widgets de tableau de bord intégrés
+- Plus de fonctions d'automatisation IT Ops
 
 Version complète et fréquemment mise à jour : [`docs/ROADMAP.md`](docs/ROADMAP.md).
 

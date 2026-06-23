@@ -126,9 +126,6 @@ Non siamo ancora riusciti a spedire un vero sacchetto di Kuai Kuai con l'install
 
 <p align="center"><sub><em>(La GIF dimostrativa. Un'immagine vale più di mille punti elenco, e i punti elenco li abbiamo finiti.)</em></sub></p>
 
-<p align="center">
-  <img src="docs/assets/screenshots/hero.png" alt="L'intera finestra di KKTerm: albero delle connessioni, una griglia di Panes dal vivo e l'assistente IA" width="720" />
-</p>
 
 
 ---
@@ -331,11 +328,12 @@ Vuoi compilare dai sorgenti o contribuire? Tutto ciò che serve è in [`CONTRIBU
 
 ## Roadmap (versione breve)
 
-- Build macOS + Linux
-- Installer firmato + aggiornamento automatico
+- Rifinitura delle release multipiattaforma
+- Rifinitura della firma delle release
 - Trasferimento file più potente (ripresa, sync di cartelle, archivia/estrai)
 - Condivisione di appunti e dispositivi più ricca per il Desktop remoto
 - Più widget da dashboard integrati
+- Più funzionalità di automazione IT Ops
 
 Versione completa e aggiornata di frequente: [`docs/ROADMAP.md`](docs/ROADMAP.md).
 

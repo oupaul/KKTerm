@@ -126,9 +126,6 @@ Aún no hemos podido incluir una bolsa real de Kuai Kuai con el instalador. Eso 
 
 <p align="center"><sub><em>(El GIF de demostración. Una imagen vale más que mil viñetas, y se nos han acabado las viñetas.)</em></sub></p>
 
-<p align="center">
-  <img src="docs/assets/screenshots/hero.png" alt="La ventana completa de KKTerm: árbol de conexiones, una cuadrícula de Panes en vivo y el asistente de IA" width="720" />
-</p>
 
 
 ---
@@ -331,11 +328,12 @@ Si alguno de esos puntos *era* un factor decisivo — justo, nos vemos en la v2.
 
 ## Hoja de ruta (versión corta)
 
-- Versiones macOS + Linux
-- Instalador firmado + actualización automática
+- Pulido de versiones multiplataforma
+- Pulido de la firma de versiones
 - Más potencia en transferencia de archivos (reanudar, sincronización de carpetas, archivar/extraer)
 - Portapapeles y compartición de dispositivos más rica en el Escritorio remoto
 - Más widgets de panel integrados
+- Más funcionalidad de automatización de IT Ops
 
 Versión completa y actualizada con frecuencia: [`docs/ROADMAP.md`](docs/ROADMAP.md).
 

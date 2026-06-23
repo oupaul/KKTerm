@@ -126,9 +126,6 @@ Kami belum berhasil menyertakan sekantong Kuai Kuai sungguhan bersama installer-
 
 <p align="center"><sub><em>(GIF demo. Satu gambar bernilai seribu poin, dan poin kami sudah habis.)</em></sub></p>
 
-<p align="center">
-  <img src="docs/assets/screenshots/hero.png" alt="Jendela KKTerm utuh: pohon koneksi, grid Panes langsung, dan asisten AI" width="720" />
-</p>
 
 
 ---
@@ -331,11 +328,12 @@ Mau build dari sumber atau berkontribusi? Semua yang kamu butuhkan ada di [`CONT
 
 ## Roadmap (versi singkat)
 
-- Build macOS + Linux
-- Installer bertanda tangan + pembaruan otomatis
+- Pemolesan rilis lintas platform
+- Pemolesan penandatanganan rilis
 - Transfer berkas lebih bertenaga (lanjutkan, sinkron folder, arsip/ekstrak)
 - Berbagi clipboard dan perangkat Remote Desktop yang lebih kaya
 - Lebih banyak widget dashboard bawaan
+- Lebih banyak fungsi otomatisasi IT Ops
 
 Versi lengkap dan sering diperbarui: [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
