@@ -1274,6 +1274,17 @@
   gap: 8px;
 }
 
+.settings-copilot-cli-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.settings-copilot-cli-status > small {
+  flex-basis: 100%;
+}
+
 .settings-data-actions {
   grid-template-columns: repeat(auto-fit, minmax(170px, max-content));
   gap: 10px;

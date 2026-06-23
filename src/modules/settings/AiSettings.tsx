@@ -745,6 +745,7 @@ function GitHubCopilotConnectionControl({
     : cliStatus.installed
       ? t("settings.copilotCliStatusReady")
       : t("settings.copilotCliStatusMissing");
+  const cliVersionText = formatCopilotCliVersion(cliStatus?.version);
 
   return (
     <div className="settings-copilot-connection">
@@ -759,21 +760,19 @@ function GitHubCopilotConnectionControl({
           {t("settings.copilotCliInstallHelp")}
         </button>
       </p>
-      <div className="settings-cli-backend-status">
+      <div className="settings-cli-backend-status settings-copilot-cli-status">
+        <button
+          className="toolbar-button"
+          disabled={checkingCli || !isTauriRuntime()}
+          onClick={() => void refreshCliStatus()}
+          type="button"
+        >
+          {t("settings.aiCliRefreshStatus")}
+        </button>
         <span className="field-hint">
           {cliStatusText}
-          {cliStatus?.version ? ` (${cliStatus.version})` : ""}
+          {cliVersionText ? ` (${cliVersionText})` : ""}
         </span>
-        <div className="settings-copilot-actions">
-          <button
-            className="toolbar-button"
-            disabled={checkingCli || !isTauriRuntime()}
-            onClick={() => void refreshCliStatus()}
-            type="button"
-          >
-            {t("settings.aiCliRefreshStatus")}
-          </button>
-        </div>
         {cliStatus && !cliStatus.installed && cliStatus.error ? (
           <small className="field-hint">{cliStatus.error}</small>
         ) : null}
@@ -811,6 +810,13 @@ function GitHubCopilotConnectionControl({
       </div>
     </div>
   );
+}
+
+function formatCopilotCliVersion(version: string | null | undefined) {
+  return (version ?? "")
+    .replace(/\s*Run\s+['"`]?copilot update['"`]?[^)]*\.?\s*$/iu, "")
+    .replace(/\.$/u, "")
+    .trim();
 }
 
 const AI_ASSISTANT_TOOL_IDS: AiAssistantToolId[] = [
