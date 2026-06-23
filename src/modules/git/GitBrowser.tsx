@@ -4,6 +4,7 @@
 // modal from a terminal pane or the File Explorer toolbar.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { X } from "lucide-react";
 import { ConfirmSheet, type ConfirmTone } from "../../app/ui/dialog";
 import { useWorkspaceStore } from "../../store";
 import type {
@@ -297,8 +298,10 @@ export function GitBrowser({
         await action();
         await reload();
         showStatusBarNotice(successMessage, { tone: "success" });
+        return true;
       } catch (error) {
         notifyError(error);
+        return false;
       } finally {
         setBusy(false);
       }
@@ -366,7 +369,7 @@ export function GitBrowser({
   const onStageAll = () => void runAction(() => gitStageAll(repoRoot), t("git.stagedAllNotice"));
   const onUnstageAll = () => void runAction(() => gitUnstageAll(repoRoot), t("git.unstagedAllNotice"));
   const onCommit = (message: string, amend: boolean) =>
-    void runAction(() => gitCommit(repoRoot, message, amend), t("git.committedDone"));
+    runAction(() => gitCommit(repoRoot, message, amend), t("git.committedDone"));
 
   // ── commit context menu ───────────────────────────────────────────────────
   const menuItems = (commit: GraphCommit): (CommitMenuItem | null)[] => [
@@ -575,7 +578,7 @@ export function GitBrowser({
           </div>
           <div className="git-titlebar-spacer" />
           <button type="button" className="git-icon-btn" onClick={onClose} aria-label={t("common.close")}>
-            <GitIcon name="more" size={17} />
+            <X size={17} />
           </button>
         </div>
 

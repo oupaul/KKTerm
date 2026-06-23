@@ -34,7 +34,7 @@ export function WorkingTree({
   onUnstageFile: (file: GitChangedFile) => void;
   onStageAll: () => void;
   onUnstageAll: () => void;
-  onCommit: (message: string, amend: boolean) => void;
+  onCommit: (message: string, amend: boolean) => Promise<boolean>;
   committing: boolean;
 }) {
   const { t } = useTranslation();
@@ -123,9 +123,12 @@ export function WorkingTree({
             className="git-btn primary"
             disabled={committing || (staged.length === 0 && !amend) || message.trim().length === 0}
             onClick={() => {
-              onCommit(message.trim(), amend);
-              setMessage("");
-              setAmend(false);
+              void onCommit(message.trim(), amend).then((committed) => {
+                if (committed) {
+                  setMessage("");
+                  setAmend(false);
+                }
+              });
             }}
           >
             <GitIcon name="commit" size={15} />
