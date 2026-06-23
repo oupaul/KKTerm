@@ -208,7 +208,7 @@ const SETTINGS_SECTIONS: Record<SettingsSectionId, SettingsSectionSummary> = {
     controls: [
       {
         key: "settings.credentialStorage",
-        description: "Credential storage backend selector.",
+        description: "Credential storage backend selector and encrypted database launch prompt policy.",
         tutorialTargetId: "settings.credentialStorage",
       },
       {

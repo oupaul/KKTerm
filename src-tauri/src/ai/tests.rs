@@ -304,6 +304,42 @@ fn windows_cli_process_args_run_cmd_shims_through_cmd_exe() {
 }
 
 #[test]
+fn windows_external_terminal_command_line_wraps_quoted_command() {
+    // A `.cmd` shim installed via nvm-for-windows: shell_quote wraps the path in
+    // double quotes, and the external-terminal command line must wrap that whole
+    // command in a second quote pair so the inner `cmd /K` strips exactly the
+    // outer pair and runs the original quoted command. Regression for the
+    // `'\"...claude.cmd\"' is not recognized` failure on quote-escaped launches.
+    let command = format!(
+        "{} auth login",
+        shell_quote("C:\\nvm4w\\nodejs\\claude.cmd")
+    );
+
+    let line = windows_external_terminal_command_line(&command);
+
+    assert_eq!(
+        line,
+        "/C start \"KKTerm AI CLI Auth\" cmd.exe /K \"\"C:\\nvm4w\\nodejs\\claude.cmd\" auth login\""
+    );
+    // The embedded quotes must stay raw (`"`), never escaped to `\"`, which is
+    // what broke cmd's parsing when the command went through Rust arg-escaping.
+    assert!(!line.contains("\\\""));
+}
+
+#[test]
+fn windows_external_terminal_command_line_handles_paths_with_spaces() {
+    let command = format!(
+        "{} auth login",
+        shell_quote("C:\\Program Files\\nodejs\\claude.cmd")
+    );
+
+    let line = windows_external_terminal_command_line(&command);
+
+    // Outer wrap keeps the space-containing path quoted after cmd strips one pair.
+    assert!(line.ends_with("/K \"\"C:\\Program Files\\nodejs\\claude.cmd\" auth login\""));
+}
+
+#[test]
 fn cli_backend_command_names_include_windows_npm_shims() {
     let codex_names = cli_backend_command_names(AiCliBackendKind::Codex);
     let claude_names = cli_backend_command_names(AiCliBackendKind::ClaudeCode);

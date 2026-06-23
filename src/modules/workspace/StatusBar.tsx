@@ -23,6 +23,7 @@ import { showNativeContextMenu } from "../../lib/nativeContextMenu";
 import { AiCodingUsageStatusBar } from "../dashboard/widgets/builtin/ai-coding-usage/AiCodingUsageStatusBar";
 import { InstallerStatusSummary } from "../installer/InstallerStatusSummary";
 import { invokeCommand, isTauriRuntime } from "../../lib/tauri";
+import { recordEncryptedStoreUnlockAt } from "../../lib/encryptedStoreLaunchPromptPolicy";
 import { useWorkspaceStore } from "../../store";
 import type { CredentialSecretStoreStatus, StatusBarNotice } from "../../types";
 import { currentPlatform } from "../../lib/platform";
@@ -252,6 +253,7 @@ function CredentialStoreStatusButton() {
       setBusy(true);
       setError(null);
       await invokeCommand("configure_encrypted_file_secret_store", { request });
+      recordEncryptedStoreUnlockAt();
       setDialogOpen(false);
       await refreshStatus();
       window.dispatchEvent(new CustomEvent("kkterm:credential-store-status-changed"));

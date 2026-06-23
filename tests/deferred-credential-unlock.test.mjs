@@ -8,6 +8,10 @@ test("encrypted credential storage unlock is deferred until a secret operation r
     new URL("../src/modules/settings/CredentialsSettings.tsx", import.meta.url),
     "utf8",
   );
+  const defaultsSource = await readFile(
+    new URL("../src/app-defaults.ts", import.meta.url),
+    "utf8",
+  );
   const statusBarSource = await readFile(
     new URL("../src/modules/workspace/StatusBar.tsx", import.meta.url),
     "utf8",
@@ -24,8 +28,10 @@ test("encrypted credential storage unlock is deferred until a secret operation r
   assert.match(appSource, /completeCredentialUnlockRequests\(true\)/);
   assert.match(appSource, /completeCredentialUnlockRequests\(false\)/);
 
-  assert.doesNotMatch(settingsSource, /encryptedStoreLaunchPrompt/);
   assert.doesNotMatch(settingsSource, /shouldPromptForEncryptedFileSetup/);
+  assert.match(settingsSource, /encryptedStoreLaunchPrompt/);
+  assert.match(defaultsSource, /encryptedStoreLaunchPrompt:\s*"never"/);
+  assert.match(appSource, /shouldPromptForEncryptedStoreOnLaunch/);
 
   assert.match(statusBarSource, /CredentialStoreStatusButton/);
   assert.match(statusBarSource, /credential_secret_store_status/);

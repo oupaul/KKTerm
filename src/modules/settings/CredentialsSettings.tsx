@@ -5,11 +5,13 @@ import {
   AI_PROVIDER_SECRET_OWNER_ID,
   aiProviderSecretOwnerId,
 } from "../../lib/settings";
+import { recordEncryptedStoreUnlockAt } from "../../lib/encryptedStoreLaunchPromptPolicy";
 import { currentPlatform } from "../../lib/platform";
 import { invokeCommand, isTauriRuntime } from "../../lib/tauri";
 import { useWorkspaceStore } from "../../store";
 import type {
   KeychainStatus,
+  EncryptedStoreLaunchPromptPolicy,
   SecretStoreKind,
   StoredCredentialKind,
   StoredCredentialSummary,
@@ -161,7 +163,10 @@ export function CredentialsSettings() {
       const result = isTauriRuntime()
         ? await invokeCommand("configure_encrypted_file_secret_store", { request })
         : {
-            settings: { secretStore: "file" as const },
+            settings: {
+              encryptedStoreLaunchPrompt: draft.encryptedStoreLaunchPrompt,
+              secretStore: "file" as const,
+            },
             status: {
               available: true,
               service: "com.kkterm.app",
@@ -171,6 +176,7 @@ export function CredentialsSettings() {
               encryptedStoreExists: true,
             },
           };
+      recordEncryptedStoreUnlockAt();
       setCredentialSettings(result.settings);
       setDraft(result.settings);
       setSecretStatus(result.status);
@@ -295,6 +301,40 @@ export function CredentialsSettings() {
             >
               {t("settings.encryptedSecretStoreSetupAction")}
             </button>
+          ) : null}
+          {selectedSecretStore === "file" ? (
+            <label>
+              <span>{t("settings.encryptedStoreLaunchPrompt")}</span>
+              <select
+                onChange={(event) =>
+                  setDraft((settings) => ({
+                    ...settings,
+                    encryptedStoreLaunchPrompt: event.currentTarget
+                      .value as EncryptedStoreLaunchPromptPolicy,
+                  }))
+                }
+                value={draft.encryptedStoreLaunchPrompt}
+              >
+                <option value="everyTime">
+                  {t("settings.encryptedStoreLaunchPromptEveryTime")}
+                </option>
+                <option value="oneHour">
+                  {t("settings.encryptedStoreLaunchPromptOneHour")}
+                </option>
+                <option value="fourHours">
+                  {t("settings.encryptedStoreLaunchPromptFourHours")}
+                </option>
+                <option value="twentyFourHours">
+                  {t("settings.encryptedStoreLaunchPromptTwentyFourHours")}
+                </option>
+                <option value="never">
+                  {t("settings.encryptedStoreLaunchPromptNever")}
+                </option>
+              </select>
+              <small className="field-hint">
+                {t("settings.encryptedStoreLaunchPromptHint")}
+              </small>
+            </label>
           ) : null}
         </div>
         <p className="field-hint settings-security-note">{t(securityReminderKey)}</p>
