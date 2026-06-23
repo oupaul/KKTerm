@@ -15,7 +15,7 @@ test("URL WebView Shift-click opens http links externally through the title brid
   assert.match(rustSource, /__KKTERM_URL_EXTERNAL_LINK__/);
   assert.match(rustSource, /event\.shiftKey/);
   assert.match(rustSource, /event\.preventDefault\(\)/);
-  assert.match(rustSource, /new URL\(href, window\.location\.href\)/);
+  assert.match(rustSource, /new URL\(anchor\.getAttribute\("href"\), window\.location\.href\)/);
   assert.match(rustSource, /protocol !== "http:" && url\.protocol !== "https:"/);
   assert.match(rustSource, /token: BRIDGE_TOKEN/);
 

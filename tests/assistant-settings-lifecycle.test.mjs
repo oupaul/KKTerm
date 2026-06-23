@@ -15,16 +15,24 @@ test("settings navigation keeps the assistant panel mounted", async () => {
 });
 
 test("settings mode visually suppresses the mounted assistant panel", async () => {
-  const cssSource = await readFile(new URL("../src/App.css", import.meta.url), "utf8");
-
-  assert.match(
-    cssSource,
-    /\.settings-mode\s+\.assistant-panel\s*\{[\s\S]*?visibility:\s*hidden;/,
-    "Settings should hide the still-mounted assistant panel from view.",
+  // Settings now renders as a full-viewport modal overlay that covers the
+  // still-mounted assistant panel, rather than toggling its visibility.
+  const settingsCss = await readFile(
+    new URL("../src/modules/settings/settings.css", import.meta.url),
+    "utf8",
   );
-  assert.match(
-    cssSource,
-    /\.settings-mode\s+\.assistant-panel\s*\{[\s\S]*?pointer-events:\s*none;/,
-    "Settings should prevent pointer interaction with the hidden assistant panel.",
+
+  const backdropMatch = settingsCss.match(/\.settings-backdrop\s*\{(?<body>[^}]+)\}/);
+  assert.ok(backdropMatch?.groups?.body, "Settings should render through a .settings-backdrop overlay.");
+  const backdrop = backdropMatch.groups.body;
+
+  assert.match(backdrop, /position:\s*fixed;/, "The settings overlay must be fixed over the viewport.");
+  assert.match(backdrop, /inset:\s*[^;]*0 0;/, "The settings overlay must stretch across the viewport.");
+  assert.match(backdrop, /background:\s*[^;]+;/, "The settings overlay must dim the content behind it.");
+
+  const backdropZ = Number(backdrop.match(/z-index:\s*(\d+);/)?.[1]);
+  assert.ok(
+    Number.isFinite(backdropZ) && backdropZ > 0,
+    "The settings overlay should declare a positive z-index so it stacks above the mounted panels.",
   );
 });

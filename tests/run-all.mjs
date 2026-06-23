@@ -4,12 +4,10 @@
 // runner. A new test file is picked up automatically — there is no hand-edited
 // `&&` chain to keep in sync, so tests can no longer be silently left unrun.
 //
-// QUARANTINE holds pre-existing source-grep guards whose asserted
-// implementation text has drifted from the current source. They assert
-// outdated patterns and are kept here, explicitly and visibly, rather than
-// being silently dropped. Each is pending a behavioral replacement (see the
-// T-FE-RETIRE task) after which it should be removed from this list and the
-// file deleted. Do not add new entries to grow the quarantine — fix the test.
+// QUARANTINE holds source-grep guards whose asserted implementation text has
+// drifted from the current source. It is currently empty — every previously
+// quarantined guard has been realigned with the live source and is back under
+// `npm run check`. Do not add new entries to grow the quarantine — fix the test.
 import { readdir } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import { dirname, join } from "node:path";
@@ -17,17 +15,7 @@ import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
 
-const QUARANTINE = new Set([
-  "assistant-composer-intents.test.mjs",
-  "assistant-settings-lifecycle.test.mjs",
-  "assistant-working-status.test.mjs",
-  "dashboard-delete-confirmation.test.mjs",
-  "dashboard-empty-canvas-context-menu.test.mjs",
-  "dashboard-widget-reveal.test.mjs",
-  "webview-external-link-shortcut.test.mjs",
-  "webview-toolbar-layout.test.mjs",
-  "workspace-connection-pane-layout.test.mjs",
-]);
+const QUARANTINE = new Set([]);
 
 const entries = await readdir(here);
 // .test.mjs are plain Node tests; .test.ts are behavioral tests against pure

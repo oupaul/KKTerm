@@ -2,34 +2,31 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-test("URL toolbar title keeps side breathing room and truncates before crowding controls", async () => {
+test("URL toolbar nav region truncates before crowding the controls", async () => {
   const source = await readFile(
     new URL("../src/modules/workspace/connections/webview/webview.css", import.meta.url),
     "utf8",
   );
+  // The header is a two-column grid: a flexible nav region (icon, nav cluster,
+  // address bar) and a content-sized actions column. The flexible column must be
+  // allowed to shrink to zero so the address bar truncates instead of pushing the
+  // controls off the edge.
   const headerMatch = source.match(/\.webview-pane\s*>\s*header\s*\{(?<body>[^}]+)\}/);
-  const match = source.match(/\.webview-pane\s*>\s*header\s*>\s*\.webview-title-center\s*\{(?<body>[^}]+)\}/);
-
   assert.ok(
     headerMatch?.groups?.body,
     "webview header CSS should own toolbar column sizing",
   );
-  assert.match(headerMatch.groups.body, /grid-template-columns:\s*minmax\(0,\s*1fr\)\s+minmax\(0,\s*[^)]+\)\s+max-content;/);
+  assert.match(headerMatch.groups.body, /grid-template-columns:\s*minmax\(0,\s*1fr\)\s+max-content;/);
+  assert.match(headerMatch.groups.body, /overflow:\s*hidden;/);
 
-  assert.ok(
-    match?.groups?.body,
-    "webview title CSS rule should be specific enough to override the generic terminal header span rule",
-  );
-  const body = match.groups.body;
+  // The nav region is the shrinkable side: it clips its overflow so the address
+  // bar can collapse rather than crowd the action buttons.
+  const navMatch = source.match(/\.webview-nav-group\s*\{(?<body>[^}]+)\}/);
+  assert.ok(navMatch?.groups?.body, "webview nav group should have a local sizing rule");
+  assert.match(navMatch.groups.body, /min-width:\s*0;/);
+  assert.match(navMatch.groups.body, /overflow:\s*hidden;/);
 
-  assert.match(body, /display:\s*block;/);
-  assert.match(body, /width:\s*100%;/);
-  assert.match(body, /justify-self:\s*center;/);
-  assert.match(body, /padding:\s*0\s+[^;]+;/);
-  assert.match(body, /box-sizing:\s*border-box;/);
-  assert.match(body, /text-overflow:\s*ellipsis;/);
-  assert.match(body, /white-space:\s*nowrap;/);
-
+  // The actions column never shrinks below the buttons' intrinsic width.
   const actionsMatch = source.match(/\.webview-pane\s+\.terminal-pane-actions\s*\{(?<body>[^}]+)\}/);
   assert.ok(actionsMatch?.groups?.body, "webview toolbar actions should have a local sizing rule");
   assert.match(actionsMatch.groups.body, /min-width:\s*max-content;/);

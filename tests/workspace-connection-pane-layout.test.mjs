@@ -57,7 +57,7 @@ test("Add To pane routes file-browser Connections to embedded browser panes", as
   );
 
   assert.match(typesSource, /export interface FileBrowserPane[\s\S]*kind: "sftp" \| "ftp" \| "localFiles"/);
-  assert.match(typesSource, /WorkspacePane = TerminalPane \| UrlPane \| RemoteDesktopPane \| FileBrowserPane/);
+  assert.match(typesSource, /WorkspacePane =\s*\| TerminalPane\s*\| UrlPane\s*\| RemoteDesktopPane\s*\| FileBrowserPane\s*\| FileViewerPane;/);
   assert.match(
     storeSource,
     /if \(connection\.type === "ftp"\) \{[\s\S]*?kind: isSftpProtocol \? "sftp" : "ftp"[\s\S]*?connection: fileConnection/,
@@ -79,7 +79,7 @@ test("Add To pane routes file-browser Connections to embedded browser panes", as
   );
   assert.match(
     terminalWorkspaceSource,
-    /pane\.kind === "remoteDesktop" \? \([\s\S]*?<RemoteDesktopWorkspace[\s\S]*?\) : \([\s\S]*?<SftpWorkspace[\s\S]*?commands=\{fileBrowserCommands \?\? undefined\}/,
+    /case "sftp":\s*case "ftp":\s*case "localFiles":[\s\S]*?<SftpWorkspace[\s\S]*?commands=\{fileBrowserCommands \?\? undefined\}/,
     "embedded file-browser panes should render through SftpWorkspace with the transport adapter",
   );
 });
