@@ -177,3 +177,42 @@ test("Connection Tree supports forced new Tabs from Ctrl-click and Add to menu",
     "DOM fallback Add Tab should be disabled for non-terminal Child Connection Tab targets",
   );
 });
+
+test("Child Connection panorama preserves the parent's original session and split Panes (issue #430)", async () => {
+  const storeSource = await readFile(new URL("../src/store.ts", import.meta.url), "utf8");
+  const childConnectionsSource = await readFile(
+    new URL("../src/modules/workspace/connections/childConnections.ts", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(
+    childConnectionsSource,
+    /export function collectPreservedParentPanes/,
+    "child layout reconciliation should expose a testable helper for preserved Panes",
+  );
+  assert.match(
+    childConnectionsSource,
+    /existingGroupTab\s*\n?\s*\?\s*existingGroupTab\.panes\.filter\(\(pane\) => !pane\.childConnectionId\)/,
+    "in-panorama split Panes (no childConnectionId) must be carried forward on rebuild",
+  );
+  assert.match(
+    childConnectionsSource,
+    /sourceTab\.childConnectionGroupParentId \|\|\s*\n?\s*sourceTab\.connection\?\.id !== parentConnectionId/,
+    "orphan adoption must stay scoped to plain Tabs of the target parent Connection",
+  );
+  assert.match(
+    storeSource,
+    /const \{ carriedGroupPanes, adoptedOrphanPanes \} = collectPreservedParentPanes\(/,
+    "openChildConnectionLayout should fold preserved Panes into the panorama",
+  );
+  assert.match(
+    storeSource,
+    /for \(const pane of adoptedOrphanPanes\) \{\s*movedPaneIds\.add\(pane\.id\);/,
+    "adopted orphan Panes must be moved out of their original Tab so it is not left behind",
+  );
+  assert.match(
+    storeSource,
+    /const childPanes = \[\.\.\.namedChildPanes, \.\.\.carriedGroupPanes, \.\.\.adoptedOrphanPanes\];/,
+    "the rebuilt panorama must include named children plus carried and adopted Panes",
+  );
+});

@@ -1,8 +1,14 @@
 import {
+  collectPreservedParentPanes,
   focusedPaneIdForChildLayout,
   syncChildConnectionsFromTabs,
 } from "./childConnections.ts";
-import type { Connection, WorkspaceChildConnection, WorkspaceTab } from "../../../types";
+import type {
+  Connection,
+  WorkspaceChildConnection,
+  WorkspacePane,
+  WorkspaceTab,
+} from "../../../types";
 
 const parentConnection: Connection = {
   id: "parent-1",
@@ -75,4 +81,106 @@ if (fallbackFocusedPane !== undefined) {
 const initialFocusedPane = focusedPaneIdForChildLayout(undefined, tab.panes);
 if (initialFocusedPane !== undefined) {
   throw new Error("Opening a child panorama without prior focus should not invent a focused child Pane.");
+}
+
+// --- collectPreservedParentPanes (issue #430) ---
+
+function terminalPane(id: string, overrides: Partial<WorkspacePane> = {}): WorkspacePane {
+  return {
+    kind: "terminal",
+    id,
+    title: id,
+    toolbarTitle: id,
+    cwd: "~",
+    buffer: "",
+    connection: parentConnection,
+    ...overrides,
+  } as WorkspacePane;
+}
+
+function terminalTab(id: string, panes: WorkspacePane[], overrides: Partial<WorkspaceTab> = {}): WorkspaceTab {
+  return {
+    id,
+    title: id,
+    subtitle: "",
+    kind: "terminal",
+    panes,
+    connection: parentConnection,
+    ...overrides,
+  };
+}
+
+// Bug 1: the parent's original plain Tab (no childConnectionId) must be adopted
+// into the panorama instead of being left as an unreachable orphan.
+const orphanPlainTab = terminalTab("tab-parent-1", [terminalPane("pane-original")]);
+const newChildTab = terminalTab("tab-parent-1-new", [
+  terminalPane("pane-new-child", { childConnectionId: "child-2" }),
+]);
+const bug1 = collectPreservedParentPanes({
+  parentConnectionId: parentConnection.id,
+  activeWorkspaceId: "default",
+  defaultWorkspaceId: "default",
+  existingGroupTab: undefined,
+  tabs: [orphanPlainTab, newChildTab],
+});
+if (bug1.adoptedOrphanPanes.map((pane) => pane.id).join(",") !== "pane-original") {
+  throw new Error("Adding a child Tab must adopt the parent's original session, not orphan it (Bug 1).");
+}
+if (bug1.carriedGroupPanes.length !== 0) {
+  throw new Error("With no existing group Tab there are no carried Panes.");
+}
+
+// The named child Pane already being moved in must not be adopted a second time.
+const bug1Excluded = collectPreservedParentPanes({
+  parentConnectionId: parentConnection.id,
+  activeWorkspaceId: "default",
+  defaultWorkspaceId: "default",
+  existingGroupTab: undefined,
+  tabs: [orphanPlainTab, newChildTab],
+  excludedPaneIds: new Set(["pane-original"]),
+});
+if (bug1Excluded.adoptedOrphanPanes.length !== 0) {
+  throw new Error("Panes already claimed by the caller must not be adopted again.");
+}
+
+// Bug 2: a "split right" inside the panorama produces a childless Pane that must
+// survive a layout rebuild rather than being discarded.
+const groupTab = terminalTab(
+  "tab-parent-children",
+  [
+    terminalPane("pane-child-a", { childConnectionId: "child-1" }),
+    terminalPane("pane-split", { title: "Child 2" }),
+  ],
+  { childConnectionGroupParentId: parentConnection.id },
+);
+const bug2 = collectPreservedParentPanes({
+  parentConnectionId: parentConnection.id,
+  activeWorkspaceId: "default",
+  defaultWorkspaceId: "default",
+  existingGroupTab: groupTab,
+  tabs: [groupTab],
+});
+if (bug2.carriedGroupPanes.map((pane) => pane.id).join(",") !== "pane-split") {
+  throw new Error("An in-panorama split Pane must be carried forward on rebuild, not dropped (Bug 2).");
+}
+if (bug2.adoptedOrphanPanes.length !== 0) {
+  throw new Error("The group Tab itself must not be re-adopted as an orphan.");
+}
+
+// Panes from other Workspaces or other Connections must never be adopted.
+const foreignWorkspaceTab = terminalTab("tab-foreign-ws", [terminalPane("pane-foreign-ws")], {
+  workspaceId: "other",
+});
+const foreignConnectionTab = terminalTab("tab-foreign-conn", [terminalPane("pane-foreign-conn")], {
+  connection: { ...parentConnection, id: "parent-2" },
+});
+const scoped = collectPreservedParentPanes({
+  parentConnectionId: parentConnection.id,
+  activeWorkspaceId: "default",
+  defaultWorkspaceId: "default",
+  existingGroupTab: undefined,
+  tabs: [foreignWorkspaceTab, foreignConnectionTab],
+});
+if (scoped.adoptedOrphanPanes.length !== 0) {
+  throw new Error("Adoption must stay scoped to the active Workspace and the target Connection.");
 }
