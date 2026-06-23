@@ -83,15 +83,28 @@ export function selectModelOptionsForProvider({
   const sortedRefreshedModels = sortModelOptionsForProvider(provider.kind, refreshedModels).map(
     (model) => mergeModelMetadata(model, providerModelLookup),
   );
+  const refreshedModelsAreAuthoritative =
+    provider.kind === "github-copilot" && sortedRefreshedModels.length > 0;
+  const refreshedModelIds = new Set(
+    sortedRefreshedModels.map((model) => normalizeModelId(model.id)),
+  );
 
-  const displayModels: ProviderModelOption[] = showAllModels
-    ? [
-        ...(sortedRefreshedModels.length > 0
-          ? sortedRefreshedModels
-          : sortedProviderModels),
-        ...sortedProviderModels,
-      ]
-    : sortedProviderModels.filter((model) => model.recommended);
+  let displayModels: ProviderModelOption[];
+  if (showAllModels) {
+    displayModels = [
+      ...(sortedRefreshedModels.length > 0 ? sortedRefreshedModels : sortedProviderModels),
+      ...sortedProviderModels,
+    ];
+  } else if (refreshedModelsAreAuthoritative) {
+    displayModels = [
+      ...provider.modelOptions.filter((model) => model.id === "auto"),
+      ...sortedProviderModels.filter(
+        (model) => model.id !== "auto" && refreshedModelIds.has(normalizeModelId(model.id)),
+      ),
+    ];
+  } else {
+    displayModels = sortedProviderModels.filter((model) => model.recommended);
+  }
 
   const customModelOption =
     customModelId &&

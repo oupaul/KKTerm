@@ -1932,7 +1932,7 @@ fn build_copilot_sdk_session_config(
 ) -> CopilotSdkSessionConfig {
     let mut config = CopilotSdkSessionConfig::default();
     config.client_name = Some("KKTerm".to_string());
-    config.model = Some(settings.model().to_string());
+    config.model = copilot_sdk_model_setting(settings.model());
     config.streaming = Some(false);
     config.tools = Some(Vec::new());
     config.available_tools = Some(Vec::new());
@@ -1940,6 +1940,15 @@ fn build_copilot_sdk_session_config(
     config.enable_config_discovery = Some(false);
     config.github_token = Some(token.to_string());
     config
+}
+
+fn copilot_sdk_model_setting(model: &str) -> Option<String> {
+    let model = model.trim();
+    if model.eq_ignore_ascii_case("auto") {
+        None
+    } else {
+        Some(model.to_string())
+    }
 }
 
 fn format_copilot_sdk_error(stage: &str, error: CopilotSdkError) -> String {

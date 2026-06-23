@@ -116,9 +116,12 @@ export const AI_PROVIDER_MODEL_CATALOG: AiProviderModelCatalog = {
     ],
   },
   "github-copilot": {
-    defaultModel: "gpt-5.5",
+    defaultModel: "auto",
     defaultReasoningEffort: "medium",
     models: [
+      { id: "auto", label: "Auto", recommended: true, supportsImageInput: true },
+      { id: "gpt-5.1-mini", label: "GPT-5.1 Mini", recommended: true, supportsImageInput: true },
+      { id: "gpt-5-mini", label: "GPT-5 Mini", recommended: true, supportsImageInput: true },
       { id: "gpt-5.5", label: "GPT-5.5", recommended: true, supportsImageInput: true },
       { id: "claude-opus-4.8", label: "Claude Opus 4.8", recommended: true, supportsImageInput: true },
       { id: "gemini-3.5-flash", label: "Gemini 3.5 Flash", recommended: true, supportsImageInput: true },

@@ -3549,6 +3549,19 @@ fn github_copilot_sdk_options_use_stored_token_only() {
 }
 
 #[test]
+fn github_copilot_auto_model_lets_sdk_use_runtime_default() {
+    let settings: AiProviderSettings = serde_json::from_value(json!({
+        "providerKind": "github-copilot",
+        "baseUrl": "https://api.githubcopilot.com",
+        "model": "auto"
+    }))
+    .expect("settings deserialize");
+    let config = build_copilot_sdk_session_config(&settings, "ghu_test-token");
+
+    assert_eq!(config.model, None);
+}
+
+#[test]
 fn copilot_cli_binary_names_match_platform() {
     let names = copilot_cli_binary_names();
     if cfg!(target_os = "windows") {

@@ -5,7 +5,7 @@ export const githubCopilotProvider: AiProviderDefinition = {
   kind: "github-copilot",
   label: "GitHub Copilot",
   baseUrl: "https://api.githubcopilot.com",
-  defaultModel: "gpt-5.4",
+  defaultModel: "auto",
   defaultReasoningEffort: "medium",
   reasoningEfforts: [...STANDARD_REASONING_EFFORTS],
   requiresApiKey: false,
@@ -15,6 +15,9 @@ export const githubCopilotProvider: AiProviderDefinition = {
   modelListStrategy: "githubCopilotSdk",
   strictModelList: true,
   modelOptions: [
+    { id: "auto", label: "Auto", recommended: true, supportsImageInput: true },
+    { id: "gpt-5.1-mini", label: "GPT-5.1 Mini", supportsImageInput: true },
+    { id: "gpt-5-mini", label: "GPT-5 Mini", supportsImageInput: true },
     { id: "gpt-5.5", label: "GPT-5.5", supportsImageInput: true },
     { id: "gpt-5.4", label: "GPT-5.4", supportsImageInput: true },
     { id: "gpt-5.4-mini", label: "GPT-5.4 Mini", supportsImageInput: true },
