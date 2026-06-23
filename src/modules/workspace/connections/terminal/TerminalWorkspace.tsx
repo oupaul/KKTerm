@@ -24,6 +24,8 @@ import { markOsIconAutoDetectDone, osIconIdForDetection, osIconRefForId, shouldA
 import { notifyConnectionTreeInvalidated } from "../connectionSidebarState";
 import { defaultTerminalSettings } from "../../../../app-defaults";
 import { forgetTmuxSessionId, useWorkspaceStore } from "../../../../store";
+import { GitIcon } from "../../../git/GitIcon";
+import { useGitRepoDetection } from "../../../git/useGitRepoDetection";
 import { createTerminalRenderer, logTerminalFontAtlasState, scheduleTerminalFontAtlasRefresh, type TerminalDimensions, type TerminalRenderer } from "./renderer";
 import { ensureLayout } from "../../layout";
 import {
@@ -1609,6 +1611,16 @@ function TerminalPaneView({
   const updateOpenTerminalPaneX11ForwardingStatus = useWorkspaceStore((state) => state.updateOpenTerminalPaneX11ForwardingStatus);
   const markOpenTerminalPaneTmuxUnavailable = useWorkspaceStore((state) => state.markOpenTerminalPaneTmuxUnavailable);
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
+  const openGitBrowser = useWorkspaceStore((state) => state.openGitBrowser);
+  // Show the Git icon when a local terminal's directory is inside a repo. Use
+  // the OSC-reported cwd when available, otherwise fall back to the Connection's
+  // startup directory so the icon can appear before any OSC 7 update. Remote
+  // (SSH) terminals run git on another host and are out of scope here.
+  const isLocalTerminal = pane.connection?.type === "local";
+  const gitDetectPath = isLocalTerminal
+    ? pane.cwd || pane.connection?.localStartupDirectory || undefined
+    : undefined;
+  const gitRepo = useGitRepoDetection(gitDetectPath, isLocalTerminal);
   const { t } = useTranslation();
   const terminalOpacity =
     pane.connection?.terminalOpacity ?? (100 - terminalSettings.defaultTransparency);
@@ -2590,6 +2602,17 @@ function TerminalPaneView({
               type="button"
             >
               <Folder size={13} />
+            </button>
+          ) : null}
+          {gitRepo ? (
+            <button
+              className="terminal-pane-action"
+              aria-label={t("git.openBrowser")}
+              onClick={() => openGitBrowser(gitRepo.repoRoot, gitRepo.label)}
+              title={t("git.openBrowser")}
+              type="button"
+            >
+              <GitIcon name="branch" size={13} />
             </button>
           ) : null}
           <button

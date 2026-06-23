@@ -76,7 +76,8 @@
   align-items: center;
   gap: 6px;
 }
-.sftp-bar-close {
+.sftp-bar-close,
+.sftp-bar-git {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -89,7 +90,8 @@
   cursor: pointer;
   transition: background 0.12s, color 0.12s;
 }
-.sftp-bar-close:hover {
+.sftp-bar-close:hover,
+.sftp-bar-git:hover {
   background: var(--hover);
   color: var(--text);
 }

@@ -9,6 +9,7 @@ import { SftpWorkspace } from "./connections/sftp/SftpWorkspace";
 import { FileViewerWorkspace } from "./connections/file-viewer/FileViewerWorkspace";
 import { TerminalWorkspace } from "./connections/terminal/TerminalWorkspace";
 import { WebViewWorkspace } from "./connections/webview/WebViewWorkspace";
+import { GitBrowser } from "../git/GitBrowser";
 import { ConnectionIcon } from "./connections/ConnectionIcon";
 import { ChevronLeft, ChevronRight, Terminal, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -297,6 +298,8 @@ export function WorkspaceCanvas({
   const closeTab = useWorkspaceStore((state) => state.closeTab);
   const localTerminalPopup = useWorkspaceStore((state) => state.localTerminalPopup);
   const closeLocalTerminalPopup = useWorkspaceStore((state) => state.closeLocalTerminalPopup);
+  const gitBrowser = useWorkspaceStore((state) => state.gitBrowser);
+  const closeGitBrowser = useWorkspaceStore((state) => state.closeGitBrowser);
   // The toolbar close button only earns its place when the tab strip is hidden;
   // otherwise the tab strip's own close button already covers it.
   const hideTopTabButtons = useWorkspaceStore((state) => state.generalSettings.hideTopTabButtons);
@@ -344,6 +347,15 @@ export function WorkspaceCanvas({
       )
     : null;
 
+  // The Git Browser is an app-window overlay (portalled to document.body) so it
+  // floats above workspace chrome and native surfaces, per the overlay rule.
+  const gitBrowserOverlay = gitBrowser
+    ? createPortal(
+        <GitBrowser target={gitBrowser} onClose={closeGitBrowser} />,
+        document.body,
+      )
+    : null;
+
   if (tabs.length === 0) {
     return (
       <>
@@ -355,6 +367,7 @@ export function WorkspaceCanvas({
           </section>
         </div>
         {terminalPopup}
+        {gitBrowserOverlay}
       </>
     );
   }
@@ -475,6 +488,7 @@ export function WorkspaceCanvas({
         })}
       </div>
       {terminalPopup}
+      {gitBrowserOverlay}
     </>
   );
 }

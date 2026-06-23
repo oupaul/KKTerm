@@ -485,6 +485,7 @@ Workspace chrome layout is global state. Connection-specific live context may ch
 - `src/modules/workspace/connections/terminal/terminal.css` — terminal workspace, split panes, xterm host, tmux controls, terminal toolbar, and terminal-local menu affordances.
 - `src/modules/workspace/connections/sftp/SftpWorkspace.tsx` — SFTP dual-pane browser, file panes, transfers, overwrite conflicts, context menu, properties popup.
 - `src/modules/workspace/connections/sftp/sftp.css` — SFTP/FTP workspace, file panes, transfer queue, conflict dialogs, properties popover, and SFTP-specific context menu CSS.
+- `src/modules/git/` — Git Browser overlay opened from local terminal and File Explorer surfaces. Owns repository detection hooks, commit graph rendering, working-tree staging/commit UI, Git-specific dialogs, and `git.css`; it calls typed command wrappers in `gitCommands.ts` and reports transient outcomes through the Status Bar.
 - `src/modules/workspace/connections/webview/WebViewWorkspace.tsx` — URL Connection workspace shell, stable overlay `WebviewWindow` bounds/visibility/focus lifecycle, toolbar navigation affordances, credentials, downloads, screenshots, and disabled runtime placeholder.
 - `src/modules/workspace/connections/webview/webview.css` — URL workspace toolbar (File Explorer Apple-esque chrome), connection icon, address bar, status, and placeholder CSS.
 - `src/modules/workspace/connections/remote-desktop/RemoteDesktopWorkspace.tsx` — RDP/VNC workspace host, RDP ActiveX visibility/bounds synchronization, RDP-only snapshot/parking for intersecting DOM overlays, and VNC canvas framebuffer/input handling.
@@ -541,6 +542,7 @@ Connections, Sessions, and transports:
 - `ssh_keys.rs` — generates Ed25519 key pairs via `ssh-keygen`, copies public keys to remote hosts, and secures private-key permissions.
 - `x_server.rs` — launches the VcXsrv X11 server when needed for SSH X forwarding and returns the display number.
 - `sftp.rs` — SFTP client: directory listing, upload/download with progress events, transfer cancellation, and Windows-drive virtual paths.
+- `git.rs` — Git Browser backend: shells out to the system `git` binary on background workers for repository detection, overview/log/status/diff reads, and user-initiated mutations such as stage, commit, checkout, branch, tag, merge, cherry-pick, revert, stash, fetch, pull, and push. It relies on the user's Git config, credential manager, and SSH agent rather than storing Git credentials in KKTerm.
 - `telnet.rs` — stateful Telnet client with interactive option negotiation, XTERM/VT100 terminal-type fallback, NAWS resize propagation, NVT input encoding, login-prompt detection, and optional automatic credential submission.
 - `serial.rs` — native serial terminal with configurable speed and DTR/RTS, emitting raw bytes to the Session.
 - `ftp.rs` — FTP/FTPS client with async transfers, listing parse, progress events, and configurable TLS/connection modes.

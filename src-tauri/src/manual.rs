@@ -127,6 +127,12 @@ const CHAPTERS: &[ManualChapter] = &[
         filename: "18-installer.md",
         title: "Install Helper",
     },
+    ManualChapter {
+        slug: "git-browser",
+        order: 19,
+        filename: "19-git-browser.md",
+        title: "Git Browser",
+    },
 ];
 
 fn resolve_chapter_path(app: &AppHandle, filename: &str) -> Result<std::path::PathBuf, String> {
