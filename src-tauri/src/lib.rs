@@ -15,6 +15,7 @@ mod diagnostics;
 mod favicon;
 mod file_viewer;
 mod ftp;
+mod git;
 mod github_copilot;
 mod import;
 mod installer;
@@ -686,6 +687,11 @@ fn delete_url_credential(
 ) -> Result<(), String> {
     storage.delete_url_credential(connection_id.clone())?;
     secrets.delete_secret(secrets::SecretReferenceRequest::url_password(connection_id))
+}
+
+#[tauri::command]
+fn list_serial_ports() -> Vec<String> {
+    serial::available_serial_ports()
 }
 
 #[tauri::command]
@@ -2430,6 +2436,145 @@ async fn render_pdf_view(
     run_blocking_command("render pdf view", move || file_viewer::render_pdf(request)).await
 }
 
+// ── Git Browser commands ────────────────────────────────────────────────────
+// Each shells out to the system `git` binary on a background worker per the
+// UI-liveness invariant. Network operations inherit the user's git credential
+// configuration; mutating operations surface git's stderr on failure.
+
+#[tauri::command]
+async fn git_detect_repo(request: git::PathRequest) -> Result<git::GitDetect, String> {
+    run_blocking_command("git detect repo", move || Ok(git::detect_repo(request))).await
+}
+
+#[tauri::command]
+async fn git_repo_overview(request: git::RepoRequest) -> Result<git::GitOverview, String> {
+    run_blocking_command("git repo overview", move || git::repo_overview(request)).await
+}
+
+#[tauri::command]
+async fn git_log_graph(request: git::LogRequest) -> Result<Vec<git::GitCommit>, String> {
+    run_blocking_command("git log graph", move || git::log_graph(request)).await
+}
+
+#[tauri::command]
+async fn git_commit_files(
+    request: git::CommitFilesRequest,
+) -> Result<Vec<git::GitChangedFile>, String> {
+    run_blocking_command("git commit files", move || git::commit_files(request)).await
+}
+
+#[tauri::command]
+async fn git_diff_commit(request: git::DiffCommitRequest) -> Result<Vec<git::GitDiffLine>, String> {
+    run_blocking_command("git diff commit", move || git::diff_commit(request)).await
+}
+
+#[tauri::command]
+async fn git_diff_worktree(
+    request: git::DiffWorktreeRequest,
+) -> Result<Vec<git::GitDiffLine>, String> {
+    run_blocking_command("git diff worktree", move || git::diff_worktree(request)).await
+}
+
+#[tauri::command]
+async fn git_status(request: git::RepoRequest) -> Result<git::GitStatus, String> {
+    run_blocking_command("git status", move || git::status(request)).await
+}
+
+#[tauri::command]
+async fn git_stage(request: git::PathsRequest) -> Result<String, String> {
+    run_blocking_command("git stage", move || git::stage(request)).await
+}
+
+#[tauri::command]
+async fn git_unstage(request: git::PathsRequest) -> Result<String, String> {
+    run_blocking_command("git unstage", move || git::unstage(request)).await
+}
+
+#[tauri::command]
+async fn git_stage_all(request: git::RepoRequest) -> Result<String, String> {
+    run_blocking_command("git stage all", move || git::stage_all(request)).await
+}
+
+#[tauri::command]
+async fn git_unstage_all(request: git::RepoRequest) -> Result<String, String> {
+    run_blocking_command("git unstage all", move || git::unstage_all(request)).await
+}
+
+#[tauri::command]
+async fn git_commit(request: git::CommitRequest) -> Result<String, String> {
+    run_blocking_command("git commit", move || git::commit(request)).await
+}
+
+#[tauri::command]
+async fn git_checkout(request: git::RefRequest) -> Result<String, String> {
+    run_blocking_command("git checkout", move || git::checkout(request)).await
+}
+
+#[tauri::command]
+async fn git_create_branch(request: git::CreateBranchRequest) -> Result<String, String> {
+    run_blocking_command("git create branch", move || git::create_branch(request)).await
+}
+
+#[tauri::command]
+async fn git_delete_branch(request: git::DeleteBranchRequest) -> Result<String, String> {
+    run_blocking_command("git delete branch", move || git::delete_branch(request)).await
+}
+
+#[tauri::command]
+async fn git_create_tag(request: git::CreateTagRequest) -> Result<String, String> {
+    run_blocking_command("git create tag", move || git::create_tag(request)).await
+}
+
+#[tauri::command]
+async fn git_merge(request: git::RefRequest) -> Result<String, String> {
+    run_blocking_command("git merge", move || git::merge(request)).await
+}
+
+#[tauri::command]
+async fn git_cherry_pick(request: git::ShaRequest) -> Result<String, String> {
+    run_blocking_command("git cherry-pick", move || git::cherry_pick(request)).await
+}
+
+#[tauri::command]
+async fn git_revert(request: git::ShaRequest) -> Result<String, String> {
+    run_blocking_command("git revert", move || git::revert(request)).await
+}
+
+#[tauri::command]
+async fn git_stash_push(request: git::StashPushRequest) -> Result<String, String> {
+    run_blocking_command("git stash push", move || git::stash_push(request)).await
+}
+
+#[tauri::command]
+async fn git_stash_pop(request: git::StashIndexRequest) -> Result<String, String> {
+    run_blocking_command("git stash pop", move || git::stash_pop(request)).await
+}
+
+#[tauri::command]
+async fn git_stash_apply(request: git::StashIndexRequest) -> Result<String, String> {
+    run_blocking_command("git stash apply", move || git::stash_apply(request)).await
+}
+
+#[tauri::command]
+async fn git_stash_drop(request: git::StashIndexRequest) -> Result<String, String> {
+    run_blocking_command("git stash drop", move || git::stash_drop(request)).await
+}
+
+#[tauri::command]
+async fn git_fetch(request: git::FetchRequest) -> Result<String, String> {
+    run_blocking_command("git fetch", move || git::fetch(request)).await
+}
+
+#[tauri::command]
+async fn git_pull(request: git::PullRequest) -> Result<String, String> {
+    run_blocking_command("git pull", move || git::pull(request)).await
+}
+
+#[tauri::command]
+async fn git_push(request: git::PushRequest) -> Result<String, String> {
+    run_blocking_command("git push", move || git::push(request)).await
+}
+
 #[tauri::command]
 async fn move_local_path(
     request: sftp::MoveLocalPathRequest,
@@ -3396,6 +3541,7 @@ pub fn run() {
             duplicate_connection,
             move_connection_folder,
             move_connection,
+            list_serial_ports,
             // ── URL connections & credentials
             update_url_connection_icon_from_page,
             upsert_url_credential,
@@ -3573,6 +3719,33 @@ pub fn run() {
             file_view_pdf_status,
             write_file_view,
             render_pdf_view,
+            // ── Git Browser
+            git_detect_repo,
+            git_repo_overview,
+            git_log_graph,
+            git_commit_files,
+            git_diff_commit,
+            git_diff_worktree,
+            git_status,
+            git_stage,
+            git_unstage,
+            git_stage_all,
+            git_unstage_all,
+            git_commit,
+            git_checkout,
+            git_create_branch,
+            git_delete_branch,
+            git_create_tag,
+            git_merge,
+            git_cherry_pick,
+            git_revert,
+            git_stash_push,
+            git_stash_pop,
+            git_stash_apply,
+            git_stash_drop,
+            git_fetch,
+            git_pull,
+            git_push,
             open_filesystem_path,
             copy_local_path,
             move_local_path,

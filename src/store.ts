@@ -56,6 +56,7 @@ import { invokeCommand, openFilesystemPath } from "./lib/tauri";
 import { elevatedLocalShellAction } from "./modules/workspace/connections/quickConnectMenuModel";
 import { resolveDefaultTerminalAppearance } from "./modules/workspace/connections/terminalAppearanceDefaults";
 import type { LocalShellOption } from "./modules/workspace/connections/utils";
+import type { GitBrowserTarget } from "./modules/git/gitTypes";
 import { markPanesForRuntimeMove } from "./modules/workspace/paneRegistry";
 import { focusedPaneIdForChildLayout } from "./modules/workspace/connections/childConnections";
 
@@ -1120,6 +1121,8 @@ interface WorkspaceState {
   performanceMetrics: PerformanceMetrics;
   statusBarNotice?: StatusBarNotice;
   localTerminalPopup?: WorkspaceTab;
+  /** Open Git Browser overlay target (repo root + label); undefined when closed. */
+  gitBrowser?: GitBrowserTarget;
   /** DOM node in the global Status Bar that the active Document Connection portals
    * its status segments into. Set by `StatusBar`; null when the bar is hidden. */
   documentStatusSlot: HTMLElement | null;
@@ -1216,6 +1219,8 @@ interface WorkspaceState {
   openLocalTerminal: (options?: { name?: string; shell?: string }) => void;
   openLocalTerminalHere: (cwd: string, options?: { name?: string; shell?: string }) => void;
   closeLocalTerminalPopup: () => void;
+  openGitBrowser: (repoRoot: string, label: string) => void;
+  closeGitBrowser: () => void;
   openElevatedLocalTerminal: (option: LocalShellOption, options?: { cwd?: string }) => Promise<void>;
   splitTerminalPane: (tabId: string) => void;
   splitTerminalPaneDirected: (tabId: string, direction: SplitDirection) => void;
@@ -2442,6 +2447,8 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     });
   },
   closeLocalTerminalPopup: () => set({ localTerminalPopup: undefined }),
+  openGitBrowser: (repoRoot, label) => set({ gitBrowser: { repoRoot, label } }),
+  closeGitBrowser: () => set({ gitBrowser: undefined }),
   openElevatedLocalTerminal: async (option, options) => {
     const isAppElevated = await invokeCommand("is_app_elevated", undefined).catch(() => false);
     const action = elevatedLocalShellAction({

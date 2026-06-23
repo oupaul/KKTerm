@@ -37,6 +37,7 @@ When a doc says "right-click on X", the implementation is a Tauri native context
 | 16 | [16-localization.md](16-localization.md) | Switching language, supported locales | `settings`, `languages` |
 | 17 | [17-data-backup-secrets.md](17-data-backup-secrets.md) | SQLite store, OS keychain, settings Import/Export `.kkbackup`, startup backup ZIP snapshots, sharing connections without passwords | `settings`, `common` |
 | 18 | [18-installer.md](18-installer.md) | Install Helper Module — Windows dev-tool catalog, install/update/uninstall, bundled catalog, UAC and WSL behaviour | `installer` |
+| 19 | [19-git-browser.md](19-git-browser.md) | Git Browser overlay — commit graph, inspector, diff, staging/commit, branches/tags/stashes, fetch/pull/push | `git` |
 
 ## How this manual is maintained
 

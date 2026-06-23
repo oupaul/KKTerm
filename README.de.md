@@ -81,9 +81,8 @@ Dazu ein paar Dinge, von denen du nicht wusstest, dass du sie wolltest:
 - Ein **Dashboard**, in dem du einer KI sagst *„bau mir ein Widget, das meinen Router alle 30 Sekunden anpingt"*, und es erscheint, in seiner eigenen Sandbox, auf deinem Raster.
 - **SSH-Panes, die sich nach jedem WLAN-Anfall wieder an deine entfernte `claude` / `codex`-Session anhängen**, damit ein Sechs-Stunden-Job eine Verbindungsunterbrechung überlebt.
 - **Workspaces**, die dein Homelab, den Hauptjob und die Server dieses einen Kunden in getrennten, umschaltbaren Containern halten.
-- Eine **KI-Nutzungsanzeige**, damit du nicht um 3 Uhr morgens überraschend gegen die Rate-Limit-Wand fährst.
 - Ein **Install Helper**, der die Windows-Dev-Tools, die du sonst durch zehn Browser-Tabs jagst, findet, installiert, aktualisiert und startet.
-- **Fünfundzwanzig animierte Hintergründe** fürs Dashboard (ja, inklusive `matrix`), weil wir nicht zu erhaben dafür sind.
+- **Fünfundzwanzig animierte Hintergründe** fürs Dashboard *und deine Terminals* (ja, inklusive `matrix`), weil wir nicht zu erhaben dafür sind.
 
 Und das Beste: Der KI-Assistent kann aus einem einzigen Satz ein winziges Dashboard-Tool machen, das du tatsächlich behältst.
 
@@ -182,18 +181,23 @@ Es ist ein Workspace für die unordentliche echte Form von Admin-Arbeit: Connect
 
 <p align="center"><sub><em>📸 <strong>Screenshot-Platzhalter</strong> — ein Vierer-Raster: PowerShell, eine SSH-Session, ein SFTP-Browser und eine VNC-Oberfläche, alle in einem Tab.</em></sub></p>
 
-### Ein KI-Assistent, der deine Tools baut
+### Ein KI-Assistent, der deine Terminals für dich steuert
 
-Die meisten „KI im Terminal"-Demos hören beim Chat auf. Der Assistent von KKTerm kann auch kleine, dauerhafte Dashboard-Widgets bauen, zugeschnitten auf deine echte Arbeitsweise — und das Gefährliche bleibt hinter einem Schalter:
+Die meisten „KI im Terminal"-Demos hören beim Chat auf. Der Assistent von KKTerm arbeitet *in* deiner Session: Du gibst ihm Kontext aus dem, was schon auf dem Bildschirm ist, und er handelt an den Maschinen, mit denen du verbunden bist — mit einem Menschen in der Freigabeschleife.
+
+**Gib ihm Kontext, direkt.** Kein Copy-Paste-Hin-und-Her:
+
+- **Terminal-Puffer zum Kontext hinzufügen** zieht den Scrollback einer laufenden lokalen oder entfernten Session direkt in die Konversation, damit „warum ist dieser Build fehlgeschlagen?" zu etwas wird, das er tatsächlich lesen kann.
+- Das **Screenshot-Menü** schnappt sich einen Bereich oder ein ganzes Pane und legt das Bild in den Chat, damit „warum sieht dieser Dialog falsch aus?" eine Frage ist, die er beantworten kann.
+- **Hänge Dateien an** und den aktuellen **Dashboard- / IT-Ops-Seitenkontext**, damit er über das nachdenkt, was du wirklich ansiehst, statt über eine vage Beschreibung davon.
+
+**Lass ihn handeln — hinter Freigabe.** Der Assistent kann Befehle in deinen Terminals ausführen, Connections öffnen und Widgets aufs Dashboard setzen, aber das Riskante bleibt abgesichert:
 
 - **Bestimme, was er anfassen darf** — ganze Tool-Familien (Dashboard / Connections / Live Sessions) an- oder ausschalten.
 - **Bestimme, wie er fragt** — `Prompt` (Standard, fragt jedes Mal) oder `Allow All` (du bist erwachsen, du hast den Haftungsausschluss unterschrieben).
+- Alles, was nach `rm -rf` aussieht, wird als gefährlich markiert — mit dem Grund auf der Freigabekarte — und wartet auf ein ausdrückliches menschliches Ja. Die KI kann keinen zerstörerischen Befehl heimlich ausführen, nur weil jemand eine Prompt-Injection in einer Man-Page schlau platziert hat.
 
-Alles, was nach `rm -rf` aussieht, wird als gefährlich markiert und wartet auf ein ausdrückliches menschliches Ja. Die KI kann keinen zerstörerischen Befehl heimlich ausführen, nur weil jemand eine Prompt-Injection in einer Man-Page schlau platziert hat.
-
-Sie spricht mit OpenAI, Anthropic, OpenRouter, DeepSeek, Grok, Azure OpenAI, LiteLLM, GitHub Copilot, Ollama, NVIDIA oder allem OpenAI-Kompatiblen. Deine API-Schlüssel landen im OS-Schlüsselbund.
-
-Sie kann auch sehen, was du siehst: Schnapp dir mit dem **Screenshot-Menü** einen Bereich oder ein ganzes Pane und schick es direkt in die Konversation, damit „warum sieht dieser Dialog falsch aus?" zu einer Frage wird, die der Assistent tatsächlich beantworten kann.
+**Bring dein eigenes Gehirn mit.** Sie spricht mit OpenAI, Anthropic, OpenRouter, DeepSeek, Grok, Azure OpenAI, LiteLLM, GitHub Copilot, Ollama, NVIDIA oder allem OpenAI-Kompatiblen — und sie kann auf der **Claude Code CLI** oder der **Codex CLI** als Backend laufen, getrieben von deinem vorhandenen `claude`- / `codex`-Login und -Abo statt von einem separaten API-Schlüssel. Deine API-Schlüssel landen im OS-Schlüsselbund.
 
 <p align="center">
   <img src="docs/assets/screenshots/ai-assistant.png" alt="Das Panel des KI-Assistenten mit den Schaltern für Tool-Zugriff und Freigabemodus" width="720" />
@@ -222,9 +226,9 @@ Manche sind schlichte Anzeige-Panels (Markdown, Checklisten, eine große Zahl); 
 
 <p align="center"><sub><em>📸 <strong>Screenshot-Platzhalter</strong> — eine Dashboard-Ansicht voller KI-gebauter Widgets: ein Ping-Monitor, ein Notizzettel, eine Live-Statistik und ein kleines Spielzeug, das gar kein Recht hat, so viel Spaß zu machen.</em></sub></p>
 
-#### Animierte Dashboard-Hintergründe (weil wir wollten)
+#### Animierte Dashboard-/Terminal-Hintergründe (weil wir wollten)
 
-Wähl pro Dashboard-Ansicht eine Stimmung aus **fünfundzwanzig** Canvas-animierten Hintergründen:
+Wähl eine Stimmung — pro Dashboard-Ansicht *oder hinter jedem Terminal* — aus **fünfundzwanzig** Canvas-animierten Hintergründen:
 
 | Stimmung | Hintergründe |
 | --- | --- |
@@ -234,7 +238,7 @@ Wähl pro Dashboard-Ansicht eine Stimmung aus **fünfundzwanzig** Canvas-animier
 | Geeky | `matrix`, `topo`, `synthwave` |
 | Unruhig | `cyberpunk`, `taipei101`, `thunderstorm`, `confetti`, `particleCursor` |
 
-Sie pausieren, wenn du woanders bist, kosten also so gut wie nichts. Kombiniere `matrix` mit deinem KI-Assistenten für eine Stimmung, die sagt „ich bin extrem produktiv und vermutlich in einem Wachowski-Film". Oder nimm `ocean` und wirk wie ein seriöser Mensch. Wir urteilen über keine der beiden Entscheidungen.
+Derselbe Picker steht auch hinter deinen Terminal-Panes, du kannst also `matrix` hinter eine laufende SSH-Session legen. Sie pausieren, wenn du woanders bist, kosten also so gut wie nichts. Kombiniere `matrix` mit deinem KI-Assistenten für eine Stimmung, die sagt „ich bin extrem produktiv und vermutlich in einem Wachowski-Film". Oder nimm `ocean` und wirk wie ein seriöser Mensch. Wir urteilen über keine der beiden Entscheidungen.
 
 <p align="center">
   <img src="docs/assets/screenshots/backgrounds.png" alt="Einige der animierten Hintergründe nebeneinander" width="720" />
@@ -242,7 +246,7 @@ Sie pausieren, wenn du woanders bist, kosten also so gut wie nichts. Kombiniere 
 
 <p align="center"><sub><em>📸 <strong>Screenshot-Platzhalter</strong> — eine Stimmungs-Übersicht: `matrix`, `aurora`, `synthwave` und `taipei101`.</em></sub></p>
 
-### Deine entfernten KI-Agenten am Leben halten
+### Deine KI-Agenten am Leben halten
 
 Das ist die zweite Funktion, in die sich Leute verlieben. KKTerms SSH-Terminals können dich direkt in eine **benannte tmux-Session** auf dem entfernten Host setzen, die ein Wiederverbinden übersteht:
 
@@ -261,20 +265,6 @@ Lokale Shells bekommen unter Windows denselben Trick: PowerShell-Panes können i
 
 <p align="center"><sub><em>📸 <strong>Screenshot-Platzhalter</strong> — die tmux/psmux-Sessionliste in der Pane-Toolbar, mit einem entfernten `claude`-Agenten, der nach einer Wiederverbindung weiterläuft.</em></sub></p>
 
-### Wissen, wie viel KI dir bleibt
-
-Coding-Agenten rechnen nach Plan-Fenster ab, nicht pro Monat, und sie fressen dein Kontingent gern auf, während du in einem Meeting sitzt. Die **KI-Nutzungsanzeige** hält das sichtbar:
-
-- Ein Dashboard-Widget, das **Claude Code** und **Codex** nebeneinander zeigt: verbundenes Konto, Plan, Verbrauch im aktuellen Fenster und diese Woche, nächste Reset-Zeit.
-- Eine kompakte **Statusleisten-Anzeige**, die dieselben Zahlen spiegelt, damit du auch bei geschlossenem Dashboard auf einen Blick siehst, ob noch Luft bis zum nächsten großen Refactoring ist.
-- Sie sagt dir vorab, ob du dich neu anmelden musst — *vor* einer langen Aufgabe, nicht mittendrin.
-
-<p align="center">
-  <img src="docs/assets/screenshots/usage-meter.png" alt="Das Widget der KI-Nutzungsanzeige und die Statusleisten-Anzeige" width="720" />
-</p>
-
-<p align="center"><sub><em>📸 <strong>Screenshot-Platzhalter</strong> — das Nutzungs-Widget mit Claude Code und Codex nebeneinander, plus die kompakte Statusleisten-Spiegelung.</em></sub></p>
-
 ### Mit Workspaces deine Welten trennen
 
 Das Homelab, der Hauptjob und die Server dieses einen Kunden gehören nicht in dieselbe Liste. **Workspaces** sind benannte, isolierte Container von Connections, zwischen denen du über das Activity Rail umschaltest. Das Umschalten re-skopiert nur den Verbindungsbaum — deine offenen Sessions, das Dashboard und die Einstellungen bleiben, wo sie sind — also kostet ein Kontextwechsel einen Klick, keinen Neustart.
@@ -285,27 +275,45 @@ Das Homelab, der Hauptjob und die Server dieses einen Kunden gehören nicht in d
 
 <p align="center"><sub><em>📸 <strong>Screenshot-Platzhalter</strong> — der Workspace-Umschalter oben im Activity Rail, mitten im Wechsel zwischen „Home Lab" und „Day Job".</em></sub></p>
 
-### Dateien und Logs, im selben Fenster
+### Mach's dir schön: Farbthemen
 
-Nicht alles ist ein entfernter Host. KKTerm durchsucht deine **lokale Platte** in einem File-Explorer-Pane (dieselbe Zweispalten-Hülle wie SFTP) und öffnet eine einzelne Datei in einem **Document-Viewer**, der den passenden Modus wählt: Text/Code mit leichtem Editor und sicherem Speichern, Markdown, CSV/TSV-Tabellen, JSON, Bilder, PDF und einen eigenen **Log-Modus** mit Level-Färbung, Filter, ANSI und Tail-Follow. Kein Griff mehr zu einem separaten Editor, nur um das Log zu lesen, neben dem du ohnehin schon stehst.
+Hintergründe sind der Spaß; **Farbthemen** sind das, worauf du den ganzen Tag tatsächlich starrst. KKTerm bringt **vierzehn** Farbschemata mit, die die ganze App-Oberfläche neu einkleiden — Activity Rail, Verbindungsbaum, Tabs, Dialoge — mit einer Live-Mini-Vorschau für jedes unter Einstellungen ▸ Darstellung:
 
-<p align="center">
-  <img src="docs/assets/screenshots/file-viewer.png" alt="Der Document-Viewer im Log-Tail-Modus neben einem File-Explorer-Pane" width="720" />
-</p>
+| Stimmung | Schemata |
+| --- | --- |
+| Neutral | `Default`, `Dark`, `Light`, `Match OS` (folgt dem Hell/Dunkel des Systems), `Mac` |
+| Bunt | `Orange`, `Purple`, `Pink`, `Confetti`, `Bubble Tea` |
+| Lokales Flair | `Green Kuai Kuai` (ja, der Snack), `Blue See`, `Blue, Green and White`, `Semiconductor` |
 
-<p align="center"><sub><em>📸 <strong>Screenshot-Platzhalter</strong> — der Document-Viewer folgt einem Live-Log (Level-Farben + Filter) neben einem lokalen File-Explorer-Pane.</em></sub></p>
-
-### Andere KIs KKTerm steuern lassen
-
-KKTerm bringt seinen eigenen MCP-Server mit, damit externe Coding-Agenten (Claude Code, Codex, Copilot, Antigravity, OpenCode) deinen Workspace so nutzen, wie du es tust — Verbindungen auflisten, eine öffnen, einen Terminal-Puffer lesen, Widgets aufs Dashboard setzen. KI zu KI, auf deiner Maschine, ohne Cloud-Relay. Die verändernden, riskanteren Aktionen bleiben hinter einem einzigen Sicherheitsschalter, der standardmäßig **aus** ist.
-
-Einstellungen → AI Assistant → **Built-in MCP Server** hat einen Ein-Klick-Dialog „Konfiguration anzeigen", schon ausgefüllt, plus kopierbare Befehle `claude mcp add` / `codex mcp add`.
+Das Terminal behält seine eigene dunkle Palette, egal welches Schema du wählst, damit deine Shells lesbar bleiben, während der Rest der App zu deiner Stimmung passt.
 
 <p align="center">
-  <img src="docs/assets/screenshots/mcp-server.png" alt="Die Einstellungen des eingebauten MCP-Servers mit dem Konfigurations-Dialog" width="720" />
+  <img src="docs/assets/screenshots/color-themes.png" alt="Das Raster der Farbschemata in den Einstellungen mit Live-Vorschauen" width="720" />
 </p>
 
-<p align="center"><sub><em>📸 <strong>Screenshot-Platzhalter</strong> — das Panel „Built-in MCP Server" mit dem Dialog „Konfiguration anzeigen" und dem standardmäßig ausgeschalteten Sicherheitsschalter.</em></sub></p>
+<p align="center"><sub><em>📸 <strong>Screenshot-Platzhalter</strong> — das Farbschema-Raster unter Einstellungen ▸ Darstellung, jede Kachel eine Live-Mini-Vorschau der App.</em></sub></p>
+
+### Install Helper (nur Windows)
+
+Eine frische Windows-Maschine fürs Entwickeln einzurichten heißt sonst zehn Browser-Tabs und viel „Weiter, Weiter, Fertig". Der **Install Helper** ist ein eingebauter Katalog, der die Tools, die du sonst von Hand jagst, findet, installiert, aktualisiert und deinstalliert — ohne KKTerm zu verlassen:
+
+- **Essentials** — winget, Node (über nvm-windows), Python (über uv), Git.
+- **AI Agents** — Claude Code, Codex, Antigravity, OpenCode und weitere CLIs und Desktop-Apps für Coding-Agenten.
+- **AI Platforms** — lokale / selbstgehostete Stacks wie Ollama, n8n, Open WebUI, Flowise und Langflow, für dich gestartet und verwaltet.
+- **Development** — Editoren, Container, API-Tools, WSL und seine Distributionen, Rustup.
+- **Windows Power User** — PowerToys, PowerShell 7, psmux, Sysinternals, Everything, Ditto.
+- **Remote Access** — Tailscale, RustDesk.
+- **Utilities** — Notepad++, ripgrep, jq, fzf, 7-Zip, Oh My Posh, FFmpeg und mehr.
+
+Er erkennt, was schon installiert ist, markiert, was ein Update hat, und **Alle aktualisieren** arbeitet die Warteschlange für dich ab. UAC-Abfragen bleiben explizit, nichts installiert sich heimlich, und der ganze Katalog steckt in der App — kein extra Konto, keine Hintergrund-Telemetrie.
+
+> macOS und Linux haben schon Paketmanager, die du liebst, also ist der Install Helper ein reiner Windows-Komfort und nicht Teil dieser Builds.
+
+<p align="center">
+  <img src="docs/assets/screenshots/install-helper.png" alt="Der Install-Helper-Katalog mit installierten und verfügbaren Tools" width="720" />
+</p>
+
+<p align="center"><sub><em>📸 <strong>Screenshot-Platzhalter</strong> — das Install-Helper-Modul: kategorisierte Tool-Kacheln, Installieren-/Aktualisieren-Buttons und die „Alle aktualisieren"-Aktion in der Kopfzeile.</em></sub></p>
 
 ---
 

@@ -105,6 +105,14 @@ import type {
   AiCodingUsageProviderState,
   AiCodingUsageState,
 } from "../modules/dashboard/widgets/builtin/ai-coding-usage/types";
+import type {
+  GitChangedFile,
+  GitCommit,
+  GitDetect,
+  GitDiffLine,
+  GitOverview,
+  GitStatus,
+} from "../modules/git/gitTypes";
 
 type BrowserFileHandle = {
   createWritable: () => Promise<{
@@ -1243,6 +1251,10 @@ type CommandMap = {
     args: undefined;
     result: UrlDataPartitionSummary[];
   };
+  list_serial_ports: {
+    args: undefined;
+    result: string[];
+  };
   clear_url_data_partition: {
     args: { name: string };
     result: null;
@@ -2144,6 +2156,120 @@ type CommandMap = {
   render_pdf_view: {
     args: { request: { path: string; page: number; scale: number } };
     result: PdfRender;
+  };
+  git_detect_repo: {
+    args: { request: { path: string } };
+    result: GitDetect;
+  };
+  git_repo_overview: {
+    args: { request: { repoRoot: string } };
+    result: GitOverview;
+  };
+  git_log_graph: {
+    args: { request: { repoRoot: string; limit?: number; allRefs?: boolean } };
+    result: GitCommit[];
+  };
+  git_commit_files: {
+    args: { request: { repoRoot: string; sha: string } };
+    result: GitChangedFile[];
+  };
+  git_diff_commit: {
+    args: { request: { repoRoot: string; sha: string; path: string } };
+    result: GitDiffLine[];
+  };
+  git_diff_worktree: {
+    args: { request: { repoRoot: string; path: string; staged?: boolean; untracked?: boolean } };
+    result: GitDiffLine[];
+  };
+  git_status: {
+    args: { request: { repoRoot: string } };
+    result: GitStatus;
+  };
+  git_stage: {
+    args: { request: { repoRoot: string; paths: string[] } };
+    result: string;
+  };
+  git_unstage: {
+    args: { request: { repoRoot: string; paths: string[] } };
+    result: string;
+  };
+  git_stage_all: {
+    args: { request: { repoRoot: string } };
+    result: string;
+  };
+  git_unstage_all: {
+    args: { request: { repoRoot: string } };
+    result: string;
+  };
+  git_commit: {
+    args: { request: { repoRoot: string; message: string; amend?: boolean } };
+    result: string;
+  };
+  git_checkout: {
+    args: { request: { repoRoot: string; reference: string } };
+    result: string;
+  };
+  git_create_branch: {
+    args: {
+      request: { repoRoot: string; name: string; startPoint?: string; checkout?: boolean };
+    };
+    result: string;
+  };
+  git_delete_branch: {
+    args: { request: { repoRoot: string; name: string; force?: boolean } };
+    result: string;
+  };
+  git_create_tag: {
+    args: { request: { repoRoot: string; name: string; sha?: string; message?: string } };
+    result: string;
+  };
+  git_merge: {
+    args: { request: { repoRoot: string; reference: string } };
+    result: string;
+  };
+  git_cherry_pick: {
+    args: { request: { repoRoot: string; sha: string } };
+    result: string;
+  };
+  git_revert: {
+    args: { request: { repoRoot: string; sha: string } };
+    result: string;
+  };
+  git_stash_push: {
+    args: { request: { repoRoot: string; message?: string; includeUntracked?: boolean } };
+    result: string;
+  };
+  git_stash_pop: {
+    args: { request: { repoRoot: string; index?: number } };
+    result: string;
+  };
+  git_stash_apply: {
+    args: { request: { repoRoot: string; index?: number } };
+    result: string;
+  };
+  git_stash_drop: {
+    args: { request: { repoRoot: string; index?: number } };
+    result: string;
+  };
+  git_fetch: {
+    args: { request: { repoRoot: string; remote?: string; prune?: boolean } };
+    result: string;
+  };
+  git_pull: {
+    args: { request: { repoRoot: string; remote?: string; branch?: string } };
+    result: string;
+  };
+  git_push: {
+    args: {
+      request: {
+        repoRoot: string;
+        remote?: string;
+        branch?: string;
+        force?: boolean;
+        setUpstream?: boolean;
+      };
+    };
+    result: string;
   };
   open_filesystem_path: {
     args: { path: string };

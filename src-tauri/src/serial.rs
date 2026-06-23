@@ -36,6 +36,23 @@ impl NativeSerialTerminal {
     }
 }
 
+/// Enumerate serial ports the OS currently exposes.
+///
+/// Backed by `serial2`, which scans IOKit on macOS (`/dev/cu.*`), `/sys/class/tty`
+/// on Linux (`/dev/ttyUSB*`, `/dev/ttyACM*`, …) and the `SERIALCOMM` registry on
+/// Windows (`COM*`). Enumeration is best-effort: on any error we return an empty
+/// list so callers can still fall back to manual entry.
+pub fn available_serial_ports() -> Vec<String> {
+    let mut ports: Vec<String> = SerialPort::available_ports()
+        .unwrap_or_default()
+        .into_iter()
+        .map(|path| path.to_string_lossy().into_owned())
+        .collect();
+    ports.sort();
+    ports.dedup();
+    ports
+}
+
 pub fn start_native_terminal(
     app: AppHandle,
     request: NativeSerialTerminalRequest,

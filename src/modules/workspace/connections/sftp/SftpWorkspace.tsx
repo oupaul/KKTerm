@@ -18,6 +18,8 @@ import {
   type FileBrowserController,
 } from "../../paneRegistry";
 import { useWorkspaceStore } from "../../../../store";
+import { GitIcon } from "../../../git/GitIcon";
+import { useGitRepoDetection } from "../../../git/useGitRepoDetection";
 import type { FileBrowserViewOptions, FileEntry, SftpSettings, WorkspaceTab } from "../../../../types";
 import type { DashboardBackground } from "../../../dashboard/types";
 import { FILE_PANE_ZOOM_DEFAULT, FilePane } from "./SftpFilePane";
@@ -130,6 +132,7 @@ export function SftpWorkspace({
   const openLocalTerminalHere = useWorkspaceStore((state) => state.openLocalTerminalHere);
   const openElevatedLocalTerminal = useWorkspaceStore((state) => state.openElevatedLocalTerminal);
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
+  const openGitBrowser = useWorkspaceStore((state) => state.openGitBrowser);
   const connection = tab.connection;
   const isLocalFilesBrowser = tab.kind === "localFiles";
   const commands = useMemo<FileBrowserCommands | null>(
@@ -138,6 +141,8 @@ export function SftpWorkspace({
   );
   const workspaceRef = useRef<HTMLElement | null>(null);
   const [localPath, setLocalPath] = useState("");
+  // Show the Git icon when the File Explorer's current directory is in a repo.
+  const gitRepo = useGitRepoDetection(localPath, isLocalFilesBrowser);
   const [localFiles, setLocalFiles] = useState<FileEntry[]>([]);
   const [remotePath, setRemotePath] = useState(".");
   const [remoteFiles, setRemoteFiles] = useState<FileEntry[]>([]);
@@ -1590,6 +1595,17 @@ export function SftpWorkspace({
           {hasRemoteHost ? hostLabel : null}
         </span>
         <span className="sftp-bar-right">
+          {gitRepo ? (
+            <button
+              className="sftp-bar-git"
+              aria-label={t("git.openBrowser")}
+              title={t("git.openBrowser")}
+              onClick={() => openGitBrowser(gitRepo.repoRoot, gitRepo.label)}
+              type="button"
+            >
+              <GitIcon name="branch" size={15} />
+            </button>
+          ) : null}
           {onClose ? (
             <button
               className="sftp-bar-close"

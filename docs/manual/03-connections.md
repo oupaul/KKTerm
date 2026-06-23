@@ -16,7 +16,7 @@
 | Local terminal | `connections.localShell` | Local PTY (ConPTY/`portable_pty`). |
 | SSH terminal | `connections.secureShell`, type label `connections.ssh` | Backed by the `NativeSsh` transport. May persist tmux launch prefs. |
 | Telnet | `connections.telnetShell`, type label `connections.telnet` | Password terminal. |
-| Serial | `connections.serialLine`, type label `connections.serial` | Serial line. |
+| Serial | `connections.serialLine`, type label `connections.serial` | Serial line. The `connections.line` field is an editable dropdown (`list_serial_ports`): it scans OS-detected ports (macOS `/dev/cu.*`, Linux `/dev/tty*`, Windows `COM*`) as pick-or-type suggestions and defaults to the first detected port, falling back to a platform-appropriate example when none are found. |
 | URL | `connections.embeddedWebApp` | Embedded WebView2 overlay window. See [08-url-webview.md](08-url-webview.md). |
 | RDP | `connections.windowsRdp` | Windows native via mstscax. See [09-remote-desktop.md](09-remote-desktop.md). |
 | VNC | `connections.screenControl` | RFB through `vnc-rs`. |

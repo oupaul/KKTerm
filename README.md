@@ -81,9 +81,8 @@ Plus a few things you didn't know you wanted:
 - A **Dashboard** where you tell an AI *"build me a widget that pings my router every 30 seconds"* and it appears, in its own sandbox, on your grid.
 - **SSH panes that reattach to your remote `claude` / `codex` session** after every Wi-Fi tantrum, so a six-hour job survives a dropped connection.
 - **Workspaces** that keep your home lab, the day job, and that one client's servers in separate, switchable containers.
-- An **AI usage meter** so you stop hitting the rate-limit wall at 3 AM by surprise.
 - An **Install Helper** that finds, installs, updates, and launches the Windows dev tools you usually chase through ten browser tabs.
-- **Twenty-six animated backgrounds** for the dashboard (yes, including `matrix`), because we are not above it.
+- **Twenty-six animated backgrounds** for the dashboard *and your terminals* (yes, including `matrix`), because we are not above it.
 
 And the best part: the AI assistant can turn a single sentence into a tiny dashboard tool you actually keep using.
 
@@ -182,18 +181,23 @@ It is one workspace for the messy real shape of admin work: mix Connection types
 
 <p align="center"><sub><em>📸 <strong>Screenshot placeholder</strong> — a four-way grid: PowerShell, an SSH session, an SFTP browser, and a VNC surface, all in one Tab.</em></sub></p>
 
-### An AI assistant that builds your tools
+### An AI assistant that commands your terminals for you
 
-Most "AI in your terminal" demos stop at chat. KKTerm's assistant can also build small, durable dashboard widgets for the way you actually work — and it keeps the dangerous stuff behind a switch:
+Most "AI in your terminal" demos stop at chat. KKTerm's assistant works *inside* your session: you hand it context from whatever is already on screen, and it acts on the boxes you're connected to — with a human in the approval loop.
+
+**Hand it context, directly.** No copy-paste relay:
+
+- **Add terminal buffer to context** pulls a live local or remote session's scrollback straight into the conversation, so "why did this build fail?" becomes something it can actually read.
+- The **screenshot menu** grabs a region or a whole Pane and drops the image into the chat, so "why does this dialog look wrong?" is a question it can answer.
+- **Attach files** and the current **Dashboard / IT Ops page context**, so it reasons about what you're actually looking at instead of a vague description of it.
+
+**Let it act — behind approval.** The assistant can run commands in your terminals, open Connections, and place widgets on the dashboard, but the risky parts stay gated:
 
 - **Pick what it can touch** — toggle whole tool families (Dashboard / Connections / Live Sessions) on or off.
 - **Pick how it asks** — `Prompt` (default, asks every time) or `Allow All` (you're an adult, you signed the waiver).
+- Anything that looks like `rm -rf` gets flagged as dangerous — with the reason shown on the approval card — and waits for an explicit human yes. The AI can't quietly run a destructive command because somebody got clever with a prompt injection in a man page.
 
-Anything that looks like `rm -rf` gets flagged as dangerous and waits for an explicit human yes. The AI can't quietly run a destructive command because somebody got clever with a prompt injection in a man page.
-
-It talks to OpenAI, OpenRouter, DeepSeek, Gemini, Grok, Azure OpenAI, LiteLLM, GitHub Copilot, Ollama, NVIDIA, OpenCode, or anything OpenAI-compatible — and reaches Anthropic's Claude through the local Claude CLI. Your API keys go to the OS keychain.
-
-It can also see what you see: grab a region or a whole Pane with the **screenshot menu** and send it straight into the conversation, so "why does this dialog look wrong?" becomes a question the assistant can actually answer.
+**Bring your own brain.** It talks to OpenAI, OpenRouter, DeepSeek, Gemini, Grok, Azure OpenAI, LiteLLM, GitHub Copilot, Ollama, NVIDIA, OpenCode, or anything OpenAI-compatible — and it can run on the **Claude Code CLI** or the **Codex CLI** as a backend, driving your existing `claude` / `codex` login and subscription instead of a separate API key. Your API keys go to the OS keychain.
 
 <p align="center">
   <img src="docs/assets/screenshots/ai-assistant.png" alt="The AI Assistant panel with the tool-access and approval-mode toggles" width="720" />
@@ -222,9 +226,9 @@ Some are simple display panels (markdown, checklists, a single big stat); others
 
 <p align="center"><sub><em>📸 <strong>Screenshot placeholder</strong> — a Dashboard View full of AI-built widgets: a ping monitor, a sticky note, a live stat, and a little toy that has no business being this fun.</em></sub></p>
 
-#### Animated dashboard backgrounds (because we wanted to)
+#### Animated dashboard/terminal backgrounds (because we wanted to)
 
-Pick a mood per dashboard view from **twenty-six** canvas-animated backgrounds:
+Pick a mood — per dashboard view, *or behind any terminal* — from **twenty-six** canvas-animated backgrounds:
 
 | Mood | Backgrounds |
 | --- | --- |
@@ -234,7 +238,7 @@ Pick a mood per dashboard view from **twenty-six** canvas-animated backgrounds:
 | Geeky | `matrix`, `topo`, `synthwave` |
 | Erratic | `cyberpunk`, `taipei101`, `thunderstorm`, `confetti`, `particleCursor` |
 
-They pause when you're elsewhere, so they cost roughly nothing. Pair `matrix` with your AI assistant for a vibe that says "I am extremely productive and also possibly in a Wachowski film." Or pick `ocean` and look like a serious person. We do not judge either choice.
+The same picker backs your terminal panes too, so you can drop `matrix` behind a live SSH session. They pause when you're elsewhere, so they cost roughly nothing. Pair `matrix` with your AI assistant for a vibe that says "I am extremely productive and also possibly in a Wachowski film." Or pick `ocean` and look like a serious person. We do not judge either choice.
 
 <p align="center">
   <img src="docs/assets/screenshots/backgrounds.png" alt="A few of the animated dashboard backgrounds side by side" width="720" />
@@ -242,7 +246,7 @@ They pause when you're elsewhere, so they cost roughly nothing. Pair `matrix` wi
 
 <p align="center"><sub><em>📸 <strong>Screenshot placeholder</strong> — a contact sheet of moods: `matrix`, `aurora`, `synthwave`, and `taipei101`.</em></sub></p>
 
-### Keep your remote AI agents alive
+### Keep your AI agents alive
 
 This is the second feature people fall in love with. KKTerm's SSH terminals can drop you straight into a **named tmux session** on the remote host that survives reconnect:
 
@@ -261,20 +265,6 @@ Local shells get the same trick on Windows: PowerShell panes can run inside **ps
 
 <p align="center"><sub><em>📸 <strong>Screenshot placeholder</strong> — the tmux/psmux session list in the Pane toolbar, with a remote `claude` agent still running after a reconnect.</em></sub></p>
 
-### Know how much AI you have left
-
-Coding agents charge by plan window, not by month, and they'll happily eat your quota while you're in a meeting. The **AI usage meter** keeps it visible:
-
-- A Dashboard widget showing **Claude Code** and **Codex** side by side: connected account, plan, how much you've used in the current window and this week, and the next reset time.
-- A compact **status-bar indicator** mirroring the same numbers, so even with the Dashboard closed you can tell at a glance whether you've got headroom before the next big refactor.
-- It tells you up front if you need to re-login — *before* a long task, not in the middle of one.
-
-<p align="center">
-  <img src="docs/assets/screenshots/usage-meter.png" alt="The AI usage meter widget and status-bar indicator" width="720" />
-</p>
-
-<p align="center"><sub><em>📸 <strong>Screenshot placeholder</strong> — the usage widget showing Claude Code and Codex side by side, plus the compact status-bar mirror.</em></sub></p>
-
 ### Keep your worlds apart with Workspaces
 
 The home lab, the day job, and that one client's servers do not belong in the same list. **Workspaces** are named, isolated containers of Connections you switch between from the Activity Rail. Switching re-scopes the Connection Tree only — your open Sessions, Dashboard, and Settings stay put — so changing context costs one click, not a relaunch.
@@ -285,27 +275,45 @@ The home lab, the day job, and that one client's servers do not belong in the sa
 
 <p align="center"><sub><em>📸 <strong>Screenshot placeholder</strong> — the Workspace switcher at the top of the Activity Rail, mid-switch between "Home Lab" and "Day Job."</em></sub></p>
 
-### Files and logs, in the same window
+### Dress it up: color themes
 
-Not everything is a remote host. KKTerm browses your **local disk** in a File Explorer Pane (the same dual-pane shell SFTP uses), and opens a single file in a **Document viewer** that picks the right mode for the job: text/code with a light editor and safe save, Markdown, CSV/TSV tables, JSON, images, PDF, and a dedicated **Log mode** with level coloring, filtering, ANSI, and tail-follow. No more reaching for a separate editor just to read the log you're already standing next to.
+Backgrounds are the fun part; **color themes** are the part you actually stare at all day. KKTerm ships **fourteen** color schemes that restyle the whole app chrome — Activity Rail, Connection Tree, tabs, dialogs — with a live mini-preview of each under Settings ▸ Appearance:
 
-<p align="center">
-  <img src="docs/assets/screenshots/file-viewer.png" alt="The document viewer in log-tail mode next to a file explorer pane" width="720" />
-</p>
+| Mood | Schemes |
+| --- | --- |
+| Neutral | `Default`, `Dark`, `Light`, `Match OS` (follows your system light/dark), `Mac` |
+| Colorful | `Orange`, `Purple`, `Pink`, `Confetti`, `Bubble Tea` |
+| Local flavor | `Green Kuai Kuai` (yes, the snack), `Blue See`, `Blue, Green and White`, `Semiconductor` |
 
-<p align="center"><sub><em>📸 <strong>Screenshot placeholder</strong> — the Document viewer following a live log (level colors + filter) next to a local File Explorer Pane.</em></sub></p>
-
-### Let other AIs drive KKTerm
-
-KKTerm ships its own built-in MCP server, so external coding agents (Claude Code, Codex, Copilot, Antigravity, OpenCode) can use your workspace the way you do — list connections, open one, read a terminal buffer, place widgets on the dashboard. AI-to-AI, on your machine, no cloud relay. The mutating, riskier actions stay behind a single safety toggle that's **off** by default.
-
-Settings → AI Assistant → **Built-in MCP Server** has a one-click "Show config" dialog with everything pre-filled, plus copyable `claude mcp add` / `codex mcp add` commands.
+The terminal keeps its own dark palette no matter which scheme you pick, so your shells stay readable while the rest of the app matches your mood.
 
 <p align="center">
-  <img src="docs/assets/screenshots/mcp-server.png" alt="The built-in MCP server settings with the show-config dialog" width="720" />
+  <img src="docs/assets/screenshots/color-themes.png" alt="The color-scheme grid in Settings with live previews" width="720" />
 </p>
 
-<p align="center"><sub><em>📸 <strong>Screenshot placeholder</strong> — the Built-in MCP Server panel with the "Show config" dialog and the safety toggle (off by default).</em></sub></p>
+<p align="center"><sub><em>📸 <strong>Screenshot placeholder</strong> — the Settings ▸ Appearance color-scheme grid, each tile a live mini-preview of the app.</em></sub></p>
+
+### Install Helper (Windows only)
+
+Setting up a fresh Windows box for dev work is usually ten browser tabs and a lot of "next, next, finish." The **Install Helper** is a built-in catalog that finds, installs, updates, and uninstalls the tools you'd otherwise chase by hand — without leaving KKTerm:
+
+- **Essentials** — winget, Node (via nvm-windows), Python (via uv), Git.
+- **AI Agents** — Claude Code, Codex, Antigravity, OpenCode, and other coding-agent CLIs and desktop apps.
+- **AI Platforms** — local / self-hosted stacks like Ollama, n8n, Open WebUI, Flowise, and Langflow, launched and managed for you.
+- **Development** — editors, containers, API tools, WSL and its distributions, Rustup.
+- **Windows Power User** — PowerToys, PowerShell 7, psmux, Sysinternals, Everything, Ditto.
+- **Remote Access** — Tailscale, RustDesk.
+- **Utilities** — Notepad++, ripgrep, jq, fzf, 7-Zip, Oh My Posh, FFmpeg, and more.
+
+It detects what's already installed, flags what has an update, and **Update all** walks the queue for you. UAC prompts stay explicit, nothing installs silently, and the whole catalog ships inside the app — no extra account, no background telemetry.
+
+> macOS and Linux already have package managers you love, so the Install Helper is a Windows-only convenience and isn't part of those builds.
+
+<p align="center">
+  <img src="docs/assets/screenshots/install-helper.png" alt="The Install Helper catalog with installed and available tools" width="720" />
+</p>
+
+<p align="center"><sub><em>📸 <strong>Screenshot placeholder</strong> — the Install Helper Module: categorized tool tiles, install/update buttons, and the "Update all" header action.</em></sub></p>
 
 ---
 
