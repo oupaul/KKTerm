@@ -6,6 +6,7 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { CSSProperties, DragEvent as ReactDragEvent, KeyboardEvent, MouseEvent as ReactMouseEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { DIcon } from "../../../../app/ui/dialog";
+import { GitIcon } from "../../../git/GitIcon";
 import { technicalInputProps } from "../../../../lib/inputBehavior";
 import type { LocalPlacesListing } from "../../../../lib/tauri";
 import type { FileEntry } from "../../../../types";
@@ -45,6 +46,7 @@ export function FilePane({
   onOpenFolder,
   onOpenFile,
   onOpenTerminalHere,
+  onOpenGit,
   onPathSubmit,
   recentPaths = [],
   onSelectionChange,
@@ -84,6 +86,9 @@ export function FilePane({
   onOpenFolder?: (folderName: string) => void;
   onOpenFile?: (fileName: string) => void;
   onOpenTerminalHere?: () => void;
+  /** Open the Git Browser for this pane's directory; shown only when the
+   * directory is inside a git repository (File Explorer local pane). */
+  onOpenGit?: () => void;
   onPathSubmit?: (path: string) => void | Promise<void>;
   recentPaths?: string[];
   onSelectionChange?: (fileNames: string[]) => void;
@@ -511,6 +516,18 @@ export function FilePane({
           </div>
         )}
         <div className="sftp-pane-head-actions">
+          {onOpenGit ? (
+            <button
+              className="sftp-icon-btn"
+              aria-label={t("git.openBrowser")}
+              disabled={isLoading}
+              onClick={onOpenGit}
+              title={t("git.openBrowser")}
+              type="button"
+            >
+              <GitIcon name="branch" size={16} />
+            </button>
+          ) : null}
           {onOpenTerminalHere ? (
             <button
               className="sftp-icon-btn"
