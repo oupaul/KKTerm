@@ -177,8 +177,7 @@
 .sftp-title-warning svg {
   flex: 0 0 auto;
 }
-.sftp-bar-close,
-.sftp-bar-git {
+.sftp-bar-close {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -191,8 +190,7 @@
   cursor: pointer;
   transition: background 0.12s, color 0.12s;
 }
-.sftp-bar-close:hover,
-.sftp-bar-git:hover {
+.sftp-bar-close:hover {
   background: var(--hover);
   color: var(--text);
 }

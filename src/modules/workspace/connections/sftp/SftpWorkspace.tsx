@@ -18,7 +18,6 @@ import {
   type FileBrowserController,
 } from "../../paneRegistry";
 import { useWorkspaceStore } from "../../../../store";
-import { GitIcon } from "../../../git/GitIcon";
 import { useGitRepoDetection } from "../../../git/useGitRepoDetection";
 import type { Connection, FileBrowserViewOptions, FileEntry, FtpConnectionOptions, SftpSettings, WorkspaceTab } from "../../../../types";
 import type { DashboardBackground } from "../../../dashboard/types";
@@ -1832,17 +1831,6 @@ export function SftpWorkspace({
           {hasRemoteHost ? hostLabel : null}
         </span>
         <span className="sftp-bar-right">
-          {gitRepo ? (
-            <button
-              className="sftp-bar-git"
-              aria-label={t("git.openBrowser")}
-              title={t("git.openBrowser")}
-              onClick={() => openGitBrowser(gitRepo.repoRoot, gitRepo.label)}
-              type="button"
-            >
-              <GitIcon name="branch" size={15} />
-            </button>
-          ) : null}
           {showPlainFtpWarning ? (
             <span
               className="sftp-title-warning"
@@ -1887,6 +1875,7 @@ export function SftpWorkspace({
           onOpenFolder={openLocalFolder}
           onOpenFile={(fileName) => void handleOpenLocalFile(fileName)}
           onOpenTerminalHere={() => void handleOpenLocalTerminalHere()}
+          onOpenGit={gitRepo ? () => openGitBrowser(gitRepo.repoRoot, gitRepo.label) : undefined}
           onPathSubmit={(path) => void loadLocalDirectory(path)}
           recentPaths={recentLocalPaths}
           onSelectionChange={setSelectedLocalNames}
