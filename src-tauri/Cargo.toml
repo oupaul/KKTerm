@@ -145,7 +145,12 @@ xcap = { version = "0.9", default-features = false, features = ["image"] }
 lto = "fat"
 codegen-units = 1
 strip = "symbols"
-panic = "abort"
+# Unwind (not "abort") so a panic in a background worker — e.g. an SSH port
+# forward task, or a third-party `Drop` such as russh closing a channel via
+# `tokio::spawn` during teardown — terminates only that worker thread instead of
+# aborting the whole app. The SSH worker additionally catches and logs panics
+# (see `run_native_terminal_thread`). Costs a little binary size vs. "abort".
+panic = "unwind"
 opt-level = "s"
 
 [profile.dev]

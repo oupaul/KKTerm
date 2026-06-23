@@ -24,6 +24,7 @@ use tokio::{
     io::{AsyncReadExt, AsyncWriteExt, copy_bidirectional},
     net::{TcpListener, TcpStream},
     sync::{mpsc, oneshot},
+    task::JoinSet,
 };
 
 const SSH_TMUX_RESUME_MAX_ATTEMPTS: usize = 2;
@@ -44,6 +45,12 @@ const SSH_KEEPALIVE_INTERVAL: Duration = Duration::from_secs(30);
 // interval that is a ~2.5 min detection window — tight enough to recover an
 // idle freeze quickly, loose enough to ride out a brief network blip.
 const SSH_KEEPALIVE_MAX_MISSED: usize = 4;
+// On session teardown the worker drains live port-forward tasks so their SSH
+// channels close while the tokio runtime is still running (russh closes
+// channels from a `Drop` that calls `tokio::spawn`, which panics once the
+// runtime is gone). This bounds how long teardown waits for a graceful drain
+// before forcing the remaining tasks down.
+const SSH_FORWARD_SHUTDOWN_GRACE: Duration = Duration::from_secs(3);
 
 fn ssh_debug(event: &str, payload: Value) {
     crate::logging::ssh_debug(event, &payload);
@@ -266,6 +273,7 @@ pub(crate) struct NativeSshConnectionRequest {
     pub socks_proxy: Option<String>,
     pub compression: bool,
     pub(crate) remote_forward_targets: Option<RemoteForwardTargets>,
+    pub(crate) bridge_tasks: Option<SshBridgeTasks>,
 }
 
 #[derive(Clone)]
@@ -348,9 +356,17 @@ pub(crate) struct VerifyingClient {
     rejection: Arc<std::sync::Mutex<Option<String>>>,
     x11_forwarding: Option<NativeSshX11Forwarding>,
     remote_forward_targets: Option<RemoteForwardTargets>,
+    bridge_tasks: Option<SshBridgeTasks>,
 }
 
 pub(crate) type RemoteForwardTargets = Arc<std::sync::Mutex<HashMap<(String, u32), (String, u16)>>>;
+
+// Tracks the detached bridge tasks that russh spawns when the *server* opens a
+// channel back to us — X11 channels and remote (`-R`) forwarded-tcpip channels.
+// Like the local/dynamic forward tasks, these own SSH channel streams that must
+// be closed while the tokio runtime is alive (russh closes them from a `Drop`
+// that calls `tokio::spawn`), so the worker drains this set on teardown.
+pub(crate) type SshBridgeTasks = Arc<std::sync::Mutex<JoinSet<()>>>;
 
 impl client::Handler for VerifyingClient {
     type Error = russh::Error;
@@ -406,11 +422,12 @@ impl client::Handler for VerifyingClient {
         _session: &mut Session,
     ) -> impl Future<Output = Result<(), Self::Error>> + Send {
         let x11_forwarding = self.x11_forwarding.clone();
+        let bridge_tasks = self.bridge_tasks.clone();
         async move {
             if let Some(x11_forwarding) = x11_forwarding {
-                tokio::spawn(async move {
+                spawn_bridge_task(&bridge_tasks, async move {
                     if let Err(error) = bridge_x11_channel(channel, x11_forwarding.display).await {
-                        eprintln!("failed to bridge SSH X11 channel: {error}");
+                        ssh_debug("bridge.x11.error", json!({ "error": error }));
                     }
                 });
             }
@@ -440,13 +457,14 @@ impl client::Handler for VerifyingClient {
                     .cloned()
             })
         });
+        let bridge_tasks = self.bridge_tasks.clone();
         async move {
             if let Some((dest_host, dest_port)) = target {
-                tokio::spawn(async move {
+                spawn_bridge_task(&bridge_tasks, async move {
                     if let Err(error) =
                         bridge_remote_forward_channel(channel, dest_host, dest_port).await
                     {
-                        eprintln!("SSH remote port forward connection failed: {error}");
+                        ssh_debug("bridge.remote_forward.error", json!({ "error": error }));
                     }
                 });
             }
@@ -809,6 +827,7 @@ async fn run_remote_command_async(request: NativeSshCommandRequest) -> Result<St
         socks_proxy: request.socks_proxy,
         compression: true,
         remote_forward_targets: None,
+        bridge_tasks: None,
     })
     .await?;
 
@@ -903,6 +922,7 @@ async fn run_remote_command_async_capture(
         socks_proxy: request.socks_proxy,
         compression: true,
         remote_forward_targets: None,
+        bridge_tasks: None,
     })
     .await?;
 
@@ -1004,23 +1024,57 @@ fn run_native_terminal_thread(
     worker_rx: mpsc::UnboundedReceiver<NativeSshWorkerMsg>,
     ready_tx: std_mpsc::SyncSender<Result<NativeSshReadyResult, String>>,
 ) -> Result<(), String> {
-    let runtime = tokio::runtime::Builder::new_current_thread()
-        .enable_all()
-        .build()
-        .map_err(|error| format!("failed to create native SSH runtime: {error}"))?;
-
+    let session_id = request.session_id.clone();
     let startup_error_tx = ready_tx.clone();
-    // A LocalSet lets background command probes run as `!Send` local tasks
-    // (russh's `client::Handle` is not `Sync`, so it cannot cross `tokio::spawn`).
-    let local = tokio::task::LocalSet::new();
-    let result = local.block_on(
-        &runtime,
-        run_native_terminal(app, request, control_rx, worker_rx, ready_tx),
-    );
+    // Catch panics on the SSH worker thread so a fault here (including a
+    // third-party `Drop` panic during teardown) is logged and contained to this
+    // one session rather than escaping. With `panic = "unwind"` the panic stops
+    // at this boundary; the parent already turns a worker error into a closed
+    // session via `worker.join()`. The runtime/LocalSet are built and dropped
+    // *inside* the catch so teardown-time panics are caught too.
+    let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .map_err(|error| format!("failed to create native SSH runtime: {error}"))?;
+
+        // A LocalSet lets background command probes run as `!Send` local tasks
+        // (russh's `client::Handle` is not `Sync`, so it cannot cross `tokio::spawn`).
+        let local = tokio::task::LocalSet::new();
+        local.block_on(
+            &runtime,
+            run_native_terminal(app, request, control_rx, worker_rx, ready_tx),
+        )
+    }));
+
+    let result = match outcome {
+        Ok(result) => result,
+        Err(panic) => {
+            let message = panic_payload_message(panic.as_ref());
+            ssh_debug(
+                "worker.panic",
+                json!({ "sessionId": session_id, "message": message }),
+            );
+            Err(format!("native SSH worker thread panicked: {message}"))
+        }
+    };
+
     if let Err(error) = &result {
         let _ = startup_error_tx.send(Err(error.clone()));
     }
     result
+}
+
+/// Best-effort extraction of a human-readable message from a caught panic
+/// payload (`catch_unwind` yields `Box<dyn Any>`), used for diagnostic logs.
+fn panic_payload_message(panic: &(dyn std::any::Any + Send)) -> String {
+    if let Some(message) = panic.downcast_ref::<&str>() {
+        (*message).to_string()
+    } else if let Some(message) = panic.downcast_ref::<String>() {
+        message.clone()
+    } else {
+        "unknown panic".to_string()
+    }
 }
 
 async fn run_native_terminal(
@@ -1164,6 +1218,7 @@ async fn run_native_terminal_once(
     startup_timeout: Duration,
 ) -> Result<TerminalRunOutcome, String> {
     let remote_forward_targets = RemoteForwardTargets::default();
+    let bridge_tasks: SshBridgeTasks = Arc::new(std::sync::Mutex::new(JoinSet::new()));
     let startup = async {
         ssh_debug(
             "terminal.startup.begin",
@@ -1191,6 +1246,7 @@ async fn run_native_terminal_once(
                 socks_proxy: request.socks_proxy.clone(),
                 compression: request.compression,
                 remote_forward_targets: Some(Arc::clone(&remote_forward_targets)),
+                bridge_tasks: Some(Arc::clone(&bridge_tasks)),
             },
             Some(&mut prompt),
         )
@@ -1296,6 +1352,12 @@ async fn run_native_terminal_once(
     // so an Rc provides the shared, read-only access the local probe tasks need.
     let session = Rc::new(session);
     let mut live_port_forwards = HashMap::<String, LivePortForward>::new();
+    // Tracks the listener tasks for every live port forward so they (and the
+    // per-connection tasks they own) can be drained on teardown while the tokio
+    // runtime is still running. Without this, abandoned forward channels are
+    // dropped after the runtime stops, and russh's channel `Drop` panics by
+    // calling `tokio::spawn` with no runtime — which crashes the whole app.
+    let mut forward_tasks: JoinSet<()> = JoinSet::new();
 
     if let Some(ready_tx) = ready_tx {
         let _ = ready_tx.send(Ok((terminal_ready_ms, x11_forwarding_status)));
@@ -1309,7 +1371,12 @@ async fn run_native_terminal_once(
         }),
     );
 
-    loop {
+    // The event loop runs inside an async block so that *every* way it can end
+    // — a clean close, a remote disconnect, or a `?` error — funnels through the
+    // forward-drain below before this function returns and the tokio runtime is
+    // torn down. See `forward_tasks` for why draining in-context matters.
+    let outcome: Result<TerminalRunOutcome, String> = async {
+        loop {
         tokio::select! {
             control = control_rx.recv() => {
                 match control {
@@ -1422,9 +1489,19 @@ async fn run_native_terminal_once(
                                         let (stop_tx, stop_rx) = oneshot::channel();
                                         let session = Rc::clone(&session);
                                         let task_forward_id = forward_id.clone();
-                                        tokio::task::spawn_local(async move {
+                                        ssh_debug(
+                                            "portforward.local.started",
+                                            json!({
+                                                "forwardId": task_forward_id,
+                                                "destPort": dest_port,
+                                            }),
+                                        );
+                                        forward_tasks.spawn_local(async move {
                                             if let Err(error) = run_live_ssh_port_forward(listener, session, dest_host, dest_port, stop_rx).await {
-                                                eprintln!("SSH port forward {task_forward_id} stopped: {error}");
+                                                ssh_debug(
+                                                    "portforward.local.stopped",
+                                                    json!({ "forwardId": task_forward_id, "error": error }),
+                                                );
                                             }
                                         });
                                         LivePortForward::Listener(stop_tx)
@@ -1437,9 +1514,16 @@ async fn run_native_terminal_once(
                                         let (stop_tx, stop_rx) = oneshot::channel();
                                         let session = Rc::clone(&session);
                                         let task_forward_id = forward_id.clone();
-                                        tokio::task::spawn_local(async move {
+                                        ssh_debug(
+                                            "portforward.dynamic.started",
+                                            json!({ "forwardId": task_forward_id }),
+                                        );
+                                        forward_tasks.spawn_local(async move {
                                             if let Err(error) = run_live_ssh_dynamic_forward(listener, session, stop_rx).await {
-                                                eprintln!("SSH dynamic port forward {task_forward_id} stopped: {error}");
+                                                ssh_debug(
+                                                    "portforward.dynamic.stopped",
+                                                    json!({ "forwardId": task_forward_id, "error": error }),
+                                                );
                                             }
                                         });
                                         LivePortForward::Listener(stop_tx)
@@ -1574,7 +1658,20 @@ async fn run_native_terminal_once(
                 }
             }
         }
+        }
     }
+    .await;
+
+    shutdown_live_port_forwards(
+        &mut live_port_forwards,
+        &mut forward_tasks,
+        &bridge_tasks,
+        &session,
+        &remote_forward_targets,
+    )
+    .await;
+
+    outcome
 }
 
 fn can_resume_tmux_terminal(request: &NativeSshTerminalRequest) -> bool {
@@ -1804,6 +1901,7 @@ async fn connect_verified_client_with_prompt(
         rejection: Arc::clone(&host_key_rejection),
         x11_forwarding: request.x11_forwarding,
         remote_forward_targets: request.remote_forward_targets,
+        bridge_tasks: request.bridge_tasks,
     };
     let mut session = with_ssh_startup_timeout("connecting to SSH server", async {
         match socks_proxy.as_deref() {
@@ -1865,6 +1963,25 @@ fn x11_port(display: u16) -> u16 {
     6000 + display.min(99)
 }
 
+/// Spawns a server-initiated bridge task (X11 or remote `-R`) into the shared
+/// tracking set when one is provided, so the worker can drain it on teardown
+/// while the runtime is still alive; otherwise falls back to a detached spawn.
+fn spawn_bridge_task<F>(bridge_tasks: &Option<SshBridgeTasks>, task: F)
+where
+    F: Future<Output = ()> + Send + 'static,
+{
+    match bridge_tasks.as_ref().and_then(|tasks| tasks.lock().ok()) {
+        Some(mut tasks) => {
+            tasks.spawn(task);
+        }
+        // No tracking set, or a poisoned lock (only ever held briefly): fall
+        // back to a detached task so the bridge still functions.
+        None => {
+            tokio::spawn(task);
+        }
+    }
+}
+
 async fn bridge_x11_channel(channel: Channel<Msg>, display: u16) -> Result<(), String> {
     let mut remote = channel.into_stream();
     let mut local = TcpStream::connect(("127.0.0.1", x11_port(display)))
@@ -1883,30 +2000,56 @@ async fn run_live_ssh_port_forward(
     remote_port: u16,
     mut stop_rx: oneshot::Receiver<()>,
 ) -> Result<(), String> {
-    loop {
+    // Per-connection forward tasks are tracked here (instead of being detached
+    // with a bare `spawn_local`) so that when the listener stops we can drain
+    // them while the tokio runtime is still being driven. russh closes a
+    // forwarded channel from its `Drop` impl via `tokio::spawn`, which panics
+    // if the runtime is already gone — historically (`panic = "abort"`) that
+    // crashed the whole app. scrcpy keeps several forwarded channels live at
+    // all times, so it hit this on every teardown unless we drain in-context.
+    let mut connections: JoinSet<()> = JoinSet::new();
+    let result = loop {
         tokio::select! {
-            _ = &mut stop_rx => return Ok(()),
+            _ = &mut stop_rx => break Ok(()),
             accepted = listener.accept() => {
-                let (stream, originator) = accepted
-                    .map_err(|error| format!("failed to accept local port forward connection: {error}"))?;
-                let session = Rc::clone(&session);
-                let dest_host = dest_host.clone();
-                tokio::task::spawn_local(async move {
-                    if let Err(error) = forward_live_ssh_stream(
-                        stream,
-                        originator,
-                        session,
-                        dest_host,
-                        remote_port,
-                    )
-                    .await
-                    {
-                        eprintln!("SSH port forward connection failed: {error}");
+                match accepted {
+                    Ok((stream, originator)) => {
+                        // Reap finished connections so a long-lived forward
+                        // (scrcpy makes many short adb connections) does not
+                        // accumulate join handles. `try_join_next` is sync, so
+                        // it avoids borrowing `connections` across the select.
+                        while connections.try_join_next().is_some() {}
+                        let session = Rc::clone(&session);
+                        let dest_host = dest_host.clone();
+                        connections.spawn_local(async move {
+                            if let Err(error) = forward_live_ssh_stream(
+                                stream,
+                                originator,
+                                session,
+                                dest_host,
+                                remote_port,
+                            )
+                            .await
+                            {
+                                ssh_debug(
+                                    "portforward.local.connection_error",
+                                    json!({ "error": error }),
+                                );
+                            }
+                        });
                     }
-                });
+                    Err(error) => {
+                        break Err(format!(
+                            "failed to accept local port forward connection: {error}"
+                        ));
+                    }
+                }
             }
         }
-    }
+    };
+    // Close in-flight forwarded channels while the runtime is still alive.
+    connections.shutdown().await;
+    result
 }
 
 async fn forward_live_ssh_stream(
@@ -1937,21 +2080,37 @@ async fn run_live_ssh_dynamic_forward(
     session: Rc<client::Handle<VerifyingClient>>,
     mut stop_rx: oneshot::Receiver<()>,
 ) -> Result<(), String> {
-    loop {
+    // See `run_live_ssh_port_forward` for why per-connection tasks are tracked
+    // and drained rather than detached.
+    let mut connections: JoinSet<()> = JoinSet::new();
+    let result = loop {
         tokio::select! {
-            _ = &mut stop_rx => return Ok(()),
+            _ = &mut stop_rx => break Ok(()),
             accepted = listener.accept() => {
-                let (stream, originator) = accepted
-                    .map_err(|error| format!("failed to accept SOCKS5 connection: {error}"))?;
-                let session = Rc::clone(&session);
-                tokio::task::spawn_local(async move {
-                    if let Err(error) = forward_live_ssh_socks5_stream(stream, originator, session).await {
-                        eprintln!("SSH SOCKS5 connection failed: {error}");
+                match accepted {
+                    Ok((stream, originator)) => {
+                        while connections.try_join_next().is_some() {}
+                        let session = Rc::clone(&session);
+                        connections.spawn_local(async move {
+                            if let Err(error) =
+                                forward_live_ssh_socks5_stream(stream, originator, session).await
+                            {
+                                ssh_debug(
+                                    "portforward.dynamic.connection_error",
+                                    json!({ "error": error }),
+                                );
+                            }
+                        });
                     }
-                });
+                    Err(error) => {
+                        break Err(format!("failed to accept SOCKS5 connection: {error}"));
+                    }
+                }
             }
         }
-    }
+    };
+    connections.shutdown().await;
+    result
 }
 
 async fn forward_live_ssh_socks5_stream(
@@ -2107,6 +2266,72 @@ async fn bridge_remote_forward_channel(
         .await
         .map_err(|error| format!("failed to proxy remote-forward data: {error}"))?;
     Ok(())
+}
+
+/// Tears down every live port forward on session teardown.
+///
+/// Each forward is asked to stop gracefully (which makes its listener task drain
+/// the per-connection forward tasks it owns), then the listener tasks are drained
+/// here. The whole drain runs while the tokio runtime is still being driven so
+/// that russh can close the forwarded channels from its `Drop` impl — that `Drop`
+/// calls `tokio::spawn`, which panics if the runtime is already gone. (The worker
+/// also catches panics as a backstop, but draining avoids the panic entirely and
+/// closes channels cleanly.) A bounded grace keeps a stuck connection from
+/// hanging teardown; anything still alive afterwards is forced down with the
+/// runtime still present.
+async fn shutdown_live_port_forwards(
+    live_port_forwards: &mut HashMap<String, LivePortForward>,
+    forward_tasks: &mut JoinSet<()>,
+    bridge_tasks: &SshBridgeTasks,
+    session: &client::Handle<VerifyingClient>,
+    remote_forward_targets: &RemoteForwardTargets,
+) {
+    let forward_count = live_port_forwards.len();
+    // Take the server-initiated bridge tasks (X11, remote `-R`) out of the
+    // shared set so we can await them without holding the lock across `.await`.
+    let mut bridges = bridge_tasks
+        .lock()
+        .map(|mut guard| std::mem::take(&mut *guard))
+        .unwrap_or_default();
+    if forward_count == 0 && forward_tasks.is_empty() && bridges.is_empty() {
+        return;
+    }
+    for (_, forward) in live_port_forwards.drain() {
+        stop_live_port_forward(forward, session, remote_forward_targets).await;
+    }
+    // Drain the local/dynamic forward listeners (which drain their own
+    // per-connection tasks) and the server-initiated bridges, all while the
+    // runtime is still alive so russh can close each channel from its `Drop`.
+    let forwards_graceful = drain_join_set_with_grace(forward_tasks).await;
+    let bridges_graceful = drain_join_set_with_grace(&mut bridges).await;
+    ssh_debug(
+        "portforward.teardown",
+        json!({
+            "forwards": forward_count,
+            "forwardsGraceful": forwards_graceful,
+            "bridgesGraceful": bridges_graceful,
+        }),
+    );
+}
+
+/// Drains a `JoinSet` within a bounded grace period, then forces down any
+/// stragglers. Both phases run while the tokio runtime is still being driven, so
+/// dropping the tasks (and the SSH channel streams they own) cannot trigger the
+/// "spawn with no runtime" panic in russh's channel `Drop`. Returns whether the
+/// graceful phase finished before the grace elapsed.
+async fn drain_join_set_with_grace(tasks: &mut JoinSet<()>) -> bool {
+    if tasks.is_empty() {
+        return true;
+    }
+    let graceful = tokio::time::timeout(SSH_FORWARD_SHUTDOWN_GRACE, async {
+        while tasks.join_next().await.is_some() {}
+    })
+    .await
+    .is_ok();
+    if !graceful {
+        tasks.shutdown().await;
+    }
+    graceful
 }
 
 async fn stop_live_port_forward(
@@ -2627,6 +2852,7 @@ async fn run_playbook_async(
         socks_proxy: request.socks_proxy,
         compression: true,
         remote_forward_targets: None,
+        bridge_tasks: None,
     })
     .await?;
 
@@ -3258,6 +3484,7 @@ mod tests {
             socks_proxy: None,
             compression: true,
             remote_forward_targets: None,
+            bridge_tasks: None,
         })
         .await?;
 
