@@ -2793,7 +2793,6 @@
     "plainFtpWarning": "FTP bản rõ",
     "plainFtpWarningTitle": "FTP bản rõ không được mã hóa.",
     "ftpConnectionErrorTitle": "Kết nối FTP thất bại",
-    "plainFtpWarningBody": "FTP thường gửi thông tin đăng nhập và nội dung tệp mà không mã hóa.",
     "plainFtpFallbackWarningTitle": "FTPS đã thất bại nên trình duyệt tệp này đang dùng FTP không mã hóa.",
     "openingProtocol": "Đang mở {{protocol}}",
     "ftpsFallbackStatus": "FTPS thất bại. Đang thử FTP bản rõ.",

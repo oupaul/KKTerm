@@ -2793,7 +2793,6 @@
     "plainFtpWarning": "明文 FTP",
     "plainFtpWarningTitle": "明文 FTP 未加密。",
     "ftpConnectionErrorTitle": "FTP 连接失败",
-    "plainFtpWarningBody": "明文 FTP 会在未加密的情况下发送凭据和文件内容。",
     "plainFtpFallbackWarningTitle": "FTPS 失败，因此此文件浏览器正在使用未加密的 FTP。",
     "openingProtocol": "正在打开 {{protocol}}",
     "ftpsFallbackStatus": "FTPS 失败。正在尝试明文 FTP。",

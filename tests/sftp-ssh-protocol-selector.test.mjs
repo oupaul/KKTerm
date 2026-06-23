@@ -58,8 +58,8 @@ test("SSH toolbar SFTP popup exposes a runtime protocol selector", async () => {
   );
   assert.match(
     workspaceSource,
-    /setPlainFtpFallbackActive\(true\);[\s\S]*setSshFileBrowserProtocol\("ftp"\);/,
-    "FTPS startup failures should fall back to plain FTP",
+    /setPlainFtpFallbackActive\(true\);[\s\S]*showStatusBarNotice\(t\("sftp\.ftpsFallbackStatus"\), \{ tone: "warning" \}\);[\s\S]*setSshFileBrowserProtocol\("ftp"\);/,
+    "FTPS startup failures should fall back to plain FTP through the standard warning notice",
   );
   assert.match(
     workspaceSource,
@@ -146,7 +146,7 @@ test("file browser password prompts pass transient passwords without saving them
   );
 });
 
-test("FTP startup warnings and errors use app dialogs instead of the transfer queue", async () => {
+test("FTP startup errors use app dialogs instead of the transfer queue", async () => {
   const [workspaceSource, stylesSource, manualSource, enSource] = await Promise.all([
     readFile(
       new URL("../src/modules/workspace/connections/sftp/SftpWorkspace.tsx", import.meta.url),
@@ -162,10 +162,10 @@ test("FTP startup warnings and errors use app dialogs instead of the transfer qu
     /setFtpNoticeDialog\(\{\s*title: t\("sftp\.ftpConnectionErrorTitle"[\s\S]*message,\s*\}\)/,
     "FTP startup failures should open an app-owned dialog with the backend error",
   );
-  assert.match(
+  assert.doesNotMatch(
     workspaceSource,
-    /setFtpNoticeDialog\(\{\s*title: t\("sftp\.plainFtpWarningTitle"\)[\s\S]*message: t\("sftp\.plainFtpWarningBody"\)/,
-    "plain FTP warnings should use an app-owned dialog body",
+    /plainFtpWarningBody/,
+    "plain FTP warnings should stay as the titlebar chip, without a blocking dialog",
   );
   assert.match(
     workspaceSource,
@@ -184,12 +184,12 @@ test("FTP startup warnings and errors use app dialogs instead of the transfer qu
   );
   assert.match(
     manualSource,
-    /FTP startup warnings and connection errors open an app-owned dialog/,
-    "the manual should document FTP warnings and startup errors as dialogs",
+    /FTPS fallback uses the standard Status Bar warning notice[\s\S]*FTP connection errors open an app-owned dialog[\s\S]*Plain FTP keeps only the compact `sftp\.plainFtpWarning` titlebar chip/,
+    "the manual should document FTPS fallback as a standard warning notice and plain FTP warnings as titlebar-only",
   );
   assert.match(
     enSource,
-    /"ftpConnectionErrorTitle": "FTP connection failed"[\s\S]*"plainFtpWarningBody": "Plain FTP sends credentials and file contents without encryption\."/,
-    "new FTP dialog strings should exist in English",
+    /"ftpConnectionErrorTitle": "FTP connection failed"/,
+    "the FTP error dialog title should exist in English",
   );
 });

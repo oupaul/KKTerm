@@ -2793,7 +2793,6 @@
     "plainFtpWarning": "平文 FTP",
     "plainFtpWarningTitle": "平文 FTP は暗号化されていません。",
     "ftpConnectionErrorTitle": "FTP 接続に失敗しました",
-    "plainFtpWarningBody": "プレーン FTP は資格情報とファイル内容を暗号化せずに送信します。",
     "plainFtpFallbackWarningTitle": "FTPS が失敗したため、このファイルブラウザは暗号化なしの FTP を使用しています。",
     "openingProtocol": "{{protocol}}を開いています",
     "ftpsFallbackStatus": "FTPS が失敗しました。平文 FTP を試しています。",

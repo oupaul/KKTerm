@@ -2793,7 +2793,6 @@
     "plainFtpWarning": "FTP texto plano",
     "plainFtpWarningTitle": "O FTP texto plano não está criptografado.",
     "ftpConnectionErrorTitle": "Falha na conexão FTP",
-    "plainFtpWarningBody": "FTP sem criptografia envia credenciais e conteúdo de arquivos sem criptografia.",
     "plainFtpFallbackWarningTitle": "FTPS falhou, então este navegador de arquivos está usando FTP sem criptografia.",
     "openingProtocol": "Abrindo {{protocol}}",
     "ftpsFallbackStatus": "FTPS falhou. Tentando FTP texto plano.",

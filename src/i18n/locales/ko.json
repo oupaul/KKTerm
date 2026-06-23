@@ -2793,7 +2793,6 @@
     "plainFtpWarning": "평문 FTP",
     "plainFtpWarningTitle": "평문 FTP는 암호화되지 않습니다.",
     "ftpConnectionErrorTitle": "FTP 연결 실패",
-    "plainFtpWarningBody": "일반 FTP는 자격 증명과 파일 내용을 암호화하지 않고 전송합니다.",
     "plainFtpFallbackWarningTitle": "FTPS 실패로 이 파일 브라우저는 암호화되지 않은 FTP를 사용합니다.",
     "openingProtocol": "{{protocol}} 여는 중",
     "ftpsFallbackStatus": "FTPS 실패. 평문 FTP 시도 중.",

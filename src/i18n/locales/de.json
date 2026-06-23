@@ -2793,7 +2793,6 @@
     "plainFtpWarning": "Klartext-FTP",
     "plainFtpWarningTitle": "Klartext-FTP ist nicht verschlüsselt.",
     "ftpConnectionErrorTitle": "FTP-Verbindung fehlgeschlagen",
-    "plainFtpWarningBody": "Plain FTP sendet Anmeldedaten und Dateiinhalte ohne Verschlüsselung.",
     "plainFtpFallbackWarningTitle": "FTPS fehlgeschlagen, daher verwendet dieser Dateibrowser unverschlüsseltes FTP.",
     "openingProtocol": "{{protocol}} wird geöffnet",
     "ftpsFallbackStatus": "FTPS fehlgeschlagen. Klartext-FTP wird versucht.",

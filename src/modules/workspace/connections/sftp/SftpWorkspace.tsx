@@ -277,12 +277,6 @@ export function SftpWorkspace({
     setSshFileBrowserPortDraft(String(nextPort));
     setProtocolMenuOpen(false);
     setPlainFtpFallbackActive(false);
-    if (protocol === "ftp") {
-      setFtpNoticeDialog({
-        title: t("sftp.plainFtpWarningTitle"),
-        message: t("sftp.plainFtpWarningBody"),
-      });
-    }
     transientPasswordRef.current = null;
   }
 
@@ -622,10 +616,7 @@ export function SftpWorkspace({
           } else if (sourceConnection && isFtpsProtocol(sshFileBrowserProtocol)) {
             setPlainFtpFallbackActive(true);
             setStatus(t("sftp.ftpsFallbackStatus"));
-            setFtpNoticeDialog({
-              title: t("sftp.plainFtpFallbackWarningTitle"),
-              message: t("sftp.plainFtpWarningBody"),
-            });
+            showStatusBarNotice(t("sftp.ftpsFallbackStatus"), { tone: "warning" });
             setSshFileBrowserProtocol("ftp");
             setSshFileBrowserPort(defaultPortForSshFileBrowserProtocol("ftp", sourceConnection));
             setSshFileBrowserPortDraft(String(defaultPortForSshFileBrowserProtocol("ftp", sourceConnection)));
@@ -688,7 +679,7 @@ export function SftpWorkspace({
         sessionIdRef.current = null;
       }
     };
-  }, [activeProtocolLabel, commands, connection, effectiveBrowserKind, isLocalFilesBrowser, markConnectionSessionEnded, markConnectionSessionStarted, sourceConnection, sshFileBrowserPort, sshFileBrowserProtocol, t]);
+  }, [activeProtocolLabel, commands, connection, effectiveBrowserKind, isLocalFilesBrowser, markConnectionSessionEnded, markConnectionSessionStarted, showStatusBarNotice, sourceConnection, sshFileBrowserPort, sshFileBrowserProtocol, t]);
 
   const refreshRemoteDirectory = async () => {
     await loadRemoteDirectory(remotePath, t("sftp.refreshing"));

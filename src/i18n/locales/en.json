@@ -2793,7 +2793,6 @@
     "plainFtpWarning": "Plain FTP",
     "plainFtpWarningTitle": "Plain FTP is not encrypted.",
     "ftpConnectionErrorTitle": "FTP connection failed",
-    "plainFtpWarningBody": "Plain FTP sends credentials and file contents without encryption.",
     "plainFtpFallbackWarningTitle": "FTPS failed, so this browser is using plain FTP without encryption.",
     "openingProtocol": "Opening {{protocol}}",
     "ftpsFallbackStatus": "FTPS failed. Trying plain FTP.",

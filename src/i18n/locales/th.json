@@ -2793,7 +2793,6 @@
     "plainFtpWarning": "FTP ไม่เข้ารหัส",
     "plainFtpWarningTitle": "FTP รูปแบบนี้ไม่ได้เข้ารหัส",
     "ftpConnectionErrorTitle": "การเชื่อมต่อ FTP ล้มเหลว",
-    "plainFtpWarningBody": "FTP แบบไม่เข้ารหัสจะส่งข้อมูลประจำตัวและเนื้อหาไฟล์โดยไม่มีการเข้ารหัส",
     "plainFtpFallbackWarningTitle": "FTPS ล้มเหลว จึงทำให้เบราว์เซอร์ไฟล์นี้ใช้ FTP โดยไม่เข้ารหัส",
     "openingProtocol": "กำลังเปิด {{protocol}}",
     "ftpsFallbackStatus": "FTPS ล้มเหลว กำลังลอง FTP ไม่เข้ารหัส",

@@ -2793,7 +2793,6 @@
     "plainFtpWarning": "FTP teks polos",
     "plainFtpWarningTitle": "FTP teks polos tidak dienkripsi.",
     "ftpConnectionErrorTitle": "Koneksi FTP gagal",
-    "plainFtpWarningBody": "FTP polos mengirim kredensial dan isi file tanpa enkripsi.",
     "plainFtpFallbackWarningTitle": "FTPS gagal, sehingga browser file ini menggunakan FTP tanpa enkripsi.",
     "openingProtocol": "Membuka {{protocol}}",
     "ftpsFallbackStatus": "FTPS gagal. Mencoba FTP teks polos.",

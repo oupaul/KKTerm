@@ -2793,7 +2793,6 @@
     "plainFtpWarning": "FTP in chiaro",
     "plainFtpWarningTitle": "Il FTP in chiaro non è cifrato.",
     "ftpConnectionErrorTitle": "Connessione FTP non riuscita",
-    "plainFtpWarningBody": "FTP non protetto invia credenziali e contenuti dei file senza crittografia.",
     "plainFtpFallbackWarningTitle": "FTPS non riuscito, quindi questo browser di file usa FTP non cifrato.",
     "openingProtocol": "Apertura di {{protocol}}",
     "ftpsFallbackStatus": "FTPS non riuscito. Tentativo di FTP in chiaro.",

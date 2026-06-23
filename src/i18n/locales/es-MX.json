@@ -2793,7 +2793,6 @@
     "plainFtpWarning": "FTP plano",
     "plainFtpWarningTitle": "El FTP plano no está cifrado.",
     "ftpConnectionErrorTitle": "Falló la conexión FTP",
-    "plainFtpWarningBody": "FTP sin cifrar envía credenciales y contenido de archivos sin cifrado.",
     "plainFtpFallbackWarningTitle": "Falló FTPS, por lo que este navegador de archivos usa FTP sin cifrar.",
     "openingProtocol": "Abriendo {{protocol}}",
     "ftpsFallbackStatus": "Falló FTPS. Probando FTP plano.",
