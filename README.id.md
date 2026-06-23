@@ -81,9 +81,8 @@ Ditambah beberapa hal yang kamu tak tahu kamu inginkan:
 - Sebuah **Dashboard** tempat kamu menyuruh AI *"buatkan widget yang ping router-ku tiap 30 detik"* lalu ia muncul, dalam sandbox-nya sendiri, di grid-mu.
 - **Panel SSH yang menyambung kembali ke sesi remote `claude` / `codex`-mu** setelah setiap amukan Wi-Fi, agar kerja enam jam selamat dari putusnya koneksi.
 - **Workspaces** yang menjaga homelab, pekerjaan kantor, dan server klien itu dalam wadah-wadah terpisah yang bisa kamu tukar dengan sekali klik.
-- Sebuah **pengukur penggunaan AI** agar kamu berhenti menabrak tembok rate limit secara mengejutkan pukul 3 pagi.
 - Sebuah **Install Helper** yang menemukan, memasang, memperbarui, dan menjalankan alat dev Windows yang biasanya kamu kejar lewat sepuluh tab browser.
-- **Dua puluh lima latar animasi** untuk dashboard (ya, termasuk `matrix`), karena kami tak terlalu jaim untuk itu.
+- **Dua puluh lima latar animasi** untuk dashboard *dan terminalmu* (ya, termasuk `matrix`), karena kami tak terlalu jaim untuk itu.
 
 Dan bagian terbaiknya: asisten AI bisa mengubah satu kalimat menjadi alat dashboard kecil yang benar-benar terus kamu pakai.
 
@@ -182,18 +181,23 @@ Ini satu workspace untuk bentuk nyata pekerjaan admin yang berantakan: campur je
 
 <p align="center"><sub><em>📸 <strong>Placeholder tangkapan layar</strong> — grid empat: PowerShell, sesi SSH, browser SFTP, dan permukaan VNC, semuanya dalam satu Tab.</em></sub></p>
 
-### Asisten AI yang membangun alatmu
+### Asisten AI yang mengomandoi terminalmu untukmu
 
-Kebanyakan demo "AI di terminalmu" berhenti di obrolan. Asisten KKTerm juga bisa membangun widget dashboard kecil yang awet, pas dengan cara kerjamu yang sebenarnya — dan menyimpan yang berbahaya di balik sakelar:
+Kebanyakan demo "AI di terminalmu" berhenti di obrolan. Asisten KKTerm bekerja *di dalam* sesimu: kamu menyerahkan konteks dari apa yang sudah ada di layar, dan ia bertindak pada mesin-mesin yang sedang kamu sambungkan — dengan manusia di dalam lingkar persetujuan.
+
+**Serahkan konteksnya, langsung.** Tanpa relai salin-tempel:
+
+- **Tambahkan terminal buffer ke konteks** menarik scrollback sebuah sesi lokal atau remote yang sedang berjalan langsung ke percakapan, sehingga "kenapa build ini gagal?" menjadi sesuatu yang benar-benar bisa ia baca.
+- **Menu tangkapan layar** menangkap sebuah area atau seluruh Pane dan menjatuhkan gambarnya ke obrolan, sehingga "kenapa dialog ini terlihat aneh?" menjadi pertanyaan yang bisa ia jawab.
+- **Lampirkan berkas** dan **konteks halaman Dashboard / IT Ops** saat ini, sehingga ia menalar tentang apa yang benar-benar kamu lihat, bukan deskripsi yang samar.
+
+**Biarkan ia bertindak — di balik persetujuan.** Asisten bisa menjalankan perintah di terminalmu, membuka Connections, dan menempatkan widget di dashboard, tapi bagian yang berisiko tetap terkunci:
 
 - **Tentukan apa yang boleh ia sentuh** — nyalakan atau matikan seluruh keluarga alat (Dashboard / Connections / Live Sessions).
 - **Tentukan bagaimana ia bertanya** — `Prompt` (default, bertanya setiap kali) atau `Allow All` (kamu sudah dewasa, kamu menandatangani pernyataannya).
+- Apa pun yang terlihat seperti `rm -rf` ditandai berbahaya — dengan alasannya ditampilkan di kartu persetujuan — dan menunggu kata "ya" eksplisit dari manusia. AI tidak bisa diam-diam menjalankan perintah merusak hanya karena ada yang berbuat licik dengan prompt injection di sebuah halaman man.
 
-Apa pun yang terlihat seperti `rm -rf` ditandai berbahaya dan menunggu kata "ya" eksplisit dari manusia. AI tidak bisa diam-diam menjalankan perintah merusak hanya karena ada yang berbuat licik dengan prompt injection di sebuah halaman man.
-
-Ia bicara dengan OpenAI, Anthropic, OpenRouter, DeepSeek, Grok, Azure OpenAI, LiteLLM, GitHub Copilot, Ollama, NVIDIA, atau endpoint apa pun yang kompatibel OpenAI. Kunci API-mu masuk ke keychain OS.
-
-Ia juga bisa melihat apa yang kamu lihat: tangkap sebuah area atau seluruh Pane dengan **menu tangkapan layar** lalu kirim langsung ke percakapan, sehingga "kenapa dialog ini terlihat aneh?" menjadi pertanyaan yang benar-benar bisa dijawab asisten.
+**Bawa otakmu sendiri.** Ia bicara dengan OpenAI, Anthropic, OpenRouter, DeepSeek, Grok, Azure OpenAI, LiteLLM, GitHub Copilot, Ollama, NVIDIA, atau endpoint apa pun yang kompatibel OpenAI — dan bisa berjalan di atas **Claude Code CLI** atau **Codex CLI** sebagai backend, memakai login dan langganan `claude` / `codex`-mu yang sudah ada alih-alih kunci API terpisah. Kunci API-mu masuk ke keychain OS.
 
 <p align="center">
   <img src="docs/assets/screenshots/ai-assistant.png" alt="Panel asisten AI dengan sakelar akses alat dan mode persetujuan" width="720" />
@@ -222,9 +226,9 @@ Sebagian adalah panel tampilan sederhana (markdown, checklist, satu angka besar)
 
 <p align="center"><sub><em>📸 <strong>Placeholder tangkapan layar</strong> — sebuah tampilan Dashboard penuh widget buatan AI: monitor ping, sticky note, statistik langsung, dan mainan kecil yang sama sekali tak pantas jadi semenyenangkan itu.</em></sub></p>
 
-#### Latar animasi dashboard (karena kami mau saja)
+#### Latar animasi dashboard/terminal (karena kami mau saja)
 
-Pilih satu suasana per tampilan dashboard dari **dua puluh lima** latar animasi canvas:
+Pilih satu suasana — per tampilan dashboard, *atau di belakang terminal mana pun* — dari **dua puluh lima** latar animasi canvas:
 
 | Suasana | Latar |
 | --- | --- |
@@ -234,7 +238,7 @@ Pilih satu suasana per tampilan dashboard dari **dua puluh lima** latar animasi 
 | Geek | `matrix`, `topo`, `synthwave` |
 | Gelisah | `cyberpunk`, `taipei101`, `thunderstorm`, `confetti`, `particleCursor` |
 
-Mereka berhenti saat kamu di tempat lain, jadi nyaris tak memakan sumber daya. Padukan `matrix` dengan asisten AI-mu untuk suasana yang berkata "aku sangat produktif dan mungkin sedang berada di film Wachowski". Atau pilih `ocean` dan tampak seperti orang serius. Kami tidak menghakimi kedua pilihan itu.
+Pemilih yang sama juga menopang panel terminalmu, jadi kamu bisa menaruh `matrix` di belakang sesi SSH yang sedang berjalan. Mereka berhenti saat kamu di tempat lain, jadi nyaris tak memakan sumber daya. Padukan `matrix` dengan asisten AI-mu untuk suasana yang berkata "aku sangat produktif dan mungkin sedang berada di film Wachowski". Atau pilih `ocean` dan tampak seperti orang serius. Kami tidak menghakimi kedua pilihan itu.
 
 <p align="center">
   <img src="docs/assets/screenshots/backgrounds.png" alt="Beberapa latar animasi berdampingan" width="720" />
@@ -242,7 +246,7 @@ Mereka berhenti saat kamu di tempat lain, jadi nyaris tak memakan sumber daya. P
 
 <p align="center"><sub><em>📸 <strong>Placeholder tangkapan layar</strong> — lembar contoh suasana: `matrix`, `aurora`, `synthwave`, dan `taipei101`.</em></sub></p>
 
-### Jaga agar agen AI remote-mu tetap hidup
+### Jaga agar agen AI-mu tetap hidup
 
 Ini fitur kedua yang membuat orang jatuh cinta. Terminal SSH KKTerm bisa langsung menjatuhkanmu ke sebuah **sesi tmux bernama** di host remote yang selamat dari penyambungan ulang:
 
@@ -261,20 +265,6 @@ Shell lokal mendapat trik yang sama di Windows: panel PowerShell bisa berjalan d
 
 <p align="center"><sub><em>📸 <strong>Placeholder tangkapan layar</strong> — daftar sesi tmux/psmux di toolbar Pane, dengan agen `claude` remote yang masih berjalan setelah reconnect.</em></sub></p>
 
-### Tahu berapa sisa AI-mu
-
-Agen coding menagih per jendela paket, bukan per bulan, dan mereka dengan senang hati melahap kuotamu saat kamu sedang rapat. **Pengukur penggunaan AI** menjaga itu tetap terlihat:
-
-- Widget dashboard yang menampilkan **Claude Code** dan **Codex** berdampingan: akun terhubung, paket, pemakaian di jendela saat ini dan minggu ini, waktu reset berikutnya.
-- Sebuah **indikator ringkas di bilah status** yang mencerminkan angka yang sama, sehingga bahkan dengan dashboard tertutup kamu bisa melihat sekilas apakah masih ada ruang sebelum refactoring besar berikutnya.
-- Ia memberitahumu lebih awal kalau kamu perlu login ulang — *sebelum* tugas panjang, bukan di tengahnya.
-
-<p align="center">
-  <img src="docs/assets/screenshots/usage-meter.png" alt="Widget pengukur penggunaan AI dan indikator bilah status" width="720" />
-</p>
-
-<p align="center"><sub><em>📸 <strong>Placeholder tangkapan layar</strong> — widget penggunaan menampilkan Claude Code dan Codex berdampingan, plus cermin ringkas di bilah status.</em></sub></p>
-
 ### Pisahkan dunia-duniamu dengan Workspaces
 
 Homelab, pekerjaan kantor, dan server klien itu tidak pantas berada di daftar yang sama. **Workspaces** adalah wadah Connections bernama dan terisolasi yang kamu tukar dari Activity Rail. Menukar hanya menata ulang cakupan pohon koneksi — Sessions yang terbuka, Dashboard, dan Pengaturanmu tetap di tempat — jadi berganti konteks cukup satu klik, bukan restart.
@@ -285,27 +275,45 @@ Homelab, pekerjaan kantor, dan server klien itu tidak pantas berada di daftar ya
 
 <p align="center"><sub><em>📸 <strong>Placeholder tangkapan layar</strong> — pengalih workspace di puncak Activity Rail, di tengah pergantian antara "Home Lab" dan "Day Job".</em></sub></p>
 
-### Berkas dan log, di jendela yang sama
+### Dandani sesukamu: tema warna
 
-Tidak semuanya host remote. KKTerm menjelajahi **disk lokal**-mu di sebuah Pane File Explorer (cangkang panel ganda yang sama dengan SFTP), dan membuka satu berkas di sebuah **penampil Document** yang memilih mode yang tepat untuk tugasnya: teks/kode dengan editor ringan dan simpan-aman, Markdown, tabel CSV/TSV, JSON, gambar, PDF, dan sebuah **mode Log** khusus dengan pewarnaan level, filter, ANSI, dan tail-follow. Tak perlu lagi meraih editor terpisah hanya untuk membaca log yang sudah ada tepat di sebelahmu.
+Latar adalah bagian serunya; **tema warna** adalah yang benar-benar kamu pandangi seharian. KKTerm membawa **empat belas** skema warna yang mendandani ulang seluruh chrome aplikasi — Activity Rail, pohon koneksi, tab, dialog — dengan pratinjau mini langsung untuk masing-masing di Pengaturan ▸ Tampilan:
 
-<p align="center">
-  <img src="docs/assets/screenshots/file-viewer.png" alt="Penampil Document dalam mode log-tail di sebelah panel file explorer" width="720" />
-</p>
+| Suasana | Skema |
+| --- | --- |
+| Netral | `Default`, `Dark`, `Light`, `Match OS` (mengikuti terang/gelap sistem), `Mac` |
+| Penuh warna | `Orange`, `Purple`, `Pink`, `Confetti`, `Bubble Tea` |
+| Cita rasa lokal | `Green Kuai Kuai` (ya, camilan itu), `Blue See`, `Blue, Green and White`, `Semiconductor` |
 
-<p align="center"><sub><em>📸 <strong>Placeholder tangkapan layar</strong> — penampil Document mengikuti log langsung (warna level + filter) di sebelah Pane File Explorer lokal.</em></sub></p>
-
-### Biarkan AI lain mengemudikan KKTerm
-
-KKTerm membawa server MCP-nya sendiri, agar agen coding eksternal (Claude Code, Codex, Copilot, Antigravity, OpenCode) bisa memakai ruang kerjamu seperti kamu — mendaftar koneksi, membuka satu, membaca buffer terminal, menempatkan widget di dashboard. AI ke AI, di mesinmu, tanpa relay cloud. Aksi yang mengubah dan lebih berisiko tetap di balik satu sakelar keamanan yang **mati** secara default.
-
-Pengaturan → AI Assistant → **Built-in MCP Server** punya dialog "Tampilkan konfig" sekali klik, sudah terisi, plus perintah `claude mcp add` / `codex mcp add` yang bisa disalin.
+Terminal mempertahankan palet gelapnya sendiri apa pun skema yang kamu pilih, agar shell-mu tetap terbaca sementara sisa aplikasi menyesuaikan suasana hatimu.
 
 <p align="center">
-  <img src="docs/assets/screenshots/mcp-server.png" alt="Pengaturan server MCP bawaan dengan dialog tampilkan konfig" width="720" />
+  <img src="docs/assets/screenshots/color-themes.png" alt="Grid skema warna di Pengaturan dengan pratinjau langsung" width="720" />
 </p>
 
-<p align="center"><sub><em>📸 <strong>Placeholder tangkapan layar</strong> — panel Built-in MCP Server dengan dialog "Tampilkan konfig" dan sakelar keamanan (mati secara default).</em></sub></p>
+<p align="center"><sub><em>📸 <strong>Placeholder tangkapan layar</strong> — grid skema warna Pengaturan ▸ Tampilan, tiap ubin sebuah pratinjau mini langsung dari aplikasi.</em></sub></p>
+
+### Install Helper (khusus Windows)
+
+Menyiapkan mesin Windows baru untuk kerja dev biasanya berarti sepuluh tab browser dan banyak "berikutnya, berikutnya, selesai". **Install Helper** adalah katalog bawaan yang menemukan, memasang, memperbarui, dan mencopot alat yang kalau tidak harus kamu kejar manual — tanpa keluar dari KKTerm:
+
+- **Essentials** — winget, Node (via nvm-windows), Python (via uv), Git.
+- **AI Agents** — Claude Code, Codex, Antigravity, OpenCode, serta CLI dan aplikasi desktop agen coding lainnya.
+- **AI Platforms** — stack lokal / self-hosted seperti Ollama, n8n, Open WebUI, Flowise, dan Langflow, dijalankan dan dikelola untukmu.
+- **Development** — editor, kontainer, alat API, WSL dan distribusinya, Rustup.
+- **Windows Power User** — PowerToys, PowerShell 7, psmux, Sysinternals, Everything, Ditto.
+- **Remote Access** — Tailscale, RustDesk.
+- **Utilities** — Notepad++, ripgrep, jq, fzf, 7-Zip, Oh My Posh, FFmpeg, dan lainnya.
+
+Ia mendeteksi apa yang sudah terpasang, menandai mana yang punya pembaruan, dan **Perbarui semua** menelusuri antrean untukmu. Prompt UAC tetap eksplisit, tak ada yang terpasang diam-diam, dan seluruh katalog ikut di dalam aplikasi — tanpa akun tambahan, tanpa telemetri latar belakang.
+
+> macOS dan Linux sudah punya manajer paket yang kamu sukai, jadi Install Helper adalah kemudahan khusus Windows dan bukan bagian dari build-build itu.
+
+<p align="center">
+  <img src="docs/assets/screenshots/install-helper.png" alt="Katalog Install Helper dengan alat yang terpasang dan tersedia" width="720" />
+</p>
+
+<p align="center"><sub><em>📸 <strong>Placeholder tangkapan layar</strong> — modul Install Helper: ubin alat berkategori, tombol pasang/perbarui, dan aksi "Perbarui semua" di header.</em></sub></p>
 
 ---
 

@@ -81,9 +81,8 @@ Y unas cuantas cosas que no sabías que querías:
 - Un **Dashboard** donde le dices a una IA *«créame un widget que le haga ping a mi router cada 30 segundos»* y aparece, en su propio espacio aislado, sobre tu cuadrícula.
 - **Paneles SSH que se vuelven a conectar a tu sesión remota `claude` / `codex`** después de cada berrinche del wifi, para que un trabajo de seis horas sobreviva a una caída.
 - **Espacios de trabajo (Workspaces)** que mantienen tu homelab, la chamba y los servidores de ese cliente en contenedores separados e intercambiables.
-- Un **medidor de uso de IA** para que dejes de estrellarte por sorpresa contra el muro del límite de uso a las 3 de la mañana.
 - Un **Install Helper** que encuentra, instala, actualiza y abre las herramientas para devs de Windows que normalmente andas persiguiendo por diez pestañas del navegador.
-- **Veinticinco fondos animados** para el panel (sí, incluido `matrix`), porque no nos da pena.
+- **Veinticinco fondos animados** para el panel *y tus terminales* (sí, incluido `matrix`), porque no nos da pena.
 
 Y lo mejor: el asistente de IA puede convertir una sola frase en una pequeña herramienta de panel que de verdad terminas usando.
 
@@ -182,18 +181,23 @@ Es un solo espacio de trabajo para la forma real y desordenada del trabajo de ad
 
 <p align="center"><sub><em>📸 <strong>Marcador de captura</strong> — una cuadrícula de cuatro: PowerShell, una sesión SSH, un explorador SFTP y una superficie VNC, todo en una sola Tab.</em></sub></p>
 
-### Un asistente de IA que construye tus herramientas
+### Un asistente de IA que comanda tus terminales por ti
 
-La mayoría de los demos de «IA en tu terminal» se quedan en el chat. El asistente de KKTerm también puede construir pequeños widgets de panel duraderos, a la medida de cómo trabajas de verdad — y mantiene lo peligroso detrás de un interruptor:
+La mayoría de los demos de «IA en tu terminal» se quedan en el chat. El asistente de KKTerm trabaja *dentro* de tu sesión: le pasas contexto a partir de lo que ya está en pantalla, y actúa sobre las máquinas a las que estás conectado — con un humano en el bucle de aprobación.
+
+**Pásale el contexto, directo.** Sin relevo de copiar y pegar:
+
+- **Agregar el búfer del terminal al contexto** mete el scrollback de una sesión local o remota en curso directo a la conversación, para que «¿por qué falló este build?» sea algo que de verdad pueda leer.
+- El **menú de captura** toma una región o un Pane entero y suelta la imagen en el chat, para que «¿por qué se ve mal este diálogo?» sea una pregunta que pueda responder.
+- **Adjunta archivos** y el **contexto de página de Dashboard / IT Ops** actual, para que razone sobre lo que de verdad estás viendo y no sobre una descripción vaga.
+
+**Déjalo actuar — tras aprobación.** El asistente puede ejecutar comandos en tus terminales, abrir Connections y colocar widgets en el panel, pero lo arriesgado sigue bajo llave:
 
 - **Decide qué puede tocar** — prende o apaga familias enteras de herramientas (Dashboard / Connections / Live Sessions).
 - **Decide cómo pregunta** — `Prompt` (por defecto, pregunta cada vez) o `Allow All` (eres adulto, firmaste el deslinde).
+- Cualquier cosa que se parezca a un `rm -rf` se marca como peligrosa — con el motivo mostrado en la tarjeta de aprobación — y espera un sí humano explícito. La IA no puede ejecutar a escondidas un comando destructivo nada más porque alguien se pasó de listo con una inyección de prompt en una página de man.
 
-Cualquier cosa que se parezca a un `rm -rf` se marca como peligrosa y espera un sí humano explícito. La IA no puede ejecutar a escondidas un comando destructivo nada más porque alguien se pasó de listo con una inyección de prompt en una página de man.
-
-Habla con OpenAI, Anthropic, OpenRouter, DeepSeek, Grok, Azure OpenAI, LiteLLM, GitHub Copilot, Ollama, NVIDIA o cualquier endpoint compatible con OpenAI. Tus llaves de API van al llavero del SO.
-
-También puede ver lo que tú ves: captura una región o un Pane entero con el **menú de captura** y mándalo directo a la conversación, para que «¿por qué se ve mal este diálogo?» se vuelva una pregunta que el asistente sí puede responder.
+**Trae tu propio cerebro.** Habla con OpenAI, Anthropic, OpenRouter, DeepSeek, Grok, Azure OpenAI, LiteLLM, GitHub Copilot, Ollama, NVIDIA o cualquier endpoint compatible con OpenAI — y puede correr sobre la **CLI de Claude Code** o la **CLI de Codex** como backend, usando tu login y suscripción `claude` / `codex` existentes en lugar de una llave de API aparte. Tus llaves de API van al llavero del SO.
 
 <p align="center">
   <img src="docs/assets/screenshots/ai-assistant.png" alt="El panel del asistente de IA con los interruptores de acceso a herramientas y modo de aprobación" width="720" />
@@ -222,9 +226,9 @@ Algunos son simples paneles de visualización (markdown, listas de pendientes, u
 
 <p align="center"><sub><em>📸 <strong>Marcador de captura</strong> — una vista de panel llena de widgets hechos por la IA: un monitor de ping, una nota adhesiva, una estadística en vivo y un jueguito que no tiene por qué ser tan divertido.</em></sub></p>
 
-#### Fondos animados del panel (porque se nos antojó)
+#### Fondos animados del panel/terminal (porque se nos antojó)
 
-Elige un ambiente por vista del panel entre **veinticinco** fondos animados sobre canvas:
+Elige un ambiente — por vista del panel, *o detrás de cualquier terminal* — entre **veinticinco** fondos animados sobre canvas:
 
 | Ambiente | Fondos |
 | --- | --- |
@@ -234,7 +238,7 @@ Elige un ambiente por vista del panel entre **veinticinco** fondos animados sobr
 | Friki | `matrix`, `topo`, `synthwave` |
 | Inquieto | `cyberpunk`, `taipei101`, `thunderstorm`, `confetti`, `particleCursor` |
 
-Se pausan cuando estás en otra parte, así que casi no cuestan nada. Combina `matrix` con tu asistente de IA para un ambiente que dice «soy extremadamente productivo y posiblemente estoy en una película de las Wachowski». O elige `ocean` y aparenta ser una persona seria. No juzgamos ninguna de las dos opciones.
+El mismo selector también respalda tus paneles de terminal, así que puedes poner `matrix` detrás de una sesión SSH activa. Se pausan cuando estás en otra parte, así que casi no cuestan nada. Combina `matrix` con tu asistente de IA para un ambiente que dice «soy extremadamente productivo y posiblemente estoy en una película de las Wachowski». O elige `ocean` y aparenta ser una persona seria. No juzgamos ninguna de las dos opciones.
 
 <p align="center">
   <img src="docs/assets/screenshots/backgrounds.png" alt="Algunos de los fondos animados lado a lado" width="720" />
@@ -242,7 +246,7 @@ Se pausan cuando estás en otra parte, así que casi no cuestan nada. Combina `m
 
 <p align="center"><sub><em>📸 <strong>Marcador de captura</strong> — una hoja de ambientes: `matrix`, `aurora`, `synthwave` y `taipei101`.</em></sub></p>
 
-### Mantén vivos a tus agentes de IA remotos
+### Mantén vivos a tus agentes de IA
 
 Esta es la segunda función de la que la gente se enamora. Los terminales SSH de KKTerm pueden dejarte directo en una **sesión tmux con nombre** en el host remoto que sobrevive a la reconexión:
 
@@ -261,20 +265,6 @@ Las shells locales tienen el mismo truco en Windows: los paneles de PowerShell p
 
 <p align="center"><sub><em>📸 <strong>Marcador de captura</strong> — la lista de sesiones tmux/psmux en la barra de herramientas del Pane, con un agente `claude` remoto que sigue corriendo tras una reconexión.</em></sub></p>
 
-### Saber cuánta IA te queda
-
-Los agentes de programación cobran por ventana de plan, no por mes, y se comen felices tu cuota mientras estás en una junta. El **medidor de uso de IA** lo mantiene a la vista:
-
-- Un widget de panel que muestra **Claude Code** y **Codex** lado a lado: cuenta conectada, plan, consumo de la ventana actual y de esta semana, hora del próximo reinicio.
-- Un **indicador compacto en la barra de estado** que refleja las mismas cifras, para que incluso con el panel cerrado veas de un vistazo si te queda margen antes del próximo gran refactor.
-- Te avisa con anticipación si necesitas volver a iniciar sesión — *antes* de una tarea larga, no a media tarea.
-
-<p align="center">
-  <img src="docs/assets/screenshots/usage-meter.png" alt="El widget del medidor de uso de IA y el indicador de la barra de estado" width="720" />
-</p>
-
-<p align="center"><sub><em>📸 <strong>Marcador de captura</strong> — el widget de uso mostrando Claude Code y Codex lado a lado, además del reflejo compacto en la barra de estado.</em></sub></p>
-
 ### Separa tus mundos con los espacios de trabajo
 
 El homelab, la chamba y los servidores de ese cliente no pertenecen a la misma lista. Los **espacios de trabajo (Workspaces)** son contenedores de Connections con nombre y aislados entre los que cambias desde el Activity Rail. Cambiar solo reajusta el árbol de conexiones — tus Sessions abiertas, el Dashboard y la configuración se quedan donde están — así que cambiar de contexto cuesta un clic, no un reinicio.
@@ -285,27 +275,45 @@ El homelab, la chamba y los servidores de ese cliente no pertenecen a la misma l
 
 <p align="center"><sub><em>📸 <strong>Marcador de captura</strong> — el selector de espacio de trabajo en la parte superior del Activity Rail, a medio cambio entre «Home Lab» y «Day Job».</em></sub></p>
 
-### Archivos y logs, en la misma ventana
+### Vístelo a tu gusto: temas de color
 
-No todo es un host remoto. KKTerm explora tu **disco local** en un Pane de File Explorer (el mismo doble panel que SFTP), y abre un único archivo en un **visor Document** que elige el modo adecuado para cada caso: texto/código con un editor ligero y guardado seguro, Markdown, tablas CSV/TSV, JSON, imágenes, PDF, y un **modo Log** dedicado con coloreado por nivel, filtro, ANSI y seguimiento (tail). Ya no hace falta echar mano de un editor aparte nada más para leer el log junto al que ya estás.
+Los fondos son la parte divertida; los **temas de color** son lo que de verdad ves todo el día. KKTerm trae **catorce** esquemas de color que reestilizan todo el chrome de la app — Activity Rail, árbol de conexiones, pestañas, diálogos — con una minivista previa en vivo de cada uno en Configuración ▸ Apariencia:
 
-<p align="center">
-  <img src="docs/assets/screenshots/file-viewer.png" alt="El visor Document en modo log-tail junto a un panel de file explorer" width="720" />
-</p>
+| Ambiente | Esquemas |
+| --- | --- |
+| Neutro | `Default`, `Dark`, `Light`, `Match OS` (sigue el claro/oscuro del sistema), `Mac` |
+| Colorido | `Orange`, `Purple`, `Pink`, `Confetti`, `Bubble Tea` |
+| Sabor local | `Green Kuai Kuai` (sí, el snack), `Blue See`, `Blue, Green and White`, `Semiconductor` |
 
-<p align="center"><sub><em>📸 <strong>Marcador de captura</strong> — el visor Document siguiendo un log en vivo (colores por nivel + filtro) junto a un Pane local de File Explorer.</em></sub></p>
-
-### Deja que otras IA manejen KKTerm
-
-KKTerm trae su propio servidor MCP, para que agentes de programación externos (Claude Code, Codex, Copilot, Antigravity, OpenCode) usen tu espacio de trabajo como lo haces tú — listar conexiones, abrir una, leer un búfer de terminal, colocar widgets en el panel. De IA a IA, en tu máquina, sin relevo en la nube. Las acciones que modifican, las más riesgosas, se quedan detrás de un único interruptor de seguridad que está **apagado** por defecto.
-
-Configuración → AI Assistant → **Built-in MCP Server** tiene un diálogo «Mostrar configuración» de un clic, ya rellenado, además de comandos `claude mcp add` / `codex mcp add` para copiar.
+El terminal conserva su propia paleta oscura sin importar el esquema que elijas, para que tus shells sigan siendo legibles mientras el resto de la app se ajusta a tu ánimo.
 
 <p align="center">
-  <img src="docs/assets/screenshots/mcp-server.png" alt="La configuración del servidor MCP integrado con el diálogo de mostrar configuración" width="720" />
+  <img src="docs/assets/screenshots/color-themes.png" alt="La cuadrícula de esquemas de color en Configuración con vistas previas en vivo" width="720" />
 </p>
 
-<p align="center"><sub><em>📸 <strong>Marcador de captura</strong> — el panel Built-in MCP Server con el diálogo «Mostrar configuración» y el interruptor de seguridad (apagado por defecto).</em></sub></p>
+<p align="center"><sub><em>📸 <strong>Marcador de captura</strong> — la cuadrícula de esquemas de color de Configuración ▸ Apariencia, cada tarjeta una minivista previa en vivo de la app.</em></sub></p>
+
+### Install Helper (solo Windows)
+
+Preparar una máquina Windows nueva para desarrollar suele ser diez pestañas del navegador y mucho «siguiente, siguiente, finalizar». El **Install Helper** es un catálogo integrado que encuentra, instala, actualiza y desinstala las herramientas que de otro modo andarías persiguiendo a mano — sin salir de KKTerm:
+
+- **Essentials** — winget, Node (vía nvm-windows), Python (vía uv), Git.
+- **AI Agents** — Claude Code, Codex, Antigravity, OpenCode y otras CLI y apps de escritorio de agentes de programación.
+- **AI Platforms** — stacks locales / autoalojados como Ollama, n8n, Open WebUI, Flowise y Langflow, abiertos y gestionados por ti.
+- **Development** — editores, contenedores, herramientas de API, WSL y sus distribuciones, Rustup.
+- **Windows Power User** — PowerToys, PowerShell 7, psmux, Sysinternals, Everything, Ditto.
+- **Remote Access** — Tailscale, RustDesk.
+- **Utilities** — Notepad++, ripgrep, jq, fzf, 7-Zip, Oh My Posh, FFmpeg y más.
+
+Detecta lo que ya está instalado, marca lo que tiene actualización, y **Actualizar todo** recorre la cola por ti. Los avisos de UAC siguen siendo explícitos, nada se instala en silencio, y todo el catálogo va dentro de la app — sin cuenta extra, sin telemetría en segundo plano.
+
+> macOS y Linux ya tienen gestores de paquetes que adoras, así que el Install Helper es una comodidad exclusiva de Windows y no forma parte de esas builds.
+
+<p align="center">
+  <img src="docs/assets/screenshots/install-helper.png" alt="El catálogo Install Helper con herramientas instaladas y disponibles" width="720" />
+</p>
+
+<p align="center"><sub><em>📸 <strong>Marcador de captura</strong> — el módulo Install Helper: tarjetas de herramientas categorizadas, botones de instalar/actualizar, y la acción «Actualizar todo» de la cabecera.</em></sub></p>
 
 ---
 
