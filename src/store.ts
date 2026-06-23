@@ -1539,7 +1539,24 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     ),
   setDocumentStatusSlot: (slot) =>
     set((state) => (state.documentStatusSlot === slot ? {} : { documentStatusSlot: slot })),
-  activateTab: (tabId) => set({ activeTabId: tabId }),
+  activateTab: (tabId) => {
+    const state = get();
+    const tab = state.tabs.find((candidate) => candidate.id === tabId);
+    const targetWorkspaceId = tabWorkspaceId(tab);
+    // Activating a tab from another Workspace (e.g. a connected/pinned
+    // connection in the activity rail) must also switch to its parent
+    // Workspace; otherwise the canvas filters it out and shows "no active
+    // session" over the wrong Workspace.
+    if (tab && targetWorkspaceId !== state.activeWorkspaceId) {
+      persistActiveWorkspaceId(targetWorkspaceId);
+      set({ activeTabId: tabId, activeWorkspaceId: targetWorkspaceId });
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("kkterm:connection-tree-invalidated"));
+      }
+      return;
+    }
+    set({ activeTabId: tabId });
+  },
   renameTab: async (tabId, title) => {
     const displayTitle = title.trim();
     if (!displayTitle) {
