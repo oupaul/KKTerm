@@ -683,7 +683,19 @@ export type ColorScheme =
   | "blue-green-white"
   | "confetti"
   | "bubble-tea"
-  | "semiconductor";
+  | "semiconductor"
+  | "canarinho"
+  | "la-albiceleste"
+  | "les-bleus"
+  | "oranje"
+  | "die-mannschaft"
+  | "la-roja"
+  | "os-navegadores"
+  | "vatreni"
+  | "el-tri"
+  | "three-lions"
+  | "samurai-blue"
+  | "stars-and-stripes";
 
 export interface AppearanceSettings {
   appFontFamily: string;

@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import { useId, type CSSProperties } from "react";
 import { Check } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { ColorScheme } from "../../types";
@@ -28,6 +28,7 @@ type SchemeTokens = {
   nav: string;
   navtext: string;
   navaccent: string;
+  worldcup?: boolean;
 };
 
 /** Schemes that resolve their palette from the OS render an AUTO split tile. */
@@ -118,6 +119,90 @@ const SCHEME_TOKENS: Record<ColorScheme, SchemeEntry> = {
     accent: "#e60012", accentsoft: "#ffe1e4", green: "#147a3f",
     nav: "#111111", navtext: "#ffffff", navaccent: "#ff1f2f",
   },
+  canarinho: {
+    bg: "#fffbe6", chrome: "#ffdc02", surface: "#ffffff", surfmuted: "#fff8d6",
+    text: "#193375", textfaint: "#9a9a5e", border: "#ecd964",
+    accent: "#19ae47", accentsoft: "#dff6e3", green: "#19ae47",
+    nav: "#19ae47", navtext: "#eafff0", navaccent: "#ffdc02",
+    worldcup: true,
+  },
+  "la-albiceleste": {
+    bg: "#eef6fc", chrome: "#43a1d5", surface: "#ffffff", surfmuted: "#e7f2fa",
+    text: "#173e69", textfaint: "#7f97ad", border: "#bdddf0",
+    accent: "#43a1d5", accentsoft: "#dbeefa", green: "#2f9e6a",
+    nav: "#173e69", navtext: "#dcebf6", navaccent: "#d5b048",
+    worldcup: true,
+  },
+  "les-bleus": {
+    bg: "#10257e", chrome: "#1b3ab5", surface: "#2347d0", surfmuted: "#1b3ab5",
+    text: "#eaeefc", textfaint: "#94a3e4", border: "#3756d8",
+    accent: "#ed2939", accentsoft: "#182c88", green: "#3fb88c",
+    nav: "#0c1c66", navtext: "#e0e7fe", navaccent: "#ffffff",
+    worldcup: true,
+  },
+  oranje: {
+    bg: "#fff2e6", chrome: "#f36c21", surface: "#ffffff", surfmuted: "#fff1e3",
+    text: "#2a1a10", textfaint: "#a88461", border: "#f6cda3",
+    accent: "#f36c21", accentsoft: "#ffe4d0", green: "#2f9e54",
+    nav: "#1a1a1a", navtext: "#ffd9bf", navaccent: "#f36c21",
+    worldcup: true,
+  },
+  "die-mannschaft": {
+    bg: "#f4f4f5", chrome: "#ffffff", surface: "#ffffff", surfmuted: "#eeeeef",
+    text: "#161413", textfaint: "#8a8a8a", border: "#d8d8d8",
+    accent: "#d71016", accentsoft: "#fbe0e1", green: "#1f7a44",
+    nav: "#161413", navtext: "#e9e9ea", navaccent: "#d71016",
+    worldcup: true,
+  },
+  "la-roja": {
+    bg: "#fff3f2", chrome: "#e30613", surface: "#ffffff", surfmuted: "#fdeceb",
+    text: "#1b2a6b", textfaint: "#a08a8e", border: "#f4c4c0",
+    accent: "#e30613", accentsoft: "#fde0de", green: "#2f9e54",
+    nav: "#1b2a6b", navtext: "#e7ecfa", navaccent: "#fcb507",
+    worldcup: true,
+  },
+  "os-navegadores": {
+    bg: "#460d10", chrome: "#a81a20", surface: "#5c1418", surfmuted: "#460d10",
+    text: "#f8e7e4", textfaint: "#c28d89", border: "#6e2528",
+    accent: "#e9b84a", accentsoft: "#6a1418", green: "#1f9d5b",
+    nav: "#0d6938", navtext: "#dcefe2", navaccent: "#f0d488",
+    worldcup: true,
+  },
+  vatreni: {
+    bg: "#fff2f2", chrome: "#ed1c24", surface: "#ffffff", surfmuted: "#fdeaea",
+    text: "#2a0a0c", textfaint: "#b07d80", border: "#f3c2c4",
+    accent: "#ed1c24", accentsoft: "#fcdcde", green: "#2f9e54",
+    nav: "#0457a2", navtext: "#ffffff", navaccent: "#ed1c24",
+    worldcup: true,
+  },
+  "el-tri": {
+    bg: "#f0f8f2", chrome: "#006847", surface: "#ffffff", surfmuted: "#e9f5ee",
+    text: "#0a2417", textfaint: "#7a9a86", border: "#c2e0cd",
+    accent: "#ce1126", accentsoft: "#fbdde1", green: "#006847",
+    nav: "#ce1126", navtext: "#ffe1e5", navaccent: "#ffffff",
+    worldcup: true,
+  },
+  "three-lions": {
+    bg: "#f3f5f9", chrome: "#ffffff", surface: "#ffffff", surfmuted: "#edf0f6",
+    text: "#00216a", textfaint: "#7c87a0", border: "#d2d9e6",
+    accent: "#da291c", accentsoft: "#fbdedb", green: "#1f7a44",
+    nav: "#00216a", navtext: "#dfe6f4", navaccent: "#da291c",
+    worldcup: true,
+  },
+  "samurai-blue": {
+    bg: "#0a1648", chrome: "#122064", surface: "#16277a", surfmuted: "#122064",
+    text: "#e6ebfa", textfaint: "#8390c4", border: "#27397e",
+    accent: "#e60026", accentsoft: "#172a78", green: "#3fb88c",
+    nav: "#ffffff", navtext: "#4a5aa0", navaccent: "#e60026",
+    worldcup: true,
+  },
+  "stars-and-stripes": {
+    bg: "#fff4f5", chrome: "#bf0a30", surface: "#ffffff", surfmuted: "#fbe9eb",
+    text: "#0a1f5c", textfaint: "#9a8a90", border: "#f1c4ca",
+    accent: "#bf0a30", accentsoft: "#fbdde2", green: "#2f7d54",
+    nav: "#0a1f5c", navtext: "#dfe6f6", navaccent: "#ffffff",
+    worldcup: true,
+  },
 };
 
 /** Light/dark references that compose the AUTO (Match OS) split tile. */
@@ -189,6 +274,34 @@ function MiniInterior() {
   );
 }
 
+function WorldCupTrophy() {
+  const gradientId = useId().replace(/:/g, "");
+  return (
+    <svg className="wc-trophy" viewBox="0 0 80 124" aria-hidden="true">
+      <defs>
+        <linearGradient id={gradientId} x1="12%" y1="0%" x2="88%" y2="100%">
+          <stop offset="0%" stopColor="#fff0b8" />
+          <stop offset="34%" stopColor="#f3c64e" />
+          <stop offset="66%" stopColor="#d29a31" />
+          <stop offset="100%" stopColor="#9c6d22" />
+        </linearGradient>
+      </defs>
+      <g style={{ fill: `url(#${gradientId})` }}>
+        <ellipse cx="40" cy="116" rx="23" ry="6.5" />
+        <rect x="22" y="103" width="36" height="12" rx="3.5" />
+        <rect x="26.5" y="95" width="27" height="10" rx="3" />
+        <path d="M30 96 C15 82 31 66 27.5 53 C25.5 46 32 43 40 43 C48 43 54.5 46 52.5 53 C49 66 65 82 50 96 Z" />
+        <circle cx="40" cy="29" r="20" />
+      </g>
+      <g fill="none" stroke="rgba(120,78,18,0.5)" strokeWidth="1.4">
+        <ellipse cx="40" cy="29" rx="8" ry="20" />
+        <line x1="20" y1="29" x2="60" y2="29" />
+        <path d="M23 19 H57 M23 39 H57" />
+      </g>
+    </svg>
+  );
+}
+
 function MiniApp({ scheme, autoLabel }: { scheme: SchemeEntry; autoLabel: string }) {
   if ("auto" in scheme) {
     return (
@@ -202,6 +315,7 @@ function MiniApp({ scheme, autoLabel }: { scheme: SchemeEntry; autoLabel: string
   return (
     <div className="mini" style={schemeVars(scheme)}>
       <MiniInterior />
+      {scheme.worldcup ? <WorldCupTrophy /> : null}
     </div>
   );
 }
@@ -253,6 +367,18 @@ const SCHEME_ORDER: { value: ColorScheme; labelKey: string }[] = [
   { value: "confetti", labelKey: "settings.schemeConfetti" },
   { value: "bubble-tea", labelKey: "settings.schemeBubbleTea" },
   { value: "semiconductor", labelKey: "settings.schemeSemiconductor" },
+  { value: "canarinho", labelKey: "settings.schemeCanarinho" },
+  { value: "la-albiceleste", labelKey: "settings.schemeLaAlbiceleste" },
+  { value: "les-bleus", labelKey: "settings.schemeLesBleus" },
+  { value: "oranje", labelKey: "settings.schemeOranje" },
+  { value: "die-mannschaft", labelKey: "settings.schemeDieMannschaft" },
+  { value: "la-roja", labelKey: "settings.schemeLaRoja" },
+  { value: "os-navegadores", labelKey: "settings.schemeOsNavegadores" },
+  { value: "vatreni", labelKey: "settings.schemeVatreni" },
+  { value: "el-tri", labelKey: "settings.schemeElTri" },
+  { value: "three-lions", labelKey: "settings.schemeThreeLions" },
+  { value: "samurai-blue", labelKey: "settings.schemeSamuraiBlue" },
+  { value: "stars-and-stripes", labelKey: "settings.schemeStarsAndStripes" },
 ];
 
 export function ThemeSchemeGrid({

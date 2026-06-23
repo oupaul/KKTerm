@@ -532,6 +532,18 @@
   position: relative;
 }
 
+.wc-trophy {
+  position: absolute;
+  right: 7%;
+  bottom: 8%;
+  width: 18%;
+  max-width: 28px;
+  min-width: 18px;
+  filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.32));
+  opacity: 0.94;
+  pointer-events: none;
+}
+
 .mini-tb {
   height: 9.5%;
   min-height: 13px;

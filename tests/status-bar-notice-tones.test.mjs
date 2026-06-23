@@ -15,7 +15,7 @@ test("status popup icons and progress bar use the same semantic tone colors", ()
   for (const token of ["info", "success", "warning", "error"]) {
     assert.equal(
       colorSchemesCss.match(new RegExp(`--notice-${token}:`, "g"))?.length,
-      13,
+      25,
       `Each color scheme should define --notice-${token}.`,
     );
   }

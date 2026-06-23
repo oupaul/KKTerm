@@ -5125,12 +5125,24 @@ fn validate_appearance_settings(
         | "blue-green-white"
         | "confetti"
         | "bubble-tea"
-        | "semiconductor" => {
+        | "semiconductor"
+        | "canarinho"
+        | "la-albiceleste"
+        | "les-bleus"
+        | "oranje"
+        | "die-mannschaft"
+        | "la-roja"
+        | "os-navegadores"
+        | "vatreni"
+        | "el-tri"
+        | "three-lions"
+        | "samurai-blue"
+        | "stars-and-stripes" => {
             settings.color_scheme.to_lowercase()
         }
         _ => {
             return Err(
-                "color scheme must be one of: default, dark, light, match-os, mac, orange, purple, pink, green-kuai-kuai, blue-see, blue-green-white, confetti, bubble-tea, semiconductor"
+                "color scheme must be one of: default, dark, light, match-os, mac, orange, purple, pink, green-kuai-kuai, blue-see, blue-green-white, confetti, bubble-tea, semiconductor, canarinho, la-albiceleste, les-bleus, oranje, die-mannschaft, la-roja, os-navegadores, vatreni, el-tri, three-lions, samurai-blue, stars-and-stripes"
                     .to_string(),
             )
         }
