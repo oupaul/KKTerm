@@ -2045,7 +2045,7 @@
     "cliAccountApply": "Set account profile",
     "line": "Line",
     "speed": "Speed",
-    "serialLinePlaceholder": "COM1",
+    "serialLinePlaceholder": "e.g. COM3 or /dev/cu.usbserial-1410",
     "url": "URL",
     "urlPlaceholder": "https://example.com",
     "dataPartition": "Data partition",
