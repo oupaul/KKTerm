@@ -179,6 +179,8 @@ export function TerminalWorkspace({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
+    // Bind Escape only while a dialog is open; closeSftpDialog is recreated each render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sftpDialogConnection]);
 
   function focusTerminalPaneAfterDialogClose(paneId: string) {
@@ -338,6 +340,8 @@ export function TerminalWorkspace({
     const restore = () => restoreFocusedTerminalPane("workspace-activated");
     const frameId = window.requestAnimationFrame(restore);
     return () => window.cancelAnimationFrame(frameId);
+    // Re-arm on focus/active changes; restoreFocusedTerminalPane is recreated each render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusedPaneId, isActive]);
 
   useEffect(() => {
@@ -425,6 +429,8 @@ export function TerminalWorkspace({
       document.removeEventListener("pointerdown", handleProbePointerdown, true);
       removeNativeFocusListener?.();
     };
+    // Re-bind activation listeners on focus/active changes; restoreFocusedTerminalPane is recreated each render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusedPaneId, isActive]);
 
   function handleFontChange(delta: number | "reset") {
@@ -2189,6 +2195,7 @@ function TerminalPaneView({
   // A terminal Session belongs to the Pane id. Display metadata updates such
   // as Child Connection Tab rename/icon edits must not tear down and recreate
   // the live SSH/local process.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pane.id, tabId]);
 
   useEffect(() => {
@@ -2215,6 +2222,8 @@ function TerminalPaneView({
       Boolean(pane.tmuxSessionId && !tmuxMouseEnabled),
       handleTmuxWheelScroll,
     );
+    // Update the wheel override on tmux/mouse changes; handleTmuxWheelScroll is recreated each render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pane.tmuxSessionId, tmuxMouseEnabled]);
 
   useEffect(() => {

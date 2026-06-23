@@ -39,7 +39,7 @@ export function applyAssistantStreamEventToMessage(
     case "contentDelta":
       msg.content += event.delta;
       break;
-    case "toolCallStart":
+    case "toolCallStart": {
       const startedToolId = streamEventString(event, "toolId", "tool_id");
       const startedToolName = streamEventString(event, "toolName", "tool_name");
       msg.workStartedAt = msg.workStartedAt ?? options.workStartedAt;
@@ -56,7 +56,8 @@ export function applyAssistantStreamEventToMessage(
         },
       ];
       break;
-    case "skillInvocation":
+    }
+    case "skillInvocation": {
       const skillName = streamEventString(event, "skillName", "skill_name");
       if (!skillName) {
         break;
@@ -64,7 +65,8 @@ export function applyAssistantStreamEventToMessage(
       msg.workStartedAt = msg.workStartedAt ?? options.workStartedAt;
       msg.skillNames = Array.from(new Set([...(msg.skillNames ?? []), skillName]));
       break;
-    case "toolCallEnd":
+    }
+    case "toolCallEnd": {
       const endedToolId = streamEventString(event, "toolId", "tool_id");
       const endedToolName = streamEventString(event, "toolName", "tool_name");
       if (!endedToolId) {
@@ -82,6 +84,7 @@ export function applyAssistantStreamEventToMessage(
           : tc,
       );
       break;
+    }
     case "planUpdate": {
       const steps: AssistantRunManifestStep[] = (Array.isArray(event.steps) ? event.steps : [])
         .filter((step) => step && typeof step.id === "string" && typeof step.label === "string")

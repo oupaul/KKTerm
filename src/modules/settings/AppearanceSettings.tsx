@@ -101,6 +101,8 @@ export function AppearanceSettings({ onResetLayout }: { onResetLayout: () => voi
     return () => {
       disposed = true;
     };
+    // Resolve available fonts once on mount; setAppearanceSettings is a stable store action.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function handleOpenCustomFontsFolder() {

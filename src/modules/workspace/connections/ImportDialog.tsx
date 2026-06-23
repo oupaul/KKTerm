@@ -560,6 +560,8 @@ function BookmarksPanel({
     return () => {
       cancelled = true;
     };
+    // Load bookmark sources once on mount; error callbacks are invoked at run time only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const selectedSource = sources.find((source) => source.id === selectedSourceId) ?? null;

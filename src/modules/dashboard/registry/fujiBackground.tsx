@@ -1,3 +1,4 @@
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment -- untyped canvas-art module; full typing is out of scope
 // @ts-nocheck
 import { useEffect, useRef } from "react";
 import { useDashboardAnimationActive } from "../view/animationGating";
@@ -213,7 +214,7 @@ export function FujiBg() {
       const grd=g.createLinearGradient(0,-r,0,r); grd.addColorStop(0,c1); grd.addColorStop(1,"#9a2410");
       g.fillStyle=grd; g.beginPath(); const pts=5;
       for(let i=0;i<pts*2;i++){ const ang=i/(pts*2)*6.2832-1.5708; const rad=i%2?r*0.42:r;
-        const px=Math.cos(ang)*rad, py=Math.sin(ang)*rad; i?g.lineTo(px,py):g.moveTo(px,py); }
+        const px=Math.cos(ang)*rad, py=Math.sin(ang)*rad; if(i){g.lineTo(px,py);}else{g.moveTo(px,py);} }
       g.closePath(); g.fill(); g.restore(); };
     const cluster = (bx,by,sc) => {
       const n = 2 + Math.floor(Math.random()*4);
@@ -612,7 +613,8 @@ export function FujiBg() {
     const TR=Math.min(SEASON*0.12, 7);
     const L=SEASON*4;
     const pos=(t % L)/SEASON;
-    let cur=Math.floor(pos)%4, nxt=(cur+1)%4, frac=pos-Math.floor(pos);
+    let cur=Math.floor(pos)%4, nxt=(cur+1)%4;
+    const frac=pos-Math.floor(pos);
     const trFrac=TR/SEASON;
     let mixk = frac>1-trFrac ? _fSmooth((frac-(1-trFrac))/trFrac) : 0;
     // preview hook: window.__fujiForceSeason = 0|1|2|3 pins a season (Spring..Winter)

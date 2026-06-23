@@ -99,7 +99,9 @@ export function UrlSettings() {
   }
 
   useEffect(() => {
+    // Load once on mount; `load` is recreated each render and must not retrigger the effect.
     void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function handleSave() {

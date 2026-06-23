@@ -547,6 +547,8 @@ export function AssistantPanel({
       disposed = true;
       unlisten?.();
     };
+    // Register the approval listener once on mount; handler deps are read via refs/stable callbacks.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -1001,7 +1003,7 @@ export function AssistantPanel({
       return;
     }
 
-    let text = "";
+    let text: string;
     if (pane.connection?.type === "ssh" && pane.tmuxSessionId) {
       try {
         text = await invokeCommand("capture_tmux_pane", {
@@ -1141,6 +1143,8 @@ export function AssistantPanel({
       true,
       assistantDirectSubmitRequest.snippet,
     );
+    // Fire only when a new direct-submit request arrives; the callbacks/state are read at run time.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assistantDirectSubmitRequest]);
 
   async function submitAssistantPrompt() {
@@ -1827,6 +1831,8 @@ export function AssistantPanel({
     node.style.left = `${screenshotRegionState.bounds.left}px`;
     node.style.top = `${screenshotRegionState.bounds.top}px`;
     node.style.width = `${screenshotRegionState.bounds.width}px`;
+    // Depend on the individual bounds fields, not the whole object, to avoid redundant DOM writes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     screenshotRegionState?.bounds.height,
     screenshotRegionState?.bounds.left,
@@ -1844,6 +1850,8 @@ export function AssistantPanel({
     node.style.left = `${screenshotSelectionRect.x}px`;
     node.style.top = `${screenshotSelectionRect.y}px`;
     node.style.width = `${screenshotSelectionRect.width}px`;
+    // Depend on the individual rect fields, not the whole object, to avoid redundant DOM writes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     screenshotSelectionRect?.height,
     screenshotSelectionRect?.width,

@@ -255,7 +255,6 @@ export function RdpCanvasView({
       return;
     }
     sendCtrlAltDelete();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cadSignal]);
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {

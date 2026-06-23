@@ -603,10 +603,10 @@ export function ConnectionSidebar({
       const { iconDataUrl, ...request } = buildFileViewConnectionDraftFromPath(selectedPath, {
         workspaceId: useWorkspaceStore.getState().activeWorkspaceId,
       });
-      let connection = await invokeCommand("create_connection", {
+      const connection = await invokeCommand("create_connection", {
         request,
       });
-      connection = await saveConnectionIconPresentation(connection, iconDataUrl, null);
+      await saveConnectionIconPresentation(connection, iconDataUrl, null);
       await handleConnectionSaved();
     } catch (error) {
       setTreeError(error instanceof Error ? error.message : String(error));
@@ -1492,7 +1492,7 @@ export function ConnectionSidebar({
     iconDataUrl: string | null | undefined,
     iconBackgroundColor: string | null | undefined,
   ) {
-    let updatedConnection = await saveConnectionIconDataUrl(connection, iconDataUrl);
+    const updatedConnection = await saveConnectionIconDataUrl(connection, iconDataUrl);
     const normalizedIconBackgroundColor = iconBackgroundColor ?? null;
     if ((updatedConnection.iconBackgroundColor ?? null) === normalizedIconBackgroundColor) {
       return updatedConnection;
@@ -1636,6 +1636,8 @@ export function ConnectionSidebar({
   );
   const quickConnectShellOptions = useMemo(
     () => localShellOptionsForPlatform(terminalSettings.customShells),
+    // localShellOptionsForPlatform resolves labels via i18next.t, so recompute on language change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [i18n.language, terminalSettings.customShells],
   );
   const recentConnections = useMemo(() => {
@@ -2142,7 +2144,7 @@ export function ConnectionSidebar({
       return;
     }
 
-    let confirmed: boolean | null = null;
+    let confirmed: boolean | null;
     try {
       confirmed = await confirmNativeDialog(deleteConfirmationMessage(t, target), {
         kind: "warning",
@@ -4035,6 +4037,8 @@ function ConnectionDialog({
   }, [initialConnection?.iconDataUrl, tree]);
   const localShellOptions = useMemo(
     () => localShellOptionsForPlatform(terminalSettings.customShells),
+    // localShellOptionsForPlatform resolves labels via i18next.t, so recompute on language change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [i18n.language, terminalSettings.customShells],
   );
   const isEditMode = mode === "edit";

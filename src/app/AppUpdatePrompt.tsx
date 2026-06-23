@@ -107,6 +107,8 @@ export function AppUpdatePrompt({
       }
       await runUpdateCheck("startup");
     })();
+    // runUpdateCheck is recreated each render; gate the startup check on settings readiness only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoUpdateChecksEnabled, settingsReady]);
 
   useEffect(() => {

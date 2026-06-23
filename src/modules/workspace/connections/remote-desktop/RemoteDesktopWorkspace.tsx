@@ -1258,6 +1258,8 @@ export function RemoteDesktopWorkspace({
     return () => {
       window.clearInterval(intervalId);
     };
+    // Re-arm the poll only when RDP eligibility changes; attemptRdpDisplaySync reads live refs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canStartRdp]);
 
   useEffect(() => {
@@ -1315,6 +1317,8 @@ export function RemoteDesktopWorkspace({
     return () => {
       window.clearInterval(intervalId);
     };
+    // Re-arm the poll only when VNC eligibility changes; t/reportRemoteDesktopError are read at run time.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canStartVnc]);
 
   const handleVncSessionEvent = (event: VncSessionEvent) => {

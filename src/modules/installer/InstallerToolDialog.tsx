@@ -123,6 +123,7 @@ function InstalledInfoBody({ recipe }: { recipe: Recipe }) {
   const hasUpdate =
     supportsLatestVersion && isInstallerUpdateAvailable(latest, version);
   const webUi = webUiAffordanceForRecipe(recipe);
+  const hasWebUi = webUi !== null;
   const service = serviceAffordanceForRecipe(recipe);
   const terminalLaunch = terminalLaunchAffordanceForRecipe(recipe);
   const workspaceSpec = workspaceConnectionSpecForRecipe(recipe);
@@ -133,7 +134,7 @@ function InstalledInfoBody({ recipe }: { recipe: Recipe }) {
   const statusRefreshInFlight = useRef(false);
 
   useEffect(() => {
-    if (!webUi || !isTauriRuntime()) {
+    if (!hasWebUi || !isTauriRuntime()) {
       setWebUiStatus(null);
       return;
     }
@@ -158,7 +159,7 @@ function InstalledInfoBody({ recipe }: { recipe: Recipe }) {
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [recipe.id, !!webUi]);
+  }, [recipe.id, hasWebUi]);
 
   async function handleTogglePin() {
     if (!isTauriRuntime()) return;

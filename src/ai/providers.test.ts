@@ -26,7 +26,10 @@ try {
 } catch (error) {
   const message = error instanceof Error ? error.message : String(error);
   if (!message.includes("Connect GitHub Copilot")) {
-    throw new Error(`GitHub Copilot should fail with the connection requirement, got: ${message}`);
+    throw Object.assign(
+      new Error(`GitHub Copilot should fail with the connection requirement, got: ${message}`),
+      { cause: error },
+    );
   }
 }
 

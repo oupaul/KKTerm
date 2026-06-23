@@ -17,7 +17,7 @@ interface ParsedConfig {
 }
 
 const SECRET_HEADER_PATTERN = /^(authorization|x-api-key|x-auth-token|api-key)$/i;
-const SECRET_VALUE_HINT = /([A-Za-z0-9._\-]{20,})/;
+const SECRET_VALUE_HINT = /([A-Za-z0-9._-]{20,})/;
 
 interface DetectedSecret {
   headerName: string;

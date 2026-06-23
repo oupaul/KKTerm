@@ -266,6 +266,8 @@ export function SftpWorkspace({
     setPlainFtpFallbackActive(false);
     setFtpNoticeDialog(null);
     transientPasswordRef.current = null;
+    // Re-run only when the connection identity changes; reading the latest object inline is intended.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sourceConnection?.id]);
 
   function handleProtocolChange(protocol: SshFileBrowserProtocol) {
@@ -336,6 +338,8 @@ export function SftpWorkspace({
 
   useEffect(() => {
     void loadLocalDirectory(isLocalFilesBrowser ? connection?.localStartupDirectory : undefined);
+    // Reload when the startup directory or browser mode changes; loadLocalDirectory is recreated each render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connection?.localStartupDirectory, isLocalFilesBrowser]);
 
   useEffect(() => {
@@ -607,7 +611,7 @@ export function SftpWorkspace({
               return;
             }
             if (!enteredPassword) {
-              throw new Error(t("sftp.passwordPromptCanceled"));
+              throw Object.assign(new Error(t("sftp.passwordPromptCanceled")), { cause: error });
             }
             transientPasswordRef.current = enteredPassword;
             result = await commands.startSession({
@@ -681,6 +685,8 @@ export function SftpWorkspace({
         sessionIdRef.current = null;
       }
     };
+    // rememberRemotePath is an inline closure over stable refs; including it would restart the session every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeProtocolLabel, commands, connection, effectiveBrowserKind, isLocalFilesBrowser, markConnectionSessionEnded, markConnectionSessionStarted, showStatusBarNotice, sourceConnection, sshFileBrowserPort, sshFileBrowserProtocol, t]);
 
   const refreshRemoteDirectory = async () => {
@@ -970,6 +976,8 @@ export function SftpWorkspace({
 
     activeTransferIdRef.current = nextTransfer.id;
     void runQueuedTransfer(nextTransfer);
+    // Drain the queue when transfers change; runQueuedTransfer is recreated each render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [transfers]);
 
   useEffect(() => {
@@ -1760,6 +1768,8 @@ export function SftpWorkspace({
     };
     registerFileBrowserController(tab.id, controller);
     return () => unregisterFileBrowserController(tab.id, controller);
+    // Re-register only on the listed inputs; refreshRemoteDirectory is recreated each render and read at call time.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [commands, connection?.id, connection?.name, effectiveBrowserKind, isLocalFilesBrowser, remoteFiles, remotePath, selectedRemoteNames, status, t, tab.id]);
 
   return (
@@ -2504,7 +2514,7 @@ function writeRecentPaths(side: FilePaneSide, path: string, connectionId?: strin
     return readRecentPaths(side, connectionId);
   }
 
-  let state: RecentFileBrowserPaths = {};
+  let state: RecentFileBrowserPaths;
   try {
     state = JSON.parse(
       window.localStorage.getItem(FILE_BROWSER_RECENT_PATHS_STORAGE_KEY) || "{}",
@@ -2615,7 +2625,7 @@ function writeSidebarCollapsed(connectionKey: string, collapsed: boolean) {
   if (typeof window === "undefined") {
     return;
   }
-  let state: Record<string, boolean> = {};
+  let state: Record<string, boolean>;
   try {
     state = JSON.parse(
       window.localStorage.getItem(FILE_BROWSER_SIDEBAR_STORAGE_KEY) || "{}",

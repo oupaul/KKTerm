@@ -202,6 +202,8 @@ export function ScreenshotMenu({
     node.style.left = `${regionState.bounds.left}px`;
     node.style.top = `${regionState.bounds.top}px`;
     node.style.width = `${regionState.bounds.width}px`;
+    // Depend on the individual bounds fields, not the whole object, to avoid redundant DOM writes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     regionState?.bounds.height,
     regionState?.bounds.left,
@@ -219,6 +221,8 @@ export function ScreenshotMenu({
     node.style.left = `${selectionRect.x}px`;
     node.style.top = `${selectionRect.y}px`;
     node.style.width = `${selectionRect.width}px`;
+    // selectionRect is recomputed each render; depend on its fields, not the object identity.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectionRect?.height, selectionRect?.width, selectionRect?.x, selectionRect?.y]);
 
   return (

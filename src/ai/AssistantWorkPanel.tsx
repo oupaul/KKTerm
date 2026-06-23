@@ -35,8 +35,10 @@ export function AssistantWorkPanel({ message }: { message: AssistantChatMessage 
   const shouldShowThinkingStep = assistantWorkPanelShouldShowThinkingStep(message);
 
   useEffect(() => {
+    // Reset only when a new message arrives; isStreaming transitions are handled below.
     setExpanded(false);
     wasStreamingRef.current = Boolean(message.isStreaming);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [message.id]);
 
   useEffect(() => {

@@ -607,6 +607,7 @@ export function ScriptWidgetHost({
   }, []);
 
   useEffect(() => {
+    const activeSubscriptions = activeSubscriptionsRef.current;
     function allowBridgeMessage(type: RateLimitedBridgeMessage): boolean {
       const now = performance.now();
       const previous = bridgeLastAcceptedRef.current.get(type) ?? -Infinity;
@@ -652,7 +653,7 @@ export function ScriptWidgetHost({
       }
       if (isScriptWidgetSettingsMessage(data)) {
         if (!allowBridgeMessage("setSettings")) return;
-        let settingsJson = "{}";
+        let settingsJson: string;
         try {
           settingsJson = JSON.stringify(data.settings);
         } catch {
@@ -924,10 +925,10 @@ export function ScriptWidgetHost({
     window.addEventListener("message", onMessage);
     return () => {
       window.removeEventListener("message", onMessage);
-      for (const id of activeSubscriptionsRef.current) {
+      for (const id of activeSubscriptions) {
         void invokeCommand("network_stream_cancel", { subscriptionId: id });
       }
-      activeSubscriptionsRef.current.clear();
+      activeSubscriptions.clear();
     };
   }, [canUseNetworkTools, instance.id, onWidgetContextMenu, updateInstance, setWidgetHealth]);
 

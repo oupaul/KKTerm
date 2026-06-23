@@ -71,14 +71,13 @@ function acquireWebviewSession(sessionId: string, start: () => Promise<WebviewSe
     return current;
   }
 
-  let lease: WebviewSessionLease;
   const promise = Promise.resolve()
     .then(start)
     .then((started) => {
       lease.started = true;
       return started;
     });
-  lease = {
+  const lease: WebviewSessionLease = {
     promise,
     refCount: 1,
     closeTimer: null,
@@ -843,6 +842,8 @@ export function WebViewWorkspace({
       disposed = true;
       disposers.forEach((dispose) => dispose());
     };
+    // Re-subscribe only on the listed inputs; the credential/icon handlers are recreated each render and read at event time.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openUrlInNewTab, refreshOpenConnectionMetadata, tab.connection, tab.id, t, updateWebviewTabMetadata]);
 
   function handleNavigate(event: FormEvent<HTMLFormElement>) {

@@ -267,7 +267,7 @@ export interface SftpDirectoryListing {
   entries: SftpDirectoryEntry[];
 }
 
-export interface SftpSessionStarted extends SftpDirectoryListing {}
+export type SftpSessionStarted = SftpDirectoryListing;
 
 export interface LocalDirectoryEntry {
   name: string;
@@ -444,7 +444,7 @@ export interface SshTransportPlan {
   systemSshRole: string;
 }
 
-export interface SshConfigConnectionDraft extends CreateConnectionRequest {}
+export type SshConfigConnectionDraft = CreateConnectionRequest;
 
 export interface UnsupportedSshDirective {
   line: number;

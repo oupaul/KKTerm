@@ -591,6 +591,8 @@ function AiCliBackendControl({
 
   useEffect(() => {
     setStoredStatus(cli ? readStoredAiCliBackendStatus(cli.backend) : null);
+    // Only the backend identity matters here; depend on it rather than the whole cli object.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cli?.backend]);
 
   if (!cli) return null;
@@ -1368,8 +1370,7 @@ export function AiSettings() {
       disposed = true;
     };
   }, [
-    aiProviderDefinition.modelListStrategy,
-    aiProviderDefinition.strictModelList,
+    aiProviderDefinition,
     draft.allowInsecureTls,
     draft.baseUrl,
     draft.extraHeaders,
