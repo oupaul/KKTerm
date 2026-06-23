@@ -2510,6 +2510,7 @@ mod tests {
             ssh_socks_proxy_secret_owner_id: None,
             auth_method: None,
             secret_owner_id: None,
+            password: None,
             passphrase_owner_id: None,
             path: None,
         }

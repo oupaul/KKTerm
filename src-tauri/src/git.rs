@@ -399,23 +399,34 @@ fn parse_remotes(repo: &str) -> Result<Vec<GitRemote>, String> {
     let mut remotes = Vec::new();
     for name in names.lines().map(str::trim).filter(|n| !n.is_empty()) {
         let prefix = format!("refs/remotes/{name}/");
+        // `lstrip=3` drops the `refs/remotes/<remote>` prefix, leaving the bare
+        // branch name (including any nested path). The remote's symbolic HEAD
+        // (`refs/remotes/<remote>/HEAD`) becomes the literal `HEAD`, which
+        // `parse_remote_branches` filters out — using `%(refname:short)` instead
+        // would shorten it to the bare remote name and surface a phantom branch.
         let stdout = git_text(
             repo,
-            &["for-each-ref", "--format", "%(refname:short)", prefix.as_str()],
+            &["for-each-ref", "--format", "%(refname:lstrip=3)", prefix.as_str()],
         )
         .unwrap_or_default();
-        let branches = stdout
-            .lines()
-            .map(str::trim)
-            .filter(|b| !b.is_empty() && !b.ends_with("/HEAD"))
-            .map(|b| b.strip_prefix(&format!("{name}/")).unwrap_or(b).to_string())
-            .collect();
+        let branches = parse_remote_branches(&stdout);
         remotes.push(GitRemote {
             name: name.to_string(),
             branches,
         });
     }
     Ok(remotes)
+}
+
+/// Turn `for-each-ref --format %(refname:lstrip=3)` output for one remote into
+/// branch names, dropping blanks and the remote's symbolic `HEAD` pointer.
+fn parse_remote_branches(stdout: &str) -> Vec<String> {
+    stdout
+        .lines()
+        .map(str::trim)
+        .filter(|b| !b.is_empty() && *b != "HEAD")
+        .map(|b| b.to_string())
+        .collect()
 }
 
 fn parse_tags(repo: &str) -> Result<Vec<String>, String> {
@@ -1098,6 +1109,17 @@ mod tests {
         assert_eq!(parse_track("[behind 2]"), (0, 2));
         assert_eq!(parse_track("[ahead 3, behind 1]"), (3, 1));
         assert_eq!(parse_track(""), (0, 0));
+    }
+
+    #[test]
+    fn remote_branches_skip_symbolic_head() {
+        // `%(refname:lstrip=3)` yields bare branch names plus the literal HEAD
+        // for the remote's symbolic pointer, which must not become a branch.
+        let stdout = "HEAD\nmain\nfeature/login\nclaude/fix-x\n";
+        assert_eq!(
+            parse_remote_branches(stdout),
+            vec!["main", "feature/login", "claude/fix-x"],
+        );
     }
 
     #[test]
