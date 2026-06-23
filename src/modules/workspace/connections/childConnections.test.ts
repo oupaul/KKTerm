@@ -1,6 +1,7 @@
 import {
   collectPreservedParentPanes,
   focusedPaneIdForChildLayout,
+  isChildConnectionRowActive,
   syncChildConnectionsFromTabs,
 } from "./childConnections.ts";
 import type {
@@ -81,6 +82,27 @@ if (fallbackFocusedPane !== undefined) {
 const initialFocusedPane = focusedPaneIdForChildLayout(undefined, tab.panes);
 if (initialFocusedPane !== undefined) {
   throw new Error("Opening a child panorama without prior focus should not invent a focused child Pane.");
+}
+
+// A parent panorama can have a focused child Pane without the user having opened
+// that Child Connection Tab row. Only a maximized child Pane should mark the
+// child row active; otherwise the parent row is the active target.
+const parentPanorama = {
+  ...tab,
+  id: "parent-panorama",
+  childConnectionGroupParentId: parentConnection.id,
+  focusedPaneId: "pane-child-1",
+  maximizedPaneId: undefined,
+};
+if (isChildConnectionRowActive({ tab: parentPanorama, paneId: "pane-child-1", activeTabId: parentPanorama.id })) {
+  throw new Error("Selecting the parent panorama must not also highlight the focused child row.");
+}
+if (!isChildConnectionRowActive({
+  tab: { ...parentPanorama, maximizedPaneId: "pane-child-1" },
+  paneId: "pane-child-1",
+  activeTabId: parentPanorama.id,
+})) {
+  throw new Error("Opening a child row in the panorama should highlight that child while it is maximized.");
 }
 
 // --- collectPreservedParentPanes (issue #430) ---

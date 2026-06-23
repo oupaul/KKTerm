@@ -17,6 +17,7 @@ import { parseUrlProxyDraft, type UrlProxyMode } from "./webview/urlProxy";
 import { VncConnectionFields, VncConnectionOptions } from "./connection-dialog/VncConnectionFields";
 import { ImportDialog } from "./ImportDialog";
 import {
+  isChildConnectionRowActive,
   loadStoredChildConnections,
   persistStoredChildConnections,
   syncChildConnectionsFromTabs,
@@ -978,14 +979,39 @@ export function ConnectionSidebar({
     );
   }
 
-  function handleAddConnectionToFocusedPane(connection: Connection, direction: SplitDirection) {
+  async function addConnectionToPaneWithChildMode(
+    tabId: string,
+    connection: Connection,
+    direction: SplitDirection,
+    targetPaneId?: string,
+  ) {
+    rememberConnection(connection);
+    if (!showChildTabsInTree) {
+      addConnectionToTerminalPane(tabId, connection, direction, targetPaneId);
+      return;
+    }
+    const child = await createChildConnection(connection);
+    addConnectionToTerminalPane(tabId, connection, direction, targetPaneId, {
+      childConnectionId: child.id,
+      cwd: child.cwd,
+      iconBackgroundColor: child.iconBackgroundColor,
+      iconDataUrl: child.iconDataUrl,
+      fontSize: child.fontSize,
+      terminalOpacity: child.terminalOpacity,
+      terminalBackground: child.terminalBackground,
+      title: child.tmuxSessionId ?? child.name,
+      toolbarTitle: child.name,
+      tmuxSessionId: child.tmuxSessionId,
+    });
+  }
+
+  async function handleAddConnectionToFocusedPane(connection: Connection, direction: SplitDirection) {
     const activeTab = tabs.find((tab) => tab.id === activeTabId);
     if (!supportsAddConnectionToTab(activeTab)) {
       handleOpenConnection(connection);
       return;
     }
-    rememberConnection(connection);
-    addConnectionToTerminalPane(activeTab.id, connection, direction);
+    await addConnectionToPaneWithChildMode(activeTab.id, connection, direction);
   }
 
   async function handleTransferSshPublicKey(username: string, password: string) {
@@ -2027,25 +2053,25 @@ export function ConnectionSidebar({
                 kind: "item" as const,
                 label: t("connections.left"),
                 iconSvg: nativeMenuIcons.arrowLeft,
-                action: () => handleTreeMenuAddToPane(menu, "left"),
+                action: () => void handleTreeMenuAddToPane(menu, "left"),
               },
               {
                 kind: "item" as const,
                 label: t("connections.right"),
                 iconSvg: nativeMenuIcons.arrowRight,
-                action: () => handleTreeMenuAddToPane(menu, "right"),
+                action: () => void handleTreeMenuAddToPane(menu, "right"),
               },
               {
                 kind: "item" as const,
                 label: t("connections.lower"),
                 iconSvg: nativeMenuIcons.arrowDown,
-                action: () => handleTreeMenuAddToPane(menu, "down"),
+                action: () => void handleTreeMenuAddToPane(menu, "down"),
               },
               {
                 kind: "item" as const,
                 label: t("connections.upper"),
                 iconSvg: nativeMenuIcons.arrowUp,
-                action: () => handleTreeMenuAddToPane(menu, "up"),
+                action: () => void handleTreeMenuAddToPane(menu, "up"),
               },
             ]
           : []),
@@ -2188,10 +2214,10 @@ export function ConnectionSidebar({
     }
   }
 
-  function handleTreeMenuAddToPane(menu: TreeContextMenuState, direction: SplitDirection) {
+  async function handleTreeMenuAddToPane(menu: TreeContextMenuState, direction: SplitDirection) {
     setTreeContextMenu(null);
     if (menu.kind === "connection") {
-      handleAddConnectionToFocusedPane(menu.connection, direction);
+      await handleAddConnectionToFocusedPane(menu.connection, direction);
     }
   }
 
@@ -2371,7 +2397,7 @@ export function ConnectionSidebar({
     return null;
   }
 
-  function completeCanvasDrop(connectionId: string, zone: CanvasDropZone) {
+  async function completeCanvasDrop(connectionId: string, zone: CanvasDropZone) {
     const found = findConnectionInTree(treeRef.current, connectionId);
     if (!found) {
       return;
@@ -2379,7 +2405,7 @@ export function ConnectionSidebar({
     const connection = found.connection;
     rememberConnection(connection);
     if (zone.kind === "split") {
-      addConnectionToTerminalPane(zone.tabId, connection, zone.direction, zone.paneId);
+      await addConnectionToPaneWithChildMode(zone.tabId, connection, zone.direction, zone.paneId);
       return;
     }
     handleOpenConnection(connection);
@@ -2630,7 +2656,7 @@ export function ConnectionSidebar({
         !didCanvasDrop && target && dragged && treeDropMovesItem(dragged, target),
       );
       if (didCanvasDrop && dragged?.kind === "connection" && canvasZone) {
-        completeCanvasDrop(dragged.connectionId, canvasZone);
+        void completeCanvasDrop(dragged.connectionId, canvasZone);
       } else if (didTreeDrop && target && dragged) {
         completeTreeDrop(dragged, target);
       }
@@ -3008,7 +3034,7 @@ export function ConnectionSidebar({
           }}
           onProperties={() => handleTreeMenuProperties(treeContextMenu)}
           onRename={() => void handleTreeMenuRename(treeContextMenu)}
-          onAddToPane={(direction) => handleTreeMenuAddToPane(treeContextMenu, direction)}
+          onAddToPane={(direction) => void handleTreeMenuAddToPane(treeContextMenu, direction)}
           onOpenNewTab={() => handleTreeMenuOpenNewTab(treeContextMenu)}
           onSaveLayout={() => handleTreeMenuSaveLayout(treeContextMenu)}
           onResetLayout={() => handleTreeMenuResetLayout(treeContextMenu)}
@@ -5175,9 +5201,11 @@ function ConnectionRowWithChildTabs({
       {childConnections.map((child) => {
         const location = childLocationById.get(child.id);
         const tab = location?.tab;
-        const active =
-          tab?.id === activeTabId &&
-          (!location?.paneId || tab.focusedPaneId === location.paneId);
+        const active = isChildConnectionRowActive({
+          activeTabId,
+          paneId: location?.paneId,
+          tab,
+        });
         return (
         <ConnectionChildTabRow
           active={active}

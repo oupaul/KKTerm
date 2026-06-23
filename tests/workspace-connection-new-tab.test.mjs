@@ -29,6 +29,11 @@ test("Connection Tree supports forced new Tabs from Ctrl-click and Add to menu",
   );
   assert.match(
     storeSource,
+    /layout: existingGroupTab\s*\?\s*ensureLayout\(existingGroupTab\.layout,\s*childPanes\)\s*:\s*layoutForChildPanes\(childPanes\)/,
+    "parent panorama rebuilds should preserve the saved split layout when a live child panorama already exists",
+  );
+  assert.match(
+    storeSource,
     /maximizeChildConnectionPane:\s*\(tabId,\s*paneId\)/,
     "Child Connection Tab activation from a parent panorama should maximize that pane",
   );
@@ -71,6 +76,11 @@ test("Connection Tree supports forced new Tabs from Ctrl-click and Add to menu",
     sidebarSource,
     /activeTab\?\.childConnectionGroupParentId === connection\.id/,
     "parent Connection rows should remain active when a focused child Pane is restored in the panorama",
+  );
+  assert.match(
+    sidebarSource,
+    /isChildConnectionRowActive\(\{[\s\S]*?activeTabId,[\s\S]*?paneId: location\?\.paneId,[\s\S]*?tab,[\s\S]*?\}\)/,
+    "Child Connection Tab rows should only become active through the shared child-row active-state helper",
   );
   assert.match(
     storeSource,

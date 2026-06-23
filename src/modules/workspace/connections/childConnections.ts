@@ -172,3 +172,21 @@ export function focusedPaneIdForChildLayout(
     ? existingTab.focusedPaneId
     : undefined;
 }
+
+export function isChildConnectionRowActive(params: {
+  activeTabId: string;
+  paneId?: string;
+  tab: WorkspaceTab | undefined;
+}) {
+  const { activeTabId, paneId, tab } = params;
+  if (!tab || tab.id !== activeTabId) {
+    return false;
+  }
+  if (!paneId) {
+    return true;
+  }
+  if (tab.childConnectionGroupParentId) {
+    return tab.maximizedPaneId === paneId;
+  }
+  return tab.focusedPaneId === paneId;
+}

@@ -45,12 +45,12 @@ test("addConnectionToTerminalPane accepts an explicit targetPaneId and falls bac
 
   assert.match(
     storeSource,
-    /addConnectionToTerminalPane: \([\s\S]*?targetPaneId\??: string,?\s*\) => void/,
+    /addConnectionToTerminalPane: \([\s\S]*?targetPaneId\??: string,[\s\S]*?options\?: ConnectionPaneOptions,[\s\S]*?\) => void/,
     "the action signature should expose an optional targetPaneId",
   );
   assert.match(
     storeSource,
-    /addConnectionToTerminalPane: \(tabId, connection, direction, targetPaneId\) =>/,
+    /addConnectionToTerminalPane: \(tabId, connection, direction, targetPaneId, options\) =>/,
   );
   assert.match(
     storeSource,
@@ -80,7 +80,7 @@ test("the Connection Tree drag wires Connections onto Workspace Canvas dock targ
 
   // Drag resolution: a split targets the hovered pane; empty canvas opens a Tab.
   assert.match(sidebarSource, /canvasDropZoneFromElement\(/);
-  assert.match(sidebarSource, /addConnectionToTerminalPane\(zone\.tabId, connection, zone\.direction, zone\.paneId\)/);
+  assert.match(sidebarSource, /addConnectionToPaneWithChildMode\(zone\.tabId, connection, zone\.direction, zone\.paneId\)/);
   assert.match(sidebarSource, /completeCanvasDrop\(dragged\.connectionId, canvasZone\)/);
   assert.match(sidebarSource, /<DockOverlay zone=\{canvasDropZone\} \/>/);
 
@@ -91,6 +91,35 @@ test("the Connection Tree drag wires Connections onto Workspace Canvas dock targ
     sidebarSource,
     /function DockOverlay[\s\S]*?<DialogPortal>\s*<div className="dock-overlay"/,
     "DockOverlay should render through DialogPortal (document.body)",
+  );
+});
+
+test("child-enabled Add-to and canvas dock create Child Connection Tab panes", async () => {
+  const sidebarSource = await readFile(
+    new URL("../src/modules/workspace/connections/ConnectionSidebar.tsx", import.meta.url),
+    "utf8",
+  );
+  const storeSource = await readFile(new URL("../src/store.ts", import.meta.url), "utf8");
+
+  assert.match(
+    storeSource,
+    /type ConnectionPaneOptions = \{[\s\S]*?childConnectionId\?: string[\s\S]*?addConnectionToTerminalPane: \([\s\S]*?options\?: ConnectionPaneOptions/,
+    "the split action should accept child pane metadata",
+  );
+  assert.match(
+    storeSource,
+    /buildPaneForConnection\(paneConnection,\s*targetPane,\s*options\)/,
+    "the split action should build panes with child-specific metadata",
+  );
+  assert.match(
+    sidebarSource,
+    /async function addConnectionToPaneWithChildMode\([\s\S]*?const child = await createChildConnection\(connection\);[\s\S]*?addConnectionToTerminalPane\([\s\S]*?childConnectionId: child\.id,[\s\S]*?toolbarTitle: child\.name,[\s\S]*?tmuxSessionId: child\.tmuxSessionId,/,
+    "child-enabled Add-to should create and dock a Child Connection Tab pane",
+  );
+  assert.match(
+    sidebarSource,
+    /await addConnectionToPaneWithChildMode\(zone\.tabId,\s*connection,\s*zone\.direction,\s*zone\.paneId\)/,
+    "drag-to-dock should use the same child-aware split path as the context menu",
   );
 });
 

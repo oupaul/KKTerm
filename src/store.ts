@@ -719,19 +719,53 @@ function terminalPaneTitleForConnection(connection: Connection) {
   }
 }
 
+type ConnectionPaneOptions = {
+  childConnectionId?: string;
+  cwd?: string;
+  iconBackgroundColor?: string | null;
+  iconDataUrl?: string | null;
+  fontSize?: number;
+  terminalOpacity?: number | null;
+  terminalBackground?: TerminalPane["terminalBackground"];
+  title?: string;
+  toolbarTitle?: string;
+  tmuxSessionId?: string;
+};
+
+function connectionWithPaneOptions(
+  connection: Connection,
+  options?: ConnectionPaneOptions,
+): Connection {
+  if (
+    !options ||
+    (
+      options.iconDataUrl === undefined &&
+      options.iconBackgroundColor === undefined &&
+      options.terminalOpacity === undefined &&
+      options.terminalBackground === undefined
+    )
+  ) {
+    return connection;
+  }
+  return {
+    ...connection,
+    iconBackgroundColor: options.iconBackgroundColor ?? connection.iconBackgroundColor,
+    iconDataUrl: options.iconDataUrl ?? connection.iconDataUrl,
+    terminalOpacity:
+      options.terminalOpacity !== undefined
+        ? options.terminalOpacity
+        : connection.terminalOpacity,
+    terminalBackground:
+      options.terminalBackground !== undefined
+        ? options.terminalBackground
+        : connection.terminalBackground,
+  };
+}
+
 function buildPaneForConnection(
   connection: Connection,
   focusedPane?: WorkspacePane,
-  options?: {
-    childConnectionId?: string;
-    cwd?: string;
-    fontSize?: number;
-    terminalOpacity?: number | null;
-    terminalBackground?: TerminalPane["terminalBackground"];
-    title?: string;
-    toolbarTitle?: string;
-    tmuxSessionId?: string;
-  },
+  options?: ConnectionPaneOptions,
 ): WorkspacePane | null {
   if (connection.type === "url") {
     if (!connection.url) {
@@ -1232,6 +1266,7 @@ interface WorkspaceState {
     connection: Connection,
     direction: SplitDirection,
     targetPaneId?: string,
+    options?: ConnectionPaneOptions,
   ) => void;
   closePane: (tabId: string, paneId: string) => void;
   closeChildConnection: (childConnectionId: string) => void;
@@ -1711,25 +1746,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       return;
     }
 
-    const paneConnection =
-      options?.iconDataUrl !== undefined ||
-      options?.iconBackgroundColor !== undefined ||
-      options?.terminalOpacity !== undefined ||
-      options?.terminalBackground !== undefined
-        ? {
-            ...connection,
-            iconBackgroundColor: options.iconBackgroundColor ?? connection.iconBackgroundColor,
-            iconDataUrl: options.iconDataUrl ?? connection.iconDataUrl,
-            terminalOpacity:
-              options.terminalOpacity !== undefined
-                ? options.terminalOpacity
-                : connection.terminalOpacity,
-            terminalBackground:
-              options.terminalBackground !== undefined
-                ? options.terminalBackground
-                : connection.terminalBackground,
-          }
-        : connection;
+    const paneConnection = connectionWithPaneOptions(connection, options);
     const pane = buildPaneForConnection(paneConnection, undefined, {
       childConnectionId: options?.childConnectionId,
       cwd: options?.cwd,
@@ -1935,7 +1952,9 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       subtitle: terminalConnectionSubtitle(connection),
       kind: "terminal",
       panes: childPanes,
-      layout: layoutForChildPanes(childPanes),
+      layout: existingGroupTab
+        ? ensureLayout(existingGroupTab.layout, childPanes)
+        : layoutForChildPanes(childPanes),
       focusedPaneId: focusedPaneIdForChildLayout(existingGroupTab, childPanes),
       maximizedPaneId: undefined,
       quickCommandBarVisible: false,
@@ -2558,7 +2577,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       };
     });
   },
-  addConnectionToTerminalPane: (tabId, connection, direction, targetPaneId) => {
+  addConnectionToTerminalPane: (tabId, connection, direction, targetPaneId, options) => {
     set((state) => {
       const openedUrlConnectionIds: string[] = [];
       const tabs = state.tabs.map((tab) => {
@@ -2576,7 +2595,8 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
         if (!targetPane) {
           return tab;
         }
-        const newPane = buildPaneForConnection(connection, targetPane);
+        const paneConnection = connectionWithPaneOptions(connection, options);
+        const newPane = buildPaneForConnection(paneConnection, targetPane, options);
         if (!newPane) {
           return tab;
         }
