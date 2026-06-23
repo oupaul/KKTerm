@@ -347,7 +347,6 @@ export function ConnectionSidebar({
   const suppressTreeClickRef = useRef(false);
 
   useEffect(() => {
-    void reloadConnectionGroups();
     const handleTreeInvalidated = () => {
       void reloadConnectionGroups();
     };
@@ -360,6 +359,14 @@ export function ConnectionSidebar({
       void unlistenPromise.then((unlisten) => unlisten());
     };
   }, []);
+
+  // The tree always reflects the active Workspace. Reload whenever it changes
+  // (initial mount included) so activating a Tab from another Workspace in the
+  // activity rail — which switches Workspaces without touching the tree — still
+  // updates the tree, rather than relying solely on the invalidation event.
+  useEffect(() => {
+    void reloadConnectionGroups();
+  }, [activeWorkspaceId]);
 
   useEffect(() => {
     persistStoredChildConnections(childConnections);
