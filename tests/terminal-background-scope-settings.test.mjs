@@ -54,6 +54,10 @@ const terminalCss = await readFile(
   new URL("../src/modules/workspace/connections/terminal/terminal.css", import.meta.url),
   "utf8",
 );
+const dashboardCss = await readFile(
+  new URL("../src/modules/dashboard/dashboard.css", import.meta.url),
+  "utf8",
+);
 
 test("Workspace settings exposes split terminal background scope defaulted off", () => {
   assert.match(typesSource, /separateSplitTerminalBackgrounds:\s*boolean/);
@@ -105,6 +109,7 @@ test("dynamic background live preview stages selection and animates only one til
   const previewDialog = sharedBackgroundPopover.slice(sharedBackgroundPopover.indexOf("function DynamicBackgroundPreviewDialog"));
   assert.match(sharedBackgroundPopover, /backgroundLivePreview/);
   assert.match(sharedBackgroundPopover, /DynamicBackgroundPreviewDialog/);
+  assert.match(sharedBackgroundPopover, /zClassName="dw-bg-preview-backdrop"/);
   assert.match(sharedBackgroundPopover, /DYNAMIC_BACKGROUNDS\.map/);
   assert.match(sharedBackgroundPopover, /dynamicBackgroundStaticPreviewStyle\(backgroundOption\.id, backgroundOption\.mood\)/);
   assert.match(dynamicBackgroundRegistry, /STATIC_PREVIEW_STYLES/);
@@ -123,6 +128,8 @@ test("dynamic background live preview stages selection and animates only one til
     "preview tiles should stage selection until OK applies it",
   );
   assert.doesNotMatch(sharedBackgroundPopover, /backgroundLivePreviewHint/);
+  assert.match(dashboardCss, /\.dw-bg-popover\s*\{[\s\S]*z-index:\s*200;/);
+  assert.match(dashboardCss, /\.kk-dlg-backdrop\.dw-bg-preview-backdrop\s*\{[\s\S]*z-index:\s*220;/);
 });
 
 test("docs make shared terminal background scope and datasource explicit", () => {

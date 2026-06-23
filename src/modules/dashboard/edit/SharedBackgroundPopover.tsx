@@ -285,7 +285,7 @@ function DynamicBackgroundPreviewDialog({
   }, [onClose]);
 
   return (
-    <DialogShell onBackdrop={onClose}>
+    <DialogShell onBackdrop={onClose} zClassName="dw-bg-preview-backdrop">
       <Sheet
         width={780}
         title={t("dashboard.backgroundLivePreviewTitle")}

@@ -3563,6 +3563,10 @@ button.dashboard-pill-dot:focus-visible {
   overflow: auto;
 }
 
+.kk-dlg-backdrop.dw-bg-preview-backdrop {
+  z-index: 220;
+}
+
 .dw-bg-preview-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
