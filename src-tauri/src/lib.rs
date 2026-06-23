@@ -809,10 +809,9 @@ fn configure_encrypted_file_secret_store(
     request: secrets::ConfigureEncryptedFileSecretStoreRequest,
 ) -> Result<ConfigureEncryptedFileSecretStoreResult, String> {
     let status = secrets.configure_encrypted_file_store(request)?;
-    let settings =
-        storage::validate_credential_settings_for_command(storage::CredentialSettings {
-            secret_store: "file".to_string(),
-        })?;
+    let mut settings = storage.credential_settings()?;
+    settings.secret_store = "file".to_string();
+    let settings = storage::validate_credential_settings_for_command(settings)?;
     let settings = storage.update_credential_settings(settings)?;
     Ok(ConfigureEncryptedFileSecretStoreResult { settings, status })
 }

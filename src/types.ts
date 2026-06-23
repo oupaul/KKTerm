@@ -503,9 +503,16 @@ export type ActivityRailItemId =
   | "dontSleep";
 
 export type SecretStoreKind = "os" | "file";
+export type EncryptedStoreLaunchPromptPolicy =
+  | "everyTime"
+  | "oneHour"
+  | "fourHours"
+  | "twentyFourHours"
+  | "never";
 
 export interface CredentialSettings {
   secretStore: SecretStoreKind;
+  encryptedStoreLaunchPrompt: EncryptedStoreLaunchPromptPolicy;
 }
 
 export interface ConfigureEncryptedFileSecretStoreRequest {

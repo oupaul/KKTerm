@@ -55,6 +55,7 @@ export const defaultGeneralSettings: GeneralSettings = {
 };
 
 export const defaultCredentialSettings: CredentialSettings = {
+  encryptedStoreLaunchPrompt: "never",
   secretStore: "os",
 };
 

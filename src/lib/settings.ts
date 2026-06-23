@@ -33,6 +33,7 @@ export function allAiProviderSecretOwnerIds() {
 // app still renders with the in-memory defaults from `app-defaults`.
 export function useBootstrapSettings() {
   const [generalSettingsReady, setGeneralSettingsReady] = useState(!isTauriRuntime());
+  const [credentialSettingsReady, setCredentialSettingsReady] = useState(!isTauriRuntime());
   const setGeneralSettings = useWorkspaceStore(
     (state) => state.setGeneralSettings,
   );
@@ -92,6 +93,9 @@ export function useBootstrapSettings() {
     void invokeCommand("get_credential_settings")
       .then((settings) => {
         if (!disposed) setCredentialSettings(settings);
+      })
+      .finally(() => {
+        if (!disposed) setCredentialSettingsReady(true);
       })
       .catch(swallow);
 
@@ -184,5 +188,5 @@ export function useBootstrapSettings() {
     setTerminalSettings,
   ]);
 
-  return { generalSettingsReady };
+  return { credentialSettingsReady, generalSettingsReady };
 }
