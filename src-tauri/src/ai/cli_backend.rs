@@ -934,15 +934,14 @@ pub(crate) fn cli_process_invocation(command: &str, args: &[&str]) -> (String, V
 pub(crate) fn spawn_external_terminal(command: &str) -> Result<(), String> {
     #[cfg(target_os = "windows")]
     {
+        use std::os::windows::process::CommandExt;
         let mut cmd = Command::new("cmd.exe");
-        cmd.args([
-            "/C",
-            "start",
-            "KKTerm AI CLI Auth",
-            "cmd.exe",
-            "/K",
-            command,
-        ]);
+        // `command` is already shell-quoted (the CLI path is wrapped in double
+        // quotes). Passing it through Rust's normal arg API escapes those quotes
+        // to `\"`, which cmd.exe's `/K` parser does not understand, so the launch
+        // fails with `'\"...claude.cmd\"' is not recognized`. `raw_arg` appends the
+        // command line verbatim instead, letting us control quoting exactly.
+        cmd.raw_arg(windows_external_terminal_command_line(command));
         cmd.spawn()
             .map_err(|error| format!("failed to open external terminal: {error}"))?;
         return Ok(());
@@ -956,6 +955,18 @@ pub(crate) fn spawn_external_terminal(command: &str) -> Result<(), String> {
             .map_err(|error| format!("failed to start CLI auth command: {error}"))?;
         Ok(())
     }
+}
+
+/// Builds the verbatim `cmd.exe` command line that opens a titled console window
+/// and runs `command` in it, keeping the window open afterwards (`/K`).
+///
+/// `command` arrives already shell-quoted. Wrapping it in an extra pair of quotes
+/// makes the inner `cmd /K` apply its quote-stripping rule (strip the outermost
+/// pair), reconstructing the original quoted command — and this stays correct even
+/// when the CLI path contains spaces.
+#[cfg(any(target_os = "windows", test))]
+pub(crate) fn windows_external_terminal_command_line(command: &str) -> String {
+    format!("/C start \"KKTerm AI CLI Auth\" cmd.exe /K \"{command}\"")
 }
 
 pub(crate) fn shell_quote(value: &str) -> String {
