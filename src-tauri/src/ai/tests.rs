@@ -3549,6 +3549,66 @@ fn github_copilot_sdk_options_use_stored_token_only() {
 }
 
 #[test]
+fn copilot_cli_binary_names_match_platform() {
+    let names = copilot_cli_binary_names();
+    if cfg!(target_os = "windows") {
+        assert!(names.contains(&"copilot.exe"));
+        assert!(names.contains(&"copilot.cmd"));
+    } else {
+        assert_eq!(names, &["copilot"]);
+    }
+}
+
+#[test]
+fn copilot_cli_candidates_only_target_copilot_binaries() {
+    let names = copilot_cli_binary_names();
+    let candidates = copilot_cli_candidates();
+    // Every probed path must end in a Copilot CLI binary name, and PATH probing
+    // plus the standard install roots should yield at least one candidate.
+    assert!(!candidates.is_empty());
+    for candidate in &candidates {
+        let file_name = candidate
+            .file_name()
+            .and_then(|name| name.to_str())
+            .unwrap_or_default();
+        assert!(
+            names.contains(&file_name),
+            "unexpected candidate binary: {}",
+            candidate.display()
+        );
+    }
+}
+
+#[test]
+fn resolve_copilot_cli_honors_explicit_path_override() {
+    // A COPILOT_CLI_PATH pointing at a real file wins over discovery. Use this
+    // test binary's own path as a guaranteed-existing file.
+    let existing = std::env::current_exe().expect("current exe path");
+    temp_env_var("COPILOT_CLI_PATH", Some(existing.to_str().unwrap()), || {
+        assert_eq!(resolve_copilot_cli(), Some(existing.clone()));
+    });
+}
+
+/// Set (or clear) an env var for the duration of `body`, restoring the previous
+/// value afterward. Copilot CLI resolution reads process env directly.
+fn temp_env_var(key: &str, value: Option<&str>, body: impl FnOnce()) {
+    let previous = std::env::var_os(key);
+    unsafe {
+        match value {
+            Some(value) => std::env::set_var(key, value),
+            None => std::env::remove_var(key),
+        }
+    }
+    body();
+    unsafe {
+        match previous {
+            Some(previous) => std::env::set_var(key, previous),
+            None => std::env::remove_var(key),
+        }
+    }
+}
+
+#[test]
 fn github_copilot_model_options_preserve_account_catalog_metadata() {
     let model = CopilotSdkModel {
         billing: None,

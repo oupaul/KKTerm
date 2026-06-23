@@ -1286,6 +1286,11 @@ async fn list_github_copilot_models(
 }
 
 #[tauri::command]
+async fn get_github_copilot_cli_status() -> Result<ai::GitHubCopilotCliStatus, String> {
+    Ok(ai::github_copilot_cli_status_async().await)
+}
+
+#[tauri::command]
 async fn list_ai_provider_models(
     app: tauri::AppHandle,
     secrets: tauri::State<'_, secrets::Secrets>,
@@ -3614,6 +3619,7 @@ pub fn run() {
             start_github_copilot_device_flow,
             poll_github_copilot_device_flow,
             list_github_copilot_models,
+            get_github_copilot_cli_status,
             list_ai_provider_models,
             get_ai_cli_backend_status,
             open_ai_cli_backend_auth,

@@ -1,6 +1,7 @@
 use futures::StreamExt;
 use github_copilot_sdk::{
-    Client as CopilotSdkClient, ClientOptions as CopilotSdkClientOptions, Error as CopilotSdkError,
+    Client as CopilotSdkClient, CliProgram as CopilotSdkCliProgram,
+    ClientOptions as CopilotSdkClientOptions, Error as CopilotSdkError,
     ErrorKind as CopilotSdkErrorKind, LogLevel as CopilotSdkLogLevel,
     MessageOptions as CopilotSdkMessageOptions, Model as CopilotSdkModel,
     SessionConfig as CopilotSdkSessionConfig, SessionEvent as CopilotSdkSessionEvent,
@@ -1779,13 +1780,150 @@ fn copilot_model_option_from_sdk_model(model: &CopilotSdkModel) -> Option<Copilo
 }
 
 fn build_copilot_sdk_client_options(app_data_dir: PathBuf, token: &str) -> CopilotSdkClientOptions {
-    CopilotSdkClientOptions::new()
+    let options = CopilotSdkClientOptions::new()
         .with_cwd(app_data_dir.clone())
         .with_base_directory(app_data_dir.join("copilot"))
         .with_github_token(token)
         .with_use_logged_in_user(false)
         .with_log_level(CopilotSdkLogLevel::Error)
-        .with_session_idle_timeout_seconds(0)
+        .with_session_idle_timeout_seconds(0);
+    // KKTerm never bundles the Copilot CLI (see docs/AI_PROVIDERS.md), and the
+    // SDK's resolver does not scan PATH or standard install locations. Hand it
+    // an explicit path to the user's externally-installed CLI when we can find
+    // one; otherwise fall back to the SDK's own resolution.
+    match resolve_copilot_cli() {
+        Some(path) => options.with_program(CopilotSdkCliProgram::Path(path)),
+        None => options,
+    }
+}
+
+/// Resolve the externally-installed GitHub Copilot CLI binary.
+///
+/// The `github-copilot-sdk` resolver, with the `bundled-cli` feature off, only
+/// honors `COPILOT_CLI_PATH` or a build-time-extracted binary in the *build
+/// machine's* cache — it never scans PATH or standard install locations. GUI
+/// apps launched from Finder/Dock (macOS) or Explorer (Windows) also inherit a
+/// truncated PATH, so we probe an explicit `COPILOT_CLI_PATH`, then PATH, then
+/// the common install roots ourselves and pass the result via `CliProgram::Path`.
+fn resolve_copilot_cli() -> Option<PathBuf> {
+    // An explicit COPILOT_CLI_PATH override always wins when it points at a file.
+    if let Some(value) = std::env::var_os("COPILOT_CLI_PATH") {
+        let candidate = PathBuf::from(&value);
+        if candidate.is_file() {
+            return Some(candidate);
+        }
+    }
+    copilot_cli_candidates()
+        .into_iter()
+        .find(|path| path.is_file())
+}
+
+fn copilot_cli_binary_names() -> &'static [&'static str] {
+    #[cfg(target_os = "windows")]
+    {
+        &["copilot.exe", "copilot.cmd"]
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        &["copilot"]
+    }
+}
+
+/// PATH entries plus the common npm / Homebrew / user-bin install roots a
+/// GUI-launched app tends to miss, expanded against the platform binary names.
+fn copilot_cli_candidates() -> Vec<PathBuf> {
+    let names = copilot_cli_binary_names();
+    let mut roots: Vec<PathBuf> = Vec::new();
+
+    if let Some(path) = std::env::var_os("PATH") {
+        roots.extend(std::env::split_paths(&path));
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        if let Some(appdata) = std::env::var_os("APPDATA") {
+            roots.push(PathBuf::from(appdata).join("npm"));
+        }
+        if let Some(localappdata) = std::env::var_os("LOCALAPPDATA") {
+            roots.push(PathBuf::from(localappdata).join("npm"));
+        }
+        if let Some(profile) = std::env::var_os("USERPROFILE") {
+            let profile = PathBuf::from(profile);
+            roots.push(profile.join(".local").join("bin"));
+            roots.push(profile.join("AppData").join("Roaming").join("npm"));
+        }
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        // Apple Silicon Homebrew, Intel/Linux Homebrew + system bins.
+        roots.push(PathBuf::from("/opt/homebrew/bin"));
+        roots.push(PathBuf::from("/usr/local/bin"));
+        roots.push(PathBuf::from("/usr/bin"));
+        if let Some(home) = std::env::var_os("HOME") {
+            let home = PathBuf::from(home);
+            roots.push(home.join(".local").join("bin"));
+            roots.push(home.join(".npm-global").join("bin"));
+            roots.push(home.join("bin"));
+        }
+    }
+
+    bin_candidates_from_roots(roots, names)
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GitHubCopilotCliStatus {
+    pub installed: bool,
+    pub command: Option<String>,
+    pub version: Option<String>,
+    pub error: Option<String>,
+}
+
+/// Detect the externally-installed GitHub Copilot CLI for the Settings page,
+/// mirroring the Codex / Claude Code CLI detection. Blocking: runs the resolved
+/// binary with `--version`; call via [`github_copilot_cli_status_async`].
+pub fn github_copilot_cli_status() -> GitHubCopilotCliStatus {
+    let Some(path) = resolve_copilot_cli() else {
+        return GitHubCopilotCliStatus {
+            installed: false,
+            command: None,
+            version: None,
+            error: Some(
+                "Copilot CLI was not found on PATH or in standard install locations. \
+                 Install it (for example, `npm install -g @github/copilot`) or set \
+                 COPILOT_CLI_PATH to its full path."
+                    .to_string(),
+            ),
+        };
+    };
+    let command = path.to_string_lossy().into_owned();
+    match run_cli_capture(&command, &["--version"], Some(Duration::from_secs(20))) {
+        Ok(output) => GitHubCopilotCliStatus {
+            installed: true,
+            command: Some(command),
+            version: Some(output.trim().to_string()).filter(|value| !value.is_empty()),
+            error: None,
+        },
+        // The binary exists but `--version` failed; still report it as installed
+        // so the user sees the resolved path alongside the diagnostic.
+        Err(message) => GitHubCopilotCliStatus {
+            installed: true,
+            command: Some(command),
+            version: None,
+            error: Some(message),
+        },
+    }
+}
+
+pub async fn github_copilot_cli_status_async() -> GitHubCopilotCliStatus {
+    tauri::async_runtime::spawn_blocking(github_copilot_cli_status)
+        .await
+        .unwrap_or_else(|error| GitHubCopilotCliStatus {
+            installed: false,
+            command: None,
+            version: None,
+            error: Some(format!("failed to check Copilot CLI status: {error}")),
+        })
 }
 
 fn build_copilot_sdk_session_config(
@@ -1806,12 +1944,12 @@ fn build_copilot_sdk_session_config(
 
 fn format_copilot_sdk_error(stage: &str, error: CopilotSdkError) -> String {
     match error.kind() {
-        CopilotSdkErrorKind::BinaryNotFound { name, hint } => {
-            let hint = hint
-                .as_deref()
-                .unwrap_or("No additional hint was provided.");
+        CopilotSdkErrorKind::BinaryNotFound { name, .. } => {
             format!(
-                "GitHub Copilot SDK could not find {name}. Rebuild KKTerm with bundled Copilot CLI support, set COPILOT_CLI_PATH, or install the Copilot CLI. {hint}"
+                "GitHub Copilot CLI ({name}) was not found. KKTerm calls the Copilot CLI \
+                 externally rather than bundling it. Install it (for example, \
+                 `npm install -g @github/copilot`) so `{name}` is on your PATH, or set the \
+                 COPILOT_CLI_PATH environment variable to its full path, then try again."
             )
         }
         _ => format!("GitHub Copilot SDK failed to {stage}: {error}"),

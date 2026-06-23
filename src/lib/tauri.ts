@@ -956,6 +956,13 @@ export interface AiProviderModelOption {
 
 export type AiCliBackendKind = "codex" | "claudeCode";
 
+export interface GitHubCopilotCliStatus {
+  installed: boolean;
+  command?: string | null;
+  version?: string | null;
+  error?: string | null;
+}
+
 export interface AiCliBackendStatus {
   provider: AiCliBackendKind;
   command: string;
@@ -1538,6 +1545,10 @@ type CommandMap = {
   list_github_copilot_models: {
     args: undefined;
     result: GitHubCopilotModelOption[];
+  };
+  get_github_copilot_cli_status: {
+    args: undefined;
+    result: GitHubCopilotCliStatus;
   };
   list_ai_provider_models: {
     args: {

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Bot, Copy, RefreshCw, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
@@ -22,6 +22,7 @@ import {
   openExternalUrl,
   type AiCliBackendKind,
   type AiProviderModelOption,
+  type GitHubCopilotCliStatus,
   type GitHubCopilotDeviceFlow,
 } from "../../lib/tauri";
 import { useWorkspaceStore } from "../../store";
@@ -717,6 +718,33 @@ function GitHubCopilotConnectionControl({
   onDisconnect: () => void;
 }) {
   const { t } = useTranslation();
+  const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
+  const [cliStatus, setCliStatus] = useState<GitHubCopilotCliStatus | null>(null);
+  const [checkingCli, setCheckingCli] = useState(false);
+
+  const refreshCliStatus = useCallback(async () => {
+    if (!isTauriRuntime()) return;
+    setCheckingCli(true);
+    try {
+      setCliStatus(await invokeCommand("get_github_copilot_cli_status", undefined));
+    } catch (error) {
+      showStatusBarNotice(error instanceof Error ? error.message : String(error), {
+        tone: "error",
+      });
+    } finally {
+      setCheckingCli(false);
+    }
+  }, [showStatusBarNotice]);
+
+  useEffect(() => {
+    void refreshCliStatus();
+  }, [refreshCliStatus]);
+
+  const cliStatusText = !cliStatus
+    ? t("settings.copilotCliStatusUnknown")
+    : cliStatus.installed
+      ? t("settings.copilotCliStatusReady")
+      : t("settings.copilotCliStatusMissing");
 
   return (
     <div className="settings-copilot-connection">
@@ -731,6 +759,25 @@ function GitHubCopilotConnectionControl({
           {t("settings.copilotCliInstallHelp")}
         </button>
       </p>
+      <div className="settings-cli-backend-status">
+        <span className="field-hint">
+          {cliStatusText}
+          {cliStatus?.version ? ` (${cliStatus.version})` : ""}
+        </span>
+        <div className="settings-copilot-actions">
+          <button
+            className="toolbar-button"
+            disabled={checkingCli || !isTauriRuntime()}
+            onClick={() => void refreshCliStatus()}
+            type="button"
+          >
+            {t("settings.aiCliRefreshStatus")}
+          </button>
+        </div>
+        {cliStatus && !cliStatus.installed && cliStatus.error ? (
+          <small className="field-hint">{cliStatus.error}</small>
+        ) : null}
+      </div>
       {deviceFlow ? (
         <div className="settings-copilot-code">
           <strong>{t("settings.copilotAuthCode", { code: deviceFlow.userCode })}</strong>

@@ -1,2 +1,11 @@
 [http]
 check-revoke = false
+
+# KKTerm calls the GitHub Copilot CLI externally and never bundles it (see
+# docs/AI_PROVIDERS.md). github-copilot-sdk's build script otherwise downloads
+# and extracts the Copilot CLI into the *build machine's* per-user cache, which
+# is absent on end users' machines and silently masks the runtime discovery
+# path during local builds. Opting out keeps the build lean and forces the SDK
+# to resolve the user/system-installed CLI at runtime on every platform.
+[env]
+COPILOT_SKIP_CLI_DOWNLOAD = "1"
