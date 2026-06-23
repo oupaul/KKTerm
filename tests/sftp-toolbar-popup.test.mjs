@@ -132,6 +132,29 @@ test("SFTP titlebar stays compact with equal vertical padding", async () => {
   );
 });
 
+test("SFTP pane search shrinks inside the shared pane toolbar", async () => {
+  const sftpStyles = await readFile(
+    new URL("../src/modules/workspace/connections/sftp/sftp.css", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(
+    sftpStyles,
+    /\.sftp-pane-head-actions\s*\{[^}]*flex:\s*0 1 auto;[^}]*min-width:\s*0;/s,
+    "pane toolbar actions should be allowed to shrink instead of overflowing into the search field",
+  );
+  assert.match(
+    sftpStyles,
+    /\.sftp-search\s*\{[^}]*flex:\s*1 1 132px;[^}]*min-width:\s*112px;[^}]*max-width:\s*170px;[^}]*overflow:\s*hidden;/s,
+    "the SFTP search box should use the same bounded, non-overlapping behavior as the File Explorer pane",
+  );
+  assert.match(
+    sftpStyles,
+    /\.sftp-search input\s*\{[^}]*flex:\s*1 1 auto;[^}]*width:\s*auto;/s,
+    "the search input should fill its wrapper instead of imposing a fixed width that can overlap adjacent buttons",
+  );
+});
+
 test("SFTP open-terminal action is wired only on the local pane", async () => {
   const sftpWorkspaceSource = await readFile(
     new URL("../src/modules/workspace/connections/sftp/SftpWorkspace.tsx", import.meta.url),

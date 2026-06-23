@@ -235,6 +235,7 @@ export function SftpWorkspace({
   } | null>(null);
   const sessionIdRef = useRef<string | null>(null);
   const transientPasswordRef = useRef<string | null>(null);
+  const passwordPromptPromiseRef = useRef<Promise<string | null> | null>(null);
   const passwordPromptResolverRef = useRef<((password: string | null) => void) | null>(null);
   const protocolMenuRef = useRef<HTMLSpanElement | null>(null);
   const activeTransferIdRef = useRef<string | null>(null);
@@ -295,19 +296,21 @@ export function SftpWorkspace({
 
   function completePasswordPrompt(password: string | null) {
     const resolve = passwordPromptResolverRef.current;
+    passwordPromptPromiseRef.current = null;
     passwordPromptResolverRef.current = null;
     setPasswordPrompt(null);
     resolve?.(password);
   }
 
   async function requestTransientPassword(message?: string) {
-    if (passwordPromptResolverRef.current) {
-      return null;
+    if (passwordPromptPromiseRef.current) {
+      return passwordPromptPromiseRef.current;
     }
     setPasswordPrompt({ message });
-    return new Promise<string | null>((resolve) => {
+    passwordPromptPromiseRef.current = new Promise<string | null>((resolve) => {
       passwordPromptResolverRef.current = resolve;
     });
+    return passwordPromptPromiseRef.current;
   }
 
   useEffect(() => {
@@ -651,7 +654,7 @@ export function SftpWorkspace({
           setStatus(message);
           setRemoteError(message);
           setRemoteFiles([]);
-          if (effectiveBrowserKind === "ftp") {
+          if (effectiveBrowserKind === "ftp" && message !== t("sftp.passwordPromptCanceled")) {
             setFtpNoticeDialog({
               title: t("sftp.ftpConnectionErrorTitle"),
               message,

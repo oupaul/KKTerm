@@ -121,6 +121,26 @@ test("file browser password prompts pass transient passwords without saving them
   );
   assert.match(
     workspaceSource,
+    /passwordPromptPromiseRef = useRef<Promise<string \| null> \| null>\(null\)/,
+    "overlapping session startup attempts should share the currently open password prompt",
+  );
+  assert.match(
+    workspaceSource,
+    /if \(passwordPromptPromiseRef\.current\) \{[\s\S]*return passwordPromptPromiseRef\.current;/,
+    "a second startup attempt should wait on the existing password prompt instead of treating it as canceled",
+  );
+  assert.match(
+    workspaceSource,
+    /passwordPromptPromiseRef\.current = null;[\s\S]*passwordPromptResolverRef\.current = null;/,
+    "completing the password prompt should clear both the pending promise and resolver",
+  );
+  assert.match(
+    workspaceSource,
+    /effectiveBrowserKind === "ftp" && message !== t\("sftp\.passwordPromptCanceled"\)/,
+    "canceling a password prompt should not stack an FTP connection-failed dialog over the prompt flow",
+  );
+  assert.match(
+    workspaceSource,
     /password: enteredPassword/,
     "the retry after a password prompt should use the entered password transiently",
   );
