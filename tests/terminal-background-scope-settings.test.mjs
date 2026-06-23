@@ -22,6 +22,10 @@ const dynamicBackgroundRegistry = await readFile(
   new URL("../src/modules/dashboard/registry/dynamicBackgrounds.tsx", import.meta.url),
   "utf8",
 );
+const dynamicBackgroundPreviewArt = await readFile(
+  new URL("../src/modules/dashboard/registry/dynamicBackgroundPreviewArt.tsx", import.meta.url),
+  "utf8",
+);
 const workspaceSettings = await readFile(
   new URL("../src/modules/settings/WorkspaceSettings.tsx", import.meta.url),
   "utf8",
@@ -111,10 +115,11 @@ test("dynamic background live preview stages selection and animates only one til
   assert.match(sharedBackgroundPopover, /DynamicBackgroundPreviewDialog/);
   assert.match(sharedBackgroundPopover, /zClassName="dw-bg-preview-backdrop"/);
   assert.match(sharedBackgroundPopover, /DYNAMIC_BACKGROUNDS\.map/);
-  assert.match(sharedBackgroundPopover, /dynamicBackgroundStaticPreviewStyle\(backgroundOption\.id, backgroundOption\.mood\)/);
-  assert.match(dynamicBackgroundRegistry, /STATIC_PREVIEW_STYLES/);
-  assert.match(dynamicBackgroundRegistry, /MOOD_PREVIEW_STYLES/);
-  assert.match(dynamicBackgroundRegistry, /export function dynamicBackgroundStaticPreviewStyle/);
+  assert.match(sharedBackgroundPopover, /DynamicBackgroundPreviewArt id=\{backgroundOption\.id\}/);
+  assert.match(dynamicBackgroundPreviewArt, /export function DynamicBackgroundPreviewArt/);
+  assert.match(dynamicBackgroundPreviewArt, /export function dynamicBackgroundPreviewSvg/);
+  assert.doesNotMatch(dynamicBackgroundRegistry, /dynamicBackgroundStaticPreviewStyle/);
+  assert.doesNotMatch(dynamicBackgroundRegistry, /STATIC_PREVIEW_STYLES/);
   assert.match(previewDialog, /setDraft\(backgroundOption\.id\)/);
   assert.match(previewDialog, /onApply\(draft\)/);
   assert.match(
@@ -130,6 +135,11 @@ test("dynamic background live preview stages selection and animates only one til
   assert.doesNotMatch(sharedBackgroundPopover, /backgroundLivePreviewHint/);
   assert.match(dashboardCss, /\.dw-bg-popover\s*\{[\s\S]*z-index:\s*200;/);
   assert.match(dashboardCss, /\.kk-dlg-backdrop\.dw-bg-preview-backdrop\s*\{[\s\S]*z-index:\s*220;/);
+  assert.match(dashboardCss, /\.dw-bg-preview-art\s*\{[\s\S]*pointer-events:\s*none;/);
+  assert.match(dashboardCss, /\.dw-bg-preview-frame \.dw-canvas-bg\s*\{[\s\S]*pointer-events:\s*none;/);
+  assert.match(dashboardCss, /@keyframes driftX\s*\{/);
+  assert.match(dashboardCss, /@keyframes dwbg_blob\s*\{[\s\S]*translate\(14px,\s*-10px\) scale\(1\.18\)/);
+  assert.match(dashboardCss, /@keyframes dwbg_sway\s*\{[\s\S]*rotate\(-5deg\)[\s\S]*rotate\(5deg\)/);
 });
 
 test("docs make shared terminal background scope and datasource explicit", () => {

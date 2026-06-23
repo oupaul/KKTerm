@@ -7,9 +7,9 @@ import { BACKGROUND_PRESETS } from "../registry/backgroundPresets";
 import {
   DashboardDynamicBackground,
   DYNAMIC_BACKGROUNDS,
-  dynamicBackgroundStaticPreviewStyle,
   type DynamicBackgroundId,
 } from "../registry/dynamicBackgrounds";
+import { DynamicBackgroundPreviewArt } from "../registry/dynamicBackgroundPreviewArt";
 import { importBackgroundImage } from "../state/persistence";
 import { BACKGROUND_FITS, type BackgroundFit, type DashboardBackground } from "../types";
 
@@ -317,11 +317,7 @@ function DynamicBackgroundPreviewDialog({
                   {selectedTile ? (
                     <DashboardDynamicBackground id={backgroundOption.id} active />
                   ) : (
-                    <span
-                      className="dw-bg-preview-paused"
-                      style={dynamicBackgroundStaticPreviewStyle(backgroundOption.id, backgroundOption.mood)}
-                      aria-hidden="true"
-                    />
+                    <DynamicBackgroundPreviewArt id={backgroundOption.id} />
                   )}
                   <span className="dw-bg-preview-check">
                     <DIcon name="check" size={12} />
