@@ -1,0 +1,31 @@
+
+[package]
+name = "picky-fuzz"
+version = "0.0.0"
+authors = ["Automatically generated"]
+publish = false
+edition = "2024"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+picky = { path = "../" }
+picky-test-data = { path = "../../picky-test-data", version = "0.1" }
+libfuzzer-sys = { git = "https://github.com/rust-fuzz/libfuzzer-sys.git" }
+
+# Prevent this from interfering with workspaces
+[workspace]
+members = ["."]
+
+[[bin]]
+name = "x509"
+path = "fuzz_targets/x509.rs"
+
+[[bin]]
+name = "jose"
+path = "fuzz_targets/jose.rs"
+
+[[bin]]
+name = "http"
+path = "fuzz_targets/http.rs"

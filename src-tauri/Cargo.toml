@@ -48,11 +48,9 @@ image = { version = "0.25", default-features = false, features = ["jpeg", "png"]
 ttf-parser = "0.25"
 portable-pty = "0.9.0"
 keyring-core = "1.0.0"
-# Pinned to 0.60.1: russh 0.60.2+/0.61.x pin RustCrypto pre-release crates
-# (ecdsa, curve25519-dalek) at versions that conflict with IronRDP's `picky`,
-# so this is the newest russh that coexists with the RDP client. Revisit (and
-# unpin) when `picky`/IronRDP bump to a newer crypto RC generation.
-russh = { version = "=0.60.1", default-features = false, features = ["flate2", "ring", "rsa"] }
+# Keep pinned until russh and IronRDP both release stable dependency lines that
+# no longer need the local RustCrypto/Dalek compatibility patches below.
+russh = { version = "=0.61.2", default-features = false, features = ["flate2", "ring", "rsa"] }
 russh-sftp = "2.1.2"
 suppaftp = { version = "=7.1.0", default-features = false, features = ["tokio", "tokio-async-native-tls", "deprecated"] }
 async-native-tls = { version = "0.5", default-features = false, features = ["runtime-tokio"] }
@@ -123,7 +121,7 @@ surge-ping = "0.8"
 # mark_as_upgraded, NetworkClient) via `pub use ironrdp_async::*`, so no separate
 # ironrdp-async dep is needed. The umbrella `input` feature re-exports ironrdp-input v0.6,
 # so no separate ironrdp-input dep is needed either.
-ironrdp = { version = "0.15", features = ["connector", "session", "graphics", "pdu", "input"] }
+ironrdp = { version = "0.16", features = ["connector", "session", "graphics", "pdu", "input"] }
 ironrdp-tokio = "0.9"
 tokio-rustls = "0.26"
 # Direct rustls use for the RDP TLS upgrade (no-cert-verify + ring provider). RDP
@@ -155,6 +153,18 @@ opt-level = "s"
 
 [profile.dev]
 opt-level = 1
+
+[patch.crates-io]
+# Temporary downstream application of Devolutions/IronRDP#1363 so russh 0.61.2
+# and the macOS/Linux IronRDP client share one RustCrypto/Dalek prerelease line.
+# Remove these patches when IronRDP/picky-rs/sspi-rs publish the aligned stack.
+picky = { path = "vendor/picky-rs-russh-061/picky" }
+picky-asn1 = { path = "vendor/picky-rs-russh-061/picky-asn1" }
+picky-asn1-der = { path = "vendor/picky-rs-russh-061/picky-asn1-der" }
+picky-asn1-x509 = { path = "vendor/picky-rs-russh-061/picky-asn1-x509" }
+picky-krb = { path = "vendor/picky-rs-russh-061/picky-krb" }
+sspi = { path = "vendor/sspi-rs-russh-061" }
+ironrdp-connector = { path = "vendor/ironrdp-russh-061/crates/ironrdp-connector" }
 
 [dev-dependencies]
 tempfile = "3.27.0"
