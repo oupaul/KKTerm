@@ -72,6 +72,12 @@ assert.match(
   "SSH SOCKS proxy input should track its draft value so ProxyJump can be disabled while it has content.",
 );
 
+assert.doesNotMatch(
+  fieldsSection,
+  /startupScriptPreview|ssh-startup-script-preview|ssh-startup-script-empty/,
+  "SSH startup script should open in the editor without rendering an inline preview or empty hint underneath.",
+);
+
 assert.match(
   source,
   /const \[proxyJumpDraft, setProxyJumpDraft\] = useState/,

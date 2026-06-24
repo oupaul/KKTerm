@@ -55,7 +55,6 @@ export function SshConnectionFields({
   const [applyStartupToExistingTmux, setApplyStartupToExistingTmux] = useState(() =>
     readSshApplyStartupToExistingTmux(initialConnection?.id),
   );
-  const startupScriptPreview = startupScript.trim().split(/\r?\n/, 1)[0] ?? "";
 
   return (
     <>
@@ -217,13 +216,6 @@ export function SshConnectionFields({
             {t("connections.sshStartupScriptEdit")}
           </button>
         </div>
-        {startupScriptEnabled ? (
-          startupScriptPreview ? (
-            <code className="ssh-startup-script-preview">{startupScriptPreview}</code>
-          ) : (
-            <small className="ssh-startup-script-empty">{t("connections.sshStartupScriptEmpty")}</small>
-          )
-        ) : null}
         <input name="localStartupScript" type="hidden" value={startupScriptEnabled ? startupScript : ""} />
         <input
           name="sshStartupScriptApplyToExistingTmux"
