@@ -42,3 +42,4 @@ dist-ssr
 .tmp
 docs/superpowers/specs
 docs/superpowers/plans
+/brag-output
