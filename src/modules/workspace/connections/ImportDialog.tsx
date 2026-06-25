@@ -1,7 +1,6 @@
 import { Loader2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import i18next from "../../../i18n/config";
 import { listen } from "@tauri-apps/api/event";
 import {
   invokeCommand,
@@ -26,12 +25,12 @@ import {
 } from "../../../app/ui/dialog";
 import { useWorkspaceStore } from "../../../store";
 import { defaultPortForConnectionType, uniqueRuntimeId } from "./utils";
-import { flattenFolders } from "./treeUtils";
 import type {
   ConnectionTree,
   ConnectionType,
   CreateConnectionRequest,
   SshSettings,
+  Workspace,
 } from "../../../types";
 
 type ImportDialogProps = {
@@ -93,8 +92,10 @@ const TYPE_ICONS: Partial<Record<ConnectionType, DialogIconName>> = {
   local: "terminal",
 };
 
-export function ImportDialog({ tree, sshSettings, onClose, onImported }: ImportDialogProps) {
+export function ImportDialog({ sshSettings, onClose, onImported }: ImportDialogProps) {
   const { t } = useTranslation();
+  const activeWorkspaceId = useWorkspaceStore((state) => state.activeWorkspaceId);
+  const workspaces = useWorkspaceStore((state) => state.workspaces);
   const [source, setSource] = useState<ImportSource>("file");
   const [error, setError] = useState("");
   const [filePath, setFilePath] = useState("");
@@ -119,12 +120,24 @@ export function ImportDialog({ tree, sshSettings, onClose, onImported }: ImportD
   const [bulkField, setBulkField] = useState<BulkField>(null);
   const [bulkValue, setBulkValue] = useState("");
   const [bulkScope, setBulkScope] = useState<"all" | "empty">("empty");
-  const [folderTarget, setFolderTarget] = useState<string>("__new__");
-  const [newFolderName, setNewFolderName] = useState(suggestFolderName("file"));
+  const [destinationWorkspaceId, setDestinationWorkspaceId] = useState(activeWorkspaceId);
   const [destinationOpen, setDestinationOpen] = useState(false);
   const [importing, setImporting] = useState(false);
 
-  const folderOptions = useMemo(() => flattenFolders(tree.folders), [tree]);
+  const workspaceOptions = useMemo(
+    () =>
+      workspaces.length > 0
+        ? workspaces
+        : [{
+            id: activeWorkspaceId,
+            name: t("workspace.workspace"),
+            icon: null,
+            iconColor: null,
+            isDefault: activeWorkspaceId === "default",
+            sortOrder: 0,
+          }],
+    [activeWorkspaceId, t, workspaces],
+  );
   const selectedSource = bookmarkSources.find((entry) => entry.id === bookmarkSourceId) ?? null;
   const selectedCount = candidates.filter((row) => row.selected).length;
   const allVisibleTypes = useMemo(() => {
@@ -186,9 +199,14 @@ export function ImportDialog({ tree, sshSettings, onClose, onImported }: ImportD
     setTypeFilter("all");
     setStatusFilter("all");
     setBulkField(null);
-    setNewFolderName(suggestFolderName(source));
     clearPreview();
   }, [source]);
+
+  useEffect(() => {
+    if (!workspaceOptions.some((workspace) => workspace.id === destinationWorkspaceId)) {
+      setDestinationWorkspaceId(activeWorkspaceId);
+    }
+  }, [activeWorkspaceId, destinationWorkspaceId, workspaceOptions]);
 
   useEffect(() => {
     if (source !== "bookmarks" || bookmarkSources.length > 0 || bookmarksLoading) {
@@ -417,6 +435,7 @@ export function ImportDialog({ tree, sshSettings, onClose, onImported }: ImportD
     baseFolderId: string | undefined,
     folderPath: string[],
     folderCache: Map<string, string>,
+    workspaceId: string,
   ) {
     let parentFolderId = baseFolderId;
     const pathSegments: string[] = [];
@@ -436,7 +455,7 @@ export function ImportDialog({ tree, sshSettings, onClose, onImported }: ImportD
         request: {
           name: segment,
           parentFolderId,
-          workspaceId: useWorkspaceStore.getState().activeWorkspaceId,
+          workspaceId,
         },
       });
       folderCache.set(cacheKey, folder.id);
@@ -466,25 +485,6 @@ export function ImportDialog({ tree, sshSettings, onClose, onImported }: ImportD
 
     setImporting(true);
     try {
-      let targetFolderId: string | undefined;
-      if (folderTarget === "__new__") {
-        const trimmed = newFolderName.trim();
-        if (!trimmed) {
-          setError(t("connections.import.folderNameRequired"));
-          setImporting(false);
-          return;
-        }
-        const folder = await invokeCommand("create_connection_folder", {
-          request: {
-            name: trimmed,
-            workspaceId: useWorkspaceStore.getState().activeWorkspaceId,
-          },
-        });
-        targetFolderId = folder.id;
-      } else if (folderTarget !== "__root__") {
-        targetFolderId = folderTarget;
-      }
-
       const folderCache = new Map<string, string>();
 
       for (const row of candidates) {
@@ -495,9 +495,10 @@ export function ImportDialog({ tree, sshSettings, onClose, onImported }: ImportD
           ? row.port
           : row.port ?? defaultPortForConnectionType(row.type, sshSettings);
         const rowFolderId = await resolveFolderPath(
-          targetFolderId,
+          undefined,
           row.folderPath,
           folderCache,
+          destinationWorkspaceId,
         );
         const password = ["ssh", "telnet", "rdp", "vnc"].includes(row.type)
           ? row.password
@@ -512,7 +513,7 @@ export function ImportDialog({ tree, sshSettings, onClose, onImported }: ImportD
           host: row.type === "url" ? undefined : row.host,
           user: row.user,
           folderId: rowFolderId,
-          workspaceId: useWorkspaceStore.getState().activeWorkspaceId,
+          workspaceId: destinationWorkspaceId,
           port,
           url: row.type === "url" ? row.url ?? row.host : undefined,
           authMethod: password && row.type === "ssh" ? "password" : undefined,
@@ -532,14 +533,12 @@ export function ImportDialog({ tree, sshSettings, onClose, onImported }: ImportD
   const footer = (
     <Actions
       extraLeft={
-        <DestinationPicker
-          folderOptions={folderOptions}
-          folderTarget={folderTarget}
-          newFolderName={newFolderName}
-          onFolderTarget={setFolderTarget}
-          onNewFolderName={setNewFolderName}
+        <WorkspaceDestinationPicker
+          destinationWorkspaceId={destinationWorkspaceId}
+          onDestinationWorkspaceId={setDestinationWorkspaceId}
           open={destinationOpen}
           setOpen={setDestinationOpen}
+          workspaces={workspaceOptions}
         />
       }
       primary={
@@ -1031,7 +1030,7 @@ function CandidateList({
         <span>{t("connections.import.colName")}</span>
         <span>{t("connections.import.colHost")}</span>
         <span>{t("connections.import.colType")}</span>
-        <span>{t("connections.import.destinationLabel")}</span>
+        <span>{t("connections.folder")}</span>
         <span>{t("connections.import.colUser")}</span>
       </div>
       <div className="import-list-redesign">
@@ -1209,68 +1208,48 @@ function BulkFieldEditor({
   );
 }
 
-function DestinationPicker({
-  folderOptions,
-  folderTarget,
-  newFolderName,
-  onFolderTarget,
-  onNewFolderName,
+function WorkspaceDestinationPicker({
+  destinationWorkspaceId,
+  onDestinationWorkspaceId,
   open,
   setOpen,
+  workspaces,
 }: {
-  folderOptions: ReturnType<typeof flattenFolders>;
-  folderTarget: string;
-  newFolderName: string;
-  onFolderTarget: (value: string) => void;
-  onNewFolderName: (value: string) => void;
+  destinationWorkspaceId: string;
+  onDestinationWorkspaceId: (value: string) => void;
   open: boolean;
   setOpen: (value: boolean) => void;
+  workspaces: Workspace[];
 }) {
   const { t } = useTranslation();
   const destinationLabel =
-    folderTarget === "__new__"
-      ? newFolderName || t("connections.import.destinationNewFolder")
-      : folderTarget === "__root__"
-        ? t("connections.import.destinationRoot")
-        : folderOptions.find((option) => option.folder.id === folderTarget)?.folder.name ??
-          t("connections.import.destinationLabel");
+    workspaces.find((workspace) => workspace.id === destinationWorkspaceId)?.name ??
+    t("workspace.workspace");
 
   return (
     <div className="import-destination-redesign">
-      <span>{t("connections.import.destinationLabel")}</span>
+      <span>{t("workspace.workspace")}</span>
       <button
         className={open ? "open" : ""}
         onClick={() => setOpen(!open)}
         type="button"
       >
-        <DIcon name="folder" size={14} />
+        <DIcon name="dashboard" size={14} />
         {destinationLabel}
         <DIcon name="updown" size={12} />
       </button>
       {open ? (
         <div className="import-popover-redesign import-destination-popover">
-          <Field label={t("connections.import.destinationLabel")}>
+          <Field label={t("workspace.workspace")}>
             <Select
-              onChange={(event) => onFolderTarget(event.currentTarget.value)}
-              options={[
-                { value: "__new__", label: t("connections.import.destinationNewFolder") },
-                { value: "__root__", label: t("connections.import.destinationRoot") },
-                ...folderOptions.map((option) => ({
-                  value: option.folder.id,
-                  label: `${"  ".repeat(option.level)}${option.folder.name}`,
-                })),
-              ]}
-              value={folderTarget}
+              onChange={(event) => onDestinationWorkspaceId(event.currentTarget.value)}
+              options={workspaces.map((workspace) => ({
+                value: workspace.id,
+                label: workspace.name,
+              }))}
+              value={destinationWorkspaceId}
             />
           </Field>
-          {folderTarget === "__new__" ? (
-            <Field label={t("connections.import.newFolderNameLabel")}>
-              <TextInput
-                onChange={(event) => onNewFolderName(event.currentTarget.value)}
-                value={newFolderName}
-              />
-            </Field>
-          ) : null}
         </div>
       ) : null}
     </div>
@@ -1348,22 +1327,4 @@ function connectionTypeText(type: ConnectionType, t: ReturnType<typeof useTransl
     return t("connections.localTerminal");
   }
   return t(`connections.${type}` as const);
-}
-
-function suggestFolderName(format: string) {
-  const today = new Date();
-  const stamp = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-  const label =
-    format === "bookmarks"
-      ? i18next.t("connections.import.importedFromBookmarks")
-      : format === "scan"
-        ? i18next.t("connections.import.importedFromScan")
-        : format === "rdcman"
-          ? i18next.t("connections.import.importedFromRdcman")
-          : format === "mobaxterm"
-            ? i18next.t("connections.import.importedFromMobaxterm")
-            : format === "putty"
-              ? i18next.t("connections.import.importedFromPutty")
-              : i18next.t("connections.import.importedDefault");
-  return `${label} ${stamp}`;
 }
