@@ -256,11 +256,15 @@ export function hasEnabledSshPortForwardings(connection: Connection | undefined)
 export function SshPortForwardingDialog({
   connection,
   sessionId,
+  failedForwardIds = [],
+  onForwardFailuresChange,
   onClose,
   onConnectionUpdated,
 }: {
   connection: Connection;
   sessionId: string | null;
+  failedForwardIds?: string[];
+  onForwardFailuresChange?: (failedForwardIds: string[]) => void;
   onClose: () => void;
   onConnectionUpdated: (connection: Connection) => void;
 }) {
@@ -269,6 +273,11 @@ export function SshPortForwardingDialog({
   const [mode, setMode] = useState<SshPortForwardMode>("L");
   const [drafts, setDrafts] = useState<ForwardingDraft>(DEFAULT_DRAFT);
   const [forwardings, setForwardings] = useState<SshPortForwarding[]>(connection.sshPortForwardings ?? []);
+  // Live ids of forwards that failed to start, seeded from the Pane's load-time
+  // failures and updated as the user starts/stops/removes rules here. Mirrored
+  // back to the Pane via onForwardFailuresChange so the toolbar warning stays in
+  // sync with the list.
+  const [failedIds, setFailedIds] = useState<Set<string>>(() => new Set(failedForwardIds));
   const [localInterfaceAddresses, setLocalInterfaceAddresses] = useState<string[]>([]);
   const [localTcpListeners, setLocalTcpListeners] = useState<LocalTcpListener[]>([]);
   const [remoteInterfaceAddresses, setRemoteInterfaceAddresses] = useState<string[]>([]);
@@ -367,6 +376,30 @@ export function SshPortForwardingDialog({
     showStatusBarNotice(message, { tone: "error" });
   }
 
+  // Mirror failure changes back to the Pane without depending on the parent
+  // callback's identity, so the toolbar warning tracks the list. The seed sync
+  // on mount is a no-op in the store (unchanged ids are ignored).
+  const onForwardFailuresChangeRef = useRef(onForwardFailuresChange);
+  onForwardFailuresChangeRef.current = onForwardFailuresChange;
+  useEffect(() => {
+    onForwardFailuresChangeRef.current?.([...failedIds]);
+  }, [failedIds]);
+
+  function setForwardFailed(forwardId: string, failed: boolean) {
+    setFailedIds((current) => {
+      if (failed === current.has(forwardId)) {
+        return current;
+      }
+      const next = new Set(current);
+      if (failed) {
+        next.add(forwardId);
+      } else {
+        next.delete(forwardId);
+      }
+      return next;
+    });
+  }
+
   async function persist(nextForwardings: SshPortForwarding[]) {
     setForwardings(nextForwardings);
     if (!isTauriRuntime()) {
@@ -404,8 +437,10 @@ export function SshPortForwardingDialog({
           sessionId,
         },
       });
+      setForwardFailed(forwarding.id, false);
       return true;
     } catch (startError) {
+      setForwardFailed(forwarding.id, true);
       const message = startError instanceof Error ? startError.message : String(startError);
       if (message.includes("ssh-port-forward-bind-conflict")) {
         showError(t("terminal.sshPortForwardBindConflict", {
@@ -439,10 +474,6 @@ export function SshPortForwardingDialog({
       destHost: mode === "D" ? undefined : current.destHost.trim(),
       destPort: mode === "D" ? undefined : destPort,
     };
-    if (!sessionId) {
-      showError(t("terminal.sshPortForwardSessionUnavailable"));
-      return;
-    }
     if (sshForwardBindConflict(forwarding, forwardings)) {
       showError(t("terminal.sshPortForwardBindConflict", {
         address: forwarding.bind,
@@ -450,25 +481,30 @@ export function SshPortForwardingDialog({
       }));
       return;
     }
-    if (!await startForward(forwarding)) {
-      return;
-    }
     const next = [...forwardings, forwarding];
+    // Persist the durable rule before attempting the live start so the saved
+    // Connection setting never depends on a live Session being present or
+    // healthy. Previously the live forward was started first and `persist` only
+    // ran on success, so a missing or just-dropped Session silently lost the
+    // rule — the "settings don't save reliably" report.
     try {
       await persist(next);
     } catch (persistError) {
-      if (isTauriRuntime()) {
-        await invokeCommand("close_ssh_port_forward", {
-          request: { forwardId: forwarding.id },
-        }).catch(() => undefined);
-      }
       showError(persistError);
+      return;
+    }
+    // Bring it up live when a Session is available. A live-start failure leaves
+    // the saved rule in place (consistent with the enable toggle) instead of
+    // dropping it; `startForward` surfaces its own error.
+    if (sessionId) {
+      await startForward(forwarding);
     }
   }
 
   async function handleRemove(id: string) {
     const forwarding = forwardings.find((entry) => entry.id === id);
     const next = forwardings.filter((entry) => entry.id !== id);
+    setForwardFailed(id, false);
     try {
       await persist(next);
       if (forwarding?.enabled && isTauriRuntime()) {
@@ -487,6 +523,7 @@ export function SshPortForwardingDialog({
       if (nextEnabled) {
         await startForward(updatedForwarding);
       } else if (isTauriRuntime()) {
+        setForwardFailed(forwarding.id, false);
         setBusyId(forwarding.id);
         try {
           await invokeCommand("close_ssh_port_forward", { request: { forwardId: forwarding.id } });
@@ -562,8 +599,15 @@ export function SshPortForwardingDialog({
                   const remoteUrl = forwarding.mode === "R"
                     ? sshRemoteForwardBrowserUrl(forwarding.bind, forwarding.listenPort, connection.host)
                     : null;
-                  return <div className="sa-row" key={forwarding.id}>
-                    <span className={`sa-dot ${forwarding.enabled ? "active" : ""}`} />
+                  const failed = forwarding.enabled && failedIds.has(forwarding.id);
+                  return <div className={`sa-row${failed ? " failed" : ""}`} key={forwarding.id}>
+                    {failed ? (
+                      <span className="sa-failed" title={t("terminal.sshPortForwardFailed")} aria-label={t("terminal.sshPortForwardFailed")}>
+                        <DIcon name="alert" size={13} />
+                      </span>
+                    ) : (
+                      <span className={`sa-dot ${forwarding.enabled ? "active" : ""}`} />
+                    )}
                     {forwarding.mode === "L" && forwarding.enabled ? (
                       <button
                         className="sa-local sa-endpoint-link"
@@ -596,7 +640,7 @@ export function SshPortForwardingDialog({
                     ) : (
                       <span className="sa-remote">{endpoints.right}</span>
                     )}
-                    <span className="sa-time">{busyId === forwarding.id ? t("terminal.opening") : forwarding.enabled ? t("terminal.active") : t("terminal.disabled")}</span>
+                    <span className="sa-time">{busyId === forwarding.id ? t("terminal.opening") : failed ? t("terminal.sshPortForwardFailed") : forwarding.enabled ? t("terminal.active") : t("terminal.disabled")}</span>
                     <Switch
                       ariaLabel={t("terminal.enableForwarding")}
                       disabled={busyId === forwarding.id}

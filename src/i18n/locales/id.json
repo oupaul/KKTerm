@@ -2753,6 +2753,8 @@
     "sshPortForwardBindConflict": "{{address}}:{{port}} sudah digunakan oleh penerusan SSH lain.",
     "sshPortForwardSessionUnavailable": "Buka dialog ini dari Pane SSH native yang terhubung dan coba lagi.",
     "sshPortForwardStartupFailed": "SSH terhubung, tetapi satu atau beberapa penerusan port tersimpan gagal dimulai: {{message}}",
+    "sshPortForwardSomeFailed": "Some port forwards failed to start.",
+    "sshPortForwardFailed": "Failed to start",
     "thisPc": "PC ini",
     "internet": "Internet",
     "anyHost": "host mana pun",

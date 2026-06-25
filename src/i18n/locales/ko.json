@@ -2753,6 +2753,8 @@
     "sshPortForwardBindConflict": "{{address}}:{{port}}은(는) 이미 다른 SSH 포워드에서 사용 중입니다.",
     "sshPortForwardSessionUnavailable": "연결된 네이티브 SSH 페인에서 이 대화상자를 열고 다시 시도하세요.",
     "sshPortForwardStartupFailed": "SSH는 연결되었지만 저장된 포트 포워딩을 하나 이상 시작하지 못했습니다: {{message}}",
+    "sshPortForwardSomeFailed": "Some port forwards failed to start.",
+    "sshPortForwardFailed": "Failed to start",
     "thisPc": "이 PC",
     "internet": "인터넷",
     "anyHost": "모든 호스트",

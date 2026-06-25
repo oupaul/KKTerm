@@ -2753,6 +2753,8 @@
     "sshPortForwardBindConflict": "{{address}}:{{port}} ถูกใช้งานโดยการส่งต่อ SSH อื่นอยู่แล้ว",
     "sshPortForwardSessionUnavailable": "เปิดกล่องโต้ตอบนี้จากบานหน้าต่าง SSH แบบเนทีฟที่เชื่อมต่อแล้วแล้วลองอีกครั้ง",
     "sshPortForwardStartupFailed": "เชื่อมต่อ SSH แล้ว แต่ไม่สามารถเริ่มการส่งต่อพอร์ตที่บันทึกไว้อย่างน้อยหนึ่งรายการได้: {{message}}",
+    "sshPortForwardSomeFailed": "Some port forwards failed to start.",
+    "sshPortForwardFailed": "Failed to start",
     "thisPc": "พีซีเครื่องนี้",
     "internet": "อินเทอร์เน็ต",
     "anyHost": "โฮสต์ใดก็ได้",

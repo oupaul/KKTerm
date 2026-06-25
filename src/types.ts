@@ -358,6 +358,11 @@ export interface TerminalPane {
   tmuxSessionId?: string;
   tmuxUnavailable?: boolean;
   x11ForwardingStatus?: "disabled" | "enabled" | "rejected";
+  /** Live ids of saved SSH port forwards that failed to start on this Session
+   * (e.g. listener port already in use). Drives the warning state on the
+   * forwarding toolbar button and the list rows; it is runtime state, not a
+   * durable Connection field. */
+  sshPortForwardFailures?: string[];
 }
 
 export interface UrlPane {

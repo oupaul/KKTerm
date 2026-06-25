@@ -179,7 +179,8 @@ test("Saved enabled forwards all start and report failures without stopping the 
 
   assert.deepEqual(started, ["local", "remote", "dynamic"]);
   assert.equal(failures.length, 1);
-  assert.match(String(failures[0]), /remote listener rejected/);
+  assert.equal(failures[0].forwarding.id, "remote");
+  assert.match(String(failures[0].reason), /remote listener rejected/);
 });
 
 test("SSH forwarding starts through the Pane's live Session", async () => {

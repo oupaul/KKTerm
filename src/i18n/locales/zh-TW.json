@@ -2753,6 +2753,8 @@
     "sshPortForwardBindConflict": "{{address}}:{{port}} 已被另一個 SSH 轉送使用。",
     "sshPortForwardSessionUnavailable": "請從已連線的原生 SSH 窗格開啟此對話框並再試一次。",
     "sshPortForwardStartupFailed": "SSH 已連線，但一或多個已儲存的連接埠轉送啟動失敗：{{message}}",
+    "sshPortForwardSomeFailed": "Some port forwards failed to start.",
+    "sshPortForwardFailed": "Failed to start",
     "thisPc": "本機電腦",
     "internet": "網際網路",
     "anyHost": "任意主機",

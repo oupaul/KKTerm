@@ -133,6 +133,8 @@ export function TerminalWorkspace({
   const [sftpDialogConnection, setSftpDialogConnection] = useState<Connection | null>(null);
   const [sshPortForwardingDialogConnection, setSshPortForwardingDialogConnection] = useState<Connection | null>(null);
   const [sshPortForwardingDialogSessionId, setSshPortForwardingDialogSessionId] = useState<string | null>(null);
+  const [sshPortForwardingDialogPaneId, setSshPortForwardingDialogPaneId] = useState<string | null>(null);
+  const setOpenTerminalPaneSshForwardFailures = useWorkspaceStore((state) => state.setOpenTerminalPaneSshForwardFailures);
   const sftpFocusRestorePaneIdRef = useRef<string | null>(null);
   const sshPortForwardingFocusRestorePaneIdRef = useRef<string | null>(null);
   const { t } = useTranslation();
@@ -218,6 +220,7 @@ export function TerminalWorkspace({
     sshPortForwardingFocusRestorePaneIdRef.current = null;
     setSshPortForwardingDialogConnection(null);
     setSshPortForwardingDialogSessionId(null);
+    setSshPortForwardingDialogPaneId(null);
     if (restorePaneId) {
       focusTerminalPaneAfterDialogClose(restorePaneId);
     }
@@ -225,6 +228,7 @@ export function TerminalWorkspace({
 
   function openSshPortForwardingDialog(connection: Connection, paneId: string, sessionId: string | null) {
     sshPortForwardingFocusRestorePaneIdRef.current = paneId === focusedPaneId ? paneId : null;
+    setSshPortForwardingDialogPaneId(paneId);
     setSshPortForwardingDialogConnection(connection);
     setSshPortForwardingDialogSessionId(sessionId);
   }
@@ -543,6 +547,16 @@ export function TerminalWorkspace({
         <SshPortForwardingDialog
           connection={sshPortForwardingDialogConnection}
           sessionId={sshPortForwardingDialogSessionId}
+          failedForwardIds={
+            tab.panes.find((pane): pane is TerminalPane =>
+              isTerminalPane(pane) && pane.id === sshPortForwardingDialogPaneId,
+            )?.sshPortForwardFailures ?? []
+          }
+          onForwardFailuresChange={(failedForwardIds) => {
+            if (sshPortForwardingDialogPaneId) {
+              setOpenTerminalPaneSshForwardFailures(tab.id, sshPortForwardingDialogPaneId, failedForwardIds);
+            }
+          }}
           onClose={closeSshPortForwardingDialog}
           onConnectionUpdated={(updatedConnection) => {
             refreshOpenConnectionMetadata(updatedConnection);
@@ -1648,6 +1662,7 @@ function TerminalPaneView({
   const updateOpenTerminalPaneAppearance = useWorkspaceStore((state) => state.updateOpenTerminalPaneAppearance);
   const updateOpenTerminalPaneBackground = useWorkspaceStore((state) => state.updateOpenTerminalPaneBackground);
   const updateOpenTerminalPaneX11ForwardingStatus = useWorkspaceStore((state) => state.updateOpenTerminalPaneX11ForwardingStatus);
+  const setOpenTerminalPaneSshForwardFailures = useWorkspaceStore((state) => state.setOpenTerminalPaneSshForwardFailures);
   const markOpenTerminalPaneTmuxUnavailable = useWorkspaceStore((state) => state.markOpenTerminalPaneTmuxUnavailable);
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
   const openGitBrowser = useWorkspaceStore((state) => state.openGitBrowser);
@@ -2175,9 +2190,18 @@ function TerminalPaneView({
               },
             }),
           ).then((failures) => {
-            if (!disposed && failures.length > 0) {
+            if (disposed) {
+              return;
+            }
+            setOpenTerminalPaneSshForwardFailures(
+              tabId,
+              pane.id,
+              failures.map((failure) => failure.forwarding.id),
+            );
+            if (failures.length > 0) {
+              const reason = failures[0].reason;
               showStatusBarNotice(t("terminal.sshPortForwardStartupFailed", {
-                message: failures[0] instanceof Error ? failures[0].message : String(failures[0]),
+                message: reason instanceof Error ? reason.message : String(reason),
               }), { tone: "warning" });
             }
           });
@@ -2666,11 +2690,11 @@ function TerminalPaneView({
           </button>
           {isSshPane && hasEnabledSshPortForwardings(pane.connection) ? (
             <button
-              className="terminal-pane-action terminal-ssh-forwarding-button"
+              className={`terminal-pane-action terminal-ssh-forwarding-button${(pane.sshPortForwardFailures?.length ?? 0) > 0 ? " has-failure" : ""}`}
               aria-label={t("terminal.sshPortRedirect")}
               data-tutorial-id="terminal.sshPortRedirect"
               onClick={handleOpenSshPortForwarding}
-              title={t("terminal.sshPortRedirect")}
+              title={(pane.sshPortForwardFailures?.length ?? 0) > 0 ? t("terminal.sshPortForwardSomeFailed") : t("terminal.sshPortRedirect")}
               type="button"
             >
               <Network size={13} />

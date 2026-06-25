@@ -1315,6 +1315,11 @@ interface WorkspaceState {
     paneId: string,
     status: TerminalPane["x11ForwardingStatus"],
   ) => void;
+  setOpenTerminalPaneSshForwardFailures: (
+    tabId: string,
+    paneId: string,
+    failedForwardIds: string[],
+  ) => void;
   markOpenTerminalPaneTmuxUnavailable: (tabId: string, paneId: string) => void;
   markConnectionSessionStarted: (connectionId: string) => void;
   markConnectionSessionEnded: (connectionId: string) => void;
@@ -3230,6 +3235,31 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
           }
           changed = true;
           return { ...pane, x11ForwardingStatus: status };
+        });
+        return changed ? { ...tab, panes } : tab;
+      }),
+    }));
+  },
+  setOpenTerminalPaneSshForwardFailures: (tabId, paneId, failedForwardIds) => {
+    set((state) => ({
+      tabs: state.tabs.map((tab) => {
+        if (tab.id !== tabId || tab.kind !== "terminal") {
+          return tab;
+        }
+        let changed = false;
+        const panes = tab.panes.map((pane) => {
+          if (!isTerminalPane(pane) || pane.id !== paneId) {
+            return pane;
+          }
+          const current = pane.sshPortForwardFailures ?? [];
+          const unchanged =
+            current.length === failedForwardIds.length &&
+            current.every((id, index) => id === failedForwardIds[index]);
+          if (unchanged) {
+            return pane;
+          }
+          changed = true;
+          return { ...pane, sshPortForwardFailures: failedForwardIds };
         });
         return changed ? { ...tab, panes } : tab;
       }),

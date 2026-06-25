@@ -2753,6 +2753,8 @@
     "sshPortForwardBindConflict": "{{address}}:{{port}} ya está en uso por otro reenvío SSH.",
     "sshPortForwardSessionUnavailable": "Abra este diálogo desde un panel SSH nativo conectado e inténtelo de nuevo.",
     "sshPortForwardStartupFailed": "La conexión SSH se estableció, pero no se pudieron iniciar uno o varios reenvíos de puertos guardados: {{message}}",
+    "sshPortForwardSomeFailed": "Some port forwards failed to start.",
+    "sshPortForwardFailed": "Failed to start",
     "thisPc": "Este equipo",
     "internet": "Internet",
     "anyHost": "cualquier host",

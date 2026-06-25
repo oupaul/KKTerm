@@ -20,10 +20,11 @@ export async function startEnabledSshPortForwardings(
   forwardings: SshPortForwarding[],
   startForward: (forwarding: SshPortForwarding) => Promise<unknown>,
 ) {
-  const results = await Promise.allSettled(
-    forwardings.filter((forwarding) => forwarding.enabled).map(startForward),
+  const enabled = forwardings.filter((forwarding) => forwarding.enabled);
+  const results = await Promise.allSettled(enabled.map(startForward));
+  return results.flatMap((result, index) =>
+    result.status === "rejected" ? [{ forwarding: enabled[index], reason: result.reason }] : [],
   );
-  return results.flatMap((result) => result.status === "rejected" ? [result.reason] : []);
 }
 
 function normalizeBindAddress(value: string): NormalizedBindAddress {
