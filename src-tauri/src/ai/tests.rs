@@ -3638,6 +3638,44 @@ fn resolve_copilot_cli_honors_explicit_path_override() {
     });
 }
 
+#[test]
+fn format_copilot_sdk_error_maps_json_failure_to_cli_update_guidance() {
+    // A legacy Copilot CLI that predates the SDK `connect` handshake falls back
+    // to `ping` and returns a numeric timestamp where the SDK expects a string,
+    // surfacing a raw serde error. KKTerm must translate that into actionable
+    // guidance instead of the confusing "invalid type" text (issue #456).
+    let error = CopilotSdkError::with_message(
+        CopilotSdkErrorKind::Json,
+        "invalid type: integer `1782380691690`, expected a string",
+    );
+    let message = format_copilot_sdk_error("start", error);
+
+    assert!(
+        message.contains("outdated or incompatible"),
+        "expected CLI-update guidance, got: {message}"
+    );
+    assert!(
+        message.contains("npm install -g @github/copilot@latest"),
+        "expected an update command, got: {message}"
+    );
+    // The underlying detail stays available for bug reports.
+    assert!(message.contains("1782380691690"), "expected detail, got: {message}");
+}
+
+#[test]
+fn format_copilot_sdk_error_keeps_stage_context_for_other_failures() {
+    let error = CopilotSdkError::with_message(
+        CopilotSdkErrorKind::InvalidConfig,
+        "bad config",
+    );
+    let message = format_copilot_sdk_error("create session", error);
+
+    assert!(
+        message.contains("failed to create session"),
+        "expected stage-based message, got: {message}"
+    );
+}
+
 /// Set (or clear) an env var for the duration of `body`, restoring the previous
 /// value afterward. Copilot CLI resolution reads process env directly.
 fn temp_env_var(key: &str, value: Option<&str>, body: impl FnOnce()) {

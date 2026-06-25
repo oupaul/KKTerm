@@ -1961,6 +1961,21 @@ fn format_copilot_sdk_error(stage: &str, error: CopilotSdkError) -> String {
                  COPILOT_CLI_PATH environment variable to its full path, then try again."
             )
         }
+        // A JSON deserialization failure means the Copilot CLI's responses no
+        // longer match the wire schema the SDK understands — almost always an
+        // outdated or mismatched externally-installed CLI. A legacy CLI that
+        // predates the SDK's `connect` handshake falls back to `ping`, whose
+        // numeric timestamp the SDK expects as a string, producing a raw serde
+        // "invalid type: integer ..., expected a string" error. Surface
+        // actionable guidance instead of that confusing text.
+        CopilotSdkErrorKind::Json => {
+            format!(
+                "GitHub Copilot CLI returned a response KKTerm could not understand. \
+                 The installed Copilot CLI is likely outdated or incompatible with this \
+                 version of KKTerm. Update it (for example, \
+                 `npm install -g @github/copilot@latest`), then try again. (Details: {error})"
+            )
+        }
         _ => format!("GitHub Copilot SDK failed to {stage}: {error}"),
     }
 }
