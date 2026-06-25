@@ -697,16 +697,18 @@
 }
 
 .status-popup-message {
-  display: block;
+  display: -webkit-box;
+  flex: 1 1 auto;
   max-width: 340px;
   overflow: hidden;
   color: var(--text);
   font-size: 13px;
   line-height: 1.4;
-  letter-spacing: -0.005em;
-  text-overflow: ellipsis;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow-wrap: anywhere;
   text-wrap: pretty;
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .status-popup-content {
