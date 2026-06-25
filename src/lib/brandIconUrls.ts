@@ -37,6 +37,7 @@ import powerToysIcon from "../assets/installer-icons/powertoys.png?url";
 import pythonIcon from "../assets/installer-icons/python.svg?url";
 import rustIcon from "../assets/installer-icons/rust.svg?url";
 import rustDeskIcon from "../assets/installer-icons/rustdesk.svg?url";
+import scrcpyIcon from "../assets/installer-icons/scrcpy.svg?url";
 import shareXIcon from "../assets/installer-icons/sharex.svg?url";
 import sysinternalsSuiteIcon from "../assets/installer-icons/sysinternals-suite.png?url";
 import tailscaleIcon from "../assets/installer-icons/tailscale.svg?url";
@@ -88,6 +89,7 @@ const brandIconUrlById: Record<string, string> = {
   python: pythonIcon,
   rust: rustIcon,
   rustdesk: rustDeskIcon,
+  scrcpy: scrcpyIcon,
   sharex: shareXIcon,
   "sysinternals-suite": sysinternalsSuiteIcon,
   tailscale: tailscaleIcon,

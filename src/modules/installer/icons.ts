@@ -44,6 +44,7 @@ import powertoys from "../../assets/installer-icons/powertoys.png?url";
 import python from "../../assets/installer-icons/python.svg?url";
 import rust from "../../assets/installer-icons/rust.svg?url";
 import rustdesk from "../../assets/installer-icons/rustdesk.svg?url";
+import scrcpy from "../../assets/installer-icons/scrcpy.svg?url";
 import sharex from "../../assets/installer-icons/sharex.svg?url";
 import sysinternalsSuite from "../../assets/installer-icons/sysinternals-suite.png?url";
 import tailscale from "../../assets/installer-icons/tailscale.svg?url";
@@ -90,6 +91,7 @@ const RECIPE_ICON_URLS: Record<string, string> = {
   ditto,
   tailscale,
   rustdesk,
+  scrcpy,
   "7zip": sevenZip,
   sharex,
   ffmpeg,

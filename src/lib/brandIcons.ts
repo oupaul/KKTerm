@@ -259,6 +259,11 @@ export const BRAND_ICON_ENTRIES: BrandIconEntry[] = [
     keywords: ["rustdesk", "remote desktop", "network"],
   },
   {
+    id: "scrcpy",
+    label: "scrcpy",
+    keywords: ["scrcpy", "android", "mirror", "screen", "device", "utility"],
+  },
+  {
     id: "sharex",
     label: "ShareX",
     keywords: ["sharex", "screenshot", "capture", "image", "utility"],

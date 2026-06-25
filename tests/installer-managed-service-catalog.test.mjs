@@ -113,6 +113,28 @@ test("FFmpeg is visible in the Install Helper Utilities section", async () => {
   );
 });
 
+test("scrcpy is a Utilities tool installed via winget", () => {
+  const scrcpy = byId.get("scrcpy");
+
+  assert.ok(scrcpy, "scrcpy should be present in the installer catalog");
+  assert.equal(scrcpy.category, "utilities");
+  assert.deepEqual(scrcpy.provider, { kind: "winget", id: "Genymobile.scrcpy" });
+  assert.deepEqual(scrcpy.options, ["version"]);
+});
+
+test("scrcpy is visible in the Install Helper Utilities section", async () => {
+  const source = await readFile(
+    new URL("../src/modules/installer/sections.ts", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(
+    source,
+    /titleKey:\s*"installer\.section\.utilities"[\s\S]*ids:\s*\[[^\]]*"scrcpy"/,
+    "scrcpy should be listed in the visible Utilities section",
+  );
+});
+
 test("BentoPDF is a Utilities managed web app", () => {
   const bentopdf = byId.get("bentopdf");
 

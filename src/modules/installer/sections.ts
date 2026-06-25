@@ -93,6 +93,7 @@ export const INSTALLER_CATEGORY_SECTIONS: InstallerSection[] = [
       "7zip",
       "sharex",
       "ffmpeg",
+      "scrcpy",
       "excalidraw",
       "bentopdf",
       "openflowkit",

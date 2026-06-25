@@ -45,6 +45,7 @@ const INSTALLER_ARTWORK_ICON_IDS = [
   "python",
   "rust",
   "rustdesk",
+  "scrcpy",
   "sharex",
   "sysinternals-suite",
   "tailscale",

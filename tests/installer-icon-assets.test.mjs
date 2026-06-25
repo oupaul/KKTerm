@@ -50,6 +50,7 @@ for (const { id, asset } of [
   { id: "oh-my-posh", asset: "oh-my-posh.svg" },
   { id: "bentopdf", asset: "bentopdf.svg" },
   { id: "openflowkit", asset: "openflowkit.svg" },
+  { id: "scrcpy", asset: "scrcpy.svg" },
 ]) {
   test(`${id} uses a bundled Install Helper icon`, async () => {
     const iconsSource = await readFile(

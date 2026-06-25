@@ -1877,6 +1877,48 @@
       }
     },
     {
+      "id": "scrcpy",
+      "name": "scrcpy",
+      "descriptionEn": "Android screen mirroring and control tool for USB or TCP/IP devices.",
+      "category": "utilities",
+      "icon": "Smartphone",
+      "needs": [
+        "winget"
+      ],
+      "homepage": "https://github.com/Genymobile/scrcpy",
+      "releaseNotesUrl": "https://github.com/Genymobile/scrcpy/releases",
+      "detection": {
+        "displayNames": [
+          "scrcpy"
+        ],
+        "displayNamePrefixes": [
+          "scrcpy "
+        ]
+      },
+      "provider": {
+        "kind": "winget",
+        "id": "Genymobile.scrcpy"
+      },
+      "options": [
+        "version"
+      ],
+      "descriptionLocales": {
+        "fr": "Outil de miroir et de contrôle d'écran Android pour les appareils USB ou TCP/IP.",
+        "it": "Strumento per duplicare e controllare lo schermo Android con dispositivi USB o TCP/IP.",
+        "de": "Android-Bildschirmspiegelungs- und Steuerungstool für USB- oder TCP/IP-Geräte.",
+        "es": "Herramienta para duplicar y controlar la pantalla de Android con dispositivos USB o TCP/IP.",
+        "es-MX": "Herramienta para duplicar y controlar la pantalla de Android con dispositivos USB o TCP/IP.",
+        "pt-BR": "Ferramenta para espelhamento e controle de tela Android em dispositivos USB ou TCP/IP.",
+        "zh-TW": "Android 螢幕鏡像與控制工具，可透過 USB 或 TCP/IP 使用。",
+        "zh-CN": "Android 屏幕镜像和控制工具，可通过 USB 或 TCP/IP 使用。",
+        "ja": "USB または TCP/IP デバイス向けの Android 画面ミラーリングおよび操作ツール。",
+        "ko": "USB 또는 TCP/IP 기기용 Android 화면 미러링 및 제어 도구입니다.",
+        "th": "เครื่องมือมิเรอร์และควบคุมหน้าจอ Android สำหรับอุปกรณ์ USB หรือ TCP/IP",
+        "id": "Alat pencerminan dan kontrol layar Android untuk perangkat USB atau TCP/IP.",
+        "vi": "Công cụ phản chiếu và điều khiển màn hình Android cho thiết bị USB hoặc TCP/IP."
+      }
+    },
+    {
       "id": "excalidraw",
       "name": "Excalidraw",
       "descriptionEn": "Whiteboard sketching app hosted from a KKTerm app-local React project.",

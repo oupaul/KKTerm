@@ -39,6 +39,9 @@ limited to small app-identification assets.
 - `codex.svg`: LobeHub Icons `@lobehub/icons-static-svg`, `codex-color.svg`.
 - `powershell.svg`: Wikimedia Commons `File:Ps black 128.svg`, the official PowerShell mark released by Microsoft under the MIT License (copyright Microsoft Corporation; trademark notice applies).
 - `psmux.svg`: `psmux/psmux`, `icon.svg`, MIT License (copyright Josh; trademark notice applies).
+- `scrcpy.svg`: `Genymobile/scrcpy`, `app/data/scrcpy.svg`, Apache
+  License 2.0 (copyright Genymobile and Romain Vimont; trademark notice
+  applies).
 - `oh-my-posh.svg`: `JanDeDobbeleer/oh-my-posh`,
   `website/static/img/favicons.svg`, MIT License; see
   `LICENSE.oh-my-posh.txt` (trademark notice applies).
