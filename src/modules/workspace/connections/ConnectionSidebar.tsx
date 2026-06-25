@@ -57,6 +57,7 @@ import {
 } from "../../../app/ModuleHeader";
 import i18next from "../../../i18n/config";
 import { ariaExpanded, dialogButtonAria } from "../../../lib/aria";
+import { lucideIconRefForName } from "../../../lib/iconCatalog";
 import { requestCredentialUnlock } from "../../../lib/credentialUnlock";
 import { nativeMenuIcons } from "../../../lib/nativeMenuIcons";
 import { lockOsIconAutoDetect } from "../../../lib/osIcons";
@@ -76,6 +77,10 @@ import type { Connection, ConnectionFolder, ConnectionStatus, ConnectionTree, Co
 const DRAG_START_THRESHOLD_PX = 8;
 const WORKSPACE_HEADER_ICON_SIZE = 16;
 const WORKSPACE_HEADER_ICON_SHELL_SIZE = 26;
+// Default glyph for connection-tree folders without a custom icon. A plain
+// folder reads as a folder; the File Explorer connection icon (localFiles)
+// previously used here was confusable with a File Explorer Connection.
+const DEFAULT_FOLDER_ICON_REF = lucideIconRefForName("Folder");
 
 type DraggedTreeItem =
   | { kind: "folder"; folderId: string }
@@ -3458,7 +3463,7 @@ function ConnectionFolderNode({
           >
             {isCollapsed ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
           </button>
-          <ConnectionIcon iconDataUrl={folder.iconDataUrl} size={18} type="localFiles" />
+          <ConnectionIcon iconDataUrl={folder.iconDataUrl ?? DEFAULT_FOLDER_ICON_REF} size={18} type="localFiles" />
           {isRenamingFolder ? (
             <InlineTreeRenameInput
               ariaLabel={t("connections.renameFolder")}
@@ -5033,7 +5038,7 @@ function TreeDragPreview({ preview }: { preview: TreeDragPreview }) {
   return (
     <div className={`tree-drag-preview ${preview.kind}`} ref={previewRef}>
       {preview.kind === "folder" ? (
-        <ConnectionIcon iconDataUrl={preview.iconDataUrl} size={15} type="localFiles" />
+        <ConnectionIcon iconDataUrl={preview.iconDataUrl ?? DEFAULT_FOLDER_ICON_REF} size={15} type="localFiles" />
       ) : (
         <ConnectionGlyph size={15} type={preview.connectionType ?? "ssh"} />
       )}
