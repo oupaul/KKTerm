@@ -439,10 +439,6 @@ export function SshPortForwardingDialog({
       destHost: mode === "D" ? undefined : current.destHost.trim(),
       destPort: mode === "D" ? undefined : destPort,
     };
-    if (!sessionId) {
-      showError(t("terminal.sshPortForwardSessionUnavailable"));
-      return;
-    }
     if (sshForwardBindConflict(forwarding, forwardings)) {
       showError(t("terminal.sshPortForwardBindConflict", {
         address: forwarding.bind,
@@ -450,19 +446,23 @@ export function SshPortForwardingDialog({
       }));
       return;
     }
-    if (!await startForward(forwarding)) {
-      return;
-    }
     const next = [...forwardings, forwarding];
+    // Persist the durable rule before attempting the live start so the saved
+    // Connection setting never depends on a live Session being present or
+    // healthy. Previously the live forward was started first and `persist` only
+    // ran on success, so a missing or just-dropped Session silently lost the
+    // rule — the "settings don't save reliably" report.
     try {
       await persist(next);
     } catch (persistError) {
-      if (isTauriRuntime()) {
-        await invokeCommand("close_ssh_port_forward", {
-          request: { forwardId: forwarding.id },
-        }).catch(() => undefined);
-      }
       showError(persistError);
+      return;
+    }
+    // Bring it up live when a Session is available. A live-start failure leaves
+    // the saved rule in place (consistent with the enable toggle) instead of
+    // dropping it; `startForward` surfaces its own error.
+    if (sessionId) {
+      await startForward(forwarding);
     }
   }
 
