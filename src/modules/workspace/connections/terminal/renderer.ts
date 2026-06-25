@@ -4,6 +4,7 @@ import {
   type ISearchOptions,
   type ISearchResultChangeEvent,
 } from "@xterm/addon-search";
+import { Unicode11Addon } from "@xterm/addon-unicode11";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { WebglAddon } from "@xterm/addon-webgl";
 import {
@@ -151,6 +152,13 @@ class XtermTerminalRenderer implements TerminalRenderer, TerminalFontAtlasRefres
     this.backgroundOpacity = backgroundOpacity;
     this.terminal = new XtermTerminal(terminalOptionsFor(settings, backgroundOpacity));
     this.terminal.attachCustomWheelEventHandler((event) => this.handleWheelEvent(event));
+    // xterm defaults to its built-in Unicode v6 width tables, where emoji are
+    // still 1 cell wide. Modern shells emit emoji that fonts paint two cells
+    // wide, so the v6 model under-counts the cursor advance and every column
+    // after an emoji drifts (issue #454). Activate Unicode 11 widths so wide
+    // codepoints reserve two cells and stay aligned.
+    this.terminal.loadAddon(new Unicode11Addon());
+    this.terminal.unicode.activeVersion = "11";
     this.terminal.loadAddon(this.fitAddon);
     this.terminal.loadAddon(this.searchAddon);
     this.terminal.loadAddon(new WebLinksAddon(handleTerminalLink));
