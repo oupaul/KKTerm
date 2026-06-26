@@ -2,7 +2,7 @@
 //
 // Phase 1 scope:
 // - HTTP JSON-RPC client (initialize, tools/list, tools/call)
-// - Stateless calls (no Mcp-Session-Id reuse between calls)
+// - Short-lived sessions (reuse Mcp-Session-Id within one validation/tool call)
 // - Single auth header per server, stored in OS keychain
 // - SSE response detection -> protocol_error (deferred)
 // - SQLite storage of server config + cached tool schemas
@@ -330,7 +330,11 @@ fn validate_headers(headers: &HashMap<String, String>) -> Result<(), McpCommandE
 
 // -- HTTP client ------------------------------------------------------------
 
-fn build_headers(server: &McpServer, secret_value: Option<&str>) -> reqwest::header::HeaderMap {
+fn build_headers(
+    server: &McpServer,
+    secret_value: Option<&str>,
+    session_id: Option<&str>,
+) -> reqwest::header::HeaderMap {
     use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
     let mut headers = HeaderMap::new();
     headers.insert(
@@ -362,17 +366,28 @@ fn build_headers(server: &McpServer, secret_value: Option<&str>) -> reqwest::hea
             headers.insert(n, v);
         }
     }
+    if let Some(session_id) = session_id {
+        if let Ok(value) = HeaderValue::from_str(session_id) {
+            headers.insert("mcp-session-id", value);
+        }
+    }
     headers
+}
+
+struct RpcResponse {
+    result: Value,
+    session_id: Option<String>,
 }
 
 async fn rpc_call(
     http: &reqwest::Client,
     server: &McpServer,
     secret_value: Option<&str>,
+    session_id: Option<&str>,
     method: &str,
     params: Value,
     rpc_id: u64,
-) -> Result<Value, McpCommandError> {
+) -> Result<RpcResponse, McpCommandError> {
     let body = json!({
         "jsonrpc": "2.0",
         "id": rpc_id,
@@ -392,7 +407,7 @@ async fn rpc_call(
     );
     let response = http
         .post(&server.url)
-        .headers(build_headers(server, secret_value))
+        .headers(build_headers(server, secret_value, session_id))
         .json(&body)
         .send()
         .await
@@ -435,6 +450,7 @@ async fn rpc_call(
         .and_then(|v| v.to_str().ok())
         .map(|s| s.to_ascii_lowercase())
         .unwrap_or_default();
+    let response_session_id = extract_session_id(response.headers());
     if !status.is_success() {
         let body_text = response.text().await.unwrap_or_default();
         crate::logging::mcp_debug(
@@ -454,7 +470,11 @@ async fn rpc_call(
         });
     }
     if content_type.contains("text/event-stream") {
-        return read_sse_rpc_result(response, rpc_id, server, method).await;
+        let result = read_sse_rpc_result(response, rpc_id, server, method).await?;
+        return Ok(RpcResponse {
+            result,
+            session_id: response_session_id,
+        });
     }
     let response_body = response
         .text()
@@ -478,7 +498,19 @@ async fn rpc_call(
         serde_json::from_str(&response_body).map_err(|e| McpCommandError::Protocol {
             message: format!("invalid JSON response: {e}"),
         })?;
-    json_rpc_result(parsed, rpc_id)
+    let result = json_rpc_result(parsed, rpc_id)?;
+    Ok(RpcResponse {
+        result,
+        session_id: response_session_id,
+    })
+}
+
+fn extract_session_id(headers: &reqwest::header::HeaderMap) -> Option<String> {
+    headers
+        .get("mcp-session-id")
+        .and_then(|value| value.to_str().ok())
+        .filter(|value| value.bytes().all(|byte| (0x21..=0x7e).contains(&byte)))
+        .map(str::to_string)
 }
 
 fn json_rpc_result(parsed: Value, rpc_id: u64) -> Result<Value, McpCommandError> {
@@ -609,7 +641,7 @@ async fn initialize(
     http: &reqwest::Client,
     server: &McpServer,
     secret_value: Option<&str>,
-) -> Result<(), McpCommandError> {
+) -> Result<Option<String>, McpCommandError> {
     let params = json!({
         "protocolVersion": PROTOCOL_VERSION,
         "capabilities": {},
@@ -618,18 +650,19 @@ async fn initialize(
             "version": env!("CARGO_PKG_VERSION"),
         }
     });
-    rpc_call(http, server, secret_value, "initialize", params, 1).await?;
+    let response = rpc_call(http, server, secret_value, None, "initialize", params, 1).await?;
+    let session_id = response.session_id;
     // Send initialized notification (id-less per JSON-RPC notification)
     let _ = http
         .post(&server.url)
-        .headers(build_headers(server, secret_value))
+        .headers(build_headers(server, secret_value, session_id.as_deref()))
         .json(&json!({
             "jsonrpc": "2.0",
             "method": "notifications/initialized",
         }))
         .send()
         .await;
-    Ok(())
+    Ok(session_id)
 }
 
 async fn fetch_tools(
@@ -637,9 +670,18 @@ async fn fetch_tools(
     server: &McpServer,
     secret_value: Option<&str>,
 ) -> Result<Value, McpCommandError> {
-    initialize(http, server, secret_value).await?;
-    let result = rpc_call(http, server, secret_value, "tools/list", json!({}), 2).await?;
-    Ok(result)
+    let session_id = initialize(http, server, secret_value).await?;
+    let result = rpc_call(
+        http,
+        server,
+        secret_value,
+        session_id.as_deref(),
+        "tools/list",
+        json!({}),
+        2,
+    )
+    .await?;
+    Ok(result.result)
 }
 
 async fn call_tool(
@@ -649,12 +691,22 @@ async fn call_tool(
     tool_name: &str,
     arguments: Value,
 ) -> Result<Value, McpCommandError> {
-    initialize(http, server, secret_value).await?;
+    let session_id = initialize(http, server, secret_value).await?;
     let params = json!({
         "name": tool_name,
         "arguments": arguments,
     });
-    rpc_call(http, server, secret_value, "tools/call", params, 3).await
+    rpc_call(
+        http,
+        server,
+        secret_value,
+        session_id.as_deref(),
+        "tools/call",
+        params,
+        3,
+    )
+    .await
+    .map(|response| response.result)
 }
 
 fn http_client() -> Result<reqwest::Client, McpCommandError> {
@@ -1053,6 +1105,40 @@ mod tests {
             created_at: chrono_now(),
             updated_at: chrono_now(),
         }
+    }
+
+    #[test]
+    fn session_id_is_extracted_from_response_headers() {
+        let mut headers = reqwest::header::HeaderMap::new();
+        headers.insert(
+            "mcp-session-id",
+            reqwest::header::HeaderValue::from_static("session-abc123"),
+        );
+
+        assert_eq!(
+            extract_session_id(&headers),
+            Some("session-abc123".to_string())
+        );
+    }
+
+    #[test]
+    fn session_id_is_sent_on_follow_up_requests() {
+        let server = sample_server("mcp_test", "Example MCP");
+
+        let headers = build_headers(&server, Some("secret-token"), Some("session-abc123"));
+
+        assert_eq!(
+            headers
+                .get("mcp-session-id")
+                .and_then(|value| value.to_str().ok()),
+            Some("session-abc123")
+        );
+        assert_eq!(
+            headers
+                .get("authorization")
+                .and_then(|value| value.to_str().ok()),
+            Some("Bearer secret-token")
+        );
     }
 
     #[test]
