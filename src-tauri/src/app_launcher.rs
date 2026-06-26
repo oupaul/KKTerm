@@ -551,7 +551,86 @@ fn native_icon_data_url(path: &str) -> Option<String> {
     }
 }
 
-#[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
+// Resolve the themed icon for any path on Linux/BSD via GIO, then render it to
+// a PNG through gdk-pixbuf. Deliberately avoids GTK's main-thread-only
+// `IconTheme`: GIO, gdk-pixbuf and the freedesktop-icons resolver are all
+// thread-safe, so this is safe from the worker thread that runs `prepare_entry`.
+// Best-effort — any failure returns None and the caller falls back to the
+// generic icon.
+#[cfg(all(unix, not(target_os = "macos")))]
+fn native_icon_data_url(path: &str) -> Option<String> {
+    use base64::{Engine as _, engine::general_purpose::STANDARD};
+    use gio::prelude::*;
+
+    let info = gio::File::for_path(path)
+        .query_info(
+            "standard::icon",
+            gio::FileQueryInfoFlags::NONE,
+            gio::Cancellable::NONE,
+        )
+        .ok()?;
+    let icon_path = resolve_themed_icon_path(&info.icon()?)?;
+
+    // gdk-pixbuf handles both raster (PNG/XPM) and SVG icons via the system
+    // image loaders, scaling to a crisp 128px for the launcher grid.
+    let pixbuf = gdk_pixbuf::Pixbuf::from_file_at_size(&icon_path, 128, 128).ok()?;
+    let png = pixbuf.save_to_bufferv("png", &[]).ok()?;
+    if png.is_empty() {
+        return None;
+    }
+    Some(format!("data:image/png;base64,{}", STANDARD.encode(png)))
+}
+
+#[cfg(all(unix, not(target_os = "macos")))]
+fn resolve_themed_icon_path(icon: &gio::Icon) -> Option<std::path::PathBuf> {
+    use gio::prelude::*;
+    use glib::prelude::*;
+
+    // A FileIcon already points at a concrete file (thumbnails, or apps whose
+    // .desktop entry uses an absolute Icon= path).
+    if let Some(file_icon) = icon.downcast_ref::<gio::FileIcon>() {
+        return file_icon.file().path();
+    }
+
+    // A ThemedIcon yields candidate names to resolve against the active icon
+    // theme, most-specific first.
+    let themed = icon.downcast_ref::<gio::ThemedIcon>()?;
+    let theme = active_icon_theme_name();
+    for name in themed.names() {
+        let mut lookup = freedesktop_icons::lookup(name.as_str()).with_size(128);
+        if let Some(theme) = theme.as_deref() {
+            lookup = lookup.with_theme(theme);
+        }
+        if let Some(found) = lookup.with_cache().find() {
+            return Some(found);
+        }
+    }
+    None
+}
+
+// Best-effort read of the desktop's configured icon theme via GSettings. Absent
+// the GNOME schema (some KDE/minimal setups) we return None and let the resolver
+// fall back through hicolor.
+#[cfg(all(unix, not(target_os = "macos")))]
+fn active_icon_theme_name() -> Option<String> {
+    use gio::prelude::*;
+
+    let source = gio::SettingsSchemaSource::default()?;
+    source.lookup("org.gnome.desktop.interface", true)?;
+    let settings = gio::Settings::new("org.gnome.desktop.interface");
+    let name = settings.string("icon-theme").to_string();
+    if name.is_empty() {
+        None
+    } else {
+        Some(name)
+    }
+}
+
+#[cfg(not(any(
+    target_os = "windows",
+    target_os = "macos",
+    all(unix, not(target_os = "macos"))
+)))]
 fn native_icon_data_url(_path: &str) -> Option<String> {
     None
 }
