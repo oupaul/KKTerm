@@ -170,7 +170,9 @@ fn uninstall_chocolatey(
         tool_id: tool_id.into(),
         message: format!("choco uninstall {package_id}"),
     });
-    super::install::run_streamed_with_refreshed_path_public(
+    // Chocolatey requires Administrator; run elevated (one UAC prompt) so the
+    // uninstall actually has permission to modify C:\ProgramData\chocolatey.
+    super::install::run_streamed_elevated(
         "choco",
         &[
             "uninstall".into(),

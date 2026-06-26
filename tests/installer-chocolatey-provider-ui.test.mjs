@@ -32,6 +32,43 @@ test("provider selector offers Chocolatey when a recipe declares a Chocolatey pr
   );
 });
 
+test("not-installed Chocolatey dialog states the admin + machine-wide requirement", () => {
+  assert.match(
+    dialogSource,
+    /selectedProvider\.kind === "chocolatey"[\s\S]*installer\.dialog\.adminRequiredChocolatey/,
+    "The not-installed dialog should show the admin/UAC hint when the selected provider is Chocolatey.",
+  );
+});
+
+test("Chocolatey update is gated by an admin confirmation before elevating", () => {
+  assert.match(
+    dialogSource,
+    /function startUpdate\(\)[\s\S]*usesChocolatey[\s\S]*setUpdateConfirm\(true\)/,
+    "startUpdate should require confirmation for Chocolatey tools instead of elevating silently.",
+  );
+  assert.match(
+    dialogSource,
+    /updateConfirm \?[\s\S]*installer\.confirm\.adminChocolateyFooter/,
+    "The update confirmation should carry the Chocolatey admin footer.",
+  );
+});
+
+test("Chocolatey uninstall confirmation carries the admin footer", () => {
+  assert.match(
+    dialogSource,
+    /footer=\{\s*usesChocolatey\s*\?\s*t\("installer\.confirm\.adminChocolateyFooter"\)/,
+    "The uninstall confirmation footer should show the Chocolatey admin notice when the op runs through choco.",
+  );
+});
+
+test("Chocolatey provider predicate mirrors the Rust selection fallback", () => {
+  assert.match(
+    dialogSource,
+    /function recipeUsesChocolateyProvider\([\s\S]*chocolateyProvider\?\.kind === "chocolatey"[\s\S]*detected\["chocolatey"\]\?\.installed/,
+    "recipeUsesChocolateyProvider should fall back to choco once Chocolatey itself is installed.",
+  );
+});
+
 test("Chocolatey-backed plans depend on Chocolatey instead of the recipe's winget provider", () => {
   assert.match(
     dagSource,
