@@ -1,6 +1,6 @@
 import { ConnectionIcon } from "../modules/workspace/connections/ConnectionIcon";
 import type { TutorialHighlightRequest } from "../app/TutorialOverlay";
-import { connectionPasswordOwnerId, resolveSshSocksProxyRequest, workspaceKindLabel } from "../modules/workspace/connections/utils";
+import { connectionPasswordOwnerId, resolveSshCompression, resolveSshSocksProxyRequest, workspaceKindLabel } from "../modules/workspace/connections/utils";
 import { inspectActiveSshSystemContext } from "../modules/workspace/connections/terminal/TerminalWorkspace";
 import { readFromClipboard, writeToClipboard } from "../lib/clipboard";
 import {
@@ -1016,6 +1016,7 @@ export function AssistantPanel({
             keyPath: pane.connection.keyPath,
             proxyJump: pane.connection.proxyJump,
             ...resolveSshSocksProxyRequest(pane.connection),
+            sshCompression: resolveSshCompression(pane.connection, useWorkspaceStore.getState().sshSettings),
             authMethod: pane.connection.authMethod,
             secretOwnerId: connectionPasswordOwnerId(pane.connection),
             passphraseOwnerId: pane.connection.type === "ssh" ? pane.connection.id : undefined,

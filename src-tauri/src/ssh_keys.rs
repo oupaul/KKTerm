@@ -34,6 +34,7 @@ pub struct TransferSshPublicKeyRequest {
     pub(crate) ssh_socks_proxy: Option<String>,
     pub(crate) ssh_socks_proxy_username: Option<String>,
     pub(crate) ssh_socks_proxy_secret_owner_id: Option<String>,
+    pub(crate) ssh_compression: Option<bool>,
 }
 
 #[derive(Serialize)]
@@ -130,6 +131,7 @@ pub fn transfer_public_key(
         command: install_public_key_command(&public_key),
         timeout_seconds: Some(30),
         socks_proxy: request.ssh_socks_proxy,
+        compression: request.ssh_compression.unwrap_or(true),
     })?;
 
     Ok(TransferSshPublicKeyResult {

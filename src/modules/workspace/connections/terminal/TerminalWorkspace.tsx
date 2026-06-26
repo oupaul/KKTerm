@@ -1408,6 +1408,7 @@ function TmuxSessionTag({
 }
 
 function tmuxConnectionRequest(connection: Connection) {
+  const sshSettings = useWorkspaceStore.getState().sshSettings;
   return {
     host: connection.host,
     user: connection.user,
@@ -1415,6 +1416,7 @@ function tmuxConnectionRequest(connection: Connection) {
     keyPath: connection.keyPath,
     proxyJump: connection.proxyJump,
     ...resolveSshSocksProxyRequest(connection),
+    sshCompression: resolveSshCompression(connection, sshSettings),
     authMethod: connection.authMethod,
     secretOwnerId: connectionPasswordOwnerId(connection),
     passphraseOwnerId: connection.id,

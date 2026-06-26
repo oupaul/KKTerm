@@ -286,6 +286,7 @@ pub(crate) struct NativeSshCommandRequest {
     pub command: String,
     pub timeout_seconds: Option<u64>,
     pub socks_proxy: Option<String>,
+    pub compression: bool,
 }
 
 #[derive(Clone)]
@@ -825,7 +826,7 @@ async fn run_remote_command_async(request: NativeSshCommandRequest) -> Result<St
         known_hosts_path: request.known_hosts_path,
         x11_forwarding: None,
         socks_proxy: request.socks_proxy,
-        compression: true,
+        compression: request.compression,
         remote_forward_targets: None,
         bridge_tasks: None,
     })
@@ -920,7 +921,7 @@ async fn run_remote_command_async_capture(
         known_hosts_path: request.known_hosts_path,
         x11_forwarding: None,
         socks_proxy: request.socks_proxy,
-        compression: true,
+        compression: request.compression,
         remote_forward_targets: None,
         bridge_tasks: None,
     })
@@ -2410,6 +2411,18 @@ mod ssh_port_forward_tests {
     }
 }
 
+/// Effective SSH transport compression for a launch on the backend: the
+/// per-Connection override (`"off"`/`"fast"`) when set, otherwise the global SSH
+/// default. Returns `true` when zlib compression should be negotiated. Mirrors
+/// the frontend `resolveSshCompression` so backend-initiated channels (SFTP,
+/// exec commands) honor the same setting as terminal sessions.
+pub(crate) fn resolve_ssh_compression(
+    connection_value: Option<&str>,
+    default_value: &str,
+) -> bool {
+    !matches!(connection_value.unwrap_or(default_value).trim(), "off")
+}
+
 fn native_ssh_client_config(compression: bool) -> client::Config {
     client::Config {
         inactivity_timeout: None,
@@ -2867,7 +2880,7 @@ async fn run_playbook_async(
         known_hosts_path: request.known_hosts_path,
         x11_forwarding: None,
         socks_proxy: request.socks_proxy,
-        compression: true,
+        compression: request.compression,
         remote_forward_targets: None,
         bridge_tasks: None,
     })

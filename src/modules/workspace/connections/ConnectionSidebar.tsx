@@ -39,7 +39,7 @@ import {
   connectionRequestNeedsCredentialStoreUnlock,
   shouldDeleteSshSocksProxySecret,
 } from "./credentialUnlockPreflight";
-import { confirmTrustedSshHostKey, connectionPasswordOwnerId, connectionSshSocksProxyPasswordOwnerId, defaultPortForConnectionType, connectionTypeLabel, ftpPortForProtocolSelection, isRemoteDesktopConnectionType, localShellOptionsForPlatform, resolveSshSocksProxyRequest, uniqueRuntimeId, type LocalShellOption } from "./utils";
+import { confirmTrustedSshHostKey, connectionPasswordOwnerId, connectionSshSocksProxyPasswordOwnerId, defaultPortForConnectionType, connectionTypeLabel, ftpPortForProtocolSelection, isRemoteDesktopConnectionType, localShellOptionsForPlatform, resolveSshCompression, resolveSshSocksProxyRequest, uniqueRuntimeId, type LocalShellOption } from "./utils";
 import { RECENT_CONNECTION_LIMIT, loadCollapsedFolderIds, loadRecentConnectionIds, notifyConnectionTreeInvalidated, saveCollapsedFolderIds, saveRecentConnectionIds } from "./connectionSidebarState";
 import { collectConnectionFolderIds, countConnections, countFolders, filterConnectedConnections, filterConnectionTree, findConnectionInTree, flattenConnections, flattenFolders, visibleFlatConnections as flattenVisibleConnections, withLiveConnectionStatuses } from "./treeUtils";
 import { WorkspaceIcon } from "../workspaceIcons";
@@ -900,6 +900,7 @@ export function ConnectionSidebar({
           keyPath: connection.keyPath,
           proxyJump: connection.proxyJump,
           ...resolveSshSocksProxyRequest(connection),
+          sshCompression: resolveSshCompression(connection, sshSettings),
           authMethod: connection.authMethod,
           secretOwnerId: connectionPasswordOwnerId(connection),
         },
@@ -1052,6 +1053,7 @@ export function ConnectionSidebar({
           keyPath,
           proxyJump: connection.proxyJump,
           ...resolveSshSocksProxyRequest(connection),
+          sshCompression: resolveSshCompression(connection, sshSettings),
         },
       });
       setTransferSshPublicKeyDialog(null);

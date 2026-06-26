@@ -55,6 +55,7 @@ pub struct StartSftpSessionRequest {
     pub password: Option<String>,
     pub passphrase_owner_id: Option<String>,
     pub path: Option<String>,
+    pub ssh_compression: Option<bool>,
 }
 
 #[derive(Deserialize)]
@@ -324,6 +325,7 @@ impl SftpSessionManager {
         let user = request.user.clone();
         let port = request.port.unwrap_or(22);
         let socks_proxy = request.ssh_socks_proxy.clone();
+        let compression = request.ssh_compression.unwrap_or(true);
         let (ssh_session, sftp, listing) = runtime.block_on(async {
             let ssh_session = ssh::connect_verified_client(ssh::NativeSshConnectionRequest {
                 host,
@@ -333,7 +335,7 @@ impl SftpSessionManager {
                 known_hosts_path,
                 x11_forwarding: None,
                 socks_proxy,
-                compression: true,
+                compression,
                 remote_forward_targets: None,
                 bridge_tasks: None,
             })
@@ -2519,6 +2521,7 @@ mod tests {
             password: None,
             passphrase_owner_id: None,
             path: None,
+            ssh_compression: None,
         }
     }
 }

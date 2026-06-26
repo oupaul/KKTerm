@@ -156,6 +156,7 @@ pub struct SshExecSpec {
     pub known_hosts_path: PathBuf,
     pub socks_proxy: Option<String>,
     pub timeout_seconds: Option<u64>,
+    pub compression: bool,
 }
 
 /// The Phase 2 SSH transport. Holds pre-resolved per-host exec specs and runs
@@ -221,6 +222,7 @@ impl BatchTransport for SshTransport {
             command,
             timeout_seconds: spec.timeout_seconds,
             socks_proxy: spec.socks_proxy.clone(),
+            compression: spec.compression,
         };
         let streamed_output = Mutex::new(String::new());
         let capture_chunk = |chunk: &str| {
@@ -274,17 +276,42 @@ pub fn resolve_ssh_specs(
     timeout_seconds: u64,
 ) -> HashMap<String, SshExecSpec> {
     let mut specs = HashMap::new();
+    let default_compression = global_default_ssh_compression(conn);
     for host in hosts {
         if host.connection_type != "ssh" {
             continue;
         }
-        if let Some(spec) =
-            resolve_one_ssh_spec(conn, secrets, &known_hosts_path, host, timeout_seconds)
-        {
+        if let Some(spec) = resolve_one_ssh_spec(
+            conn,
+            secrets,
+            &known_hosts_path,
+            host,
+            timeout_seconds,
+            &default_compression,
+        ) {
             specs.insert(host.connection_id.clone(), spec);
         }
     }
     specs
+}
+
+/// Read the global SSH compression default (`"off"`/`"fast"`) from the settings
+/// blob so batch runs honor the same setting as interactive sessions. Falls back
+/// to `"fast"` when the settings row or field is absent.
+fn global_default_ssh_compression(conn: &SqliteConnection) -> String {
+    conn.query_row("SELECT value FROM settings WHERE key = 'ssh'", [], |row| {
+        row.get::<_, String>(0)
+    })
+    .optional()
+    .ok()
+    .flatten()
+    .and_then(|value| serde_json::from_str::<serde_json::Value>(&value).ok())
+    .and_then(|json| {
+        json.get("defaultSshCompression")
+            .and_then(|value| value.as_str())
+            .map(str::to_string)
+    })
+    .unwrap_or_else(|| "fast".to_string())
 }
 
 fn resolve_one_ssh_spec(
@@ -293,10 +320,11 @@ fn resolve_one_ssh_spec(
     known_hosts_path: &PathBuf,
     host: &ResolvedHost,
     timeout_seconds: u64,
+    default_compression: &str,
 ) -> Option<SshExecSpec> {
     let row = conn
         .query_row(
-            "SELECT host, username, port, key_path, auth_method, password_credential_id, ssh_socks_proxy
+            "SELECT host, username, port, key_path, auth_method, password_credential_id, ssh_socks_proxy, ssh_compression
              FROM connections WHERE id = ?",
             params![host.connection_id],
             |row| {
@@ -308,13 +336,23 @@ fn resolve_one_ssh_spec(
                     row.get::<_, String>(4)?,
                     row.get::<_, Option<String>>(5)?,
                     row.get::<_, Option<String>>(6)?,
+                    row.get::<_, Option<String>>(7)?,
                 ))
             },
         )
         .optional()
         .ok()
         .flatten()?;
-    let (hostname, username, port, key_path, auth_method, password_credential_id, socks_proxy) = row;
+    let (
+        hostname,
+        username,
+        port,
+        key_path,
+        auth_method,
+        password_credential_id,
+        socks_proxy,
+        ssh_compression,
+    ) = row;
 
     let key_path_present = key_path
         .as_deref()
@@ -344,6 +382,7 @@ fn resolve_one_ssh_spec(
         known_hosts_path: known_hosts_path.clone(),
         socks_proxy: socks_proxy.filter(|value| !value.trim().is_empty()),
         timeout_seconds: Some(timeout_seconds),
+        compression: ssh::resolve_ssh_compression(ssh_compression.as_deref(), default_compression),
     })
 }
 

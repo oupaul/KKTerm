@@ -115,6 +115,7 @@ pub struct TmuxConnectionRequest {
     pub auth_method: Option<String>,
     pub secret_owner_id: Option<String>,
     pub passphrase_owner_id: Option<String>,
+    pub ssh_compression: Option<bool>,
 }
 
 #[derive(Deserialize)]
@@ -1783,6 +1784,7 @@ fn run_ssh_command(
             command,
             timeout_seconds: timeout.map(|duration| duration.as_secs().max(1)),
             socks_proxy: terminal_request.ssh_socks_proxy.clone(),
+            compression: terminal_request.ssh_compression.unwrap_or(true),
         });
     }
 
@@ -1979,7 +1981,7 @@ fn terminal_request_for_tmux(request: &TmuxConnectionRequest) -> StartTerminalSe
         ssh_socks_proxy: request.ssh_socks_proxy.clone(),
         ssh_socks_proxy_username: request.ssh_socks_proxy_username.clone(),
         ssh_socks_proxy_secret_owner_id: request.ssh_socks_proxy_secret_owner_id.clone(),
-        ssh_compression: None,
+        ssh_compression: request.ssh_compression,
         auth_method: request.auth_method.clone(),
         secret_owner_id: request.secret_owner_id.clone(),
         passphrase_owner_id: request.passphrase_owner_id.clone(),

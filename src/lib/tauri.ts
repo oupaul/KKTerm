@@ -246,6 +246,7 @@ export interface StartSftpSessionRequest {
   password?: string;
   passphraseOwnerId?: string;
   path?: string;
+  sshCompression?: boolean;
 }
 
 export interface SftpDirectoryEntry {
@@ -1446,6 +1447,7 @@ type CommandMap = {
         sshSocksProxyUsername?: string;
         sshSocksProxySecretOwnerId?: string;
         sshSocksProxyInheritDefaults?: boolean;
+        sshCompression?: boolean;
       };
     };
     result: TransferSshPublicKeyResult;
@@ -1864,6 +1866,7 @@ type CommandMap = {
   sshSocksProxyUsername?: string;
   sshSocksProxySecretOwnerId?: string;
   sshSocksProxyInheritDefaults?: boolean;
+        sshCompression?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
         passphraseOwnerId?: string;
@@ -1883,6 +1886,7 @@ type CommandMap = {
   sshSocksProxyUsername?: string;
   sshSocksProxySecretOwnerId?: string;
   sshSocksProxyInheritDefaults?: boolean;
+        sshCompression?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
         passphraseOwnerId?: string;
@@ -1904,6 +1908,7 @@ type CommandMap = {
   sshSocksProxyUsername?: string;
   sshSocksProxySecretOwnerId?: string;
   sshSocksProxyInheritDefaults?: boolean;
+        sshCompression?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
         passphraseOwnerId?: string;
@@ -1925,6 +1930,7 @@ type CommandMap = {
   sshSocksProxyUsername?: string;
   sshSocksProxySecretOwnerId?: string;
   sshSocksProxyInheritDefaults?: boolean;
+        sshCompression?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
         passphraseOwnerId?: string;
@@ -1945,6 +1951,7 @@ type CommandMap = {
   sshSocksProxyUsername?: string;
   sshSocksProxySecretOwnerId?: string;
   sshSocksProxyInheritDefaults?: boolean;
+        sshCompression?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
         passphraseOwnerId?: string;
@@ -1966,6 +1973,7 @@ type CommandMap = {
   sshSocksProxyUsername?: string;
   sshSocksProxySecretOwnerId?: string;
   sshSocksProxyInheritDefaults?: boolean;
+        sshCompression?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
         passphraseOwnerId?: string;
@@ -2003,6 +2011,7 @@ type CommandMap = {
   sshSocksProxyUsername?: string;
   sshSocksProxySecretOwnerId?: string;
   sshSocksProxyInheritDefaults?: boolean;
+        sshCompression?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
         passphraseOwnerId?: string;
@@ -2022,6 +2031,7 @@ type CommandMap = {
         sshSocksProxyUsername?: string;
         sshSocksProxySecretOwnerId?: string;
         sshSocksProxyInheritDefaults?: boolean;
+        sshCompression?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
         passphraseOwnerId?: string;
@@ -2042,6 +2052,7 @@ type CommandMap = {
   sshSocksProxyUsername?: string;
   sshSocksProxySecretOwnerId?: string;
   sshSocksProxyInheritDefaults?: boolean;
+        sshCompression?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
         passphraseOwnerId?: string;
@@ -2061,6 +2072,7 @@ type CommandMap = {
         sshSocksProxyUsername?: string;
         sshSocksProxySecretOwnerId?: string;
         sshSocksProxyInheritDefaults?: boolean;
+        sshCompression?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
         passphraseOwnerId?: string;
@@ -2086,6 +2098,7 @@ type CommandMap = {
   sshSocksProxyUsername?: string;
   sshSocksProxySecretOwnerId?: string;
   sshSocksProxyInheritDefaults?: boolean;
+        sshCompression?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
         passphraseOwnerId?: string;
