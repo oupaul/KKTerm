@@ -54,7 +54,7 @@ Details values come from live local file metadata when available:
 
 App Launcher actions live in the right-click menu, not the default surface. Icon and list views show the icon and label; Details view also shows type, size, modified time, and the stored local path for comparison.
 
-- Launch: `appLauncher.launchApp`. Variants: `appLauncher.runNormal`, `appLauncher.runAdmin` (UAC elevation), `appLauncher.runAsUser` (run as a different user).
+- Launch: `appLauncher.launchApp`. Variants: `appLauncher.runNormal`, `appLauncher.runAdmin` (UAC elevation), `appLauncher.runAsUser` (run as a different user). `appLauncher.runAdmin` and `appLauncher.runAsUser` map to Windows shell verbs (`runas` / `runasuser`) and only appear on Windows; macOS and Linux show `appLauncher.runNormal` and `appLauncher.openFolder` only. A normal launch opens the entry through the host OS default handler (Windows `explorer.exe`, macOS/Linux the platform opener), so non-runnable files and folders never shell out to `explorer.exe` on macOS or Linux.
 - `appLauncher.openFolder` — open the containing local folder for files, shortcuts, scripts, and apps; for folder entries, open that folder.
 - `appLauncher.editApp` / `appLauncher.edit` — open the edit dialog.
 - `appLauncher.removeApp` / `appLauncher.remove` — delete. Status `appLauncher.removedStatus`.

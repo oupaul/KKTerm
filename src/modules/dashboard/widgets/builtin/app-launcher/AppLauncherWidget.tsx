@@ -29,6 +29,7 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { LegacyDialogActions } from "../../../../../app/ui/dialog";
 import { selectAppLauncherFile, selectAppLauncherFolder, isTauriRuntime } from "../../../../../lib/tauri";
+import { isWindowsPlatform } from "../../../../../lib/platform";
 import { useWorkspaceStore } from "../../../../../store";
 import { useDashboardStore } from "../../../state/dashboardStore";
 import type { DashboardWidgetInstance } from "../../../types";
@@ -1104,6 +1105,10 @@ function AppLauncherMenu({
 }) {
   const { t } = useTranslation();
   const runnable = state.prepared?.runnable ?? isRunnablePath(state.entry.path);
+  // "Run as administrator" (UAC) and "Run as a different user" map to Windows
+  // shell verbs (runas / runasuser) that have no macOS/Linux equivalent, so the
+  // backend rejects them off Windows. Only surface them on Windows.
+  const supportsElevatedLaunch = isWindowsPlatform();
   return (
     <div
       ref={menuRef}
@@ -1122,24 +1127,28 @@ function AppLauncherMenu({
           void onLaunch(state.entry, "normal");
         }}
       />
-      <MenuButton
-        disabled={!runnable}
-        icon={<Shield size={14} />}
-        label={t("appLauncher.runAdmin")}
-        onClick={() => {
-          onClose();
-          void onLaunch(state.entry, "admin");
-        }}
-      />
-      <MenuButton
-        disabled={!runnable}
-        icon={<UserRound size={14} />}
-        label={t("appLauncher.runAsUser")}
-        onClick={() => {
-          onClose();
-          void onLaunch(state.entry, "differentUser");
-        }}
-      />
+      {supportsElevatedLaunch ? (
+        <>
+          <MenuButton
+            disabled={!runnable}
+            icon={<Shield size={14} />}
+            label={t("appLauncher.runAdmin")}
+            onClick={() => {
+              onClose();
+              void onLaunch(state.entry, "admin");
+            }}
+          />
+          <MenuButton
+            disabled={!runnable}
+            icon={<UserRound size={14} />}
+            label={t("appLauncher.runAsUser")}
+            onClick={() => {
+              onClose();
+              void onLaunch(state.entry, "differentUser");
+            }}
+          />
+        </>
+      ) : null}
       <MenuButton
         icon={<FolderOpen size={14} />}
         label={t("appLauncher.openFolder")}
