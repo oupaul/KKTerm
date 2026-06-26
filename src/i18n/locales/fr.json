@@ -902,7 +902,7 @@
     },
     "quickLaunch": {
       "search": "Rechercher des outils…",
-      "openTerminal": "Ouvrir l'invite de commandes",
+      "openTerminal": "Ouvrir PowerShell en mode administrateur",
       "cli": "CLI",
       "launch": "Lancer",
       "noMatches": "Aucun outil ne correspond à votre recherche."

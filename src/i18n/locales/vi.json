@@ -902,7 +902,7 @@
     },
     "quickLaunch": {
       "search": "Tìm công cụ…",
-      "openTerminal": "Mở dấu nhắc lệnh",
+      "openTerminal": "Mở PowerShell nâng quyền",
       "cli": "CLI",
       "launch": "Khởi chạy",
       "noMatches": "Không có công cụ nào khớp với tìm kiếm của bạn."

@@ -902,7 +902,7 @@
     },
     "quickLaunch": {
       "search": "ค้นหาเครื่องมือ…",
-      "openTerminal": "เปิดพรอมต์คำสั่ง",
+      "openTerminal": "เปิด PowerShell แบบยกระดับสิทธิ์",
       "cli": "CLI",
       "launch": "เปิด",
       "noMatches": "ไม่มีเครื่องมือที่ตรงกับการค้นหา"

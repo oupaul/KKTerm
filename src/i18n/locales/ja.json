@@ -902,7 +902,7 @@
     },
     "quickLaunch": {
       "search": "ツールを検索…",
-      "openTerminal": "コマンド プロンプトを開く",
+      "openTerminal": "管理者として PowerShell を開く",
       "cli": "CLI",
       "launch": "起動",
       "noMatches": "検索に一致するツールはありません。"

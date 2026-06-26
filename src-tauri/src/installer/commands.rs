@@ -1101,27 +1101,19 @@ pub async fn installer_launch_quick_command(
     .map_err(|error| format!("failed to launch quick command: {error}"))?
 }
 
-/// Open a terminal with the refreshed PATH so a suite's command-line tools
-/// (e.g. Sysinternals `handle`, `psexec`, `sigcheck`) can be run with their
-/// own arguments. Only available for tools that expose a quick launcher.
+/// Open a standard elevated PowerShell prompt so a suite's command-line tools
+/// (e.g. Sysinternals `handle`, `psexec`, `sigcheck`) can be run with their own
+/// arguments. Only available for tools that expose a quick launcher.
 #[tauri::command]
 pub async fn installer_open_quick_launch_terminal(tool_id: String) -> Result<(), String> {
     tauri::async_runtime::spawn_blocking(move || {
         if quick_launch_affordance(&tool_id).is_empty() {
             return Err(format!("tool `{tool_id}` does not have a quick launcher"));
         }
-        let affordance = TerminalLaunchAffordance {
-            activate_ps1: None,
-            setup_lines: vec![],
-            prefill: String::new(),
-            hints: vec![
-                "Sysinternals command-line tools are on PATH — e.g. handle, psexec, sigcheck, strings, sdelete.".into(),
-            ],
-        };
-        spawn_terminal_launcher(&affordance)
+        spawn_elevated_powershell()
     })
     .await
-    .map_err(|error| format!("failed to open command prompt: {error}"))?
+    .map_err(|error| format!("failed to open elevated PowerShell: {error}"))?
 }
 
 fn service_affordance(tool_id: &str) -> Option<ManagedServiceAffordance> {
@@ -1716,15 +1708,52 @@ fn spawn_terminal_launcher(_affordance: &TerminalLaunchAffordance) -> Result<(),
     Err("terminal launcher is only available on Windows".into())
 }
 
+/// PowerShell that resolves a quick-launch executable against the refreshed
+/// PATH and starts it **elevated**. Many Sysinternals GUI tools embed a
+/// `requireAdministrator` manifest, so a plain CreateProcess fails with
+/// `os error 740` ("requires elevation"); launching every tool through
+/// `Start-Process -Verb RunAs` shows the normal UAC consent prompt instead.
+fn build_quick_launch_ps_command(command: &str) -> String {
+    let escaped = command.replace('\'', "''");
+    format!(
+        "$ErrorActionPreference = 'Stop'; \
+         $exe = (Get-Command '{escaped}' -ErrorAction SilentlyContinue).Source; \
+         if (-not $exe) {{ Write-Error 'not found on PATH'; exit 1 }}; \
+         Start-Process -FilePath $exe -Verb RunAs"
+    )
+}
+
+fn build_elevated_powershell_ps_command(refreshed_path: Option<&str>) -> String {
+    let mut elevated_parts = vec![
+        "$host.UI.RawUI.WindowTitle = 'KKTerm Sysinternals tools'".to_string(),
+        "Write-Host 'Sysinternals command-line tools are on PATH — e.g. handle, psexec, sigcheck, strings, sdelete.' -ForegroundColor Cyan".to_string(),
+    ];
+    if let Some(path) = refreshed_path {
+        elevated_parts.insert(0, format!("$env:PATH = {}", ps_single_quote(path)));
+    }
+    let elevated_command = ps_single_quote(&elevated_parts.join("; "));
+    format!(
+        "Start-Process -FilePath 'powershell' -ArgumentList @('-NoExit', '-NoLogo', '-ExecutionPolicy', 'Bypass', '-Command', {elevated_command}) -Verb RunAs"
+    )
+}
+
 #[cfg(target_os = "windows")]
 fn spawn_quick_launch(command: &str) -> Result<(), String> {
-    // GUI utilities create their own window, so launch detached and let the
-    // refreshed PATH resolve the executable name (Store/WinGet aliases or
-    // Chocolatey shims) without flashing a console.
-    let mut cmd = Command::new(command);
+    let ps = build_quick_launch_ps_command(command);
+    let mut cmd = Command::new("powershell");
+    cmd.args([
+        "-NoProfile",
+        "-NonInteractive",
+        "-WindowStyle",
+        "Hidden",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-Command",
+        &ps,
+    ]);
     use std::os::windows::process::CommandExt;
-    const DETACHED_PROCESS: u32 = 0x0000_0008;
-    cmd.creation_flags(DETACHED_PROCESS);
+    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+    cmd.creation_flags(CREATE_NO_WINDOW);
     if let Some(path) = super::install::refreshed_path_public() {
         cmd.env("PATH", path);
     }
@@ -1736,6 +1765,38 @@ fn spawn_quick_launch(command: &str) -> Result<(), String> {
 #[cfg(not(target_os = "windows"))]
 fn spawn_quick_launch(_command: &str) -> Result<(), String> {
     Err("quick launch is only available on Windows".into())
+}
+
+/// Open a standard elevated Windows PowerShell window so a suite's
+/// command-line tools (e.g. Sysinternals `handle`, `psexec`) can be run with
+/// their own arguments at admin integrity. The launcher process stays hidden
+/// and only relays the UAC consent prompt.
+#[cfg(target_os = "windows")]
+fn spawn_elevated_powershell() -> Result<(), String> {
+    let refreshed_path = super::install::refreshed_path_public();
+    let ps = build_elevated_powershell_ps_command(refreshed_path.as_deref());
+    let mut cmd = Command::new("powershell");
+    cmd.args([
+        "-NoProfile",
+        "-NonInteractive",
+        "-WindowStyle",
+        "Hidden",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-Command",
+        &ps,
+    ]);
+    use std::os::windows::process::CommandExt;
+    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+    cmd.creation_flags(CREATE_NO_WINDOW);
+    cmd.spawn()
+        .map_err(|error| format!("failed to open elevated PowerShell: {error}"))?;
+    Ok(())
+}
+
+#[cfg(not(target_os = "windows"))]
+fn spawn_elevated_powershell() -> Result<(), String> {
+    Err("elevated PowerShell is only available on Windows".into())
 }
 
 fn build_terminal_launcher_ps_command(affordance: &TerminalLaunchAffordance) -> String {
@@ -2168,6 +2229,23 @@ mod tests {
 
         // Tools without a curated launcher list return nothing.
         assert!(quick_launch_affordance("git").is_empty());
+    }
+
+    #[test]
+    fn quick_launch_runs_elevated_after_resolving_on_path() {
+        let command = build_quick_launch_ps_command("procexp.exe");
+        // Resolve the exe against the (refreshed) PATH, then elevate via RunAs.
+        assert!(command.contains("Get-Command 'procexp.exe'"));
+        assert!(command.contains("Start-Process -FilePath $exe -Verb RunAs"));
+    }
+
+    #[test]
+    fn quick_launch_terminal_forwards_refreshed_path_to_elevated_shell() {
+        let command = build_elevated_powershell_ps_command(Some("C:\\Tools;C:\\Sysinternals"));
+        assert!(command.contains("Start-Process -FilePath 'powershell'"));
+        assert!(command.contains("-Verb RunAs"));
+        assert!(command.contains("$env:PATH = ''C:\\Tools;C:\\Sysinternals''"));
+        assert!(command.contains("-NoExit"));
     }
 
     #[test]

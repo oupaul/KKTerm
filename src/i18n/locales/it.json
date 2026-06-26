@@ -902,7 +902,7 @@
     },
     "quickLaunch": {
       "search": "Cerca strumenti…",
-      "openTerminal": "Apri prompt dei comandi",
+      "openTerminal": "Apri PowerShell con privilegi elevati",
       "cli": "CLI",
       "launch": "Avvia",
       "noMatches": "Nessuno strumento corrisponde alla ricerca."

@@ -902,7 +902,7 @@
     },
     "quickLaunch": {
       "search": "搜索工具…",
-      "openTerminal": "打开命令提示符",
+      "openTerminal": "打开提升权限的 PowerShell",
       "cli": "CLI",
       "launch": "启动",
       "noMatches": "没有与搜索匹配的工具。"

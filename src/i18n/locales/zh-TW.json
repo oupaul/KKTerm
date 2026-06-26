@@ -902,7 +902,7 @@
     },
     "quickLaunch": {
       "search": "搜尋工具…",
-      "openTerminal": "開啟命令提示字元",
+      "openTerminal": "開啟以系統管理員身分執行的 PowerShell",
       "cli": "CLI",
       "launch": "啟動",
       "noMatches": "沒有符合搜尋的工具。"

@@ -902,7 +902,7 @@
     },
     "quickLaunch": {
       "search": "도구 검색…",
-      "openTerminal": "명령 프롬프트 열기",
+      "openTerminal": "관리자 권한 PowerShell 열기",
       "cli": "CLI",
       "launch": "실행",
       "noMatches": "검색과 일치하는 도구가 없습니다."

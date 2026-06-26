@@ -902,7 +902,7 @@
     },
     "quickLaunch": {
       "search": "Cari alat…",
-      "openTerminal": "Buka command prompt",
+      "openTerminal": "Buka PowerShell dengan hak akses tinggi",
       "cli": "CLI",
       "launch": "Jalankan",
       "noMatches": "Tidak ada alat yang cocok dengan pencarian Anda."

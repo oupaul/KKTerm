@@ -902,7 +902,7 @@
     },
     "quickLaunch": {
       "search": "Search tools…",
-      "openTerminal": "Open command prompt",
+      "openTerminal": "Open elevated PowerShell",
       "cli": "CLI",
       "launch": "Launch",
       "noMatches": "No tools match your search."
