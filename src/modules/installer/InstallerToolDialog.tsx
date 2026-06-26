@@ -37,6 +37,7 @@ import {
   recipeSupportsLatestVersion,
 } from "./latestSupport";
 import type {
+  DetectedState,
   InstallOptions,
   ManagedWebUiStatus,
   Provider,
@@ -112,8 +113,10 @@ function InstalledInfoBody({ recipe }: { recipe: Recipe }) {
   const [uninstallConfirm, setUninstallConfirm] = useState<null | {
     dependents: string[];
   }>(null);
+  const [updateConfirm, setUpdateConfirm] = useState(false);
 
   const isWsl = isWslFeature(recipe);
+  const usesChocolatey = recipeUsesChocolateyProvider(recipe, allDetected);
 
   const description =
     recipe.descriptionLocales?.[i18n.language] ?? recipe.descriptionEn;
@@ -199,6 +202,17 @@ function InstalledInfoBody({ recipe }: { recipe: Recipe }) {
 
   function startUpdate() {
     if (!catalog) return;
+    // Chocolatey upgrades run elevated (UAC) and machine-wide — confirm first
+    // so the admin requirement is explicit before the prompt appears.
+    if (usesChocolatey) {
+      setUpdateConfirm(true);
+      return;
+    }
+    runUpdate();
+  }
+
+  function runUpdate() {
+    setUpdateConfirm(false);
     openStepperDialog(recipe.id);
     beginInFlight(recipe.id, "install");
     void installRecipeAndWait(recipe.id, {})
@@ -631,14 +645,26 @@ function InstalledInfoBody({ recipe }: { recipe: Recipe }) {
               : undefined
           }
           footer={
-            uninstallConfirm.dependents.length > 0
-              ? t("installer.confirm.uninstallDependentsFooter")
-              : undefined
+            usesChocolatey
+              ? t("installer.confirm.adminChocolateyFooter")
+              : uninstallConfirm.dependents.length > 0
+                ? t("installer.confirm.uninstallDependentsFooter")
+                : undefined
           }
           confirmLabel={t("installer.confirm.uninstallConfirm")}
           tone="danger"
           onConfirm={() => void doUninstall()}
           onCancel={() => setUninstallConfirm(null)}
+        />
+      ) : null}
+      {updateConfirm ? (
+        <InstallerConfirmDialog
+          title={t("installer.confirm.updateTitle", { name: recipe.name })}
+          body={t("installer.dialog.adminRequiredChocolatey")}
+          footer={t("installer.confirm.adminChocolateyFooter")}
+          confirmLabel={t("installer.actions.update")}
+          onConfirm={() => runUpdate()}
+          onCancel={() => setUpdateConfirm(false)}
         />
       ) : null}
     </>
@@ -791,7 +817,13 @@ function NotInstalledInfoBody({ recipe }: { recipe: Recipe }) {
           <Row label={t("installer.dialog.provider")}>
             {providerSummary(selectedProvider)}
           </Row>
-          {installMode ? (
+          {selectedProvider.kind === "chocolatey" ? (
+            <Row label={t("installer.options.scope")}>
+              <span className="installer-tool-dialog__option-hint">
+                {t("installer.dialog.adminRequiredChocolatey")}
+              </span>
+            </Row>
+          ) : installMode ? (
             <Row label={t("installer.options.scope")}>
               {installModeLabel(installMode, t)}
             </Row>
@@ -1275,6 +1307,29 @@ function selectedProviderForRecipe(
     return recipe.chocolateyProvider;
   }
   return recipe.provider;
+}
+
+/// Whether an install/update/uninstall of this recipe will run through the
+/// Chocolatey provider — which the Rust side always runs elevated (one UAC
+/// prompt) and machine-wide. Mirrors `selected_install_provider` in
+/// `src-tauri/src/installer/install.rs`: explicit user choice, a primary
+/// chocolatey provider, or a chocolatey fallback once Chocolatey is installed.
+function recipeUsesChocolateyProvider(
+  recipe: Recipe,
+  detected: Record<string, DetectedState>,
+  options?: InstallOptions,
+): boolean {
+  if (
+    options?.provider === "chocolatey" &&
+    recipe.chocolateyProvider?.kind === "chocolatey"
+  ) {
+    return true;
+  }
+  if (recipe.provider.kind === "chocolatey") return true;
+  return (
+    recipe.chocolateyProvider?.kind === "chocolatey" &&
+    (detected["chocolatey"]?.installed ?? false)
+  );
 }
 
 function recipeSupportsScope(recipe: Recipe): boolean {

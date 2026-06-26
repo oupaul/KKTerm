@@ -1094,7 +1094,10 @@ fn install_chocolatey(
         message: format!("choco {verb} {package_id}"),
     });
     let args = chocolatey_install_args(package_id, options, verb);
-    run_streamed_with_refreshed_path_public("choco", &args, tool_id, cancel, emit)?;
+    // Chocolatey writes to C:\ProgramData\chocolatey and always requires
+    // Administrator. Run elevated so a UAC prompt is raised explicitly rather
+    // than letting the op silently fail under a non-elevated KKTerm.
+    run_streamed_elevated("choco", &args, tool_id, cancel, emit)?;
     Ok(None)
 }
 
@@ -1804,6 +1807,209 @@ pub fn refreshed_path_public() -> Option<String> {
     refreshed_path()
 }
 
+/// Run an admin-only command (Chocolatey) **elevated**, raising one UAC prompt
+/// via `Start-Process -Verb RunAs`. An elevated child launched from this
+/// non-elevated process cannot share stdout/stderr pipes across the UAC
+/// boundary, so the elevated command redirects its output to a temp log that we
+/// tail into the stepper. The app itself stays non-elevated.
+pub fn run_streamed_elevated(
+    program: &str,
+    args: &[String],
+    tool_id: &str,
+    cancel: Arc<AtomicBool>,
+    emit: &EventSink,
+) -> Result<(), String> {
+    run_streamed_elevated_impl(program, args, tool_id, cancel, emit)
+}
+
+/// Batch wrapper run by the elevated process. Because `Start-Process -Verb
+/// RunAs` rejects `-RedirectStandardOutput`, the elevated command must
+/// self-redirect; a `.cmd` file sidesteps PowerShell→ShellExecute quoting and
+/// returns the wrapped program's exit code as its own errorlevel.
+fn elevated_batch_contents(program: &str, args: &[String], log_path: &Path) -> String {
+    format!(
+        "@echo off\r\n\"{}\" {} > \"{}\" 2>&1\r\n",
+        program,
+        args.join(" "),
+        log_path.display()
+    )
+}
+
+/// Non-elevated launcher script: elevate the batch file, wait, and propagate
+/// its exit code. A declined UAC prompt throws, which we map to `1223`
+/// (`ERROR_CANCELLED`).
+fn elevated_powershell_script(batch_path: &Path) -> String {
+    format!(
+        "$ErrorActionPreference='Stop'; try {{ $p = Start-Process -FilePath {} -Verb RunAs -PassThru -Wait -WindowStyle Hidden; exit $p.ExitCode }} catch {{ exit 1223 }}",
+        powershell_single_quote(&batch_path.to_string_lossy())
+    )
+}
+
+/// Read complete log lines appended since the last drain. Holds back a trailing
+/// partial line until `finished` so a line being written isn't emitted twice.
+fn drain_elevated_log(path: &Path, emitted: &mut usize, finished: bool) -> Vec<String> {
+    let bytes = std::fs::read(path).unwrap_or_default();
+    let content = String::from_utf8_lossy(&bytes);
+    let all: Vec<&str> = content.lines().collect();
+    let mut end = all.len();
+    if !finished && end > 0 && !content.ends_with('\n') {
+        end -= 1;
+    }
+    if end <= *emitted {
+        return Vec::new();
+    }
+    let out = all[*emitted..end]
+        .iter()
+        .map(|line| line.trim_end_matches('\r').to_string())
+        .collect();
+    *emitted = end;
+    out
+}
+
+#[cfg(windows)]
+fn run_streamed_elevated_impl(
+    program: &str,
+    args: &[String],
+    tool_id: &str,
+    cancel: Arc<AtomicBool>,
+    emit: &EventSink,
+) -> Result<(), String> {
+    let started_at_log = Instant::now();
+    emit(ProgressEvent::Stdout {
+        tool_id: tool_id.into(),
+        step_id: None,
+        line: format!("$ {program} {} (elevated — UAC required)", args.join(" ")),
+    });
+
+    let dir = std::env::temp_dir().join("kkterm-installer-elevated");
+    std::fs::create_dir_all(&dir)
+        .map_err(|e| format!("failed to create elevated temp dir: {e}"))?;
+    let stamp = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
+    let safe_tool: String = tool_id
+        .chars()
+        .map(|c| if c.is_ascii_alphanumeric() { c } else { '_' })
+        .collect();
+    let log_path = dir.join(format!("{safe_tool}-{stamp}.log"));
+    let batch_path = dir.join(format!("{safe_tool}-{stamp}.cmd"));
+
+    std::fs::write(&batch_path, elevated_batch_contents(program, args, &log_path))
+        .map_err(|e| format!("failed to write elevated batch: {e}"))?;
+    std::fs::write(&log_path, b"").ok();
+
+    let script = elevated_powershell_script(&batch_path);
+    let mut command = Command::new("powershell");
+    command
+        .args(["-NoProfile", "-NonInteractive", "-Command", &script])
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .stdin(Stdio::null());
+    let mut child = no_window(&mut command).spawn().map_err(|e| {
+        let _ = std::fs::remove_file(&batch_path);
+        let _ = std::fs::remove_file(&log_path);
+        format!("failed to spawn elevated launcher: {e}")
+    })?;
+
+    let mut emitted = 0usize;
+    let started_at = Instant::now();
+    let mut last_output_at = Instant::now();
+    let mut next_heartbeat_at =
+        started_at + std::time::Duration::from_secs(HEARTBEAT_INTERVAL_SECS);
+
+    let result = loop {
+        for line in drain_elevated_log(&log_path, &mut emitted, false) {
+            emit(ProgressEvent::Stdout {
+                tool_id: tool_id.into(),
+                step_id: None,
+                line,
+            });
+            last_output_at = Instant::now();
+        }
+        if cancel.load(Ordering::Relaxed) {
+            // The elevated child runs in a separate security context and cannot
+            // be killed from here; we stop tailing and let it finish on its own.
+            let _ = child.kill();
+            let _ = child.wait();
+            break Err("cancelled".to_string());
+        }
+        if Instant::now() >= next_heartbeat_at {
+            let elapsed = started_at.elapsed().as_secs();
+            let silent = last_output_at.elapsed().as_secs();
+            emit(ProgressEvent::Stderr {
+                tool_id: tool_id.into(),
+                step_id: None,
+                line: format!(
+                    "[installer] still running (elevated): {elapsed}s elapsed, {silent}s since last output"
+                ),
+            });
+            next_heartbeat_at =
+                Instant::now() + std::time::Duration::from_secs(HEARTBEAT_INTERVAL_SECS);
+        }
+        match child.try_wait() {
+            Ok(Some(status)) => {
+                for line in drain_elevated_log(&log_path, &mut emitted, true) {
+                    emit(ProgressEvent::Stdout {
+                        tool_id: tool_id.into(),
+                        step_id: None,
+                        line,
+                    });
+                }
+                let code = status.code().unwrap_or(-1);
+                let elapsed = started_at.elapsed().as_secs();
+                if code == 0 {
+                    emit(ProgressEvent::Stdout {
+                        tool_id: tool_id.into(),
+                        step_id: None,
+                        line: format!("[installer] `{program}` exited 0 after {elapsed}s"),
+                    });
+                    break Ok(());
+                }
+                let hint = if code == 1223 {
+                    " (Administrator elevation was declined)"
+                } else {
+                    ""
+                };
+                emit(ProgressEvent::Stderr {
+                    tool_id: tool_id.into(),
+                    step_id: None,
+                    line: format!("[installer] `{program}` exited {code}{hint} after {elapsed}s"),
+                });
+                break Err(format!("elevated `{program}` exited with status {code}{hint}"));
+            }
+            Ok(None) => std::thread::sleep(std::time::Duration::from_millis(150)),
+            Err(e) => break Err(format!("wait on elevated launcher failed: {e}")),
+        }
+    };
+
+    let _ = std::fs::remove_file(&batch_path);
+    let _ = std::fs::remove_file(&log_path);
+    crate::logging::installer_helper_debug(
+        "process.elevated.exit",
+        &json!({
+            "toolId": tool_id,
+            "program": program,
+            "elapsedMs": started_at_log.elapsed().as_millis(),
+            "ok": result.is_ok(),
+        }),
+    );
+    result
+}
+
+#[cfg(not(windows))]
+fn run_streamed_elevated_impl(
+    program: &str,
+    _args: &[String],
+    _tool_id: &str,
+    _cancel: Arc<AtomicBool>,
+    _emit: &EventSink,
+) -> Result<(), String> {
+    Err(format!(
+        "elevated `{program}` execution is only supported on Windows"
+    ))
+}
+
 fn run_streamed(
     program: &str,
     args: &[String],
@@ -2345,6 +2551,60 @@ mod tests {
     fn glob_exact() {
         assert!(glob_match("nssm.zip", "nssm.zip"));
         assert!(!glob_match("nssm.zip", "nssm-2.zip"));
+    }
+
+    #[test]
+    fn elevated_powershell_script_requests_runas_and_propagates_exit() {
+        let script = elevated_powershell_script(Path::new(r"C:\tmp\choco.cmd"));
+        assert!(script.contains("-Verb RunAs"), "must elevate: {script}");
+        assert!(
+            script.contains("exit $p.ExitCode"),
+            "must propagate exit code: {script}"
+        );
+        assert!(
+            script.contains(r"'C:\tmp\choco.cmd'"),
+            "must launch the batch wrapper: {script}"
+        );
+        // A declined UAC prompt throws; we map it to ERROR_CANCELLED (1223).
+        assert!(script.contains("exit 1223"), "must map declined UAC: {script}");
+    }
+
+    #[test]
+    fn elevated_batch_redirects_choco_output_to_log() {
+        let batch = elevated_batch_contents(
+            "choco",
+            &["upgrade".into(), "chocolatey".into(), "-y".into()],
+            Path::new(r"C:\tmp\out.log"),
+        );
+        assert!(
+            batch.contains(r#""choco" upgrade chocolatey -y > "C:\tmp\out.log" 2>&1"#),
+            "batch must run choco and redirect to the log: {batch}"
+        );
+    }
+
+    #[test]
+    fn drain_elevated_log_holds_back_partial_trailing_line() {
+        let dir = std::env::temp_dir().join(format!(
+            "kkterm-drain-test-{}",
+            std::process::id()
+        ));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("log.txt");
+
+        std::fs::write(&path, b"line one\npartial").unwrap();
+        let mut emitted = 0usize;
+        // Mid-stream: "partial" (no trailing newline) is held back.
+        assert_eq!(drain_elevated_log(&path, &mut emitted, false), vec!["line one"]);
+
+        std::fs::write(&path, b"line one\npartial done\n").unwrap();
+        assert_eq!(
+            drain_elevated_log(&path, &mut emitted, false),
+            vec!["partial done"]
+        );
+        // No new complete lines → nothing re-emitted.
+        assert!(drain_elevated_log(&path, &mut emitted, true).is_empty());
+
+        std::fs::remove_dir_all(&dir).ok();
     }
 
     #[test]
