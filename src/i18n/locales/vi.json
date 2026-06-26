@@ -798,6 +798,7 @@
       "development": "Phát triển",
       "windowsPowerUser": "Người dùng Windows nâng cao",
       "remoteAccess": "Truy cập từ xa",
+      "packageManagers": "Trình quản lý gói",
       "utilities": "Tiện ích"
     },
     "tile": {
@@ -886,6 +887,7 @@
       "runtimeStatus": "Trạng thái",
       "serviceStartup": "Khởi động",
       "runHints": "Mẹo chạy",
+      "quickLaunch": "Khởi chạy nhanh",
       "prerequisites": "Điều kiện tiên quyết",
       "prereqInstalled": "Đã cài đặt",
       "prereqMissing": "Thiếu",

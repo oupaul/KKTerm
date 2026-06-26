@@ -798,6 +798,7 @@
       "development": "開發",
       "windowsPowerUser": "Windows 進階使用者",
       "remoteAccess": "遠端存取",
+      "packageManagers": "套件管理員",
       "utilities": "公用程式"
     },
     "tile": {
@@ -886,6 +887,7 @@
       "runtimeStatus": "狀態",
       "serviceStartup": "啟動類型",
       "runHints": "執行提示",
+      "quickLaunch": "快速啟動",
       "prerequisites": "必要條件",
       "prereqInstalled": "已安裝",
       "prereqMissing": "缺少",

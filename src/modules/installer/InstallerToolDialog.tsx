@@ -40,6 +40,7 @@ import type {
   InstallOptions,
   ManagedWebUiStatus,
   Provider,
+  QuickLaunchEntry,
   Recipe,
   RecipeOption,
 } from "./types";
@@ -132,6 +133,25 @@ function InstalledInfoBody({ recipe }: { recipe: Recipe }) {
     null,
   );
   const statusRefreshInFlight = useRef(false);
+  const [quickLaunch, setQuickLaunch] = useState<QuickLaunchEntry[]>([]);
+
+  useEffect(() => {
+    if (!isTauriRuntime()) {
+      setQuickLaunch([]);
+      return;
+    }
+    let cancelled = false;
+    void invokeCommand("installer_list_quick_launch", { toolId: recipe.id })
+      .then((entries) => {
+        if (!cancelled) setQuickLaunch(entries);
+      })
+      .catch(() => {
+        if (!cancelled) setQuickLaunch([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [recipe.id]);
 
   useEffect(() => {
     if (!hasWebUi || !isTauriRuntime()) {
@@ -274,6 +294,19 @@ function InstalledInfoBody({ recipe }: { recipe: Recipe }) {
     }
   }
 
+  async function handleQuickLaunch(command: string) {
+    if (!isTauriRuntime()) return;
+    try {
+      await invokeCommand("installer_launch_quick_command", {
+        toolId: recipe.id,
+        command,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      showStatusBarNotice(message, { tone: "error" });
+    }
+  }
+
   async function handleAddToWorkspace() {
     if (!workspaceSpec || !isTauriRuntime()) return;
     try {
@@ -391,6 +424,25 @@ function InstalledInfoBody({ recipe }: { recipe: Recipe }) {
             </Row>
           ) : null}
         </dl>
+        {quickLaunch.length > 0 ? (
+          <div className="installer-tool-dialog__quick-launch">
+            <span className="installer-tool-dialog__quick-launch-label">
+              {t("installer.dialog.quickLaunch")}
+            </span>
+            <div className="installer-tool-dialog__quick-launch-buttons">
+              {quickLaunch.map((entry) => (
+                <button
+                  key={entry.command}
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => void handleQuickLaunch(entry.command)}
+                >
+                  {entry.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
         {supportsLatestVersion ? (
           <label className="installer-tool-dialog__pin">
             <span>{t("installer.options.pinVersion")}</span>

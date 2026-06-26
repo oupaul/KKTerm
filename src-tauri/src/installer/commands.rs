@@ -964,6 +964,71 @@ pub async fn installer_open_terminal_launcher(tool_id: String) -> Result<(), Str
     .map_err(|error| format!("failed to open terminal launcher: {error}"))?
 }
 
+/// One launchable command exposed in an installed tool's dialog. Used by tool
+/// suites — like Sysinternals — that ship several standalone GUI utilities a
+/// user might want to start directly instead of from a terminal.
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct QuickLaunchEntry {
+    /// Executable name resolved against the refreshed Windows PATH, e.g.
+    /// `procexp.exe`. The closed per-tool allow-list below is the only set of
+    /// values `installer_launch_quick_command` will spawn.
+    pub command: String,
+    /// Human-facing tool name shown on the launch button, e.g. "Process Explorer".
+    pub label: String,
+}
+
+/// Curated quick-launch entries for installed tool suites. Sysinternals ships
+/// many GUI utilities that land on PATH after install (WinGet/Store app
+/// execution aliases or Chocolatey shims), so they can be started by name with
+/// the refreshed PATH. Returns an empty list for tools without launchers.
+fn quick_launch_affordance(tool_id: &str) -> Vec<QuickLaunchEntry> {
+    fn entry(command: &str, label: &str) -> QuickLaunchEntry {
+        QuickLaunchEntry {
+            command: command.into(),
+            label: label.into(),
+        }
+    }
+    match tool_id {
+        "sysinternals-suite" => vec![
+            entry("procexp.exe", "Process Explorer"),
+            entry("procmon.exe", "Process Monitor"),
+            entry("autoruns.exe", "Autoruns"),
+            entry("tcpview.exe", "TCPView"),
+            entry("zoomit.exe", "ZoomIt"),
+        ],
+        _ => vec![],
+    }
+}
+
+#[tauri::command]
+pub async fn installer_list_quick_launch(
+    tool_id: String,
+) -> Result<Vec<QuickLaunchEntry>, String> {
+    Ok(quick_launch_affordance(&tool_id))
+}
+
+#[tauri::command]
+pub async fn installer_launch_quick_command(
+    tool_id: String,
+    command: String,
+) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let allowed = quick_launch_affordance(&tool_id);
+        if !allowed
+            .iter()
+            .any(|entry| entry.command.eq_ignore_ascii_case(&command))
+        {
+            return Err(format!(
+                "`{command}` is not a known quick-launch command for `{tool_id}`"
+            ));
+        }
+        spawn_quick_launch(&command)
+    })
+    .await
+    .map_err(|error| format!("failed to launch quick command: {error}"))?
+}
+
 fn service_affordance(tool_id: &str) -> Option<ManagedServiceAffordance> {
     match tool_id {
         "n8n" => Some(ManagedServiceAffordance {
@@ -1556,6 +1621,28 @@ fn spawn_terminal_launcher(_affordance: &TerminalLaunchAffordance) -> Result<(),
     Err("terminal launcher is only available on Windows".into())
 }
 
+#[cfg(target_os = "windows")]
+fn spawn_quick_launch(command: &str) -> Result<(), String> {
+    // GUI utilities create their own window, so launch detached and let the
+    // refreshed PATH resolve the executable name (Store/WinGet aliases or
+    // Chocolatey shims) without flashing a console.
+    let mut cmd = Command::new(command);
+    use std::os::windows::process::CommandExt;
+    const DETACHED_PROCESS: u32 = 0x0000_0008;
+    cmd.creation_flags(DETACHED_PROCESS);
+    if let Some(path) = super::install::refreshed_path_public() {
+        cmd.env("PATH", path);
+    }
+    cmd.spawn()
+        .map_err(|error| format!("failed to launch `{command}`: {error}"))?;
+    Ok(())
+}
+
+#[cfg(not(target_os = "windows"))]
+fn spawn_quick_launch(_command: &str) -> Result<(), String> {
+    Err("quick launch is only available on Windows".into())
+}
+
 fn build_terminal_launcher_ps_command(affordance: &TerminalLaunchAffordance) -> String {
     let mut parts: Vec<String> = vec![
         "$host.UI.RawUI.WindowTitle = 'KKTerm terminal'".into(),
@@ -1955,6 +2042,21 @@ mod tests {
                 .any(|hint| hint.starts_with("openclaw onboard --install-daemon")),
             "OpenClaw launcher should point users to onboarding"
         );
+    }
+
+    #[test]
+    fn sysinternals_quick_launch_exposes_process_explorer() {
+        let entries = quick_launch_affordance("sysinternals-suite");
+        assert!(
+            entries
+                .iter()
+                .any(|entry| entry.command.eq_ignore_ascii_case("procexp.exe")),
+            "Sysinternals quick launch should offer Process Explorer (procexp.exe)"
+        );
+        // Every entry carries a human-facing label for its button.
+        assert!(entries.iter().all(|entry| !entry.label.is_empty()));
+        // Tools without a curated launcher list return nothing.
+        assert!(quick_launch_affordance("git").is_empty());
     }
 
     #[test]

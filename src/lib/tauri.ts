@@ -2798,6 +2798,14 @@ type CommandMap = {
     args: { toolId: string };
     result: void;
   };
+  installer_list_quick_launch: {
+    args: { toolId: string };
+    result: import("../modules/installer/types").QuickLaunchEntry[];
+  };
+  installer_launch_quick_command: {
+    args: { toolId: string; command: string };
+    result: void;
+  };
   installer_get_web_ui_status: {
     args: { toolId: string };
     result: import("../modules/installer/types").ManagedWebUiStatus;

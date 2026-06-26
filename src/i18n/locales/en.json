@@ -798,6 +798,7 @@
       "development": "Development",
       "windowsPowerUser": "Windows Power User",
       "remoteAccess": "Remote Access",
+      "packageManagers": "Package Managers",
       "utilities": "Utilities"
     },
     "tile": {
@@ -886,6 +887,7 @@
       "runtimeStatus": "Status",
       "serviceStartup": "Startup",
       "runHints": "Run tips",
+      "quickLaunch": "Quick launch",
       "prerequisites": "Prerequisites",
       "prereqInstalled": "Installed",
       "prereqMissing": "Missing",

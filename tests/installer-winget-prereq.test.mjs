@@ -6,11 +6,11 @@ const catalog = JSON.parse(
   await readFile(new URL("../installer/catalog.v1.json", import.meta.url), "utf8"),
 );
 
-test("winget is an Essentials tool with a web installer", () => {
+test("winget is a Package Managers tool with a web installer", () => {
   const winget = catalog.recipes.find((recipe) => recipe.id === "winget");
 
   assert.ok(winget, "catalog should include winget");
-  assert.equal(winget.category, "essentials");
+  assert.equal(winget.category, "package-managers");
   assert.equal(winget.provider.kind, "downloadInstaller");
   assert.match(winget.provider.url, /github\.com\/microsoft\/winget-cli/);
 });

@@ -798,6 +798,7 @@
       "development": "Développement",
       "windowsPowerUser": "Utilisateur avancé Windows",
       "remoteAccess": "Accès distant",
+      "packageManagers": "Gestionnaires de paquets",
       "utilities": "Utilitaires"
     },
     "tile": {
@@ -886,6 +887,7 @@
       "runtimeStatus": "Statut",
       "serviceStartup": "Démarrage",
       "runHints": "Conseils d'exécution",
+      "quickLaunch": "Lancement rapide",
       "prerequisites": "Prérequis",
       "prereqInstalled": "Installé",
       "prereqMissing": "Manquant",

@@ -798,6 +798,7 @@
       "development": "개발",
       "windowsPowerUser": "Windows 고급 사용자",
       "remoteAccess": "원격 액세스",
+      "packageManagers": "패키지 관리자",
       "utilities": "유틸리티"
     },
     "tile": {
@@ -886,6 +887,7 @@
       "runtimeStatus": "상태",
       "serviceStartup": "시작 유형",
       "runHints": "실행 팁",
+      "quickLaunch": "빠른 실행",
       "prerequisites": "필수 구성 요소",
       "prereqInstalled": "설치됨",
       "prereqMissing": "누락됨",

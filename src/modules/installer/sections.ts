@@ -8,7 +8,7 @@
 // Each section also carries a lucide glyph and a CSS tint variable (defined in
 // src/styles/colorSchemes.css) so the rail rows match the house-style mockup.
 
-import { Bot, Box, Code2, Cpu, Globe, Wrench, Zap } from "lucide-react";
+import { Bot, Box, Boxes, Code2, Cpu, Globe, Wrench, Zap } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 export interface InstallerSection {
@@ -30,7 +30,7 @@ export const INSTALLER_CATEGORY_SECTIONS: InstallerSection[] = [
   {
     id: "essentials",
     titleKey: "installer.section.essentials",
-    ids: ["winget", "node-bundle", "python-bundle", "git"],
+    ids: ["node-bundle", "python-bundle", "git"],
     Icon: Box,
     tintVar: "--installer-tint-essentials",
   },
@@ -60,7 +60,7 @@ export const INSTALLER_CATEGORY_SECTIONS: InstallerSection[] = [
   {
     id: "development",
     titleKey: "installer.section.development",
-    ids: ["vscode", "cursor", "docker-desktop", "bruno", "wsl", "rustup"],
+    ids: ["vscode", "cursor", "docker-desktop", "bruno", "wsl", "rustup", "bun"],
     Icon: Code2,
     tintVar: "--installer-tint-development",
   },
@@ -68,7 +68,6 @@ export const INSTALLER_CATEGORY_SECTIONS: InstallerSection[] = [
     id: "windowsPowerUser",
     titleKey: "installer.section.windowsPowerUser",
     ids: [
-      "chocolatey",
       "powershell-7",
       "psmux",
       "powertoys",
@@ -85,6 +84,13 @@ export const INSTALLER_CATEGORY_SECTIONS: InstallerSection[] = [
     ids: ["tailscale", "rustdesk"],
     Icon: Globe,
     tintVar: "--installer-tint-remote",
+  },
+  {
+    id: "packageManagers",
+    titleKey: "installer.section.packageManagers",
+    ids: ["winget", "chocolatey"],
+    Icon: Boxes,
+    tintVar: "--installer-tint-package-managers",
   },
   {
     id: "utilities",

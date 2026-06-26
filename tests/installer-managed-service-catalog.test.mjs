@@ -73,11 +73,11 @@ test("Oh My Posh is visible in the Install Helper Utilities section", async () =
   );
 });
 
-test("Chocolatey is a Windows Power User tool installed via winget", () => {
+test("Chocolatey is a Package Managers tool installed via winget", () => {
   const chocolatey = byId.get("chocolatey");
 
   assert.ok(chocolatey, "Chocolatey should be present in the installer catalog");
-  assert.equal(chocolatey.category, "windows-power-user");
+  assert.equal(chocolatey.category, "package-managers");
   assert.deepEqual(chocolatey.provider, {
     kind: "winget",
     id: "Chocolatey.Chocolatey",
@@ -120,7 +120,7 @@ test("PowerShell 7 detection covers versioned ARP display names", () => {
   );
 });
 
-test("Chocolatey is visible in the Install Helper Windows Power User section", async () => {
+test("winget and Chocolatey live in the Package Managers section above Utilities", async () => {
   const source = await readFile(
     new URL("../src/modules/installer/sections.ts", import.meta.url),
     "utf8",
@@ -128,8 +128,42 @@ test("Chocolatey is visible in the Install Helper Windows Power User section", a
 
   assert.match(
     source,
-    /titleKey:\s*"installer\.section\.windowsPowerUser"[\s\S]*ids:\s*\[[^\]]*"chocolatey"/,
-    "Chocolatey should be listed in the visible Windows Power User section",
+    /titleKey:\s*"installer\.section\.packageManagers"[\s\S]*ids:\s*\[[^\]]*"winget"[^\]]*"chocolatey"/,
+    "winget and Chocolatey should be listed in the Package Managers section",
+  );
+  // The Package Managers section must appear before Utilities in display order.
+  assert.ok(
+    source.indexOf('"installer.section.packageManagers"') <
+      source.indexOf('"installer.section.utilities"'),
+    "Package Managers should be ordered above Utilities",
+  );
+});
+
+test("Bun is visible in the Install Helper Development section", async () => {
+  const source = await readFile(
+    new URL("../src/modules/installer/sections.ts", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(
+    source,
+    /titleKey:\s*"installer\.section\.development"[\s\S]*ids:\s*\[[^\]]*"bun"/,
+    "Bun should be listed in the visible Development section",
+  );
+});
+
+test("Bun catalog entry offers winget, Chocolatey, and GitHub-release sources", () => {
+  const bun = byId.get("bun");
+
+  assert.ok(bun, "Bun should be present in the installer catalog");
+  assert.equal(bun.category, "development");
+  assert.deepEqual(bun.provider, { kind: "winget", id: "Oven-sh.Bun" });
+  assert.deepEqual(bun.chocolateyProvider, { kind: "chocolatey", id: "bun" });
+  assert.equal(bun.downloadProvider?.kind, "githubRelease");
+  assert.equal(bun.downloadProvider?.repo, "oven-sh/bun");
+  assert.ok(
+    bun.options?.includes("provider"),
+    "Bun should expose the provider selector for its alternate sources",
   );
 });
 

@@ -80,6 +80,7 @@ const RECIPE_ICON_URLS: Record<string, string> = {
   coreutils: defaultIcon,
   opencode,
   rustup: rust,
+  bun: defaultIcon,
   "codex-desktop": codex,
   "claude-desktop": anthropic,
   "hermes-agent": hermesAgent,

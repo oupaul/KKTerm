@@ -95,6 +95,38 @@ Steps 1 and 2 are mandatory and independent; step 3 is cosmetic. The
 manual chapter `docs/manual/18-installer.md` lists tools for end users
 and should be updated to match when the user-visible set changes.
 
+## Finding all install sources for a recipe
+
+When adding a package, look for **every** source we can support so users
+get a primary provider plus fallbacks (the provider selector — option
+`provider` — surfaces `downloadProvider` and `chocolateyProvider`
+alternatives). Check, in this order, and wire up whichever exist:
+
+1. **winget** (`provider: { kind: "winget", id }`) — the default for
+   most Windows tools. Find the id at <https://winstall.app/> or
+   `winget search <name>` / the `microsoft/winget-pkgs` manifests. Prefer
+   the publisher id (e.g. `Oven-sh.Bun`) over a Store id.
+2. **Chocolatey** (`chocolateyProvider: { kind: "chocolatey", id }`) —
+   verify the package exists and is trusted at
+   <https://community.chocolatey.org/packages>. Only add ids that resolve
+   to the same tool (e.g. `bun`).
+3. **Direct download / GitHub release** (`downloadProvider`):
+   - A vendor `.exe`/`.msi`/`.msix` with a stable URL → `downloadInstaller`
+     (add `arm64Url` / `arm64FileName` when a native ARM64 asset exists).
+   - A portable archive published on GitHub releases → `githubRelease`
+     with `assetPattern`, `layout` (`zip` / `exeInstaller` / `msi`), and
+     an optional `pathSubdir` pointing at the nested executable directory
+     (supports a `{tag}` placeholder).
+
+Worked example — **Bun** (`development` section) exposes all three:
+winget `Oven-sh.Bun`, Chocolatey `bun`, and a `githubRelease` fallback
+(`oven-sh/bun`, asset `bun-windows-x64.zip`, layout `zip`, `pathSubdir`
+`bun-windows-x64` where `bun.exe` lives). Bun has no standalone `.exe`
+installer and no native Windows-on-Arm build, so there is no
+`downloadInstaller` and no `arm64Url` — record "source not available"
+rather than inventing an unstable URL. Tools without a verified
+Chocolatey package or portable archive simply ship winget-only.
+
 ## What was removed
 
 - `src-tauri/src/installer/trust.rs` (Ed25519 / minisign verification).

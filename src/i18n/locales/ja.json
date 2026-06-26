@@ -798,6 +798,7 @@
       "development": "開発",
       "windowsPowerUser": "Windows パワー ユーザー",
       "remoteAccess": "リモート アクセス",
+      "packageManagers": "パッケージ マネージャー",
       "utilities": "ユーティリティ"
     },
     "tile": {
@@ -886,6 +887,7 @@
       "runtimeStatus": "ステータス",
       "serviceStartup": "スタートアップ",
       "runHints": "実行のヒント",
+      "quickLaunch": "クイック起動",
       "prerequisites": "前提条件",
       "prereqInstalled": "インストール済み",
       "prereqMissing": "不足",

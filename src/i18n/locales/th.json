@@ -798,6 +798,7 @@
       "development": "การพัฒนา",
       "windowsPowerUser": "ผู้ใช้ Windows ขั้นสูง",
       "remoteAccess": "การเข้าถึงระยะไกล",
+      "packageManagers": "ตัวจัดการแพ็กเกจ",
       "utilities": "ยูทิลิตี"
     },
     "tile": {
@@ -886,6 +887,7 @@
       "runtimeStatus": "สถานะ",
       "serviceStartup": "การเริ่มต้น",
       "runHints": "เคล็ดลับการใช้งาน",
+      "quickLaunch": "เปิดใช้ด่วน",
       "prerequisites": "ข้อกำหนดเบื้องต้น",
       "prereqInstalled": "ติดตั้งแล้ว",
       "prereqMissing": "ขาดหาย",

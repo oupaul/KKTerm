@@ -623,6 +623,24 @@
   color: var(--amber);
 }
 
+.installer-tool-dialog__quick-launch {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.installer-tool-dialog__quick-launch-label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.installer-tool-dialog__quick-launch-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
 .installer-tool-dialog__pin {
   display: flex;
   align-items: center;

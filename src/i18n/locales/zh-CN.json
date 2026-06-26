@@ -798,6 +798,7 @@
       "development": "开发",
       "windowsPowerUser": "Windows 高级用户",
       "remoteAccess": "远程访问",
+      "packageManagers": "包管理器",
       "utilities": "实用工具"
     },
     "tile": {
@@ -886,6 +887,7 @@
       "runtimeStatus": "状态",
       "serviceStartup": "启动类型",
       "runHints": "运行提示",
+      "quickLaunch": "快速启动",
       "prerequisites": "先决条件",
       "prereqInstalled": "已安装",
       "prereqMissing": "缺失",

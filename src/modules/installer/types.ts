@@ -110,6 +110,14 @@ export interface ManagedWebUiStatus {
   url?: string | null;
 }
 
+/// One launchable utility exposed in an installed tool suite's dialog (e.g.
+/// Sysinternals' Process Explorer). `command` is the executable name resolved
+/// against the refreshed PATH; `label` is the button text.
+export interface QuickLaunchEntry {
+  command: string;
+  label: string;
+}
+
 /// One installed WSL distribution reported by `wsl --list --verbose`.
 export interface WslDistroInfo {
   name: string;

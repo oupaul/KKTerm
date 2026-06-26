@@ -110,7 +110,7 @@
       "id": "winget",
       "name": "winget",
       "descriptionEn": "Microsoft's Windows Package Manager command-line client. Required before KKTerm can install winget-backed tools.",
-      "category": "essentials",
+      "category": "package-managers",
       "icon": "Package",
       "homepage": "https://github.com/microsoft/winget-cli",
       "releaseNotesUrl": "https://github.com/microsoft/winget-cli/releases",
@@ -140,7 +140,7 @@
       "id": "chocolatey",
       "name": "Chocolatey",
       "descriptionEn": "Windows package manager used by KKTerm as an optional backend for curated tools that also publish Chocolatey packages.",
-      "category": "windows-power-user",
+      "category": "package-managers",
       "icon": "PackagePlus",
       "needs": [
         "winget"
@@ -1352,6 +1352,63 @@
         "ja": "Rust ツールチェーンのインストーラーとバージョン マネージャー。",
         "it": "Programma di installazione e gestione delle versioni della toolchain di Rust.",
         "th": "ตัวติดตั้ง Rust toolchain และตัวจัดการเวอร์ชัน"
+      }
+    },
+    {
+      "id": "bun",
+      "name": "Bun",
+      "descriptionEn": "All-in-one JavaScript runtime and toolkit with a bundler, test runner, and Node.js-compatible package manager.",
+      "category": "development",
+      "icon": "Zap",
+      "needs": [
+        "winget"
+      ],
+      "homepage": "https://bun.sh/",
+      "releaseNotesUrl": "https://github.com/oven-sh/bun/releases",
+      "detection": {
+        "displayNames": [
+          "Bun"
+        ],
+        "displayNamePrefixes": [
+          "Bun "
+        ]
+      },
+      "provider": {
+        "kind": "winget",
+        "id": "Oven-sh.Bun"
+      },
+      "downloadProvider": {
+        "kind": "githubRelease",
+        "repo": "oven-sh/bun",
+        "assetPattern": "bun-windows-x64.zip",
+        "layout": "zip",
+        "pathSubdir": "bun-windows-x64"
+      },
+      "chocolateyProvider": {
+        "kind": "chocolatey",
+        "id": "bun"
+      },
+      "options": [
+        "provider",
+        "scope",
+        "version",
+        "location",
+        "addToPath"
+      ],
+      "descriptionLocales": {
+        "de": "All-in-One-JavaScript-Runtime und -Toolkit mit Bundler, Test-Runner und Node.js-kompatiblem Paketmanager.",
+        "it": "Runtime e toolkit JavaScript all-in-one con bundler, test runner e gestore di pacchetti compatibile con Node.js.",
+        "fr": "Runtime et boîte à outils JavaScript tout-en-un avec bundler, exécuteur de tests et gestionnaire de paquets compatible Node.js.",
+        "zh-CN": "一体化 JavaScript 运行时和工具包，内置打包器、测试运行器和兼容 Node.js 的包管理器。",
+        "zh-TW": "一體化 JavaScript 執行階段與工具組，內建打包工具、測試執行器與相容 Node.js 的套件管理員。",
+        "ja": "バンドラー、テストランナー、Node.js 互換のパッケージ マネージャーを備えたオールインワンの JavaScript ランタイムおよびツールキット。",
+        "es": "Runtime y kit de herramientas de JavaScript todo en uno con empaquetador, ejecutor de pruebas y administrador de paquetes compatible con Node.js.",
+        "es-MX": "Runtime y kit de herramientas de JavaScript todo en uno con empaquetador, ejecutor de pruebas y administrador de paquetes compatible con Node.js.",
+        "th": "JavaScript runtime และชุดเครื่องมือแบบครบวงจร พร้อม bundler, ตัวรันการทดสอบ และตัวจัดการแพ็กเกจที่เข้ากันได้กับ Node.js",
+        "id": "Runtime dan perangkat JavaScript serba ada dengan bundler, test runner, dan manajer paket yang kompatibel dengan Node.js.",
+        "pt-BR": "Runtime e kit de ferramentas JavaScript tudo-em-um com empacotador, executor de testes e gerenciador de pacotes compatível com Node.js.",
+        "vi": "Runtime và bộ công cụ JavaScript tất cả trong một với trình đóng gói, trình chạy kiểm thử và trình quản lý gói tương thích Node.js.",
+        "ko": "번들러, 테스트 러너, Node.js 호환 패키지 관리자를 갖춘 올인원 JavaScript 런타임 및 도구 키트입니다."
       }
     },
     {

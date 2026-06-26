@@ -798,6 +798,7 @@
       "development": "Pengembangan",
       "windowsPowerUser": "Pengguna Mahir Windows",
       "remoteAccess": "Akses Jarak Jauh",
+      "packageManagers": "Manajer Paket",
       "utilities": "Utilitas"
     },
     "tile": {
@@ -886,6 +887,7 @@
       "runtimeStatus": "Status",
       "serviceStartup": "Startup",
       "runHints": "Tips menjalankan",
+      "quickLaunch": "Peluncuran cepat",
       "prerequisites": "Prasyarat",
       "prereqInstalled": "Terpasang",
       "prereqMissing": "Hilang",
