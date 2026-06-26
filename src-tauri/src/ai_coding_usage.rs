@@ -585,7 +585,7 @@ fn refresh_codex_wham_usage() -> Result<ProviderUpdate, String> {
         resolve_codex_chatgpt_base_url(),
         CODEX_CHATGPT_USAGE_PATH
     );
-    let client = reqwest::blocking::Client::builder()
+    let client = crate::net::proxy::apply_blocking(reqwest::blocking::Client::builder())
         .timeout(Duration::from_secs(20))
         .build()
         .map_err(|error| format!("failed to build Codex direct usage client: {error}"))?;
@@ -801,7 +801,7 @@ const CLAUDE_OAUTH_BETA_HEADER: &str = "oauth-2025-04-20";
 
 fn fetch_claude_oauth_usage() -> Result<Value, String> {
     let token = read_claude_oauth_token()?;
-    let client = reqwest::blocking::Client::builder()
+    let client = crate::net::proxy::apply_blocking(reqwest::blocking::Client::builder())
         .timeout(Duration::from_secs(20))
         .build()
         .map_err(|error| format!("failed to build HTTP client: {error}"))?;

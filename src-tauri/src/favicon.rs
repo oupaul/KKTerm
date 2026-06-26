@@ -11,7 +11,7 @@ pub async fn fetch_favicon_data_url(page_url: &str) -> Option<String> {
     if !matches!(page_url.scheme(), "http" | "https") {
         return None;
     }
-    let client = Client::builder()
+    let client = crate::net::proxy::apply_async(Client::builder())
         .timeout(Duration::from_secs(4))
         .redirect(reqwest::redirect::Policy::limited(5))
         .user_agent("KKTerm favicon fetcher")

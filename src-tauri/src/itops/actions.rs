@@ -127,7 +127,9 @@ fn run_webhook(url: &str, method: &str, body: Option<&str>) {
     let method = method.to_string();
     let body = body.map(str::to_string);
     runtime.block_on(async move {
-        let client = reqwest::Client::new();
+        let client = crate::net::proxy::apply_async(reqwest::Client::builder())
+            .build()
+            .unwrap_or_else(|_| reqwest::Client::new());
         let method = reqwest::Method::from_bytes(method.as_bytes()).unwrap_or(reqwest::Method::POST);
         let mut request = client.request(method, &url);
         if let Some(body) = body {

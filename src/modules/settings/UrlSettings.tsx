@@ -3,11 +3,6 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { invokeCommand, isTauriRuntime } from "../../lib/tauri";
 import { technicalInputProps } from "../../lib/inputBehavior";
-import {
-  parseUrlProxyDraft,
-  splitUrlProxy,
-  type UrlProxyMode,
-} from "../workspace/connections/webview/urlProxy";
 import { useWorkspaceStore } from "../../store";
 import type { UrlCredentialSummary, UrlDataPartitionSummary } from "../../types";
 import { CredentialDeleteConfirmDialog } from "./CredentialDeleteConfirmDialog";
@@ -43,39 +38,23 @@ export function UrlSettings() {
   const setUrlSettings = useWorkspaceStore((state) => state.setUrlSettings);
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
   const [draft, setDraft] = useState(urlSettings);
-  const initialProxy = splitUrlProxy(urlSettings.defaultProxyUrl);
-  const [proxyMode, setProxyMode] = useState<UrlProxyMode>(initialProxy.mode);
-  const [proxyHost, setProxyHost] = useState(initialProxy.host);
-  const [proxyPort, setProxyPort] = useState(initialProxy.port);
   const [credentials, setCredentials] = useState<UrlCredentialSummary[]>([]);
   const [partitions, setPartitions] = useState<UrlDataPartitionSummary[]>([]);
   const [editingCredentialId, setEditingCredentialId] = useState<string | null>(null);
   const [credentialDraft, setCredentialDraft] = useState<UrlCredentialEditDraft | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<UrlCredentialSummary | null>(null);
-  let proxyDraftUrl: string | undefined;
-  try {
-    proxyDraftUrl = parseUrlProxyDraft(proxyMode, proxyHost, proxyPort);
-  } catch {
-    proxyDraftUrl = `${proxyMode}://${proxyHost.trim()}:${proxyPort.trim()}`;
-  }
   const hasChanges =
     JSON.stringify({
       ...draft,
-      defaultProxyUrl: proxyDraftUrl || undefined,
       defaultDataPartition: draft.defaultDataPartition?.trim() || undefined,
     }) !==
     JSON.stringify({
       ...urlSettings,
-      defaultProxyUrl: urlSettings.defaultProxyUrl || undefined,
       defaultDataPartition: urlSettings.defaultDataPartition?.trim() || undefined,
     });
 
   useEffect(() => {
     setDraft(urlSettings);
-    const proxy = splitUrlProxy(urlSettings.defaultProxyUrl);
-    setProxyMode(proxy.mode);
-    setProxyHost(proxy.host);
-    setProxyPort(proxy.port);
   }, [urlSettings]);
 
   async function load() {
@@ -108,7 +87,6 @@ export function UrlSettings() {
     try {
       const request = {
         ...draft,
-        defaultProxyUrl: parseUrlProxyDraft(proxyMode, proxyHost, proxyPort),
         defaultDataPartition: draft.defaultDataPartition?.trim() || undefined,
       };
       const saved = isTauriRuntime() ? await invokeCommand("update_url_settings", { request }) : request;
@@ -227,50 +205,6 @@ export function UrlSettings() {
             </span>
           </label>
         </div>
-      </fieldset>
-
-      <fieldset className="settings-subsection settings-fieldset">
-        <legend>{t("settings.urlProxy")}</legend>
-        <div>
-          <p className="field-hint">{t("settings.urlProxyHint")}</p>
-        </div>
-        <div className="form-grid three-columns">
-          <label>
-            <span>{t("settings.urlProxyMode")}</span>
-            <select value={proxyMode} onChange={(event) => setProxyMode(event.currentTarget.value as UrlProxyMode)}>
-              <option value="direct">{t("settings.urlProxyDirect")}</option>
-              <option value="http">{t("settings.urlProxyHttp")}</option>
-              <option value="socks5">{t("settings.urlProxySocks5")}</option>
-            </select>
-          </label>
-          <label>
-            <span>{t("settings.urlProxyHost")}</span>
-            <input
-              {...technicalInputProps}
-              disabled={proxyMode === "direct"}
-              onChange={(event) => setProxyHost(event.currentTarget.value)}
-              placeholder={t("settings.urlProxyHostPlaceholder")}
-              required={proxyMode !== "direct"}
-              value={proxyHost}
-            />
-          </label>
-          <label>
-            <span>{t("settings.urlProxyPort")}</span>
-            <input
-              {...technicalInputProps}
-              disabled={proxyMode === "direct"}
-              inputMode="numeric"
-              max={65535}
-              min={1}
-              onChange={(event) => setProxyPort(event.currentTarget.value)}
-              placeholder={proxyMode === "socks5" ? "1080" : "3128"}
-              required={proxyMode !== "direct"}
-              type="number"
-              value={proxyPort}
-            />
-          </label>
-        </div>
-        <small className="field-hint">{t("settings.urlProxyPlatformHint")}</small>
       </fieldset>
 
       <fieldset className="settings-subsection settings-fieldset">

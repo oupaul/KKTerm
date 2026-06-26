@@ -64,7 +64,9 @@ pub(crate) fn github_copilot_device_code_form() -> Vec<(&'static str, &'static s
 }
 
 pub(crate) async fn start_device_flow() -> Result<GitHubCopilotDeviceFlow, String> {
-    let client = reqwest::Client::new();
+    let client = crate::net::proxy::apply_async(reqwest::Client::builder())
+        .build()
+        .map_err(|error| format!("failed to build HTTP client: {error}"))?;
     let response = client
         .post(GITHUB_DEVICE_CODE_URL)
         .header("Accept", "application/json")
@@ -100,7 +102,9 @@ pub(crate) async fn poll_device_flow(
         return Err("GitHub Copilot device code is required".to_string());
     }
 
-    let client = reqwest::Client::new();
+    let client = crate::net::proxy::apply_async(reqwest::Client::builder())
+        .build()
+        .map_err(|error| format!("failed to build HTTP client: {error}"))?;
     let response = client
         .post(GITHUB_ACCESS_TOKEN_URL)
         .header("Accept", "application/json")

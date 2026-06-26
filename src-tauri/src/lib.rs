@@ -734,6 +734,10 @@ fn update_general_settings(
 ) -> Result<storage::GeneralSettings, String> {
     auto_start::sync_auto_start_with_windows(request.auto_start_with_windows())?;
     let saved = storage.update_general_settings(request)?;
+    net::proxy::set(net::proxy::from_settings(
+        saved.proxy_mode(),
+        saved.proxy_url(),
+    ));
     logging::set_advanced_debugging_enabled(saved.advanced_debugging_enabled());
     debug_heartbeat::start(app);
     tray_state.set_minimize_to_tray(saved.minimize_to_tray());
@@ -3274,6 +3278,10 @@ pub fn run() {
             let general_settings = storage.general_settings().map_err(setup_error)?;
             let credential_settings = storage.credential_settings().map_err(setup_error)?;
             let ai_provider_settings = storage.ai_provider_settings().map_err(setup_error)?;
+            net::proxy::set(net::proxy::from_settings(
+                general_settings.proxy_mode(),
+                general_settings.proxy_url(),
+            ));
             logging::set_advanced_debugging_enabled(general_settings.advanced_debugging_enabled());
             debug_heartbeat::start(app.handle().clone());
 

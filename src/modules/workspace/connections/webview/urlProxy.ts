@@ -1,13 +1,38 @@
-import type { Connection, UrlSettings } from "../../../../types";
+import type { Connection, GeneralSettings, UrlSettings } from "../../../../types";
 
 export type UrlProxyMode = "direct" | "http" | "socks5";
 
 type UrlProxyConnection = Pick<Connection, "urlProxy" | "urlProxyInheritDefaults">;
 type UrlDataPartitionConnection = Pick<Connection, "dataPartition" | "urlProxyInheritDefaults">;
+type GlobalProxySettings = Pick<GeneralSettings, "proxyMode" | "proxyUrl">;
 
-export function resolveUrlProxy(connection: UrlProxyConnection, settings: UrlSettings): string | undefined {
-  const value = connection.urlProxyInheritDefaults !== false ? settings.defaultProxyUrl : connection.urlProxy;
-  return value?.trim() || undefined;
+/**
+ * The proxy value handed to the URL WebView2 backend. A per-Connection override
+ * wins; otherwise the URL Session inherits the global app proxy (Settings →
+ * General → Proxy). "No Proxy" maps to the `direct://` sentinel the backend
+ * interprets as a forced direct connection; "Use system settings" maps to
+ * `undefined` so the WebView2 uses the operating system proxy.
+ */
+export function resolveUrlProxy(
+  connection: UrlProxyConnection,
+  general: GlobalProxySettings,
+): string | undefined {
+  if (connection.urlProxyInheritDefaults === false) {
+    return connection.urlProxy?.trim() || undefined;
+  }
+  return globalWebviewProxy(general);
+}
+
+/** Translate the global app proxy into a WebView2 proxy value. */
+export function globalWebviewProxy(general: GlobalProxySettings): string | undefined {
+  switch (general.proxyMode) {
+    case "none":
+      return "direct://";
+    case "manual":
+      return general.proxyUrl?.trim() || undefined;
+    default:
+      return undefined;
+  }
 }
 
 export function resolveUrlDataPartition(

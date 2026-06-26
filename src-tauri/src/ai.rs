@@ -4970,7 +4970,7 @@ async fn web_fetch_tool(args: Value) -> String {
     if !(url.starts_with("https://") || url.starts_with("http://")) {
         return "web_fetch only accepts http:// or https:// URLs.".to_string();
     }
-    let client = match reqwest::Client::builder().build() {
+    let client = match crate::net::proxy::apply_async(reqwest::Client::builder()).build() {
         Ok(client) => client,
         Err(error) => return format!("Failed to create HTTP client: {error}"),
     };

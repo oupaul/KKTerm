@@ -51,6 +51,8 @@ export const defaultGeneralSettings: GeneralSettings = {
   statusBarMonitorIntervalSeconds: 5,
   advancedDebuggingEnabled: false,
   rdpWebviewStability: false,
+  proxyMode: "system",
+  proxyUrl: "",
   lastBackupAt: null,
 };
 
@@ -128,7 +130,6 @@ export const defaultSftpSettings: SftpSettings = {
 
 export const defaultUrlSettings: UrlSettings = {
   ignoreCertificateErrors: false,
-  defaultProxyUrl: "",
   defaultDataPartition: "",
 };
 

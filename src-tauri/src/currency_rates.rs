@@ -24,7 +24,7 @@ pub async fn fetch_currency_rates() -> Result<CurrencyRatesResponse, String> {
 }
 
 fn fetch_currency_rates_blocking() -> Result<CurrencyRatesResponse, String> {
-    let client = reqwest::blocking::Client::builder()
+    let client = crate::net::proxy::apply_blocking(reqwest::blocking::Client::builder())
         .timeout(Duration::from_secs(10))
         .user_agent("KKTerm/0.1 currency converter")
         .build()

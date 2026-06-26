@@ -108,7 +108,7 @@ struct GithubContentEntry {
 }
 
 fn winget_manifest_latest(id: &str) -> LatestVersionResult {
-    let client = reqwest::blocking::Client::builder()
+    let client = crate::net::proxy::apply_blocking(reqwest::blocking::Client::builder())
         .user_agent("KKTerm-Installer/1")
         .timeout(std::time::Duration::from_secs(15))
         .build()
@@ -241,7 +241,7 @@ fn winget_show_args(id: &str) -> Vec<&str> {
 }
 
 fn npm_latest(pkg: &str) -> LatestVersionResult {
-    let client = reqwest::blocking::Client::builder()
+    let client = crate::net::proxy::apply_blocking(reqwest::blocking::Client::builder())
         .user_agent("KKTerm-Installer/1")
         .timeout(std::time::Duration::from_secs(15))
         .build()
@@ -298,7 +298,7 @@ fn github_releases_repo_from_url(url: &str) -> Option<String> {
 }
 
 fn pypi_latest(package: &str) -> LatestVersionResult {
-    let client = reqwest::blocking::Client::builder()
+    let client = crate::net::proxy::apply_blocking(reqwest::blocking::Client::builder())
         .user_agent("KKTerm-Installer/1")
         .timeout(std::time::Duration::from_secs(15))
         .build()
@@ -336,7 +336,7 @@ fn encode_npm_package_name(pkg: &str) -> String {
 }
 
 fn github_latest(repo: &str) -> LatestVersionResult {
-    let client = reqwest::blocking::Client::builder()
+    let client = crate::net::proxy::apply_blocking(reqwest::blocking::Client::builder())
         .user_agent("KKTerm-Installer/1")
         .timeout(std::time::Duration::from_secs(15))
         .build()

@@ -658,7 +658,7 @@ async fn call_tool(
 }
 
 fn http_client() -> Result<reqwest::Client, McpCommandError> {
-    reqwest::Client::builder()
+    crate::net::proxy::apply_async(reqwest::Client::builder())
         .timeout(std::time::Duration::from_secs(60))
         .build()
         .map_err(|e| McpCommandError::Internal {

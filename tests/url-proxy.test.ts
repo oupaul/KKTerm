@@ -1,25 +1,37 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { parseUrlProxyDraft, resolveUrlDataPartition, resolveUrlProxy } from "../src/modules/workspace/connections/webview/urlProxy";
+import { globalWebviewProxy, parseUrlProxyDraft, resolveUrlDataPartition, resolveUrlProxy } from "../src/modules/workspace/connections/webview/urlProxy";
 
-test("URL proxy inheritance resolves global, direct, and custom modes", () => {
-  const settings = { ignoreCertificateErrors: false, defaultProxyUrl: "http://proxy.example:3128" };
+test("URL proxy inheritance follows the global app proxy or a per-connection override", () => {
+  const manual = { proxyMode: "manual" as const, proxyUrl: "http://proxy.example:3128" };
 
-  assert.equal(resolveUrlProxy({ urlProxyInheritDefaults: true }, settings), "http://proxy.example:3128");
-  assert.equal(resolveUrlProxy({ urlProxyInheritDefaults: false }, settings), undefined);
+  // Inheriting follows the global app proxy.
+  assert.equal(resolveUrlProxy({ urlProxyInheritDefaults: true }, manual), "http://proxy.example:3128");
+  // A per-connection override with no value is direct.
+  assert.equal(resolveUrlProxy({ urlProxyInheritDefaults: false }, manual), undefined);
+  // A per-connection override value wins over the global proxy.
   assert.equal(
     resolveUrlProxy(
       { urlProxyInheritDefaults: false, urlProxy: "socks5://127.0.0.1:1080" },
-      settings,
+      manual,
     ),
     "socks5://127.0.0.1:1080",
   );
 });
 
+test("global webview proxy maps each app proxy mode", () => {
+  assert.equal(globalWebviewProxy({ proxyMode: "system" }), undefined);
+  assert.equal(globalWebviewProxy({ proxyMode: "none" }), "direct://");
+  assert.equal(
+    globalWebviewProxy({ proxyMode: "manual", proxyUrl: "socks5://127.0.0.1:1080" }),
+    "socks5://127.0.0.1:1080",
+  );
+  assert.equal(globalWebviewProxy({ proxyMode: "manual", proxyUrl: "" }), undefined);
+});
+
 test("URL data partition inheritance resolves global and custom values", () => {
   const settings = {
     ignoreCertificateErrors: false,
-    defaultProxyUrl: undefined,
     defaultDataPartition: "ops",
   };
 

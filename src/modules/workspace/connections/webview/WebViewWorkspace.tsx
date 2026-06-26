@@ -560,7 +560,7 @@ export function WebViewWorkspace({
           ? false
           : undefined,
     };
-    const proxyUrl = resolveUrlProxy(urlConnectionOptions, urlSettings);
+    const proxyUrl = resolveUrlProxy(urlConnectionOptions, generalSettings);
     const dataPartition = resolveUrlDataPartition(urlConnectionOptions, urlSettings);
     sessionStartingRef.current = true;
     lastBoundsRef.current = bounds;

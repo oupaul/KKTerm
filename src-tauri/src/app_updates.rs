@@ -264,7 +264,7 @@ fn validate_update_asset_url(
 }
 
 fn http_client() -> Result<reqwest::blocking::Client, String> {
-    reqwest::blocking::Client::builder()
+    crate::net::proxy::apply_blocking(reqwest::blocking::Client::builder())
         .user_agent("KKTerm-Updater/1")
         .timeout(Duration::from_secs(120))
         .build()

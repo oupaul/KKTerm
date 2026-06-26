@@ -36,6 +36,13 @@ const HIDDEN_WEBVIEW_POSITION: f64 = -32_000.0;
 #[cfg(target_os = "windows")]
 pub(crate) const REMOTE_SESSION_WEBVIEW2_ARGS: &str = "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection,CalculateNativeWinOcclusion --disable-gpu";
 
+/// Wry's default WebView2 additional browser arguments. Supplying explicit
+/// arguments makes wry stop generating these, so they are re-included whenever we
+/// must inject our own proxy directive (e.g. "No Proxy" → `--no-proxy-server`).
+#[cfg(windows)]
+pub(crate) const WRY_DEFAULT_WEBVIEW2_ARGS: &str =
+    "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection";
+
 const AUTOFILL_AGENT: &str = r#"
 (() => {
   const TITLE_CHANNEL = "__KKTERM_URL_CREDENTIAL__";
@@ -486,10 +493,16 @@ impl WebviewSessionManager {
 
         let session_id = required_id(session_id)?;
         let parsed_url = parse_external_url(&url)?;
-        let proxy_url = proxy_url
-            .as_deref()
-            .map(parse_proxy_url)
-            .transpose()?;
+        // "direct://" is the global "No Proxy" sentinel: force a direct
+        // connection on the WebView2 even when the OS has a system proxy. It has
+        // no tauri `proxy_url` equivalent, so it is applied as a browser argument
+        // below rather than parsed into a proxy URL.
+        let force_direct = matches!(proxy_url.as_deref().map(str::trim), Some("direct://"));
+        let proxy_url = if force_direct {
+            None
+        } else {
+            proxy_url.as_deref().map(parse_proxy_url).transpose()?
+        };
         let partition = resolve_partition(data_partition);
         logging::url_connection_debug(
             "backend.session.start.request",
@@ -676,25 +689,43 @@ impl WebviewSessionManager {
             builder = builder.data_directory(data_directory);
         }
         if let Some(proxy_url) = proxy_url.as_ref() {
-            builder = builder.proxy_url(proxy_url.clone());
+            // tauri's cross-platform proxy_url only models HTTP and SOCKS5; an
+            // HTTPS proxy is honored on Windows through the --proxy-server browser
+            // argument below instead.
+            if matches!(proxy_url.scheme(), "http" | "socks5") {
+                builder = builder.proxy_url(proxy_url.clone());
+            }
         }
         if let Some(additional_browser_args) = self.additional_browser_args {
             #[cfg(windows)]
             {
                 // Wry uses explicit additional browser arguments instead of its
-                // generated WebView2 arguments. Preserve the proxy flag when
+                // generated WebView2 arguments. Preserve the proxy directive when
                 // remote-session stability arguments are also enabled.
-                let browser_args = match proxy_url.as_ref() {
-                    Some(proxy_url) => {
-                        format!("{additional_browser_args} --proxy-server={proxy_url}")
+                let browser_args = if force_direct {
+                    format!("{additional_browser_args} --no-proxy-server")
+                } else {
+                    match proxy_url.as_ref() {
+                        Some(proxy_url) => {
+                            format!("{additional_browser_args} --proxy-server={proxy_url}")
+                        }
+                        None => additional_browser_args.to_string(),
                     }
-                    None => additional_browser_args.to_string(),
                 };
                 builder = builder.additional_browser_args(&browser_args);
             }
             #[cfg(not(windows))]
             {
                 builder = builder.additional_browser_args(additional_browser_args);
+            }
+        } else {
+            // No custom browser args: wry would generate its own. "No Proxy" must
+            // still force a direct connection, which has no proxy_url equivalent,
+            // so inject --no-proxy-server while preserving wry's default arguments.
+            #[cfg(windows)]
+            if force_direct {
+                let browser_args = format!("{WRY_DEFAULT_WEBVIEW2_ARGS} --no-proxy-server");
+                builder = builder.additional_browser_args(&browser_args);
             }
         }
 
@@ -1570,7 +1601,7 @@ fn parse_external_url(value: &str) -> Result<url::Url, String> {
 }
 
 fn parse_proxy_url(value: &str) -> Result<url::Url, String> {
-    let normalized = crate::storage::normalize_url_proxy(Some(value.to_string()))?
+    let normalized = crate::storage::normalize_app_proxy_url(Some(value.to_string()))?
         .ok_or_else(|| "URL proxy is required".to_string())?;
     url::Url::parse(&normalized).map_err(|error| format!("URL proxy is invalid: {error}"))
 }
@@ -1610,7 +1641,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn proxy_urls_accept_http_and_socks5_endpoints_only() {
+    fn proxy_urls_accept_http_https_and_socks5_endpoints() {
         assert_eq!(
             parse_proxy_url("http://proxy.example:3128")
                 .expect("HTTP proxy parses")
@@ -1618,12 +1649,18 @@ mod tests {
             "http://proxy.example:3128/"
         );
         assert_eq!(
+            parse_proxy_url("https://proxy.example:443")
+                .expect("HTTPS proxy parses")
+                .scheme(),
+            "https"
+        );
+        assert_eq!(
             parse_proxy_url("socks5://127.0.0.1:1080")
                 .expect("SOCKS5 proxy parses")
                 .scheme(),
             "socks5"
         );
-        assert!(parse_proxy_url("https://proxy.example:443").is_err());
+        assert!(parse_proxy_url("ftp://proxy.example:21").is_err());
         assert!(parse_proxy_url("http://proxy.example").is_err());
     }
 

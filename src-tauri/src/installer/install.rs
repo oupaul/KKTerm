@@ -301,7 +301,7 @@ fn install_managed_source_web_app(
         tool_id: tool_id.into(),
         message: format!("Downloading {archive_url}"),
     });
-    let client = reqwest::blocking::Client::builder()
+    let client = crate::net::proxy::apply_blocking(reqwest::blocking::Client::builder())
         .user_agent("KKTerm Install Helper")
         .build()
         .map_err(|error| error.to_string())?;
@@ -624,7 +624,7 @@ fn install_download_installer(
         tool_id: tool_id.into(),
         message: format!("Downloading {url}"),
     });
-    let client = reqwest::blocking::Client::builder()
+    let client = crate::net::proxy::apply_blocking(reqwest::blocking::Client::builder())
         .user_agent("KKTerm-Installer/1")
         .timeout(std::time::Duration::from_secs(60))
         .build()
@@ -1249,7 +1249,7 @@ fn install_github_release(
         message: format!("Querying GitHub releases for {repo}"),
     });
     let api_url = format!("https://api.github.com/repos/{repo}/releases/latest");
-    let client = reqwest::blocking::Client::builder()
+    let client = crate::net::proxy::apply_blocking(reqwest::blocking::Client::builder())
         .user_agent("KKTerm-Installer/1")
         .timeout(std::time::Duration::from_secs(30))
         .build()

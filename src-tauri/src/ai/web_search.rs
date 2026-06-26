@@ -87,7 +87,7 @@ pub(crate) fn extract_readable_text(html: &str) -> String {
 }
 
 pub(crate) fn build_web_client(allow_insecure_tls: bool) -> Result<reqwest::Client, String> {
-    reqwest::Client::builder()
+    crate::net::proxy::apply_async(reqwest::Client::builder())
         .danger_accept_invalid_certs(allow_insecure_tls)
         .build()
         .map_err(|e| format!("failed to create HTTP client: {e}"))

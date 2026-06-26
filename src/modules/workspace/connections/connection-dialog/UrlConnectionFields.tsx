@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { technicalInputProps } from "../../../../lib/inputBehavior";
 import type { Connection } from "../../../../types";
 import { useWorkspaceStore } from "../../../../store";
-import { splitUrlProxy, type UrlProxyMode } from "../webview/urlProxy";
+import { globalWebviewProxy, splitUrlProxy, type UrlProxyMode } from "../webview/urlProxy";
 import { PasswordField } from "./ConnectionPasswordFields";
 
 export function UrlConnectionFields({
@@ -60,9 +60,13 @@ export function UrlConnectionFields({
 export function UrlConnectionOptions({ initialConnection }: { initialConnection?: Connection }) {
   const { t } = useTranslation();
   const urlSettings = useWorkspaceStore((state) => state.urlSettings);
+  const generalSettings = useWorkspaceStore((state) => state.generalSettings);
   const [inheritsDefaults, setInheritsDefaults] = useState(initialConnection?.urlProxyInheritDefaults ?? true);
   const initialProxy = splitUrlProxy(initialConnection?.urlProxy);
-  const inheritedProxy = splitUrlProxy(urlSettings.defaultProxyUrl);
+  // When inheriting, the URL Session follows the global app proxy. The webview
+  // mode dropdown only models direct/http/socks5, so system and "No Proxy" both
+  // display as direct here; the actual behavior is resolved by resolveUrlProxy.
+  const inheritedProxy = splitUrlProxy(globalWebviewProxy(generalSettings));
   const [proxyMode, setProxyMode] = useState<UrlProxyMode>(initialProxy.mode);
   const [proxyHost, setProxyHost] = useState(initialProxy.host);
   const [proxyPort, setProxyPort] = useState(initialProxy.port);
