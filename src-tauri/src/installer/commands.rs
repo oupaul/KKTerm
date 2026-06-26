@@ -1113,7 +1113,7 @@ pub async fn installer_open_quick_launch_terminal(tool_id: String) -> Result<(),
         spawn_elevated_powershell()
     })
     .await
-    .map_err(|error| format!("failed to open command prompt: {error}"))?
+    .map_err(|error| format!("failed to open elevated PowerShell: {error}"))?
 }
 
 fn service_affordance(tool_id: &str) -> Option<ManagedServiceAffordance> {
@@ -1723,6 +1723,20 @@ fn build_quick_launch_ps_command(command: &str) -> String {
     )
 }
 
+fn build_elevated_powershell_ps_command(refreshed_path: Option<&str>) -> String {
+    let mut elevated_parts = vec![
+        "$host.UI.RawUI.WindowTitle = 'KKTerm Sysinternals tools'".to_string(),
+        "Write-Host 'Sysinternals command-line tools are on PATH — e.g. handle, psexec, sigcheck, strings, sdelete.' -ForegroundColor Cyan".to_string(),
+    ];
+    if let Some(path) = refreshed_path {
+        elevated_parts.insert(0, format!("$env:PATH = {}", ps_single_quote(path)));
+    }
+    let elevated_command = ps_single_quote(&elevated_parts.join("; "));
+    format!(
+        "Start-Process -FilePath 'powershell' -ArgumentList @('-NoExit', '-NoLogo', '-ExecutionPolicy', 'Bypass', '-Command', {elevated_command}) -Verb RunAs"
+    )
+}
+
 #[cfg(target_os = "windows")]
 fn spawn_quick_launch(command: &str) -> Result<(), String> {
     let ps = build_quick_launch_ps_command(command);
@@ -1759,6 +1773,8 @@ fn spawn_quick_launch(_command: &str) -> Result<(), String> {
 /// and only relays the UAC consent prompt.
 #[cfg(target_os = "windows")]
 fn spawn_elevated_powershell() -> Result<(), String> {
+    let refreshed_path = super::install::refreshed_path_public();
+    let ps = build_elevated_powershell_ps_command(refreshed_path.as_deref());
     let mut cmd = Command::new("powershell");
     cmd.args([
         "-NoProfile",
@@ -1768,7 +1784,7 @@ fn spawn_elevated_powershell() -> Result<(), String> {
         "-ExecutionPolicy",
         "Bypass",
         "-Command",
-        "Start-Process powershell -Verb RunAs",
+        &ps,
     ]);
     use std::os::windows::process::CommandExt;
     const CREATE_NO_WINDOW: u32 = 0x0800_0000;
@@ -2221,6 +2237,15 @@ mod tests {
         // Resolve the exe against the (refreshed) PATH, then elevate via RunAs.
         assert!(command.contains("Get-Command 'procexp.exe'"));
         assert!(command.contains("Start-Process -FilePath $exe -Verb RunAs"));
+    }
+
+    #[test]
+    fn quick_launch_terminal_forwards_refreshed_path_to_elevated_shell() {
+        let command = build_elevated_powershell_ps_command(Some("C:\\Tools;C:\\Sysinternals"));
+        assert!(command.contains("Start-Process -FilePath 'powershell'"));
+        assert!(command.contains("-Verb RunAs"));
+        assert!(command.contains("$env:PATH = ''C:\\Tools;C:\\Sysinternals''"));
+        assert!(command.contains("-NoExit"));
     }
 
     #[test]
