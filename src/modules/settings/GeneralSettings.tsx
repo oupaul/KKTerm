@@ -78,6 +78,17 @@ const STATUS_BAR_MONITOR_INTERVAL_OPTIONS = [5, 15, 30, 60, 300] as const;
 
 type ProxyProtocol = "http" | "https" | "socks5";
 
+function explicitPortFromProxyValue(value: string): string {
+  const authority = value.split("://", 2)[1]?.split(/[/?#]/, 1)[0] ?? "";
+  if (!authority) {
+    return "";
+  }
+  if (authority.startsWith("[")) {
+    return authority.match(/^\[[^\]]+\]:(\d+)$/)?.[1] ?? "";
+  }
+  return authority.match(/:(\d+)$/)?.[1] ?? "";
+}
+
 /** Split a stored `<scheme>://host:port` app proxy into editable parts. */
 function splitAppProxy(value?: string): { protocol: ProxyProtocol; host: string; port: string } {
   if (value?.trim()) {
@@ -85,7 +96,11 @@ function splitAppProxy(value?: string): { protocol: ProxyProtocol; host: string;
       const parsed = new URL(value);
       const scheme = parsed.protocol.replace(/:$/, "");
       if ((scheme === "http" || scheme === "https" || scheme === "socks5") && parsed.hostname) {
-        return { protocol: scheme, host: parsed.hostname.replace(/^\[|\]$/g, ""), port: parsed.port };
+        return {
+          protocol: scheme,
+          host: parsed.hostname.replace(/^\[|\]$/g, ""),
+          port: explicitPortFromProxyValue(value),
+        };
       }
     } catch {
       // Invalid persisted values fall back to the manual defaults below.
