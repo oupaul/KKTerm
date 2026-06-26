@@ -2366,7 +2366,7 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 22px;
-  box-shadow: var(--shadow), 0 12px 36px rgba(0, 0, 0, 0.14);
+  box-shadow: var(--shadow);
 }
 
 .settings-popup .settings-page-header {

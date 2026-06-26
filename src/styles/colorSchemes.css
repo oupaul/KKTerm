@@ -202,7 +202,7 @@
   --nav-toolbar-tooltip-bg: #111827;
   --nav-toolbar-tooltip-text: #f8fafc;
   --nav-toolbar-tooltip-border: rgba(255, 255, 255, 0.14);
-  --shadow: 0 12px 40px rgba(0, 8, 32, 0.1);
+  --shadow: 0 8px 24px rgba(0, 8, 32, 0.1), 0 2px 6px rgba(0, 8, 32, 0.06);
 }
 
 [data-color-scheme="mac"] {
@@ -268,7 +268,7 @@
   --nav-toolbar-tooltip-bg: #12306b;
   --nav-toolbar-tooltip-text: #ffffff;
   --nav-toolbar-tooltip-border: rgba(255, 255, 255, 0.28);
-  --shadow: 0 14px 42px rgba(255, 111, 0, 0.18);
+  --shadow: 0 8px 24px rgba(255, 111, 0, 0.1), 0 2px 6px rgba(255, 111, 0, 0.06);
 }
 
 [data-color-scheme="purple"] {
@@ -334,7 +334,7 @@
   --nav-toolbar-tooltip-bg: #3b1430;
   --nav-toolbar-tooltip-text: #fff0f7;
   --nav-toolbar-tooltip-border: rgba(255, 190, 220, 0.25);
-  --shadow: 0 12px 40px rgba(80, 20, 60, 0.1);
+  --shadow: 0 8px 24px rgba(80, 20, 60, 0.1), 0 2px 6px rgba(80, 20, 60, 0.06);
 }
 
 [data-color-scheme="green-kuai-kuai"] {
@@ -368,7 +368,7 @@
   --nav-toolbar-tooltip-bg: #082d68;
   --nav-toolbar-tooltip-text: #ffffff;
   --nav-toolbar-tooltip-border: rgba(255, 255, 255, 0.2);
-  --shadow: 0 18px 46px rgba(44, 104, 18, 0.2);
+  --shadow: 0 8px 24px rgba(44, 104, 18, 0.1), 0 2px 6px rgba(44, 104, 18, 0.06);
 }
 
 [data-color-scheme="blue-see"] {
@@ -437,7 +437,7 @@
   --nav-toolbar-tooltip-bg: #07151c;
   --nav-toolbar-tooltip-text: #ffffff;
   --nav-toolbar-tooltip-border: rgba(255, 255, 255, 0.24);
-  --shadow: 0 16px 44px rgba(31, 160, 203, 0.16);
+  --shadow: 0 8px 24px rgba(31, 160, 203, 0.1), 0 2px 6px rgba(31, 160, 203, 0.06);
 }
 
 [data-color-scheme="confetti"] {
@@ -470,7 +470,7 @@
   --nav-toolbar-tooltip-bg: #221435;
   --nav-toolbar-tooltip-text: #fff0f8;
   --nav-toolbar-tooltip-border: rgba(240, 152, 208, 0.25);
-  --shadow: 0 12px 40px rgba(60, 20, 70, 0.08);
+  --shadow: 0 8px 24px rgba(60, 20, 70, 0.1), 0 2px 6px rgba(60, 20, 70, 0.06);
 }
 
 [data-color-scheme="bubble-tea"] {
@@ -503,7 +503,7 @@
   --nav-toolbar-tooltip-bg: #2a1710;
   --nav-toolbar-tooltip-text: #fff4e8;
   --nav-toolbar-tooltip-border: rgba(224, 176, 128, 0.25);
-  --shadow: 0 12px 40px rgba(60, 30, 10, 0.1);
+  --shadow: 0 8px 24px rgba(60, 30, 10, 0.1), 0 2px 6px rgba(60, 30, 10, 0.06);
 }
 
 [data-color-scheme="semiconductor"] {
@@ -539,7 +539,7 @@
   --nav-toolbar-tooltip-bg: #050505;
   --nav-toolbar-tooltip-text: #ffffff;
   --nav-toolbar-tooltip-border: rgba(255, 255, 255, 0.18);
-  --shadow: 0 16px 44px rgba(0, 0, 0, 0.18);
+  --shadow: 0 8px 24px rgba(0, 0, 0, 0.1), 0 2px 6px rgba(0, 0, 0, 0.06);
 }
 
 [data-color-scheme="canarinho"] {
@@ -576,7 +576,7 @@
   --titlebar-text: #193375;
   --titlebar-hover-bg: rgba(25, 51, 117, 0.12);
   --titlebar-border: rgba(25, 51, 117, 0.2);
-  --shadow: 0 16px 44px rgba(25, 174, 71, 0.16);
+  --shadow: 0 8px 24px rgba(25, 174, 71, 0.1), 0 2px 6px rgba(25, 174, 71, 0.06);
 }
 
 [data-color-scheme="la-albiceleste"] {
@@ -613,7 +613,7 @@
   --titlebar-text: #173e69;
   --titlebar-hover-bg: rgba(23, 62, 105, 0.14);
   --titlebar-border: rgba(23, 62, 105, 0.2);
-  --shadow: 0 16px 44px rgba(67, 161, 213, 0.16);
+  --shadow: 0 8px 24px rgba(67, 161, 213, 0.1), 0 2px 6px rgba(67, 161, 213, 0.06);
 }
 
 [data-color-scheme="les-bleus"] {
@@ -687,7 +687,7 @@
   --titlebar-text: #2a1a10;
   --titlebar-hover-bg: rgba(42, 26, 16, 0.12);
   --titlebar-border: rgba(42, 26, 16, 0.16);
-  --shadow: 0 16px 44px rgba(243, 108, 33, 0.18);
+  --shadow: 0 8px 24px rgba(243, 108, 33, 0.1), 0 2px 6px rgba(243, 108, 33, 0.06);
 }
 
 [data-color-scheme="die-mannschaft"] {
@@ -724,7 +724,7 @@
   --titlebar-text: #161413;
   --titlebar-hover-bg: rgba(22, 20, 19, 0.08);
   --titlebar-border: rgba(22, 20, 19, 0.12);
-  --shadow: 0 16px 44px rgba(0, 0, 0, 0.14);
+  --shadow: 0 8px 24px rgba(0, 0, 0, 0.09), 0 2px 6px rgba(0, 0, 0, 0.05);
 }
 
 [data-color-scheme="la-roja"] {
@@ -761,7 +761,7 @@
   --titlebar-text: #ffffff;
   --titlebar-hover-bg: rgba(255, 255, 255, 0.16);
   --titlebar-border: rgba(255, 255, 255, 0.2);
-  --shadow: 0 16px 44px rgba(227, 6, 19, 0.16);
+  --shadow: 0 8px 24px rgba(227, 6, 19, 0.1), 0 2px 6px rgba(227, 6, 19, 0.06);
 }
 
 [data-color-scheme="os-navegadores"] {
@@ -835,7 +835,7 @@
   --titlebar-text: #ffffff;
   --titlebar-hover-bg: rgba(255, 255, 255, 0.16);
   --titlebar-border: rgba(255, 255, 255, 0.2);
-  --shadow: 0 16px 44px rgba(237, 28, 36, 0.16);
+  --shadow: 0 8px 24px rgba(237, 28, 36, 0.1), 0 2px 6px rgba(237, 28, 36, 0.06);
 }
 
 [data-color-scheme="el-tri"] {
@@ -872,7 +872,7 @@
   --titlebar-text: #ffffff;
   --titlebar-hover-bg: rgba(255, 255, 255, 0.14);
   --titlebar-border: rgba(255, 255, 255, 0.18);
-  --shadow: 0 16px 44px rgba(0, 104, 71, 0.16);
+  --shadow: 0 8px 24px rgba(0, 104, 71, 0.1), 0 2px 6px rgba(0, 104, 71, 0.06);
 }
 
 [data-color-scheme="three-lions"] {
@@ -909,7 +909,7 @@
   --titlebar-text: #00216a;
   --titlebar-hover-bg: rgba(0, 33, 106, 0.08);
   --titlebar-border: rgba(0, 33, 106, 0.12);
-  --shadow: 0 16px 44px rgba(0, 33, 106, 0.14);
+  --shadow: 0 8px 24px rgba(0, 33, 106, 0.1), 0 2px 6px rgba(0, 33, 106, 0.06);
 }
 
 [data-color-scheme="samurai-blue"] {
@@ -983,5 +983,5 @@
   --titlebar-text: #ffffff;
   --titlebar-hover-bg: rgba(255, 255, 255, 0.14);
   --titlebar-border: rgba(255, 255, 255, 0.18);
-  --shadow: 0 16px 44px rgba(191, 10, 48, 0.16);
+  --shadow: 0 8px 24px rgba(191, 10, 48, 0.1), 0 2px 6px rgba(191, 10, 48, 0.06);
 }
