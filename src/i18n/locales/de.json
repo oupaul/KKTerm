@@ -1745,7 +1745,7 @@
     "ignoreCertificateErrorsHint": "Lädt URL-Verbindungen mit selbstsignierten oder nicht vertrauenswürdigen Zertifikaten ohne Browserwarnung. Gilt für neu geöffnete URL-Tabs.",
     "proxy": "Proxy",
     "proxyHint": "Netzwerk-Proxy für alle KKTerm-Aktivitäten — Verbindungen, App-Updates, KI-Anbieter und sonstige Webanfragen.",
-    "proxyMode": "Proxy",
+    "proxyMode": "Proxy-Einstellungen",
     "proxyModeSystem": "Systemeinstellungen verwenden",
     "proxyModeNone": "Kein Proxy",
     "proxyModeManual": "Manuell",

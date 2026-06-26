@@ -1745,7 +1745,7 @@
     "ignoreCertificateErrorsHint": "ブラウザ警告なしに自己署名または信頼できない証明書を持つ URL 接続を読み込みます。新しく開いた URL タブに適用されます。",
     "proxy": "Proxy",
     "proxyHint": "KKTerm のすべての通信 — 接続、アプリのアップデート、AI プロバイダー、その他の Web リクエスト — を対象とするネットワークプロキシです。",
-    "proxyMode": "プロキシ",
+    "proxyMode": "プロキシ設定",
     "proxyModeSystem": "システム設定を使用",
     "proxyModeNone": "プロキシなし",
     "proxyModeManual": "手動",

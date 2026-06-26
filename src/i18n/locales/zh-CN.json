@@ -1745,7 +1745,7 @@
     "ignoreCertificateErrorsHint": "加载具有自签名或不受信任证书的 URL 连接，而不显示浏览器警告。适用于新打开的 URL 标签页。",
     "proxy": "代理",
     "proxyHint": "用于所有 KKTerm 活动的网络代理 — 连接、应用更新、AI 提供者以及其他网络请求。",
-    "proxyMode": "代理",
+    "proxyMode": "代理设置",
     "proxyModeSystem": "使用系统设置",
     "proxyModeNone": "不使用代理",
     "proxyModeManual": "手动",

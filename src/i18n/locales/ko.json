@@ -1745,7 +1745,7 @@
     "ignoreCertificateErrorsHint": "브라우저 경고 없이 자체 서명 또는 신뢰할 수 없는 인증서로 URL 연결을 로드합니다. 새로 열린 URL 탭에 적용됩니다.",
     "proxy": "프록시",
     "proxyHint": "KKTerm의 모든 활동 — 연결, 앱 업데이트, AI 제공자 및 기타 웹 요청 — 을 위한 네트워크 프록시입니다.",
-    "proxyMode": "프록시",
+    "proxyMode": "프록시 설정",
     "proxyModeSystem": "시스템 설정 사용",
     "proxyModeNone": "프록시 없음",
     "proxyModeManual": "수동",

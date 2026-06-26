@@ -1745,7 +1745,7 @@
     "ignoreCertificateErrorsHint": "載入使用自簽或不受信任憑證的 URL 連線，不會顯示瀏覽器警告。僅對新開啟的 URL 分頁生效。",
     "proxy": "Proxy",
     "proxyHint": "用於所有 KKTerm 活動的網路 Proxy — 連線、應用程式更新、AI 提供者與其他網路請求。",
-    "proxyMode": "Proxy",
+    "proxyMode": "Proxy 設定",
     "proxyModeSystem": "使用系統設定",
     "proxyModeNone": "不使用 Proxy",
     "proxyModeManual": "手動",

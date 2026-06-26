@@ -1745,7 +1745,7 @@
     "ignoreCertificateErrorsHint": "Tải Kết nối URL với chứng chỉ tự ký hoặc không đáng tin cậy mà không có cảnh báo trình duyệt. Áp dụng cho các tab URL mới mở.",
     "proxy": "Proxy",
     "proxyHint": "Proxy mạng cho mọi hoạt động của KKTerm — kết nối, cập nhật ứng dụng, nhà cung cấp AI và các yêu cầu web khác.",
-    "proxyMode": "Proxy",
+    "proxyMode": "Cài đặt Proxy",
     "proxyModeSystem": "Dùng cài đặt hệ thống",
     "proxyModeNone": "Không proxy",
     "proxyModeManual": "Thủ công",

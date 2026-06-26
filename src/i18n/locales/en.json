@@ -1748,7 +1748,7 @@
     "ignoreCertificateErrorsHint": "Allows self-signed or untrusted certificates in new URL tabs.",
     "proxy": "Proxy",
     "proxyHint": "Network proxy for all KKTerm activity — connections, app updates, AI providers, and other web requests.",
-    "proxyMode": "Proxy",
+    "proxyMode": "Proxy Settings",
     "proxyModeSystem": "Use system settings",
     "proxyModeNone": "No proxy",
     "proxyModeManual": "Manual",

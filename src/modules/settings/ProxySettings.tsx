@@ -125,6 +125,7 @@ export function ProxySettings() {
               <option value="none">{t("settings.proxyModeNone")}</option>
               <option value="manual">{t("settings.proxyModeManual")}</option>
             </select>
+            <small className="field-hint">{t("settings.proxyPlatformHint")}</small>
           </label>
         </div>
         {proxyMode === "manual" ? (
@@ -168,7 +169,6 @@ export function ProxySettings() {
             </label>
           </div>
         ) : null}
-        <small className="field-hint">{t("settings.proxyPlatformHint")}</small>
       </fieldset>
     </section>
   );

@@ -1745,7 +1745,7 @@
     "ignoreCertificateErrorsHint": "Memuat Koneksi URL dengan sertifikat self-signed atau tidak tepercaya tanpa peringatan browser. Berlaku untuk tab URL yang baru dibuka.",
     "proxy": "Proxy",
     "proxyHint": "Proxy jaringan untuk seluruh aktivitas KKTerm — koneksi, pembaruan aplikasi, penyedia AI, dan permintaan web lainnya.",
-    "proxyMode": "Proxy",
+    "proxyMode": "Pengaturan proxy",
     "proxyModeSystem": "Gunakan pengaturan sistem",
     "proxyModeNone": "Tanpa proxy",
     "proxyModeManual": "Manual",

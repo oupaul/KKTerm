@@ -1745,7 +1745,7 @@
     "ignoreCertificateErrorsHint": "Carrega Conexões URL com certificados autoassinados ou não confiáveis sem o aviso do navegador. Aplica-se a abas URL recém-abertas.",
     "proxy": "Proxy",
     "proxyHint": "Proxy de rede para toda a atividade do KKTerm — conexões, atualizações do app, provedores de IA e outras requisições web.",
-    "proxyMode": "Proxy",
+    "proxyMode": "Configurações de proxy",
     "proxyModeSystem": "Usar ajustes do sistema",
     "proxyModeNone": "Sem proxy",
     "proxyModeManual": "Manual",
