@@ -3,6 +3,112 @@
 All notable changes to KKTerm are documented here.
 
 ## Direct Downloads
+* 💻 [Download for Windows (64-bit)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.105/kkterm-0.1.105-windows-x64-setup.exe)
+* 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.105/kkterm-0.1.105-windows-arm64-setup.exe)
+
+## Highlights
+- Fix **Proxy settings** layout/labels so the page doesn’t repeat “Proxy” three times like it’s trying to debug itself.
+- Fix **Import browser bookmarks** so its **Tab** won’t get stuck on “Looking for browser bookmark sources…” forever.
+
+## New
+- Connection Import: add support for **HTTP/HTTPS ports** and improve the **port selection** UI. (PR #451)
+
+## Improved
+- (Dashboard) App launcher widget styling and icon rendering improvements for macOS. (PR #1705c2b, PR #b5ed7a8, PR #7d6a5cf)
+
+## Fixed
+- Settings: tidy **Proxy settings** layout and label. (PR #473, @ryantsai)
+- Connections: stop **Import browser bookmarks** from hanging indefinitely. (PR #474, @ryantsai)
+
+## Internal
+- Localization work for admin-related Chocolatey messages across multiple languages. (6c2d445)  
+- Import dialog/bookmark handling refactor (UI components). (7fcd826)
+- Enhance file picker filters for platform-specific app selection. (0fb8c93)
+
+---
+
+## 重點摘要
+- 修正 **Proxy 設定** 的版面/標籤，讓頁面不再像在自我除錯一樣重複顯示「Proxy」三次。
+- 修正「**匯入瀏覽器書籤**」的 **Tab**，避免卡在「Looking for browser bookmark sources…」永遠不結束。
+
+## 新增
+- 連線匯入：支援 **HTTP/HTTPS 埠**，並強化**埠選擇**介面。(PR #451)
+
+## 改進
+- （Dashboard）macOS 的 App launcher 小工具樣式與圖示呈現最佳化。(PR #1705c2b、PR #b5ed7a8、PR #7d6a5cf)
+
+## 修正
+- 設定：整理 **Proxy 設定**版面與標籤。(PR #473，@ryantsai)
+- 連線：修正「**匯入瀏覽器書籤**」可能無限卡住。(PR #474，@ryantsai)
+
+## 內部
+- 多語系更新：與 Chocolatey 管理員相關的訊息。(6c2d445)
+- 匯入對話框/書籤處理流程重構（UI 元件）。(7fcd826)
+- 強化平台專用應用選擇的檔案選取篩選。(0fb8c93)
+
+## Direct Downloads
+* 💻 [Download for Windows (64-bit)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.104/kkterm-0.1.104-windows-x64-setup.exe)
+* 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.104/kkterm-0.1.104-windows-arm64-setup.exe)
+
+## Highlights
+- **Global Proxy for the whole app**: choose **System / No Proxy / Manual (HTTP/HTTPS/SOCKS5)** in **Settings → General**. (PR #461)
+- **Global SSH zlib compression default now persists**: your chosen default is saved and applied on reload. (PR #462)
+- **RDP overlay keyboard focus fixed**: clicks/keyboard focus now properly route into the RDP ActiveX overlay instead of forcing extra “tab dancing.” (PR #471, fixes #460)
+
+## New
+- **Proxy moved to its own top-level Settings section**: **Settings → Proxy** with a dedicated Proxy UI. (PR #464)
+- **Installer improvements: Sysinternals quick launcher** plus **Bun recipe** and a new **Package Managers** section. (PR #467, PR #468)
+
+## Improved
+- **Sysinternals quick launcher is now searchable** (GUI launch + CLI list). (PR #468)
+- **Softened drop shadows** that previously bled on light backgrounds across shared UI surfaces. (PR #463)
+
+## Fixed
+- **RDP ActiveX overlay keyboard focus** when clicking the overlay (proper fix for #460 using a thread-local mouse hook). (PR #471)  
+- **RDP overlay click now grabs keyboard focus** (initial focus handling update). (PR #465)
+- **Installer: Sysinternals tools launch elevated**, and **“Open elevated PowerShell”** is used consistently. (PR #470)
+- **Installer: Chocolatey operations now run elevated (UAC) and machine-wide** so installs/upgrades/uninstalls behave as expected. (PR #472)  
+  - Issue reporter: **@sw2000s-Git** reported session keyboard/function trouble; PR **#471** addresses that (not Chocolatey), but credit is still noted here to keep our network/KB wiring straight. 😉
+- **App Launcher: fixes explorer.exe launching on macOS**. (PR #469)
+
+## Internal
+- Global app proxy work and docs/UI updates (PR #461, #464)
+- Persist global SSH zlib compression default with settings validation + test coverage (PR #462)
+- Installer tooling & localization updates for Sysinternals/Bun/Package Managers (PR #467, #468, #470, #472)
+- RDP focus-policy updates and related tests (PR #465, #471)
+- UI styling/shadow token adjustments (PR #463)
+
+---
+
+## Highlights（重點）
+- **全域 Proxy 控制應用程式整體網路流量**：在 **設定 → 一般** 選擇 **系統 / 不使用 Proxy / 手動（HTTP/HTTPS/SOCKS5）**。 (PR #461)
+- **全域 SSH zlib 壓縮預設值會被保留**：你選的預設會被儲存並在重新載入後生效。 (PR #462)
+- **已修正 RDP overlay 的鍵盤焦點**：點擊/鍵盤輸入會正確導入 RDP ActiveX overlay，不用再額外切換分頁才聽話。 (PR #471，修正 #460)
+
+## New（新增）
+- **Proxy 搬到獨立的頂層設定頁**：**設定 → Proxy**，提供專屬的 Proxy 介面。 (PR #464)
+- **安裝程式改進**：新增 **Sysinternals 快速啟動器**，加入 **Bun recipe**，並新增 **Package Managers** 分類。 (PR #467, PR #468)
+
+## Improved（改善）
+- **Sysinternals 快速啟動器支援搜尋**（GUI 直接啟動 + CLI 清單）。 (PR #468)
+- **弱化在淺色背景上會外溢的陰影**，改善多處共用 UI 表面。 (PR #463)
+
+## Fixed（修正）
+- **RDP ActiveX overlay 鍵盤焦點**：點擊 overlay 時會正確導入（#460 的正確修正，使用 thread-local 滑鼠 hook）。 (PR #471)
+- **點擊 RDP overlay 時會抓到鍵盤焦點**（焦點處理的初步更新）。 (PR #465)
+- **安裝程式：Sysinternals 工具改為以提升權限（elevated）啟動**，並一致使用 **「開啟提升權限的 PowerShell」**。 (PR #470)
+- **安裝程式：Chocolatey 相關操作改為提升權限（UAC）且以整台機器範圍執行**，讓安裝/升級/解除安裝更符合預期。 (PR #472)
+  - 問題回報者：**@sw2000s-Git** 回報「session 鍵盤/功能在切換其他程式後無效」；此為 **PR #471** 的修正。（這裡附上引用只是提醒我們不要把網路/鍵盤的接線弄錯。😉）
+- **App Launcher：修正 macOS 上誤用 explorer.exe 啟動**。 (PR #469)
+
+## Internal（內部）
+- 全域 Proxy、文件與 UI 更新（PR #461、#464）
+- 保留全域 SSH zlib 壓縮預設值：設定驗證與測試覆蓋（PR #462）
+- 安裝程式工具與在地化更新：Sysinternals/Bun/Package Managers（PR #467、#468、#470、#472）
+- RDP 焦點策略更新與相關測試（PR #465、#471）
+- UI 陰影樣式/色 token 調整（PR #463）
+
+## Direct Downloads
 * 💻 [Download for Windows (64-bit)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.103/kkterm-0.1.103-windows-x64-setup.exe)
 * 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.103/kkterm-0.1.103-windows-arm64-setup.exe)
 

@@ -11,6 +11,8 @@ import {
 import type { ConfirmDialogOptions } from "@tauri-apps/plugin-dialog";
 import { readFile, writeFile, writeTextFile } from "@tauri-apps/plugin-fs";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import { documentDir } from "@tauri-apps/api/path";
+import { isMacPlatform, isWindowsPlatform } from "./platform";
 import i18next from "../i18n/config";
 import {
   CREDENTIAL_UNLOCK_REQUIRED_EVENT,
@@ -501,7 +503,7 @@ export interface BrowserBookmarkSourcesResponse {
 export interface ScanResultEntry {
   host: string;
   port: number;
-  type: "ssh" | "telnet" | "rdp" | "vnc";
+  type: "ssh" | "telnet" | "rdp" | "vnc" | "url";
 }
 
 export interface ScanNetworkResponse {
@@ -3128,18 +3130,44 @@ export async function selectAppLauncherFile(options: {
     return null;
   }
 
-  const filters =
-    options.kind === "app"
-      ? [
-          {
-            name: options.filterName,
-            extensions: ["exe", "lnk", "bat", "cmd", "ps1"],
-          },
-        ]
-      : [{ name: options.allFilesFilterName, extensions: ["*"] }];
+  // Native pickers grey out everything that does not match a filter, so the
+  // extension list must be platform-specific. macOS apps are `.app` bundles
+  // (treated as selectable files by the native panel), Windows uses executable
+  // extensions, and Linux executables generally have no extension at all. For
+  // the "file" kind we pass no filter so every file stays selectable — a
+  // wildcard `*` filter greys out all files on macOS.
+  let filters: WidgetFilePickFilter[] | undefined;
+  let defaultPath: string | undefined;
+  if (options.kind === "app") {
+    if (isMacPlatform()) {
+      filters = [{ name: options.filterName, extensions: ["app"] }];
+      // macOS apps live in /Applications; open there so the `.app` bundles are
+      // immediately visible instead of dropping the user in their home folder.
+      defaultPath = "/Applications";
+    } else if (isWindowsPlatform()) {
+      filters = [
+        {
+          name: options.filterName,
+          extensions: ["exe", "lnk", "bat", "cmd", "ps1"],
+        },
+      ];
+    } else {
+      // Linux executables have no canonical extension; allow any file.
+      filters = undefined;
+    }
+  } else {
+    filters = undefined;
+    if (isMacPlatform()) {
+      // Documents is where users keep the files they tend to pin; open there
+      // instead of the home folder. Best-effort — fall back to the default
+      // location if the path can't be resolved.
+      defaultPath = (await documentDir().catch(() => undefined)) || undefined;
+    }
+  }
 
   const selectedPath = await openDialog({
     directory: false,
+    defaultPath,
     filters,
     multiple: false,
     title: options.title,

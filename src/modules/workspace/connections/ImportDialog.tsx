@@ -60,10 +60,11 @@ type Candidate = {
   folderPath: string[];
 };
 
-const DEFAULT_PORTS: Array<{ port: number; labelKey: string }> = [
-  { port: 22, labelKey: "connections.import.portSsh" },
-  { port: 23, labelKey: "connections.import.portTelnet" },
-  { port: 3389, labelKey: "connections.import.portRdp" },
+const SCAN_PROTOCOLS: Array<{ ports: number[]; labelKey: string }> = [
+  { ports: [22], labelKey: "connections.import.portSsh" },
+  { ports: [23], labelKey: "connections.import.portTelnet" },
+  { ports: [3389], labelKey: "connections.import.portRdp" },
+  { ports: [80, 443], labelKey: "connections.import.portHttpHttps" },
 ];
 
 const IMPORTABLE_TYPES: ConnectionType[] = [
@@ -104,8 +105,9 @@ export function ImportDialog({ sshSettings, onClose, onImported }: ImportDialogP
   const [fileLoading, setFileLoading] = useState(false);
   const [target, setTarget] = useState("");
   const [enabledPorts, setEnabledPorts] = useState<Set<number>>(
-    () => new Set(DEFAULT_PORTS.map((entry) => entry.port)),
+    () => new Set(SCAN_PROTOCOLS.flatMap((entry) => entry.ports)),
   );
+  const [customScanPort, setCustomScanPort] = useState("");
   const [scanning, setScanning] = useState(false);
   const [progress, setProgress] = useState<ScanProgressEvent | null>(null);
   const scanIdRef = useRef("");
@@ -115,6 +117,7 @@ export function ImportDialog({ sshSettings, onClose, onImported }: ImportDialogP
   const [bookmarksLoaded, setBookmarksLoaded] = useState(false);
   const [bookmarksLoading, setBookmarksLoading] = useState(false);
   const [bookmarksPreviewing, setBookmarksPreviewing] = useState(false);
+  const bookmarkDiscoveryRef = useRef(false);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<ConnectionType | "all">("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -122,7 +125,6 @@ export function ImportDialog({ sshSettings, onClose, onImported }: ImportDialogP
   const [bulkValue, setBulkValue] = useState("");
   const [bulkScope, setBulkScope] = useState<"all" | "empty">("empty");
   const [destinationWorkspaceId, setDestinationWorkspaceId] = useState(activeWorkspaceId);
-  const [destinationOpen, setDestinationOpen] = useState(false);
   const [importing, setImporting] = useState(false);
 
   const workspaceOptions = useMemo(
@@ -170,6 +172,10 @@ export function ImportDialog({ sshSettings, onClose, onImported }: ImportDialogP
     progress && progress.total > 0
       ? Math.round((progress.completed / progress.total) * 100)
       : 0;
+  const scanPorts = useMemo(
+    () => normalizeScanPorts(enabledPorts, customScanPort),
+    [customScanPort, enabledPorts],
+  );
 
   useEffect(() => {
     let dispose: (() => void) | null = null;
@@ -210,10 +216,17 @@ export function ImportDialog({ sshSettings, onClose, onImported }: ImportDialogP
   }, [activeWorkspaceId, destinationWorkspaceId, workspaceOptions]);
 
   useEffect(() => {
-    if (source !== "bookmarks" || bookmarksLoaded || bookmarksLoading) {
+    // Guard re-entrancy with a ref, NOT with `bookmarksLoading`. Listing the
+    // loading flag in the dependency array (and writing it below) made the
+    // effect re-run the moment discovery started, whose cleanup cancelled the
+    // in-flight request before it could resolve — so the dialog hung on
+    // "Looking for browser bookmark sources…" forever regardless of which (or
+    // whether any) browsers were installed.
+    if (source !== "bookmarks" || bookmarksLoaded || bookmarkDiscoveryRef.current) {
       return;
     }
     let cancelled = false;
+    bookmarkDiscoveryRef.current = true;
     setBookmarksLoading(true);
     invokeCommand("list_browser_bookmark_sources", undefined)
       .then((response) => {
@@ -226,24 +239,25 @@ export function ImportDialog({ sshSettings, onClose, onImported }: ImportDialogP
           response.sources[0];
         if (first) {
           setBookmarkSourceId(first.id);
+          setSelectedNodeIds(new Set(bookmarkSourceNodeIds(first)));
         }
-        setBookmarksLoaded(true);
       })
       .catch((failure) => {
         if (!cancelled) {
           setError(failure instanceof Error ? failure.message : String(failure));
-          setBookmarksLoaded(true);
         }
       })
       .finally(() => {
+        bookmarkDiscoveryRef.current = false;
         if (!cancelled) {
+          setBookmarksLoaded(true);
           setBookmarksLoading(false);
         }
       });
     return () => {
       cancelled = true;
     };
-  }, [bookmarksLoaded, bookmarksLoading, source]);
+  }, [bookmarksLoaded, source]);
 
   async function handleBrowse() {
     setError("");
@@ -270,7 +284,7 @@ export function ImportDialog({ sshSettings, onClose, onImported }: ImportDialogP
       setError(t("connections.import.scanTargetRequired"));
       return;
     }
-    if (enabledPorts.size === 0) {
+    if (scanPorts.length === 0) {
       setError(t("connections.import.scanPortRequired"));
       return;
     }
@@ -285,7 +299,7 @@ export function ImportDialog({ sshSettings, onClose, onImported }: ImportDialogP
         request: {
           scanId,
           target: target.trim(),
-          ports: Array.from(enabledPorts).sort((left, right) => left - right),
+          ports: scanPorts,
         },
       });
       setWarnings([]);
@@ -300,13 +314,13 @@ export function ImportDialog({ sshSettings, onClose, onImported }: ImportDialogP
     }
   }
 
-  function togglePort(port: number) {
+  function togglePortGroup(ports: number[]) {
     setEnabledPorts((current) => {
       const next = new Set(current);
-      if (next.has(port)) {
-        next.delete(port);
+      if (ports.every((port) => next.has(port))) {
+        ports.forEach((port) => next.delete(port));
       } else {
-        next.add(port);
+        ports.forEach((port) => next.add(port));
       }
       return next;
     });
@@ -314,7 +328,8 @@ export function ImportDialog({ sshSettings, onClose, onImported }: ImportDialogP
 
   function handleBookmarkSourceChange(sourceId: string) {
     setBookmarkSourceId(sourceId);
-    setSelectedNodeIds(new Set());
+    const source = bookmarkSources.find((entry) => entry.id === sourceId);
+    setSelectedNodeIds(new Set(source ? bookmarkSourceNodeIds(source) : []));
     clearPreview();
     setError("");
   }
@@ -324,22 +339,8 @@ export function ImportDialog({ sshSettings, onClose, onImported }: ImportDialogP
     setBookmarkSources([]);
     setBookmarkSourceId("");
     setSelectedNodeIds(new Set());
+    bookmarkDiscoveryRef.current = false;
     setBookmarksLoaded(false);
-    clearPreview();
-  }
-
-  function toggleBookmarkNode(node: BookmarkTreeNode, checked: boolean) {
-    setSelectedNodeIds((current) => {
-      const next = new Set(current);
-      collectBookmarkNodeIds(node).forEach((id) => {
-        if (checked) {
-          next.add(id);
-        } else {
-          next.delete(id);
-        }
-      });
-      return next;
-    });
     clearPreview();
   }
 
@@ -348,7 +349,11 @@ export function ImportDialog({ sshSettings, onClose, onImported }: ImportDialogP
       setError(t("connections.import.bookmarksSourceRequired"));
       return;
     }
-    if (selectedNodeIds.size === 0) {
+    const nodeIds =
+      selectedNodeIds.size > 0
+        ? Array.from(selectedNodeIds)
+        : bookmarkSourceNodeIds(selectedSource);
+    if (nodeIds.length === 0) {
       setError(t("connections.import.bookmarksSelectionRequired"));
       return;
     }
@@ -358,7 +363,7 @@ export function ImportDialog({ sshSettings, onClose, onImported }: ImportDialogP
       const result = await invokeCommand("preview_browser_bookmark_import", {
         request: {
           sourceId: selectedSource.id,
-          selectedNodeIds: Array.from(selectedNodeIds),
+          selectedNodeIds: nodeIds,
         },
       });
       setPreview(result);
@@ -548,8 +553,6 @@ export function ImportDialog({ sshSettings, onClose, onImported }: ImportDialogP
         <WorkspaceDestinationPicker
           destinationWorkspaceId={destinationWorkspaceId}
           onDestinationWorkspaceId={setDestinationWorkspaceId}
-          open={destinationOpen}
-          setOpen={setDestinationOpen}
           workspaces={workspaceOptions}
         />
       }
@@ -600,7 +603,8 @@ export function ImportDialog({ sshSettings, onClose, onImported }: ImportDialogP
             onBookmarkRefresh={handleBookmarkRefresh}
             onBookmarkSourceChange={handleBookmarkSourceChange}
             onChooseFile={() => void handleBrowse()}
-            onPortToggle={togglePort}
+            onCustomScanPort={setCustomScanPort}
+            onPortToggle={togglePortGroup}
             onScan={() => void handleStartScan()}
             progress={progress}
             progressPercent={progressPercent}
@@ -608,17 +612,13 @@ export function ImportDialog({ sshSettings, onClose, onImported }: ImportDialogP
             selectedNodeCount={selectedNodeIds.size}
             selectedSource={selectedSource}
             source={source}
+            customScanPort={customScanPort}
             target={target}
             setTarget={setTarget}
             t={t}
           />
           {source === "bookmarks" && selectedSource ? (
-            <BookmarkSourceStrip
-              selectedNodeIds={selectedNodeIds}
-              source={selectedSource}
-              onToggle={toggleBookmarkNode}
-              t={t}
-            />
+            <BookmarkWarnings source={selectedSource} t={t} />
           ) : null}
           {error ? <p className="form-error import-inline-error">{error}</p> : null}
           <FilterBar
@@ -702,6 +702,7 @@ function SourceContext({
   bookmarksLoaded,
   bookmarksLoading,
   bookmarksPreviewing,
+  customScanPort,
   enabledPorts,
   fileLoading,
   filePath,
@@ -709,6 +710,7 @@ function SourceContext({
   onBookmarkRefresh,
   onBookmarkSourceChange,
   onChooseFile,
+  onCustomScanPort,
   onPortToggle,
   onScan,
   progress,
@@ -725,6 +727,7 @@ function SourceContext({
   bookmarksLoaded: boolean;
   bookmarksLoading: boolean;
   bookmarksPreviewing: boolean;
+  customScanPort: string;
   enabledPorts: Set<number>;
   fileLoading: boolean;
   filePath: string;
@@ -732,7 +735,8 @@ function SourceContext({
   onBookmarkRefresh: () => void;
   onBookmarkSourceChange: (sourceId: string) => void;
   onChooseFile: () => void;
-  onPortToggle: (port: number) => void;
+  onCustomScanPort: (port: string) => void;
+  onPortToggle: (ports: number[]) => void;
   onScan: () => void;
   progress: ScanProgressEvent | null;
   progressPercent: number;
@@ -817,16 +821,27 @@ function SourceContext({
             value={target}
           />
           <div className="import-portchips-redesign">
-            {DEFAULT_PORTS.map((entry) => (
+            {SCAN_PROTOCOLS.map((entry) => (
               <button
-                className={enabledPorts.has(entry.port) ? "on" : ""}
-                key={entry.port}
-                onClick={() => onPortToggle(entry.port)}
+                className={entry.ports.every((port) => enabledPorts.has(port)) ? "on" : ""}
+                key={entry.labelKey}
+                onClick={() => onPortToggle(entry.ports)}
                 type="button"
               >
-                {entry.port}
+                {t(entry.labelKey)}
               </button>
             ))}
+            <TextInput
+              aria-label={t("connections.port")}
+              className="import-custom-port-input"
+              inputMode="numeric"
+              max={65535}
+              min={1}
+              onChange={(event) => onCustomScanPort(event.currentTarget.value)}
+              placeholder={t("connections.port")}
+              type="number"
+              value={customScanPort}
+            />
           </div>
         </div>
         {scanning || (progress && progress.total > 0) ? (
@@ -859,96 +874,25 @@ function SourceIcon({ source }: { source: ImportSource }) {
   );
 }
 
-function BookmarkSourceStrip({
-  selectedNodeIds,
+function BookmarkWarnings({
   source,
-  onToggle,
   t,
 }: {
-  selectedNodeIds: Set<string>;
   source: BookmarkImportSource;
-  onToggle: (node: BookmarkTreeNode, checked: boolean) => void;
   t: ReturnType<typeof useTranslation>["t"];
 }) {
-  return (
+  return source.warnings.length > 0 ? (
     <div className="import-bookmark-strip">
-      {source.warnings.length > 0 ? (
-        <div className="import-warnings" role="status">
-          <strong>{t("connections.import.warningsHeading")}</strong>
-          <ul>
-            {source.warnings.map((message, index) => (
-              <li key={index}>{message}</li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-      <div
-        className="import-bookmark-tree import-bookmark-tree-redesign"
-        role="tree"
-        aria-label={t("connections.import.bookmarksTreeLabel")}
-      >
-        {source.root.children.map((node) => (
-          <BookmarkTreeRow
-            key={node.id}
-            node={node}
-            selectedNodeIds={selectedNodeIds}
-            onToggle={onToggle}
-          />
-        ))}
+      <div className="import-warnings" role="status">
+        <strong>{t("connections.import.warningsHeading")}</strong>
+        <ul>
+          {source.warnings.map((message, index) => (
+            <li key={index}>{message}</li>
+          ))}
+        </ul>
       </div>
     </div>
-  );
-}
-
-function BookmarkTreeRow({
-  node,
-  selectedNodeIds,
-  onToggle,
-}: {
-  node: BookmarkTreeNode;
-  selectedNodeIds: Set<string>;
-  onToggle: (node: BookmarkTreeNode, checked: boolean) => void;
-}) {
-  const descendantIds = useMemo(() => collectBookmarkNodeIds(node), [node]);
-  const checked = descendantIds.every((id) => selectedNodeIds.has(id));
-  const partiallyChecked =
-    !checked && descendantIds.some((id) => selectedNodeIds.has(id));
-  const checkboxRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (checkboxRef.current) {
-      checkboxRef.current.indeterminate = partiallyChecked;
-    }
-  }, [partiallyChecked]);
-
-  return (
-    <div className="import-bookmark-node" role="treeitem">
-      <label className="import-bookmark-label">
-        <input
-          ref={checkboxRef}
-          checked={checked}
-          onChange={(event) => onToggle(node, event.currentTarget.checked)}
-          type="checkbox"
-        />
-        <span>{node.name}</span>
-        {node.type === "bookmark" && node.url ? (
-          <small>{node.url}</small>
-        ) : null}
-      </label>
-      {node.children.length > 0 ? (
-        <div className="import-bookmark-children" role="group">
-          {node.children.map((child) => (
-            <BookmarkTreeRow
-              key={child.id}
-              node={child}
-              selectedNodeIds={selectedNodeIds}
-              onToggle={onToggle}
-            />
-          ))}
-        </div>
-      ) : null}
-    </div>
-  );
+  ) : null;
 }
 
 function FilterBar({
@@ -1236,47 +1180,25 @@ function BulkFieldEditor({
 function WorkspaceDestinationPicker({
   destinationWorkspaceId,
   onDestinationWorkspaceId,
-  open,
-  setOpen,
   workspaces,
 }: {
   destinationWorkspaceId: string;
   onDestinationWorkspaceId: (value: string) => void;
-  open: boolean;
-  setOpen: (value: boolean) => void;
   workspaces: Workspace[];
 }) {
   const { t } = useTranslation();
-  const destinationLabel =
-    workspaces.find((workspace) => workspace.id === destinationWorkspaceId)?.name ??
-    t("workspace.workspace");
 
   return (
     <div className="import-destination-redesign">
       <span>{t("workspace.workspace")}</span>
-      <button
-        className={open ? "open" : ""}
-        onClick={() => setOpen(!open)}
-        type="button"
-      >
-        <DIcon name="dashboard" size={14} />
-        {destinationLabel}
-        <DIcon name="updown" size={12} />
-      </button>
-      {open ? (
-        <div className="import-popover-redesign import-destination-popover">
-          <Field label={t("workspace.workspace")}>
-            <Select
-              onChange={(event) => onDestinationWorkspaceId(event.currentTarget.value)}
-              options={workspaces.map((workspace) => ({
-                value: workspace.id,
-                label: workspace.name,
-              }))}
-              value={destinationWorkspaceId}
-            />
-          </Field>
-        </div>
-      ) : null}
+      <Select
+        onChange={(event) => onDestinationWorkspaceId(event.currentTarget.value)}
+        options={workspaces.map((workspace) => ({
+          value: workspace.id,
+          label: workspace.name,
+        }))}
+        value={destinationWorkspaceId}
+      />
     </div>
   );
 }
@@ -1327,11 +1249,13 @@ function draftToCandidate(draft: ImportFilePreview["drafts"][number], index: num
 }
 
 function scanResultToCandidate(entry: ScanResultEntry, index: number): Candidate {
+  const url = entry.type === "url" ? urlForScannedPort(entry.host, entry.port) : undefined;
+  const host = url ?? entry.host;
   return {
     id: `${index}`,
     selected: true,
-    name: entry.host,
-    host: entry.host,
+    name: host,
+    host,
     user: "",
     password: "",
     port: entry.port,
@@ -1345,6 +1269,29 @@ function collectBookmarkNodeIds(node: BookmarkTreeNode): string[] {
     node.id,
     ...node.children.flatMap((child) => collectBookmarkNodeIds(child)),
   ];
+}
+
+function bookmarkSourceNodeIds(source: BookmarkImportSource): string[] {
+  return source.root.children.flatMap((node) => collectBookmarkNodeIds(node));
+}
+
+function normalizeScanPorts(enabledPorts: Set<number>, customPort: string): number[] {
+  const ports = new Set(enabledPorts);
+  const parsedCustomPort = Number(customPort);
+  if (Number.isInteger(parsedCustomPort) && parsedCustomPort >= 1 && parsedCustomPort <= 65535) {
+    ports.add(parsedCustomPort);
+  }
+  return Array.from(ports).sort((left, right) => left - right);
+}
+
+function urlForScannedPort(host: string, port: number): string {
+  if (port === 80) {
+    return `http://${host}`;
+  }
+  if (port === 443) {
+    return `https://${host}`;
+  }
+  return `http://${host}:${port}`;
 }
 
 function connectionTypeText(type: ConnectionType, t: ReturnType<typeof useTranslation>["t"]) {

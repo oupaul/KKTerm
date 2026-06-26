@@ -248,6 +248,36 @@
   max-height: 22px;
 }
 
+/* macOS: icons pulled from Finder already carry their own squircle shape, so the
+   tile background is redundant — drop it and let the icon fill, matching Finder.
+   Scoped to :has(img) so the generic lucide fallback keeps its colored tile. */
+[data-platform="macos"] .app-launcher-tile-icon:has(img) {
+  background: transparent;
+  border-radius: 0;
+  /* Clears the inset hairline the base rule draws around the tile so real
+     Finder icons sit on nothing, like Finder. */
+  box-shadow: none;
+}
+
+[data-platform="macos"] .app-launcher-tile-icon img {
+  max-width: 42px;
+  max-height: 42px;
+}
+
+[data-platform="macos"] .app-launcher-widget-list .app-launcher-tile-icon img,
+[data-platform="macos"] .app-launcher-widget-details .app-launcher-tile-icon img {
+  max-width: 30px;
+  max-height: 30px;
+}
+
+/* macOS icons view: drop the white tile card so entries read as bare icon +
+   label, like Finder/Launchpad. The transparent border keeps the 1px box so the
+   accent hover ring still lines up. List/details views keep their card rows. */
+[data-platform="macos"] .app-launcher-widget-icons .app-launcher-tile-launch {
+  background: transparent;
+  border-color: transparent;
+}
+
 .app-launcher-tile-label {
   max-width: 100%;
   display: -webkit-box;

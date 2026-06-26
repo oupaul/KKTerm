@@ -515,7 +515,122 @@ fn icon_handle_to_data_url(icon: WindowsIconHandle, icon_size: i32) -> Option<St
     Some(format!("data:image/png;base64,{}", STANDARD.encode(png)))
 }
 
-#[cfg(not(target_os = "windows"))]
+// Render the Finder icon for any path (apps, folders, files) via NSWorkspace.
+// Off the main thread is fine here: `iconForFile:` and the bitmap export do not
+// touch the AppKit run loop. Returns None on any failure so the caller falls
+// back to the generic icon.
+#[cfg(target_os = "macos")]
+fn native_icon_data_url(path: &str) -> Option<String> {
+    use base64::{Engine as _, engine::general_purpose::STANDARD};
+    use objc2::AnyThread;
+    use objc2_app_kit::{NSBitmapImageFileType, NSBitmapImageRep, NSWorkspace};
+    use objc2_foundation::{NSDictionary, NSSize, NSString};
+
+    if path.is_empty() {
+        return None;
+    }
+
+    unsafe {
+        let workspace = NSWorkspace::sharedWorkspace();
+        let ns_path = NSString::from_str(path);
+        let image = workspace.iconForFile(&ns_path);
+        // Default icon size is 32pt; request a crisp 128pt so the launcher grid
+        // shows a sharp icon. NSImage picks the closest representation.
+        image.setSize(NSSize::new(128.0, 128.0));
+
+        let tiff = image.TIFFRepresentation()?;
+        let bitmap = NSBitmapImageRep::initWithData(NSBitmapImageRep::alloc(), &tiff)?;
+        let properties = NSDictionary::new();
+        let png =
+            bitmap.representationUsingType_properties(NSBitmapImageFileType::PNG, &properties)?;
+        let bytes = png.to_vec();
+        if bytes.is_empty() {
+            return None;
+        }
+        Some(format!("data:image/png;base64,{}", STANDARD.encode(bytes)))
+    }
+}
+
+// Resolve the themed icon for any path on Linux/BSD via GIO, then render it to
+// a PNG through gdk-pixbuf. Deliberately avoids GTK's main-thread-only
+// `IconTheme`: GIO, gdk-pixbuf and the freedesktop-icons resolver are all
+// thread-safe, so this is safe from the worker thread that runs `prepare_entry`.
+// Best-effort — any failure returns None and the caller falls back to the
+// generic icon.
+#[cfg(all(unix, not(target_os = "macos")))]
+fn native_icon_data_url(path: &str) -> Option<String> {
+    use base64::{Engine as _, engine::general_purpose::STANDARD};
+    use gio::prelude::*;
+
+    let info = gio::File::for_path(path)
+        .query_info(
+            "standard::icon",
+            gio::FileQueryInfoFlags::NONE,
+            gio::Cancellable::NONE,
+        )
+        .ok()?;
+    let icon_path = resolve_themed_icon_path(&info.icon()?)?;
+
+    // gdk-pixbuf handles both raster (PNG/XPM) and SVG icons via the system
+    // image loaders, scaling to a crisp 128px for the launcher grid.
+    let pixbuf = gdk_pixbuf::Pixbuf::from_file_at_size(&icon_path, 128, 128).ok()?;
+    let png = pixbuf.save_to_bufferv("png", &[]).ok()?;
+    if png.is_empty() {
+        return None;
+    }
+    Some(format!("data:image/png;base64,{}", STANDARD.encode(png)))
+}
+
+#[cfg(all(unix, not(target_os = "macos")))]
+fn resolve_themed_icon_path(icon: &gio::Icon) -> Option<std::path::PathBuf> {
+    use gio::prelude::*;
+    use glib::prelude::*;
+
+    // A FileIcon already points at a concrete file (thumbnails, or apps whose
+    // .desktop entry uses an absolute Icon= path).
+    if let Some(file_icon) = icon.downcast_ref::<gio::FileIcon>() {
+        return file_icon.file().path();
+    }
+
+    // A ThemedIcon yields candidate names to resolve against the active icon
+    // theme, most-specific first.
+    let themed = icon.downcast_ref::<gio::ThemedIcon>()?;
+    let theme = active_icon_theme_name();
+    for name in themed.names() {
+        let mut lookup = freedesktop_icons::lookup(name.as_str()).with_size(128);
+        if let Some(theme) = theme.as_deref() {
+            lookup = lookup.with_theme(theme);
+        }
+        if let Some(found) = lookup.with_cache().find() {
+            return Some(found);
+        }
+    }
+    None
+}
+
+// Best-effort read of the desktop's configured icon theme via GSettings. Absent
+// the GNOME schema (some KDE/minimal setups) we return None and let the resolver
+// fall back through hicolor.
+#[cfg(all(unix, not(target_os = "macos")))]
+fn active_icon_theme_name() -> Option<String> {
+    use gio::prelude::*;
+
+    let source = gio::SettingsSchemaSource::default()?;
+    source.lookup("org.gnome.desktop.interface", true)?;
+    let settings = gio::Settings::new("org.gnome.desktop.interface");
+    let name = settings.string("icon-theme").to_string();
+    if name.is_empty() {
+        None
+    } else {
+        Some(name)
+    }
+}
+
+#[cfg(not(any(
+    target_os = "windows",
+    target_os = "macos",
+    all(unix, not(target_os = "macos"))
+)))]
 fn native_icon_data_url(_path: &str) -> Option<String> {
     None
 }

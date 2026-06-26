@@ -1462,6 +1462,7 @@ fn connection_type_for_port(port: u16) -> &'static str {
     match port {
         22 => "ssh",
         23 => "telnet",
+        80 | 443 => "url",
         3389 => "rdp",
         5900..=5909 => "vnc",
         _ => "ssh",
@@ -1744,6 +1745,8 @@ mod tests {
     fn maps_well_known_ports_to_connection_types() {
         assert_eq!(connection_type_for_port(22), "ssh");
         assert_eq!(connection_type_for_port(23), "telnet");
+        assert_eq!(connection_type_for_port(80), "url");
+        assert_eq!(connection_type_for_port(443), "url");
         assert_eq!(connection_type_for_port(3389), "rdp");
         assert_eq!(connection_type_for_port(5900), "vnc");
     }
