@@ -199,11 +199,43 @@ monitor this usually hides itself because switching to KKTerm tends to displace
 the previously focused app; it is most visible on multi-monitor setups where
 both windows stay visible.
 
-Fix: a comctl32 subclass (`rdp_overlay_subclass_proc`) intercepts
-`WM_MOUSEACTIVATE` on the overlay HWND, foregrounds the owner and `SetFocus`es
-the control, then returns `MA_NOACTIVATE` so the click still reaches the remote
-session without activating the no-activate overlay. SSH/TELNET do not need this
-because they render inside the activatable WebView2 window and
+### Why `WM_MOUSEACTIVATE` does not work here
+
+`WM_MOUSEACTIVATE` is the obvious hook, but it is **not** delivered for a plain
+click into a `WS_EX_NOACTIVATE` top-level window: Windows sees the window is
+non-activatable, short-circuits the activation decision entirely, and just
+routes the mouse message to the child under the cursor (which is why the remote
+cursor already moves). The only known path that still sends `WM_MOUSEACTIVATE` to
+a `WS_EX_NOACTIVATE` window is the "activate a window by hovering over it"
+accessibility feature ("active window tracking"), which Microsoft itself
+describes as an oversight in the feature's code. A previous attempt installed a
+`WM_MOUSEACTIVATE` subclass on the overlay; because the message never fires on a
+real click it fixed nothing, and on systems with hover-to-activate enabled it
+actively stole focus to KKTerm on mere *hover* (inverting the whole point of the
+no-activate overlay). That subclass was reverted. See Raymond Chen, "My window
+has the `WS_EX_NOACTIVATE` extended style, but it got activated anyway"
+(https://devblogs.microsoft.com/oldnewthing/20240919-00/?p=110283), and the
+`WM_MOUSEACTIVATE` reference
+(https://learn.microsoft.com/en-us/windows/win32/inputdev/wm-mouseactivate).
+
+### Fix: thread-local `WH_MOUSE` hook
+
+The reliable trigger is a **thread-local `WH_MOUSE` hook**
+(`SetWindowsHookExW(WH_MOUSE, …, None, GetCurrentThreadId())`), installed lazily
+the first time an RDP overlay becomes visible and torn down when no sessions
+remain. A `WH_MOUSE` hook receives `WM_xBUTTONDOWN` for every window on the
+installing thread - including the mstscax rendering child inside the no-activate
+overlay - because delivery does not depend on activation or hit-test activation.
+On the first button-down inside the visible overlay subtree (`IsChild(overlay,
+target)`), we reuse `focus_rdp_control` (`SetForegroundWindow(owner)` +
+`SetFocus(overlay)`, the same path the existing Tauri RDP commands use) to pull
+keyboard focus into the remote session, then always `CallNextHookEx` so the
+click still reaches the remote session - mouse behavior is unchanged. Our thread
+is the "last input" thread, so the foreground lock allows `SetForegroundWindow`.
+All hook state is created/installed/uninstalled on Tauri's main thread, which
+is the only thread that ever owns an overlay; only one overlay is visible at a
+time, so a single hook guarded by the current targets is sufficient. SSH/TELNET
+do not need this because they render inside the activatable WebView2 window and
 `TerminalWorkspace` already restores focus on activation.
 
 ## Current Architectural Constraint

@@ -29,6 +29,7 @@ mod platform {
                 LibraryLoader::{GetProcAddress, LoadLibraryW},
                 Memory::{GMEM_MOVEABLE, GlobalAlloc, GlobalLock, GlobalUnlock},
                 Ole::{CF_UNICODETEXT, DISPID_PROPERTYPUT, IOleInPlaceObject, OleInitialize},
+                Threading::GetCurrentThreadId,
                 Variant::{
                     VARIANT, VT_BOOL, VT_BSTR, VT_DISPATCH, VT_I2, VT_I4, VT_UI4, VariantClear,
                 },
@@ -40,10 +41,13 @@ mod platform {
                     VIRTUAL_KEY, VkKeyScanW,
                 },
                 WindowsAndMessaging::{
-                    CreateWindowExW, DestroyWindow, GetClientRect, GetWindowRect, HMENU,
-                    SW_SHOWNOACTIVATE, SWP_NOACTIVATE, SWP_NOZORDER, SendMessageW,
-                    SetForegroundWindow, SetWindowPos, ShowWindow, WS_CLIPCHILDREN,
-                    WS_CLIPSIBLINGS, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_POPUP, WS_VISIBLE,
+                    CallNextHookEx, CreateWindowExW, DestroyWindow, GetClientRect,
+                    GetForegroundWindow, GetWindowRect, HC_ACTION, HHOOK, HMENU, IsChild,
+                    MOUSEHOOKSTRUCT, SW_SHOWNOACTIVATE, SWP_NOACTIVATE, SWP_NOZORDER, SendMessageW,
+                    SetForegroundWindow, SetWindowPos, SetWindowsHookExW, ShowWindow,
+                    UnhookWindowsHookEx, WH_MOUSE, WM_LBUTTONDOWN, WM_MBUTTONDOWN, WM_RBUTTONDOWN,
+                    WM_XBUTTONDOWN, WS_CLIPCHILDREN, WS_CLIPSIBLINGS, WS_EX_NOACTIVATE,
+                    WS_EX_TOOLWINDOW, WS_POPUP, WS_VISIBLE,
                 },
             },
         },
@@ -579,6 +583,7 @@ mod platform {
                             "parkedOtherSessions": parked_other_sessions,
                         }),
                     );
+                    set_rdp_overlay_focus_targets(Some(session.hwnd), Some(session.owner));
                     Ok(())
                 } else {
                     let session = sessions.get(&request.session_id).ok_or_else(|| {
@@ -616,6 +621,7 @@ mod platform {
                             },
                         }),
                     );
+                    set_rdp_overlay_focus_targets(None, None);
                     Ok(())
                 }
             })
@@ -746,6 +752,11 @@ mod platform {
                             format!("failed to destroy RDP host window: {error}")
                         })?;
                     }
+                }
+                if sessions.is_empty() {
+                    uninstall_rdp_overlay_focus_hook();
+                } else {
+                    set_rdp_overlay_focus_targets(None, None);
                 }
                 Ok(())
             })
@@ -1200,7 +1211,6 @@ mod platform {
                 Ok(dispatch)
             }) {
                 Ok(dispatch) => {
-                    install_rdp_overlay_focus_subclass(hwnd, owner_hwnd);
                     rdp_debug("control.create.ok", &json!({ "progid": progid }));
                     return Ok((hwnd, dispatch, (*progid).to_string()));
                 }
@@ -1225,66 +1235,153 @@ mod platform {
         ))
     }
 
-    /// comctl32 subclass id for the RDP overlay focus shim. Arbitrary but stable
-    /// per HWND; "KKRD" in ASCII.
-    const RDP_OVERLAY_FOCUS_SUBCLASS_ID: usize = 0x4b4b_5244;
-
-    /// Subclass callback for the RDP ActiveX overlay window.
+    /// Process-wide state for the RDP overlay keyboard-focus hook.
     ///
-    /// The overlay is created `WS_EX_NOACTIVATE` so it never steals activation
-    /// from the main KKTerm frame (see `create_rdp_control`). The side effect is
-    /// that clicking the remote desktop neither brings KKTerm to the foreground
-    /// nor routes keyboard focus into the control: mouse messages still reach the
-    /// control (Windows delivers them to the window under the cursor), but
-    /// keystrokes keep going to whatever window held OS focus - e.g. another app
-    /// on a second monitor, or any other foreground window. The user had to click
-    /// the connection tab (an activatable WebView region) first.
+    /// The RDP ActiveX overlay is a separate top-level `WS_POPUP` window created
+    /// `WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW` (see `create_rdp_control`) and only
+    /// ever shown/moved with `SWP_NOACTIVATE` / `SW_SHOWNOACTIVATE` so it never
+    /// steals activation from the main KKTerm frame. The side effect is that
+    /// clicking the remote desktop neither brings KKTerm to the foreground nor
+    /// routes keyboard focus into the control: mouse messages still reach the
+    /// control (Windows delivers them to the window under the cursor - so the
+    /// remote cursor moves and text can even be selected) but keystrokes keep
+    /// going to whatever window held OS focus, e.g. another app on a second
+    /// monitor. The user had to click the connection tab first.
     ///
-    /// `WM_MOUSEACTIVATE` is sent when the user clicks an inactive window, so we
-    /// intercept it to foreground the owner and focus the control, then return
-    /// `MA_NOACTIVATE` so the click still flows through to the remote session
-    /// without activating the no-activate overlay. `SetForegroundWindow` is
-    /// permitted here because our process is the one receiving the user's click;
-    /// if Windows' foreground lock denies it, `SetFocus` on the in-process HWND
-    /// still routes keystrokes, mirroring `focus_rdp_control`.
-    unsafe extern "system" fn rdp_overlay_subclass_proc(
-        hwnd: HWND,
-        msg: u32,
-        wparam: WPARAM,
-        lparam: LPARAM,
-        _uidsubclass: usize,
-        owner_ref: usize,
-    ) -> windows::Win32::Foundation::LRESULT {
-        use windows::Win32::Foundation::LRESULT;
-        use windows::Win32::UI::Shell::DefSubclassProc;
-        use windows::Win32::UI::WindowsAndMessaging::WM_MOUSEACTIVATE;
-
-        const MA_NOACTIVATE: isize = 3;
-        if msg == WM_MOUSEACTIVATE {
-            let owner = HWND(owner_ref as *mut c_void);
-            unsafe {
-                let _ = SetForegroundWindow(owner);
-                let _ = SetFocus(Some(hwnd));
-            }
-            return LRESULT(MA_NOACTIVATE);
-        }
-        unsafe { DefSubclassProc(hwnd, msg, wparam, lparam) }
+    /// `WM_MOUSEACTIVATE` is *not* the answer here: for a `WS_EX_NOACTIVATE`
+    /// top-level window Windows suppresses activation entirely on click and never
+    /// generates `WM_MOUSEACTIVATE` (it only fires for such a window via the
+    /// "hover-to-activate" accessibility feature - where a previous attempt at a
+    /// `WM_MOUSEACTIVATE` subclass actually turned the overlay into a focus-stealer
+    /// on mere hover). Instead we install a *thread-local* `WH_MOUSE` hook, which
+    /// receives `WM_xBUTTONDOWN` for every window on the installing thread -
+    /// including the mstscax rendering child inside the no-activate overlay -
+    /// because delivery does not depend on activation. On the first button-down
+    /// inside the visible overlay subtree we reuse `focus_rdp_control` (the same
+    /// `SetForegroundWindow(owner)` + `SetFocus(overlay)` path the existing Tauri
+    /// commands use) to pull keyboard focus into the remote session, then forward
+    /// the click so the remote session still receives it. Our thread is the "last
+    /// input" thread, so the foreground lock allows `SetForegroundWindow`.
+    ///
+    /// All hook state is created, installed, and uninstalled on Tauri's main
+    /// thread (every entry point dispatches through `run_on_main_thread`), which
+    /// is the only thread that ever owns an RDP overlay window. Only one overlay
+    /// is visible at a time, so a single hook guarded by the current targets is
+    /// sufficient and there is no per-HWND bookkeeping.
+    struct RdpOverlayFocusHook {
+        hook: Option<HHOOK>,
+        overlay: Option<HWND>,
+        owner: Option<HWND>,
     }
 
-    /// Install the focus shim on the RDP overlay HWND. The owner HWND is carried
-    /// through the subclass `dwRefData` slot (a plain pointer-sized value, nothing
-    /// to free), so it is torn down automatically when the window is destroyed.
-    fn install_rdp_overlay_focus_subclass(hwnd: HWND, owner: HWND) {
-        use windows::Win32::UI::Shell::SetWindowSubclass;
-
-        unsafe {
-            let _ = SetWindowSubclass(
-                hwnd,
-                Some(rdp_overlay_subclass_proc),
-                RDP_OVERLAY_FOCUS_SUBCLASS_ID,
-                owner.0 as usize,
-            );
+    impl RdpOverlayFocusHook {
+        const fn new() -> Self {
+            Self {
+                hook: None,
+                overlay: None,
+                owner: None,
+            }
         }
+    }
+
+    // The hook handle and overlay/owner HWNDs are raw pointers, which are not
+    // `Send`/`Sync` by default. The state lives behind a `Mutex` in a static and
+    // is only ever read/written from the Tauri main thread (the single thread
+    // that owns the overlay window), exactly like `RdpSession`'s own `Send`
+    // impl, so sharing it across threads is sound.
+    unsafe impl Send for RdpOverlayFocusHook {}
+    unsafe impl Sync for RdpOverlayFocusHook {}
+
+    static RDP_OVERLAY_FOCUS_HOOK: OnceLock<Mutex<RdpOverlayFocusHook>> = OnceLock::new();
+
+    fn rdp_overlay_focus_hook() -> &'static Mutex<RdpOverlayFocusHook> {
+        RDP_OVERLAY_FOCUS_HOOK.get_or_init(|| Mutex::new(RdpOverlayFocusHook::new()))
+    }
+
+    /// `WH_MOUSE` thread hook. `wParam` is the mouse message; `lParam` points to a
+    /// `MOUSEHOOKSTRUCT` whose `hwnd` is the window under the cursor. We foreground
+    /// the owner and focus the overlay on a button-down inside the visible overlay
+    /// subtree, then always call `CallNextHookEx` so the click still reaches the
+    /// remote session (mouse behavior is unchanged).
+    unsafe extern "system" fn rdp_overlay_focus_hook_proc(
+        code: i32,
+        wparam: WPARAM,
+        lparam: LPARAM,
+    ) -> windows::Win32::Foundation::LRESULT {
+        if code == HC_ACTION as i32 {
+            let down = matches!(
+                wparam.0 as u32,
+                WM_LBUTTONDOWN | WM_RBUTTONDOWN | WM_MBUTTONDOWN | WM_XBUTTONDOWN
+            );
+            if down {
+                let mut grab = None;
+                {
+                    let state = rdp_overlay_focus_hook()
+                        .lock()
+                        .expect("RDP overlay focus hook mutex poisoned");
+                    if let (Some(overlay), Some(owner)) = (state.overlay, state.owner) {
+                        let target = if lparam.0 != 0 {
+                            let info = unsafe { &*(lparam.0 as *const MOUSEHOOKSTRUCT) };
+                            Some(info.hwnd)
+                        } else {
+                            None
+                        };
+                        let inside = target
+                            .map(|target| {
+                                target == overlay || unsafe { IsChild(overlay, target) }.as_bool()
+                            })
+                            .unwrap_or(false);
+                        if inside {
+                            let already_foreground = unsafe { GetForegroundWindow() } == owner;
+                            if !already_foreground {
+                                grab = Some((owner, overlay));
+                            }
+                        }
+                    }
+                }
+                if let Some((owner, overlay)) = grab {
+                    focus_rdp_control(owner, overlay);
+                }
+            }
+        }
+        unsafe { CallNextHookEx(None, code, wparam, lparam) }
+    }
+
+    /// Record which overlay/owner should grab focus on click, installing the
+    /// thread-local `WH_MOUSE` hook lazily on first use. Must be called on the
+    /// main thread (the thread that owns the overlay window).
+    fn set_rdp_overlay_focus_targets(overlay: Option<HWND>, owner: Option<HWND>) {
+        let mut state = rdp_overlay_focus_hook()
+            .lock()
+            .expect("RDP overlay focus hook mutex poisoned");
+        state.overlay = overlay;
+        state.owner = owner;
+        if overlay.is_some() && state.hook.is_none() {
+            unsafe {
+                if let Ok(hook) = SetWindowsHookExW(
+                    WH_MOUSE,
+                    Some(rdp_overlay_focus_hook_proc),
+                    None,
+                    GetCurrentThreadId(),
+                ) {
+                    state.hook = Some(hook);
+                }
+            }
+        }
+    }
+
+    /// Remove the focus hook entirely, e.g. when no RDP sessions remain.
+    fn uninstall_rdp_overlay_focus_hook() {
+        let mut state = rdp_overlay_focus_hook()
+            .lock()
+            .expect("RDP overlay focus hook mutex poisoned");
+        if let Some(hook) = state.hook.take() {
+            unsafe {
+                let _ = UnhookWindowsHookEx(hook);
+            }
+        }
+        state.overlay = None;
+        state.owner = None;
     }
 
     fn control_dispatch(hwnd: HWND) -> Result<IDispatch, String> {
