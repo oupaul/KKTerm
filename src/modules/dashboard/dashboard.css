@@ -1590,20 +1590,20 @@ button.dashboard-pill-dot:focus-visible {
   background: transparent;
 }
 
+/* Fade the body surface with a translucent color rather than an absolutely
+   positioned ::before. A pseudo-element with `inset: 0` inside this
+   `overflow: auto` body is sized to the client box and anchored to the content
+   top in WebKit (macOS WKWebView), so it failed to cover content past the first
+   row. A normal element background always covers the full scroll area, and a
+   color-mix keeps the fade off the body's content (unlike `opacity`). */
 .dw-preset-panel .dw-body {
   position: relative;
   z-index: 0;
-  background: transparent;
-}
-
-.dw-preset-panel .dw-body::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background: var(--surface);
-  opacity: calc(var(--w-body-opacity, 100) / 100);
+  background: color-mix(
+    in srgb,
+    var(--surface) calc(var(--w-body-opacity, 100) * 1%),
+    transparent
+  );
 }
 
 .dw-custom-widget .dw-head {
