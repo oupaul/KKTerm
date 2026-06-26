@@ -13,6 +13,7 @@ export type SettingsSectionId =
   | "url-settings"
   | "rdp-settings"
   | "vnc-settings"
+  | "proxy-settings"
   | "about-settings";
 
 export type SettingsAssistantContext = {
@@ -380,6 +381,19 @@ const SETTINGS_SECTIONS: Record<SettingsSectionId, SettingsSectionSummary> = {
         key: "settings.vncColorLevel",
         description: "VNC color level default.",
         tutorialTargetId: "settings.vncColorLevel",
+      },
+    ],
+  },
+  "proxy-settings": {
+    labelKey: "settings.proxy",
+    fallbackLabel: "Proxy",
+    tutorialTargetId: "settings.proxy",
+    controls: [
+      {
+        key: "settings.proxy",
+        description:
+          "Global network proxy mode (system, none, or manual) and manual host/port for all KKTerm activity — connections, app updates, AI providers, and other web requests. A manual SOCKS5 proxy also routes SSH/SFTP and Telnet sessions.",
+        tutorialTargetId: "settings.proxy",
       },
     ],
   },

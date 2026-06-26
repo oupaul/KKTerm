@@ -23,6 +23,7 @@ import {
   Server,
   Settings as SettingsIcon,
   Terminal,
+  Waypoints,
   X,
   type LucideIcon,
 } from "lucide-react";
@@ -40,6 +41,7 @@ import { CredentialsSettings } from "./CredentialsSettings";
 import { GeneralSettings } from "./GeneralSettings";
 import { FileExplorerSettings } from "./FileExplorerSettings";
 import { InstallerSettings } from "./InstallerSettings";
+import { ProxySettings } from "./ProxySettings";
 import { RdpSettings } from "./RdpSettings";
 import { SshSettings } from "./SshSettings";
 import { TerminalSettings as TerminalSettingsPage } from "./TerminalSettings";
@@ -73,6 +75,7 @@ const SETTINGS_SECTION_IDS: readonly SettingsSectionId[] = [
   "rdp-settings",
   "vnc-settings",
   "dont-sleep-settings",
+  "proxy-settings",
   "about-settings",
 ];
 
@@ -101,6 +104,7 @@ const SETTINGS_NAV: readonly {
   { id: "rdp-settings", Icon: Monitor, color: "#5856d6", labelKey: "settings.sectionRdp", requires: "rdp" },
   { id: "vnc-settings", Icon: Network, color: "#5ac8fa", labelKey: "settings.sectionVnc" },
   { id: "dont-sleep-settings", Icon: Coffee, color: "#ac8e68", labelKey: "settings.sectionDontSleep" },
+  { id: "proxy-settings", Icon: Waypoints, color: "#00c7be", labelKey: "settings.proxy" },
   { id: "about-settings", Icon: Info, color: "#64748b", labelKey: "settings.sectionAbout" },
 ];
 
@@ -316,6 +320,7 @@ export function SettingsPage({
             {rdpSupported ? renderSettingsSection("rdp-settings", <RdpSettings />) : null}
             {renderSettingsSection("vnc-settings", <VncSettings />)}
             {renderSettingsSection("dont-sleep-settings", <DontSleepSettings />)}
+            {renderSettingsSection("proxy-settings", <ProxySettings />)}
             {renderSettingsSection("about-settings", <AboutSettings />)}
           </section>
         </div>

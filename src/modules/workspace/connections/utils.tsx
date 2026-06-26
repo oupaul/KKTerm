@@ -270,7 +270,7 @@ export type SshSocksProxyRequestFields = {
  * Resolve the per-Connection SOCKS proxy override for an SSH Connection launch.
  * A Connection that opted out of inheriting defaults provides its own endpoint;
  * otherwise this returns `undefined` and the backend applies the global app
- * proxy (Settings → General → Proxy) as the fallback.
+ * proxy (Settings → Proxy) as the fallback.
  */
 export function resolveSshSocksProxy(
   connection: Pick<Connection, "sshSocksProxy" | "sshSocksProxyInheritDefaults">,

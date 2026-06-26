@@ -4230,7 +4230,7 @@ function ConnectionDialog({
     const proxyJump =
       usesSshDefaults && sshUsesDefaultOptions ? (sshSettings.defaultProxyJump ?? "").trim() : formProxyJump;
     // Inheriting defaults stores a blank SOCKS proxy so the Connection falls
-    // back to the global app proxy (Settings → General → Proxy) at launch; an
+    // back to the global app proxy (Settings → Proxy) at launch; an
     // explicit per-Connection value is stored only when defaults are overridden.
     const sshSocksProxy =
       usesSshDefaults && sshUsesDefaultOptions ? "" : formSshSocksProxy;

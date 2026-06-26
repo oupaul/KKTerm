@@ -21,6 +21,7 @@ const SETTINGS_SECTION_IDS = new Set<SettingsSectionId>([
   "url-settings",
   "rdp-settings",
   "vnc-settings",
+  "proxy-settings",
   "about-settings",
 ]);
 
@@ -62,6 +63,7 @@ const SETTINGS_TUTORIAL_TARGET_SECTIONS: Record<string, SettingsSectionId> = {
   "settings.rdpRemoteResolution": "rdp-settings",
   "settings.vncViewOnly": "vnc-settings",
   "settings.vncColorLevel": "vnc-settings",
+  "settings.proxy": "proxy-settings",
   "settings.aboutVersion": "about-settings",
   "settings.workspace": "workspace-settings",
   "settings.fileExplorer": "file-explorer-settings",

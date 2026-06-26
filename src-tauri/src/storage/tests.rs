@@ -2898,7 +2898,7 @@ fn url_settings_round_trip_through_settings_table() {
 
 #[test]
 fn app_proxy_url_normalization_accepts_valid_and_rejects_invalid() {
-    // The global app proxy (Settings → General → Proxy) accepts http/https/socks5
+    // The global app proxy (Settings → Proxy) accepts http/https/socks5
     // endpoints with no credentials, path, query, or fragment.
     assert_eq!(
         crate::storage::normalize_app_proxy_url(Some(" socks5://127.0.0.1:1080 ".to_string()))

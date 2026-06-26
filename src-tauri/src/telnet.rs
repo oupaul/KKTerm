@@ -410,7 +410,7 @@ impl NativeTelnetTerminal {
 }
 
 /// Open a blocking TCP connection for a Telnet session, routing through the
-/// global SOCKS5 proxy (Settings → General → Proxy) when one is configured.
+/// global SOCKS5 proxy (Settings → Proxy) when one is configured.
 ///
 /// Telnet uses a blocking `std::net::TcpStream`, so the async SOCKS5 handshake
 /// runs on a temporary current-thread runtime (this function is called from a

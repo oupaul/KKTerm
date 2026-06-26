@@ -9,7 +9,7 @@ type GlobalProxySettings = Pick<GeneralSettings, "proxyMode" | "proxyUrl">;
 /**
  * The proxy value handed to the URL WebView2 backend. A per-Connection override
  * wins; otherwise the URL Session inherits the global app proxy (Settings →
- * General → Proxy). "No Proxy" maps to the `direct://` sentinel the backend
+ * Settings → Proxy). "No Proxy" maps to the `direct://` sentinel the backend
  * interprets as a forced direct connection; "Use system settings" maps to
  * `undefined` so the WebView2 uses the operating system proxy.
  */

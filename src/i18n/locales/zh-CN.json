@@ -1748,6 +1748,7 @@
     "proxyHostPlaceholder": "proxy.example.com",
     "proxyPort": "Proxy port",
     "proxyPlatformHint": "System settings use the OS proxy (Windows WinINET, macOS CFNetwork, Linux environment variables). A manual SOCKS5 proxy also routes SSH/SFTP and Telnet sessions; HTTP and HTTPS proxies apply to web and app requests only.",
+    "proxySettingsSaved": "Proxy settings saved.",
     "urlProxyMode": "代理类型",
     "urlProxyDirect": "直接连接（不使用代理）",
     "urlProxyHttp": "HTTP / HTTPS",

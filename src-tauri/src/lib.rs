@@ -1464,7 +1464,7 @@ fn resolve_ssh_socks_proxy(
     };
     let composed = compose_ssh_socks_proxy(proxy, username, password)?;
     // A per-Connection SOCKS proxy wins. Otherwise fall back to the global app
-    // proxy (Settings → General → Proxy) when it is a manual SOCKS5 endpoint —
+    // proxy (Settings → Proxy) when it is a manual SOCKS5 endpoint —
     // but never when the Connection uses ProxyJump, which is its own mutually
     // exclusive reachability path.
     if composed.is_none() && !has_proxy_jump {

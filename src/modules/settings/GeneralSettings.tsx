@@ -8,7 +8,6 @@ import {
   GripVertical,
   Languages,
   LayoutDashboard,
-  Network,
   RefreshCw,
   RotateCcw,
   Settings as SettingsIcon,
@@ -71,57 +70,10 @@ import {
 } from "./shared";
 import { ToggleSwitch } from "./ToggleSwitch";
 import { ItIcon } from "../itops/icons";
-import { technicalInputProps } from "../../lib/inputBehavior";
-import type { ActivityRailItemId, ProxyMode } from "../../types";
+import type { ActivityRailItemId } from "../../types";
 
 const STATUS_BAR_MONITOR_INTERVAL_OPTIONS = [5, 15, 30, 60, 300] as const;
 
-type ProxyProtocol = "http" | "https" | "socks5";
-
-function explicitPortFromProxyValue(value: string): string {
-  const authority = value.split("://", 2)[1]?.split(/[/?#]/, 1)[0] ?? "";
-  if (!authority) {
-    return "";
-  }
-  if (authority.startsWith("[")) {
-    return authority.match(/^\[[^\]]+\]:(\d+)$/)?.[1] ?? "";
-  }
-  return authority.match(/:(\d+)$/)?.[1] ?? "";
-}
-
-/** Split a stored `<scheme>://host:port` app proxy into editable parts. */
-function splitAppProxy(value?: string): { protocol: ProxyProtocol; host: string; port: string } {
-  if (value?.trim()) {
-    try {
-      const parsed = new URL(value);
-      const scheme = parsed.protocol.replace(/:$/, "");
-      if ((scheme === "http" || scheme === "https" || scheme === "socks5") && parsed.hostname) {
-        return {
-          protocol: scheme,
-          host: parsed.hostname.replace(/^\[|\]$/g, ""),
-          port: explicitPortFromProxyValue(value),
-        };
-      }
-    } catch {
-      // Invalid persisted values fall back to the manual defaults below.
-    }
-  }
-  return { protocol: "socks5", host: "", port: "" };
-}
-
-/** Assemble editable parts back into a `<scheme>://host:port` app proxy URL. */
-function assembleAppProxy(protocol: ProxyProtocol, host: string, port: string): string {
-  const trimmedHost = host.trim();
-  if (!trimmedHost) {
-    return "";
-  }
-  const bracketedHost =
-    trimmedHost.includes(":") && !trimmedHost.startsWith("[") ? `[${trimmedHost}]` : trimmedHost;
-  const trimmedPort = port.trim();
-  return trimmedPort
-    ? `${protocol}://${bracketedHost}:${trimmedPort}`
-    : `${protocol}://${bracketedHost}`;
-}
 type ActivityRailVisibilitySetting =
   | "showWorkspaceOnRail"
   | "showDashboardOnRail"
@@ -217,39 +169,13 @@ export function GeneralSettings() {
   const [selectiveExportOpen, setSelectiveExportOpen] = useState(false);
   const [selectiveImportOpen, setSelectiveImportOpen] = useState(false);
   const [draggedRailItem, setDraggedRailItem] = useState<ActivityRailItemId | null>(null);
-  const initialProxyParts = splitAppProxy(generalSettings.proxyUrl);
-  const [proxyProtocol, setProxyProtocol] = useState<ProxyProtocol>(initialProxyParts.protocol);
-  const [proxyHost, setProxyHost] = useState(initialProxyParts.host);
-  const [proxyPort, setProxyPort] = useState(initialProxyParts.port);
   const hasChanges =
     JSON.stringify(draft) !== JSON.stringify(generalSettings) ||
     currentLanguage !== detectLanguage();
 
   useEffect(() => {
     setDraft(generalSettings);
-    const parts = splitAppProxy(generalSettings.proxyUrl);
-    setProxyProtocol(parts.protocol);
-    setProxyHost(parts.host);
-    setProxyPort(parts.port);
   }, [generalSettings]);
-
-  function updateProxyParts(next: { protocol?: ProxyProtocol; host?: string; port?: string }) {
-    const protocol = next.protocol ?? proxyProtocol;
-    const host = next.host ?? proxyHost;
-    const port = next.port ?? proxyPort;
-    if (next.protocol !== undefined) setProxyProtocol(next.protocol);
-    if (next.host !== undefined) setProxyHost(next.host);
-    if (next.port !== undefined) setProxyPort(next.port);
-    setDraft((state) => ({ ...state, proxyUrl: assembleAppProxy(protocol, host, port) }));
-  }
-
-  function handleProxyModeChange(proxyMode: ProxyMode) {
-    setDraft((state) => ({
-      ...state,
-      proxyMode,
-      proxyUrl: proxyMode === "manual" ? assembleAppProxy(proxyProtocol, proxyHost, proxyPort) : "",
-    }));
-  }
 
   async function handleSave() {
     try {
@@ -493,70 +419,6 @@ export function GeneralSettings() {
           </select>
         </label>
       </div>
-
-      <fieldset className="settings-subsection settings-fieldset">
-        <legend>
-          <Network size={16} /> {t("settings.proxy")}
-        </legend>
-        <div>
-          <p className="field-hint">{t("settings.proxyHint")}</p>
-        </div>
-        <div className="form-grid general-settings-grid">
-          <label>
-            <span>{t("settings.proxyMode")}</span>
-            <select
-              value={draft.proxyMode}
-              onChange={(event) => handleProxyModeChange(event.currentTarget.value as ProxyMode)}
-            >
-              <option value="system">{t("settings.proxyModeSystem")}</option>
-              <option value="none">{t("settings.proxyModeNone")}</option>
-              <option value="manual">{t("settings.proxyModeManual")}</option>
-            </select>
-          </label>
-        </div>
-        {draft.proxyMode === "manual" ? (
-          <div className="form-grid three-columns settings-merged-block">
-            <label>
-              <span>{t("settings.proxyProtocol")}</span>
-              <select
-                value={proxyProtocol}
-                onChange={(event) =>
-                  updateProxyParts({ protocol: event.currentTarget.value as ProxyProtocol })
-                }
-              >
-                <option value="http">{t("settings.proxyHttp")}</option>
-                <option value="https">{t("settings.proxyHttps")}</option>
-                <option value="socks5">{t("settings.proxySocks5")}</option>
-              </select>
-            </label>
-            <label>
-              <span>{t("settings.proxyHost")}</span>
-              <input
-                {...technicalInputProps}
-                onChange={(event) => updateProxyParts({ host: event.currentTarget.value })}
-                placeholder={t("settings.proxyHostPlaceholder")}
-                required
-                value={proxyHost}
-              />
-            </label>
-            <label>
-              <span>{t("settings.proxyPort")}</span>
-              <input
-                {...technicalInputProps}
-                inputMode="numeric"
-                max={65535}
-                min={1}
-                onChange={(event) => updateProxyParts({ port: event.currentTarget.value })}
-                placeholder={proxyProtocol === "socks5" ? "1080" : "3128"}
-                required
-                type="number"
-                value={proxyPort}
-              />
-            </label>
-          </div>
-        ) : null}
-        <small className="field-hint">{t("settings.proxyPlatformHint")}</small>
-      </fieldset>
 
       <fieldset
         className="settings-subsection settings-fieldset"

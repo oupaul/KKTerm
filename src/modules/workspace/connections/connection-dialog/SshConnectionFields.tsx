@@ -272,7 +272,7 @@ export function SshConnectionOptions({
     initialConnection?.sshCompression ?? sshSettings.defaultSshCompression ?? "fast",
   );
   // When inheriting defaults the per-Connection SOCKS fields are blank, so the
-  // launch falls back to the global app proxy (Settings → General → Proxy).
+  // launch falls back to the global app proxy (Settings → Proxy).
   const displayedSshSocksProxy = sshInheritsSettingsDefaults ? "" : sshSocksProxyDraft;
   const displayedSshSocksProxyUsername = sshInheritsSettingsDefaults
     ? ""
