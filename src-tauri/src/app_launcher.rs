@@ -159,6 +159,18 @@ fn plan_launch_with_options(
         }
     }
 
+    #[cfg(not(target_os = "windows"))]
+    {
+        if mode == AppLauncherLaunchMode::Normal && !runnable {
+            return Ok(AppLauncherLaunchPlan {
+                target: path.to_string(),
+                parameters: None,
+                working_directory: None,
+                operation,
+            });
+        }
+    }
+
     Ok(AppLauncherLaunchPlan {
         target: path.to_string(),
         parameters: arguments.map(ToOwned::to_owned),
@@ -646,6 +658,23 @@ mod tests {
             assert_eq!(plan.target, "C:\\Docs\\budget.xlsx");
             assert_eq!(plan.parameters, None);
         }
+        assert_eq!(plan.operation, None);
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    #[test]
+    fn launch_plan_opens_associated_files_through_default_handler_even_with_extra_fields() {
+        let plan = plan_launch_with_options(
+            "/Users/example/Documents/budget.xlsx",
+            Some("--ignored-by-default-handler"),
+            Some("/Users/example/Documents"),
+            AppLauncherLaunchMode::Normal,
+        )
+        .expect("associated files should still open through the OS default handler");
+
+        assert_eq!(plan.target, "/Users/example/Documents/budget.xlsx");
+        assert_eq!(plan.parameters, None);
+        assert_eq!(plan.working_directory, None);
         assert_eq!(plan.operation, None);
     }
 
