@@ -2201,6 +2201,7 @@
       "portSsh": "SSH",
       "portTelnet": "Telnet",
       "portRdp": "RDP",
+      "portHttpHttps": "HTTP/HTTPS",
       "scanStart": "Iniciar varredura",
       "scanRunning": "Varrendo",
       "scanNoResults": "Nenhuma porta aberta encontrada no intervalo varrido.",

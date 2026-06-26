@@ -2147,14 +2147,11 @@ fieldset.connection-specific-options > legend {
   flex: 0 0 auto;
 }
 
-.import-source-card-scan {
-  align-items: stretch;
-}
-
 .import-scan-row-redesign {
   display: flex;
   gap: 9px;
   align-items: center;
+  min-width: 0;
 }
 
 .import-scan-row-redesign .kk-inp {
@@ -2163,12 +2160,15 @@ fieldset.connection-specific-options > legend {
 
 .import-portchips-redesign {
   display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
   gap: 6px;
   align-items: center;
+  min-width: 0;
 }
 
 .import-portchips-redesign button {
-  height: 24px;
+  height: 28px;
   padding: 0 9px;
   color: var(--text-muted);
   font: inherit;
@@ -2179,6 +2179,13 @@ fieldset.connection-specific-options > legend {
   border: 0.5px solid var(--border);
   border-radius: 7px;
   cursor: pointer;
+}
+
+.import-portchips-redesign .import-custom-port-input {
+  width: 82px;
+  height: 28px;
+  font-size: 11.5px;
+  font-weight: 650;
 }
 
 .import-portchips-redesign button.on {

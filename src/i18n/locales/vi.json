@@ -2201,6 +2201,7 @@
       "portSsh": "SSH",
       "portTelnet": "Telnet",
       "portRdp": "RDP",
+      "portHttpHttps": "HTTP/HTTPS",
       "scanStart": "Start scan",
       "scanRunning": "Scanning",
       "scanNoResults": "No open ports found in the scanned range.",

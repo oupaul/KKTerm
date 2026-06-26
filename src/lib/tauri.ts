@@ -503,7 +503,7 @@ export interface BrowserBookmarkSourcesResponse {
 export interface ScanResultEntry {
   host: string;
   port: number;
-  type: "ssh" | "telnet" | "rdp" | "vnc";
+  type: "ssh" | "telnet" | "rdp" | "vnc" | "url";
 }
 
 export interface ScanNetworkResponse {

@@ -60,10 +60,11 @@ type Candidate = {
   folderPath: string[];
 };
 
-const DEFAULT_PORTS: Array<{ port: number; labelKey: string }> = [
-  { port: 22, labelKey: "connections.import.portSsh" },
-  { port: 23, labelKey: "connections.import.portTelnet" },
-  { port: 3389, labelKey: "connections.import.portRdp" },
+const SCAN_PROTOCOLS: Array<{ ports: number[]; labelKey: string }> = [
+  { ports: [22], labelKey: "connections.import.portSsh" },
+  { ports: [23], labelKey: "connections.import.portTelnet" },
+  { ports: [3389], labelKey: "connections.import.portRdp" },
+  { ports: [80, 443], labelKey: "connections.import.portHttpHttps" },
 ];
 
 const IMPORTABLE_TYPES: ConnectionType[] = [
@@ -104,8 +105,9 @@ export function ImportDialog({ sshSettings, onClose, onImported }: ImportDialogP
   const [fileLoading, setFileLoading] = useState(false);
   const [target, setTarget] = useState("");
   const [enabledPorts, setEnabledPorts] = useState<Set<number>>(
-    () => new Set(DEFAULT_PORTS.map((entry) => entry.port)),
+    () => new Set(SCAN_PROTOCOLS.flatMap((entry) => entry.ports)),
   );
+  const [customScanPort, setCustomScanPort] = useState("");
   const [scanning, setScanning] = useState(false);
   const [progress, setProgress] = useState<ScanProgressEvent | null>(null);
   const scanIdRef = useRef("");
@@ -170,6 +172,10 @@ export function ImportDialog({ sshSettings, onClose, onImported }: ImportDialogP
     progress && progress.total > 0
       ? Math.round((progress.completed / progress.total) * 100)
       : 0;
+  const scanPorts = useMemo(
+    () => normalizeScanPorts(enabledPorts, customScanPort),
+    [customScanPort, enabledPorts],
+  );
 
   useEffect(() => {
     let dispose: (() => void) | null = null;
@@ -278,7 +284,7 @@ export function ImportDialog({ sshSettings, onClose, onImported }: ImportDialogP
       setError(t("connections.import.scanTargetRequired"));
       return;
     }
-    if (enabledPorts.size === 0) {
+    if (scanPorts.length === 0) {
       setError(t("connections.import.scanPortRequired"));
       return;
     }
@@ -293,7 +299,7 @@ export function ImportDialog({ sshSettings, onClose, onImported }: ImportDialogP
         request: {
           scanId,
           target: target.trim(),
-          ports: Array.from(enabledPorts).sort((left, right) => left - right),
+          ports: scanPorts,
         },
       });
       setWarnings([]);
@@ -308,13 +314,13 @@ export function ImportDialog({ sshSettings, onClose, onImported }: ImportDialogP
     }
   }
 
-  function togglePort(port: number) {
+  function togglePortGroup(ports: number[]) {
     setEnabledPorts((current) => {
       const next = new Set(current);
-      if (next.has(port)) {
-        next.delete(port);
+      if (ports.every((port) => next.has(port))) {
+        ports.forEach((port) => next.delete(port));
       } else {
-        next.add(port);
+        ports.forEach((port) => next.add(port));
       }
       return next;
     });
@@ -597,7 +603,8 @@ export function ImportDialog({ sshSettings, onClose, onImported }: ImportDialogP
             onBookmarkRefresh={handleBookmarkRefresh}
             onBookmarkSourceChange={handleBookmarkSourceChange}
             onChooseFile={() => void handleBrowse()}
-            onPortToggle={togglePort}
+            onCustomScanPort={setCustomScanPort}
+            onPortToggle={togglePortGroup}
             onScan={() => void handleStartScan()}
             progress={progress}
             progressPercent={progressPercent}
@@ -605,6 +612,7 @@ export function ImportDialog({ sshSettings, onClose, onImported }: ImportDialogP
             selectedNodeCount={selectedNodeIds.size}
             selectedSource={selectedSource}
             source={source}
+            customScanPort={customScanPort}
             target={target}
             setTarget={setTarget}
             t={t}
@@ -694,6 +702,7 @@ function SourceContext({
   bookmarksLoaded,
   bookmarksLoading,
   bookmarksPreviewing,
+  customScanPort,
   enabledPorts,
   fileLoading,
   filePath,
@@ -701,6 +710,7 @@ function SourceContext({
   onBookmarkRefresh,
   onBookmarkSourceChange,
   onChooseFile,
+  onCustomScanPort,
   onPortToggle,
   onScan,
   progress,
@@ -717,6 +727,7 @@ function SourceContext({
   bookmarksLoaded: boolean;
   bookmarksLoading: boolean;
   bookmarksPreviewing: boolean;
+  customScanPort: string;
   enabledPorts: Set<number>;
   fileLoading: boolean;
   filePath: string;
@@ -724,7 +735,8 @@ function SourceContext({
   onBookmarkRefresh: () => void;
   onBookmarkSourceChange: (sourceId: string) => void;
   onChooseFile: () => void;
-  onPortToggle: (port: number) => void;
+  onCustomScanPort: (port: string) => void;
+  onPortToggle: (ports: number[]) => void;
   onScan: () => void;
   progress: ScanProgressEvent | null;
   progressPercent: number;
@@ -809,16 +821,27 @@ function SourceContext({
             value={target}
           />
           <div className="import-portchips-redesign">
-            {DEFAULT_PORTS.map((entry) => (
+            {SCAN_PROTOCOLS.map((entry) => (
               <button
-                className={enabledPorts.has(entry.port) ? "on" : ""}
-                key={entry.port}
-                onClick={() => onPortToggle(entry.port)}
+                className={entry.ports.every((port) => enabledPorts.has(port)) ? "on" : ""}
+                key={entry.labelKey}
+                onClick={() => onPortToggle(entry.ports)}
                 type="button"
               >
-                {entry.port}
+                {t(entry.labelKey)}
               </button>
             ))}
+            <TextInput
+              aria-label={t("connections.port")}
+              className="import-custom-port-input"
+              inputMode="numeric"
+              max={65535}
+              min={1}
+              onChange={(event) => onCustomScanPort(event.currentTarget.value)}
+              placeholder={t("connections.port")}
+              type="number"
+              value={customScanPort}
+            />
           </div>
         </div>
         {scanning || (progress && progress.total > 0) ? (
@@ -1226,11 +1249,13 @@ function draftToCandidate(draft: ImportFilePreview["drafts"][number], index: num
 }
 
 function scanResultToCandidate(entry: ScanResultEntry, index: number): Candidate {
+  const url = entry.type === "url" ? urlForScannedPort(entry.host, entry.port) : undefined;
+  const host = url ?? entry.host;
   return {
     id: `${index}`,
     selected: true,
-    name: entry.host,
-    host: entry.host,
+    name: host,
+    host,
     user: "",
     password: "",
     port: entry.port,
@@ -1248,6 +1273,25 @@ function collectBookmarkNodeIds(node: BookmarkTreeNode): string[] {
 
 function bookmarkSourceNodeIds(source: BookmarkImportSource): string[] {
   return source.root.children.flatMap((node) => collectBookmarkNodeIds(node));
+}
+
+function normalizeScanPorts(enabledPorts: Set<number>, customPort: string): number[] {
+  const ports = new Set(enabledPorts);
+  const parsedCustomPort = Number(customPort);
+  if (Number.isInteger(parsedCustomPort) && parsedCustomPort >= 1 && parsedCustomPort <= 65535) {
+    ports.add(parsedCustomPort);
+  }
+  return Array.from(ports).sort((left, right) => left - right);
+}
+
+function urlForScannedPort(host: string, port: number): string {
+  if (port === 80) {
+    return `http://${host}`;
+  }
+  if (port === 443) {
+    return `https://${host}`;
+  }
+  return `http://${host}:${port}`;
 }
 
 function connectionTypeText(type: ConnectionType, t: ReturnType<typeof useTranslation>["t"]) {

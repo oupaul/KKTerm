@@ -2201,6 +2201,7 @@
       "portSsh": "SSH",
       "portTelnet": "Telnet",
       "portRdp": "RDP",
+      "portHttpHttps": "HTTP/HTTPS",
       "scanStart": "스캔 시작",
       "scanRunning": "스캔 중",
       "scanNoResults": "스캔한 범위에서 열린 포트를 찾지 못했습니다.",

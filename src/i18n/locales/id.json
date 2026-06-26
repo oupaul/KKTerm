@@ -2201,6 +2201,7 @@
       "portSsh": "SSH",
       "portTelnet": "Telnet",
       "portRdp": "RDP",
+      "portHttpHttps": "HTTP/HTTPS",
       "scanStart": "Mulai pemindaian",
       "scanRunning": "Memindai",
       "scanNoResults": "Tidak ditemukan port terbuka dalam rentang yang dipindai.",
