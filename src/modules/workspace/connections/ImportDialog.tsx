@@ -123,7 +123,6 @@ export function ImportDialog({ sshSettings, onClose, onImported }: ImportDialogP
   const [bulkValue, setBulkValue] = useState("");
   const [bulkScope, setBulkScope] = useState<"all" | "empty">("empty");
   const [destinationWorkspaceId, setDestinationWorkspaceId] = useState(activeWorkspaceId);
-  const [destinationOpen, setDestinationOpen] = useState(false);
   const [importing, setImporting] = useState(false);
 
   const workspaceOptions = useMemo(
@@ -234,6 +233,7 @@ export function ImportDialog({ sshSettings, onClose, onImported }: ImportDialogP
           response.sources[0];
         if (first) {
           setBookmarkSourceId(first.id);
+          setSelectedNodeIds(new Set(bookmarkSourceNodeIds(first)));
         }
       })
       .catch((failure) => {
@@ -322,7 +322,8 @@ export function ImportDialog({ sshSettings, onClose, onImported }: ImportDialogP
 
   function handleBookmarkSourceChange(sourceId: string) {
     setBookmarkSourceId(sourceId);
-    setSelectedNodeIds(new Set());
+    const source = bookmarkSources.find((entry) => entry.id === sourceId);
+    setSelectedNodeIds(new Set(source ? bookmarkSourceNodeIds(source) : []));
     clearPreview();
     setError("");
   }
@@ -337,27 +338,16 @@ export function ImportDialog({ sshSettings, onClose, onImported }: ImportDialogP
     clearPreview();
   }
 
-  function toggleBookmarkNode(node: BookmarkTreeNode, checked: boolean) {
-    setSelectedNodeIds((current) => {
-      const next = new Set(current);
-      collectBookmarkNodeIds(node).forEach((id) => {
-        if (checked) {
-          next.add(id);
-        } else {
-          next.delete(id);
-        }
-      });
-      return next;
-    });
-    clearPreview();
-  }
-
   async function handleBookmarkPreview() {
     if (!selectedSource) {
       setError(t("connections.import.bookmarksSourceRequired"));
       return;
     }
-    if (selectedNodeIds.size === 0) {
+    const nodeIds =
+      selectedNodeIds.size > 0
+        ? Array.from(selectedNodeIds)
+        : bookmarkSourceNodeIds(selectedSource);
+    if (nodeIds.length === 0) {
       setError(t("connections.import.bookmarksSelectionRequired"));
       return;
     }
@@ -367,7 +357,7 @@ export function ImportDialog({ sshSettings, onClose, onImported }: ImportDialogP
       const result = await invokeCommand("preview_browser_bookmark_import", {
         request: {
           sourceId: selectedSource.id,
-          selectedNodeIds: Array.from(selectedNodeIds),
+          selectedNodeIds: nodeIds,
         },
       });
       setPreview(result);
@@ -557,8 +547,6 @@ export function ImportDialog({ sshSettings, onClose, onImported }: ImportDialogP
         <WorkspaceDestinationPicker
           destinationWorkspaceId={destinationWorkspaceId}
           onDestinationWorkspaceId={setDestinationWorkspaceId}
-          open={destinationOpen}
-          setOpen={setDestinationOpen}
           workspaces={workspaceOptions}
         />
       }
@@ -622,12 +610,7 @@ export function ImportDialog({ sshSettings, onClose, onImported }: ImportDialogP
             t={t}
           />
           {source === "bookmarks" && selectedSource ? (
-            <BookmarkSourceStrip
-              selectedNodeIds={selectedNodeIds}
-              source={selectedSource}
-              onToggle={toggleBookmarkNode}
-              t={t}
-            />
+            <BookmarkWarnings source={selectedSource} t={t} />
           ) : null}
           {error ? <p className="form-error import-inline-error">{error}</p> : null}
           <FilterBar
@@ -868,96 +851,25 @@ function SourceIcon({ source }: { source: ImportSource }) {
   );
 }
 
-function BookmarkSourceStrip({
-  selectedNodeIds,
+function BookmarkWarnings({
   source,
-  onToggle,
   t,
 }: {
-  selectedNodeIds: Set<string>;
   source: BookmarkImportSource;
-  onToggle: (node: BookmarkTreeNode, checked: boolean) => void;
   t: ReturnType<typeof useTranslation>["t"];
 }) {
-  return (
+  return source.warnings.length > 0 ? (
     <div className="import-bookmark-strip">
-      {source.warnings.length > 0 ? (
-        <div className="import-warnings" role="status">
-          <strong>{t("connections.import.warningsHeading")}</strong>
-          <ul>
-            {source.warnings.map((message, index) => (
-              <li key={index}>{message}</li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-      <div
-        className="import-bookmark-tree import-bookmark-tree-redesign"
-        role="tree"
-        aria-label={t("connections.import.bookmarksTreeLabel")}
-      >
-        {source.root.children.map((node) => (
-          <BookmarkTreeRow
-            key={node.id}
-            node={node}
-            selectedNodeIds={selectedNodeIds}
-            onToggle={onToggle}
-          />
-        ))}
+      <div className="import-warnings" role="status">
+        <strong>{t("connections.import.warningsHeading")}</strong>
+        <ul>
+          {source.warnings.map((message, index) => (
+            <li key={index}>{message}</li>
+          ))}
+        </ul>
       </div>
     </div>
-  );
-}
-
-function BookmarkTreeRow({
-  node,
-  selectedNodeIds,
-  onToggle,
-}: {
-  node: BookmarkTreeNode;
-  selectedNodeIds: Set<string>;
-  onToggle: (node: BookmarkTreeNode, checked: boolean) => void;
-}) {
-  const descendantIds = useMemo(() => collectBookmarkNodeIds(node), [node]);
-  const checked = descendantIds.every((id) => selectedNodeIds.has(id));
-  const partiallyChecked =
-    !checked && descendantIds.some((id) => selectedNodeIds.has(id));
-  const checkboxRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (checkboxRef.current) {
-      checkboxRef.current.indeterminate = partiallyChecked;
-    }
-  }, [partiallyChecked]);
-
-  return (
-    <div className="import-bookmark-node" role="treeitem">
-      <label className="import-bookmark-label">
-        <input
-          ref={checkboxRef}
-          checked={checked}
-          onChange={(event) => onToggle(node, event.currentTarget.checked)}
-          type="checkbox"
-        />
-        <span>{node.name}</span>
-        {node.type === "bookmark" && node.url ? (
-          <small>{node.url}</small>
-        ) : null}
-      </label>
-      {node.children.length > 0 ? (
-        <div className="import-bookmark-children" role="group">
-          {node.children.map((child) => (
-            <BookmarkTreeRow
-              key={child.id}
-              node={child}
-              selectedNodeIds={selectedNodeIds}
-              onToggle={onToggle}
-            />
-          ))}
-        </div>
-      ) : null}
-    </div>
-  );
+  ) : null;
 }
 
 function FilterBar({
@@ -1245,47 +1157,25 @@ function BulkFieldEditor({
 function WorkspaceDestinationPicker({
   destinationWorkspaceId,
   onDestinationWorkspaceId,
-  open,
-  setOpen,
   workspaces,
 }: {
   destinationWorkspaceId: string;
   onDestinationWorkspaceId: (value: string) => void;
-  open: boolean;
-  setOpen: (value: boolean) => void;
   workspaces: Workspace[];
 }) {
   const { t } = useTranslation();
-  const destinationLabel =
-    workspaces.find((workspace) => workspace.id === destinationWorkspaceId)?.name ??
-    t("workspace.workspace");
 
   return (
     <div className="import-destination-redesign">
       <span>{t("workspace.workspace")}</span>
-      <button
-        className={open ? "open" : ""}
-        onClick={() => setOpen(!open)}
-        type="button"
-      >
-        <DIcon name="dashboard" size={14} />
-        {destinationLabel}
-        <DIcon name="updown" size={12} />
-      </button>
-      {open ? (
-        <div className="import-popover-redesign import-destination-popover">
-          <Field label={t("workspace.workspace")}>
-            <Select
-              onChange={(event) => onDestinationWorkspaceId(event.currentTarget.value)}
-              options={workspaces.map((workspace) => ({
-                value: workspace.id,
-                label: workspace.name,
-              }))}
-              value={destinationWorkspaceId}
-            />
-          </Field>
-        </div>
-      ) : null}
+      <Select
+        onChange={(event) => onDestinationWorkspaceId(event.currentTarget.value)}
+        options={workspaces.map((workspace) => ({
+          value: workspace.id,
+          label: workspace.name,
+        }))}
+        value={destinationWorkspaceId}
+      />
     </div>
   );
 }
@@ -1354,6 +1244,10 @@ function collectBookmarkNodeIds(node: BookmarkTreeNode): string[] {
     node.id,
     ...node.children.flatMap((child) => collectBookmarkNodeIds(child)),
   ];
+}
+
+function bookmarkSourceNodeIds(source: BookmarkImportSource): string[] {
+  return source.root.children.flatMap((node) => collectBookmarkNodeIds(node));
 }
 
 function connectionTypeText(type: ConnectionType, t: ReturnType<typeof useTranslation>["t"]) {

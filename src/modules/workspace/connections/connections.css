@@ -2473,13 +2473,11 @@ fieldset.connection-specific-options > legend {
   text-transform: uppercase;
 }
 
-.import-tool-redesign,
-.import-destination-redesign {
+.import-tool-redesign {
   position: relative;
 }
 
-.import-tool-redesign > button,
-.import-destination-redesign > button {
+.import-tool-redesign > button {
   display: inline-flex;
   gap: 7px;
   align-items: center;
@@ -2496,9 +2494,7 @@ fieldset.connection-specific-options > legend {
 }
 
 .import-tool-redesign > button:hover,
-.import-tool-redesign > button.open,
-.import-destination-redesign > button:hover,
-.import-destination-redesign > button.open {
+.import-tool-redesign > button.open {
   background: var(--hover);
 }
 
@@ -2559,14 +2555,15 @@ fieldset.connection-specific-options > legend {
   text-transform: uppercase;
 }
 
-.import-destination-redesign > button {
-  max-width: 280px;
-  background: var(--surface);
-  border: 0.5px solid var(--border-strong);
+.import-destination-redesign > .kk-sel {
+  width: 170px;
 }
 
-.import-destination-popover {
-  bottom: calc(100% + 10px);
+.import-destination-redesign > .kk-sel select {
+  height: 30px;
+  background: var(--surface);
+  font-size: 12.5px;
+  font-weight: 560;
 }
 
 .import-check-redesign {
