@@ -1035,8 +1035,11 @@ async fn dispatch_tool(app: &AppHandle, name: &str, args: Value) -> Result<Value
             parse_dashboard_json(&raw)
         }
         "kkterm.dashboard.add_instance" => {
-            // Pass through every recognised placement field; the AI tool
-            // applies sensible defaults for anything missing.
+            // Pass through every recognised placement field. The AI tool
+            // auto-places missing grid coordinates, but kind, sourceId,
+            // preset, accentName, and iconName must be valid (empty values
+            // are rejected by storage validation) — the catalog marks them
+            // required to match.
             let raw = crate::ai::dashboard_tool(app, "dashboard_add_instance", args);
             parse_dashboard_json(&raw)
         }

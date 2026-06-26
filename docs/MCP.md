@@ -206,7 +206,7 @@ storage and event path (`dashboard-changed` is emitted on mutations).
 | `kkterm.dashboard.screenshot_widget` | Capture a single Dashboard Widget Instance region by `instanceId`. The app activates the owning Dashboard View before capture and returns a JPEG data URL plus dimensions. |
 | `kkterm.dashboard.read_widget_source` | Fetch the script body of a single AI-Created Widget by id. |
 | `kkterm.dashboard.create_view` | Add a new Dashboard view. |
-| `kkterm.dashboard.update_view` | Edit a view (title, gridDensity). |
+| `kkterm.dashboard.update_view` | Edit a view (title, gridDensity, sortOrder, background, tabColor). |
 | `kkterm.dashboard.remove_view` | Delete a view and its instances. |
 | `kkterm.dashboard.reorder_views` | Reorder views by id list. |
 | `kkterm.dashboard.add_instance` | Place a widget instance on a view (built-in widget or AI widget by `sourceId`). |

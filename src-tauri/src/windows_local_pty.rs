@@ -130,8 +130,12 @@ impl ProcThreadAttributeList {
                 &mut bytes_required,
             )
         };
-        let mut data = Vec::with_capacity(bytes_required);
-        unsafe { data.set_len(bytes_required) };
+        // Zero-initialized scratch buffer for the opaque attribute list that
+        // InitializeProcThreadAttributeList fills in. Using `vec![0u8; n]`
+        // instead of `with_capacity` + `set_len` avoids constructing a Vec
+        // over uninitialized memory (undefined behavior; clippy::uninit_vec).
+        // The attribute list is tiny, so zeroing is negligible.
+        let mut data = vec![0u8; bytes_required];
 
         let attr_ptr = data.as_mut_slice().as_mut_ptr() as *mut _;
         let res = unsafe {

@@ -329,12 +329,12 @@ pub fn tool_descriptors() -> Vec<Value> {
         }),
         json!({
             "name": "kkterm.dashboard.create_view",
-            "description": "Add a new Dashboard view (tab). `gridDensity` is optional ('cozy' | 'compact'); defaults to the app default.",
+            "description": "Add a new Dashboard view (tab). `gridDensity` is optional ('compact' | 'default' | 'roomy'); defaults to 'default'.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "title": {"type": "string"},
-                    "gridDensity": {"type": "string"},
+                    "gridDensity": {"type": "string", "enum": ["compact", "default", "roomy"]},
                 },
                 "required": ["title"],
                 "additionalProperties": false,
@@ -342,7 +342,7 @@ pub fn tool_descriptors() -> Vec<Value> {
         }),
         json!({
             "name": "kkterm.dashboard.update_view",
-            "description": "Edit an existing Dashboard view. `patch` supports the same fields as create_view (title, gridDensity).",
+            "description": "Edit an existing Dashboard view. `patch` may include title, gridDensity ('compact' | 'default' | 'roomy'), sortOrder, background, and tabColor.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -377,14 +377,14 @@ pub fn tool_descriptors() -> Vec<Value> {
         }),
         json!({
             "name": "kkterm.dashboard.add_instance",
-            "description": "Place a new widget instance on a view. For built-in widgets, set kind to e.g. 'connection', 'app_launcher', etc. For AI-Created Widgets, set kind = 'script' and sourceId to the widget's id. Grid coordinates are 0-11 columns wide.",
+            "description": "Place a new widget instance on a view. `kind` is 'builtIn' for a stock widget or 'script' for an AI-Created Widget. `sourceId` selects which one: for built-in widgets it is the registry id ('appLauncher', 'connectionPane', 'notes', 'networkTools', 'generatorTools', 'converters', or 'aiCodingUsage'); for 'script' it is the AI-Created Widget's id. `preset`, `accentName`, and `iconName` are required. Grid coordinates are 0-11 columns wide; gridX/Y/W/H are optional and auto-placed when omitted.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "viewId": {"type": "string"},
-                    "kind": {"type": "string"},
+                    "kind": {"type": "string", "enum": ["builtIn", "script"]},
                     "sourceId": {"type": "string"},
-                    "preset": {"type": "string"},
+                    "preset": {"type": "string", "enum": ["panel", "ambient", "hero"]},
                     "accentName": {"type": "string"},
                     "iconName": {"type": "string"},
                     "gridX": {"type": "integer", "minimum": 0, "maximum": 11},
@@ -392,7 +392,7 @@ pub fn tool_descriptors() -> Vec<Value> {
                     "gridW": {"type": "integer", "minimum": 1, "maximum": 12},
                     "gridH": {"type": "integer", "minimum": 1},
                 },
-                "required": ["viewId", "kind"],
+                "required": ["viewId", "kind", "sourceId", "preset", "accentName", "iconName"],
                 "additionalProperties": false,
             },
         }),
