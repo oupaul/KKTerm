@@ -127,26 +127,36 @@ fn plan_launch_with_options(
         .filter(|value| !value.is_empty())
         .map(ToOwned::to_owned);
 
-    if is_powershell_script(path) {
-        let parameters = Some(match arguments {
-            Some(arguments) => format!("-File \"{}\" {arguments}", path.replace('"', "\\\"")),
-            None => format!("-File \"{}\"", path.replace('"', "\\\"")),
-        });
-        return Ok(AppLauncherLaunchPlan {
-            target: "powershell.exe".to_string(),
-            parameters,
-            working_directory,
-            operation,
-        });
-    }
+    // Windows routes PowerShell scripts and shell-associated documents through
+    // native shims (powershell.exe / explorer.exe). macOS and Linux have no such
+    // executables: they open the path through the OS default handler in
+    // `launch_plan`, so they must not inject those Windows-only targets — doing so
+    // made the macOS launcher try to spawn explorer.exe (issue #466).
+    #[cfg(target_os = "windows")]
+    {
+        if is_powershell_script(path) {
+            let parameters = Some(match arguments {
+                Some(arguments) => {
+                    format!("-File \"{}\" {arguments}", path.replace('"', "\\\""))
+                }
+                None => format!("-File \"{}\"", path.replace('"', "\\\"")),
+            });
+            return Ok(AppLauncherLaunchPlan {
+                target: "powershell.exe".to_string(),
+                parameters,
+                working_directory,
+                operation,
+            });
+        }
 
-    if mode == AppLauncherLaunchMode::Normal && !runnable {
-        return Ok(AppLauncherLaunchPlan {
-            target: "explorer.exe".to_string(),
-            parameters: Some(path.to_string()),
-            working_directory,
-            operation,
-        });
+        if mode == AppLauncherLaunchMode::Normal && !runnable {
+            return Ok(AppLauncherLaunchPlan {
+                target: "explorer.exe".to_string(),
+                parameters: Some(path.to_string()),
+                working_directory,
+                operation,
+            });
+        }
     }
 
     Ok(AppLauncherLaunchPlan {
@@ -505,6 +515,7 @@ fn is_runnable_path(path: &str) -> bool {
     )
 }
 
+#[cfg(target_os = "windows")]
 fn is_powershell_script(path: &str) -> bool {
     path_extension(path).as_deref() == Some("ps1")
 }
@@ -605,34 +616,60 @@ mod tests {
         let plan = plan_launch("C:\\Docs\\notes.txt", AppLauncherLaunchMode::Normal)
             .expect("normal launches can open associated files");
 
-        assert_eq!(plan.target, "explorer.exe");
-        assert_eq!(plan.parameters.as_deref(), Some("C:\\Docs\\notes.txt"));
+        // Windows shells the document through explorer.exe; macOS and Linux open
+        // the path itself via the OS default handler.
+        #[cfg(target_os = "windows")]
+        {
+            assert_eq!(plan.target, "explorer.exe");
+            assert_eq!(plan.parameters.as_deref(), Some("C:\\Docs\\notes.txt"));
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            assert_eq!(plan.target, "C:\\Docs\\notes.txt");
+            assert_eq!(plan.parameters, None);
+        }
         assert_eq!(plan.operation, None);
     }
 
     #[test]
-    fn launch_plan_opens_office_documents_through_explorer() {
+    fn launch_plan_opens_office_documents_through_default_handler() {
         let plan = plan_launch("C:\\Docs\\budget.xlsx", AppLauncherLaunchMode::Normal)
             .expect("office documents open through their shell association");
 
-        assert_eq!(plan.target, "explorer.exe");
-        assert_eq!(plan.parameters.as_deref(), Some("C:\\Docs\\budget.xlsx"));
+        #[cfg(target_os = "windows")]
+        {
+            assert_eq!(plan.target, "explorer.exe");
+            assert_eq!(plan.parameters.as_deref(), Some("C:\\Docs\\budget.xlsx"));
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            assert_eq!(plan.target, "C:\\Docs\\budget.xlsx");
+            assert_eq!(plan.parameters, None);
+        }
         assert_eq!(plan.operation, None);
     }
 
     #[test]
-    fn launch_plan_opens_folders_through_explorer() {
+    fn launch_plan_opens_folders_through_default_handler() {
         let plan = plan_launch(
             "C:\\Users\\example\\Documents",
             AppLauncherLaunchMode::Normal,
         )
-        .expect("folders open in File Explorer");
+        .expect("folders open in the OS file manager");
 
-        assert_eq!(plan.target, "explorer.exe");
-        assert_eq!(
-            plan.parameters.as_deref(),
-            Some("C:\\Users\\example\\Documents")
-        );
+        #[cfg(target_os = "windows")]
+        {
+            assert_eq!(plan.target, "explorer.exe");
+            assert_eq!(
+                plan.parameters.as_deref(),
+                Some("C:\\Users\\example\\Documents")
+            );
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            assert_eq!(plan.target, "C:\\Users\\example\\Documents");
+            assert_eq!(plan.parameters, None);
+        }
         assert_eq!(plan.operation, None);
     }
 
@@ -641,7 +678,12 @@ mod tests {
         let plan = plan_launch("C:\\Tools\\script.ps1", AppLauncherLaunchMode::Admin)
             .expect("scripts can use admin launch");
 
+        // Only Windows wraps the script in powershell.exe; the admin verb itself
+        // is rejected later by `launch_plan` on other platforms.
+        #[cfg(target_os = "windows")]
         assert_eq!(plan.target, "powershell.exe");
+        #[cfg(not(target_os = "windows"))]
+        assert_eq!(plan.target, "C:\\Tools\\script.ps1");
         assert_eq!(plan.operation, Some("runas"));
 
         let error = plan_launch("C:\\Docs\\notes.txt", AppLauncherLaunchMode::Admin)
