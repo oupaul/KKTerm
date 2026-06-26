@@ -50,6 +50,10 @@ export function resolveInstallPlan(
     seen.add(id);
     const recipe = byId.get(id);
     if (!recipe) return;
+    if (id !== targetRecipeId && detected[id]?.installed) {
+      order.push(recipe);
+      return;
+    }
     const recipeOptions = id === targetRecipeId ? options : undefined;
     for (const need of effectiveNeedsFor(recipe, recipeOptions)) {
       visit(need);
@@ -88,6 +92,9 @@ export function resolveInstallPlan(
 
 function effectiveNeedsFor(recipe: Recipe, options?: InstallOptions): string[] {
   const needs = recipe.needs ?? [];
+  if (selectedProviderForOptions(recipe, options).kind === "chocolatey") {
+    return Array.from(new Set([...needs.filter((need) => need !== "winget"), "chocolatey"]));
+  }
   if (
     recipe.provider.kind === "winget" &&
     selectedProviderForOptions(recipe, options) !== recipe.provider
@@ -104,6 +111,12 @@ function selectedProviderForOptions(recipe: Recipe, options?: InstallOptions): R
       recipe.downloadProvider?.kind === "githubRelease")
   ) {
     return recipe.downloadProvider;
+  }
+  if (
+    options?.provider === "chocolatey" &&
+    recipe.chocolateyProvider?.kind === "chocolatey"
+  ) {
+    return recipe.chocolateyProvider;
   }
   return recipe.provider;
 }
@@ -163,6 +176,8 @@ function estimateUacPromptsFor(
       if (isKnownMachineOnlyWingetRecipe(recipe)) return 1;
       return isKnownSelfElevatingWingetRecipe(recipe) ? 1 : 0;
     }
+    case "chocolatey":
+      return 1;
     case "windowsFeature":
       return 1;
     case "wslDistro":

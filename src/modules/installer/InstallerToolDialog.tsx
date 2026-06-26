@@ -538,6 +538,7 @@ function NotInstalledInfoBody({ recipe }: { recipe: Recipe }) {
   const checking = useInstallerStore((s) => s.checking);
   const catalog = useInstallerStore((s) => s.catalog);
   const closeDialog = useInstallerStore((s) => s.closeDialog);
+  const openInfoDialog = useInstallerStore((s) => s.openInfoDialog);
   const openStepperDialog = useInstallerStore((s) => s.openStepperDialog);
   const beginInFlight = useInstallerStore((s) => s.beginInFlight);
   const wslJustEnabled = useInstallerStore((s) => s.wslJustEnabled);
@@ -581,6 +582,14 @@ function NotInstalledInfoBody({ recipe }: { recipe: Recipe }) {
 
   function attemptInstall() {
     if (!catalog || wslBlocked) return;
+    if (
+      selectedProvider.kind === "chocolatey" &&
+      recipe.id !== "chocolatey" &&
+      !detected["chocolatey"]?.installed
+    ) {
+      openInfoDialog("chocolatey");
+      return;
+    }
     const plan = resolveInstallPlan(recipe.id, catalog, detected, options);
     const prereqActionable = plan.actionable.filter((s) => s.isPrerequisite);
     if (prereqActionable.length > 0 || plan.uacPromptEstimate > 0) {
@@ -1034,11 +1043,11 @@ function OptionsForm({
     supported.has("provider") &&
     (recipe.downloadProvider?.kind === "downloadInstaller" ||
       recipe.downloadProvider?.kind === "githubRelease");
+  const canChooseChocolatey =
+    supported.has("provider") && recipe.chocolateyProvider?.kind === "chocolatey";
   const usingDownloadProvider =
     canChooseDownload && options.provider === "download";
-  const selectedProvider = usingDownloadProvider
-    ? recipe.downloadProvider
-    : recipe.provider;
+  const selectedProvider = selectedProviderForRecipe(recipe, options);
   const selectedProviderKind = selectedProvider?.kind;
   const showSelfElevatingScopeHint =
     selectedProviderKind === "winget" && isKnownSelfElevatingWingetRecipe(recipe);
@@ -1048,19 +1057,29 @@ function OptionsForm({
       className="installer-tool-dialog__options"
       data-tutorial-id="installer.toolOptions"
     >
-      {canChooseDownload ? (
+      {canChooseDownload || canChooseChocolatey ? (
         <label>
           <span>{t("installer.options.provider")}</span>
           <select
             value={options.provider ?? "default"}
             onChange={(event) =>
-              onChange("provider", event.target.value as "default" | "download")
+              onChange(
+                "provider",
+                event.target.value as "default" | "download" | "chocolatey",
+              )
             }
           >
             <option value="default">{providerSummary(recipe.provider)}</option>
-            <option value="download">
-              {providerSummary(recipe.downloadProvider!)}
-            </option>
+            {canChooseDownload ? (
+              <option value="download">
+                {providerSummary(recipe.downloadProvider!)}
+              </option>
+            ) : null}
+            {canChooseChocolatey ? (
+              <option value="chocolatey">
+                {providerSummary(recipe.chocolateyProvider!)}
+              </option>
+            ) : null}
           </select>
         </label>
       ) : null}
@@ -1131,6 +1150,12 @@ function selectedProviderForRecipe(
   ) {
     return recipe.downloadProvider;
   }
+  if (
+    options.provider === "chocolatey" &&
+    recipe.chocolateyProvider?.kind === "chocolatey"
+  ) {
+    return recipe.chocolateyProvider;
+  }
   return recipe.provider;
 }
 
@@ -1169,6 +1194,8 @@ function providerSummary(provider: Provider): string {
   switch (provider.kind) {
     case "winget":
       return `winget · ${provider.id}`;
+    case "chocolatey":
+      return `Chocolatey · ${provider.id}`;
     case "npm":
       return `npm · ${provider.pkg}`;
     case "uvPip":
@@ -1198,6 +1225,8 @@ function deriveProviderUrl(provider: Provider): string | null {
       return provider.url;
     case "winget":
       return `https://winstall.app/apps/${encodeURIComponent(provider.id)}`;
+    case "chocolatey":
+      return `https://community.chocolatey.org/packages/${encodeURIComponent(provider.id)}`;
     default:
       return null;
   }

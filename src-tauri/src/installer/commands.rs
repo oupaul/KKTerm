@@ -71,6 +71,7 @@ fn find_recipe<'a>(catalog: &'a Catalog, id: &str) -> Option<&'a Recipe> {
 fn provider_kind(provider: &Provider) -> &'static str {
     match provider {
         Provider::Winget { .. } => "winget",
+        Provider::Chocolatey { .. } => "chocolatey",
         Provider::Npm { .. } => "npm",
         Provider::UvPip { .. } => "uvPip",
         Provider::DownloadInstaller { .. } => "downloadInstaller",

@@ -31,6 +31,10 @@
         "url": "https://github.com/git-for-windows/git/releases/download/v2.54.0.windows.1/Git-2.54.0-64-bit.exe",
         "fileName": "Git-2.54.0-64-bit.exe"
       },
+      "chocolateyProvider": {
+        "kind": "chocolatey",
+        "id": "git.install"
+      },
       "options": [
         "provider",
         "scope",
@@ -76,6 +80,10 @@
         "fileName": "gh_2.93.0_windows_amd64.msi",
         "arm64Url": "https://github.com/cli/cli/releases/download/v2.93.0/gh_2.93.0_windows_arm64.msi",
         "arm64FileName": "gh_2.93.0_windows_arm64.msi"
+      },
+      "chocolateyProvider": {
+        "kind": "chocolatey",
+        "id": "gh"
       },
       "options": [
         "provider",
@@ -129,6 +137,45 @@
       }
     },
     {
+      "id": "chocolatey",
+      "name": "Chocolatey",
+      "descriptionEn": "Windows package manager used by KKTerm as an optional backend for curated tools that also publish Chocolatey packages.",
+      "category": "windows-power-user",
+      "icon": "PackagePlus",
+      "needs": [
+        "winget"
+      ],
+      "detection": {
+        "displayNames": [
+          "Chocolatey"
+        ]
+      },
+      "homepage": "https://chocolatey.org/",
+      "releaseNotesUrl": "https://github.com/chocolatey/choco/releases",
+      "provider": {
+        "kind": "winget",
+        "id": "Chocolatey.Chocolatey"
+      },
+      "options": [
+        "version"
+      ],
+      "descriptionLocales": {
+        "zh-CN": "Windows 包管理器。KKTerm 可将它作为支持 Chocolatey 软件包的精选工具的可选后端。",
+        "de": "Windows-Paketmanager, den KKTerm als optionales Backend für kuratierte Tools mit Chocolatey-Paketen verwendet.",
+        "ja": "Chocolatey パッケージも公開している厳選ツール向けに、KKTerm が任意のバックエンドとして使う Windows パッケージマネージャー。",
+        "vi": "Trình quản lý gói Windows mà KKTerm dùng làm backend tùy chọn cho các công cụ tuyển chọn cũng phát hành gói Chocolatey.",
+        "zh-TW": "Windows 套件管理員。KKTerm 可將它作為支援 Chocolatey 套件之精選工具的選用後端。",
+        "pt-BR": "Gerenciador de pacotes do Windows usado pelo KKTerm como backend opcional para ferramentas selecionadas que também publicam pacotes Chocolatey.",
+        "fr": "Gestionnaire de paquets Windows que KKTerm utilise comme backend facultatif pour les outils sélectionnés qui publient aussi des paquets Chocolatey.",
+        "ko": "Chocolatey 패키지도 제공하는 선별 도구에 대해 KKTerm이 선택적 백엔드로 사용하는 Windows 패키지 관리자입니다.",
+        "es": "Gestor de paquetes de Windows que KKTerm usa como backend opcional para herramientas seleccionadas que también publican paquetes Chocolatey.",
+        "es-MX": "Gestor de paquetes de Windows que KKTerm usa como backend opcional para herramientas seleccionadas que también publican paquetes Chocolatey.",
+        "th": "ตัวจัดการแพ็กเกจ Windows ที่ KKTerm ใช้เป็นแบ็กเอนด์ทางเลือกสำหรับเครื่องมือที่คัดสรรซึ่งเผยแพร่แพ็กเกจ Chocolatey ด้วย",
+        "it": "Gestore pacchetti Windows usato da KKTerm come backend opzionale per strumenti curati che pubblicano anche pacchetti Chocolatey.",
+        "id": "Pengelola paket Windows yang digunakan KKTerm sebagai backend opsional untuk alat pilihan yang juga menerbitkan paket Chocolatey."
+      }
+    },
+    {
       "id": "vscode",
       "name": "VS Code",
       "descriptionEn": "Visual Studio Code — Microsoft's free source editor with rich extension ecosystem.",
@@ -159,6 +206,10 @@
         "fileName": "VSCodeUserSetup-x64.exe",
         "arm64Url": "https://update.code.visualstudio.com/latest/win32-arm64-user/stable",
         "arm64FileName": "VSCodeUserSetup-arm64.exe"
+      },
+      "chocolateyProvider": {
+        "kind": "chocolatey",
+        "id": "vscode.install"
       },
       "options": [
         "provider",
@@ -250,6 +301,10 @@
         "url": "https://github.com/notepad-plus-plus/notepad-plus-plus/releases/download/v8.9.6.2/npp.8.9.6.2.Installer.x64.exe",
         "fileName": "npp.8.9.6.2.Installer.x64.exe"
       },
+      "chocolateyProvider": {
+        "kind": "chocolatey",
+        "id": "notepadplusplus.install"
+      },
       "options": [
         "provider",
         "scope",
@@ -293,6 +348,10 @@
         "kind": "downloadInstaller",
         "url": "https://github.com/coreybutler/nvm-windows/releases/latest/download/nvm-setup.exe",
         "fileName": "nvm-setup.exe"
+      },
+      "chocolateyProvider": {
+        "kind": "chocolatey",
+        "id": "nvm"
       },
       "options": [
         "provider",
@@ -518,6 +577,10 @@
         "url": "https://desktop.docker.com/win/main/amd64/Docker%20Desktop%20Installer.exe",
         "fileName": "Docker Desktop Installer.exe"
       },
+      "chocolateyProvider": {
+        "kind": "chocolatey",
+        "id": "docker-desktop"
+      },
       "options": [
         "provider",
         "scope",
@@ -560,9 +623,14 @@
         "kind": "winget",
         "id": "NSSM.NSSM"
       },
+      "chocolateyProvider": {
+        "kind": "chocolatey",
+        "id": "nssm"
+      },
       "options": [
         "scope",
-        "version"
+        "version",
+        "provider"
       ],
       "descriptionLocales": {
         "fr": "Le gestionnaire de services non suceurs — enveloppe n'importe quel programme en tant que service Windows.",
@@ -603,8 +671,13 @@
         "kind": "winget",
         "id": "marha.VcXsrv"
       },
+      "chocolateyProvider": {
+        "kind": "chocolatey",
+        "id": "vcxsrv"
+      },
       "options": [
-        "version"
+        "version",
+        "provider"
       ],
       "descriptionLocales": {
         "it": "Server Windows X leggero per l'inoltro SSH X11 e app GUI Linux remote.",
@@ -645,9 +718,14 @@
         "kind": "winget",
         "id": "JanDeDobbeleer.OhMyPosh"
       },
+      "chocolateyProvider": {
+        "kind": "chocolatey",
+        "id": "oh-my-posh"
+      },
       "options": [
         "scope",
-        "version"
+        "version",
+        "provider"
       ],
       "descriptionLocales": {
         "it": "Motore di temi per il prompt di qualsiasi shell. Aggiunge prompt avanzati e personalizzabili a PowerShell e altri.",
@@ -781,6 +859,10 @@
         "kind": "downloadInstaller",
         "url": "https://ollama.com/download/OllamaSetup.exe",
         "fileName": "OllamaSetup.exe"
+      },
+      "chocolateyProvider": {
+        "kind": "chocolatey",
+        "id": "ollama"
       },
       "options": [
         "provider",
@@ -960,6 +1042,10 @@
         "url": "https://github.com/usebruno/bruno/releases/download/v3.4.2/bruno_3.4.2_x64_win.exe",
         "fileName": "bruno_3.4.2_x64_win.exe"
       },
+      "chocolateyProvider": {
+        "kind": "chocolatey",
+        "id": "bruno"
+      },
       "options": [
         "provider",
         "scope",
@@ -999,9 +1085,14 @@
         "kind": "winget",
         "id": "BurntSushi.ripgrep.MSVC"
       },
+      "chocolateyProvider": {
+        "kind": "chocolatey",
+        "id": "ripgrep"
+      },
       "options": [
         "scope",
-        "version"
+        "version",
+        "provider"
       ],
       "descriptionLocales": {
         "it": "Strumento di ricerca ricorsiva orientata alla linea. Gli agenti di codifica dell'intelligenza artificiale si affidano fortemente a questo.",
@@ -1037,9 +1128,14 @@
         "kind": "winget",
         "id": "jqlang.jq"
       },
+      "chocolateyProvider": {
+        "kind": "chocolatey",
+        "id": "jq"
+      },
       "options": [
         "scope",
-        "version"
+        "version",
+        "provider"
       ],
       "descriptionLocales": {
         "fr": "Processeur JSON en ligne de commande.",
@@ -1075,9 +1171,14 @@
         "kind": "winget",
         "id": "junegunn.fzf"
       },
+      "chocolateyProvider": {
+        "kind": "chocolatey",
+        "id": "fzf"
+      },
       "options": [
         "scope",
-        "version"
+        "version",
+        "provider"
       ],
       "descriptionLocales": {
         "zh-CN": "用于命令行的通用模糊查找器。",
@@ -1125,6 +1226,10 @@
         "arm64Url": "https://github.com/microsoft/coreutils/releases/download/v2026.5.29/coreutils-2026.5.29-arm64.exe",
         "arm64FileName": "coreutils-2026.5.29-arm64.exe"
       },
+      "chocolateyProvider": {
+        "kind": "chocolatey",
+        "id": "coreutils"
+      },
       "options": [
         "provider",
         "version"
@@ -1165,9 +1270,14 @@
         "kind": "winget",
         "id": "SST.opencode"
       },
+      "chocolateyProvider": {
+        "kind": "chocolatey",
+        "id": "opencode"
+      },
       "options": [
         "scope",
-        "version"
+        "version",
+        "provider"
       ],
       "descriptionLocales": {
         "it": "Agente di codifica terminale che può funzionare con più fornitori di intelligenza artificiale.",
@@ -1215,6 +1325,10 @@
         "fileName": "rustup-init.exe",
         "arm64Url": "https://win.rustup.rs/aarch64",
         "arm64FileName": "rustup-init.exe"
+      },
+      "chocolateyProvider": {
+        "kind": "chocolatey",
+        "id": "rustup.install"
       },
       "options": [
         "provider",
@@ -1296,6 +1410,10 @@
         "url": "https://claude.ai/api/desktop/win32/x64/msix/latest/redirect",
         "fileName": "Claude.msix"
       },
+      "chocolateyProvider": {
+        "kind": "chocolatey",
+        "id": "claude-desktop"
+      },
       "options": [
         "provider"
       ],
@@ -1375,6 +1493,10 @@
         "url": "https://github.com/microsoft/PowerToys/releases/download/v0.99.1/PowerToysUserSetup-0.99.1-x64.exe",
         "fileName": "PowerToysUserSetup-0.99.1-x64.exe"
       },
+      "chocolateyProvider": {
+        "kind": "chocolatey",
+        "id": "powertoys"
+      },
       "options": [
         "provider",
         "scope",
@@ -1425,6 +1547,10 @@
         "arm64Url": "https://github.com/PowerShell/PowerShell/releases/download/v7.6.2/PowerShell-7.6.2-win-arm64.msi",
         "arm64FileName": "PowerShell-7.6.2-win-arm64.msi"
       },
+      "chocolateyProvider": {
+        "kind": "chocolatey",
+        "id": "powershell-core"
+      },
       "options": [
         "provider",
         "scope",
@@ -1465,9 +1591,14 @@
         "kind": "winget",
         "id": "Microsoft.Sysinternals.Suite"
       },
+      "chocolateyProvider": {
+        "kind": "chocolatey",
+        "id": "sysinternals"
+      },
       "options": [
         "scope",
-        "version"
+        "version",
+        "provider"
       ],
       "descriptionLocales": {
         "de": "Microsoft Sysinternals Fehlerbehebungs- und Verwaltungsdienstprogramme.",
@@ -1511,6 +1642,10 @@
         "kind": "downloadInstaller",
         "url": "https://www.voidtools.com/Everything-1.4.1.1032.x64-Setup.exe",
         "fileName": "Everything-1.4.1.1032.x64-Setup.exe"
+      },
+      "chocolateyProvider": {
+        "kind": "chocolatey",
+        "id": "everything"
       },
       "options": [
         "provider",
@@ -1597,6 +1732,10 @@
         "url": "https://github.com/sabrogden/Ditto/releases/download/3.25.113.0/DittoSetup_3_25_113_0.exe",
         "fileName": "DittoSetup_3_25_113_0.exe"
       },
+      "chocolateyProvider": {
+        "kind": "chocolatey",
+        "id": "ditto"
+      },
       "options": [
         "provider",
         "scope",
@@ -1641,6 +1780,10 @@
         "kind": "downloadInstaller",
         "url": "https://pkgs.tailscale.com/stable/tailscale-setup-latest.exe",
         "fileName": "tailscale-setup-latest.exe"
+      },
+      "chocolateyProvider": {
+        "kind": "chocolatey",
+        "id": "tailscale"
       },
       "options": [
         "provider",
@@ -1723,6 +1866,10 @@
         "url": "https://www.7-zip.org/a/7z2601-x64.exe",
         "fileName": "7z2601-x64.exe"
       },
+      "chocolateyProvider": {
+        "kind": "chocolatey",
+        "id": "7zip.install"
+      },
       "options": [
         "provider",
         "scope",
@@ -1802,6 +1949,10 @@
         "url": "https://github.com/ShareX/ShareX/releases/download/v20.2.0/ShareX-20.2.0-setup-x64.exe",
         "fileName": "ShareX-20.2.0-setup-x64.exe"
       },
+      "chocolateyProvider": {
+        "kind": "chocolatey",
+        "id": "sharex"
+      },
       "options": [
         "provider",
         "scope",
@@ -1853,6 +2004,10 @@
         "layout": "zip",
         "pathSubdir": "ffmpeg-{tag}-full_build/bin"
       },
+      "chocolateyProvider": {
+        "kind": "chocolatey",
+        "id": "ffmpeg"
+      },
       "options": [
         "provider",
         "scope",
@@ -1899,8 +2054,13 @@
         "kind": "winget",
         "id": "Genymobile.scrcpy"
       },
+      "chocolateyProvider": {
+        "kind": "chocolatey",
+        "id": "scrcpy"
+      },
       "options": [
-        "version"
+        "version",
+        "provider"
       ],
       "descriptionLocales": {
         "fr": "Outil de miroir et de contrôle d'écran Android pour les appareils USB ou TCP/IP.",

@@ -54,8 +54,8 @@ pub fn load_bundled_catalog() -> Result<Catalog, CatalogError> {
 
 The catalog file `installer/catalog.v1.json` still lives at the repo
 root with the same schema style as before (closed provider enum:
-`winget`, `npm`, `uvPip`, `downloadInstaller`, `githubRelease`,
-`windowsFeature`, `wslDistro`, `bundle`). Adding,
+`winget`, `chocolatey`, `npm`, `uvPip`, `downloadInstaller`,
+`githubRelease`, `windowsFeature`, `wslDistro`, `bundle`). Adding,
 editing, or removing a tool is a normal commit; the change rides with
 the next KKTerm release.
 

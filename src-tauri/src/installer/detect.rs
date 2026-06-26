@@ -172,10 +172,22 @@ pub fn detect_one(recipe: &Recipe) -> DetectedState {
     let state = if is_managed_app(&recipe.id) {
         detect_managed_app_marker(&recipe.id)
     } else {
+        if let Some(Provider::Chocolatey { id }) = &recipe.chocolatey_provider {
+            let chocolatey_state = detect_chocolatey_package(id);
+            if chocolatey_state.installed {
+                crate::logging::installer_helper_debug(
+                    "detect.one.chocolatey_provider",
+                    &json!({ "toolId": recipe.id, "packageId": id, "state": chocolatey_state }),
+                );
+                return chocolatey_state;
+            }
+        }
         match &recipe.provider {
             Provider::Winget { .. } => {
                 let state = detect_winget(recipe);
-                if !state.installed
+                if !state.installed && recipe.id == "chocolatey" {
+                    detect_chocolatey_cli()
+                } else if !state.installed
                     && let Some(cli_state) = detect_winget_cli_fallback(&recipe.id)
                 {
                     cli_state
@@ -190,6 +202,7 @@ pub fn detect_one(recipe: &Recipe) -> DetectedState {
                     state
                 }
             }
+            Provider::Chocolatey { id } => detect_chocolatey_package(id),
             Provider::Npm { pkg } => detect_npm(pkg),
             Provider::UvPip { .. } => DetectedState::not_installed(),
             Provider::DownloadInstaller { .. } if recipe.id == "winget" => detect_winget_cli(),
@@ -213,6 +226,7 @@ pub fn detect_one(recipe: &Recipe) -> DetectedState {
 fn provider_kind(provider: &Provider) -> &'static str {
     match provider {
         Provider::Winget { .. } => "winget",
+        Provider::Chocolatey { .. } => "chocolatey",
         Provider::Npm { .. } => "npm",
         Provider::UvPip { .. } => "uvPip",
         Provider::DownloadInstaller { .. } => "downloadInstaller",
@@ -356,6 +370,48 @@ fn detect_winget_cli() -> DetectedState {
         Some(version) => DetectedState::installed(Some(version)),
         None => DetectedState::not_installed(),
     }
+}
+
+fn detect_chocolatey_cli() -> DetectedState {
+    match command_version("choco", &["--version"]) {
+        Some(version) => DetectedState::installed(Some(version)),
+        None => DetectedState::not_installed(),
+    }
+}
+
+pub fn detect_chocolatey_package(package_id: &str) -> DetectedState {
+    let output = match command_output_with_refreshed_path(
+        "choco",
+        &[
+            "list",
+            "--local-only",
+            "--exact",
+            package_id,
+            "--limit-output",
+        ],
+    ) {
+        Some(output) => output,
+        None => return DetectedState::not_installed(),
+    };
+    if !output.status.success() {
+        return DetectedState::not_installed();
+    }
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    chocolatey_package_from_limit_output(&stdout, package_id)
+        .map(|version| DetectedState::installed(Some(version)))
+        .unwrap_or_else(DetectedState::not_installed)
+}
+
+fn chocolatey_package_from_limit_output(output: &str, package_id: &str) -> Option<String> {
+    for line in output.lines() {
+        let Some((id, version)) = line.trim().split_once('|') else {
+            continue;
+        };
+        if id.eq_ignore_ascii_case(package_id) && !version.trim().is_empty() {
+            return Some(version.trim().to_string());
+        }
+    }
+    None
 }
 
 fn detect_winget_cli_fallback(tool_id: &str) -> Option<DetectedState> {
@@ -1013,6 +1069,7 @@ mod tests {
                 id: winget_id.into(),
             },
             download_provider: None,
+            chocolatey_provider: None,
             options: vec![],
             homepage: None,
             release_notes_url: None,
@@ -1404,7 +1461,8 @@ mod tests {
         // `<id>_Microsoft.Winget.Source_…` ARP key whose DisplayName does not
         // exactly equal the catalog alias "ripgrep". Detection must still flag
         // it installed off the winget-source key.
-        let recipe = winget_recipe_with_detection("BurntSushi.ripgrep.MSVC", &[], &["ripgrep"], &[]);
+        let recipe =
+            winget_recipe_with_detection("BurntSushi.ripgrep.MSVC", &[], &["ripgrep"], &[]);
         let snapshot = InstalledSoftwareSnapshot {
             entries: vec![
                 InstalledSoftwareEntry {

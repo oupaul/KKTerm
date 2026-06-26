@@ -3,6 +3,7 @@
 
 export type ProviderKind =
   | "winget"
+  | "chocolatey"
   | "npm"
   | "uvPip"
   | "downloadInstaller"
@@ -23,6 +24,7 @@ export interface Detection {
 
 export type Provider =
   | { kind: "winget"; id: string }
+  | { kind: "chocolatey"; id: string }
   | { kind: "npm"; pkg: string }
   | { kind: "uvPip"; package: string }
   | { kind: "downloadInstaller"; url: string; fileName: string }
@@ -47,6 +49,7 @@ export interface Recipe {
   category?: string;
   provider: Provider;
   downloadProvider?: Provider;
+  chocolateyProvider?: Provider;
   options?: RecipeOption[];
   /// Optional official project website, surfaced in the not-installed dialog.
   homepage?: string;
@@ -126,7 +129,7 @@ export interface InstallOptions {
   version?: string;
   location?: string;
   addToPath?: boolean;
-  provider?: "default" | "download";
+  provider?: "default" | "download" | "chocolatey";
 }
 
 export type ProgressEvent =

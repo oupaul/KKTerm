@@ -52,6 +52,10 @@ pub struct Recipe {
     /// Optional direct-download installer fallback for winget recipes.
     #[serde(default, rename = "downloadProvider")]
     pub download_provider: Option<Provider>,
+    /// Optional Chocolatey package fallback for curated recipes that are also
+    /// available in the Chocolatey community feed.
+    #[serde(default, rename = "chocolateyProvider")]
+    pub chocolatey_provider: Option<Provider>,
     /// Which options from the closed shared option set apply to this recipe.
     /// See `RecipeOptions` enum.
     #[serde(default)]
@@ -123,6 +127,10 @@ pub enum RecipeOption {
 pub enum Provider {
     Winget {
         /// e.g. "Microsoft.VisualStudioCode".
+        id: String,
+    },
+    Chocolatey {
+        /// e.g. "vscode" or "git.install".
         id: String,
     },
     Npm {
@@ -386,6 +394,7 @@ mod tests {
                 id: winget_id.into(),
             },
             download_provider: None,
+            chocolatey_provider: None,
             options: vec![],
             homepage: None,
             release_notes_url: None,
@@ -455,6 +464,7 @@ mod tests {
             icon: None,
             category: None,
             download_provider: None,
+            chocolatey_provider: None,
             provider: Provider::Bundle {
                 steps: vec!["ghost".into()],
             },
@@ -646,7 +656,10 @@ mod tests {
             .expect("catalog should include psmux");
 
         assert_eq!(recipe.category.as_deref(), Some("windows-power-user"));
-        assert_eq!(recipe.homepage.as_deref(), Some("https://github.com/psmux/psmux"));
+        assert_eq!(
+            recipe.homepage.as_deref(),
+            Some("https://github.com/psmux/psmux")
+        );
         assert!(recipe.needs.contains(&"winget".to_string()));
         assert!(matches!(
             &recipe.provider,
@@ -744,6 +757,7 @@ mod tests {
             icon: None,
             category: None,
             download_provider: None,
+            chocolatey_provider: None,
             provider: Provider::Bundle {
                 steps: vec!["nvm".into(), "node".into()],
             },

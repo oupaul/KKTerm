@@ -25,7 +25,10 @@ use serde_json::json;
 /// genuinely quiet for 30–90s during MSIX staging.
 const HEARTBEAT_INTERVAL_SECS: u64 = 10;
 
-use super::detect::{GithubReleaseMarker, github_release_install_dir, github_release_marker_path};
+use super::detect::{
+    GithubReleaseMarker, detect_chocolatey_package, github_release_install_dir,
+    github_release_marker_path,
+};
 use super::events::ProgressEvent;
 use super::managed_app::{
     ManagedAppMarker, managed_app_binary_dir, managed_app_data_dir, managed_app_install_dir,
@@ -51,7 +54,13 @@ pub fn install_recipe(
             "options": options,
         }),
     );
-    let result = if recipe.id == "n8n" || recipe.id == "flowise" || recipe.id == "openclaw" {
+    let use_selected_provider_directly = matches!(
+        selected_install_provider(recipe, &effective_install_options(recipe, options)),
+        Provider::Chocolatey { .. }
+    );
+    let result = if use_selected_provider_directly {
+        install_recipe_by_provider(recipe, options, cancel, emit)
+    } else if recipe.id == "n8n" || recipe.id == "flowise" || recipe.id == "openclaw" {
         if let Provider::Npm { pkg } = &recipe.provider {
             install_managed_npm_app(&recipe.id, pkg, options, cancel, emit)
         } else {
@@ -113,6 +122,7 @@ fn install_recipe_by_provider(
     let provider = selected_install_provider(recipe, &options);
     match provider {
         Provider::Winget { id } => install_winget(&recipe.id, id, &options, cancel, emit),
+        Provider::Chocolatey { id } => install_chocolatey(&recipe.id, id, &options, cancel, emit),
         Provider::Npm { pkg } => install_npm(&recipe.id, pkg, &options, cancel, emit),
         Provider::UvPip { package } => install_uv_pip(&recipe.id, package, &options, cancel, emit),
         provider @ Provider::DownloadInstaller { .. } => {
@@ -155,12 +165,24 @@ fn selected_install_provider<'a>(recipe: &'a Recipe, options: &InstallOptions) -
             _ => {}
         }
     }
+    if options.provider.as_deref() == Some("chocolatey") {
+        match recipe.chocolatey_provider.as_ref() {
+            Some(provider @ Provider::Chocolatey { .. }) => return provider,
+            _ => {}
+        }
+    }
+    if let Some(provider @ Provider::Chocolatey { id }) = recipe.chocolatey_provider.as_ref() {
+        if detect_chocolatey_package(id).installed {
+            return provider;
+        }
+    }
     &recipe.provider
 }
 
 fn provider_kind(provider: &Provider) -> &'static str {
     match provider {
         Provider::Winget { .. } => "winget",
+        Provider::Chocolatey { .. } => "chocolatey",
         Provider::Npm { .. } => "npm",
         Provider::UvPip { .. } => "uvPip",
         Provider::DownloadInstaller { .. } => "downloadInstaller",
@@ -969,6 +991,47 @@ fn winget_links_dir_from_local_app_data(local_app_data: PathBuf) -> PathBuf {
         .join("Microsoft")
         .join("WinGet")
         .join("Links")
+}
+
+// ---- Chocolatey ---------------------------------------------------------
+
+fn install_chocolatey(
+    tool_id: &str,
+    package_id: &str,
+    options: &InstallOptions,
+    cancel: Arc<AtomicBool>,
+    emit: &EventSink,
+) -> Result<Option<String>, String> {
+    let already_installed = detect_chocolatey_package(package_id).installed;
+    let verb = if already_installed {
+        "upgrade"
+    } else {
+        "install"
+    };
+    emit(ProgressEvent::Step {
+        tool_id: tool_id.into(),
+        message: format!("choco {verb} {package_id}"),
+    });
+    let args = chocolatey_install_args(package_id, options, verb);
+    run_streamed_with_refreshed_path_public("choco", &args, tool_id, cancel, emit)?;
+    Ok(None)
+}
+
+fn chocolatey_install_args(package_id: &str, options: &InstallOptions, verb: &str) -> Vec<String> {
+    let mut args: Vec<String> = vec![
+        verb.into(),
+        package_id.into(),
+        "-y".into(),
+        "--no-progress".into(),
+        "--limit-output".into(),
+    ];
+    if let Some(version) = options.version.as_deref() {
+        if !version.is_empty() {
+            args.push("--version".into());
+            args.push(version.into());
+        }
+    }
+    args
 }
 
 /// Directory where winget writes its per-run diagnostic logs. Surfaced on a
@@ -2279,6 +2342,7 @@ mod tests {
                 id: "Git.Git".into(),
             },
             download_provider: None,
+            chocolatey_provider: None,
             options,
             homepage: None,
             release_notes_url: None,

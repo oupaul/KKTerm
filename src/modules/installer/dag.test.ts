@@ -172,3 +172,82 @@ if (
     "GitHub-release download provider installs should not include winget as a prerequisite.",
   );
 }
+
+const chocolateyBackedWingetRecipe: Recipe = {
+  id: "choco-backed-winget-app",
+  name: "Chocolatey-backed winget app",
+  descriptionEn: "Chocolatey-backed winget app",
+  category: "utilities",
+  icon: "Package",
+  needs: ["winget"],
+  provider: { kind: "winget", id: "Example.App" },
+  chocolateyProvider: { kind: "chocolatey", id: "example-app" },
+  options: ["provider"],
+};
+
+const catalogWithChocolateyProvider: Catalog = {
+  schemaVersion: 1,
+  generatedAt: "2026-06-26",
+  recipes: [
+    {
+      id: "winget",
+      name: "winget",
+      descriptionEn: "winget",
+      category: "essentials",
+      icon: "Package",
+      provider: {
+        kind: "downloadInstaller",
+        url: "https://example.test/winget.msixbundle",
+        fileName: "winget.msixbundle",
+      },
+    },
+    {
+      id: "chocolatey",
+      name: "Chocolatey",
+      descriptionEn: "Chocolatey",
+      category: "windows-power-user",
+      icon: "Package",
+      needs: ["winget"],
+      provider: { kind: "winget", id: "Chocolatey.Chocolatey" },
+    },
+    chocolateyBackedWingetRecipe,
+  ],
+};
+
+const chocolateyProviderPlan = resolveInstallPlan(
+  "choco-backed-winget-app",
+  catalogWithChocolateyProvider,
+  {},
+  { provider: "chocolatey" },
+);
+if (
+  !chocolateyProviderPlan.actionable.some(
+    (step) => step.recipe.id === "chocolatey",
+  )
+) {
+  throw new Error(
+    "Chocolatey provider installs should include Chocolatey as a prerequisite when missing.",
+  );
+}
+
+const installedChocolateyProviderPlan = resolveInstallPlan(
+  "choco-backed-winget-app",
+  catalogWithChocolateyProvider,
+  {
+    chocolatey: {
+      installed: true,
+      installedVersion: "2.7.3",
+      partialCount: null,
+    },
+  },
+  { provider: "chocolatey" },
+);
+if (
+  installedChocolateyProviderPlan.actionable.some(
+    (step) => step.recipe.id === "winget" || step.recipe.id === "chocolatey",
+  )
+) {
+  throw new Error(
+    "Installed Chocolatey should satisfy the Chocolatey provider prerequisite without pulling winget.",
+  );
+}

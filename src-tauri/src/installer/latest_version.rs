@@ -6,6 +6,7 @@ use std::process::Command;
 use serde::Deserialize;
 use serde_json::json;
 
+use super::detect::detect_chocolatey_package;
 use super::proc::no_window;
 use super::schema::{Catalog, Provider, Recipe};
 
@@ -16,8 +17,10 @@ pub fn latest_version(recipe: &Recipe) -> LatestVersionResult {
         "latest.one.start",
         &json!({ "toolId": recipe.id, "provider": provider_kind(&recipe.provider) }),
     );
-    let result = match &recipe.provider {
+    let provider = latest_provider_for_recipe(recipe);
+    let result = match provider {
         Provider::Winget { id } => winget_latest(id),
+        Provider::Chocolatey { id } => chocolatey_latest(id),
         Provider::Npm { pkg } => npm_latest_for_recipe(pkg, recipe.release_notes_url.as_deref()),
         Provider::UvPip { package } => pypi_latest(package),
         Provider::DownloadInstaller { .. } => Ok(None),
@@ -61,6 +64,7 @@ pub fn latest_version_in_catalog(recipe: &Recipe, catalog: &Catalog) -> LatestVe
 fn provider_kind(provider: &Provider) -> &'static str {
     match provider {
         Provider::Winget { .. } => "winget",
+        Provider::Chocolatey { .. } => "chocolatey",
         Provider::Npm { .. } => "npm",
         Provider::UvPip { .. } => "uvPip",
         Provider::DownloadInstaller { .. } => "downloadInstaller",
@@ -69,6 +73,15 @@ fn provider_kind(provider: &Provider) -> &'static str {
         Provider::WslDistro { .. } => "wslDistro",
         Provider::Bundle { .. } => "bundle",
     }
+}
+
+fn latest_provider_for_recipe(recipe: &Recipe) -> &Provider {
+    if let Some(provider @ Provider::Chocolatey { id }) = recipe.chocolatey_provider.as_ref() {
+        if detect_chocolatey_package(id).installed {
+            return provider;
+        }
+    }
+    &recipe.provider
 }
 
 fn winget_latest(id: &str) -> LatestVersionResult {
@@ -238,6 +251,39 @@ fn winget_show_args(id: &str) -> Vec<&str> {
         "--accept-source-agreements",
         "--disable-interactivity",
     ]
+}
+
+fn chocolatey_latest(id: &str) -> LatestVersionResult {
+    let mut command = Command::new("choco");
+    command.args(["search", id, "--exact", "--limit-output", "--no-progress"]);
+    if let Some(path) = super::install::refreshed_path_public() {
+        if !path.trim().is_empty() {
+            command.env("PATH", path);
+        }
+    }
+    let output = no_window(&mut command)
+        .output()
+        .map_err(|error| format!("failed to run choco search for `{id}`: {error}"))?;
+    if !output.status.success() {
+        return Err(format!(
+            "choco search `{id}` failed: {}",
+            command_error_text(&output.stderr, &output.stdout)
+        ));
+    }
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    Ok(chocolatey_version_from_limit_output(&stdout, id))
+}
+
+fn chocolatey_version_from_limit_output(output: &str, package_id: &str) -> Option<String> {
+    for line in output.lines() {
+        let Some((id, version)) = line.trim().split_once('|') else {
+            continue;
+        };
+        if id.eq_ignore_ascii_case(package_id) && !version.trim().is_empty() {
+            return Some(version.trim().to_string());
+        }
+    }
+    None
 }
 
 fn npm_latest(pkg: &str) -> LatestVersionResult {

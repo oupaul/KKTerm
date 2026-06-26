@@ -3,6 +3,7 @@ import type { Provider, Recipe } from "./types";
 export function providerSupportsLatestVersion(provider: Provider): boolean {
   switch (provider.kind) {
     case "winget":
+    case "chocolatey":
     case "uvPip":
     case "githubRelease":
       return true;

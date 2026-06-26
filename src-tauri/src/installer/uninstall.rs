@@ -8,7 +8,7 @@ use std::sync::atomic::AtomicBool;
 
 use serde_json::json;
 
-use super::detect::github_release_install_dir;
+use super::detect::{detect_chocolatey_package, github_release_install_dir};
 use super::events::ProgressEvent;
 use super::install::EventSink;
 use super::managed_app::{is_managed_app, managed_app_install_dir};
@@ -26,6 +26,10 @@ pub fn uninstall_recipe(
     );
     let result = if recipe.id == "n8n" {
         uninstall_managed_app(&recipe.id, emit)
+    } else if let Some(Provider::Chocolatey { id }) = recipe.chocolatey_provider.as_ref()
+        && detect_chocolatey_package(id).installed
+    {
+        uninstall_chocolatey(&recipe.id, id, cancel, emit)
     } else if recipe.id == "ollama" {
         if let Provider::Winget { id } = &recipe.provider {
             uninstall_winget(&recipe.id, id, cancel, emit)
@@ -58,6 +62,7 @@ fn uninstall_recipe_by_provider(
 ) -> Result<(), String> {
     match &recipe.provider {
         Provider::Winget { id } => uninstall_winget(&recipe.id, id, cancel, emit),
+        Provider::Chocolatey { id } => uninstall_chocolatey(&recipe.id, id, cancel, emit),
         Provider::Npm { pkg } => uninstall_npm(&recipe.id, pkg, cancel, emit),
         Provider::UvPip { package } => uninstall_uv_pip(&recipe.id, package, cancel, emit),
         Provider::DownloadInstaller { .. } => Err(
@@ -79,6 +84,7 @@ fn uninstall_recipe_by_provider(
 fn provider_kind(provider: &Provider) -> &'static str {
     match provider {
         Provider::Winget { .. } => "winget",
+        Provider::Chocolatey { .. } => "chocolatey",
         Provider::Npm { .. } => "npm",
         Provider::UvPip { .. } => "uvPip",
         Provider::DownloadInstaller { .. } => "downloadInstaller",
@@ -147,6 +153,30 @@ fn uninstall_winget(
             "--accept-source-agreements".into(),
             "--disable-interactivity".into(),
             "--verbose-logs".into(),
+        ],
+        tool_id,
+        cancel,
+        emit,
+    )
+}
+
+fn uninstall_chocolatey(
+    tool_id: &str,
+    package_id: &str,
+    cancel: Arc<AtomicBool>,
+    emit: &EventSink,
+) -> Result<(), String> {
+    emit(ProgressEvent::Step {
+        tool_id: tool_id.into(),
+        message: format!("choco uninstall {package_id}"),
+    });
+    super::install::run_streamed_with_refreshed_path_public(
+        "choco",
+        &[
+            "uninstall".into(),
+            package_id.into(),
+            "-y".into(),
+            "--limit-output".into(),
         ],
         tool_id,
         cancel,

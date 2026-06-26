@@ -73,6 +73,59 @@ test("Oh My Posh is visible in the Install Helper Utilities section", async () =
   );
 });
 
+test("Chocolatey is a Windows Power User tool installed via winget", () => {
+  const chocolatey = byId.get("chocolatey");
+
+  assert.ok(chocolatey, "Chocolatey should be present in the installer catalog");
+  assert.equal(chocolatey.category, "windows-power-user");
+  assert.deepEqual(chocolatey.provider, {
+    kind: "winget",
+    id: "Chocolatey.Chocolatey",
+  });
+  assert.ok(
+    chocolatey.needs?.includes("winget"),
+    "Chocolatey should install through the existing winget prerequisite flow",
+  );
+});
+
+test("Chocolatey is visible in the Install Helper Windows Power User section", async () => {
+  const source = await readFile(
+    new URL("../src/modules/installer/sections.ts", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(
+    source,
+    /titleKey:\s*"installer\.section\.windowsPowerUser"[\s\S]*ids:\s*\[[^\]]*"chocolatey"/,
+    "Chocolatey should be listed in the visible Windows Power User section",
+  );
+});
+
+test("curated Chocolatey overlaps expose Chocolatey alternate providers", () => {
+  const expected = new Map([
+    ["git", "git.install"],
+    ["github-cli", "gh"],
+    ["vscode", "vscode.install"],
+    ["notepadpp", "notepadplusplus.install"],
+    ["nssm", "nssm"],
+    ["powershell-7", "powershell-core"],
+    ["ffmpeg", "ffmpeg"],
+  ]);
+
+  for (const [toolId, packageId] of expected) {
+    const recipe = byId.get(toolId);
+    assert.ok(recipe, `${toolId} should be present in the installer catalog`);
+    assert.deepEqual(recipe.chocolateyProvider, {
+      kind: "chocolatey",
+      id: packageId,
+    });
+    assert.ok(
+      recipe.options?.includes("provider"),
+      `${toolId} should expose the provider selector`,
+    );
+  }
+});
+
 test("Coreutils is a Utilities tool with winget and download providers", () => {
   const coreutils = byId.get("coreutils");
 
@@ -119,7 +172,8 @@ test("scrcpy is a Utilities tool installed via winget", () => {
   assert.ok(scrcpy, "scrcpy should be present in the installer catalog");
   assert.equal(scrcpy.category, "utilities");
   assert.deepEqual(scrcpy.provider, { kind: "winget", id: "Genymobile.scrcpy" });
-  assert.deepEqual(scrcpy.options, ["version"]);
+  assert.ok(scrcpy.options?.includes("version"));
+  assert.ok(scrcpy.options?.includes("provider"));
 });
 
 test("scrcpy is visible in the Install Helper Utilities section", async () => {

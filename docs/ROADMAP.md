@@ -121,7 +121,7 @@ For operational measurement records see `docs/PERFORMANCE.md`. For packaging and
 
 - [x] Install Helper Module with a bundled curated Windows developer-tool catalog.
 - [x] Local detection, latest-version checks, install, update, uninstall, pin, and "Update all" flows.
-- [x] Structured provider recipes for winget, npm, uv pip, downloaded installers, GitHub releases, Windows features, WSL distros, and bundled tools.
+- [x] Structured provider recipes for winget, Chocolatey, npm, uv pip, downloaded installers, GitHub releases, Windows features, WSL distros, and bundled tools.
 - [x] Managed app support for app-local tools, launch actions, workspace add actions, service helpers, and streaming command logs.
 
 ### UI, Settings & i18n
