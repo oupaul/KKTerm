@@ -178,6 +178,34 @@ is included.
    SmartSizing state, and WebView/native scale factors before changing another
    sizing heuristic.
 
+## Keyboard Focus And `WS_EX_NOACTIVATE`
+
+The ActiveX overlay is a separate top-level `WS_POPUP` window created
+`WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW` and only ever shown/moved with
+`SWP_NOACTIVATE` / `SW_SHOWNOACTIVATE`. This is deliberate: the overlay must
+never steal activation from the main KKTerm frame (custom title bar, WebView2
+focus model). The tradeoff is that clicking the remote desktop does **not**
+bring KKTerm to the foreground or hand keyboard focus to the control:
+
+- Mouse works regardless of foreground state, because Windows delivers mouse
+  messages to the window under the cursor. The remote cursor moves and text can
+  even be selected.
+- Keyboard does not follow. Keystrokes keep going to whatever window held OS
+  focus (e.g. another app on a second monitor, or any other foreground window).
+
+Symptom: "mouse moved into the RDP session from another program works, but
+typing goes to the other program until I click the connection tab." On a single
+monitor this usually hides itself because switching to KKTerm tends to displace
+the previously focused app; it is most visible on multi-monitor setups where
+both windows stay visible.
+
+Fix: a comctl32 subclass (`rdp_overlay_subclass_proc`) intercepts
+`WM_MOUSEACTIVATE` on the overlay HWND, foregrounds the owner and `SetFocus`es
+the control, then returns `MA_NOACTIVATE` so the click still reaches the remote
+session without activating the no-activate overlay. SSH/TELNET do not need this
+because they render inside the activatable WebView2 window and
+`TerminalWorkspace` already restores focus on activation.
+
 ## Current Architectural Constraint
 
 KKTerm embeds Microsoft's RDP ActiveX control. That keeps Windows RDP auth,

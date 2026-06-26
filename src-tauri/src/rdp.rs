@@ -1200,6 +1200,7 @@ mod platform {
                 Ok(dispatch)
             }) {
                 Ok(dispatch) => {
+                    install_rdp_overlay_focus_subclass(hwnd, owner_hwnd);
                     rdp_debug("control.create.ok", &json!({ "progid": progid }));
                     return Ok((hwnd, dispatch, (*progid).to_string()));
                 }
@@ -1222,6 +1223,68 @@ mod platform {
         Err(format!(
             "failed to create Microsoft RDP ActiveX control from mstscax.dll ({last_error})"
         ))
+    }
+
+    /// comctl32 subclass id for the RDP overlay focus shim. Arbitrary but stable
+    /// per HWND; "KKRD" in ASCII.
+    const RDP_OVERLAY_FOCUS_SUBCLASS_ID: usize = 0x4b4b_5244;
+
+    /// Subclass callback for the RDP ActiveX overlay window.
+    ///
+    /// The overlay is created `WS_EX_NOACTIVATE` so it never steals activation
+    /// from the main KKTerm frame (see `create_rdp_control`). The side effect is
+    /// that clicking the remote desktop neither brings KKTerm to the foreground
+    /// nor routes keyboard focus into the control: mouse messages still reach the
+    /// control (Windows delivers them to the window under the cursor), but
+    /// keystrokes keep going to whatever window held OS focus - e.g. another app
+    /// on a second monitor, or any other foreground window. The user had to click
+    /// the connection tab (an activatable WebView region) first.
+    ///
+    /// `WM_MOUSEACTIVATE` is sent when the user clicks an inactive window, so we
+    /// intercept it to foreground the owner and focus the control, then return
+    /// `MA_NOACTIVATE` so the click still flows through to the remote session
+    /// without activating the no-activate overlay. `SetForegroundWindow` is
+    /// permitted here because our process is the one receiving the user's click;
+    /// if Windows' foreground lock denies it, `SetFocus` on the in-process HWND
+    /// still routes keystrokes, mirroring `focus_rdp_control`.
+    unsafe extern "system" fn rdp_overlay_subclass_proc(
+        hwnd: HWND,
+        msg: u32,
+        wparam: WPARAM,
+        lparam: LPARAM,
+        _uidsubclass: usize,
+        owner_ref: usize,
+    ) -> windows::Win32::Foundation::LRESULT {
+        use windows::Win32::Foundation::LRESULT;
+        use windows::Win32::UI::Shell::DefSubclassProc;
+        use windows::Win32::UI::WindowsAndMessaging::WM_MOUSEACTIVATE;
+
+        const MA_NOACTIVATE: isize = 3;
+        if msg == WM_MOUSEACTIVATE {
+            let owner = HWND(owner_ref as *mut c_void);
+            unsafe {
+                let _ = SetForegroundWindow(owner);
+                let _ = SetFocus(Some(hwnd));
+            }
+            return LRESULT(MA_NOACTIVATE);
+        }
+        unsafe { DefSubclassProc(hwnd, msg, wparam, lparam) }
+    }
+
+    /// Install the focus shim on the RDP overlay HWND. The owner HWND is carried
+    /// through the subclass `dwRefData` slot (a plain pointer-sized value, nothing
+    /// to free), so it is torn down automatically when the window is destroyed.
+    fn install_rdp_overlay_focus_subclass(hwnd: HWND, owner: HWND) {
+        use windows::Win32::UI::Shell::SetWindowSubclass;
+
+        unsafe {
+            let _ = SetWindowSubclass(
+                hwnd,
+                Some(rdp_overlay_subclass_proc),
+                RDP_OVERLAY_FOCUS_SUBCLASS_ID,
+                owner.0 as usize,
+            );
+        }
     }
 
     fn control_dispatch(hwnd: HWND) -> Result<IDispatch, String> {
