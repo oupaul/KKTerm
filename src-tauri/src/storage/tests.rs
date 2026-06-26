@@ -2805,6 +2805,7 @@ fn ssh_settings_round_trip_through_settings_table() {
     assert_eq!(defaults.x_server_display, 0);
     assert_eq!(defaults.x_server_args, "-multiwindow -clipboard -wgl");
     assert!(defaults.default_key_path.is_some());
+    assert_eq!(defaults.default_ssh_compression, "fast");
 
     let updated = storage
         .update_ssh_settings(SshSettings {
@@ -2814,6 +2815,7 @@ fn ssh_settings_round_trip_through_settings_table() {
             default_proxy_jump: Some("  bastion.internal  ".to_string()),
             default_ssh_socks_proxy: Some("  127.0.0.1:1080  ".to_string()),
             default_ssh_socks_proxy_username: None,
+            default_ssh_compression: "off".to_string(),
             buffer_lines: 12_000,
             default_transparency: 40,
             default_use_tmux_sessions: false,
@@ -2838,6 +2840,7 @@ fn ssh_settings_round_trip_through_settings_table() {
     assert_eq!(reloaded.buffer_lines, 12_000);
     assert_eq!(reloaded.default_transparency, 40);
     assert!(!reloaded.default_use_tmux_sessions);
+    assert_eq!(reloaded.default_ssh_compression, "off");
     assert!(reloaded.use_random_dynamic_background);
     assert!(!reloaded.hide_common_port_redirects);
     assert!(!reloaded.allow_osc52_clipboard);

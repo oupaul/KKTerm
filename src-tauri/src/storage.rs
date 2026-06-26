@@ -597,6 +597,8 @@ pub struct SshSettings {
     default_ssh_socks_proxy: Option<String>,
     #[serde(default)]
     default_ssh_socks_proxy_username: Option<String>,
+    #[serde(default = "default_ssh_compression")]
+    default_ssh_compression: String,
     #[serde(default = "default_ssh_buffer_lines")]
     buffer_lines: u32,
     #[serde(default = "default_terminal_transparency")]
@@ -4569,6 +4571,7 @@ fn default_ssh_settings() -> SshSettings {
         default_proxy_jump: None,
         default_ssh_socks_proxy: None,
         default_ssh_socks_proxy_username: None,
+        default_ssh_compression: default_ssh_compression(),
         buffer_lines: default_ssh_buffer_lines(),
         default_transparency: default_terminal_transparency(),
         default_use_tmux_sessions: default_use_tmux_sessions(),
@@ -4584,6 +4587,10 @@ fn default_ssh_settings() -> SshSettings {
 
 fn default_ssh_buffer_lines() -> u32 {
     5_000
+}
+
+fn default_ssh_compression() -> String {
+    "fast".to_string()
 }
 
 fn default_terminal_transparency() -> u8 {
@@ -5153,6 +5160,16 @@ fn validate_ssh_settings(mut settings: SshSettings) -> Result<SshSettings, Strin
     };
     settings.default_ssh_socks_proxy_username =
         normalize_socks_proxy_username(settings.default_ssh_socks_proxy_username)?;
+    settings.default_ssh_compression = match settings
+        .default_ssh_compression
+        .trim()
+        .to_lowercase()
+        .as_str()
+    {
+        "off" => "off".to_string(),
+        "" | "fast" => "fast".to_string(),
+        _ => return Err("SSH default compression must be off or fast".to_string()),
+    };
     if !(100..=100_000).contains(&settings.buffer_lines) {
         return Err("SSH buffer must be between 100 and 100000 lines".to_string());
     }
