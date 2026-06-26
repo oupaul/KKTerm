@@ -105,7 +105,24 @@ sysinfo = "0.39"
 # IOKit itself links as a system framework via #[link] in power.rs.
 core-foundation-sys = "0.8"
 objc2 = "0.6"
-objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "NSWindow"] }
+objc2-app-kit = { version = "0.3", default-features = false, features = [
+    "std",
+    "NSWindow",
+    # App Launcher Finder icons: NSWorkspace.iconForFile -> NSImage ->
+    # NSBitmapImageRep PNG export.
+    "NSWorkspace",
+    "NSImage",
+    "NSImageRep",
+    "NSBitmapImageRep",
+    "NSGraphics",
+] }
+objc2-foundation = { version = "0.3", default-features = false, features = [
+    "std",
+    "NSString",
+    "NSData",
+    "NSDictionary",
+    "NSGeometry",
+] }
 
 [target.'cfg(all(target_os = "windows", any(target_arch = "x86", target_arch = "x86_64")))'.dependencies]
 # AV mitigation #1: use IcmpSendEcho2 via winping (NOT raw sockets) on Windows.

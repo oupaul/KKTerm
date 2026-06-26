@@ -11,6 +11,7 @@ import {
 import type { ConfirmDialogOptions } from "@tauri-apps/plugin-dialog";
 import { readFile, writeFile, writeTextFile } from "@tauri-apps/plugin-fs";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import { documentDir } from "@tauri-apps/api/path";
 import { isMacPlatform, isWindowsPlatform } from "./platform";
 import i18next from "../i18n/config";
 import {
@@ -3156,6 +3157,12 @@ export async function selectAppLauncherFile(options: {
     }
   } else {
     filters = undefined;
+    if (isMacPlatform()) {
+      // Documents is where users keep the files they tend to pin; open there
+      // instead of the home folder. Best-effort — fall back to the default
+      // location if the path can't be resolved.
+      defaultPath = (await documentDir().catch(() => undefined)) || undefined;
+    }
   }
 
   const selectedPath = await openDialog({

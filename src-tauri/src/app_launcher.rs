@@ -515,7 +515,43 @@ fn icon_handle_to_data_url(icon: WindowsIconHandle, icon_size: i32) -> Option<St
     Some(format!("data:image/png;base64,{}", STANDARD.encode(png)))
 }
 
-#[cfg(not(target_os = "windows"))]
+// Render the Finder icon for any path (apps, folders, files) via NSWorkspace.
+// Off the main thread is fine here: `iconForFile:` and the bitmap export do not
+// touch the AppKit run loop. Returns None on any failure so the caller falls
+// back to the generic icon.
+#[cfg(target_os = "macos")]
+fn native_icon_data_url(path: &str) -> Option<String> {
+    use base64::{Engine as _, engine::general_purpose::STANDARD};
+    use objc2::AnyThread;
+    use objc2_app_kit::{NSBitmapImageFileType, NSBitmapImageRep, NSWorkspace};
+    use objc2_foundation::{NSDictionary, NSSize, NSString};
+
+    if path.is_empty() {
+        return None;
+    }
+
+    unsafe {
+        let workspace = NSWorkspace::sharedWorkspace();
+        let ns_path = NSString::from_str(path);
+        let image = workspace.iconForFile(&ns_path);
+        // Default icon size is 32pt; request a crisp 128pt so the launcher grid
+        // shows a sharp icon. NSImage picks the closest representation.
+        image.setSize(NSSize::new(128.0, 128.0));
+
+        let tiff = image.TIFFRepresentation()?;
+        let bitmap = NSBitmapImageRep::initWithData(NSBitmapImageRep::alloc(), &tiff)?;
+        let properties = NSDictionary::new();
+        let png =
+            bitmap.representationUsingType_properties(NSBitmapImageFileType::PNG, &properties)?;
+        let bytes = png.to_vec();
+        if bytes.is_empty() {
+            return None;
+        }
+        Some(format!("data:image/png;base64,{}", STANDARD.encode(bytes)))
+    }
+}
+
+#[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
 fn native_icon_data_url(_path: &str) -> Option<String> {
     None
 }
