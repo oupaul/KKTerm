@@ -900,6 +900,13 @@
       "failedTitle": "Error de instalación: {{name}}",
       "cancelledTitle": "Instalación cancelada: {{name}}"
     },
+    "quickLaunch": {
+      "search": "Buscar herramientas…",
+      "openTerminal": "Abrir símbolo del sistema",
+      "cli": "CLI",
+      "launch": "Iniciar",
+      "noMatches": "Ninguna herramienta coincide con tu búsqueda."
+    },
     "stepper": {
       "failedBadge": "Error"
     },

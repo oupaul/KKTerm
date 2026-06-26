@@ -900,6 +900,13 @@
       "failedTitle": "ติดตั้งล้มเหลว: {{name}}",
       "cancelledTitle": "ยกเลิกการติดตั้ง: {{name}}"
     },
+    "quickLaunch": {
+      "search": "ค้นหาเครื่องมือ…",
+      "openTerminal": "เปิดพรอมต์คำสั่ง",
+      "cli": "CLI",
+      "launch": "เปิด",
+      "noMatches": "ไม่มีเครื่องมือที่ตรงกับการค้นหา"
+    },
     "stepper": {
       "failedBadge": "ล้มเหลว"
     },

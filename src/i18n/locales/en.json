@@ -900,6 +900,13 @@
       "failedTitle": "Install failed: {{name}}",
       "cancelledTitle": "Install cancelled: {{name}}"
     },
+    "quickLaunch": {
+      "search": "Search tools…",
+      "openTerminal": "Open command prompt",
+      "cli": "CLI",
+      "launch": "Launch",
+      "noMatches": "No tools match your search."
+    },
     "stepper": {
       "failedBadge": "Failed"
     },

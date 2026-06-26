@@ -900,6 +900,13 @@
       "failedTitle": "설치 실패: {{name}}",
       "cancelledTitle": "설치 취소됨: {{name}}"
     },
+    "quickLaunch": {
+      "search": "도구 검색…",
+      "openTerminal": "명령 프롬프트 열기",
+      "cli": "CLI",
+      "launch": "실행",
+      "noMatches": "검색과 일치하는 도구가 없습니다."
+    },
     "stepper": {
       "failedBadge": "실패"
     },

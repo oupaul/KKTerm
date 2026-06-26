@@ -900,6 +900,13 @@
       "failedTitle": "Échec de l’installation : {{name}}",
       "cancelledTitle": "Installation annulée : {{name}}"
     },
+    "quickLaunch": {
+      "search": "Rechercher des outils…",
+      "openTerminal": "Ouvrir l'invite de commandes",
+      "cli": "CLI",
+      "launch": "Lancer",
+      "noMatches": "Aucun outil ne correspond à votre recherche."
+    },
     "stepper": {
       "failedBadge": "Échec"
     },

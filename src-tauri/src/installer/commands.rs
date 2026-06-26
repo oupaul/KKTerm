@@ -964,9 +964,11 @@ pub async fn installer_open_terminal_launcher(tool_id: String) -> Result<(), Str
     .map_err(|error| format!("failed to open terminal launcher: {error}"))?
 }
 
-/// One launchable command exposed in an installed tool's dialog. Used by tool
-/// suites — like Sysinternals — that ship several standalone GUI utilities a
-/// user might want to start directly instead of from a terminal.
+/// One utility exposed in an installed tool suite's mini launcher. Used by
+/// suites — like Sysinternals — that ship many standalone utilities. GUI tools
+/// (`cli == false`) get a one-click Launch button; command-line tools
+/// (`cli == true`) are list-only, since launching them with no arguments is
+/// useless — the dialog offers a single "open command prompt" action instead.
 #[derive(Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct QuickLaunchEntry {
@@ -974,28 +976,96 @@ pub struct QuickLaunchEntry {
     /// `procexp.exe`. The closed per-tool allow-list below is the only set of
     /// values `installer_launch_quick_command` will spawn.
     pub command: String,
-    /// Human-facing tool name shown on the launch button, e.g. "Process Explorer".
+    /// Human-facing tool name, e.g. "Process Explorer".
     pub label: String,
+    /// One-line description shown under the name in the launcher list.
+    pub description: String,
+    /// Command-line tool: list-only, not directly launchable.
+    pub cli: bool,
 }
 
-/// Curated quick-launch entries for installed tool suites. Sysinternals ships
-/// many GUI utilities that land on PATH after install (WinGet/Store app
-/// execution aliases or Chocolatey shims), so they can be started by name with
-/// the refreshed PATH. Returns an empty list for tools without launchers.
+/// Curated launcher entries for installed tool suites. Sysinternals ships many
+/// utilities that land on PATH after install (WinGet/Store app execution
+/// aliases or Chocolatey shims). GUI tools start by name with the refreshed
+/// PATH; CLI tools are listed for discovery and run from the command prompt.
+/// Returns an empty list for tools without a launcher.
 fn quick_launch_affordance(tool_id: &str) -> Vec<QuickLaunchEntry> {
-    fn entry(command: &str, label: &str) -> QuickLaunchEntry {
+    fn gui(command: &str, label: &str, description: &str) -> QuickLaunchEntry {
         QuickLaunchEntry {
             command: command.into(),
             label: label.into(),
+            description: description.into(),
+            cli: false,
+        }
+    }
+    fn cli(command: &str, label: &str, description: &str) -> QuickLaunchEntry {
+        QuickLaunchEntry {
+            command: command.into(),
+            label: label.into(),
+            description: description.into(),
+            cli: true,
         }
     }
     match tool_id {
         "sysinternals-suite" => vec![
-            entry("procexp.exe", "Process Explorer"),
-            entry("procmon.exe", "Process Monitor"),
-            entry("autoruns.exe", "Autoruns"),
-            entry("tcpview.exe", "TCPView"),
-            entry("zoomit.exe", "ZoomIt"),
+            // GUI tools — open a window when launched with no arguments.
+            gui("procexp.exe", "Process Explorer", "Advanced process viewer: handles, loaded DLLs, and the full process tree."),
+            gui("procmon.exe", "Process Monitor", "Real-time file system, registry, process, thread, and network activity."),
+            gui("autoruns.exe", "Autoruns", "Everything configured to start automatically at boot and logon."),
+            gui("tcpview.exe", "TCPView", "Live view of TCP and UDP endpoints and their owning processes."),
+            gui("zoomit.exe", "ZoomIt", "Screen zoom, drawing, and break-timer tool for presentations."),
+            gui("rammap.exe", "RAMMap", "Detailed breakdown of how Windows is using physical memory."),
+            gui("vmmap.exe", "VMMap", "Analyze a process's virtual and physical memory usage."),
+            gui("diskview.exe", "DiskView", "Graphical map showing where files are located on a disk."),
+            gui("dbgview.exe", "DebugView", "Capture kernel and application debug output without a debugger."),
+            gui("winobj.exe", "WinObj", "Browse the Windows Object Manager namespace."),
+            gui("accessenum.exe", "AccessEnum", "Audit who has access across a file or registry tree."),
+            gui("shareenum.exe", "ShareEnum", "Scan network file shares and review their security."),
+            gui("adexplorer.exe", "AD Explorer", "Browse, edit, and snapshot Active Directory databases."),
+            gui("adinsight.exe", "ADInsight", "Real-time LDAP activity monitor for Active Directory."),
+            gui("bginfo.exe", "BgInfo", "Paint system information onto the desktop background."),
+            gui("desktops.exe", "Desktops", "Run applications across up to four virtual desktops."),
+            gui("disk2vhd.exe", "Disk2vhd", "Capture a VHD image of a live physical disk."),
+            gui("rdcman.exe", "RDCMan", "Manage many Remote Desktop connections from one window."),
+            gui("diskmon.exe", "DiskMon", "Capture and display all hard-disk read/write activity."),
+            gui("autologon.exe", "Autologon", "Configure Windows to log on automatically."),
+            // CLI tools — list-only; run them from the command prompt.
+            cli("accesschk.exe", "AccessChk", "Show effective permissions for files, keys, services, and more."),
+            cli("handle.exe", "Handle", "List open handles, or find which process has a file open."),
+            cli("listdlls.exe", "ListDLLs", "List the DLLs loaded into running processes."),
+            cli("procdump.exe", "ProcDump", "Generate process crash/hang dumps from the command line."),
+            cli("psexec.exe", "PsExec", "Run programs on remote systems."),
+            cli("pslist.exe", "PsList", "List detailed process and thread statistics."),
+            cli("pskill.exe", "PsKill", "Kill processes by name or PID, locally or remotely."),
+            cli("psinfo.exe", "PsInfo", "Gather system information, including installed hotfixes."),
+            cli("psservice.exe", "PsService", "View and control Windows services."),
+            cli("psloggedon.exe", "PsLoggedon", "Show who is logged on, locally and via shares."),
+            cli("psloglist.exe", "PsLogList", "Dump event log records from the command line."),
+            cli("psping.exe", "PsPing", "Measure latency and bandwidth, including TCP/UDP."),
+            cli("psshutdown.exe", "PsShutdown", "Shut down or restart local and remote computers."),
+            cli("pssuspend.exe", "PsSuspend", "Suspend and resume processes."),
+            cli("psgetsid.exe", "PsGetSid", "Display the SID of a computer or user account."),
+            cli("pspasswd.exe", "PsPasswd", "Change account passwords locally or remotely."),
+            cli("psfile.exe", "PsFile", "Show files opened remotely over the network."),
+            cli("sigcheck.exe", "Sigcheck", "Verify file signatures and versions; query VirusTotal."),
+            cli("streams.exe", "Streams", "Reveal and delete NTFS alternate data streams."),
+            cli("strings.exe", "Strings", "Extract printable strings from binary files."),
+            cli("sdelete.exe", "SDelete", "Securely delete files and wipe free space."),
+            cli("du.exe", "Disk Usage (DU)", "Report disk space used by a directory tree."),
+            cli("coreinfo.exe", "Coreinfo", "Map logical processors to sockets, cores, and NUMA nodes."),
+            cli("contig.exe", "Contig", "Defragment individual files."),
+            cli("ntfsinfo.exe", "NTFSInfo", "Show detailed NTFS volume information."),
+            cli("junction.exe", "Junction", "Create and inspect NTFS directory junctions."),
+            cli("movefile.exe", "MoveFile", "Schedule file move/delete operations for next boot."),
+            cli("pendmoves.exe", "PendMoves", "List file operations queued for the next boot."),
+            cli("pipelist.exe", "PipeList", "List named pipes and their instance counts."),
+            cli("logonsessions.exe", "LogonSessions", "List the active logon sessions on the system."),
+            cli("clockres.exe", "ClockRes", "Show the resolution of the system clock."),
+            cli("hex2dec.exe", "Hex2dec", "Convert numbers between hexadecimal and decimal."),
+            cli("sync.exe", "Sync", "Flush cached file data to disk."),
+            cli("whois.exe", "Whois", "Look up domain registration and IP ownership."),
+            cli("regjump.exe", "RegJump", "Open Registry Editor directly at a given path."),
+            cli("ru.exe", "Registry Usage (RU)", "Report the registry space used by a key."),
         ],
         _ => vec![],
     }
@@ -1014,19 +1084,44 @@ pub async fn installer_launch_quick_command(
     command: String,
 ) -> Result<(), String> {
     tauri::async_runtime::spawn_blocking(move || {
-        let allowed = quick_launch_affordance(&tool_id);
-        if !allowed
-            .iter()
-            .any(|entry| entry.command.eq_ignore_ascii_case(&command))
-        {
+        let entry = quick_launch_affordance(&tool_id)
+            .into_iter()
+            .find(|entry| entry.command.eq_ignore_ascii_case(&command))
+            .ok_or_else(|| {
+                format!("`{command}` is not a known quick-launch command for `{tool_id}`")
+            })?;
+        if entry.cli {
             return Err(format!(
-                "`{command}` is not a known quick-launch command for `{tool_id}`"
+                "`{command}` is a command-line tool — open a command prompt to run it"
             ));
         }
         spawn_quick_launch(&command)
     })
     .await
     .map_err(|error| format!("failed to launch quick command: {error}"))?
+}
+
+/// Open a terminal with the refreshed PATH so a suite's command-line tools
+/// (e.g. Sysinternals `handle`, `psexec`, `sigcheck`) can be run with their
+/// own arguments. Only available for tools that expose a quick launcher.
+#[tauri::command]
+pub async fn installer_open_quick_launch_terminal(tool_id: String) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        if quick_launch_affordance(&tool_id).is_empty() {
+            return Err(format!("tool `{tool_id}` does not have a quick launcher"));
+        }
+        let affordance = TerminalLaunchAffordance {
+            activate_ps1: None,
+            setup_lines: vec![],
+            prefill: String::new(),
+            hints: vec![
+                "Sysinternals command-line tools are on PATH — e.g. handle, psexec, sigcheck, strings, sdelete.".into(),
+            ],
+        };
+        spawn_terminal_launcher(&affordance)
+    })
+    .await
+    .map_err(|error| format!("failed to open command prompt: {error}"))?
 }
 
 fn service_affordance(tool_id: &str) -> Option<ManagedServiceAffordance> {
@@ -2045,16 +2140,32 @@ mod tests {
     }
 
     #[test]
-    fn sysinternals_quick_launch_exposes_process_explorer() {
+    fn sysinternals_quick_launch_exposes_gui_and_cli_tools() {
         let entries = quick_launch_affordance("sysinternals-suite");
-        assert!(
-            entries
-                .iter()
-                .any(|entry| entry.command.eq_ignore_ascii_case("procexp.exe")),
-            "Sysinternals quick launch should offer Process Explorer (procexp.exe)"
-        );
-        // Every entry carries a human-facing label for its button.
-        assert!(entries.iter().all(|entry| !entry.label.is_empty()));
+
+        // Process Explorer is a GUI tool that can be launched directly.
+        let procexp = entries
+            .iter()
+            .find(|entry| entry.command.eq_ignore_ascii_case("procexp.exe"))
+            .expect("Sysinternals quick launch should offer Process Explorer");
+        assert!(!procexp.cli, "Process Explorer is a GUI tool");
+
+        // PsExec is a command-line tool: listed for discovery, not launchable.
+        let psexec = entries
+            .iter()
+            .find(|entry| entry.command.eq_ignore_ascii_case("psexec.exe"))
+            .expect("Sysinternals quick launch should list PsExec");
+        assert!(psexec.cli, "PsExec is a command-line tool");
+
+        // Every entry carries a label and a description for the searchable list.
+        assert!(entries
+            .iter()
+            .all(|entry| !entry.label.is_empty() && !entry.description.is_empty()));
+        // The suite ships dozens of tools, including both GUI and CLI ones.
+        assert!(entries.len() > 30);
+        assert!(entries.iter().any(|entry| entry.cli));
+        assert!(entries.iter().any(|entry| !entry.cli));
+
         // Tools without a curated launcher list return nothing.
         assert!(quick_launch_affordance("git").is_empty());
     }

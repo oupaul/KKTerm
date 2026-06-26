@@ -900,6 +900,13 @@
       "failedTitle": "Installation fehlgeschlagen: {{name}}",
       "cancelledTitle": "Installation abgebrochen: {{name}}"
     },
+    "quickLaunch": {
+      "search": "Tools suchen…",
+      "openTerminal": "Eingabeaufforderung öffnen",
+      "cli": "CLI",
+      "launch": "Starten",
+      "noMatches": "Keine Tools entsprechen deiner Suche."
+    },
     "stepper": {
       "failedBadge": "Fehlgeschlagen"
     },

@@ -900,6 +900,13 @@
       "failedTitle": "Instalasi gagal: {{name}}",
       "cancelledTitle": "Instalasi dibatalkan: {{name}}"
     },
+    "quickLaunch": {
+      "search": "Cari alat…",
+      "openTerminal": "Buka command prompt",
+      "cli": "CLI",
+      "launch": "Jalankan",
+      "noMatches": "Tidak ada alat yang cocok dengan pencarian Anda."
+    },
     "stepper": {
       "failedBadge": "Gagal"
     },

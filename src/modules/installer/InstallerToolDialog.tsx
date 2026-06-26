@@ -134,6 +134,7 @@ function InstalledInfoBody({ recipe }: { recipe: Recipe }) {
   );
   const statusRefreshInFlight = useRef(false);
   const [quickLaunch, setQuickLaunch] = useState<QuickLaunchEntry[]>([]);
+  const [quickLaunchQuery, setQuickLaunchQuery] = useState("");
 
   useEffect(() => {
     if (!isTauriRuntime()) {
@@ -307,6 +308,28 @@ function InstalledInfoBody({ recipe }: { recipe: Recipe }) {
     }
   }
 
+  async function handleOpenQuickLaunchTerminal() {
+    if (!isTauriRuntime()) return;
+    try {
+      await invokeCommand("installer_open_quick_launch_terminal", {
+        toolId: recipe.id,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      showStatusBarNotice(message, { tone: "error" });
+    }
+  }
+
+  const quickLaunchQueryNorm = quickLaunchQuery.trim().toLowerCase();
+  const quickLaunchFiltered = quickLaunchQueryNorm
+    ? quickLaunch.filter((entry) =>
+        `${entry.label} ${entry.command} ${entry.description}`
+          .toLowerCase()
+          .includes(quickLaunchQueryNorm),
+      )
+    : quickLaunch;
+  const quickLaunchHasCli = quickLaunch.some((entry) => entry.cli);
+
   async function handleAddToWorkspace() {
     if (!workspaceSpec || !isTauriRuntime()) return;
     try {
@@ -426,21 +449,64 @@ function InstalledInfoBody({ recipe }: { recipe: Recipe }) {
         </dl>
         {quickLaunch.length > 0 ? (
           <div className="installer-tool-dialog__quick-launch">
-            <span className="installer-tool-dialog__quick-launch-label">
-              {t("installer.dialog.quickLaunch")}
-            </span>
-            <div className="installer-tool-dialog__quick-launch-buttons">
-              {quickLaunch.map((entry) => (
+            <div className="installer-tool-dialog__quick-launch-head">
+              <span className="installer-tool-dialog__quick-launch-label">
+                {t("installer.dialog.quickLaunch")}
+              </span>
+              {quickLaunchHasCli ? (
                 <button
-                  key={entry.command}
                   type="button"
-                  className="secondary-button"
-                  onClick={() => void handleQuickLaunch(entry.command)}
+                  className="secondary-button installer-tool-dialog__quick-launch-terminal"
+                  onClick={() => void handleOpenQuickLaunchTerminal()}
                 >
-                  {entry.label}
+                  {t("installer.quickLaunch.openTerminal")}
                 </button>
-              ))}
+              ) : null}
             </div>
+            <input
+              type="search"
+              className="installer-tool-dialog__quick-launch-search"
+              placeholder={t("installer.quickLaunch.search")}
+              value={quickLaunchQuery}
+              onChange={(event) => setQuickLaunchQuery(event.target.value)}
+            />
+            <ul className="installer-tool-dialog__quick-launch-list">
+              {quickLaunchFiltered.map((entry) => (
+                <li
+                  key={entry.command}
+                  className="installer-tool-dialog__quick-launch-item"
+                  data-cli={entry.cli ? "true" : "false"}
+                >
+                  <div className="installer-tool-dialog__quick-launch-meta">
+                    <span className="installer-tool-dialog__quick-launch-name">
+                      {entry.label}
+                      <code>{entry.command}</code>
+                    </span>
+                    <span className="installer-tool-dialog__quick-launch-desc">
+                      {entry.description}
+                    </span>
+                  </div>
+                  {entry.cli ? (
+                    <span className="installer-tool-dialog__quick-launch-badge">
+                      {t("installer.quickLaunch.cli")}
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      className="secondary-button"
+                      onClick={() => void handleQuickLaunch(entry.command)}
+                    >
+                      {t("installer.quickLaunch.launch")}
+                    </button>
+                  )}
+                </li>
+              ))}
+              {quickLaunchFiltered.length === 0 ? (
+                <li className="installer-tool-dialog__quick-launch-empty">
+                  {t("installer.quickLaunch.noMatches")}
+                </li>
+              ) : null}
+            </ul>
           </div>
         ) : null}
         {supportsLatestVersion ? (

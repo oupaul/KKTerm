@@ -110,12 +110,15 @@ export interface ManagedWebUiStatus {
   url?: string | null;
 }
 
-/// One launchable utility exposed in an installed tool suite's dialog (e.g.
+/// One utility exposed in an installed tool suite's mini launcher (e.g.
 /// Sysinternals' Process Explorer). `command` is the executable name resolved
-/// against the refreshed PATH; `label` is the button text.
+/// against the refreshed PATH. GUI tools (`cli: false`) launch directly; CLI
+/// tools (`cli: true`) are list-only and run from a command prompt.
 export interface QuickLaunchEntry {
   command: string;
   label: string;
+  description: string;
+  cli: boolean;
 }
 
 /// One installed WSL distribution reported by `wsl --list --verbose`.

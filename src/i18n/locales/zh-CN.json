@@ -900,6 +900,13 @@
       "failedTitle": "安装失败：{{name}}",
       "cancelledTitle": "安装已取消：{{name}}"
     },
+    "quickLaunch": {
+      "search": "搜索工具…",
+      "openTerminal": "打开命令提示符",
+      "cli": "CLI",
+      "launch": "启动",
+      "noMatches": "没有与搜索匹配的工具。"
+    },
     "stepper": {
       "failedBadge": "失败"
     },

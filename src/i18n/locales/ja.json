@@ -900,6 +900,13 @@
       "failedTitle": "インストール失敗: {{name}}",
       "cancelledTitle": "インストールをキャンセル: {{name}}"
     },
+    "quickLaunch": {
+      "search": "ツールを検索…",
+      "openTerminal": "コマンド プロンプトを開く",
+      "cli": "CLI",
+      "launch": "起動",
+      "noMatches": "検索に一致するツールはありません。"
+    },
     "stepper": {
       "failedBadge": "失敗"
     },

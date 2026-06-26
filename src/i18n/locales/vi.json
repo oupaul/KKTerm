@@ -900,6 +900,13 @@
       "failedTitle": "Cài đặt thất bại: {{name}}",
       "cancelledTitle": "Cài đặt đã hủy: {{name}}"
     },
+    "quickLaunch": {
+      "search": "Tìm công cụ…",
+      "openTerminal": "Mở dấu nhắc lệnh",
+      "cli": "CLI",
+      "launch": "Khởi chạy",
+      "noMatches": "Không có công cụ nào khớp với tìm kiếm của bạn."
+    },
     "stepper": {
       "failedBadge": "Thất bại"
     },

@@ -3897,6 +3897,7 @@ pub fn run() {
             installer::commands::installer_open_terminal_launcher,
             installer::commands::installer_list_quick_launch,
             installer::commands::installer_launch_quick_command,
+            installer::commands::installer_open_quick_launch_terminal,
             installer::commands::installer_install_service,
             installer::commands::installer_remove_service,
             installer::commands::installer_get_state,
