@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-test("RDP overlay keyboard focus uses a thread-local WH_MOUSE hook, not WM_MOUSEACTIVATE", async () => {
+test("RDP overlay keyboard focus uses a low-level click hook, not WM_MOUSEACTIVATE", async () => {
   const source = await readFile(new URL("../src-tauri/src/rdp.rs", import.meta.url), "utf8");
   const shim = source.match(/struct RdpOverlayFocusHook[\s\S]*?fn uninstall_rdp_overlay_focus_hook/)?.[0] ?? "";
 
@@ -18,22 +18,32 @@ test("RDP overlay keyboard focus uses a thread-local WH_MOUSE hook, not WM_MOUSE
     "the WM_MOUSEACTIVATE subclass install path must be removed",
   );
 
-  // The active fix: a thread-local WH_MOUSE hook.
-  assert.match(shim, /WH_MOUSE/, "RDP focus fix should install a WH_MOUSE hook");
+  // The active fix: a low-level click hook that is not tied to the ActiveX child thread.
+  assert.match(shim, /WH_MOUSE_LL/, "RDP focus fix should install a low-level mouse hook");
   assert.match(
     shim,
-    /SetWindowsHookExW\(WH_MOUSE,/,
-    "RDP focus fix should install the hook via SetWindowsHookExW(WH_MOUSE, ...)",
+    /SetWindowsHookExW\(\s*WH_MOUSE_LL,/,
+    "RDP focus fix should install the hook via SetWindowsHookExW(WH_MOUSE_LL, ...)",
   );
   assert.match(
     shim,
-    /GetCurrentThreadId\(\)/,
-    "RDP focus hook must be thread-local (dwThreadId = GetCurrentThreadId), not a global desktop hook that would require a DLL",
+    /SetWindowsHookExW\([\s\S]*WH_MOUSE_LL[\s\S]*,\s*0,\s*\)/,
+    "RDP focus hook should be global low-level (dwThreadId = 0) so it is not tied to a recreated ActiveX child thread",
   );
   assert.match(
     shim,
-    /focus_rdp_control\(owner, overlay\)/,
-    "RDP focus hook should reuse focus_rdp_control to bring the owner forward and focus the overlay",
+    /MSLLHOOKSTRUCT/,
+    "RDP focus hook should read the low-level mouse point from MSLLHOOKSTRUCT",
+  );
+  assert.match(
+    shim,
+    /WindowFromPoint\(info\.pt\)/,
+    "RDP focus hook should resolve the real HWND under the click from the screen point",
+  );
+  assert.match(
+    source,
+    /fn focus_rdp_window\([\s\S]*SetForegroundWindow\(owner\)[\s\S]*SetForegroundWindow\(active\)[\s\S]*SetFocus\(Some\(focus\)\)/,
+    "RDP focus should foreground KKTerm, foreground the no-activate overlay, and focus the clicked or hosted ActiveX HWND",
   );
   assert.match(
     shim,
