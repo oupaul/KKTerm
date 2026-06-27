@@ -1,4 +1,4 @@
-// Launch a Batch Run: pick a Host Group, then either a one-shot script body or
+// Launch a Batch Run: pick a Fleet, then either a one-shot script body or
 // an interactive Playbook (an ordered expect-style step sequence run over a
 // single shell — docs/ITOPS.md). Built from the shared dialog primitives.
 
@@ -36,18 +36,18 @@ export function BatchRunDialog({
   onStarted: () => void;
 }) {
   const { t } = useTranslation();
-  const hostGroups = useItOpsStore((state) => state.hostGroups);
+  const fleets = useItOpsStore((state) => state.fleets);
   const startBatchRun = useItOpsStore((state) => state.startBatchRun);
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
 
-  const [groupId, setGroupId] = useState(defaultGroupId ?? hostGroups[0]?.id ?? "");
+  const [groupId, setGroupId] = useState(defaultGroupId ?? fleets[0]?.id ?? "");
   const [mode, setMode] = useState<TaskMode>("script");
   const [body, setBody] = useState("");
   const [playbookName, setPlaybookName] = useState("");
   const [steps, setSteps] = useState<PlaybookStep[]>([emptyStep()]);
   const [busy, setBusy] = useState(false);
 
-  const hasGroups = hostGroups.length > 0;
+  const hasGroups = fleets.length > 0;
   // Drop only fully-blank steps. A step with an empty `send` but a set `expect`
   // is valid (e.g. wait for the initial prompt before the first command).
   const filledSteps = steps.filter(
@@ -117,11 +117,11 @@ export function BatchRunDialog({
       >
         {hasGroups ? (
           <>
-            <Field label={t("itops.batchRuns.hostGroupLabel")} req>
+            <Field label={t("itops.batchRuns.fleetLabel")} req>
               <Select
                 value={groupId}
                 onChange={(event) => setGroupId(event.currentTarget.value)}
-                options={hostGroups.map((group) => ({ value: group.id, label: group.name }))}
+                options={fleets.map((group) => ({ value: group.id, label: group.name }))}
               />
             </Field>
             <Field label={t("itops.batchRuns.taskTypeLabel")}>

@@ -855,12 +855,12 @@
     "railLabel": "IT Ops",
     "title": "IT Ops",
     "tabs": {
-      "groups": "호스트 그룹",
+      "fleets": "호스트 그룹",
       "runs": "일괄 실행",
       "autos": "자동화"
     },
     "actions": {
-      "newHostGroup": "새 호스트 그룹",
+      "newFleet": "새 호스트 그룹",
       "newBatchRun": "새 일괄 실행",
       "startBatchRun": "일괄 실행 시작",
       "newAutomation": "새 자동화",
@@ -883,7 +883,7 @@
     "transport": {
       "auto": "자동"
     },
-    "hostGroups": {
+    "fleets": {
       "heading": "호스트 그룹",
       "emptyTitle": "아직 호스트 그룹이 없습니다",
       "emptyBody": "호스트 그룹은 일괄 실행과 자동화의 플릿 대상으로 사용되는 기존 연결의 명명된 선택입니다.",
@@ -934,7 +934,7 @@
       "codeQueued": "대기 중",
       "savedReport": "통합 보고서가 실행 이력에 저장되었습니다 · 수동 실행 · {{ok}}/{{total}}개 성공",
       "launchTitle": "새 일괄 실행",
-      "hostGroupLabel": "호스트 그룹",
+      "fleetLabel": "호스트 그룹",
       "scriptLabel": "스크립트",
       "scriptPlaceholder": "sudo apt-get update && sudo apt-get upgrade -y",
       "noGroups": "일괄 실행을 하려면 먼저 호스트 그룹을 만드세요.",

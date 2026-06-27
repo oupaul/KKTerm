@@ -855,12 +855,12 @@
     "railLabel": "IT Ops",
     "title": "IT Ops",
     "tabs": {
-      "groups": "Hostgruppen",
+      "fleets": "Hostgruppen",
       "runs": "Batch-Ausführungen",
       "autos": "Automationen"
     },
     "actions": {
-      "newHostGroup": "Neue Hostgruppe",
+      "newFleet": "Neue Hostgruppe",
       "newBatchRun": "Neue Batch-Ausführung",
       "startBatchRun": "Batch-Ausführung starten",
       "newAutomation": "Neue Automation",
@@ -883,7 +883,7 @@
     "transport": {
       "auto": "Auto"
     },
-    "hostGroups": {
+    "fleets": {
       "heading": "Hostgruppen",
       "emptyTitle": "Noch keine Hostgruppen",
       "emptyBody": "Eine Hostgruppe ist eine benannte Auswahl bestehender Verbindungen, die als Flottenziel für Batch-Ausführungen und Automationen verwendet wird.",
@@ -934,7 +934,7 @@
       "codeQueued": "in Warteschlange",
       "savedReport": "Konsolidierter Bericht im Ausführungsverlauf gespeichert · Quelle manuell · {{ok}}/{{total}} erfolgreich",
       "launchTitle": "Neue Batch-Ausführung",
-      "hostGroupLabel": "Hostgruppe",
+      "fleetLabel": "Hostgruppe",
       "scriptLabel": "Script",
       "scriptPlaceholder": "sudo apt-get update && sudo apt-get upgrade -y",
       "noGroups": "Erstellen Sie zuerst eine Hostgruppe, um eine Batch-Ausführung zu starten.",

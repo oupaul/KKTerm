@@ -1,4 +1,4 @@
-// IT Ops Module shell: header, three tabs (Host Groups, Batch Runs,
+// IT Ops Module shell: header, three tabs (Fleets, Batch Runs,
 // Automations) and the content router. All three tabs are backed by real
 // commands (Phases 1–4). The module also surfaces live Batch Run progress and
 // Automation actions (notify/popup) streamed from the backend.
@@ -17,7 +17,7 @@ import { isTauriRuntime } from "../../lib/tauri";
 import { useWorkspaceStore } from "../../store";
 import type { RunEvent } from "../../types";
 import { ItIcon, type ItIconName } from "./icons";
-import { HostGroupsTab } from "./HostGroupsTab";
+import { FleetsTab } from "./FleetsTab";
 import { BatchRunsTab } from "./BatchRunsTab";
 import { BatchRunDialog } from "./BatchRunDialog";
 import { AutomationsTab } from "./AutomationsTab";
@@ -33,13 +33,13 @@ type AutomationActionEvent = {
 type TabId = "groups" | "runs" | "autos";
 
 const TABS: { id: TabId; labelKey: string; icon: ItIconName }[] = [
-  { id: "groups", labelKey: "itops.tabs.groups", icon: "group" },
+  { id: "groups", labelKey: "itops.tabs.fleets", icon: "group" },
   { id: "runs", labelKey: "itops.tabs.runs", icon: "run" },
   { id: "autos", labelKey: "itops.tabs.autos", icon: "auto" },
 ];
 
 const PRIMARY: Record<TabId, { labelKey: string; icon: ItIconName; size: number }> = {
-  groups: { labelKey: "itops.actions.newHostGroup", icon: "plus", size: 15 },
+  groups: { labelKey: "itops.actions.newFleet", icon: "plus", size: 15 },
   runs: { labelKey: "itops.actions.newBatchRun", icon: "run", size: 13 },
   autos: { labelKey: "itops.actions.newAutomation", icon: "plus", size: 15 },
 };
@@ -56,10 +56,10 @@ export function ItOpsModule() {
   );
 
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
-  const hostGroupCount = useItOpsStore((state) => state.hostGroups.length);
+  const fleetCount = useItOpsStore((state) => state.fleets.length);
   const automationCount = useItOpsStore((state) => state.automations.length);
-  const loadHostGroups = useItOpsStore((state) => state.loadHostGroups);
-  const requestNewHostGroup = useItOpsStore((state) => state.requestNewHostGroup);
+  const loadFleets = useItOpsStore((state) => state.loadFleets);
+  const requestNewFleet = useItOpsStore((state) => state.requestNewFleet);
   const requestNewAutomation = useItOpsStore((state) => state.requestNewAutomation);
   const loadRunHistory = useItOpsStore((state) => state.loadRunHistory);
   const loadAutomations = useItOpsStore((state) => state.loadAutomations);
@@ -69,10 +69,10 @@ export function ItOpsModule() {
   const pendingRunGroupId = useItOpsStore((state) => state.pendingRunGroupId);
 
   useEffect(() => {
-    void loadHostGroups();
+    void loadFleets();
     void loadRunHistory();
     void loadAutomations();
-  }, [loadHostGroups, loadRunHistory, loadAutomations]);
+  }, [loadFleets, loadRunHistory, loadAutomations]);
 
   // Stream live Batch Run progress into the store.
   useEffect(() => {
@@ -130,7 +130,7 @@ export function ItOpsModule() {
 
   function handlePrimary() {
     if (tab === "groups") {
-      requestNewHostGroup();
+      requestNewFleet();
     } else if (tab === "runs") {
       openBatchRunDialog();
     } else {
@@ -154,7 +154,7 @@ export function ItOpsModule() {
             const active = tabDef.id === tab;
             const badge =
               tabDef.id === "groups"
-                ? hostGroupCount
+                ? fleetCount
                 : tabDef.id === "autos"
                   ? automationCount
                   : null;
@@ -200,7 +200,7 @@ export function ItOpsModule() {
 
       {/* content */}
       <div className="it-content">
-        {tab === "groups" ? <HostGroupsTab /> : null}
+        {tab === "groups" ? <FleetsTab /> : null}
         {tab === "runs" ? <BatchRunsTab onNewBatchRun={() => openBatchRunDialog()} /> : null}
         {tab === "autos" ? <AutomationsTab /> : null}
       </div>

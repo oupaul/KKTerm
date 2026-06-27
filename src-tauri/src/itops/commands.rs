@@ -1,4 +1,4 @@
-// IT Ops Tauri commands (docs/ITOPS.md). Phase 1: Host Group CRUD + the
+// IT Ops Tauri commands (docs/ITOPS.md). Phase 1: Fleet CRUD + the
 // run-time resolver. Errors surface as plain strings the frontend store shows in
 // the Status Bar; the storage layer carries the typed variants.
 
@@ -17,7 +17,7 @@ use super::runner::{self, SshTransport, DEFAULT_CONCURRENCY, DEFAULT_TIMEOUT_SEC
 use super::run_storage;
 use super::storage as ito;
 use super::types::{
-    BatchTask, HostGroup, HostGroupFilter, ResolvedHost, RunEvent, RunEventHost, RunHistoryEntry,
+    BatchTask, Fleet, FleetFilter, ResolvedHost, RunEvent, RunEventHost, RunHistoryEntry,
     Transport,
 };
 
@@ -26,64 +26,64 @@ fn storage(app: &AppHandle) -> State<'_, crate::storage::Storage> {
 }
 
 #[tauri::command]
-pub fn itops_list_host_groups(app: AppHandle) -> Result<Vec<HostGroup>, String> {
+pub fn itops_list_fleets(app: AppHandle) -> Result<Vec<Fleet>, String> {
     storage(&app)
-        .with_connection_infallible(|conn| ito::list_host_groups(conn).map_err(|error| error.to_string()))
+        .with_connection_infallible(|conn| ito::list_fleets(conn).map_err(|error| error.to_string()))
 }
 
 #[tauri::command]
-pub fn itops_create_host_group(
+pub fn itops_create_fleet(
     app: AppHandle,
     name: String,
     member_ids: Vec<String>,
-    filter: Option<HostGroupFilter>,
+    filter: Option<FleetFilter>,
     transport: Transport,
-) -> Result<HostGroup, String> {
+) -> Result<Fleet, String> {
     let id = new_itops_id("hg");
     storage(&app).with_connection_infallible(|conn| {
-        ito::create_host_group(conn, &id, &name, member_ids, filter, transport)
+        ito::create_fleet(conn, &id, &name, member_ids, filter, transport)
             .map_err(|error| error.to_string())
     })
 }
 
 #[tauri::command]
-pub fn itops_update_host_group(
+pub fn itops_update_fleet(
     app: AppHandle,
     id: String,
     name: String,
     member_ids: Vec<String>,
-    filter: Option<HostGroupFilter>,
+    filter: Option<FleetFilter>,
     transport: Transport,
-) -> Result<HostGroup, String> {
+) -> Result<Fleet, String> {
     storage(&app).with_connection_infallible(|conn| {
-        ito::update_host_group(conn, &id, &name, member_ids, filter, transport)
+        ito::update_fleet(conn, &id, &name, member_ids, filter, transport)
             .map_err(|error| error.to_string())
     })
 }
 
 #[tauri::command]
-pub fn itops_remove_host_group(app: AppHandle, id: String) -> Result<(), String> {
+pub fn itops_remove_fleet(app: AppHandle, id: String) -> Result<(), String> {
     storage(&app).with_connection_infallible(|conn| {
-        ito::remove_host_group(conn, &id).map_err(|error| error.to_string())
+        ito::remove_fleet(conn, &id).map_err(|error| error.to_string())
     })
 }
 
 #[tauri::command]
-pub fn itops_reorder_host_groups(app: AppHandle, ordered_ids: Vec<String>) -> Result<(), String> {
+pub fn itops_reorder_fleets(app: AppHandle, ordered_ids: Vec<String>) -> Result<(), String> {
     storage(&app).with_connection_infallible(|conn| {
-        ito::reorder_host_groups(conn, &ordered_ids).map_err(|error| error.to_string())
+        ito::reorder_fleets(conn, &ordered_ids).map_err(|error| error.to_string())
     })
 }
 
 #[tauri::command]
-pub fn itops_resolve_host_group(app: AppHandle, id: String) -> Result<Vec<ResolvedHost>, String> {
+pub fn itops_resolve_fleet(app: AppHandle, id: String) -> Result<Vec<ResolvedHost>, String> {
     storage(&app).with_connection_infallible(|conn| {
-        let group = ito::list_host_groups(conn)
+        let group = ito::list_fleets(conn)
             .map_err(|error| error.to_string())?
             .into_iter()
             .find(|group| group.id == id)
-            .ok_or_else(|| "host group not found".to_string())?;
-        ito::resolve_host_group(conn, &group).map_err(|error| error.to_string())
+            .ok_or_else(|| "fleet not found".to_string())?;
+        ito::resolve_fleet(conn, &group).map_err(|error| error.to_string())
     })
 }
 
@@ -128,17 +128,17 @@ fn now_millis() -> String {
         .to_string()
 }
 
-/// Start a Batch Run of `task` against a Host Group. Resolves the group and each
+/// Start a Batch Run of `task` against a Fleet. Resolves the group and each
 /// SSH host's auth up front (DB + keychain), then fans out on a background
 /// thread, streaming `itops://run` events and writing the consolidated report to
 /// itops_run_history on completion. Returns the run id immediately.
 #[tauri::command]
 pub fn itops_start_batch_run(
     app: AppHandle,
-    host_group_id: String,
+    fleet_id: String,
     task: BatchTask,
 ) -> Result<String, String> {
-    start_run(&app, host_group_id, task)
+    start_run(&app, fleet_id, task)
 }
 
 /// Start a Batch Run; reusable by the command above and the Automation
@@ -146,18 +146,18 @@ pub fn itops_start_batch_run(
 /// `itops://run` and the report lands in itops_run_history on completion.
 pub fn start_run(
     app: &AppHandle,
-    host_group_id: String,
+    fleet_id: String,
     task: BatchTask,
 ) -> Result<String, String> {
     let secrets = app.state::<secrets::Secrets>();
     let known_hosts = ssh::app_known_hosts_path(app)?;
     let (hosts, specs) = storage(app).with_connection_infallible(|conn| {
-        let group = ito::list_host_groups(conn)
+        let group = ito::list_fleets(conn)
             .map_err(|error| error.to_string())?
             .into_iter()
-            .find(|group| group.id == host_group_id)
-            .ok_or_else(|| "host group not found".to_string())?;
-        let hosts = ito::resolve_host_group(conn, &group).map_err(|error| error.to_string())?;
+            .find(|group| group.id == fleet_id)
+            .ok_or_else(|| "fleet not found".to_string())?;
+        let hosts = ito::resolve_fleet(conn, &group).map_err(|error| error.to_string())?;
         let specs = runner::resolve_ssh_specs(
             conn,
             &secrets,
@@ -169,7 +169,7 @@ pub fn start_run(
     })?;
 
     if hosts.is_empty() {
-        return Err("host group resolves to no hosts".to_string());
+        return Err("fleet resolves to no hosts".to_string());
     }
 
     let run_id = new_itops_id("run");
@@ -203,7 +203,7 @@ pub fn start_run(
         // the tally reading 0 until a relaunch reloaded the persisted report.
         emit(RunEvent::Started {
             run_id: run_id_thread.clone(),
-            host_group_id: Some(host_group_id.clone()),
+            fleet_id: Some(fleet_id.clone()),
             task_summary: task_summary.clone(),
             hosts: event_hosts,
         });
@@ -226,7 +226,7 @@ pub fn start_run(
                     conn,
                     &run_id_thread,
                     "manual",
-                    Some(&host_group_id),
+                    Some(&fleet_id),
                     &task_summary,
                     &started_at,
                     Some(&finished_at),

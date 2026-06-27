@@ -137,7 +137,7 @@ function HostCard({ host }: { host: LiveRunHost }) {
 
 function LiveRunView({ run }: { run: LiveRun }) {
   const { t } = useTranslation();
-  const hostGroups = useItOpsStore((state) => state.hostGroups);
+  const fleets = useItOpsStore((state) => state.fleets);
   const cancelRun = useItOpsStore((state) => state.cancelRun);
   const requestNewBatchRun = useItOpsStore((state) => state.requestNewBatchRun);
 
@@ -151,7 +151,7 @@ function LiveRunView({ run }: { run: LiveRun }) {
   const total = run.hosts.length;
   const done = tally.ok + tally.failed;
   const live = run.state === "running";
-  const groupName = hostGroups.find((group) => group.id === run.hostGroupId)?.name;
+  const groupName = fleets.find((group) => group.id === run.fleetId)?.name;
   const pct = (value: number) => `${total > 0 ? (value / total) * 100 : 0}%`;
 
   return (
@@ -230,7 +230,7 @@ function LiveRunView({ run }: { run: LiveRun }) {
             <button
               type="button"
               className="it-btn"
-              onClick={() => requestNewBatchRun(run.hostGroupId ?? undefined)}
+              onClick={() => requestNewBatchRun(run.fleetId ?? undefined)}
             >
               <span className="it-btn-ic">
                 <ItIcon name="rerun" size={14} />

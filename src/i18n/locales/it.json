@@ -855,12 +855,12 @@
     "railLabel": "IT Ops",
     "title": "IT Ops",
     "tabs": {
-      "groups": "Gruppi di host",
+      "fleets": "Gruppi di host",
       "runs": "Esecuzioni batch",
       "autos": "Automazioni"
     },
     "actions": {
-      "newHostGroup": "Nuovo gruppo di host",
+      "newFleet": "Nuovo gruppo di host",
       "newBatchRun": "Nuova esecuzione batch",
       "startBatchRun": "Avvia un'esecuzione batch",
       "newAutomation": "Nuova automazione",
@@ -883,7 +883,7 @@
     "transport": {
       "auto": "Auto"
     },
-    "hostGroups": {
+    "fleets": {
       "heading": "Gruppi di host",
       "emptyTitle": "Nessun gruppo di host ancora",
       "emptyBody": "Un gruppo di host è una selezione denominata di connessioni esistenti usata come obiettivo di flotta per le esecuzioni batch e le automazioni.",
@@ -934,7 +934,7 @@
       "codeQueued": "in coda",
       "savedReport": "Report consolidato salvato nella cronologia delle esecuzioni · origine manuale · {{ok}}/{{total}} riusciti",
       "launchTitle": "Nuova esecuzione batch",
-      "hostGroupLabel": "Gruppo di host",
+      "fleetLabel": "Gruppo di host",
       "scriptLabel": "Script",
       "scriptPlaceholder": "sudo apt-get update && sudo apt-get upgrade -y",
       "noGroups": "Crea prima un gruppo di host per avviare un'esecuzione batch.",

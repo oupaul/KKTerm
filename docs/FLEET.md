@@ -1,7 +1,8 @@
 # Fleet Management — Design & Implementation Plan
 
-Status: **Planned** (not yet implemented). This document is the detailed plan
-for evolving the IT Ops **Host Groups** tab into **Fleet** management with a
+Status: **Phase A landed** (Host Group → Fleet rename shipped); Phases B–E
+planned. This document is the detailed plan for evolving the IT Ops **Host
+Groups** tab into **Fleet** management with a
 visual virtual-datacenter (rack elevation) layer. It extends `docs/ITOPS.md`
 (which remains the source of truth for shipped IT Ops architecture) and follows
 the same durable-vs-live split. When this doc conflicts with `docs/ITOPS.md`
@@ -356,7 +357,7 @@ enters the export.
 
 Each phase is one reviewable PR and leaves the app shippable.
 
-- **Phase A — Rename Host Group → Fleet (no behavior change).** Table rename
+- **Phase A — Rename Host Group → Fleet (no behavior change). ✅ Landed.** Table rename
   migration (33→34, table + `fleet_id` column), Rust type/function renames,
   command renames, frontend file/identifier renames, i18n key renames + pending
   localization files, doc/`CONTEXT.md` updates. Pure rename; tests green.

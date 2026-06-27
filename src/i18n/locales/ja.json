@@ -855,12 +855,12 @@
     "railLabel": "IT Ops",
     "title": "IT Ops",
     "tabs": {
-      "groups": "ホストグループ",
+      "fleets": "ホストグループ",
       "runs": "バッチ実行",
       "autos": "オートメーション"
     },
     "actions": {
-      "newHostGroup": "新規ホストグループ",
+      "newFleet": "新規ホストグループ",
       "newBatchRun": "新規バッチ実行",
       "startBatchRun": "バッチ実行を開始",
       "newAutomation": "新規オートメーション",
@@ -883,7 +883,7 @@
     "transport": {
       "auto": "自動"
     },
-    "hostGroups": {
+    "fleets": {
       "heading": "ホストグループ",
       "emptyTitle": "ホストグループはまだありません",
       "emptyBody": "ホストグループは、バッチ実行やオートメーションのフリートターゲットとして使用される、既存の接続の名前付き選択です。",
@@ -934,7 +934,7 @@
       "codeQueued": "キューに追加済み",
       "savedReport": "統合レポートが実行履歴に保存されました · 手動実行 · {{ok}}/{{total}} 件成功",
       "launchTitle": "新規バッチ実行",
-      "hostGroupLabel": "ホストグループ",
+      "fleetLabel": "ホストグループ",
       "scriptLabel": "スクリプト",
       "scriptPlaceholder": "sudo apt-get update && sudo apt-get upgrade -y",
       "noGroups": "バッチ実行を行うには、まずホストグループを作成してください。",

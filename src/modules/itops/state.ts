@@ -1,5 +1,5 @@
-// IT Ops Module frontend store. Phase 1 owns durable Host Groups: a thin cache
-// over the itops_* Tauri commands so the rail badge, the Host Groups tab, and
+// IT Ops Module frontend store. Phase 1 owns durable Fleets: a thin cache
+// over the itops_* Tauri commands so the rail badge, the Fleets tab, and
 // any dialog share one source of truth and update live after a mutation without
 // a full reload. Live Batch Run / Automation state arrives in later phases.
 
@@ -10,8 +10,8 @@ import type {
   AutomationAction,
   AutomationTestResult,
   BatchTask,
-  HostGroup,
-  HostGroupFilter,
+  Fleet,
+  FleetFilter,
   ItopsTransport,
   ResolvedHost,
   RunEvent,
@@ -19,10 +19,10 @@ import type {
 } from "../../types";
 import type { WatchdogConfig } from "../../watchdog/types";
 
-export interface HostGroupInput {
+export interface FleetInput {
   name: string;
   memberIds: string[];
-  filter: HostGroupFilter | null;
+  filter: FleetFilter | null;
   transport: ItopsTransport;
 }
 
@@ -42,7 +42,7 @@ export interface LiveRunHost {
 
 export interface LiveRun {
   runId: string;
-  hostGroupId?: string | null;
+  fleetId?: string | null;
   taskSummary: string;
   hosts: LiveRunHost[];
   state: "running" | "done" | "canceled";
@@ -62,7 +62,7 @@ function reduceRun(run: LiveRun | null, event: RunEvent): LiveRun | null {
     case "started":
       return {
         runId: event.runId,
-        hostGroupId: event.hostGroupId,
+        fleetId: event.fleetId,
         taskSummary: event.taskSummary,
         hosts: event.hosts.map((host) => ({ ...host, status: "pending" as const })),
         state: "running",
@@ -144,18 +144,18 @@ function reduceRun(run: LiveRun | null, event: RunEvent): LiveRun | null {
 }
 
 interface ItOpsState {
-  hostGroups: HostGroup[];
+  fleets: Fleet[];
   loaded: boolean;
   loading: boolean;
-  /** Bumped when the module header's "New Host Group" button is pressed so the
-   *  Host Groups tab (which owns the dialog + selection) opens the create flow. */
+  /** Bumped when the module header's "New Fleet" button is pressed so the
+   *  Fleets tab (which owns the dialog + selection) opens the create flow. */
   newGroupRequest: number;
-  requestNewHostGroup: () => void;
-  loadHostGroups: () => Promise<void>;
-  createHostGroup: (input: HostGroupInput) => Promise<HostGroup>;
-  updateHostGroup: (id: string, input: HostGroupInput) => Promise<HostGroup>;
-  removeHostGroup: (id: string) => Promise<void>;
-  resolveHostGroup: (id: string) => Promise<ResolvedHost[]>;
+  requestNewFleet: () => void;
+  loadFleets: () => Promise<void>;
+  createFleet: (input: FleetInput) => Promise<Fleet>;
+  updateFleet: (id: string, input: FleetInput) => Promise<Fleet>;
+  removeFleet: (id: string) => Promise<void>;
+  resolveFleet: (id: string) => Promise<ResolvedHost[]>;
 
   // ── Batch Runs (Phase 2) ──
   activeRun: LiveRun | null;
@@ -164,9 +164,9 @@ interface ItOpsState {
   /** Bumped to open the Batch Run launcher; pendingRunGroupId preselects a group. */
   newRunRequest: number;
   pendingRunGroupId: string | null;
-  requestNewBatchRun: (hostGroupId?: string) => void;
+  requestNewBatchRun: (fleetId?: string) => void;
   applyRunEvent: (event: RunEvent) => void;
-  startBatchRun: (hostGroupId: string, task: BatchTask) => Promise<string>;
+  startBatchRun: (fleetId: string, task: BatchTask) => Promise<string>;
   cancelRun: (runId: string) => Promise<void>;
   loadRunHistory: () => Promise<void>;
 
@@ -194,42 +194,42 @@ interface ItOpsState {
 }
 
 export const useItOpsStore = create<ItOpsState>((set, get) => ({
-  hostGroups: [],
+  fleets: [],
   loaded: false,
   loading: false,
   newGroupRequest: 0,
 
-  requestNewHostGroup() {
+  requestNewFleet() {
     set({ newGroupRequest: get().newGroupRequest + 1 });
   },
 
-  async loadHostGroups() {
+  async loadFleets() {
     if (!isTauriRuntime()) {
       set({ loaded: true });
       return;
     }
     set({ loading: true });
     try {
-      const hostGroups = await invokeCommand("itops_list_host_groups");
-      set({ hostGroups, loaded: true });
+      const fleets = await invokeCommand("itops_list_fleets");
+      set({ fleets, loaded: true });
     } finally {
       set({ loading: false });
     }
   },
 
-  async createHostGroup(input) {
-    const created = await invokeCommand("itops_create_host_group", {
+  async createFleet(input) {
+    const created = await invokeCommand("itops_create_fleet", {
       name: input.name,
       memberIds: input.memberIds,
       filter: input.filter,
       transport: input.transport,
     });
-    set({ hostGroups: [...get().hostGroups, created] });
+    set({ fleets: [...get().fleets, created] });
     return created;
   },
 
-  async updateHostGroup(id, input) {
-    const updated = await invokeCommand("itops_update_host_group", {
+  async updateFleet(id, input) {
+    const updated = await invokeCommand("itops_update_fleet", {
       id,
       name: input.name,
       memberIds: input.memberIds,
@@ -237,21 +237,21 @@ export const useItOpsStore = create<ItOpsState>((set, get) => ({
       transport: input.transport,
     });
     set({
-      hostGroups: get().hostGroups.map((group) => (group.id === id ? updated : group)),
+      fleets: get().fleets.map((group) => (group.id === id ? updated : group)),
     });
     return updated;
   },
 
-  async removeHostGroup(id) {
-    await invokeCommand("itops_remove_host_group", { id });
-    set({ hostGroups: get().hostGroups.filter((group) => group.id !== id) });
+  async removeFleet(id) {
+    await invokeCommand("itops_remove_fleet", { id });
+    set({ fleets: get().fleets.filter((group) => group.id !== id) });
   },
 
-  async resolveHostGroup(id) {
+  async resolveFleet(id) {
     if (!isTauriRuntime()) {
       return [];
     }
-    return invokeCommand("itops_resolve_host_group", { id });
+    return invokeCommand("itops_resolve_fleet", { id });
   },
 
   // ── Batch Runs ──
@@ -261,10 +261,10 @@ export const useItOpsStore = create<ItOpsState>((set, get) => ({
   newRunRequest: 0,
   pendingRunGroupId: null,
 
-  requestNewBatchRun(hostGroupId) {
+  requestNewBatchRun(fleetId) {
     set({
       newRunRequest: get().newRunRequest + 1,
-      pendingRunGroupId: hostGroupId ?? null,
+      pendingRunGroupId: fleetId ?? null,
     });
   },
 
@@ -275,11 +275,11 @@ export const useItOpsStore = create<ItOpsState>((set, get) => ({
     }
   },
 
-  async startBatchRun(hostGroupId, task) {
+  async startBatchRun(fleetId, task) {
     // The Started event populates activeRun; clear any prior run first so the
     // grid does not briefly show stale hosts.
     set({ activeRun: null });
-    return invokeCommand("itops_start_batch_run", { hostGroupId, task });
+    return invokeCommand("itops_start_batch_run", { fleetId, task });
   },
 
   async cancelRun(runId) {

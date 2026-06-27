@@ -1,16 +1,16 @@
-// Host Groups tab — durable fleet target groups (docs/ITOPS.md Phase 1). The
+// Fleets tab — durable fleet target groups (docs/ITOPS.md Phase 1). The
 // list and detail are backed by the itops_* commands via useItOpsStore; the
-// detail's member list is the run-time resolver output (itops_resolve_host_group)
+// detail's member list is the run-time resolver output (itops_resolve_fleet)
 // so dynamic-filter groups show the Connections they currently match.
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ConfirmSheet } from "../../app/ui/dialog";
 import { useWorkspaceStore } from "../../store";
-import type { HostGroup, ItopsTransport, ResolvedHost } from "../../types";
+import type { Fleet, ItopsTransport, ResolvedHost } from "../../types";
 import { ItIcon, IT_ACCENTS, type ItIconName } from "./icons";
 import { TransportChip } from "./TransportChip";
-import { HostGroupDialog } from "./HostGroupDialog";
+import { FleetDialog } from "./FleetDialog";
 import { useItOpsStore } from "./state";
 
 const TRANSPORT_ORDER: ItopsTransport[] = ["auto", "ssh", "winrm", "psexec"];
@@ -23,7 +23,7 @@ const TILE_COLORS = [
   IT_ACCENTS.purple,
 ];
 
-// A stable per-group tile colour (Host Groups don't store one); hashing the id
+// A stable per-group tile colour (Fleets don't store one); hashing the id
 // keeps a group's colour steady across reloads without a durable field.
 function groupColor(id: string): string {
   let hash = 0;
@@ -33,29 +33,29 @@ function groupColor(id: string): string {
   return TILE_COLORS[hash % TILE_COLORS.length];
 }
 
-function groupIcon(group: HostGroup): ItIconName {
+function groupIcon(group: Fleet): ItIconName {
   return group.filter ? "filter" : "group";
 }
 
-export function HostGroupsTab() {
+export function FleetsTab() {
   const { t } = useTranslation();
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
-  const hostGroups = useItOpsStore((state) => state.hostGroups);
+  const fleets = useItOpsStore((state) => state.fleets);
   const loaded = useItOpsStore((state) => state.loaded);
-  const updateHostGroup = useItOpsStore((state) => state.updateHostGroup);
-  const removeHostGroup = useItOpsStore((state) => state.removeHostGroup);
-  const resolveHostGroup = useItOpsStore((state) => state.resolveHostGroup);
+  const updateFleet = useItOpsStore((state) => state.updateFleet);
+  const removeFleet = useItOpsStore((state) => state.removeFleet);
+  const resolveFleet = useItOpsStore((state) => state.resolveFleet);
   const requestNewBatchRun = useItOpsStore((state) => state.requestNewBatchRun);
   const newGroupRequest = useItOpsStore((state) => state.newGroupRequest);
 
   const [activeId, setActiveId] = useState<string | null>(null);
   const [members, setMembers] = useState<ResolvedHost[]>([]);
-  const [dialog, setDialog] = useState<{ group: HostGroup | null } | null>(null);
-  const [pendingDelete, setPendingDelete] = useState<HostGroup | null>(null);
+  const [dialog, setDialog] = useState<{ group: Fleet | null } | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<Fleet | null>(null);
 
   const activeGroup = useMemo(
-    () => hostGroups.find((group) => group.id === activeId) ?? hostGroups[0] ?? null,
-    [hostGroups, activeId],
+    () => fleets.find((group) => group.id === activeId) ?? fleets[0] ?? null,
+    [fleets, activeId],
   );
 
   // Open the create dialog when the module header's primary button signals.
@@ -69,14 +69,14 @@ export function HostGroupsTab() {
 
   // Keep a valid selection as the list loads or its active group is removed.
   useEffect(() => {
-    if (hostGroups.length === 0) {
+    if (fleets.length === 0) {
       if (activeId !== null) setActiveId(null);
       return;
     }
-    if (!hostGroups.some((group) => group.id === activeId)) {
-      setActiveId(hostGroups[0].id);
+    if (!fleets.some((group) => group.id === activeId)) {
+      setActiveId(fleets[0].id);
     }
-  }, [hostGroups, activeId]);
+  }, [fleets, activeId]);
 
   // Resolve the active group's members whenever the group (or its definition)
   // changes. The group object identity changes after an edit, re-running this.
@@ -86,7 +86,7 @@ export function HostGroupsTab() {
       setMembers([]);
       return;
     }
-    void resolveHostGroup(activeGroup.id)
+    void resolveFleet(activeGroup.id)
       .then((resolved) => {
         if (!disposed) setMembers(resolved);
       })
@@ -96,14 +96,14 @@ export function HostGroupsTab() {
     return () => {
       disposed = true;
     };
-  }, [activeGroup, resolveHostGroup]);
+  }, [activeGroup, resolveFleet]);
 
   async function applyUpdate(
-    group: HostGroup,
-    changes: Partial<Pick<HostGroup, "transport" | "memberIds">>,
+    group: Fleet,
+    changes: Partial<Pick<Fleet, "transport" | "memberIds">>,
   ) {
     try {
-      await updateHostGroup(group.id, {
+      await updateFleet(group.id, {
         name: group.name,
         memberIds: changes.memberIds ?? group.memberIds,
         filter: group.filter ?? null,
@@ -120,8 +120,8 @@ export function HostGroupsTab() {
     const group = pendingDelete;
     setPendingDelete(null);
     try {
-      await removeHostGroup(group.id);
-      showStatusBarNotice(t("itops.hostGroups.deletedNotice", { name: group.name }), {
+      await removeFleet(group.id);
+      showStatusBarNotice(t("itops.fleets.deletedNotice", { name: group.name }), {
         tone: "success",
       });
     } catch (error) {
@@ -130,24 +130,24 @@ export function HostGroupsTab() {
     }
   }
 
-  if (loaded && hostGroups.length === 0) {
+  if (loaded && fleets.length === 0) {
     return (
       <>
         <div className="it-empty">
           <span className="glyph">
             <ItIcon name="group" size={30} sw={1.5} />
           </span>
-          <h2>{t("itops.hostGroups.emptyTitle")}</h2>
-          <p>{t("itops.hostGroups.emptyBody")}</p>
+          <h2>{t("itops.fleets.emptyTitle")}</h2>
+          <p>{t("itops.fleets.emptyBody")}</p>
           <button type="button" className="it-btn primary" onClick={() => setDialog({ group: null })}>
             <span className="it-btn-ic">
               <ItIcon name="plus" size={15} />
             </span>
-            {t("itops.actions.newHostGroup")}
+            {t("itops.actions.newFleet")}
           </button>
         </div>
         {dialog ? (
-          <HostGroupDialog
+          <FleetDialog
             group={dialog.group}
             onClose={() => setDialog(null)}
             onSaved={(saved) => setActiveId(saved.id)}
@@ -162,10 +162,10 @@ export function HostGroupsTab() {
       {/* left list */}
       <div className="hg-list">
         <div className="hg-list-h">
-          <span>{t("itops.hostGroups.heading")}</span>
-          <span>{hostGroups.length}</span>
+          <span>{t("itops.fleets.heading")}</span>
+          <span>{fleets.length}</span>
         </div>
-        {hostGroups.map((group) => (
+        {fleets.map((group) => (
           <button
             key={group.id}
             type="button"
@@ -179,11 +179,11 @@ export function HostGroupsTab() {
               <span className="nm">{group.name}</span>
               <span className="meta">
                 {group.filter
-                  ? t("itops.hostGroups.dynamicMembership")
-                  : t("itops.hostGroups.connectionsCount", { count: group.memberIds.length })}
+                  ? t("itops.fleets.dynamicMembership")
+                  : t("itops.fleets.connectionsCount", { count: group.memberIds.length })}
               </span>
             </span>
-            {group.filter ? <span className="dyn">{t("itops.hostGroups.dynamicBadge")}</span> : null}
+            {group.filter ? <span className="dyn">{t("itops.fleets.dynamicBadge")}</span> : null}
             <span className="cnt">{group.memberIds.length}</span>
           </button>
         ))}
@@ -199,8 +199,8 @@ export function HostGroupsTab() {
             <div style={{ minWidth: 0, flex: "1 1 auto" }}>
               <div className="nm">{activeGroup.name}</div>
               <div className="sub">
-                {t("itops.hostGroups.connectionsCount", { count: members.length })}
-                {activeGroup.filter ? `  ·  ${t("itops.hostGroups.dynamicMembership")}` : ""}
+                {t("itops.fleets.connectionsCount", { count: members.length })}
+                {activeGroup.filter ? `  ·  ${t("itops.fleets.dynamicMembership")}` : ""}
               </div>
             </div>
             <button
@@ -231,15 +231,15 @@ export function HostGroupsTab() {
             </button>
           </div>
 
-          <div className="it-section-label">{t("itops.hostGroups.transportDefaultLabel")}</div>
+          <div className="it-section-label">{t("itops.fleets.transportDefaultLabel")}</div>
           <div className="card">
             <div className="hg-opt">
               <span className="ic">
                 <ItIcon name="link" size={16} />
               </span>
               <div className="hg-opt-txt">
-                <div className="t">{t("itops.hostGroups.perHostTransport")}</div>
-                <div className="d">{t("itops.hostGroups.perHostTransportHint")}</div>
+                <div className="t">{t("itops.fleets.perHostTransport")}</div>
+                <div className="d">{t("itops.fleets.perHostTransportHint")}</div>
               </div>
               <div className="seg">
                 {TRANSPORT_ORDER.map((tp) => (
@@ -264,19 +264,19 @@ export function HostGroupsTab() {
                   <ItIcon name="filter" size={16} />
                 </span>
                 <div className="hg-opt-txt">
-                  <div className="t">{t("itops.hostGroups.dynamicFilter")}</div>
-                  <div className="d">{t("itops.hostGroups.dynamicFilterHint")}</div>
+                  <div className="t">{t("itops.fleets.dynamicFilter")}</div>
+                  <div className="d">{t("itops.fleets.dynamicFilterHint")}</div>
                 </div>
                 <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
                   {activeGroup.filter.types.map((type) => (
                     <span key={type} className="filter-pill">
-                      <span className="k">{t("itops.hostGroups.filterTypeKey")}</span>
+                      <span className="k">{t("itops.fleets.filterTypeKey")}</span>
                       {type}
                     </span>
                   ))}
                   {activeGroup.filter.folderId ? (
                     <span className="filter-pill">
-                      <span className="k">{t("itops.hostGroups.filterFolderKey")}</span>
+                      <span className="k">{t("itops.fleets.filterFolderKey")}</span>
                       {activeGroup.filter.folderId}
                     </span>
                   ) : null}
@@ -286,12 +286,12 @@ export function HostGroupsTab() {
           </div>
 
           <div className="it-section-label">
-            <span>{t("itops.hostGroups.membersLabel")}</span>
-            <span className="ct">{t("itops.hostGroups.membersCount", { count: members.length })}</span>
+            <span>{t("itops.fleets.membersLabel")}</span>
+            <span className="ct">{t("itops.fleets.membersCount", { count: members.length })}</span>
           </div>
           <div className="card">
             {members.length === 0 ? (
-              <div className="hg-dlg-empty">{t("itops.hostGroups.noMembers")}</div>
+              <div className="hg-dlg-empty">{t("itops.fleets.noMembers")}</div>
             ) : (
               members.map((member) => (
                 <div key={member.connectionId} className="member">
@@ -328,7 +328,7 @@ export function HostGroupsTab() {
                       <ItIcon name="xmark" size={13} />
                     </button>
                   ) : (
-                    <span className="dyn">{t("itops.hostGroups.dynamicBadge")}</span>
+                    <span className="dyn">{t("itops.fleets.dynamicBadge")}</span>
                   )}
                 </div>
               ))
@@ -346,7 +346,7 @@ export function HostGroupsTab() {
       ) : null}
 
       {dialog ? (
-        <HostGroupDialog
+        <FleetDialog
           group={dialog.group}
           onClose={() => setDialog(null)}
           onSaved={(saved) => setActiveId(saved.id)}
@@ -355,8 +355,8 @@ export function HostGroupsTab() {
       {pendingDelete ? (
         <ConfirmSheet
           tone="danger"
-          title={t("itops.hostGroups.deleteTitle")}
-          message={t("itops.hostGroups.deleteBody", { name: pendingDelete.name })}
+          title={t("itops.fleets.deleteTitle")}
+          message={t("itops.fleets.deleteBody", { name: pendingDelete.name })}
           confirmLabel={t("itops.actions.delete")}
           confirmIcon="trash"
           onConfirm={() => void confirmDelete()}

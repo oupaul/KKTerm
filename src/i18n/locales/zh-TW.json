@@ -855,12 +855,12 @@
     "railLabel": "IT Ops",
     "title": "IT Ops",
     "tabs": {
-      "groups": "主機群組",
+      "fleets": "主機群組",
       "runs": "批次執行",
       "autos": "自動化"
     },
     "actions": {
-      "newHostGroup": "新增主機群組",
+      "newFleet": "新增主機群組",
       "newBatchRun": "新增批次執行",
       "startBatchRun": "開始批次執行",
       "newAutomation": "新增自動化",
@@ -883,7 +883,7 @@
     "transport": {
       "auto": "自動"
     },
-    "hostGroups": {
+    "fleets": {
       "heading": "主機群組",
       "emptyTitle": "尚無主機群組",
       "emptyBody": "主機群組是現有連線的命名選取，作為批次執行與自動化的機群目標。",
@@ -934,7 +934,7 @@
       "codeQueued": "已排入佇列",
       "savedReport": "彙總報告已儲存至執行歷程 · 來源手動 · {{ok}}/{{total}} 成功",
       "launchTitle": "新增批次執行",
-      "hostGroupLabel": "主機群組",
+      "fleetLabel": "主機群組",
       "scriptLabel": "指令碼",
       "scriptPlaceholder": "sudo apt-get update && sudo apt-get upgrade -y",
       "noGroups": "請先建立主機群組才能執行批次執行。",

@@ -855,12 +855,12 @@
     "railLabel": "IT Ops",
     "title": "IT Ops",
     "tabs": {
-      "groups": "Grupos de hosts",
+      "fleets": "Grupos de hosts",
       "runs": "Execuções em lote",
       "autos": "Automações"
     },
     "actions": {
-      "newHostGroup": "Novo grupo de hosts",
+      "newFleet": "Novo grupo de hosts",
       "newBatchRun": "Nova execução em lote",
       "startBatchRun": "Iniciar uma execução em lote",
       "newAutomation": "Nova automação",
@@ -883,7 +883,7 @@
     "transport": {
       "auto": "Automático"
     },
-    "hostGroups": {
+    "fleets": {
       "heading": "Grupos de hosts",
       "emptyTitle": "Ainda não há grupos de hosts",
       "emptyBody": "Um grupo de hosts é uma seleção nomeada de conexões existentes usada como destino de frota para execuções em lote e automações.",
@@ -934,7 +934,7 @@
       "codeQueued": "na fila",
       "savedReport": "Relatório consolidado salvo no histórico de execuções · origem manual · {{ok}}/{{total}} com êxito",
       "launchTitle": "Nova execução em lote",
-      "hostGroupLabel": "Grupo de hosts",
+      "fleetLabel": "Grupo de hosts",
       "scriptLabel": "Script",
       "scriptPlaceholder": "sudo apt-get update && sudo apt-get upgrade -y",
       "noGroups": "Crie primeiro um grupo de hosts para executar uma execução em lote.",

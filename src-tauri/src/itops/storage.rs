@@ -1,5 +1,5 @@
-// IT Ops durable storage (docs/ITOPS.md). Phase 1: the `itops_host_groups`
-// repository plus the run-time resolver that turns a Host Group into a concrete
+// IT Ops durable storage (docs/ITOPS.md). Phase 1: the `itops_fleets`
+// repository plus the run-time resolver that turns a Fleet into a concrete
 // ordered list of fleet targets. Mirrors the dashboard_storage.rs conventions
 // (free functions over `&SqliteConnection`, JSON `TEXT` columns, `sort_order`).
 
@@ -7,7 +7,7 @@ use std::collections::HashSet;
 
 use rusqlite::{Connection as SqliteConnection, OptionalExtension, params, params_from_iter};
 
-use super::types::{HostGroup, HostGroupFilter, ResolvedHost, Transport};
+use super::types::{Fleet, FleetFilter, ResolvedHost, Transport};
 
 #[derive(Debug)]
 pub enum ItopsStorageError {
@@ -20,7 +20,7 @@ impl std::fmt::Display for ItopsStorageError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Validation(reason) => write!(f, "{reason}"),
-            Self::NotFound => write!(f, "host group not found"),
+            Self::NotFound => write!(f, "fleet not found"),
             Self::Sqlite(error) => write!(f, "{error}"),
         }
     }
@@ -38,7 +38,7 @@ fn validate_name(name: &str) -> Result<String> {
     let trimmed = name.trim();
     if trimmed.is_empty() {
         return Err(ItopsStorageError::Validation(
-            "host group name must not be empty".to_string(),
+            "fleet name must not be empty".to_string(),
         ));
     }
     Ok(trimmed.to_string())
@@ -54,7 +54,7 @@ fn parse_member_ids(raw: &str) -> Vec<String> {
 
 /// Serialize a filter to JSON, collapsing an empty filter to NULL so a Host
 /// Group never claims dynamic membership it does not have.
-fn filter_to_json(filter: &Option<HostGroupFilter>) -> Result<Option<String>> {
+fn filter_to_json(filter: &Option<FleetFilter>) -> Result<Option<String>> {
     match filter {
         Some(filter) if !filter.is_empty() => Ok(Some(
             serde_json::to_string(filter)
@@ -64,18 +64,18 @@ fn filter_to_json(filter: &Option<HostGroupFilter>) -> Result<Option<String>> {
     }
 }
 
-fn parse_filter(raw: Option<String>) -> Option<HostGroupFilter> {
+fn parse_filter(raw: Option<String>) -> Option<FleetFilter> {
     let raw = raw?;
-    serde_json::from_str::<HostGroupFilter>(&raw)
+    serde_json::from_str::<FleetFilter>(&raw)
         .ok()
         .filter(|filter| !filter.is_empty())
 }
 
-fn row_to_group(row: &rusqlite::Row<'_>) -> rusqlite::Result<HostGroup> {
+fn row_to_group(row: &rusqlite::Row<'_>) -> rusqlite::Result<Fleet> {
     let member_ids: String = row.get(3)?;
     let filter_json: Option<String> = row.get(4)?;
     let transport: String = row.get(5)?;
-    Ok(HostGroup {
+    Ok(Fleet {
         id: row.get(0)?,
         name: row.get(1)?,
         sort_order: row.get(2)?,
@@ -86,9 +86,9 @@ fn row_to_group(row: &rusqlite::Row<'_>) -> rusqlite::Result<HostGroup> {
 }
 
 const SELECT_GROUP_COLUMNS: &str =
-    "id, name, sort_order, member_ids_json, filter_json, transport FROM itops_host_groups";
+    "id, name, sort_order, member_ids_json, filter_json, transport FROM itops_fleets";
 
-pub fn list_host_groups(conn: &SqliteConnection) -> Result<Vec<HostGroup>> {
+pub fn list_fleets(conn: &SqliteConnection) -> Result<Vec<Fleet>> {
     let mut stmt = conn.prepare(&format!("SELECT {SELECT_GROUP_COLUMNS} ORDER BY sort_order"))?;
     let groups = stmt
         .query_map([], row_to_group)?
@@ -96,28 +96,28 @@ pub fn list_host_groups(conn: &SqliteConnection) -> Result<Vec<HostGroup>> {
     Ok(groups)
 }
 
-pub fn create_host_group(
+pub fn create_fleet(
     conn: &SqliteConnection,
     id: &str,
     name: &str,
     member_ids: Vec<String>,
-    filter: Option<HostGroupFilter>,
+    filter: Option<FleetFilter>,
     transport: Transport,
-) -> Result<HostGroup> {
+) -> Result<Fleet> {
     let name = validate_name(name)?;
     let next_sort: i64 = conn.query_row(
-        "SELECT COALESCE(MAX(sort_order), -1) + 1 FROM itops_host_groups",
+        "SELECT COALESCE(MAX(sort_order), -1) + 1 FROM itops_fleets",
         [],
         |row| row.get(0),
     )?;
     let member_json = member_ids_to_json(&member_ids)?;
     let filter_json = filter_to_json(&filter)?;
     conn.execute(
-        "INSERT INTO itops_host_groups (id, name, sort_order, member_ids_json, filter_json, transport)
+        "INSERT INTO itops_fleets (id, name, sort_order, member_ids_json, filter_json, transport)
          VALUES (?, ?, ?, ?, ?, ?)",
         params![id, name, next_sort, member_json, filter_json, transport.as_db_str()],
     )?;
-    Ok(HostGroup {
+    Ok(Fleet {
         id: id.to_string(),
         name,
         sort_order: next_sort,
@@ -127,18 +127,18 @@ pub fn create_host_group(
     })
 }
 
-pub fn update_host_group(
+pub fn update_fleet(
     conn: &SqliteConnection,
     id: &str,
     name: &str,
     member_ids: Vec<String>,
-    filter: Option<HostGroupFilter>,
+    filter: Option<FleetFilter>,
     transport: Transport,
-) -> Result<HostGroup> {
+) -> Result<Fleet> {
     let name = validate_name(name)?;
     let sort_order: i64 = conn
         .query_row(
-            "SELECT sort_order FROM itops_host_groups WHERE id = ?",
+            "SELECT sort_order FROM itops_fleets WHERE id = ?",
             params![id],
             |row| row.get(0),
         )
@@ -147,12 +147,12 @@ pub fn update_host_group(
     let member_json = member_ids_to_json(&member_ids)?;
     let filter_json = filter_to_json(&filter)?;
     conn.execute(
-        "UPDATE itops_host_groups
+        "UPDATE itops_fleets
          SET name = ?, member_ids_json = ?, filter_json = ?, transport = ?, updated_at = CURRENT_TIMESTAMP
          WHERE id = ?",
         params![name, member_json, filter_json, transport.as_db_str(), id],
     )?;
-    Ok(HostGroup {
+    Ok(Fleet {
         id: id.to_string(),
         name,
         sort_order,
@@ -162,18 +162,18 @@ pub fn update_host_group(
     })
 }
 
-pub fn remove_host_group(conn: &SqliteConnection, id: &str) -> Result<()> {
-    let affected = conn.execute("DELETE FROM itops_host_groups WHERE id = ?", params![id])?;
+pub fn remove_fleet(conn: &SqliteConnection, id: &str) -> Result<()> {
+    let affected = conn.execute("DELETE FROM itops_fleets WHERE id = ?", params![id])?;
     if affected == 0 {
         return Err(ItopsStorageError::NotFound);
     }
     Ok(())
 }
 
-pub fn reorder_host_groups(conn: &SqliteConnection, ordered_ids: &[String]) -> Result<()> {
+pub fn reorder_fleets(conn: &SqliteConnection, ordered_ids: &[String]) -> Result<()> {
     for (index, id) in ordered_ids.iter().enumerate() {
         conn.execute(
-            "UPDATE itops_host_groups SET sort_order = ? WHERE id = ?",
+            "UPDATE itops_fleets SET sort_order = ? WHERE id = ?",
             params![index as i64, id],
         )?;
     }
@@ -206,7 +206,7 @@ fn fetch_resolved_host(
 
 fn fetch_filtered_hosts(
     conn: &SqliteConnection,
-    filter: &HostGroupFilter,
+    filter: &FleetFilter,
     transport: Transport,
 ) -> Result<Vec<ResolvedHost>> {
     let mut sql =
@@ -239,11 +239,11 @@ fn fetch_filtered_hosts(
     Ok(rows)
 }
 
-/// Resolve a Host Group into a concrete ordered list of fleet targets at call
+/// Resolve a Fleet into a concrete ordered list of fleet targets at call
 /// time: explicit members first (in stored order, skipping any since-deleted
 /// Connections), then dynamic-filter matches not already included. Deduplicated
 /// by Connection id so a member that also matches the filter appears once.
-pub fn resolve_host_group(conn: &SqliteConnection, group: &HostGroup) -> Result<Vec<ResolvedHost>> {
+pub fn resolve_fleet(conn: &SqliteConnection, group: &Fleet) -> Result<Vec<ResolvedHost>> {
     let mut seen: HashSet<String> = HashSet::new();
     let mut resolved: Vec<ResolvedHost> = Vec::new();
 
@@ -276,7 +276,7 @@ mod tests {
         let conn = SqliteConnection::open_in_memory().unwrap();
         conn.execute_batch(
             r#"
-            CREATE TABLE itops_host_groups (
+            CREATE TABLE itops_fleets (
                 id TEXT PRIMARY KEY,
                 name TEXT NOT NULL,
                 sort_order INTEGER NOT NULL,
@@ -321,7 +321,7 @@ mod tests {
     #[test]
     fn create_list_update_remove_roundtrip() {
         let conn = open_test_db();
-        let created = create_host_group(
+        let created = create_fleet(
             &conn,
             "hg-1",
             "  Production Web  ",
@@ -335,16 +335,16 @@ mod tests {
         assert_eq!(created.transport, Transport::Ssh);
         assert!(created.filter.is_none());
 
-        let listed = list_host_groups(&conn).unwrap();
+        let listed = list_fleets(&conn).unwrap();
         assert_eq!(listed.len(), 1);
         assert_eq!(listed[0].member_ids, vec!["c1", "c2"]);
 
-        let updated = update_host_group(
+        let updated = update_fleet(
             &conn,
             "hg-1",
             "Web",
             vec!["c2".into()],
-            Some(HostGroupFilter {
+            Some(FleetFilter {
                 types: vec!["ssh".into()],
                 folder_id: Some("f1".into()),
             }),
@@ -355,10 +355,10 @@ mod tests {
         assert_eq!(updated.sort_order, 0); // preserved
         assert!(updated.filter.is_some());
 
-        remove_host_group(&conn, "hg-1").unwrap();
-        assert!(list_host_groups(&conn).unwrap().is_empty());
+        remove_fleet(&conn, "hg-1").unwrap();
+        assert!(list_fleets(&conn).unwrap().is_empty());
         assert!(matches!(
-            remove_host_group(&conn, "hg-1"),
+            remove_fleet(&conn, "hg-1"),
             Err(ItopsStorageError::NotFound)
         ));
     }
@@ -367,7 +367,7 @@ mod tests {
     fn empty_name_is_rejected() {
         let conn = open_test_db();
         assert!(matches!(
-            create_host_group(&conn, "hg-x", "   ", vec![], None, Transport::Auto),
+            create_fleet(&conn, "hg-x", "   ", vec![], None, Transport::Auto),
             Err(ItopsStorageError::Validation(_))
         ));
     }
@@ -375,17 +375,17 @@ mod tests {
     #[test]
     fn empty_filter_is_stored_as_none() {
         let conn = open_test_db();
-        let group = create_host_group(
+        let group = create_fleet(
             &conn,
             "hg-2",
             "Group",
             vec![],
-            Some(HostGroupFilter::default()),
+            Some(FleetFilter::default()),
             Transport::Auto,
         )
         .unwrap();
         assert!(group.filter.is_none());
-        assert!(list_host_groups(&conn).unwrap()[0].filter.is_none());
+        assert!(list_fleets(&conn).unwrap()[0].filter.is_none());
     }
 
     #[test]
@@ -396,13 +396,13 @@ mod tests {
         insert_connection(&conn, "c3", "rdp", Some("prod"), 2);
         insert_connection(&conn, "gone", "ssh", None, 3);
 
-        let group = create_host_group(
+        let group = create_fleet(
             &conn,
             "hg-3",
             "Mixed",
             // explicit members: c2 first, then a deleted-style id, then c1 also in filter
             vec!["c2".into(), "missing".into()],
-            Some(HostGroupFilter {
+            Some(FleetFilter {
                 types: vec!["ssh".into()],
                 folder_id: Some("prod".into()),
             }),
@@ -410,7 +410,7 @@ mod tests {
         )
         .unwrap();
 
-        let resolved = resolve_host_group(&conn, &group).unwrap();
+        let resolved = resolve_fleet(&conn, &group).unwrap();
         let ids: Vec<&str> = resolved.iter().map(|h| h.connection_id.as_str()).collect();
         // c2 explicit first; "missing" skipped; then filter adds c1 (ssh+prod);
         // c3 excluded (rdp); "gone" excluded (folder None); c2 not duplicated.
@@ -421,10 +421,10 @@ mod tests {
     #[test]
     fn reorder_rewrites_sort_order() {
         let conn = open_test_db();
-        create_host_group(&conn, "a", "A", vec![], None, Transport::Auto).unwrap();
-        create_host_group(&conn, "b", "B", vec![], None, Transport::Auto).unwrap();
-        reorder_host_groups(&conn, &["b".to_string(), "a".to_string()]).unwrap();
-        let order: Vec<String> = list_host_groups(&conn)
+        create_fleet(&conn, "a", "A", vec![], None, Transport::Auto).unwrap();
+        create_fleet(&conn, "b", "B", vec![], None, Transport::Auto).unwrap();
+        reorder_fleets(&conn, &["b".to_string(), "a".to_string()]).unwrap();
+        let order: Vec<String> = list_fleets(&conn)
             .unwrap()
             .into_iter()
             .map(|g| g.id)

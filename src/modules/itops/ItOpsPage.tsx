@@ -17,7 +17,7 @@ export function ItOpsPage({
   onAssistantContextChange: (context: AssistantPageContext) => void;
 }) {
   const { t } = useTranslation();
-  const hostGroups = useItOpsStore((state) => state.hostGroups);
+  const fleets = useItOpsStore((state) => state.fleets);
   const runHistory = useItOpsStore((state) => state.runHistory);
   const automations = useItOpsStore((state) => state.automations);
   const activeRun = useItOpsStore((state) => state.activeRun);
@@ -30,8 +30,8 @@ export function ItOpsPage({
       sourceLabel: `${t("itops.title")} context`,
       text: [
         "Active Module: IT Ops.",
-        "Tutorial targets: itops.groups for Host Groups, itops.runs for Batch Runs, itops.autos for Automations, and itops.primaryAction for the action that belongs to the selected tab.",
-        `Host Groups (${hostGroups.length}): ${hostGroups.map((group) => `${group.name} [${group.memberIds.length} saved members, ${group.transport}]`).join(", ") || "none"}.`,
+        "Tutorial targets: itops.groups for Fleets, itops.runs for Batch Runs, itops.autos for Automations, and itops.primaryAction for the action that belongs to the selected tab.",
+        `Fleets (${fleets.length}): ${fleets.map((group) => `${group.name} [${group.memberIds.length} saved members, ${group.transport}]`).join(", ") || "none"}.`,
         `Automations (${automations.length}): ${automations.map((automation) => `${automation.name} [${automation.enabled ? "armed" : "disabled"}]`).join(", ") || "none"}.`,
         `Recent completed Batch Runs: ${runHistory.length}.`,
         activeRun
@@ -40,7 +40,7 @@ export function ItOpsPage({
         "For operational instructions, search and read the IT Ops chapter in the KKTerm Operation Manual before answering. Do not infer host output, scripts, secrets, or trigger details from this compact metadata.",
       ].join("\n"),
     });
-  }, [activeRun, automations, hostGroups, onAssistantContextChange, runHistory, t]);
+  }, [activeRun, automations, fleets, onAssistantContextChange, runHistory, t]);
 
   return (
     <section

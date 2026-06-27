@@ -855,12 +855,12 @@
     "railLabel": "IT Ops",
     "title": "IT Ops",
     "tabs": {
-      "groups": "主机组",
+      "fleets": "主机组",
       "runs": "批量运行",
       "autos": "自动化"
     },
     "actions": {
-      "newHostGroup": "新建主机组",
+      "newFleet": "新建主机组",
       "newBatchRun": "新建批量运行",
       "startBatchRun": "开始批量运行",
       "newAutomation": "新建自动化",
@@ -883,7 +883,7 @@
     "transport": {
       "auto": "自动"
     },
-    "hostGroups": {
+    "fleets": {
       "heading": "主机组",
       "emptyTitle": "暂无主机组",
       "emptyBody": "主机组是现有连接的命名选择，作为批量运行和自动化的机群目标。",
@@ -934,7 +934,7 @@
       "codeQueued": "已排队",
       "savedReport": "汇总报告已保存至运行历史 · 来源手动 · {{ok}}/{{total}} 成功",
       "launchTitle": "新建批量运行",
-      "hostGroupLabel": "主机组",
+      "fleetLabel": "主机组",
       "scriptLabel": "脚本",
       "scriptPlaceholder": "sudo apt-get update && sudo apt-get upgrade -y",
       "noGroups": "请先创建主机组才能运行批量运行。",

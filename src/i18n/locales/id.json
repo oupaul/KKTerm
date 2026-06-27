@@ -855,12 +855,12 @@
     "railLabel": "IT Ops",
     "title": "IT Ops",
     "tabs": {
-      "groups": "Grup host",
+      "fleets": "Grup host",
       "runs": "Eksekusi batch",
       "autos": "Automasi"
     },
     "actions": {
-      "newHostGroup": "Grup host baru",
+      "newFleet": "Grup host baru",
       "newBatchRun": "Eksekusi batch baru",
       "startBatchRun": "Mulai eksekusi batch",
       "newAutomation": "Automasi baru",
@@ -883,7 +883,7 @@
     "transport": {
       "auto": "Otomatis"
     },
-    "hostGroups": {
+    "fleets": {
       "heading": "Grup host",
       "emptyTitle": "Belum ada grup host",
       "emptyBody": "Grup host adalah pilihan bernama dari koneksi yang ada yang digunakan sebagai target armada untuk eksekusi batch dan automasi.",
@@ -934,7 +934,7 @@
       "codeQueued": "antrian",
       "savedReport": "Laporan gabungan disimpan ke riwayat eksekusi · sumber manual · {{ok}}/{{total}} berhasil",
       "launchTitle": "Eksekusi batch baru",
-      "hostGroupLabel": "Grup host",
+      "fleetLabel": "Grup host",
       "scriptLabel": "Skrip",
       "scriptPlaceholder": "sudo apt-get update && sudo apt-get upgrade -y",
       "noGroups": "Buat grup host lebih dulu untuk menjalankan eksekusi batch.",

@@ -490,8 +490,14 @@ per-host output blobs and a flat list of names. The enhancements below turn it
 into something that produces *answers* and a fleet you *see*. They are captured
 here so the design is not lost; sequence them by demand.
 
-**Fleet management (next, planned in `docs/FLEET.md`).** Rename **Host Group →
-Fleet** and add a virtual-datacenter layer: per-Fleet **Racks** grouped by
+**Fleet management (in progress, planned in `docs/FLEET.md`).** Phase A has
+**landed**: Host Group is renamed to **Fleet** across the product — the table is
+now `itops_fleets`, the run-history soft reference is `fleet_id`, and the IT Ops
+tab/commands/i18n use the Fleet term. The historical design prose above still
+refers to the original "Host Group" naming; treat `docs/FLEET.md` as the source
+of truth for current Fleet naming and the remaining topology phases (B–E).
+The remaining Fleet work adds a virtual-datacenter layer: per-Fleet **Racks**
+grouped by
 Region/Area, drawn as full 42U **rack elevations**, holding placed Connections
 (click to open ssh/rdp/vnc/etc.) and passive items (switch, PDU, patch panel,
 blank, label). Also enables rack/area/region-scoped Batch Runs. See

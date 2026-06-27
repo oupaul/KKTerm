@@ -1,4 +1,4 @@
-// Create / edit a Host Group. Built from the shared dialog primitives
+// Create / edit a Fleet. Built from the shared dialog primitives
 // (docs/DESIGN_LANGUAGE.md): a name field, the per-host transport default, and a
 // multi-select of the active Workspace's Connections for static membership.
 //
@@ -11,27 +11,27 @@ import { Actions, Btn, DialogShell, Field, Sheet, TextInput } from "../../app/ui
 import { invokeCommand, isTauriRuntime } from "../../lib/tauri";
 import { flattenConnections } from "../workspace/connections/treeUtils";
 import { useWorkspaceStore } from "../../store";
-import type { Connection, HostGroup, ItopsTransport } from "../../types";
+import type { Connection, Fleet, ItopsTransport } from "../../types";
 import { ItIcon } from "./icons";
 import { useItOpsStore } from "./state";
 
 const TRANSPORTS: ItopsTransport[] = ["auto", "ssh", "winrm", "psexec"];
 
-export function HostGroupDialog({
+export function FleetDialog({
   group,
   onClose,
   onSaved,
 }: {
-  group?: HostGroup | null;
+  group?: Fleet | null;
   onClose: () => void;
-  onSaved: (group: HostGroup) => void;
+  onSaved: (group: Fleet) => void;
 }) {
   const { t } = useTranslation();
   const isEdit = !!group;
   const activeWorkspaceId = useWorkspaceStore((state) => state.activeWorkspaceId);
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
-  const createHostGroup = useItOpsStore((state) => state.createHostGroup);
-  const updateHostGroup = useItOpsStore((state) => state.updateHostGroup);
+  const createFleet = useItOpsStore((state) => state.createFleet);
+  const updateFleet = useItOpsStore((state) => state.updateFleet);
 
   const [name, setName] = useState(group?.name ?? "");
   const [transport, setTransport] = useState<ItopsTransport>(group?.transport ?? "auto");
@@ -95,9 +95,9 @@ export function HostGroupDialog({
     };
     try {
       const saved = isEdit
-        ? await updateHostGroup(group!.id, input)
-        : await createHostGroup(input);
-      showStatusBarNotice(t("itops.hostGroups.savedNotice", { name: saved.name }), {
+        ? await updateFleet(group!.id, input)
+        : await createFleet(input);
+      showStatusBarNotice(t("itops.fleets.savedNotice", { name: saved.name }), {
         tone: "success",
       });
       onSaved(saved);
@@ -113,8 +113,8 @@ export function HostGroupDialog({
     <DialogShell onBackdrop={onClose}>
       <Sheet
         width={560}
-        title={isEdit ? t("itops.hostGroups.editTitle") : t("itops.actions.newHostGroup")}
-        ariaLabel={isEdit ? t("itops.hostGroups.editTitle") : t("itops.actions.newHostGroup")}
+        title={isEdit ? t("itops.fleets.editTitle") : t("itops.actions.newFleet")}
+        ariaLabel={isEdit ? t("itops.fleets.editTitle") : t("itops.actions.newFleet")}
         footer={
           <Actions
             cancel={<Btn onClick={onClose}>{t("itops.actions.cancel")}</Btn>}
@@ -126,16 +126,16 @@ export function HostGroupDialog({
           />
         }
       >
-        <Field label={t("itops.hostGroups.nameLabel")} req>
+        <Field label={t("itops.fleets.nameLabel")} req>
           <TextInput
             value={name}
-            placeholder={t("itops.hostGroups.namePlaceholder")}
+            placeholder={t("itops.fleets.namePlaceholder")}
             onChange={(event) => setName(event.currentTarget.value)}
             autoFocus
           />
         </Field>
 
-        <Field label={t("itops.hostGroups.perHostTransport")}>
+        <Field label={t("itops.fleets.perHostTransport")}>
           <div className="hg-dlg-seg">
             {TRANSPORTS.map((value) => (
               <button
@@ -151,12 +151,12 @@ export function HostGroupDialog({
         </Field>
 
         <Field
-          label={t("itops.hostGroups.connectionsLabel")}
-          hint={t("itops.hostGroups.selectedCount", { count: selected.size })}
+          label={t("itops.fleets.connectionsLabel")}
+          hint={t("itops.fleets.selectedCount", { count: selected.size })}
         >
           <div className="hg-dlg-list">
             {orderedConnections.length === 0 ? (
-              <div className="hg-dlg-empty">{t("itops.hostGroups.noConnections")}</div>
+              <div className="hg-dlg-empty">{t("itops.fleets.noConnections")}</div>
             ) : (
               orderedConnections.map((connection) => {
                 const checked = selected.has(connection.id);

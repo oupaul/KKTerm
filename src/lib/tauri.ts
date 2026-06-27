@@ -39,8 +39,8 @@ import type {
   FileBrowserViewOptions,
   FtpConnectionOptions,
   GeneralSettings,
-  HostGroup,
-  HostGroupFilter,
+  Fleet,
+  FleetFilter,
   ItopsTransport,
   ResolvedHost,
   BatchTask,
@@ -1075,43 +1075,43 @@ type CommandMap = {
     args: { workspaceId?: string } | undefined;
     result: ConnectionTree;
   };
-  itops_list_host_groups: {
+  itops_list_fleets: {
     args: undefined;
-    result: HostGroup[];
+    result: Fleet[];
   };
-  itops_create_host_group: {
+  itops_create_fleet: {
     args: {
       name: string;
       memberIds: string[];
-      filter: HostGroupFilter | null;
+      filter: FleetFilter | null;
       transport: ItopsTransport;
     };
-    result: HostGroup;
+    result: Fleet;
   };
-  itops_update_host_group: {
+  itops_update_fleet: {
     args: {
       id: string;
       name: string;
       memberIds: string[];
-      filter: HostGroupFilter | null;
+      filter: FleetFilter | null;
       transport: ItopsTransport;
     };
-    result: HostGroup;
+    result: Fleet;
   };
-  itops_remove_host_group: {
+  itops_remove_fleet: {
     args: { id: string };
     result: void;
   };
-  itops_reorder_host_groups: {
+  itops_reorder_fleets: {
     args: { orderedIds: string[] };
     result: void;
   };
-  itops_resolve_host_group: {
+  itops_resolve_fleet: {
     args: { id: string };
     result: ResolvedHost[];
   };
   itops_start_batch_run: {
-    args: { hostGroupId: string; task: BatchTask };
+    args: { fleetId: string; task: BatchTask };
     result: string;
   };
   itops_cancel_batch_run: {

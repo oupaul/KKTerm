@@ -1,5 +1,5 @@
 // IT Ops Batch Run executor (docs/ITOPS.md Phase 2). A bounded-concurrency
-// worker pool fans a Batch Task out across a resolved Host Group, streaming
+// worker pool fans a Batch Task out across a resolved Fleet, streaming
 // per-host progress and assembling a consolidated report. The transport is
 // abstracted behind `BatchTransport` so the SSH adapter here (Phase 2) and the
 // WinRM/PsExec adapters (Phase 6) share the exact same runner and UI.

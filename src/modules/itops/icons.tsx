@@ -378,7 +378,7 @@ export function ItIcon({
 }
 
 // Fleet-status accent palette for tiles and action chips. These are content
-// accents (a host group's chosen colour, an action's category hue), not theme
+// accents (a fleet's chosen colour, an action's category hue), not theme
 // chrome, so they live here as fixed values rather than scheme tokens.
 export const IT_ACCENTS = {
   blue: "#0a84ff",

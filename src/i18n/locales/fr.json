@@ -855,12 +855,12 @@
     "railLabel": "IT Ops",
     "title": "IT Ops",
     "tabs": {
-      "groups": "Groupes d'hôtes",
+      "fleets": "Groupes d'hôtes",
       "runs": "Exécutions par lot",
       "autos": "Automatisations"
     },
     "actions": {
-      "newHostGroup": "Nouveau groupe d'hôtes",
+      "newFleet": "Nouveau groupe d'hôtes",
       "newBatchRun": "Nouvelle exécution par lot",
       "startBatchRun": "Démarrer une exécution par lot",
       "newAutomation": "Nouvelle automatisation",
@@ -883,7 +883,7 @@
     "transport": {
       "auto": "Auto"
     },
-    "hostGroups": {
+    "fleets": {
       "heading": "Groupes d'hôtes",
       "emptyTitle": "Aucun groupe d'hôtes pour le moment",
       "emptyBody": "Un groupe d'hôtes est une sélection nommée de connexions existantes utilisée comme cible de flotte pour les exécutions par lot et les automatisations.",
@@ -934,7 +934,7 @@
       "codeQueued": "en file d'attente",
       "savedReport": "Rapport consolidé enregistré dans l'historique d'exécution · source manuel · {{ok}}/{{total}} réussis",
       "launchTitle": "Nouvelle exécution par lot",
-      "hostGroupLabel": "Groupe d'hôtes",
+      "fleetLabel": "Groupe d'hôtes",
       "scriptLabel": "Script",
       "scriptPlaceholder": "sudo apt-get update && sudo apt-get upgrade -y",
       "noGroups": "Créez d'abord un groupe d'hôtes pour lancer une exécution par lot.",

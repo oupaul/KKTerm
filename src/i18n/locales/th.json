@@ -855,12 +855,12 @@
     "railLabel": "IT Ops",
     "title": "IT Ops",
     "tabs": {
-      "groups": "กลุ่มโฮสต์",
+      "fleets": "กลุ่มโฮสต์",
       "runs": "การทำงานเป็นชุด",
       "autos": "การทำงานอัตโนมัติ"
     },
     "actions": {
-      "newHostGroup": "กลุ่มโฮสต์ใหม่",
+      "newFleet": "กลุ่มโฮสต์ใหม่",
       "newBatchRun": "การทำงานเป็นชุดใหม่",
       "startBatchRun": "เริ่มการทำงานเป็นชุด",
       "newAutomation": "การทำงานอัตโนมัติใหม่",
@@ -883,7 +883,7 @@
     "transport": {
       "auto": "อัตโนมัติ"
     },
-    "hostGroups": {
+    "fleets": {
       "heading": "กลุ่มโฮสต์",
       "emptyTitle": "ยังไม่มีกลุ่มโฮสต์",
       "emptyBody": "กลุ่มโฮสต์คือการเลือกที่มีชื่อของการเชื่อมต่อที่มีอยู่ซึ่งใช้เป็นเป้าหมายกลุ่มสำหรับการทำงานเป็นชุดและการทำงานอัตโนมัติ",
@@ -934,7 +934,7 @@
       "codeQueued": "อยู่ในคิว",
       "savedReport": "บันทึกรายงานรวมไปยังประวัติการทำงาน · แหล่งที่มาด้วยตนเอง · {{ok}}/{{total}} สำเร็จ",
       "launchTitle": "การทำงานเป็นชุดใหม่",
-      "hostGroupLabel": "กลุ่มโฮสต์",
+      "fleetLabel": "กลุ่มโฮสต์",
       "scriptLabel": "สคริปต์",
       "scriptPlaceholder": "sudo apt-get update && sudo apt-get upgrade -y",
       "noGroups": "สร้างกลุ่มโฮสต์ก่อนเพื่อทำการทำงานเป็นชุด",

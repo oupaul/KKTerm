@@ -855,12 +855,12 @@
     "railLabel": "IT Ops",
     "title": "IT Ops",
     "tabs": {
-      "groups": "Nhóm máy chủ",
+      "fleets": "Nhóm máy chủ",
       "runs": "Chạy hàng loạt",
       "autos": "Tự động hóa"
     },
     "actions": {
-      "newHostGroup": "Nhóm máy chủ mới",
+      "newFleet": "Nhóm máy chủ mới",
       "newBatchRun": "Lần chạy hàng loạt mới",
       "startBatchRun": "Bắt đầu chạy hàng loạt",
       "newAutomation": "Tự động hóa mới",
@@ -883,7 +883,7 @@
     "transport": {
       "auto": "Tự động"
     },
-    "hostGroups": {
+    "fleets": {
       "heading": "Nhóm máy chủ",
       "emptyTitle": "Chưa có nhóm máy chủ nào",
       "emptyBody": "Nhóm máy chủ là tập hợp có tên của các kết nối hiện có được dùng làm mục tiêu đội cho chạy hàng loạt và tự động hóa.",
@@ -934,7 +934,7 @@
       "codeQueued": "đang xếp hàng",
       "savedReport": "Báo cáo tổng hợp đã lưu vào lịch sử chạy · nguồn thủ công · {{ok}}/{{total}} thành công",
       "launchTitle": "Lần chạy hàng loạt mới",
-      "hostGroupLabel": "Nhóm máy chủ",
+      "fleetLabel": "Nhóm máy chủ",
       "scriptLabel": "Tập lệnh",
       "scriptPlaceholder": "sudo apt-get update && sudo apt-get upgrade -y",
       "noGroups": "Tạo nhóm máy chủ trước để chạy hàng loạt.",

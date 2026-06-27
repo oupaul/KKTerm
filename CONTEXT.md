@@ -122,15 +122,15 @@ The live runtime that executes an armed **Automation** (or an ad-hoc live monito
 _Avoid_: monitor profile, durable watcher (the Automation is the durable part)
 
 **IT Ops Module**:
-A built-in Activity Rail Module for fleet operations: **Host Groups**, **Batch Runs**, and **Automations**. Lives with Dashboard and Install Helper above Settings. Not a Connection, Session, or Dashboard widget. See `docs/ITOPS.md` and `docs/ADR/0011-it-ops-module.md`.
+A built-in Activity Rail Module for fleet operations: **Fleets**, **Batch Runs**, and **Automations**. Lives with Dashboard and Install Helper above Settings. Not a Connection, Session, or Dashboard widget. See `docs/ITOPS.md` and `docs/ADR/0011-it-ops-module.md`.
 _Avoid_: operations center, fleet manager, orchestrator
 
-**Host Group**:
-A durable, named selection of existing Connections (plus an optional dynamic filter by type/folder) used as the fleet target for Batch Runs and Automation `runBatch` actions. Stored in `itops_host_groups`; it references Connection ids and owns no Session and no secret. It is not a Connection type.
-_Avoid_: inventory, host list, connection group (as a Connection type)
+**Fleet**:
+A durable, named selection of existing Connections (plus an optional dynamic filter by type/folder) used as the target for Batch Runs and Automation `runBatch` actions. Stored in `itops_fleets`; it references Connection ids and owns no Session and no secret. It is not a Connection type. The Fleet topology layer (virtual-datacenter racks) is planned in `docs/FLEET.md`.
+_Avoid_: host group, inventory, host list, connection group (as a Connection type)
 
 **Batch Run**:
-One execution of a Batch Task (a one-shot script or an interactive, expect-style playbook) across a resolved Host Group, fanned out with bounded concurrency over a per-host transport (SSH, WinRM, or PsExec). Live per-host progress streams to the run grid as it happens; on completion a consolidated report — including each host's captured output — is written to `itops_run_history`, where it can be reopened as a read-only Run Report. The run is live runtime, not a durable definition.
+One execution of a Batch Task (a one-shot script or an interactive, expect-style playbook) across a resolved Fleet, fanned out with bounded concurrency over a per-host transport (SSH, WinRM, or PsExec). Live per-host progress streams to the run grid as it happens; on completion a consolidated report — including each host's captured output — is written to `itops_run_history`, where it can be reopened as a read-only Run Report. The run is live runtime, not a durable definition.
 _Avoid_: broadcast, job, deployment
 
 **Playbook**:

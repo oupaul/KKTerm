@@ -1,4 +1,4 @@
-// IT Ops durable types (docs/ITOPS.md). Phase 1 covers Host Groups, Phase 2 the
+// IT Ops durable types (docs/ITOPS.md). Phase 1 covers Fleets, Phase 2 the
 // Batch Run report shapes, and Phase 3 the durable Automation.
 
 use serde::{Deserialize, Serialize};
@@ -63,7 +63,10 @@ pub enum AutomationAction {
         body: Option<String>,
     },
     RunBatch {
-        host_group_id: String,
+        // `hostGroupId` alias keeps Automation actions persisted before the
+        // Fleet rename (docs/FLEET.md Phase A) deserializable from actions_json.
+        #[serde(alias = "hostGroupId")]
+        fleet_id: String,
         task: BatchTask,
     },
 }
@@ -72,7 +75,7 @@ fn default_webhook_method() -> String {
     "POST".to_string()
 }
 
-/// How a Batch Run reaches one host. Stored per Host Group as the default;
+/// How a Batch Run reaches one host. Stored per Fleet as the default;
 /// `Auto` means "derive from the Connection at run time" (resolved in Phase 2+).
 #[derive(Clone, Copy, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -105,12 +108,12 @@ impl Transport {
     }
 }
 
-/// Optional dynamic membership filter resolved at run time: a Host Group picks up
+/// Optional dynamic membership filter resolved at run time: a Fleet picks up
 /// later-added Connections that match these criteria. An empty filter is treated
 /// as "no filter" and stored as NULL.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-pub struct HostGroupFilter {
+pub struct FleetFilter {
     /// Connection `connection_type` values to include (e.g. `["ssh"]`).
     #[serde(default)]
     pub types: Vec<String>,
@@ -119,7 +122,7 @@ pub struct HostGroupFilter {
     pub folder_id: Option<String>,
 }
 
-impl HostGroupFilter {
+impl FleetFilter {
     pub fn is_empty(&self) -> bool {
         self.types.is_empty() && self.folder_id.is_none()
     }
@@ -129,17 +132,17 @@ impl HostGroupFilter {
 /// References Connection ids; owns no Session and no secret.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct HostGroup {
+pub struct Fleet {
     pub id: String,
     pub name: String,
     pub sort_order: i64,
     pub member_ids: Vec<String>,
     #[serde(default)]
-    pub filter: Option<HostGroupFilter>,
+    pub filter: Option<FleetFilter>,
     pub transport: Transport,
 }
 
-/// One concrete fleet target produced by resolving a Host Group at run time.
+/// One concrete fleet target produced by resolving a Fleet at run time.
 /// Lightweight and secret-free — the seam the Phase 2 Batch Run executor builds
 /// on. Passwords/keys are never carried here; they stay in the keychain.
 #[derive(Clone, Debug, Serialize, PartialEq, Eq)]
@@ -303,7 +306,7 @@ pub struct RunReport {
 pub struct RunHistoryEntry {
     pub id: String,
     pub source: String,
-    pub host_group_id: Option<String>,
+    pub fleet_id: Option<String>,
     pub task_summary: String,
     pub started_at: String,
     pub finished_at: Option<String>,
@@ -327,7 +330,7 @@ pub struct RunEventHost {
 pub enum RunEvent {
     Started {
         run_id: String,
-        host_group_id: Option<String>,
+        fleet_id: Option<String>,
         task_summary: String,
         hosts: Vec<RunEventHost>,
     },
