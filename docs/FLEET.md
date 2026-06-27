@@ -373,11 +373,14 @@ Each phase is one reviewable PR and leaves the app shippable.
   event (nothing emits or listens for it yet — wire it in Phase C with the store
   listener), and selective export/import inclusion (Fleets themselves are not in
   the ADR-0010 export shape yet; add racks when Fleets are added).
-- **Phase C — Rack View (read + place).** _Read-only slice landed:_
-  `RackElevation.tsx` (U-keyed CSS-grid front elevation), the Members/Racks
-  toggle in the Fleet detail, Region→Area sectioning, and the `racksByFleet`
-  store loader. _Still to come in C:_ add-rack/add-item dialogs, drag-place with
-  overlap gating, ghost-item handling, and the `itops-changed` reload listener.
+- **Phase C — Rack View (read + place).** _Landed:_ `RackElevation.tsx`
+  (U-keyed CSS-grid front elevation), the Members/Racks toggle, Region→Area
+  sectioning, the `racksByFleet` store loader + mutations, and the
+  **dialogs-first editor** — add/edit/delete racks (`RackDialog`) and
+  place/edit/move/remove devices (`RackItemDialog`): click an empty U to add,
+  click an item to edit, with backend overlap/fit validation surfaced as a
+  Status Bar error. _Still to come in C:_ drag-to-place/resize (layered on the
+  dialog baseline), ghost-item handling, and the `itops-changed` reload listener.
 - **Phase D — Click-to-connect + scoped Batch Runs.** Wire item click to
   `openConnection`; add rack/area/region-scoped "Run task" via
   `resolve_fleet_scoped` + `itops_start_batch_run` scope.

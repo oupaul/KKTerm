@@ -2045,9 +2045,16 @@
 }
 .itops-page .rk-head {
   display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin-bottom: 9px;
+}
+.itops-page .rk-head-txt {
+  display: flex;
   flex-direction: column;
   gap: 1px;
-  margin-bottom: 9px;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 .itops-page .rk-name {
   font-size: 13px;
@@ -2134,4 +2141,34 @@
   color: var(--text-3);
   font-weight: 460;
   justify-content: center;
+}
+
+/* ── Rack View editing affordances (docs/FLEET.md Phase C, dialogs-first) ──── */
+.itops-page .it-icon-btn.sm {
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  box-shadow: none;
+}
+.itops-page .it-btn.sm {
+  height: 28px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+.itops-page .rk-slot-btn {
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.1s, border-color 0.1s;
+}
+.itops-page .rk-slot-btn:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.itops-page .rk-item-btn {
+  cursor: pointer;
+  text-align: left;
+  transition: filter 0.1s;
+}
+.itops-page .rk-item-btn:hover {
+  filter: brightness(1.06);
 }

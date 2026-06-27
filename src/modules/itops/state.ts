@@ -14,6 +14,7 @@ import type {
   FleetFilter,
   ItopsTransport,
   Rack,
+  RackItemKind,
   ResolvedHost,
   RunEvent,
   RunHistoryEntry,
@@ -25,6 +26,29 @@ export interface FleetInput {
   memberIds: string[];
   filter: FleetFilter | null;
   transport: ItopsTransport;
+}
+
+export interface RackInput {
+  name: string;
+  region: string;
+  area: string;
+  heightU: number;
+}
+
+export interface PlaceItemInput {
+  rackId: string;
+  connectionId: string | null;
+  kind: RackItemKind;
+  label: string;
+  startU: number;
+  heightU: number;
+}
+
+export interface UpdateItemInput {
+  id: string;
+  kind: RackItemKind;
+  connectionId: string | null;
+  label: string;
 }
 
 export type LiveRunHostStatus = "pending" | "running" | "ok" | "failed";
@@ -162,6 +186,16 @@ interface ItOpsState {
   /** Racks per Fleet id, hydrated with their items. Loaded on demand. */
   racksByFleet: Record<string, Rack[]>;
   loadRacks: (fleetId: string) => Promise<void>;
+  createRack: (fleetId: string, input: RackInput) => Promise<void>;
+  updateRack: (fleetId: string, id: string, input: RackInput) => Promise<void>;
+  deleteRack: (fleetId: string, id: string) => Promise<void>;
+  placeRackItem: (fleetId: string, input: PlaceItemInput) => Promise<void>;
+  updateRackItem: (fleetId: string, input: UpdateItemInput) => Promise<void>;
+  moveRackItem: (
+    fleetId: string,
+    input: { id: string; rackId: string; startU: number; heightU: number },
+  ) => Promise<void>;
+  removeRackItem: (fleetId: string, id: string) => Promise<void>;
 
   // ── Batch Runs (Phase 2) ──
   activeRun: LiveRun | null;
@@ -270,6 +304,41 @@ export const useItOpsStore = create<ItOpsState>((set, get) => ({
     }
     const racks = await invokeCommand("itops_list_racks", { fleetId });
     set({ racksByFleet: { ...get().racksByFleet, [fleetId]: racks } });
+  },
+
+  async createRack(fleetId, input) {
+    await invokeCommand("itops_create_rack", { fleetId, ...input });
+    await get().loadRacks(fleetId);
+  },
+
+  async updateRack(fleetId, id, input) {
+    await invokeCommand("itops_update_rack", { id, ...input });
+    await get().loadRacks(fleetId);
+  },
+
+  async deleteRack(fleetId, id) {
+    await invokeCommand("itops_delete_rack", { id });
+    await get().loadRacks(fleetId);
+  },
+
+  async placeRackItem(fleetId, input) {
+    await invokeCommand("itops_place_rack_item", input);
+    await get().loadRacks(fleetId);
+  },
+
+  async updateRackItem(fleetId, input) {
+    await invokeCommand("itops_update_rack_item", input);
+    await get().loadRacks(fleetId);
+  },
+
+  async moveRackItem(fleetId, input) {
+    await invokeCommand("itops_move_rack_item", input);
+    await get().loadRacks(fleetId);
+  },
+
+  async removeRackItem(fleetId, id) {
+    await invokeCommand("itops_remove_rack_item", { id });
+    await get().loadRacks(fleetId);
   },
 
   // ── Batch Runs ──

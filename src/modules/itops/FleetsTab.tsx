@@ -12,7 +12,10 @@ import { ItIcon, IT_ACCENTS, type ItIconName } from "./icons";
 import { TransportChip } from "./TransportChip";
 import { FleetDialog } from "./FleetDialog";
 import { RackElevation } from "./RackElevation";
+import { RackDialog } from "./RackDialog";
+import { RackItemDialog } from "./RackItemDialog";
 import { useItOpsStore } from "./state";
+import type { Rack, RackItem } from "../../types";
 
 type FleetView = "members" | "racks";
 
@@ -80,6 +83,14 @@ export function FleetsTab() {
   const [members, setMembers] = useState<ResolvedHost[]>([]);
   const [dialog, setDialog] = useState<{ group: Fleet | null } | null>(null);
   const [pendingDelete, setPendingDelete] = useState<Fleet | null>(null);
+  const [rackDialog, setRackDialog] = useState<{ rack: Rack | null } | null>(null);
+  const [itemDialog, setItemDialog] = useState<{
+    rack: Rack;
+    item: RackItem | null;
+    startU?: number;
+  } | null>(null);
+  const [pendingRackDelete, setPendingRackDelete] = useState<Rack | null>(null);
+  const deleteRack = useItOpsStore((state) => state.deleteRack);
 
   const activeGroup = useMemo(
     () => fleets.find((group) => group.id === activeId) ?? fleets[0] ?? null,
@@ -148,6 +159,18 @@ export function FleetsTab() {
         filter: group.filter ?? null,
         transport: changes.transport ?? group.transport,
       });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      showStatusBarNotice(t("itops.errorNotice", { message }), { tone: "error" });
+    }
+  }
+
+  async function confirmRackDelete() {
+    if (!pendingRackDelete || !activeGroup) return;
+    const rack = pendingRackDelete;
+    setPendingRackDelete(null);
+    try {
+      await deleteRack(activeGroup.id, rack.id);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       showStatusBarNotice(t("itops.errorNotice", { message }), { tone: "error" });
@@ -409,6 +432,17 @@ export function FleetsTab() {
               <div className="it-section-label">
                 <span>{t("itops.racks.heading")}</span>
                 <span className="ct">{t("itops.racks.rackCount", { count: racks.length })}</span>
+                <span style={{ flex: "1 1 auto" }} />
+                <button
+                  type="button"
+                  className="it-btn sm"
+                  onClick={() => setRackDialog({ rack: null })}
+                >
+                  <span className="it-btn-ic">
+                    <ItIcon name="plus" size={13} />
+                  </span>
+                  {t("itops.racks.newTitle")}
+                </button>
               </div>
               {racks.length === 0 ? (
                 <div className="card">
@@ -424,7 +458,14 @@ export function FleetsTab() {
                           {area.area ? <div className="rk-area-h">{area.area}</div> : null}
                           <div className="rk-row">
                             {area.racks.map((rack) => (
-                              <RackElevation key={rack.id} rack={rack} />
+                              <RackElevation
+                                key={rack.id}
+                                rack={rack}
+                                onSlotClick={(startU) => setItemDialog({ rack, item: null, startU })}
+                                onItemClick={(item) => setItemDialog({ rack, item })}
+                                onEditRack={(target) => setRackDialog({ rack: target })}
+                                onDeleteRack={(target) => setPendingRackDelete(target)}
+                              />
                             ))}
                           </div>
                         </div>
@@ -454,6 +495,34 @@ export function FleetsTab() {
           confirmIcon="trash"
           onConfirm={() => void confirmDelete()}
           onCancel={() => setPendingDelete(null)}
+        />
+      ) : null}
+      {rackDialog && activeGroup ? (
+        <RackDialog
+          fleetId={activeGroup.id}
+          rack={rackDialog.rack}
+          onClose={() => setRackDialog(null)}
+        />
+      ) : null}
+      {itemDialog && activeGroup ? (
+        <RackItemDialog
+          fleetId={activeGroup.id}
+          rack={itemDialog.rack}
+          item={itemDialog.item}
+          defaultStartU={itemDialog.startU}
+          members={members}
+          onClose={() => setItemDialog(null)}
+        />
+      ) : null}
+      {pendingRackDelete ? (
+        <ConfirmSheet
+          tone="danger"
+          title={t("itops.racks.deleteTitle")}
+          message={t("itops.racks.deleteBody", { name: pendingRackDelete.name })}
+          confirmLabel={t("itops.actions.delete")}
+          confirmIcon="trash"
+          onConfirm={() => void confirmRackDelete()}
+          onCancel={() => setPendingRackDelete(null)}
         />
       ) : null}
     </div>
