@@ -374,12 +374,16 @@ pub fn repo_overview(request: RepoRequest) -> Result<GitOverview, String> {
 fn detect_default_branch(repo: &str, local: &[GitBranch]) -> Option<String> {
     if let Ok(out) = run_git(
         Some(repo),
-        &["symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD"],
+        &[
+            "symbolic-ref",
+            "--quiet",
+            "--short",
+            "refs/remotes/origin/HEAD",
+        ],
     ) {
         if out.code == 0 {
             let full = String::from_utf8_lossy(&out.stdout).trim().to_string();
-            // `origin/main` -> `main`
-            let short = full.rsplit('/').next().unwrap_or(&full).to_string();
+            let short = remote_head_short_branch(&full, "origin");
             if local.iter().any(|b| b.name == short) {
                 return Some(short);
             }
@@ -391,6 +395,13 @@ fn detect_default_branch(repo: &str, local: &[GitBranch]) -> Option<String> {
         }
     }
     None
+}
+
+/// `origin/main` -> `main`; preserve nested branch names such as
+/// `origin/release/main` -> `release/main`.
+fn remote_head_short_branch(full: &str, remote: &str) -> String {
+    let prefix = format!("{remote}/");
+    full.strip_prefix(&prefix).unwrap_or(full).to_string()
 }
 
 /// Reorder `branches` so the default branch is first, preserving the relative
@@ -566,10 +577,15 @@ fn parse_worktree_porcelain(stdout: &str, current_root: &str) -> Vec<GitWorktree
 }
 
 /// Normalize a path for equality comparison: unify separators and drop a single
-/// trailing slash. Case is preserved (git paths are already canonical).
+/// trailing slash. Windows paths compare case-insensitively.
 fn normalize_path(path: &str) -> String {
     let unified = path.replace('\\', "/");
-    unified.trim_end_matches('/').to_string()
+    let trimmed = unified.trim_end_matches('/');
+    if cfg!(windows) {
+        trimmed.to_ascii_lowercase()
+    } else {
+        trimmed.to_string()
+    }
 }
 
 // ── Changed files for a commit ──────────────────────────────────────────────
@@ -1390,6 +1406,14 @@ mod tests {
         assert!(worktrees[0].is_current);
     }
 
+    #[cfg(windows)]
+    #[test]
+    fn worktree_current_match_is_case_insensitive_on_windows() {
+        let stdout = "worktree C:/Repo/Main\nHEAD aaaa\nbranch refs/heads/main\n";
+        let worktrees = parse_worktree_porcelain(stdout, "c:\\repo\\main");
+        assert!(worktrees[0].is_current);
+    }
+
     #[test]
     fn default_branch_sorts_to_top() {
         let mk = |name: &str| GitBranch {
@@ -1412,6 +1436,15 @@ mod tests {
         assert_eq!(branches2[0].name, "feature");
         sort_branches_default_first(&mut branches2, None);
         assert_eq!(branches2[0].name, "feature");
+    }
+
+    #[test]
+    fn origin_default_branch_preserves_nested_branch_name() {
+        assert_eq!(
+            remote_head_short_branch("origin/release/main", "origin"),
+            "release/main"
+        );
+        assert_eq!(remote_head_short_branch("origin/main", "origin"), "main");
     }
 
     #[test]
