@@ -2790,6 +2790,14 @@
     "nextDifference": "Next difference",
     "diffOriginal": "Original",
     "diffModified": "Modified",
+    "diffDisplayMode": "Display mode",
+    "diffMode": {
+      "all": "All",
+      "diff": "Differences",
+      "same": "Same"
+    },
+    "diffNavigationMap": "Difference map",
+    "jumpToDifference": "Jump to difference {{number}}",
     "staged": "已暫存",
     "changes": "變更",
     "stageAll": "全部暫存",

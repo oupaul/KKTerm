@@ -2790,6 +2790,14 @@
     "nextDifference": "Next difference",
     "diffOriginal": "Original",
     "diffModified": "Modified",
+    "diffDisplayMode": "Display mode",
+    "diffMode": {
+      "all": "All",
+      "diff": "Differences",
+      "same": "Same"
+    },
+    "diffNavigationMap": "Difference map",
+    "jumpToDifference": "Jump to difference {{number}}",
     "staged": "Preparado",
     "changes": "Cambios",
     "stageAll": "Preparar todo",

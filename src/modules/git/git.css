@@ -295,15 +295,18 @@
   border-left: 1px solid var(--git-hairline); background: var(--git-bg);
   display: flex; flex-direction: column; overflow: hidden;
 }
-.git-detail-head { padding: 16px 18px 14px; border-bottom: 1px solid var(--git-hairline); flex: 0 0 auto; }
-.git-detail-head .msg { font-size: 15px; font-weight: 650; line-height: 1.34; letter-spacing: -0.01em; }
-.git-detail-head .body-msg { margin-top: 7px; font-size: 12.5px; color: var(--git-text-2); line-height: 1.5; white-space: pre-wrap; }
-.git-detail-meta { display: flex; align-items: center; gap: 10px; margin-top: 13px; }
+.git-detail-head {
+  padding: 16px 18px 14px; border-bottom: 1px solid var(--git-hairline);
+  flex: 0 0 auto; display: flex; flex-direction: column; max-height: 40%; min-height: 0;
+}
+.git-detail-head .msg { flex: 0 0 auto; font-size: 15px; font-weight: 650; line-height: 1.34; letter-spacing: -0.01em; }
+.git-detail-head .body-msg { flex: 1 1 auto; min-height: 0; overflow-y: auto; margin-top: 7px; font-size: 12.5px; color: var(--git-text-2); line-height: 1.5; white-space: pre-wrap; }
+.git-detail-meta { flex: 0 0 auto; display: flex; align-items: center; gap: 10px; margin-top: 13px; }
 .git-detail-meta .who { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
 .git-detail-meta .who .n { font-size: 12.5px; font-weight: 600; }
 .git-detail-meta .who .e { font-size: 11.5px; color: var(--git-text-3); }
 .git-detail-meta .when { margin-left: auto; text-align: right; font-size: 11.5px; color: var(--git-text-3); }
-.git-sha-row { display: flex; align-items: center; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.git-sha-row { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
 .git-sha-chip {
   display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 6px 0 9px;
   border-radius: 6px; background: var(--git-muted); box-shadow: inset 0 0 0 0.5px var(--git-border);
@@ -373,6 +376,27 @@
 
 /* ── advanced side-by-side diff ─────────────────────────────────────────── */
 .git-adv-backdrop {
+  --git-bg: var(--surface);
+  --git-chrome: var(--surface-muted);
+  --git-chrome-2: var(--app-bg);
+  --git-muted: var(--surface-muted);
+  --git-text: var(--text);
+  --git-text-2: var(--text-muted);
+  --git-text-3: var(--text-faint);
+  --git-hairline: var(--hairline);
+  --git-border: var(--border);
+  --git-accent: var(--accent);
+  --git-green: var(--green);
+  --git-amber: var(--amber);
+  --git-red: var(--red);
+  --git-add-text: color-mix(in srgb, var(--green) 70%, var(--text));
+  --git-del-text: color-mix(in srgb, var(--red) 72%, var(--text));
+  --git-diff-add: color-mix(in srgb, var(--green) 12%, var(--surface));
+  --git-diff-add-gutter: color-mix(in srgb, var(--green) 26%, var(--surface));
+  --git-diff-del: color-mix(in srgb, var(--red) 11%, var(--surface));
+  --git-diff-del-gutter: color-mix(in srgb, var(--red) 24%, var(--surface));
+  --git-mono: ui-monospace, "SF Mono", "JetBrains Mono", "Menlo", "Consolas", monospace;
+
   position: fixed;
   inset: 0;
   z-index: 70;
@@ -478,6 +502,9 @@
   font-size: 12px;
   line-height: 1.55;
 }
+.git-adv-content {
+  min-width: max-content;
+}
 .git-adv-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -537,6 +564,87 @@
 }
 .git-adv-cell.search-hit .txt {
   background: color-mix(in srgb, var(--git-amber) 26%, transparent);
+}
+.git-adv-mode {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 28px;
+  padding: 2px;
+  border-radius: 8px;
+  background: var(--git-muted);
+  box-shadow: inset 0 0 0 0.5px var(--git-border);
+}
+.git-adv-mode button {
+  height: 24px;
+  padding: 0 11px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--git-text-2);
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.git-adv-mode button:hover { color: var(--git-text); }
+.git-adv-mode button.active {
+  background: var(--git-bg);
+  color: var(--git-text);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+}
+.git-adv-main {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+}
+.git-adv-map {
+  position: relative;
+  flex: 0 0 auto;
+  width: 18px;
+  border-right: 1px solid var(--git-hairline);
+  background: var(--git-chrome-2);
+  overflow: hidden;
+  touch-action: none;
+}
+.git-adv-map.scrollable { cursor: pointer; }
+.git-adv-map.scrollable:active { cursor: grabbing; }
+.git-adv-map-window {
+  position: absolute;
+  left: 0;
+  right: 0;
+  min-height: 8px;
+  background: color-mix(in srgb, var(--git-accent) 16%, transparent);
+  border-top: 1px solid color-mix(in srgb, var(--git-accent) 45%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--git-accent) 45%, transparent);
+  pointer-events: none;
+}
+.git-adv-map-marker {
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  height: 3px;
+  margin-top: -1.5px;
+  padding: 0;
+  border: 0;
+  border-radius: 1px;
+  cursor: pointer;
+}
+.git-adv-map-marker:hover {
+  height: 5px;
+  margin-top: -2.5px;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--git-text) 40%, transparent);
+}
+.git-adv-map-marker.add { background: var(--git-green); }
+.git-adv-map-marker.del { background: var(--git-red); }
+.git-adv-map-marker.mod { background: var(--git-amber); }
+.git-browser[data-git-theme="dark"] ~ .git-adv-backdrop {
+  --git-add-text: color-mix(in srgb, var(--green) 78%, #ffffff);
+  --git-del-text: color-mix(in srgb, var(--red) 80%, #ffffff);
+  --git-diff-add: color-mix(in srgb, var(--green) 18%, var(--surface));
+  --git-diff-add-gutter: color-mix(in srgb, var(--green) 34%, var(--surface));
+  --git-diff-del: color-mix(in srgb, var(--red) 18%, var(--surface));
+  --git-diff-del-gutter: color-mix(in srgb, var(--red) 36%, var(--surface));
 }
 
 /* ── working tree pane ──────────────────────────────────────────────────── */
