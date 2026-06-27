@@ -132,13 +132,16 @@ CREATE TABLE IF NOT EXISTS itops_fleet_rack_items (
     rack_id       TEXT NOT NULL REFERENCES itops_fleet_racks(id) ON DELETE CASCADE,
     -- Soft ref to connections.id; NULL for passive items.
     connection_id TEXT,
-    -- 'connection' | 'switch' | 'pdu' | 'patchPanel' | 'blank' | 'label' | 'server'
+    -- 'connection' | 'switch' | 'pdu' | 'patchPanel' | 'blank' | 'label' |
+    -- 'server' | 'storage' | 'router' | 'firewall' | 'ups' | 'kvm' |
+    -- 'equipment' | 'general' — each kind paints its own animated faceplate.
     kind          TEXT NOT NULL,
     -- Display label (passive items, or an override for a connection item).
     label         TEXT NOT NULL DEFAULT '',
     start_u       INTEGER NOT NULL,        -- bottom-most U occupied (1-based)
     height_u      INTEGER NOT NULL DEFAULT 1,
-    -- Presentation only: accent color, icon name, notes. No secrets.
+    -- Presentation only: accent color, icon, notes, plus faceplate fields
+    -- (status, ports, disks, battery, load). No secrets, no live state.
     metadata_json TEXT NOT NULL DEFAULT '{}',
     created_at    TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at    TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -185,6 +188,7 @@ pub struct Rack {
 #[serde(rename_all = "camelCase")]
 pub enum RackItemKind {
     Connection, Switch, Pdu, PatchPanel, Blank, Label, Server,
+    Storage, Router, Firewall, Ups, Kvm, Equipment, General,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -198,7 +202,7 @@ pub struct RackItem {
     pub start_u: u32,
     pub height_u: u32,
     #[serde(default)]
-    pub metadata: RackItemMetadata,   // accent, icon, notes
+    pub metadata: RackItemMetadata,   // accent, icon, notes, status, ports, disks, battery, load
 }
 ```
 

@@ -956,6 +956,24 @@
       "itemHeightLabel": "Height (U)",
       "itemHeightDecrease": "Shorter device",
       "itemHeightIncrease": "Taller device",
+      "statusLabel": "ステータス",
+      "status": {
+        "online": "オンライン",
+        "warning": "警告",
+        "offline": "オフライン"
+      },
+      "portsLabel": "ポート",
+      "portsDecrease": "ポートを減らす",
+      "portsIncrease": "ポートを増やす",
+      "disksLabel": "ドライブベイ",
+      "disksDecrease": "ドライブベイを減らす",
+      "disksIncrease": "ドライブベイを増やす",
+      "batteryLabel": "バッテリー (%)",
+      "batteryDecrease": "バッテリー残量を下げる",
+      "batteryIncrease": "バッテリー残量を上げる",
+      "loadLabel": "負荷 (%)",
+      "loadDecrease": "負荷を下げる",
+      "loadIncrease": "負荷を上げる",
       "kind": {
         "connection": "Host",
         "switch": "Switch",
@@ -963,7 +981,14 @@
         "patchPanel": "Patch panel",
         "blank": "Blank",
         "label": "Label",
-        "server": "Server"
+        "server": "Server",
+        "storage": "ディスクアレイ",
+        "router": "ルーター",
+        "firewall": "ファイアウォール",
+        "ups": "UPS",
+        "kvm": "KVMスイッチ",
+        "equipment": "機器",
+        "general": "一般"
       }
     },
     "batchRuns": {

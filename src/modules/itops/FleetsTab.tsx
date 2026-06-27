@@ -161,6 +161,17 @@ export function FleetsTab() {
     return item.kind === "connection" && !!item.connectionId && !memberIds.has(item.connectionId);
   }
 
+  // Resolve a placed Connection's host so its faceplate can show the address
+  // like the design comp's IP line. Built from the already-resolved members.
+  const hostById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const member of members) map.set(member.connectionId, member.host);
+    return map;
+  }, [members]);
+  function hostForItem(item: RackItem): string | null {
+    return item.connectionId ? (hostById.get(item.connectionId) ?? null) : null;
+  }
+
   // Drag-drop move/restack: drop a device onto a U slot (possibly in another
   // rack). Keeps its height; the backend re-validates overlap/fit.
   async function moveItem(itemId: string, targetRackId: string, startU: number) {
@@ -538,6 +549,7 @@ export function FleetsTab() {
                               <RackElevation
                                 key={rack.id}
                                 rack={rack}
+                                hostFor={hostForItem}
                                 onSlotClick={(startU) => setItemDialog({ rack, item: null, startU })}
                                 onOpenItem={(item) => void openRackItem(item)}
                                 onEditItem={(item) => setItemDialog({ rack, item })}

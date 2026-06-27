@@ -173,12 +173,29 @@ export type RackItemKind =
   | "patchPanel"
   | "blank"
   | "label"
-  | "server";
+  | "server"
+  | "storage"
+  | "router"
+  | "firewall"
+  | "ups"
+  | "kvm"
+  | "equipment"
+  | "general";
+
+export type RackItemStatus = "online" | "warning" | "offline";
 
 export interface RackItemMetadata {
   accent?: string | null;
   icon?: string | null;
   notes?: string | null;
+  // Presentation status driving the faceplate LEDs/dimming; stored, not live.
+  status?: RackItemStatus | null;
+  // Faceplate spec counts: ports (switch/router/patch panel), drive bays
+  // (server/storage); battery and load are 0–100 percentages.
+  ports?: number | null;
+  disks?: number | null;
+  battery?: number | null;
+  load?: number | null;
 }
 
 export interface RackItem {

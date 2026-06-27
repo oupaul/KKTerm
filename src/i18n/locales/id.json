@@ -956,6 +956,24 @@
       "itemHeightLabel": "Height (U)",
       "itemHeightDecrease": "Shorter device",
       "itemHeightIncrease": "Taller device",
+      "statusLabel": "Status",
+      "status": {
+        "online": "Daring",
+        "warning": "Peringatan",
+        "offline": "Luring"
+      },
+      "portsLabel": "Port",
+      "portsDecrease": "Lebih sedikit port",
+      "portsIncrease": "Lebih banyak port",
+      "disksLabel": "Bay drive",
+      "disksDecrease": "Lebih sedikit bay drive",
+      "disksIncrease": "Lebih banyak bay drive",
+      "batteryLabel": "Baterai (%)",
+      "batteryDecrease": "Turunkan level baterai",
+      "batteryIncrease": "Naikkan level baterai",
+      "loadLabel": "Beban (%)",
+      "loadDecrease": "Beban lebih rendah",
+      "loadIncrease": "Beban lebih tinggi",
       "kind": {
         "connection": "Host",
         "switch": "Switch",
@@ -963,7 +981,14 @@
         "patchPanel": "Patch panel",
         "blank": "Blank",
         "label": "Label",
-        "server": "Server"
+        "server": "Server",
+        "storage": "Array disk",
+        "router": "Router",
+        "firewall": "Firewall",
+        "ups": "UPS",
+        "kvm": "Sakelar KVM",
+        "equipment": "Peralatan",
+        "general": "Umum"
       }
     },
     "batchRuns": {

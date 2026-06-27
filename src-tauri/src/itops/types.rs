@@ -173,6 +173,13 @@ pub enum RackItemKind {
     Blank,
     Label,
     Server,
+    Storage,
+    Router,
+    Firewall,
+    Ups,
+    Kvm,
+    Equipment,
+    General,
 }
 
 impl RackItemKind {
@@ -185,6 +192,13 @@ impl RackItemKind {
             RackItemKind::Blank => "blank",
             RackItemKind::Label => "label",
             RackItemKind::Server => "server",
+            RackItemKind::Storage => "storage",
+            RackItemKind::Router => "router",
+            RackItemKind::Firewall => "firewall",
+            RackItemKind::Ups => "ups",
+            RackItemKind::Kvm => "kvm",
+            RackItemKind::Equipment => "equipment",
+            RackItemKind::General => "general",
         }
     }
 
@@ -197,6 +211,13 @@ impl RackItemKind {
             "blank" => Some(RackItemKind::Blank),
             "label" => Some(RackItemKind::Label),
             "server" => Some(RackItemKind::Server),
+            "storage" => Some(RackItemKind::Storage),
+            "router" => Some(RackItemKind::Router),
+            "firewall" => Some(RackItemKind::Firewall),
+            "ups" => Some(RackItemKind::Ups),
+            "kvm" => Some(RackItemKind::Kvm),
+            "equipment" => Some(RackItemKind::Equipment),
+            "general" => Some(RackItemKind::General),
             _ => None,
         }
     }
@@ -212,6 +233,20 @@ pub struct RackItemMetadata {
     pub icon: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub notes: Option<String>,
+    /// Presentation status driving the device faceplate LEDs and dimming
+    /// ("online" | "warning" | "offline"). Stored, not live-polled.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub status: Option<String>,
+    /// Faceplate spec counts: visible ports (switch/router/patch panel) and
+    /// drive bays (server/storage); battery and load are 0–100 percentages.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ports: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub disks: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub battery: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub load: Option<u32>,
 }
 
 /// One device occupying a contiguous `start_u..start_u + height_u` span in a

@@ -2049,20 +2049,35 @@
   gap: 16px;
   align-items: flex-start;
 }
+/* ──────────────────────────────────────────────────────────────────────────
+   Rack elevation — skeuomorphic frame + animated device faceplates, ported
+   from the "IT Ops Racks" design comp. Hardware greys are a fixed physical
+   palette (`--rkd-*`, like the scheme-independent terminal surfaces); all
+   status/accent colour reads the shared theme tokens.
+   ────────────────────────────────────────────────────────────────────────── */
 .itops-page .rk {
-  --rk-u: 22px;
-  width: 210px;
-  border: 1px solid var(--border);
-  border-radius: var(--r-card);
-  background: var(--surface);
-  padding: 10px;
-  box-shadow: var(--card-shadow);
+  --rk-u: 26px;
+  /* Fixed hardware palette — physical equipment greys, not theme tokens. */
+  --rkd-face-top: #313134;
+  --rkd-face-mid: #28282b;
+  --rkd-face-bot: #222225;
+  --rkd-ear-a: #1c1c1e;
+  --rkd-ear-b: #2a2a2d;
+  --rkd-line: #3a3a3d;
+  --rkd-well: #161618;
+  --rkd-slot: #141416;
+  --rkd-hi: #48484c;
+  --rkd-dim: #2c2c30;
+  --rkd-cell-off: #1a1a1c;
+  flex: 0 0 auto;
+  width: 300px;
 }
 .itops-page .rk-head {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 6px;
-  margin-bottom: 9px;
+  margin-bottom: 10px;
+  padding: 0 2px;
 }
 .itops-page .rk-head-txt {
   display: flex;
@@ -2073,89 +2088,116 @@
 }
 .itops-page .rk-name {
   font-size: 13px;
-  font-weight: 640;
+  font-weight: 660;
+  letter-spacing: -0.01em;
   color: var(--text);
 }
 .itops-page .rk-meta {
   font-size: 10.5px;
-  color: var(--text-3);
+  color: var(--text-3, var(--text-faint));
+  font-variant-numeric: tabular-nums;
+}
+/* Status tally pills. */
+.itops-page .rk-pills {
+  display: flex;
+  gap: 5px;
+  flex: 0 0 auto;
+}
+.itops-page .rk-pill {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 9.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  border-radius: 5px;
+  padding: 2px 6px;
+}
+.itops-page .rk-pill .dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+}
+.itops-page .rk-pill.on {
+  color: var(--green);
+  background: color-mix(in srgb, var(--green) 14%, transparent);
+}
+.itops-page .rk-pill.on .dot {
+  background: var(--green);
+  box-shadow: 0 0 5px var(--green);
+}
+.itops-page .rk-pill.warn {
+  color: var(--amber);
+  background: color-mix(in srgb, var(--amber) 16%, transparent);
+}
+.itops-page .rk-pill.warn .dot {
+  background: var(--amber);
+}
+.itops-page .rk-pill.off {
+  color: var(--red);
+  background: color-mix(in srgb, var(--red) 16%, transparent);
+}
+.itops-page .rk-pill.off .dot {
+  background: var(--red);
+}
+
+/* Metal rack frame: rail caps top & bottom, dark bay between. */
+.itops-page .rk-frame {
+  position: relative;
+  border-radius: 14px;
+  padding: 12px;
+  background: linear-gradient(180deg, #1e1e21, #161618);
+  border: 0.5px solid #38383a;
+  box-shadow:
+    0 22px 50px -24px rgba(0, 0, 0, 0.8),
+    inset 0 0.5px 0 rgba(255, 255, 255, 0.05);
+}
+.itops-page .rk-rail {
+  height: 7px;
+  border-radius: 5px;
+  background: repeating-linear-gradient(90deg, #2a2a2d 0 7px, #202022 7px 11px);
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.5);
+}
+.itops-page .rk-bay {
+  display: flex;
+  gap: 6px;
+  margin: 9px 0;
 }
 .itops-page .rk-grid {
   display: grid;
-  grid-template-columns: 24px 1fr;
+  grid-template-columns: 22px 1fr;
   column-gap: 6px;
-  padding: 6px;
-  border-radius: var(--r-row);
-  background: var(--bg-2);
-  border: 1px solid var(--hairline);
+  flex: 1 1 auto;
 }
 .itops-page .rk-u {
   grid-column: 1;
   align-self: center;
   text-align: right;
-  font-size: 9px;
+  padding-right: 4px;
+  font-size: 8px;
+  font-family: var(--app-mono-font-family, monospace);
   font-variant-numeric: tabular-nums;
-  color: var(--text-faint);
+  color: var(--rkd-hi);
   user-select: none;
 }
+/* Empty U slot — recessed vented blanking area. */
 .itops-page .rk-slot {
   grid-column: 2;
-  margin: 1px 0;
-  border-radius: 3px;
+  margin: 1.5px 0;
+  border-radius: 4px;
   background: repeating-linear-gradient(
     45deg,
-    transparent,
-    transparent 4px,
-    var(--hover) 4px,
-    var(--hover) 5px
+    transparent 0 5px,
+    rgba(255, 255, 255, 0.03) 5px 6px
   );
-  border: 1px solid var(--hairline);
+  border: 0.5px dashed rgba(255, 255, 255, 0.07);
 }
+/* Device wrapper — positioned over the slot grid; the faceplate paints itself. */
 .itops-page .rk-item {
   grid-column: 2;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin: 1px 0;
-  padding: 0 8px;
-  border-radius: 4px;
-  background: var(--accent-soft);
-  border: 1px solid var(--accent);
-  color: var(--text);
-  font-size: 11px;
-  font-weight: 520;
-  overflow: hidden;
+  position: relative;
+  margin: 1.5px 0;
   z-index: 1;
-}
-.itops-page .rk-item-ic {
-  display: inline-flex;
-  flex: 0 0 auto;
-  color: var(--accent);
-}
-.itops-page .rk-item-label {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-/* Passive / non-openable items read quieter than placed Connections. */
-.itops-page .rk-item.kind-switch,
-.itops-page .rk-item.kind-pdu,
-.itops-page .rk-item.kind-patchPanel {
-  background: var(--surface-muted);
-  border-color: var(--border);
-}
-.itops-page .rk-item.kind-switch .rk-item-ic,
-.itops-page .rk-item.kind-pdu .rk-item-ic,
-.itops-page .rk-item.kind-patchPanel .rk-item-ic {
-  color: var(--text-2);
-}
-.itops-page .rk-item.kind-blank,
-.itops-page .rk-item.kind-label {
-  background: transparent;
-  border: 1px dashed var(--border);
-  color: var(--text-3);
-  font-weight: 460;
-  justify-content: center;
 }
 
 /* ── Rack View editing affordances (docs/FLEET.md Phase C, dialogs-first) ──── */
@@ -2173,82 +2215,67 @@
 .itops-page .rk-slot-btn {
   cursor: pointer;
   padding: 0;
-  transition: background 0.1s, border-color 0.1s;
+  transition: background 0.12s, border-color 0.12s;
 }
 .itops-page .rk-slot-btn:hover {
-  border-color: var(--accent);
-  background: var(--accent-soft);
-}
-.itops-page .rk-item-btn {
-  cursor: pointer;
-  text-align: left;
-  transition: filter 0.1s;
-}
-.itops-page .rk-item-btn:hover {
-  filter: brightness(1.06);
+  border-color: color-mix(in srgb, var(--accent) 70%, transparent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
 }
 
-/* ── Rack item open/edit affordances + ghost (docs/FLEET.md Phase D) ───────── */
-.itops-page .rk-item.rk-item-row {
-  padding: 0;
-  gap: 0;
-  transition: filter 0.1s;
-}
-.itops-page .rk-item-row:hover {
-  filter: brightness(1.05);
-}
+/* ── Rack item open/edit affordances + ghost ─────────────────────────────── */
 .itops-page .rk-item-main {
-  flex: 1 1 auto;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
+  display: block;
+  width: 100%;
   height: 100%;
-  padding: 0 8px;
+  padding: 0;
   background: transparent;
   border: 0;
-  color: inherit;
-  font: inherit;
-  font-weight: inherit;
-  text-align: left;
   cursor: pointer;
+  font: inherit;
+  color: inherit;
 }
+/* Floating pencil revealed on hover over the device. */
 .itops-page .rk-item-edit {
-  flex: 0 0 auto;
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  transform: translateY(-50%);
   display: none;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 100%;
-  background: transparent;
-  border: 0;
-  border-left: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
-  color: var(--accent);
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--rkd-face-mid) 88%, transparent);
+  border: 0.5px solid var(--rkd-line);
+  color: var(--text);
   cursor: pointer;
+  z-index: 7;
 }
 .itops-page .rk-item-row:hover .rk-item-edit {
   display: inline-flex;
 }
 .itops-page .rk-item.ghost {
-  opacity: 0.55;
-  background: var(--surface-muted);
-  border-color: var(--border);
-  border-style: dashed;
+  opacity: 0.5;
 }
-.itops-page .rk-item.ghost .rk-item-ic {
-  color: var(--text-3);
+.itops-page .rk-item.ghost .rkd {
+  filter: grayscale(0.7);
 }
 .itops-page .rk-ghost-badge {
-  flex: 0 0 auto;
-  margin-left: auto;
-  font-size: 8.5px;
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
+  font-size: 8px;
   font-weight: 700;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--red);
+  background: color-mix(in srgb, var(--red) 18%, transparent);
+  border-radius: 4px;
+  padding: 1px 5px;
+  z-index: 6;
 }
-
-/* ── Drag-to-place (docs/FLEET.md Phase D) ────────────────────────────────── */
 .itops-page .rk-item-row.draggable {
   cursor: grab;
 }
@@ -2256,6 +2283,623 @@
   cursor: grabbing;
 }
 .itops-page .rk-slot-btn:where(:hover) {
-  outline: 1px dashed var(--accent);
+  outline: 1px dashed color-mix(in srgb, var(--accent) 70%, transparent);
   outline-offset: -1px;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Device faceplate (RackDevice) + keyframes.
+   ────────────────────────────────────────────────────────────────────────── */
+@keyframes rkInsertIn {
+  from {
+    opacity: 0;
+    transform: translateX(-18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes rkLedBreathe {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.42;
+  }
+}
+@keyframes rkLedBlink {
+  0%,
+  46% {
+    opacity: 1;
+  }
+  50%,
+  96% {
+    opacity: 0.16;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+@keyframes rkPortBlink {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.12;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+@keyframes rkFanSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes rkShimmer {
+  0% {
+    transform: translateX(-130%);
+  }
+  100% {
+    transform: translateX(130%);
+  }
+}
+@keyframes rkFwBar {
+  0%,
+  100% {
+    transform: scaleY(0.28);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+@keyframes rkChargePulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.itops-page .rk-item.dev-in {
+  animation: rkInsertIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* Faceplate shell. */
+.itops-page .rkd {
+  position: relative;
+  height: 100%;
+  width: 100%;
+  min-height: 22px;
+  box-sizing: border-box;
+  border-radius: 6px;
+  border: 0.5px solid var(--rkd-line);
+  overflow: hidden;
+  display: flex;
+  align-items: stretch;
+  background: linear-gradient(
+    180deg,
+    var(--rkd-face-top) 0%,
+    var(--rkd-face-mid) 48%,
+    var(--rkd-face-bot) 100%
+  );
+  box-shadow:
+    inset 0 0.5px 0 rgba(255, 255, 255, 0.06),
+    inset 0 0 0 0.5px rgba(0, 0, 0, 0.4),
+    0 1px 2px rgba(0, 0, 0, 0.45);
+  color: var(--text);
+  transition: transform 0.16s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.16s;
+}
+.itops-page .rk-item-row:hover .rkd {
+  transform: translateY(-1px);
+  box-shadow:
+    0 8px 20px -6px rgba(0, 0, 0, 0.7),
+    0 0 0 1px color-mix(in srgb, var(--rkd-accent, var(--accent)) 70%, transparent),
+    0 0 26px -8px var(--rkd-accent, var(--accent));
+}
+.itops-page .rkd-ear {
+  flex: 0 0 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  padding: 3px 0;
+  background: linear-gradient(90deg, var(--rkd-ear-a), var(--rkd-ear-b));
+  border-right: 0.5px solid #151517;
+}
+.itops-page .rkd-ear-bolt {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #5a5a5e, #1a1a1c);
+  box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.6);
+}
+.itops-page .rkd-body {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 10px;
+  min-width: 0;
+  position: relative;
+}
+.itops-page .rkd-leds {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.itops-page .rkd-leds > span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+.itops-page .rkd-id {
+  flex: 0 1 138px;
+  min-width: 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  line-height: 1.1;
+}
+.itops-page .rkd-name {
+  font-size: 11.5px;
+  font-weight: 640;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.itops-page .rkd-sub {
+  font-family: var(--app-mono-font-family, monospace);
+  font-size: 9px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.itops-page .rkd-visual {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  height: 100%;
+  min-width: 0;
+  overflow: hidden;
+  position: relative;
+}
+.itops-page .rkd-meta {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+}
+.itops-page .rkd-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+/* LED + activity animation classes (scoped to the faceplate). */
+.itops-page .rkd .led-ok {
+  animation: rkLedBreathe 2.6s ease-in-out infinite;
+}
+.itops-page .rkd .led-warn {
+  animation: rkLedBlink 1s steps(1, end) infinite;
+}
+.itops-page .rkd .blk-1 {
+  animation: rkPortBlink 1.15s linear infinite;
+}
+.itops-page .rkd .blk-2 {
+  animation: rkPortBlink 1.75s linear infinite 0.25s;
+}
+.itops-page .rkd .blk-3 {
+  animation: rkPortBlink 0.85s linear infinite 0.4s;
+}
+.itops-page .rkd .blk-4 {
+  animation: rkPortBlink 1.45s linear infinite 0.55s;
+}
+.itops-page .rkd .blk-5 {
+  animation: rkPortBlink 2.1s linear infinite 0.15s;
+}
+.itops-page .rkd .fan {
+  animation: rkFanSpin 2.6s linear infinite;
+}
+.itops-page .rkd .shimmer {
+  animation: rkShimmer 2.6s ease-in-out infinite;
+}
+.itops-page .rkd .charge {
+  animation: rkChargePulse 1.8s ease-in-out infinite;
+}
+.itops-page .rkd .fwb-1 {
+  animation: rkFwBar 1.2s ease-in-out infinite;
+}
+.itops-page .rkd .fwb-2 {
+  animation: rkFwBar 0.9s ease-in-out infinite 0.2s;
+}
+.itops-page .rkd .fwb-3 {
+  animation: rkFwBar 1.5s ease-in-out infinite 0.4s;
+}
+
+/* Shared port / disk wells. */
+.itops-page .rkd-ports {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: center;
+  gap: 3px;
+  max-height: 100%;
+  padding: 2px 0;
+}
+.itops-page .rkd-port {
+  position: relative;
+  width: 13px;
+  height: 11px;
+  border-radius: 2px;
+  background: var(--rkd-slot);
+  border: 0.5px solid var(--rkd-line);
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 1.5px;
+}
+.itops-page .rkd-port.wan {
+  width: 15px;
+  height: 12px;
+  border-color: var(--rkd-accent);
+}
+.itops-page .rkd-port-led {
+  width: 5px;
+  height: 2px;
+  border-radius: 1px;
+}
+.itops-page .rkd-shimmer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 40%;
+  height: 100%;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--rkd-accent) 22%, transparent),
+    transparent
+  );
+}
+.itops-page .rkd-switch,
+.itops-page .rkd-router,
+.itops-page .rkd-firewall,
+.itops-page .rkd-server,
+.itops-page .rkd-storage,
+.itops-page .rkd-pdu,
+.itops-page .rkd-ups,
+.itops-page .rkd-kvm,
+.itops-page .rkd-panel,
+.itops-page .rkd-equip,
+.itops-page .rkd-blank {
+  position: relative;
+  flex: 1 1 auto;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+.itops-page .rkd-router {
+  gap: 8px;
+}
+.itops-page .rkd-wan-label,
+.itops-page .rkd-fw-label {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--rkd-accent);
+  text-transform: uppercase;
+}
+.itops-page .rkd-divider {
+  width: 0;
+  height: 60%;
+  border-left: 0.5px solid var(--rkd-line);
+}
+
+/* Firewall. */
+.itops-page .rkd-firewall {
+  gap: 10px;
+}
+.itops-page .rkd-fwbars {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 18px;
+}
+.itops-page .rkd-fwbar {
+  width: 3px;
+  height: 100%;
+  border-radius: 1px;
+  transform-origin: bottom;
+  background: linear-gradient(
+    180deg,
+    var(--rkd-accent),
+    color-mix(in srgb, var(--rkd-accent) 30%, transparent)
+  );
+}
+
+/* Server. */
+.itops-page .rkd-server {
+  gap: 9px;
+}
+.itops-page .rkd-disks-row {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 2px;
+}
+.itops-page .rkd-disk-bay {
+  position: relative;
+  width: 6px;
+  height: 20px;
+  border-radius: 1.5px;
+  background: var(--rkd-well);
+  border: 0.5px solid var(--rkd-line);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 2px;
+}
+.itops-page .rkd-disk-led {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+}
+.itops-page .rkd-vent {
+  flex: 1 1 auto;
+  height: 14px;
+  border-radius: 2px;
+  min-width: 16px;
+  background: repeating-linear-gradient(90deg, #202023 0 2px, var(--rkd-well) 2px 4px);
+  opacity: 0.8;
+}
+.itops-page .rkd-vent.flex {
+  height: 13px;
+}
+.itops-page .rkd-fans {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 5px;
+}
+.itops-page .rkd-fan {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    var(--rkd-line),
+    var(--rkd-hi) 25%,
+    #2a2a2c 26%,
+    var(--rkd-line) 50%,
+    var(--rkd-hi) 75%,
+    #2a2a2c 76%,
+    var(--rkd-line)
+  );
+  box-shadow: inset 0 0 0 0.5px #151517, 0 0 8px -3px var(--rkd-accent);
+}
+.itops-page .rkd-fan.alt {
+  background: conic-gradient(
+    from 90deg,
+    var(--rkd-line),
+    var(--rkd-hi) 25%,
+    #2a2a2c 26%,
+    var(--rkd-line) 50%,
+    var(--rkd-hi) 75%,
+    #2a2a2c 76%,
+    var(--rkd-line)
+  );
+}
+
+/* Storage disk grid. */
+.itops-page .rkd-storage {
+  flex-wrap: wrap;
+  align-content: center;
+  gap: 3px;
+  padding: 2px 0;
+}
+.itops-page .rkd-storage-bay {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  width: 34px;
+  height: 9px;
+  border-radius: 2px;
+  background: var(--rkd-well);
+  border: 0.5px solid var(--rkd-line);
+  padding: 0 3px;
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.4);
+}
+.itops-page .rkd-storage-bar {
+  flex: 1 1 auto;
+  height: 2px;
+  border-radius: 1px;
+  background: repeating-linear-gradient(90deg, #2a2a2d 0 2px, var(--rkd-well) 2px 3px);
+}
+
+/* PDU. */
+.itops-page .rkd-pdu {
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+}
+.itops-page .rkd-outlets {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+.itops-page .rkd-outlet {
+  position: relative;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 45%, #202023, #101012);
+  border: 0.5px solid var(--rkd-line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+.itops-page .rkd-outlet-pin {
+  width: 1.5px;
+  height: 4px;
+  border-radius: 1px;
+  background: var(--rkd-hi);
+}
+.itops-page .rkd-load {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+.itops-page .rkd-load-track {
+  flex: 1 1 auto;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--rkd-well);
+  overflow: hidden;
+  border: 0.5px solid var(--rkd-line);
+}
+.itops-page .rkd-load-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--green), var(--amber));
+}
+.itops-page .rkd-load-pct {
+  font-family: var(--app-mono-font-family, monospace);
+  font-size: 8.5px;
+  color: var(--amber);
+  font-weight: 600;
+}
+
+/* UPS. */
+.itops-page .rkd-ups {
+  gap: 9px;
+}
+.itops-page .rkd-bolt {
+  flex: 0 0 auto;
+  color: var(--rkd-accent);
+  font-size: 15px;
+  line-height: 1;
+}
+.itops-page .rkd-cells {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.itops-page .rkd-cell {
+  width: 9px;
+  height: 16px;
+  border-radius: 2px;
+  border: 0.5px solid var(--rkd-line);
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.4);
+}
+.itops-page .rkd-cell-cap {
+  width: 2px;
+  height: 8px;
+  border-radius: 0 1px 1px 0;
+  background: var(--rkd-line);
+  margin-left: 1px;
+}
+.itops-page .rkd-ups-pct {
+  font-family: var(--app-mono-font-family, monospace);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text);
+}
+.itops-page .rkd-ups-mode {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* KVM. */
+.itops-page .rkd-kvm {
+  gap: 8px;
+}
+.itops-page .rkd-kvm-screens {
+  display: flex;
+  gap: 4px;
+}
+.itops-page .rkd-kvm-screen {
+  width: 16px;
+  height: 13px;
+  border-radius: 2px;
+  background: var(--rkd-slot);
+  border: 0.5px solid var(--rkd-line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.itops-page .rkd-kvm-screen-in {
+  width: 8px;
+  height: 5px;
+  border-radius: 1px;
+  background: var(--rkd-dim);
+}
+.itops-page .rkd-kvm-channels {
+  display: flex;
+  gap: 4px;
+}
+.itops-page .rkd-kvm-ch {
+  width: 13px;
+  height: 13px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 7.5px;
+  font-weight: 700;
+  font-family: var(--app-mono-font-family, monospace);
+  border: 0.5px solid var(--rkd-line);
+}
+
+/* Patch panel. */
+.itops-page .rkd-panel {
+  flex-wrap: wrap;
+  align-content: center;
+  gap: 2px;
+  padding: 2px 0;
+}
+.itops-page .rkd-panel-port {
+  width: 11px;
+  height: 9px;
+  border-radius: 1.5px;
+  background: #1a1a1c;
+  border: 0.5px solid var(--rkd-line);
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.5);
+}
+
+/* Equipment / general. */
+.itops-page .rkd-equip {
+  gap: 8px;
+}
+.itops-page .rkd-equip-label {
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* Blank / label filler. */
+.itops-page .rkd-blank {
+  justify-content: center;
+}
+.itops-page .rkd-blank-plate {
+  width: 100%;
+  max-width: 200px;
+  height: 9px;
+  border-radius: 2px;
+  background: repeating-linear-gradient(90deg, #26262a 0 6px, #1c1c1e 6px 12px);
+  opacity: 0.55;
 }

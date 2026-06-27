@@ -1,26 +1,23 @@
-// Rack front elevation (docs/FLEET.md Phase C/D). Renders one Rack as a fixed-
-// height column of U slots with its items at their U positions. With callbacks
+// Rack front elevation (docs/FLEET.md Rack View). Renders one Rack as a
+// skeuomorphic metal frame — rail caps, a U-number gutter, and a slatted device
+// column — with each Rack Item drawn as an animated <RackDevice> faceplate at
+// its U position (ported from the "IT Ops Racks" design comp). With callbacks
 // wired it is the editor: click an empty U to add a device; a placed host opens
-// its Session on click (Phase D) with a pencil to edit; passive items open the
-// edit dialog. A Connection-backed item whose Connection is gone renders as a
-// dimmed "ghost". Drag-to-place lands in a later slice.
+// its Session on click with a pencil to edit; passive items open the edit
+// dialog. A Connection-backed item whose Connection is gone renders as a dimmed
+// "ghost". Items are drag-to-restacked onto any U slot (possibly across racks).
 
 import { useTranslation } from "react-i18next";
-import type { Rack, RackItem, RackItemKind } from "../../types";
-import { ItIcon, type ItIconName } from "./icons";
+import type { Rack, RackItem, RackItemStatus } from "../../types";
+import { ItIcon } from "./icons";
+import { RackDevice } from "./RackDevice";
 
 // Pixel height of one rack unit (U) row. Kept in sync with `--rk-u` in CSS.
-const U_PX = 22;
+const U_PX = 26;
 
-const KIND_ICON: Record<RackItemKind, ItIconName | null> = {
-  connection: "server",
-  server: "server",
-  switch: "link",
-  pdu: "power",
-  patchPanel: "link",
-  blank: null,
-  label: null,
-};
+function itemStatus(item: RackItem): RackItemStatus {
+  return item.metadata?.status ?? "online";
+}
 
 // Grid row for the top edge of an item: rows run top-down (row 1 = highest U),
 // so an item's top U maps to `heightU - topU + 1`.
@@ -31,6 +28,7 @@ function itemRowStart(rackHeightU: number, item: RackItem): number {
 
 export function RackElevation({
   rack,
+  hostFor,
   onSlotClick,
   onOpenItem,
   onEditItem,
@@ -41,6 +39,8 @@ export function RackElevation({
   isGhost,
 }: {
   rack: Rack;
+  /** Resolve a placed Connection's host/ip for the faceplate sub-line. */
+  hostFor?: (item: RackItem) => string | null;
   onSlotClick?: (startU: number) => void;
   onOpenItem?: (item: RackItem) => void;
   onEditItem?: (item: RackItem) => void;
@@ -56,6 +56,24 @@ export function RackElevation({
   // Top-to-bottom U numbers: heightU … 1.
   const unitNumbers = Array.from({ length: rack.heightU }, (_, i) => rack.heightU - i);
 
+  // Status tallies for the header pills (passive items default to online).
+  let online = 0;
+  let warning = 0;
+  let offline = 0;
+  for (const item of rack.items) {
+    const s = itemStatus(item);
+    if (s === "warning") warning += 1;
+    else if (s === "offline") offline += 1;
+    else online += 1;
+  }
+
+  // Stagger the slide-in by visual order (top of rack first).
+  const order = new Map(
+    [...rack.items]
+      .sort((a, b) => b.startU + b.heightU - (a.startU + a.heightU))
+      .map((item, index) => [item.id, index] as const),
+  );
+
   return (
     <div className="rk">
       <div className="rk-head">
@@ -68,6 +86,26 @@ export function RackElevation({
               : ""}
           </span>
         </div>
+        {rack.items.length > 0 ? (
+          <div className="rk-pills">
+            <span className="rk-pill on" title={t("itops.racks.status.online")}>
+              <span className="dot" />
+              {online}
+            </span>
+            {warning > 0 ? (
+              <span className="rk-pill warn" title={t("itops.racks.status.warning")}>
+                <span className="dot" />
+                {warning}
+              </span>
+            ) : null}
+            {offline > 0 ? (
+              <span className="rk-pill off" title={t("itops.racks.status.offline")}>
+                <span className="dot" />
+                {offline}
+              </span>
+            ) : null}
+          </div>
+        ) : null}
         {onRunRack ? (
           <button
             type="button"
@@ -99,121 +137,137 @@ export function RackElevation({
           </button>
         ) : null}
       </div>
-      <div
-        className="rk-grid"
-        style={{ gridTemplateRows: `repeat(${rack.heightU}, var(--rk-u, ${U_PX}px))` }}
-      >
-        {/* U-number gutter. */}
-        {unitNumbers.map((u) => (
-          <div className="rk-u" key={`u-${u}`} style={{ gridRow: rack.heightU - u + 1 }}>
-            {u}
-          </div>
-        ))}
-        {/* Empty slots — clickable to add a device when editing. */}
-        {unitNumbers.map((u) =>
-          onSlotClick ? (
-            <button
-              type="button"
-              className="rk-slot rk-slot-btn"
-              key={`s-${u}`}
-              style={{ gridColumn: 2, gridRow: rack.heightU - u + 1 }}
-              title={t("itops.racks.addAtUnit", { unit: u })}
-              onClick={() => onSlotClick(u)}
-              onDragOver={
-                onMoveItem
-                  ? (event) => {
-                      event.preventDefault();
-                      event.dataTransfer.dropEffect = "move";
-                    }
-                  : undefined
-              }
-              onDrop={
-                onMoveItem
-                  ? (event) => {
-                      event.preventDefault();
-                      const itemId = event.dataTransfer.getData("application/x-itops-rack-item");
-                      if (itemId) onMoveItem(itemId, rack.id, u);
-                    }
-                  : undefined
-              }
-            />
-          ) : (
-            <div
-              className="rk-slot"
-              key={`s-${u}`}
-              style={{ gridColumn: 2, gridRow: rack.heightU - u + 1 }}
-            />
-          ),
-        )}
-        {/* Items paint over the empty slots they occupy. */}
-        {rack.items.map((item) => {
-          const icon = KIND_ICON[item.kind];
-          const ghost = item.kind === "connection" && !!isGhost?.(item);
-          const text = item.label || t(`itops.racks.kind.${item.kind}`);
-          // A live host opens on click; everything else (passive, ghost) edits.
-          const opens = item.kind === "connection" && !ghost && !!onOpenItem;
-          const primary = opens ? () => onOpenItem!(item) : () => onEditItem?.(item);
-          const accent = item.metadata?.accent;
-          const style = {
-            gridColumn: 2,
-            gridRow: `${itemRowStart(rack.heightU, item)} / span ${item.heightU}`,
-            ...(accent ? { boxShadow: `inset 3px 0 0 0 ${accent}` } : {}),
-          } as const;
-          const inner = (
-            <>
-              {icon ? (
-                <span className="rk-item-ic">
-                  <ItIcon name={icon} size={13} sw={1.6} />
-                </span>
-              ) : null}
-              <span className="rk-item-label">{text}</span>
-              {ghost ? <span className="rk-ghost-badge">{t("itops.racks.ghostBadge")}</span> : null}
-            </>
-          );
-          const className = `rk-item kind-${item.kind}${ghost ? " ghost" : ""}`;
-          if (!editable) {
-            return (
-              <div key={item.id} className={className} style={style} title={text}>
-                {inner}
+
+      <div className="rk-frame">
+        <div className="rk-rail" />
+        <div className="rk-bay">
+          <div
+            className="rk-grid"
+            style={{ gridTemplateRows: `repeat(${rack.heightU}, var(--rk-u, ${U_PX}px))` }}
+          >
+            {/* U-number gutter. */}
+            {unitNumbers.map((u) => (
+              <div className="rk-u" key={`u-${u}`} style={{ gridRow: rack.heightU - u + 1 }}>
+                {u}
               </div>
-            );
-          }
-          return (
-            <div
-              key={item.id}
-              className={`${className} rk-item-row${onMoveItem ? " draggable" : ""}`}
-              style={style}
-              draggable={!!onMoveItem}
-              onDragStart={
-                onMoveItem
-                  ? (event) => {
-                      event.dataTransfer.setData("application/x-itops-rack-item", item.id);
-                      event.dataTransfer.effectAllowed = "move";
-                    }
-                  : undefined
-              }
-            >
-              <button
-                type="button"
-                className="rk-item-main"
-                title={opens ? t("itops.racks.openTitle", { name: text }) : text}
-                onClick={primary}
-              >
-                {inner}
-              </button>
-              {opens ? (
+            ))}
+            {/* Empty slots — clickable to add a device when editing; drop targets. */}
+            {unitNumbers.map((u) =>
+              onSlotClick ? (
                 <button
                   type="button"
-                  className="rk-item-edit"
-                  title={t("itops.racks.editItemTitle")}
-                  onClick={() => onEditItem?.(item)}
+                  className="rk-slot rk-slot-btn"
+                  key={`s-${u}`}
+                  style={{ gridColumn: 2, gridRow: rack.heightU - u + 1 }}
+                  title={t("itops.racks.addAtUnit", { unit: u })}
+                  onClick={() => onSlotClick(u)}
+                  onDragOver={
+                    onMoveItem
+                      ? (event) => {
+                          event.preventDefault();
+                          event.dataTransfer.dropEffect = "move";
+                        }
+                      : undefined
+                  }
+                  onDrop={
+                    onMoveItem
+                      ? (event) => {
+                          event.preventDefault();
+                          const itemId = event.dataTransfer.getData("application/x-itops-rack-item");
+                          if (itemId) onMoveItem(itemId, rack.id, u);
+                        }
+                      : undefined
+                  }
+                />
+              ) : (
+                <div
+                  className="rk-slot"
+                  key={`s-${u}`}
+                  style={{ gridColumn: 2, gridRow: rack.heightU - u + 1 }}
+                />
+              ),
+            )}
+            {/* Items paint over the empty slots they occupy. */}
+            {rack.items.map((item) => {
+              const ghost = item.kind === "connection" && !!isGhost?.(item);
+              const text = item.label || t(`itops.racks.kind.${item.kind}`);
+              // A live host opens on click; everything else (passive, ghost) edits.
+              const opens = item.kind === "connection" && !ghost && !!onOpenItem;
+              const primary = opens ? () => onOpenItem!(item) : () => onEditItem?.(item);
+              const delay = `${(order.get(item.id) ?? 0) * 0.045}s`;
+              const style = {
+                gridColumn: 2,
+                gridRow: `${itemRowStart(rack.heightU, item)} / span ${item.heightU}`,
+                animationDelay: delay,
+              } as const;
+              const face = (
+                <RackDevice
+                  kind={item.kind}
+                  label={text}
+                  subLabel={hostFor?.(item) ?? null}
+                  status={ghost ? "offline" : itemStatus(item)}
+                  ports={item.metadata?.ports ?? null}
+                  disks={item.metadata?.disks ?? null}
+                  battery={item.metadata?.battery ?? null}
+                  load={item.metadata?.load ?? null}
+                  heightU={item.heightU}
+                  accent={item.metadata?.accent ?? null}
+                  seed={item.id}
+                />
+              );
+              const className = `rk-item dev-in${ghost ? " ghost" : ""}`;
+              if (!editable) {
+                return (
+                  <div key={item.id} className={className} style={style} title={text}>
+                    {face}
+                    {ghost ? (
+                      <span className="rk-ghost-badge">{t("itops.racks.ghostBadge")}</span>
+                    ) : null}
+                  </div>
+                );
+              }
+              return (
+                <div
+                  key={item.id}
+                  className={`${className} rk-item-row${onMoveItem ? " draggable" : ""}`}
+                  style={style}
+                  draggable={!!onMoveItem}
+                  onDragStart={
+                    onMoveItem
+                      ? (event) => {
+                          event.dataTransfer.setData("application/x-itops-rack-item", item.id);
+                          event.dataTransfer.effectAllowed = "move";
+                        }
+                      : undefined
+                  }
                 >
-                  <ItIcon name="edit" size={11} />
-                </button>
-              ) : null}
-            </div>
-          );
-        })}
+                  <button
+                    type="button"
+                    className="rk-item-main"
+                    title={opens ? t("itops.racks.openTitle", { name: text }) : text}
+                    onClick={primary}
+                  >
+                    {face}
+                  </button>
+                  {ghost ? (
+                    <span className="rk-ghost-badge">{t("itops.racks.ghostBadge")}</span>
+                  ) : null}
+                  {opens ? (
+                    <button
+                      type="button"
+                      className="rk-item-edit"
+                      title={t("itops.racks.editItemTitle")}
+                      onClick={() => onEditItem?.(item)}
+                    >
+                      <ItIcon name="edit" size={11} />
+                    </button>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+        <div className="rk-rail" />
       </div>
     </div>
   );

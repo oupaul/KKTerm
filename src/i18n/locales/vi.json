@@ -956,6 +956,24 @@
       "itemHeightLabel": "Height (U)",
       "itemHeightDecrease": "Shorter device",
       "itemHeightIncrease": "Taller device",
+      "statusLabel": "Trạng thái",
+      "status": {
+        "online": "Trực tuyến",
+        "warning": "Cảnh báo",
+        "offline": "Ngoại tuyến"
+      },
+      "portsLabel": "Cổng",
+      "portsDecrease": "Ít cổng hơn",
+      "portsIncrease": "Nhiều cổng hơn",
+      "disksLabel": "Khay ổ đĩa",
+      "disksDecrease": "Ít khay ổ đĩa hơn",
+      "disksIncrease": "Nhiều khay ổ đĩa hơn",
+      "batteryLabel": "Pin (%)",
+      "batteryDecrease": "Giảm mức pin",
+      "batteryIncrease": "Tăng mức pin",
+      "loadLabel": "Tải (%)",
+      "loadDecrease": "Giảm tải",
+      "loadIncrease": "Tăng tải",
       "kind": {
         "connection": "Host",
         "switch": "Switch",
@@ -963,7 +981,14 @@
         "patchPanel": "Patch panel",
         "blank": "Blank",
         "label": "Label",
-        "server": "Server"
+        "server": "Server",
+        "storage": "Dãy đĩa",
+        "router": "Bộ định tuyến",
+        "firewall": "Tường lửa",
+        "ups": "UPS",
+        "kvm": "Bộ chuyển mạch KVM",
+        "equipment": "Thiết bị",
+        "general": "Chung"
       }
     },
     "batchRuns": {

@@ -17,11 +17,41 @@ import {
   TextInput,
 } from "../../app/ui/dialog";
 import { useWorkspaceStore } from "../../store";
-import type { Rack, RackItem, RackItemKind, ResolvedHost } from "../../types";
+import type {
+  Rack,
+  RackItem,
+  RackItemKind,
+  RackItemMetadata,
+  RackItemStatus,
+  ResolvedHost,
+} from "../../types";
 import { useItOpsStore } from "./state";
 
-const PASSIVE_KINDS: RackItemKind[] = ["server", "switch", "pdu", "patchPanel", "blank", "label"];
+const PASSIVE_KINDS: RackItemKind[] = [
+  "server",
+  "storage",
+  "switch",
+  "router",
+  "firewall",
+  "pdu",
+  "ups",
+  "kvm",
+  "patchPanel",
+  "equipment",
+  "general",
+  "blank",
+  "label",
+];
 const ALL_KINDS: RackItemKind[] = ["connection", ...PASSIVE_KINDS];
+const STATUS_OPTIONS: RackItemStatus[] = ["online", "warning", "offline"];
+
+// Which faceplate spec inputs a kind exposes.
+function showsPorts(kind: RackItemKind): boolean {
+  return kind === "switch" || kind === "router" || kind === "patchPanel";
+}
+function showsDisks(kind: RackItemKind): boolean {
+  return kind === "server" || kind === "storage" || kind === "connection";
+}
 
 export function RackItemDialog({
   fleetId,
@@ -54,9 +84,21 @@ export function RackItemDialog({
   const [startU, setStartU] = useState(item?.startU ?? defaultStartU ?? 1);
   const [heightU, setHeightU] = useState(item?.heightU ?? 1);
   const [accent, setAccent] = useState(item?.metadata?.accent ?? "none");
+  const [status, setStatus] = useState<RackItemStatus>(item?.metadata?.status ?? "online");
+  const [ports, setPorts] = useState(item?.metadata?.ports ?? 24);
+  const [disks, setDisks] = useState(item?.metadata?.disks ?? 4);
+  const [battery, setBattery] = useState(item?.metadata?.battery ?? 90);
+  const [load, setLoad] = useState(item?.metadata?.load ?? 60);
   const [busy, setBusy] = useState(false);
 
-  const metadata = { accent: accent === "none" ? null : accent };
+  const metadata: RackItemMetadata = {
+    accent: accent === "none" ? null : accent,
+    status,
+    ...(showsPorts(kind) ? { ports } : {}),
+    ...(showsDisks(kind) ? { disks } : {}),
+    ...(kind === "ups" ? { battery } : {}),
+    ...(kind === "pdu" ? { load } : {}),
+  };
 
   const needsConnection = kind === "connection";
   const hasConnection = !needsConnection || connectionId.length > 0;
@@ -166,6 +208,66 @@ export function RackItemDialog({
             onChange={(event) => setLabel(event.currentTarget.value)}
           />
         </Field>
+
+        <Field label={t("itops.racks.statusLabel")}>
+          <Select
+            value={status}
+            onChange={(event) => setStatus(event.currentTarget.value as RackItemStatus)}
+            options={STATUS_OPTIONS.map((value) => ({
+              value,
+              label: t(`itops.racks.status.${value}`),
+            }))}
+          />
+        </Field>
+
+        {showsPorts(kind) || showsDisks(kind) || kind === "ups" || kind === "pdu" ? (
+          <div style={{ display: "flex", gap: 12 }}>
+            {showsPorts(kind) ? (
+              <Field label={t("itops.racks.portsLabel")}>
+                <Stepper
+                  value={ports}
+                  min={0}
+                  onChange={(next) => setPorts(Math.max(0, Math.min(48, next)))}
+                  ariaDecrease={t("itops.racks.portsDecrease")}
+                  ariaIncrease={t("itops.racks.portsIncrease")}
+                />
+              </Field>
+            ) : null}
+            {showsDisks(kind) ? (
+              <Field label={t("itops.racks.disksLabel")}>
+                <Stepper
+                  value={disks}
+                  min={0}
+                  onChange={(next) => setDisks(Math.max(0, Math.min(14, next)))}
+                  ariaDecrease={t("itops.racks.disksDecrease")}
+                  ariaIncrease={t("itops.racks.disksIncrease")}
+                />
+              </Field>
+            ) : null}
+            {kind === "ups" ? (
+              <Field label={t("itops.racks.batteryLabel")}>
+                <Stepper
+                  value={battery}
+                  min={0}
+                  onChange={(next) => setBattery(Math.max(0, Math.min(100, next)))}
+                  ariaDecrease={t("itops.racks.batteryDecrease")}
+                  ariaIncrease={t("itops.racks.batteryIncrease")}
+                />
+              </Field>
+            ) : null}
+            {kind === "pdu" ? (
+              <Field label={t("itops.racks.loadLabel")}>
+                <Stepper
+                  value={load}
+                  min={0}
+                  onChange={(next) => setLoad(Math.max(0, Math.min(100, next)))}
+                  ariaDecrease={t("itops.racks.loadDecrease")}
+                  ariaIncrease={t("itops.racks.loadIncrease")}
+                />
+              </Field>
+            ) : null}
+          </div>
+        ) : null}
 
         <Field label={t("itops.racks.accentLabel")}>
           <Swatches

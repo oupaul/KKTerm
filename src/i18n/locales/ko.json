@@ -956,6 +956,24 @@
       "itemHeightLabel": "Height (U)",
       "itemHeightDecrease": "Shorter device",
       "itemHeightIncrease": "Taller device",
+      "statusLabel": "상태",
+      "status": {
+        "online": "온라인",
+        "warning": "경고",
+        "offline": "오프라인"
+      },
+      "portsLabel": "포트",
+      "portsDecrease": "포트 줄이기",
+      "portsIncrease": "포트 늘리기",
+      "disksLabel": "드라이브 베이",
+      "disksDecrease": "드라이브 베이 줄이기",
+      "disksIncrease": "드라이브 베이 늘리기",
+      "batteryLabel": "배터리 (%)",
+      "batteryDecrease": "배터리 잔량 낮추기",
+      "batteryIncrease": "배터리 잔량 높이기",
+      "loadLabel": "부하 (%)",
+      "loadDecrease": "부하 낮추기",
+      "loadIncrease": "부하 높이기",
       "kind": {
         "connection": "Host",
         "switch": "Switch",
@@ -963,7 +981,14 @@
         "patchPanel": "Patch panel",
         "blank": "Blank",
         "label": "Label",
-        "server": "Server"
+        "server": "Server",
+        "storage": "디스크 어레이",
+        "router": "라우터",
+        "firewall": "방화벽",
+        "ups": "UPS",
+        "kvm": "KVM 스위치",
+        "equipment": "장비",
+        "general": "일반"
       }
     },
     "batchRuns": {

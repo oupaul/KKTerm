@@ -956,6 +956,24 @@
       "itemHeightLabel": "Height (U)",
       "itemHeightDecrease": "Shorter device",
       "itemHeightIncrease": "Taller device",
+      "statusLabel": "สถานะ",
+      "status": {
+        "online": "ออนไลน์",
+        "warning": "คำเตือน",
+        "offline": "ออฟไลน์"
+      },
+      "portsLabel": "พอร์ต",
+      "portsDecrease": "ลดพอร์ต",
+      "portsIncrease": "เพิ่มพอร์ต",
+      "disksLabel": "ช่องใส่ไดรฟ์",
+      "disksDecrease": "ลดช่องใส่ไดรฟ์",
+      "disksIncrease": "เพิ่มช่องใส่ไดรฟ์",
+      "batteryLabel": "แบตเตอรี่ (%)",
+      "batteryDecrease": "ลดระดับแบตเตอรี่",
+      "batteryIncrease": "เพิ่มระดับแบตเตอรี่",
+      "loadLabel": "โหลด (%)",
+      "loadDecrease": "ลดโหลด",
+      "loadIncrease": "เพิ่มโหลด",
       "kind": {
         "connection": "Host",
         "switch": "Switch",
@@ -963,7 +981,14 @@
         "patchPanel": "Patch panel",
         "blank": "Blank",
         "label": "Label",
-        "server": "Server"
+        "server": "Server",
+        "storage": "ดิสก์อาเรย์",
+        "router": "เราเตอร์",
+        "firewall": "ไฟร์วอลล์",
+        "ups": "UPS",
+        "kvm": "สวิตช์ KVM",
+        "equipment": "อุปกรณ์",
+        "general": "ทั่วไป"
       }
     },
     "batchRuns": {

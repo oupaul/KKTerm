@@ -956,6 +956,24 @@
       "itemHeightLabel": "Height (U)",
       "itemHeightDecrease": "Shorter device",
       "itemHeightIncrease": "Taller device",
+      "statusLabel": "Status",
+      "status": {
+        "online": "Online",
+        "warning": "Aviso",
+        "offline": "Offline"
+      },
+      "portsLabel": "Portas",
+      "portsDecrease": "Menos portas",
+      "portsIncrease": "Mais portas",
+      "disksLabel": "Compartimentos de disco",
+      "disksDecrease": "Menos compartimentos de disco",
+      "disksIncrease": "Mais compartimentos de disco",
+      "batteryLabel": "Bateria (%)",
+      "batteryDecrease": "Diminuir nível da bateria",
+      "batteryIncrease": "Aumentar nível da bateria",
+      "loadLabel": "Carga (%)",
+      "loadDecrease": "Diminuir carga",
+      "loadIncrease": "Aumentar carga",
       "kind": {
         "connection": "Host",
         "switch": "Switch",
@@ -963,7 +981,14 @@
         "patchPanel": "Patch panel",
         "blank": "Blank",
         "label": "Label",
-        "server": "Server"
+        "server": "Server",
+        "storage": "Matriz de discos",
+        "router": "Roteador",
+        "firewall": "Firewall",
+        "ups": "Nobreak",
+        "kvm": "Comutador KVM",
+        "equipment": "Equipamento",
+        "general": "Geral"
       }
     },
     "batchRuns": {

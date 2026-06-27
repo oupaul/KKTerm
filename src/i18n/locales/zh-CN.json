@@ -956,6 +956,24 @@
       "itemHeightLabel": "Height (U)",
       "itemHeightDecrease": "Shorter device",
       "itemHeightIncrease": "Taller device",
+      "statusLabel": "状态",
+      "status": {
+        "online": "在线",
+        "warning": "警告",
+        "offline": "离线"
+      },
+      "portsLabel": "端口",
+      "portsDecrease": "减少端口",
+      "portsIncrease": "增加端口",
+      "disksLabel": "硬盘托架",
+      "disksDecrease": "减少硬盘托架",
+      "disksIncrease": "增加硬盘托架",
+      "batteryLabel": "电池 (%)",
+      "batteryDecrease": "降低电池电量",
+      "batteryIncrease": "提高电池电量",
+      "loadLabel": "负载 (%)",
+      "loadDecrease": "降低负载",
+      "loadIncrease": "提高负载",
       "kind": {
         "connection": "Host",
         "switch": "Switch",
@@ -963,7 +981,14 @@
         "patchPanel": "Patch panel",
         "blank": "Blank",
         "label": "Label",
-        "server": "Server"
+        "server": "Server",
+        "storage": "磁盘阵列",
+        "router": "路由器",
+        "firewall": "防火墙",
+        "ups": "UPS",
+        "kvm": "KVM 切换器",
+        "equipment": "设备",
+        "general": "通用"
       }
     },
     "batchRuns": {
