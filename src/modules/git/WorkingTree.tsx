@@ -1,6 +1,6 @@
 // Commit workflow: staged / changed file lists with stage toggles and a commit
 // box. Mirrors the mockup's working-tree pane, wired to live `git_status`.
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 import type { GitChangedFile } from "./gitTypes";
 import { splitPath } from "./gitPath";
@@ -23,8 +23,11 @@ export function WorkingTree({
   onUnstageFile,
   onStageAll,
   onUnstageAll,
+  onDiscardFile,
+  onDiscardAll,
   onCommit,
   committing,
+  style,
 }: {
   staged: GitChangedFile[];
   unstaged: GitChangedFile[];
@@ -34,8 +37,11 @@ export function WorkingTree({
   onUnstageFile: (file: GitChangedFile) => void;
   onStageAll: () => void;
   onUnstageAll: () => void;
+  onDiscardFile: (file: GitChangedFile) => void;
+  onDiscardAll: () => void;
   onCommit: (message: string, amend: boolean) => Promise<boolean>;
   committing: boolean;
+  style?: CSSProperties;
 }) {
   const { t } = useTranslation();
   const [message, setMessage] = useState("");
@@ -69,12 +75,26 @@ export function WorkingTree({
           <span className="a">+{Math.max(file.add, 0)}</span>
           <span className="d">−{Math.max(file.del, 0)}</span>
         </span>
+        {!isStaged ? (
+          <span className="git-wt-row-actions">
+            <button
+              type="button"
+              title={t("git.discard")}
+              onClick={(event) => {
+                event.stopPropagation();
+                onDiscardFile(file);
+              }}
+            >
+              <GitIcon name="trash" size={13} />
+            </button>
+          </span>
+        ) : null}
       </div>
     );
   };
 
   return (
-    <div className="git-wt-pane">
+    <div className="git-wt-pane" style={style}>
       <div className="git-wt-section-head">
         <span className="t">{t("git.staged")}</span>
         <span className="cnt">{staged.length}</span>
@@ -91,6 +111,9 @@ export function WorkingTree({
       <div className="git-wt-section-head">
         <span className="t">{t("git.changes")}</span>
         <span className="cnt">{unstaged.length}</span>
+        <button type="button" className="mini" onClick={onDiscardAll} disabled={unstaged.length === 0}>
+          {t("git.discardAll")}
+        </button>
         <button type="button" className="mini" onClick={onStageAll} disabled={unstaged.length === 0}>
           {t("git.stageAll")}
         </button>

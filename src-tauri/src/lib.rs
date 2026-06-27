@@ -2543,6 +2543,11 @@ async fn git_delete_branch(request: git::DeleteBranchRequest) -> Result<String, 
 }
 
 #[tauri::command]
+async fn git_rename_branch(request: git::RenameBranchRequest) -> Result<String, String> {
+    run_blocking_command("git rename branch", move || git::rename_branch(request)).await
+}
+
+#[tauri::command]
 async fn git_create_tag(request: git::CreateTagRequest) -> Result<String, String> {
     run_blocking_command("git create tag", move || git::create_tag(request)).await
 }
@@ -2595,6 +2600,31 @@ async fn git_pull(request: git::PullRequest) -> Result<String, String> {
 #[tauri::command]
 async fn git_push(request: git::PushRequest) -> Result<String, String> {
     run_blocking_command("git push", move || git::push(request)).await
+}
+
+#[tauri::command]
+async fn git_discard(request: git::DiscardRequest) -> Result<String, String> {
+    run_blocking_command("git discard", move || git::discard(request)).await
+}
+
+#[tauri::command]
+async fn git_reset(request: git::ResetRequest) -> Result<String, String> {
+    run_blocking_command("git reset", move || git::reset(request)).await
+}
+
+#[tauri::command]
+async fn git_worktree_list(request: git::RepoRequest) -> Result<Vec<git::GitWorktree>, String> {
+    run_blocking_command("git worktree list", move || git::worktree_list(request)).await
+}
+
+#[tauri::command]
+async fn git_worktree_add(request: git::WorktreeAddRequest) -> Result<String, String> {
+    run_blocking_command("git worktree add", move || git::worktree_add(request)).await
+}
+
+#[tauri::command]
+async fn git_worktree_remove(request: git::WorktreeRemoveRequest) -> Result<String, String> {
+    run_blocking_command("git worktree remove", move || git::worktree_remove(request)).await
 }
 
 #[tauri::command]
@@ -3762,6 +3792,7 @@ pub fn run() {
             git_checkout,
             git_create_branch,
             git_delete_branch,
+            git_rename_branch,
             git_create_tag,
             git_merge,
             git_cherry_pick,
@@ -3773,6 +3804,11 @@ pub fn run() {
             git_fetch,
             git_pull,
             git_push,
+            git_discard,
+            git_reset,
+            git_worktree_list,
+            git_worktree_add,
+            git_worktree_remove,
             open_filesystem_path,
             copy_local_path,
             move_local_path,

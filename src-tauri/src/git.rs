@@ -314,12 +314,31 @@ pub struct GitStash {
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct GitWorktree {
+    /// Absolute path to the worktree's working directory.
+    pub path: String,
+    /// Checked-out branch (short name), or `None` for a detached HEAD.
+    pub branch: Option<String>,
+    /// Commit the worktree's HEAD points at.
+    pub head: Option<String>,
+    /// True for the worktree that owns `repo_root` in this overview.
+    pub is_current: bool,
+    /// True when the worktree is locked (`git worktree lock`).
+    pub locked: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct GitOverview {
     pub current_branch: Option<String>,
+    /// Repository default branch (short name), e.g. `main`. Used to pin it to the
+    /// top of the sidebar branch list.
+    pub default_branch: Option<String>,
     pub local_branches: Vec<GitBranch>,
     pub remotes: Vec<GitRemote>,
     pub tags: Vec<String>,
     pub stashes: Vec<GitStash>,
+    pub worktrees: Vec<GitWorktree>,
 }
 
 pub fn repo_overview(request: RepoRequest) -> Result<GitOverview, String> {
@@ -330,18 +349,60 @@ pub fn repo_overview(request: RepoRequest) -> Result<GitOverview, String> {
         .map(|out| String::from_utf8_lossy(&out.stdout).trim().to_string())
         .filter(|branch| !branch.is_empty() && branch != "HEAD");
 
-    let local_branches = parse_local_branches(repo)?;
+    let mut local_branches = parse_local_branches(repo)?;
+    let default_branch = detect_default_branch(repo, &local_branches);
+    sort_branches_default_first(&mut local_branches, default_branch.as_deref());
     let remotes = parse_remotes(repo)?;
     let tags = parse_tags(repo)?;
     let stashes = parse_stashes(repo)?;
+    let worktrees = parse_worktrees(repo, repo);
 
     Ok(GitOverview {
         current_branch,
+        default_branch,
         local_branches,
         remotes,
         tags,
         stashes,
+        worktrees,
     })
+}
+
+/// Resolve the repository's default branch. Prefer the remote's symbolic HEAD
+/// (`origin/HEAD -> origin/<branch>`); fall back to a local `main` then `master`
+/// when there is no remote HEAD. Returns the short branch name.
+fn detect_default_branch(repo: &str, local: &[GitBranch]) -> Option<String> {
+    if let Ok(out) = run_git(
+        Some(repo),
+        &["symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD"],
+    ) {
+        if out.code == 0 {
+            let full = String::from_utf8_lossy(&out.stdout).trim().to_string();
+            // `origin/main` -> `main`
+            let short = full.rsplit('/').next().unwrap_or(&full).to_string();
+            if local.iter().any(|b| b.name == short) {
+                return Some(short);
+            }
+        }
+    }
+    for candidate in ["main", "master"] {
+        if local.iter().any(|b| b.name == candidate) {
+            return Some(candidate.to_string());
+        }
+    }
+    None
+}
+
+/// Reorder `branches` so the default branch is first, preserving the relative
+/// order of the rest. No-op when there is no default or it is already first.
+fn sort_branches_default_first(branches: &mut Vec<GitBranch>, default_branch: Option<&str>) {
+    let Some(default) = default_branch else {
+        return;
+    };
+    if let Some(index) = branches.iter().position(|b| b.name == default) {
+        let branch = branches.remove(index);
+        branches.insert(0, branch);
+    }
 }
 
 fn parse_local_branches(repo: &str) -> Result<Vec<GitBranch>, String> {
@@ -454,6 +515,61 @@ fn parse_stashes(repo: &str) -> Result<Vec<GitStash>, String> {
         });
     }
     Ok(stashes)
+}
+
+/// List linked worktrees via `git worktree list --porcelain`. Returns an empty
+/// list (not an error) when the command fails so a worktree probe never blocks
+/// the rest of the overview.
+fn parse_worktrees(repo: &str, current_root: &str) -> Vec<GitWorktree> {
+    let stdout = git_text(repo, &["worktree", "list", "--porcelain"]).unwrap_or_default();
+    parse_worktree_porcelain(&stdout, current_root)
+}
+
+/// Parse the blank-line-delimited `worktree list --porcelain` records.
+fn parse_worktree_porcelain(stdout: &str, current_root: &str) -> Vec<GitWorktree> {
+    let current = normalize_path(current_root);
+    let mut worktrees = Vec::new();
+    for record in stdout.split("\n\n") {
+        let mut path: Option<String> = None;
+        let mut head: Option<String> = None;
+        let mut branch: Option<String> = None;
+        let mut locked = false;
+        for line in record.lines().map(str::trim).filter(|l| !l.is_empty()) {
+            if let Some(rest) = line.strip_prefix("worktree ") {
+                path = Some(rest.trim().to_string());
+            } else if let Some(rest) = line.strip_prefix("HEAD ") {
+                head = Some(rest.trim().to_string());
+            } else if let Some(rest) = line.strip_prefix("branch ") {
+                // `branch refs/heads/main` -> `main`
+                branch = Some(
+                    rest.trim()
+                        .strip_prefix("refs/heads/")
+                        .unwrap_or(rest.trim())
+                        .to_string(),
+                );
+            } else if line == "locked" || line.starts_with("locked ") {
+                locked = true;
+            }
+        }
+        if let Some(path) = path {
+            let is_current = normalize_path(&path) == current;
+            worktrees.push(GitWorktree {
+                path,
+                branch,
+                head,
+                is_current,
+                locked,
+            });
+        }
+    }
+    worktrees
+}
+
+/// Normalize a path for equality comparison: unify separators and drop a single
+/// trailing slash. Case is preserved (git paths are already canonical).
+fn normalize_path(path: &str) -> String {
+    let unified = path.replace('\\', "/");
+    unified.trim_end_matches('/').to_string()
 }
 
 // ── Changed files for a commit ──────────────────────────────────────────────
@@ -860,6 +976,54 @@ pub struct DeleteBranchRequest {
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct RenameBranchRequest {
+    pub repo_root: String,
+    pub name: String,
+    pub new_name: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DiscardRequest {
+    pub repo_root: String,
+    pub paths: Vec<String>,
+    /// Paths that are untracked (`?`): removed with `git clean` instead of
+    /// restored, since there is no tracked version to restore to.
+    #[serde(default)]
+    pub untracked: Vec<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ResetRequest {
+    pub repo_root: String,
+    pub sha: String,
+    /// `soft`, `mixed`, or `hard`. Defaults to `mixed` (git's own default).
+    #[serde(default)]
+    pub mode: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WorktreeAddRequest {
+    pub repo_root: String,
+    pub path: String,
+    /// Optional ref to check out in the new worktree (branch, tag, or commit).
+    #[serde(default)]
+    pub reference: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WorktreeRemoveRequest {
+    pub repo_root: String,
+    pub path: String,
+    #[serde(default)]
+    pub force: bool,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CreateTagRequest {
     pub repo_root: String,
     pub name: String,
@@ -912,6 +1076,9 @@ pub struct PullRequest {
     pub remote: Option<String>,
     #[serde(default)]
     pub branch: Option<String>,
+    /// Pull with `--rebase` for a linear history (used by the Sync action).
+    #[serde(default)]
+    pub rebase: bool,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -983,6 +1150,13 @@ pub fn delete_branch(request: DeleteBranchRequest) -> Result<String, String> {
     git_run(&request.repo_root, &["branch", flag, &request.name])
 }
 
+pub fn rename_branch(request: RenameBranchRequest) -> Result<String, String> {
+    git_run(
+        &request.repo_root,
+        &["branch", "-m", &request.name, &request.new_name],
+    )
+}
+
 pub fn create_tag(request: CreateTagRequest) -> Result<String, String> {
     let mut args = vec!["tag"];
     if let Some(message) = request.message.as_deref() {
@@ -1050,6 +1224,9 @@ pub fn fetch(request: FetchRequest) -> Result<String, String> {
 
 pub fn pull(request: PullRequest) -> Result<String, String> {
     let mut args = vec!["pull"];
+    if request.rebase {
+        args.push("--rebase");
+    }
     if let Some(remote) = request.remote.as_deref() {
         args.push(remote);
         if let Some(branch) = request.branch.as_deref() {
@@ -1073,6 +1250,57 @@ pub fn push(request: PushRequest) -> Result<String, String> {
             args.push(branch);
         }
     }
+    git_run(&request.repo_root, &args)
+}
+
+/// Discard working-tree changes. Tracked paths are restored to HEAD; untracked
+/// paths are deleted with `git clean -f`. Both run when each list is non-empty.
+pub fn discard(request: DiscardRequest) -> Result<String, String> {
+    if !request.paths.is_empty() {
+        let mut args = vec!["restore", "--worktree", "--"];
+        let paths: Vec<&str> = request.paths.iter().map(String::as_str).collect();
+        args.extend(paths);
+        git_run(&request.repo_root, &args)?;
+    }
+    if !request.untracked.is_empty() {
+        let mut args = vec!["clean", "-f", "--"];
+        let paths: Vec<&str> = request.untracked.iter().map(String::as_str).collect();
+        args.extend(paths);
+        git_run(&request.repo_root, &args)?;
+    }
+    Ok(String::new())
+}
+
+pub fn reset(request: ResetRequest) -> Result<String, String> {
+    let mode = match request.mode.as_deref() {
+        Some("soft") => "--soft",
+        Some("hard") => "--hard",
+        // git's own default is mixed; treat anything else as mixed too.
+        _ => "--mixed",
+    };
+    git_run(&request.repo_root, &["reset", mode, &request.sha])
+}
+
+pub fn worktree_list(request: RepoRequest) -> Result<Vec<GitWorktree>, String> {
+    let repo = request.repo_root.as_str();
+    let stdout = git_text(repo, &["worktree", "list", "--porcelain"])?;
+    Ok(parse_worktree_porcelain(&stdout, repo))
+}
+
+pub fn worktree_add(request: WorktreeAddRequest) -> Result<String, String> {
+    let mut args = vec!["worktree", "add", request.path.as_str()];
+    if let Some(reference) = request.reference.as_deref() {
+        args.push(reference);
+    }
+    git_run(&request.repo_root, &args)
+}
+
+pub fn worktree_remove(request: WorktreeRemoveRequest) -> Result<String, String> {
+    let mut args = vec!["worktree", "remove"];
+    if request.force {
+        args.push("--force");
+    }
+    args.push(request.path.as_str());
     git_run(&request.repo_root, &args)
 }
 
@@ -1135,6 +1363,55 @@ mod tests {
         assert_eq!(files[2].status, "R");
         assert_eq!(files[2].path, "src/renamed.rs");
         assert_eq!(files[2].old_path.as_deref(), Some("src/old.rs"));
+    }
+
+    #[test]
+    fn parses_worktree_porcelain() {
+        let stdout = "worktree /repo/main\nHEAD aaaa1111\nbranch refs/heads/main\n\nworktree /repo/feature\nHEAD bbbb2222\nbranch refs/heads/feature/login\nlocked\n\nworktree /repo/detached\nHEAD cccc3333\ndetached\n";
+        let worktrees = parse_worktree_porcelain(stdout, "/repo/main");
+        assert_eq!(worktrees.len(), 3);
+        assert_eq!(worktrees[0].path, "/repo/main");
+        assert_eq!(worktrees[0].branch.as_deref(), Some("main"));
+        assert!(worktrees[0].is_current);
+        assert!(!worktrees[0].locked);
+        assert_eq!(worktrees[1].branch.as_deref(), Some("feature/login"));
+        assert!(worktrees[1].locked);
+        assert!(!worktrees[1].is_current);
+        // Detached HEAD has no branch.
+        assert_eq!(worktrees[2].branch, None);
+        assert_eq!(worktrees[2].head.as_deref(), Some("cccc3333"));
+    }
+
+    #[test]
+    fn worktree_current_match_is_separator_insensitive() {
+        let stdout = "worktree C:/repo/main\nHEAD aaaa\nbranch refs/heads/main\n";
+        // A backslash-style current root must still match git's forward-slash path.
+        let worktrees = parse_worktree_porcelain(stdout, "C:\\repo\\main");
+        assert!(worktrees[0].is_current);
+    }
+
+    #[test]
+    fn default_branch_sorts_to_top() {
+        let mk = |name: &str| GitBranch {
+            name: name.to_string(),
+            current: false,
+            ahead: 0,
+            behind: 0,
+            upstream: None,
+            lane: 0,
+        };
+        let mut branches = vec![mk("feature"), mk("main"), mk("hotfix")];
+        sort_branches_default_first(&mut branches, Some("main"));
+        assert_eq!(branches[0].name, "main");
+        assert_eq!(branches[1].name, "feature");
+        assert_eq!(branches[2].name, "hotfix");
+
+        // Missing / no default leaves order untouched.
+        let mut branches2 = vec![mk("feature"), mk("hotfix")];
+        sort_branches_default_first(&mut branches2, Some("main"));
+        assert_eq!(branches2[0].name, "feature");
+        sort_branches_default_first(&mut branches2, None);
+        assert_eq!(branches2[0].name, "feature");
     }
 
     #[test]

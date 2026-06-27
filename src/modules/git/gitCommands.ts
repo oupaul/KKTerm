@@ -9,6 +9,7 @@ import type {
   GitDiffLine,
   GitOverview,
   GitStatus,
+  GitWorktree,
 } from "./gitTypes";
 
 export function gitDetectRepo(path: string): Promise<GitDetect> {
@@ -94,6 +95,14 @@ export function gitDeleteBranch(
   return invokeCommand("git_delete_branch", { request: { repoRoot, name, force } });
 }
 
+export function gitRenameBranch(
+  repoRoot: string,
+  name: string,
+  newName: string,
+): Promise<string> {
+  return invokeCommand("git_rename_branch", { request: { repoRoot, name, newName } });
+}
+
 export function gitCreateTag(
   repoRoot: string,
   name: string,
@@ -142,7 +151,7 @@ export function gitFetch(
 
 export function gitPull(
   repoRoot: string,
-  options?: { remote?: string; branch?: string },
+  options?: { remote?: string; branch?: string; rebase?: boolean },
 ): Promise<string> {
   return invokeCommand("git_pull", { request: { repoRoot, ...options } });
 }
@@ -152,4 +161,40 @@ export function gitPush(
   options?: { remote?: string; branch?: string; force?: boolean; setUpstream?: boolean },
 ): Promise<string> {
   return invokeCommand("git_push", { request: { repoRoot, ...options } });
+}
+
+export function gitDiscard(
+  repoRoot: string,
+  paths: string[],
+  untracked?: string[],
+): Promise<string> {
+  return invokeCommand("git_discard", { request: { repoRoot, paths, untracked } });
+}
+
+export function gitReset(
+  repoRoot: string,
+  sha: string,
+  mode: "soft" | "mixed" | "hard",
+): Promise<string> {
+  return invokeCommand("git_reset", { request: { repoRoot, sha, mode } });
+}
+
+export function gitWorktreeList(repoRoot: string): Promise<GitWorktree[]> {
+  return invokeCommand("git_worktree_list", { request: { repoRoot } });
+}
+
+export function gitWorktreeAdd(
+  repoRoot: string,
+  path: string,
+  reference?: string,
+): Promise<string> {
+  return invokeCommand("git_worktree_add", { request: { repoRoot, path, reference } });
+}
+
+export function gitWorktreeRemove(
+  repoRoot: string,
+  path: string,
+  force?: boolean,
+): Promise<string> {
+  return invokeCommand("git_worktree_remove", { request: { repoRoot, path, force } });
 }

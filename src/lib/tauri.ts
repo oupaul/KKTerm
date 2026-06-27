@@ -114,6 +114,7 @@ import type {
   GitDiffLine,
   GitOverview,
   GitStatus,
+  GitWorktree,
 } from "../modules/git/gitTypes";
 
 type BrowserFileHandle = {
@@ -2247,6 +2248,10 @@ type CommandMap = {
     args: { request: { repoRoot: string; name: string; force?: boolean } };
     result: string;
   };
+  git_rename_branch: {
+    args: { request: { repoRoot: string; name: string; newName: string } };
+    result: string;
+  };
   git_create_tag: {
     args: { request: { repoRoot: string; name: string; sha?: string; message?: string } };
     result: string;
@@ -2284,7 +2289,7 @@ type CommandMap = {
     result: string;
   };
   git_pull: {
-    args: { request: { repoRoot: string; remote?: string; branch?: string } };
+    args: { request: { repoRoot: string; remote?: string; branch?: string; rebase?: boolean } };
     result: string;
   };
   git_push: {
@@ -2297,6 +2302,26 @@ type CommandMap = {
         setUpstream?: boolean;
       };
     };
+    result: string;
+  };
+  git_discard: {
+    args: { request: { repoRoot: string; paths: string[]; untracked?: string[] } };
+    result: string;
+  };
+  git_reset: {
+    args: { request: { repoRoot: string; sha: string; mode?: string } };
+    result: string;
+  };
+  git_worktree_list: {
+    args: { request: { repoRoot: string } };
+    result: GitWorktree[];
+  };
+  git_worktree_add: {
+    args: { request: { repoRoot: string; path: string; reference?: string } };
+    result: string;
+  };
+  git_worktree_remove: {
+    args: { request: { repoRoot: string; path: string; force?: boolean } };
     result: string;
   };
   open_filesystem_path: {

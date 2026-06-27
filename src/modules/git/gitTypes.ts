@@ -48,12 +48,23 @@ export interface GitStash {
   message: string;
 }
 
+export interface GitWorktree {
+  path: string;
+  branch: string | null;
+  head: string | null;
+  isCurrent: boolean;
+  locked: boolean;
+}
+
 export interface GitOverview {
   currentBranch: string | null;
+  /** Repository default branch (short name); pinned to the top of the sidebar. */
+  defaultBranch: string | null;
   localBranches: GitBranch[];
   remotes: GitRemote[];
   tags: string[];
   stashes: GitStash[];
+  worktrees: GitWorktree[];
 }
 
 export interface GitChangedFile {

@@ -19,13 +19,16 @@ import { assignLanes } from "./lane";
 import { lanePalette } from "./gitPalette";
 import { GitIcon } from "./GitIcon";
 import { GitGraph } from "./GitGraph";
-import { GitSidebar } from "./GitSidebar";
+import { GitSidebar, sidebarKey, type SidebarRef } from "./GitSidebar";
 import { ChangedFiles, DetailHead } from "./GitDetail";
 import { GitDiffViewer } from "./GitDiffViewer";
 import { WorkingTree, type WorkingTreeSelection } from "./WorkingTree";
 import { GitCommitMenu, type CommitMenuItem } from "./GitCommitMenu";
 import { GitNamePrompt } from "./GitNamePrompt";
 import { GitInstallGate } from "./GitInstallGate";
+import { GitResizeHandle } from "./GitResizeHandle";
+import { useGitLayout } from "./useGitLayout";
+import { splitPath } from "./gitPath";
 import { useGitTheme } from "./useGitTheme";
 import {
   gitCheckout,
@@ -34,15 +37,19 @@ import {
   gitCommitFiles,
   gitCreateBranch,
   gitCreateTag,
+  gitDeleteBranch,
   gitDetectRepo,
   gitDiffCommit,
   gitDiffWorktree,
+  gitDiscard,
   gitFetch,
   gitLogGraph,
   gitMerge,
   gitPull,
   gitPush,
+  gitRenameBranch,
   gitRepoOverview,
+  gitReset,
   gitRevert,
   gitStage,
   gitStageAll,
@@ -53,6 +60,8 @@ import {
   gitStatus,
   gitUnstage,
   gitUnstageAll,
+  gitWorktreeAdd,
+  gitWorktreeRemove,
 } from "./gitCommands";
 
 const ROW_HEIGHT = 30; // compact density
@@ -93,11 +102,19 @@ export function GitBrowser({
   onClose: () => void;
 }) {
   const { t } = useTranslation();
-  const repoRoot = target.repoRoot;
+  // The browser can be re-pointed to a linked worktree from the sidebar, so the
+  // active root is stateful; all git calls below use `repoRoot`.
+  const [activeRoot, setActiveRoot] = useState(target.repoRoot);
+  const repoRoot = activeRoot;
+  const repoLabel =
+    activeRoot === target.repoRoot
+      ? target.label
+      : splitPath(activeRoot.replace(/\\/g, "/")).name || target.label;
   const rootRef = useRef<HTMLDivElement | null>(null);
   const theme = useGitTheme(rootRef);
   const palette = useMemo(() => lanePalette("colorful", theme), [theme]);
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
+  const { layout, nudge, nudgeWindow } = useGitLayout();
 
   const [available, setAvailable] = useState<boolean | null>(null);
   const [view, setView] = useState<GitView>("history");
@@ -120,8 +137,12 @@ export function GitBrowser({
   const [diffLines, setDiffLines] = useState<GitDiffLine[]>([]);
   const [diffLoading, setDiffLoading] = useState(false);
 
+  // Sidebar single-click selection (visual; double-click activates).
+  const [selectedRef, setSelectedRef] = useState<string | null>(null);
+
   // Transient UI
   const [menu, setMenu] = useState<{ x: number; y: number; commit: GraphCommit } | null>(null);
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; items: (CommitMenuItem | null)[] } | null>(null);
   const [prompt, setPrompt] = useState<PromptState | null>(null);
   const [confirm, setConfirm] = useState<ConfirmState | null>(null);
   const [busy, setBusy] = useState(false);
@@ -196,13 +217,13 @@ export function GitBrowser({
   // Esc closes the overlay.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !prompt && !confirm && !menu) {
+      if (event.key === "Escape" && !prompt && !confirm && !menu && !ctxMenu) {
         onClose();
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onClose, prompt, confirm, menu]);
+  }, [onClose, prompt, confirm, menu, ctxMenu]);
 
   const selectedCommit = useMemo(
     () => commits.find((c) => c.id === selectedId) ?? null,
@@ -342,6 +363,20 @@ export function GitBrowser({
       confirmLabel: t("git.push"),
       onConfirm: () => void runAction(() => gitPush(repoRoot), t("git.pushDone")),
     });
+  // Sync = rebase-pull then push, behind a single confirm. Push runs only when
+  // the pull succeeds (runAction stops on the first thrown error).
+  const onSync = () =>
+    setConfirm({
+      title: t("git.syncConfirmTitle"),
+      message: t("git.syncConfirmBody", { branch: currentBranch ?? "HEAD" }),
+      tone: "info",
+      confirmLabel: t("git.sync"),
+      onConfirm: () =>
+        void runAction(async () => {
+          await gitPull(repoRoot, { rebase: true });
+          return gitPush(repoRoot);
+        }, t("git.syncDone")),
+    });
   const onNewBranch = () =>
     setPrompt({
       title: t("git.newBranchTitle"),
@@ -370,6 +405,209 @@ export function GitBrowser({
   const onUnstageAll = () => void runAction(() => gitUnstageAll(repoRoot), t("git.unstagedAllNotice"));
   const onCommit = (message: string, amend: boolean) =>
     runAction(() => gitCommit(repoRoot, message, amend), t("git.committedDone"));
+
+  const discardOne = (file: GitChangedFile) =>
+    file.status === "?"
+      ? gitDiscard(repoRoot, [], [file.path])
+      : gitDiscard(repoRoot, [file.path]);
+  const onDiscardFile = (file: GitChangedFile) =>
+    setConfirm({
+      title: t("git.discardConfirmTitle"),
+      message: t("git.discardConfirmBody", { path: file.path }),
+      tone: "danger",
+      confirmLabel: t("git.discard"),
+      onConfirm: () => void runAction(() => discardOne(file), t("git.discardedNotice")),
+    });
+  const onDiscardAll = () => {
+    const unstaged = status?.unstaged ?? [];
+    if (unstaged.length === 0) {
+      return;
+    }
+    const tracked = unstaged.filter((f) => f.status !== "?").map((f) => f.path);
+    const untracked = unstaged.filter((f) => f.status === "?").map((f) => f.path);
+    setConfirm({
+      title: t("git.discardConfirmTitle"),
+      message: t("git.discardAllConfirmBody", { count: unstaged.length }),
+      tone: "danger",
+      confirmLabel: t("git.discardAll"),
+      onConfirm: () => void runAction(() => gitDiscard(repoRoot, tracked, untracked), t("git.discardedNotice")),
+    });
+  };
+
+  // ── sidebar: switch root, checkout, branch + worktree management ───────────
+  const switchRoot = (root: string) => {
+    setActiveRoot(root);
+    setSelectedId(null);
+    setWtSelected(false);
+    setCommitFiles([]);
+    setFileIndex(0);
+    setWtSelection(null);
+    setSelectedRef(null);
+  };
+
+  const confirmCheckout = (ref: string) =>
+    setConfirm({
+      title: t("git.switchRefConfirmTitle"),
+      message: t("git.switchRefConfirmBody", { ref }),
+      tone: "warn",
+      confirmLabel: t("git.checkout"),
+      onConfirm: () => void runAction(() => gitCheckout(repoRoot, ref), t("git.checkedOut")),
+    });
+
+  // Double-clicking a sidebar row activates it (after confirmation where it
+  // mutates the working tree).
+  const onSidebarActivate = (ref: SidebarRef) => {
+    switch (ref.kind) {
+      case "branch":
+        confirmCheckout(ref.name);
+        return;
+      case "tag":
+        confirmCheckout(ref.name);
+        return;
+      case "remote": {
+        // Prefer creating/refreshing a local tracking branch over a detached HEAD.
+        const localExists = overview?.localBranches.some((b) => b.name === ref.branch);
+        if (localExists) {
+          confirmCheckout(ref.branch);
+          return;
+        }
+        setConfirm({
+          title: t("git.switchRefConfirmTitle"),
+          message: t("git.trackRemoteConfirmBody", { ref: ref.ref, branch: ref.branch }),
+          tone: "warn",
+          confirmLabel: t("git.checkout"),
+          onConfirm: () =>
+            void runAction(
+              () => gitCreateBranch(repoRoot, ref.branch, { startPoint: ref.ref, checkout: true }),
+              t("git.checkedOut"),
+            ),
+        });
+        return;
+      }
+      case "worktree": {
+        const { worktree } = ref;
+        if (worktree.isCurrent || worktree.path === activeRoot) {
+          return;
+        }
+        setConfirm({
+          title: t("git.switchWorktreeConfirmTitle"),
+          message: t("git.switchWorktreeConfirmBody", { path: worktree.path }),
+          tone: "info",
+          confirmLabel: t("git.switchWorktree"),
+          onConfirm: () => switchRoot(worktree.path),
+        });
+        return;
+      }
+    }
+  };
+
+  // Right-click a branch or worktree row for management actions.
+  const onSidebarContext = (event: React.MouseEvent, ref: SidebarRef) => {
+    event.preventDefault();
+    setSelectedRef(sidebarKey(ref));
+    if (ref.kind === "branch") {
+      const isCurrent = currentBranch === ref.name;
+      setCtxMenu({
+        x: event.clientX,
+        y: event.clientY,
+        items: [
+          {
+            icon: "branch",
+            label: t("git.checkout"),
+            onClick: () => confirmCheckout(ref.name),
+          },
+          {
+            icon: "pencil",
+            label: t("git.renameBranch"),
+            onClick: () =>
+              setPrompt({
+                title: t("git.renameBranchTitle"),
+                label: t("git.branchName"),
+                confirmLabel: t("git.rename"),
+                initialValue: ref.name,
+                onSubmit: (newName) =>
+                  void runAction(
+                    () => gitRenameBranch(repoRoot, ref.name, newName),
+                    t("git.branchRenamed", { name: newName }),
+                  ),
+              }),
+          },
+          {
+            icon: "trash",
+            label: t("git.deleteBranch"),
+            danger: true,
+            onClick: () =>
+              setConfirm({
+                title: t("git.deleteBranchConfirmTitle"),
+                message: t("git.deleteBranchConfirmBody", { name: ref.name }),
+                tone: "danger",
+                confirmLabel: t("git.delete"),
+                onConfirm: () =>
+                  void runAction(
+                    () => gitDeleteBranch(repoRoot, ref.name),
+                    t("git.branchDeleted", { name: ref.name }),
+                  ),
+              }),
+            // Deleting the current branch is impossible; git will reject it, and
+            // the error surfaces via the Status Bar.
+          },
+        ].filter((item) => !(isCurrent && item?.icon === "trash")) as (CommitMenuItem | null)[],
+      });
+    } else if (ref.kind === "worktree") {
+      const { worktree } = ref;
+      setCtxMenu({
+        x: event.clientX,
+        y: event.clientY,
+        items: [
+          {
+            icon: "worktree",
+            label: t("git.switchWorktree"),
+            onClick: () => onSidebarActivate(ref),
+          },
+          {
+            icon: "trash",
+            label: t("git.removeWorktree"),
+            danger: true,
+            onClick: () =>
+              setConfirm({
+                title: t("git.removeWorktreeConfirmTitle"),
+                message: t("git.removeWorktreeConfirmBody", { path: worktree.path }),
+                tone: "danger",
+                confirmLabel: t("git.remove"),
+                onConfirm: () =>
+                  void runAction(
+                    () => gitWorktreeRemove(repoRoot, worktree.path),
+                    t("git.worktreeRemoved"),
+                  ),
+              }),
+          },
+        ].filter((item) => !(worktree.isCurrent && item?.icon === "trash")) as (CommitMenuItem | null)[],
+      });
+    }
+  };
+
+  const onAddWorktree = () =>
+    setPrompt({
+      title: t("git.addWorktreeTitle"),
+      label: t("git.worktreePath"),
+      placeholder: t("git.worktreePathPlaceholder"),
+      confirmLabel: t("git.addWorktree"),
+      onSubmit: (path) => void runAction(() => gitWorktreeAdd(repoRoot, path), t("git.worktreeAdded")),
+    });
+
+  const sidebarProps = {
+    overview,
+    palette,
+    width: layout.sidebarW,
+    selectedKey: selectedRef,
+    onSelect: setSelectedRef,
+    onActivate: onSidebarActivate,
+    onContext: onSidebarContext,
+    onAddWorktree,
+    onStashApply: (i: number) => void runAction(() => gitStashApply(repoRoot, i), t("git.stashApplied")),
+    onStashPop: (i: number) => void runAction(() => gitStashPop(repoRoot, i), t("git.stashPopped")),
+    onStashDrop: (i: number) => void runAction(() => gitStashDrop(repoRoot, i), t("git.stashDropped")),
+  };
 
   // ── commit context menu ───────────────────────────────────────────────────
   const menuItems = (commit: GraphCommit): (CommitMenuItem | null)[] => [
@@ -440,6 +678,44 @@ export function GitBrowser({
     },
     null,
     {
+      icon: "reset",
+      label: t("git.resetSoft"),
+      onClick: () =>
+        setConfirm({
+          title: t("git.resetConfirmTitle"),
+          message: t("git.resetSoftConfirmBody", { sha: commit.shortId }),
+          tone: "warn",
+          confirmLabel: t("git.reset"),
+          onConfirm: () => void runAction(() => gitReset(repoRoot, commit.id, "soft"), t("git.resetDone")),
+        }),
+    },
+    {
+      icon: "reset",
+      label: t("git.resetMixed"),
+      onClick: () =>
+        setConfirm({
+          title: t("git.resetConfirmTitle"),
+          message: t("git.resetMixedConfirmBody", { sha: commit.shortId }),
+          tone: "warn",
+          confirmLabel: t("git.reset"),
+          onConfirm: () => void runAction(() => gitReset(repoRoot, commit.id, "mixed"), t("git.resetDone")),
+        }),
+    },
+    {
+      icon: "reset",
+      label: t("git.resetHard"),
+      danger: true,
+      onClick: () =>
+        setConfirm({
+          title: t("git.resetConfirmTitle"),
+          message: t("git.resetHardConfirmBody", { sha: commit.shortId }),
+          tone: "danger",
+          confirmLabel: t("git.reset"),
+          onConfirm: () => void runAction(() => gitReset(repoRoot, commit.id, "hard"), t("git.resetDone")),
+        }),
+    },
+    null,
+    {
       icon: "copy",
       label: t("git.copySha"),
       onClick: () => void navigator.clipboard?.writeText(commit.id),
@@ -467,13 +743,12 @@ export function GitBrowser({
   } else if (view === "commit") {
     body = (
       <div className="git-body">
-        <GitSidebar
-          overview={overview}
-          palette={palette}
-          onCheckout={(ref) => void runAction(() => gitCheckout(repoRoot, ref), t("git.checkedOut"))}
-          onStashApply={(i) => void runAction(() => gitStashApply(repoRoot, i), t("git.stashApplied"))}
-          onStashPop={(i) => void runAction(() => gitStashPop(repoRoot, i), t("git.stashPopped"))}
-          onStashDrop={(i) => void runAction(() => gitStashDrop(repoRoot, i), t("git.stashDropped"))}
+        <GitSidebar {...sidebarProps} />
+        <GitResizeHandle
+          axis="x"
+          className="git-pane-resizer"
+          ariaLabel={t("git.resizeSidebar")}
+          onResize={(dx) => nudge("sidebarW", dx)}
         />
         <WorkingTree
           staged={status?.staged ?? []}
@@ -484,8 +759,17 @@ export function GitBrowser({
           onUnstageFile={onUnstageFile}
           onStageAll={onStageAll}
           onUnstageAll={onUnstageAll}
+          onDiscardFile={onDiscardFile}
+          onDiscardAll={onDiscardAll}
           onCommit={onCommit}
           committing={busy}
+          style={{ width: layout.worktreeW, flex: "0 0 auto" }}
+        />
+        <GitResizeHandle
+          axis="x"
+          className="git-pane-resizer"
+          ariaLabel={t("git.resizeWorktree")}
+          onResize={(dx) => nudge("worktreeW", dx)}
         />
         <GitDiffViewer file={activeEntry?.file ?? null} lines={diffLines} loading={diffLoading} />
       </div>
@@ -493,13 +777,12 @@ export function GitBrowser({
   } else {
     body = (
       <div className="git-body">
-        <GitSidebar
-          overview={overview}
-          palette={palette}
-          onCheckout={(ref) => void runAction(() => gitCheckout(repoRoot, ref), t("git.checkedOut"))}
-          onStashApply={(i) => void runAction(() => gitStashApply(repoRoot, i), t("git.stashApplied"))}
-          onStashPop={(i) => void runAction(() => gitStashPop(repoRoot, i), t("git.stashPopped"))}
-          onStashDrop={(i) => void runAction(() => gitStashDrop(repoRoot, i), t("git.stashDropped"))}
+        <GitSidebar {...sidebarProps} />
+        <GitResizeHandle
+          axis="x"
+          className="git-pane-resizer"
+          ariaLabel={t("git.resizeSidebar")}
+          onResize={(dx) => nudge("sidebarW", dx)}
         />
         <GitGraph
           commits={filteredCommits}
@@ -520,7 +803,13 @@ export function GitBrowser({
             setFileIndex(0);
           }}
         />
-        <div className="git-detail">
+        <GitResizeHandle
+          axis="x"
+          className="git-pane-resizer"
+          ariaLabel={t("git.resizeDetail")}
+          onResize={(dx) => nudge("detailW", -dx)}
+        />
+        <div className="git-detail" style={{ width: layout.detailW, flex: "0 0 auto" }}>
           {wtSelected ? (
             <div className="git-detail-head">
               <div className="msg">{t("git.uncommittedChanges")}</div>
@@ -563,12 +852,13 @@ export function GitBrowser({
         ref={rootRef}
         role="dialog"
         aria-modal="true"
-        aria-label={t("git.title", { repo: target.label })}
+        aria-label={t("git.title", { repo: repoLabel })}
+        style={{ width: layout.width, height: layout.height }}
       >
         <div className="git-titlebar">
           <div className="git-title-id">
             <span className="repo-glyph"><GitIcon name="repo" size={17} /></span>
-            {target.label}
+            {repoLabel}
             {currentBranch ? (
               <span className="git-branch-pill">
                 <span className="gl"><GitIcon name="branch" size={12} /></span>
@@ -597,6 +887,10 @@ export function GitBrowser({
                 <span className="gl"><GitIcon name="push" size={19} /></span>
                 <span className="lbl">{t("git.push")}</span>
                 {ahead > 0 ? <span className="cnt">{ahead}</span> : null}
+              </button>
+              <button type="button" className="act" onClick={onSync} disabled={busy}>
+                <span className="gl"><GitIcon name="sync" size={19} /></span>
+                <span className="lbl">{t("git.sync")}</span>
               </button>
             </div>
             <div className="git-tb-sep" />
@@ -635,10 +929,32 @@ export function GitBrowser({
         ) : null}
 
         {body}
+
+        <GitResizeHandle
+          axis="x"
+          className="git-resize-edge-e"
+          ariaLabel={t("git.resizeWindow")}
+          onResize={(dx) => nudgeWindow(dx, 0)}
+        />
+        <GitResizeHandle
+          axis="y"
+          className="git-resize-edge-s"
+          ariaLabel={t("git.resizeWindow")}
+          onResize={(_dx, dy) => nudgeWindow(0, dy)}
+        />
+        <GitResizeHandle
+          axis="xy"
+          className="git-resize-corner"
+          ariaLabel={t("git.resizeWindow")}
+          onResize={(dx, dy) => nudgeWindow(dx, dy)}
+        />
       </div>
 
       {menu ? (
         <GitCommitMenu x={menu.x} y={menu.y} items={menuItems(menu.commit)} onClose={() => setMenu(null)} />
+      ) : null}
+      {ctxMenu ? (
+        <GitCommitMenu x={ctxMenu.x} y={ctxMenu.y} items={ctxMenu.items} onClose={() => setCtxMenu(null)} />
       ) : null}
       {prompt ? (
         <GitNamePrompt

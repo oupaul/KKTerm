@@ -7,7 +7,8 @@ export type GitIconName =
   | "branch" | "commit" | "merge" | "tag" | "remote" | "stash"
   | "fetch" | "pull" | "push" | "repo" | "search"
   | "chevronR" | "chevronD" | "check" | "copy" | "plus"
-  | "more" | "dot" | "pencil" | "history" | "file";
+  | "more" | "dot" | "pencil" | "history" | "file"
+  | "sync" | "worktree" | "trash" | "reset";
 
 const GLYPHS: Record<GitIconName, JSX.Element> = {
   branch: (
@@ -121,6 +122,31 @@ const GLYPHS: Record<GitIconName, JSX.Element> = {
     <g fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
       <path d="M6.5 3.5h7l5 5v12a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1v-16a1 1 0 0 1 1-1Z" />
       <path d="M13 3.5V8a1 1 0 0 0 1 1h4.5" />
+    </g>
+  ),
+  sync: (
+    <g fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4.5 9A7.5 7.5 0 0 1 18 6.5l2 2" /><path d="M20 3.5v5h-5" />
+      <path d="M19.5 15A7.5 7.5 0 0 1 6 17.5l-2-2" /><path d="M4 20.5v-5h5" />
+    </g>
+  ),
+  worktree: (
+    <g fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="6" cy="5" r="2.2" /><path d="M6 7.2v3.3a2 2 0 0 0 2 2h9" />
+      <circle cx="18.5" cy="12.5" r="2.2" /><circle cx="18.5" cy="19" r="2.2" />
+      <path d="M6 10.5v6a2 2 0 0 0 2 2h8.3" />
+    </g>
+  ),
+  trash: (
+    <g fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4.5 6.5h15" /><path d="M9 6.5V5a1.5 1.5 0 0 1 1.5-1.5h3A1.5 1.5 0 0 1 15 5v1.5" />
+      <path d="M6.5 6.5 7.4 19a1.5 1.5 0 0 0 1.5 1.4h6.2a1.5 1.5 0 0 0 1.5-1.4l.9-12.5" />
+      <path d="M10 10v6.5M14 10v6.5" />
+    </g>
+  ),
+  reset: (
+    <g fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 11a8 8 0 1 1 1.6 5.3" /><path d="M3.5 5.5V11H9" />
     </g>
   ),
 };
