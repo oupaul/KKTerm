@@ -1,0 +1,25 @@
+{
+  "shape": "package",
+  "projectId": "8f7bb0f3-c9f0-4632-b0db-5fa06b1f9bec",
+  "pkg": "kkterm",
+  "globalName": "KKTerm",
+  "srcDir": "src",
+  "tsconfig": "tsconfig.json",
+  "cssEntry": ".design-sync/kkterm-ds.css",
+  "readmeHeader": ".design-sync/conventions.md",
+  "componentSrcMap": {
+    "Sheet": "src/app/ui/dialog/Sheet.tsx",
+    "ConfirmSheet": "src/app/ui/dialog/ConfirmSheet.tsx",
+    "ToggleSwitch": "src/modules/settings/ToggleSwitch.tsx",
+    "ModuleHeader": "src/app/ModuleHeader.tsx",
+    "ColorPalettePicker": "src/app/ui/ColorPalettePicker.tsx"
+  },
+  "guidelinesGlob": ["docs/DESIGN_LANGUAGE.md"],
+  "extraEntries": ["./.design-sync/preview-provider.tsx"],
+  "provider": { "component": "PreviewI18nProvider" },
+  "overrides": {
+    "Sheet": { "cardMode": "column" },
+    "ConfirmSheet": { "cardMode": "single", "primaryStory": "Danger", "viewport": "460x360" },
+    "ModuleHeader": { "cardMode": "column" }
+  }
+}

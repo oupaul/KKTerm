@@ -43,3 +43,9 @@ dist-ssr
 docs/superpowers/specs
 docs/superpowers/plans
 /brag-output
+# design-sync (generated/staged — durable inputs under .design-sync/ are committed)
+/.ds-sync/
+/ds-bundle/
+.design-sync/.cache/
+.design-sync/learnings/
+.design-sync/node_modules
