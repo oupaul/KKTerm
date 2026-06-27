@@ -13,6 +13,7 @@ import {
   Select,
   Sheet,
   Stepper,
+  Swatches,
   TextInput,
 } from "../../app/ui/dialog";
 import { useWorkspaceStore } from "../../store";
@@ -52,7 +53,10 @@ export function RackItemDialog({
   const [label, setLabel] = useState(item?.label ?? "");
   const [startU, setStartU] = useState(item?.startU ?? defaultStartU ?? 1);
   const [heightU, setHeightU] = useState(item?.heightU ?? 1);
+  const [accent, setAccent] = useState(item?.metadata?.accent ?? "none");
   const [busy, setBusy] = useState(false);
+
+  const metadata = { accent: accent === "none" ? null : accent };
 
   const needsConnection = kind === "connection";
   const hasConnection = !needsConnection || connectionId.length > 0;
@@ -69,6 +73,7 @@ export function RackItemDialog({
           kind,
           connectionId: resolvedConnectionId,
           label: label.trim(),
+          metadata,
         });
         if (startU !== item!.startU || heightU !== item!.heightU) {
           await moveRackItem(fleetId, { id: item!.id, rackId: rack.id, startU, heightU });
@@ -81,6 +86,7 @@ export function RackItemDialog({
           label: label.trim(),
           startU,
           heightU,
+          metadata,
         });
       }
       onClose();
@@ -158,6 +164,15 @@ export function RackItemDialog({
             value={label}
             placeholder={t("itops.racks.labelPlaceholder")}
             onChange={(event) => setLabel(event.currentTarget.value)}
+          />
+        </Field>
+
+        <Field label={t("itops.racks.accentLabel")}>
+          <Swatches
+            value={accent}
+            onChange={setAccent}
+            allowNone
+            noneLabel={t("itops.racks.accentNone")}
           />
         </Field>
 

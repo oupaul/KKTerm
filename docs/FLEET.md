@@ -2,9 +2,12 @@
 
 Status: **Phases A–D landed** (rename, rack data model, Rack View with the
 dialogs-first editor, click-to-connect with ghost handling, and rack/area/region
-scoped Batch Runs, and drag-to-place). Remaining: drag-resize (polish) and
-Phase E (AI + live reload + export/import). This document is the detailed plan
-for evolving the IT Ops **Host Groups** tab into **Fleet** management with a
+scoped Batch Runs, drag-to-place, plus rack page-context awareness and accent
+colour-coding). Remaining: the approval-gated "draft a rack layout" assistant
+tool (+ `itops-changed` live reload), selective export/import inclusion, and
+drag-resize polish — each best done with the desktop app running to verify.
+This document is the detailed plan for evolving the IT Ops **Host Groups** tab
+into **Fleet** management with a
 visual virtual-datacenter (rack elevation) layer. It extends `docs/ITOPS.md`
 (which remains the source of truth for shipped IT Ops architecture) and follows
 the same durable-vs-live split. When this doc conflicts with `docs/ITOPS.md`
@@ -395,8 +398,15 @@ Each phase is one reviewable PR and leaves the app shippable.
   (storage) and an optional `scope` on `itops_start_batch_run`; per-rack and
   per-region/area "Run" affordances launch a run over only the placed hosts in
   the matching racks, with the launcher showing a scope banner.
-- **Phase E — AI + polish.** Rack metadata in page context, the "draft a rack
-  layout" approval-gated tool, accent/icon metadata, manual + tutorial finish.
+- **Phase E — AI + polish.** _Landed:_ rack-topology metadata in the IT Ops
+  assistant page context (compact, loaded-Fleets only), per-device **accent**
+  colour-coding (`RackItemMetadata.accent` via a Swatches picker, rendered as a
+  left accent bar), and the manual Rack View section. _Still to come (each best
+  done with the app running to verify):_ the approval-gated "draft a rack
+  layout" assistant tool plus its `itops-changed` live-reload listener, and
+  selective export/import inclusion (Fleets are not yet in the ADR-0010 export
+  shape, so that lands Fleets + racks together). Drag-resize is a remaining
+  visual polish on top of drag-to-place.
 
 Phases A–C deliver the visible feature; D–E are independent and demand-ordered.
 

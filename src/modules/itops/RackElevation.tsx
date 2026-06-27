@@ -153,9 +153,11 @@ export function RackElevation({
           // A live host opens on click; everything else (passive, ghost) edits.
           const opens = item.kind === "connection" && !ghost && !!onOpenItem;
           const primary = opens ? () => onOpenItem!(item) : () => onEditItem?.(item);
+          const accent = item.metadata?.accent;
           const style = {
             gridColumn: 2,
             gridRow: `${itemRowStart(rack.heightU, item)} / span ${item.heightU}`,
+            ...(accent ? { boxShadow: `inset 3px 0 0 0 ${accent}` } : {}),
           } as const;
           const inner = (
             <>

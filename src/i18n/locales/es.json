@@ -948,6 +948,8 @@
       "labelLabel": "Label",
       "labelHint": "Optional. Defaults to the device type or Connection name.",
       "labelPlaceholder": "e.g. core-switch-1",
+      "accentLabel": "Accent",
+      "accentNone": "No accent",
       "startULabel": "Position (U)",
       "startUDecrease": "Lower position",
       "startUIncrease": "Higher position",

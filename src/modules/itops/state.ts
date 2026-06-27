@@ -15,6 +15,7 @@ import type {
   ItopsTransport,
   Rack,
   RackItemKind,
+  RackItemMetadata,
   ResolvedHost,
   RunEvent,
   RunHistoryEntry,
@@ -43,6 +44,7 @@ export interface PlaceItemInput {
   label: string;
   startU: number;
   heightU: number;
+  metadata?: RackItemMetadata;
 }
 
 export interface UpdateItemInput {
@@ -50,6 +52,7 @@ export interface UpdateItemInput {
   kind: RackItemKind;
   connectionId: string | null;
   label: string;
+  metadata?: RackItemMetadata;
 }
 
 export type LiveRunHostStatus = "pending" | "running" | "ok" | "failed";

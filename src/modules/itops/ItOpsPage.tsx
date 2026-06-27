@@ -21,8 +21,20 @@ export function ItOpsPage({
   const runHistory = useItOpsStore((state) => state.runHistory);
   const automations = useItOpsStore((state) => state.automations);
   const activeRun = useItOpsStore((state) => state.activeRun);
+  const racksByFleet = useItOpsStore((state) => state.racksByFleet);
 
   useEffect(() => {
+    // Compact rack-topology summary for whichever Fleets have had their Rack
+    // View opened (racks load on demand); never device-level detail or secrets.
+    const rackSummary = Object.entries(racksByFleet)
+      .filter(([, racks]) => racks.length > 0)
+      .map(([fleetId, racks]) => {
+        const name = fleets.find((fleet) => fleet.id === fleetId)?.name ?? fleetId;
+        const devices = racks.reduce((sum, rack) => sum + rack.items.length, 0);
+        return `${name} [${racks.length} racks, ${devices} placed devices]`;
+      })
+      .join(", ");
+
     onAssistantContextChange({
       contextKind: "itops",
       contextLabel: t("itops.title"),
@@ -32,6 +44,7 @@ export function ItOpsPage({
         "Active Module: IT Ops.",
         "Tutorial targets: itops.groups for Fleets, itops.runs for Batch Runs, itops.autos for Automations, and itops.primaryAction for the action that belongs to the selected tab.",
         `Fleets (${fleets.length}): ${fleets.map((group) => `${group.name} [${group.memberIds.length} saved members, ${group.transport}]`).join(", ") || "none"}.`,
+        `Rack topology (loaded Fleets only): ${rackSummary || "none loaded"}.`,
         `Automations (${automations.length}): ${automations.map((automation) => `${automation.name} [${automation.enabled ? "armed" : "disabled"}]`).join(", ") || "none"}.`,
         `Recent completed Batch Runs: ${runHistory.length}.`,
         activeRun
@@ -40,7 +53,7 @@ export function ItOpsPage({
         "For operational instructions, search and read the IT Ops chapter in the KKTerm Operation Manual before answering. Do not infer host output, scripts, secrets, or trigger details from this compact metadata.",
       ].join("\n"),
     });
-  }, [activeRun, automations, fleets, onAssistantContextChange, runHistory, t]);
+  }, [activeRun, automations, fleets, onAssistantContextChange, racksByFleet, runHistory, t]);
 
   return (
     <section
