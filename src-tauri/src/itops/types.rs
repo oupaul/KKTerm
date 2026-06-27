@@ -142,6 +142,96 @@ pub struct Fleet {
     pub transport: Transport,
 }
 
+/// A Rack in a Fleet's virtual datacenter (docs/FLEET.md Phase B): a fixed-height
+/// cabinet grouped by `region` and `area`, holding Rack Items at U positions.
+/// `items` is hydrated on read (storage joins the items in U order).
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct Rack {
+    pub id: String,
+    pub fleet_id: String,
+    pub name: String,
+    #[serde(default)]
+    pub region: String,
+    #[serde(default)]
+    pub area: String,
+    pub height_u: u32,
+    pub sort_order: i64,
+    #[serde(default)]
+    pub items: Vec<RackItem>,
+}
+
+/// What a Rack Item represents. `Connection` items are openable (carry a
+/// `connection_id`); the rest are passive inventory/visual devices.
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum RackItemKind {
+    Connection,
+    Switch,
+    Pdu,
+    PatchPanel,
+    Blank,
+    Label,
+    Server,
+}
+
+impl RackItemKind {
+    pub fn as_db_str(self) -> &'static str {
+        match self {
+            RackItemKind::Connection => "connection",
+            RackItemKind::Switch => "switch",
+            RackItemKind::Pdu => "pdu",
+            RackItemKind::PatchPanel => "patchPanel",
+            RackItemKind::Blank => "blank",
+            RackItemKind::Label => "label",
+            RackItemKind::Server => "server",
+        }
+    }
+
+    pub fn from_db_str(value: &str) -> Option<Self> {
+        match value {
+            "connection" => Some(RackItemKind::Connection),
+            "switch" => Some(RackItemKind::Switch),
+            "pdu" => Some(RackItemKind::Pdu),
+            "patchPanel" => Some(RackItemKind::PatchPanel),
+            "blank" => Some(RackItemKind::Blank),
+            "label" => Some(RackItemKind::Label),
+            "server" => Some(RackItemKind::Server),
+            _ => None,
+        }
+    }
+}
+
+/// Presentation-only metadata for a Rack Item. No secrets ever land here.
+#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct RackItemMetadata {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub accent: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub icon: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub notes: Option<String>,
+}
+
+/// One device occupying a contiguous `start_u..start_u + height_u` span in a
+/// Rack. `connection_id` is a soft reference to `connections.id` (None = passive).
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct RackItem {
+    pub id: String,
+    pub rack_id: String,
+    #[serde(default)]
+    pub connection_id: Option<String>,
+    pub kind: RackItemKind,
+    #[serde(default)]
+    pub label: String,
+    pub start_u: u32,
+    pub height_u: u32,
+    #[serde(default)]
+    pub metadata: RackItemMetadata,
+}
+
 /// One concrete fleet target produced by resolving a Fleet at run time.
 /// Lightweight and secret-free — the seam the Phase 2 Batch Run executor builds
 /// on. Passwords/keys are never carried here; they stay in the keychain.

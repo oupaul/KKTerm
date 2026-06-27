@@ -12,7 +12,7 @@ use std::{
 use time::{OffsetDateTime, format_description::well_known::Rfc3339};
 use zip::{ZipArchive, ZipWriter, write::SimpleFileOptions};
 
-const SCHEMA_USER_VERSION: i32 = 34;
+const SCHEMA_USER_VERSION: i32 = 35;
 
 const DEFAULT_TERMINAL_OPACITY: u8 = 50;
 
@@ -330,6 +330,44 @@ CREATE TABLE IF NOT EXISTS itops_automations (
     created_at   TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at   TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Fleet topology (docs/FLEET.md Phase B). A Rack is a fixed-height cabinet that
+-- belongs to one Fleet, grouped visually by region + area. v35.
+CREATE TABLE IF NOT EXISTS itops_fleet_racks (
+    id          TEXT PRIMARY KEY,
+    fleet_id    TEXT NOT NULL REFERENCES itops_fleets(id) ON DELETE CASCADE,
+    name        TEXT NOT NULL,
+    region      TEXT NOT NULL DEFAULT '',
+    area        TEXT NOT NULL DEFAULT '',
+    height_u    INTEGER NOT NULL DEFAULT 42,
+    sort_order  INTEGER NOT NULL,
+    created_at  TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at  TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_itops_fleet_racks_fleet
+    ON itops_fleet_racks(fleet_id, sort_order);
+
+-- One device occupying a contiguous U span in a Rack. Connection-backed when
+-- connection_id is set; passive otherwise. connection_id is a SOFT reference
+-- (no FK): a placed host whose Connection is later deleted becomes a flagged
+-- "ghost" item the UI surfaces, rather than vanishing the rack layout. v35.
+CREATE TABLE IF NOT EXISTS itops_fleet_rack_items (
+    id            TEXT PRIMARY KEY,
+    rack_id       TEXT NOT NULL REFERENCES itops_fleet_racks(id) ON DELETE CASCADE,
+    connection_id TEXT,
+    -- 'connection' | 'switch' | 'pdu' | 'patchPanel' | 'blank' | 'label' | 'server'
+    kind          TEXT NOT NULL,
+    label         TEXT NOT NULL DEFAULT '',
+    start_u       INTEGER NOT NULL,
+    height_u      INTEGER NOT NULL DEFAULT 1,
+    metadata_json TEXT NOT NULL DEFAULT '{}',
+    created_at    TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at    TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_itops_fleet_rack_items_rack
+    ON itops_fleet_rack_items(rack_id, start_u);
 "#;
 
 pub struct Storage {

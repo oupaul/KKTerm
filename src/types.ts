@@ -164,6 +164,47 @@ export interface ResolvedHost {
   transport: ItopsTransport;
 }
 
+// Fleet topology (docs/FLEET.md Phase B). A Rack belongs to one Fleet, grouped
+// by region/area, and holds Rack Items at U positions.
+export type RackItemKind =
+  | "connection"
+  | "switch"
+  | "pdu"
+  | "patchPanel"
+  | "blank"
+  | "label"
+  | "server";
+
+export interface RackItemMetadata {
+  accent?: string | null;
+  icon?: string | null;
+  notes?: string | null;
+}
+
+export interface RackItem {
+  id: string;
+  rackId: string;
+  // Soft reference to a Connection id; null for passive items.
+  connectionId?: string | null;
+  kind: RackItemKind;
+  label: string;
+  // Bottom-most U occupied (1-based) and height in U.
+  startU: number;
+  heightU: number;
+  metadata: RackItemMetadata;
+}
+
+export interface Rack {
+  id: string;
+  fleetId: string;
+  name: string;
+  region: string;
+  area: string;
+  heightU: number;
+  sortOrder: number;
+  items: RackItem[];
+}
+
 // One step of an interactive Playbook: text sent to the host's PTY shell, then
 // an optional literal substring to wait for before the next step runs.
 export interface PlaybookStep {

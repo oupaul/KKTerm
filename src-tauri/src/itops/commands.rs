@@ -12,13 +12,14 @@ use tauri::{AppHandle, Emitter, Manager, State};
 use crate::secrets;
 use crate::ssh;
 
+use super::fleet_storage as topo;
 use super::ids::new_itops_id;
 use super::runner::{self, SshTransport, DEFAULT_CONCURRENCY, DEFAULT_TIMEOUT_SECONDS};
 use super::run_storage;
 use super::storage as ito;
 use super::types::{
-    BatchTask, Fleet, FleetFilter, ResolvedHost, RunEvent, RunEventHost, RunHistoryEntry,
-    Transport,
+    BatchTask, Fleet, FleetFilter, Rack, RackItem, RackItemKind, RackItemMetadata, ResolvedHost,
+    RunEvent, RunEventHost, RunHistoryEntry, Transport,
 };
 
 fn storage(app: &AppHandle) -> State<'_, crate::storage::Storage> {
@@ -270,5 +271,128 @@ pub fn itops_list_run_history(
     let limit = limit.unwrap_or(50).clamp(1, 500);
     storage(&app).with_connection_infallible(|conn| {
         run_storage::list_run_history(conn, limit).map_err(|error| error.to_string())
+    })
+}
+
+// ── Fleet topology: Racks + Rack Items (docs/FLEET.md Phase B) ───────────────
+
+#[tauri::command]
+pub fn itops_list_racks(app: AppHandle, fleet_id: String) -> Result<Vec<Rack>, String> {
+    storage(&app).with_connection_infallible(|conn| {
+        topo::list_racks(conn, &fleet_id).map_err(|error| error.to_string())
+    })
+}
+
+#[tauri::command]
+pub fn itops_create_rack(
+    app: AppHandle,
+    fleet_id: String,
+    name: String,
+    region: String,
+    area: String,
+    height_u: u32,
+) -> Result<Rack, String> {
+    let id = new_itops_id("rack");
+    storage(&app).with_connection_infallible(|conn| {
+        topo::create_rack(conn, &id, &fleet_id, &name, &region, &area, height_u)
+            .map_err(|error| error.to_string())
+    })
+}
+
+#[tauri::command]
+pub fn itops_update_rack(
+    app: AppHandle,
+    id: String,
+    name: String,
+    region: String,
+    area: String,
+    height_u: u32,
+) -> Result<Rack, String> {
+    storage(&app).with_connection_infallible(|conn| {
+        topo::update_rack(conn, &id, &name, &region, &area, height_u)
+            .map_err(|error| error.to_string())
+    })
+}
+
+#[tauri::command]
+pub fn itops_delete_rack(app: AppHandle, id: String) -> Result<(), String> {
+    storage(&app).with_connection_infallible(|conn| {
+        topo::delete_rack(conn, &id).map_err(|error| error.to_string())
+    })
+}
+
+#[tauri::command]
+pub fn itops_reorder_racks(
+    app: AppHandle,
+    fleet_id: String,
+    ordered_ids: Vec<String>,
+) -> Result<(), String> {
+    storage(&app).with_connection_infallible(|conn| {
+        topo::reorder_racks(conn, &fleet_id, &ordered_ids).map_err(|error| error.to_string())
+    })
+}
+
+#[tauri::command]
+#[allow(clippy::too_many_arguments)]
+pub fn itops_place_rack_item(
+    app: AppHandle,
+    rack_id: String,
+    connection_id: Option<String>,
+    kind: RackItemKind,
+    label: String,
+    start_u: u32,
+    height_u: u32,
+    metadata: Option<RackItemMetadata>,
+) -> Result<RackItem, String> {
+    let id = new_itops_id("ri");
+    storage(&app).with_connection_infallible(|conn| {
+        topo::place_rack_item(
+            conn,
+            &id,
+            &rack_id,
+            connection_id,
+            kind,
+            &label,
+            start_u,
+            height_u,
+            metadata.unwrap_or_default(),
+        )
+        .map_err(|error| error.to_string())
+    })
+}
+
+#[tauri::command]
+pub fn itops_update_rack_item(
+    app: AppHandle,
+    id: String,
+    kind: RackItemKind,
+    connection_id: Option<String>,
+    label: String,
+    metadata: Option<RackItemMetadata>,
+) -> Result<RackItem, String> {
+    storage(&app).with_connection_infallible(|conn| {
+        topo::update_rack_item(conn, &id, kind, connection_id, &label, metadata.unwrap_or_default())
+            .map_err(|error| error.to_string())
+    })
+}
+
+#[tauri::command]
+pub fn itops_move_rack_item(
+    app: AppHandle,
+    id: String,
+    rack_id: String,
+    start_u: u32,
+    height_u: u32,
+) -> Result<RackItem, String> {
+    storage(&app).with_connection_infallible(|conn| {
+        topo::move_rack_item(conn, &id, &rack_id, start_u, height_u)
+            .map_err(|error| error.to_string())
+    })
+}
+
+#[tauri::command]
+pub fn itops_remove_rack_item(app: AppHandle, id: String) -> Result<(), String> {
+    storage(&app).with_connection_infallible(|conn| {
+        topo::remove_rack_item(conn, &id).map_err(|error| error.to_string())
     })
 }
