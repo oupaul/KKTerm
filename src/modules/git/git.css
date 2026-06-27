@@ -203,6 +203,7 @@
   font-weight: 500; cursor: pointer; text-align: left;
 }
 .git-sb-item.git-sb-sub { padding-left: 28px; }
+.git-sb-item.git-sb-more .nm { color: var(--git-text-3); font-size: 12px; }
 .git-sb-item .gl { display: inline-flex; flex: 0 0 auto; }
 .git-sb-item .nm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1 1 auto; }
 .git-sb-item:hover { background: var(--git-hover); }

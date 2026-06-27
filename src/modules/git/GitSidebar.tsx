@@ -3,12 +3,16 @@
 // activated (checkout / switch worktree) on double click — the parent confirms
 // before acting. Branch and worktree rows expose a right-click context menu;
 // stash rows expose apply/pop/drop affordances.
-import type { MouseEvent } from "react";
+import { useState, type MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
 import type { GitOverview, GitWorktree } from "./gitTypes";
 import { laneColor } from "./gitPalette";
 import { GitIcon } from "./GitIcon";
 import { splitPath } from "./gitPath";
+
+// Tags can run into the hundreds; show the newest few and collapse the rest
+// behind an expandable ellipsis row (the backend sorts tags newest-first).
+const TAG_PREVIEW_COUNT = 10;
 
 /** A user-actionable sidebar row. */
 export type SidebarRef =
@@ -57,9 +61,13 @@ export function GitSidebar({
   onStashDrop: (index: number) => void;
 }) {
   const { t } = useTranslation();
+  const [tagsExpanded, setTagsExpanded] = useState(false);
   if (!overview) {
     return <div className="git-sidebar" style={{ width, flex: "0 0 auto", minWidth: 0 }} />;
   }
+
+  const tagOverflow = overview.tags.length - TAG_PREVIEW_COUNT;
+  const visibleTags = tagsExpanded ? overview.tags : overview.tags.slice(0, TAG_PREVIEW_COUNT);
 
   // Wire single-click select, double-click activate, and right-click context.
   const rowHandlers = (ref: SidebarRef) => ({
@@ -85,6 +93,29 @@ export function GitSidebar({
             {isDefault ? <span className="git-sb-tag">{t("git.defaultBranch")}</span> : null}
             {branch.ahead > 0 ? <span className="ab"><span className="up">↑{branch.ahead}</span></span> : null}
             {branch.behind > 0 ? <span className="ab"><span className="down">↓{branch.behind}</span></span> : null}
+          </div>
+        );
+      })}
+
+      <div className="git-sb-group">
+        <span className="t">{t("git.worktrees")}</span>
+        <button type="button" className="git-sb-add" onClick={onAddWorktree} title={t("git.addWorktree")}>
+          <GitIcon name="plus" size={14} />
+        </button>
+      </div>
+      {overview.worktrees.map((worktree) => {
+        const ref: SidebarRef = { kind: "worktree", worktree };
+        const { name } = splitPath(worktree.path.replace(/\\/g, "/"));
+        return (
+          <div
+            key={worktree.path}
+            className={cls(ref, worktree.isCurrent ? "active" : "")}
+            title={worktree.path}
+            {...rowHandlers(ref)}
+          >
+            <span className="gl" style={{ color: "var(--git-text-2)" }}><GitIcon name="worktree" size={15} /></span>
+            <span className="nm">{name || worktree.path}</span>
+            {worktree.branch ? <span className="git-sb-tag">{worktree.branch}</span> : null}
           </div>
         );
       })}
@@ -119,7 +150,7 @@ export function GitSidebar({
       {overview.tags.length > 0 ? (
         <div className="git-sb-group"><span className="t">{t("git.tags")}</span></div>
       ) : null}
-      {overview.tags.map((tag) => {
+      {visibleTags.map((tag) => {
         const ref: SidebarRef = { kind: "tag", name: tag };
         return (
           <div key={tag} className={cls(ref)} {...rowHandlers(ref)}>
@@ -128,29 +159,18 @@ export function GitSidebar({
           </div>
         );
       })}
-
-      <div className="git-sb-group">
-        <span className="t">{t("git.worktrees")}</span>
-        <button type="button" className="git-sb-add" onClick={onAddWorktree} title={t("git.addWorktree")}>
-          <GitIcon name="plus" size={14} />
+      {tagOverflow > 0 ? (
+        <button
+          type="button"
+          className="git-sb-item git-sb-more"
+          onClick={() => setTagsExpanded((value) => !value)}
+        >
+          <span className="gl" style={{ color: "var(--git-text-3)" }}><GitIcon name="more" size={15} /></span>
+          <span className="nm">
+            {tagsExpanded ? t("git.showFewerTags") : t("git.showMoreTags", { count: tagOverflow })}
+          </span>
         </button>
-      </div>
-      {overview.worktrees.map((worktree) => {
-        const ref: SidebarRef = { kind: "worktree", worktree };
-        const { name } = splitPath(worktree.path.replace(/\\/g, "/"));
-        return (
-          <div
-            key={worktree.path}
-            className={cls(ref, worktree.isCurrent ? "active" : "")}
-            title={worktree.path}
-            {...rowHandlers(ref)}
-          >
-            <span className="gl" style={{ color: "var(--git-text-2)" }}><GitIcon name="worktree" size={15} /></span>
-            <span className="nm">{name || worktree.path}</span>
-            {worktree.branch ? <span className="git-sb-tag">{worktree.branch}</span> : null}
-          </div>
-        );
-      })}
+      ) : null}
 
       {overview.stashes.length > 0 ? (
         <div className="git-sb-group"><span className="t">{t("git.stashes")}</span></div>

@@ -2769,6 +2769,8 @@
     "local": "Local",
     "remotes": "Remotes",
     "tags": "Tags",
+    "showMoreTags": "… {{count}} more",
+    "showFewerTags": "Show fewer",
     "stashes": "Stashes",
     "stashApply": "Apply stash",
     "stashPop": "Pop stash",
