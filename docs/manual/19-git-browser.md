@@ -2,9 +2,9 @@
 
 ## AI grep hints
 
-- Keys: `git.*` (full namespace), `git.openBrowser`, `git.history`, `git.commit`, `git.fetch`, `git.pull`, `git.push`, `git.sync`, `git.branch`, `git.merge`, `git.stash`, `git.checkoutCommit`, `git.cherryPick`, `git.revertCommit`, `git.reset`, `git.discard`, `git.renameBranch`, `git.deleteBranch`, `git.worktrees`, `git.addWorktree`, `git.switchWorktree`, `git.switchRefConfirmTitle`, `git.gitNeededTitle`
+- Keys: `git.*` (full namespace), `git.openBrowser`, `git.history`, `git.commit`, `git.fetch`, `git.pull`, `git.push`, `git.sync`, `git.branch`, `git.merge`, `git.stash`, `git.checkoutCommit`, `git.cherryPick`, `git.revertCommit`, `git.reset`, `git.discard`, `git.renameBranch`, `git.deleteBranch`, `git.worktrees`, `git.addWorktree`, `git.switchWorktree`, `git.switchRefConfirmTitle`, `git.gitNeededTitle`, `git.advancedDiffTitle`, `git.searchDiff`, `git.previousDifference`, `git.nextDifference`
 - Files: `src/modules/git/` (overlay; layout in `useGitLayout.ts` + `GitResizeHandle.tsx`), `src-tauri/src/git.rs` (backend), entry points in `src/modules/workspace/connections/terminal/TerminalWorkspace.tsx` and `src/modules/workspace/connections/sftp/SftpWorkspace.tsx`
-- Topics: commit graph, commit history, staging, committing, branches, tags, stashes, worktrees, fetch/pull/push/sync, reset, discard, diff viewer, resizable panes
+- Topics: commit graph, commit history, staging, committing, branches, tags, stashes, worktrees, fetch/pull/push/sync, reset, discard, unified diff viewer, side-by-side diff viewer, resizable panes
 - Synonyms: "git client", "source control", "version control", "commit graph", "git log", "git GUI", "worktree"
 
 ## Opening the Git Browser
@@ -27,7 +27,7 @@ The default view (`git.history`) shows a GitKraken-style commit graph with color
 - The graph column routes curved connectors between each commit and its parents; lane color is derived from the branch topology.
 - Ref badges show the current branch (`head`), other local branches, remote-tracking branches, and tags.
 - A dashed **Working tree** row (`git.workingTree`) at the top represents uncommitted changes.
-- Selecting a commit fills the right-hand inspector with the message, author, exact date, commit/parent SHAs (with copy), the changed-files list (`git.changedFiles`), and a unified diff viewer.
+- Selecting a commit fills the right-hand inspector with the message, author, exact date, commit/parent SHAs (with copy), the changed-files list (`git.changedFiles`), and a unified diff viewer. Double-click a changed file to open the advanced side-by-side diff dialog (`git.advancedDiffTitle`) with original/modified columns (`git.diffOriginal`, `git.diffModified`), text search (`git.searchDiff`), and previous/next difference navigation (`git.previousDifference`, `git.nextDifference`).
 
 Right-click a commit for actions: `git.checkoutCommit`, `git.createBranchHere`, `git.createTag`, `git.cherryPick`, `git.revertCommit`, `git.resetSoft` / `git.resetMixed` / `git.resetHard`, `git.copySha`, `git.copyMessage`. Destructive actions (checkout/detach, cherry-pick, revert, reset) confirm first through the standard `ConfirmSheet`; hard reset uses the danger tone.
 
@@ -35,7 +35,7 @@ Use the search box (`git.searchCommits`) to filter the visible commits by messag
 
 ## Commit view
 
-Switch to `git.commit` to stage and commit. The working-tree pane lists **Staged** (`git.staged`) and **Changes** (`git.changes`) sections. Toggle a file's checkbox to stage/unstage it, or use `git.stageAll` / `git.unstageAll`. Selecting a file shows its diff. Enter a message (`git.commitMessagePlaceholder`), optionally tick `git.amend`, and commit with the button (`git.commitFiles`).
+Switch to `git.commit` to stage and commit. The working-tree pane lists **Staged** (`git.staged`) and **Changes** (`git.changes`) sections. Toggle a file's checkbox to stage/unstage it, or use `git.stageAll` / `git.unstageAll`. Selecting a file shows its diff; double-clicking a file opens the advanced side-by-side diff dialog (`git.advancedDiffTitle`). Enter a message (`git.commitMessagePlaceholder`), optionally tick `git.amend`, and commit with the button (`git.commitFiles`).
 
 Discard changes from the Changes section: hover a file for its discard control (`git.discard`) or use `git.discardAll`. Both confirm first (`git.discardConfirmTitle`); tracked files are restored to HEAD and untracked files are deleted, so the action cannot be undone.
 

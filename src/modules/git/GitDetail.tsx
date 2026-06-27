@@ -69,11 +69,13 @@ export function ChangedFiles({
   files,
   selectedIndex,
   onSelect,
+  onOpenDiff,
   label,
 }: {
   files: GitChangedFile[];
   selectedIndex: number;
   onSelect: (index: number) => void;
+  onOpenDiff?: (index: number) => void;
   label?: string;
 }) {
   const { t } = useTranslation();
@@ -96,6 +98,7 @@ export function ChangedFiles({
               key={`${file.path}-${i}`}
               className={`git-file-row${selectedIndex === i ? " sel" : ""}`}
               onClick={() => onSelect(i)}
+              onDoubleClick={() => onOpenDiff?.(i)}
             >
               <span className={`git-st ${statusClass(file.status)}`}>{file.status}</span>
               <span className="path">

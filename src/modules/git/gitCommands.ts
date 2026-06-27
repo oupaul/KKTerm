@@ -35,14 +35,15 @@ export function gitDiffCommit(
   repoRoot: string,
   sha: string,
   path: string,
+  options?: { fullContext?: boolean },
 ): Promise<GitDiffLine[]> {
-  return invokeCommand("git_diff_commit", { request: { repoRoot, sha, path } });
+  return invokeCommand("git_diff_commit", { request: { repoRoot, sha, path, ...options } });
 }
 
 export function gitDiffWorktree(
   repoRoot: string,
   path: string,
-  options?: { staged?: boolean; untracked?: boolean },
+  options?: { staged?: boolean; untracked?: boolean; fullContext?: boolean },
 ): Promise<GitDiffLine[]> {
   return invokeCommand("git_diff_worktree", { request: { repoRoot, path, ...options } });
 }

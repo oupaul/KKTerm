@@ -723,6 +723,9 @@ pub struct DiffCommitRequest {
     pub repo_root: String,
     pub sha: String,
     pub path: String,
+    /// Include unchanged lines so side-by-side viewers can show the full file.
+    #[serde(default)]
+    pub full_context: bool,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -736,16 +739,25 @@ pub struct DiffWorktreeRequest {
     /// File is untracked: diff it against an empty blob so new content shows.
     #[serde(default)]
     pub untracked: bool,
+    /// Include unchanged lines so side-by-side viewers can show the full file.
+    #[serde(default)]
+    pub full_context: bool,
 }
 
 pub fn diff_commit(request: DiffCommitRequest) -> Result<Vec<GitDiffLine>, String> {
     let repo = request.repo_root.as_str();
+    let context = if request.full_context {
+        "--unified=999999"
+    } else {
+        "--unified=3"
+    };
     let stdout = git_text(
         repo,
         &[
             "show",
             "--root",
             "--no-color",
+            context,
             "--format=",
             &request.sha,
             "--",
@@ -763,11 +775,26 @@ pub fn diff_worktree(request: DiffWorktreeRequest) -> Result<Vec<GitDiffLine>, S
         // differ, which is expected here, so do not treat that as an error.
         let out = run_git(
             Some(repo),
-            &["diff", "--no-color", "--no-index", "--", "/dev/null", &request.path],
+            &[
+                "diff",
+                "--no-color",
+                if request.full_context {
+                    "--unified=999999"
+                } else {
+                    "--unified=3"
+                },
+                "--no-index",
+                "--",
+                "/dev/null",
+                &request.path,
+            ],
         )?;
         return Ok(parse_unified_diff(&String::from_utf8_lossy(&out.stdout)));
     }
     let mut args = vec!["diff", "--no-color"];
+    if request.full_context {
+        args.push("--unified=999999");
+    }
     if request.staged {
         args.push("--cached");
     }

@@ -22,6 +22,7 @@ import { GitGraph } from "./GitGraph";
 import { GitSidebar, sidebarKey, type SidebarRef } from "./GitSidebar";
 import { ChangedFiles, DetailHead } from "./GitDetail";
 import { GitDiffViewer } from "./GitDiffViewer";
+import { GitAdvancedDiffViewer } from "./GitAdvancedDiffViewer";
 import { WorkingTree, type WorkingTreeSelection } from "./WorkingTree";
 import { GitCommitMenu, type CommitMenuItem } from "./GitCommitMenu";
 import { GitNamePrompt } from "./GitNamePrompt";
@@ -75,6 +76,8 @@ interface DetailEntry {
   untracked: boolean;
   /** True when this file belongs to a committed change (uses commit diff). */
   fromCommit: boolean;
+  /** Commit to diff against when the entry belongs to a committed change. */
+  commitSha?: string;
 }
 
 interface PromptState {
@@ -136,6 +139,9 @@ export function GitBrowser({
   // Diff
   const [diffLines, setDiffLines] = useState<GitDiffLine[]>([]);
   const [diffLoading, setDiffLoading] = useState(false);
+  const [advancedEntry, setAdvancedEntry] = useState<DetailEntry | null>(null);
+  const [advancedLines, setAdvancedLines] = useState<GitDiffLine[]>([]);
+  const [advancedLoading, setAdvancedLoading] = useState(false);
 
   // Sidebar single-click selection (visual; double-click activates).
   const [selectedRef, setSelectedRef] = useState<string | null>(null);
@@ -253,8 +259,9 @@ export function GitBrowser({
       staged: false,
       untracked: false,
       fromCommit: true,
+      commitSha: selectedId ?? undefined,
     }));
-  }, [wtSelected, status, commitFiles]);
+  }, [wtSelected, status, commitFiles, selectedId]);
 
   const activeEntry: DetailEntry | null = useMemo(() => {
     if (view === "commit") {
@@ -283,8 +290,8 @@ export function GitBrowser({
     let cancelled = false;
     setDiffLoading(true);
     const loader =
-      activeEntry.fromCommit && selectedId
-        ? gitDiffCommit(repoRoot, selectedId, activeEntry.file.path)
+      activeEntry.fromCommit && activeEntry.commitSha
+        ? gitDiffCommit(repoRoot, activeEntry.commitSha, activeEntry.file.path)
         : gitDiffWorktree(repoRoot, activeEntry.file.path, {
             staged: activeEntry.staged,
             untracked: activeEntry.untracked,
@@ -309,7 +316,44 @@ export function GitBrowser({
     return () => {
       cancelled = true;
     };
-  }, [activeEntry, repoRoot, selectedId, notifyError]);
+  }, [activeEntry, repoRoot, notifyError]);
+
+  useEffect(() => {
+    if (!advancedEntry) {
+      setAdvancedLines([]);
+      return;
+    }
+    let cancelled = false;
+    setAdvancedLoading(true);
+    const loader =
+      advancedEntry.fromCommit && advancedEntry.commitSha
+        ? gitDiffCommit(repoRoot, advancedEntry.commitSha, advancedEntry.file.path, { fullContext: true })
+        : gitDiffWorktree(repoRoot, advancedEntry.file.path, {
+            staged: advancedEntry.staged,
+            untracked: advancedEntry.untracked,
+            fullContext: true,
+          });
+    void loader
+      .then((lines) => {
+        if (!cancelled) {
+          setAdvancedLines(lines);
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setAdvancedLines([]);
+          notifyError(error);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setAdvancedLoading(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [advancedEntry, repoRoot, notifyError]);
 
   /** Run a mutating git action, then reload and report the outcome. */
   const runAction = useCallback(
@@ -762,6 +806,15 @@ export function GitBrowser({
           onDiscardFile={onDiscardFile}
           onDiscardAll={onDiscardAll}
           onCommit={onCommit}
+          onOpenDiff={(selection) => {
+            setWtSelection(selection);
+            setAdvancedEntry({
+              file: selection.file,
+              staged: selection.staged,
+              untracked: selection.untracked,
+              fromCommit: false,
+            });
+          }}
           committing={busy}
           style={{ width: layout.worktreeW, flex: "0 0 auto" }}
         />
@@ -827,6 +880,10 @@ export function GitBrowser({
             files={detailEntries.map((entry) => entry.file)}
             selectedIndex={Math.min(fileIndex, Math.max(detailEntries.length - 1, 0))}
             onSelect={setFileIndex}
+            onOpenDiff={(index) => {
+              setFileIndex(index);
+              setAdvancedEntry(detailEntries[index] ?? null);
+            }}
           />
           <GitDiffViewer file={activeEntry?.file ?? null} lines={diffLines} loading={diffLoading} />
         </div>
@@ -981,6 +1038,14 @@ export function GitBrowser({
             setConfirm(null);
           }}
           onCancel={() => setConfirm(null)}
+        />
+      ) : null}
+      {advancedEntry ? (
+        <GitAdvancedDiffViewer
+          file={advancedEntry.file}
+          lines={advancedLines}
+          loading={advancedLoading}
+          onClose={() => setAdvancedEntry(null)}
         />
       ) : null}
     </div>

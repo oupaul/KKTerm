@@ -2203,11 +2203,11 @@ type CommandMap = {
     result: GitChangedFile[];
   };
   git_diff_commit: {
-    args: { request: { repoRoot: string; sha: string; path: string } };
+    args: { request: { repoRoot: string; sha: string; path: string; fullContext?: boolean } };
     result: GitDiffLine[];
   };
   git_diff_worktree: {
-    args: { request: { repoRoot: string; path: string; staged?: boolean; untracked?: boolean } };
+    args: { request: { repoRoot: string; path: string; staged?: boolean; untracked?: boolean; fullContext?: boolean } };
     result: GitDiffLine[];
   };
   git_status: {

@@ -371,6 +371,174 @@
 .git-dl.del .gut { background: var(--git-diff-del-gutter); color: var(--git-del-text); }
 .git-dl.del .code { color: var(--git-del-text); }
 
+/* ── advanced side-by-side diff ─────────────────────────────────────────── */
+.git-adv-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.34);
+}
+.git-adv {
+  width: min(1320px, 92vw);
+  height: min(760px, 86vh);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 10px;
+  border: 1px solid var(--git-border);
+  background: var(--git-bg);
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.34), 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+.git-adv-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 10px 0 14px;
+  border-bottom: 1px solid var(--git-hairline);
+  background: var(--git-chrome);
+  flex: 0 0 auto;
+}
+.git-adv-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1 1 auto;
+  font-family: var(--git-mono);
+  font-size: 12px;
+}
+.git-adv-title .name {
+  color: var(--git-text);
+  font-weight: 700;
+  white-space: nowrap;
+}
+.git-adv-title .dir {
+  color: var(--git-text-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.git-adv-search {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: 240px;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 8px;
+  background: var(--git-muted);
+  color: var(--git-text-3);
+  box-shadow: inset 0 0 0 0.5px var(--git-border);
+}
+.git-adv-search input {
+  min-width: 0;
+  flex: 1 1 auto;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--git-text);
+  font: inherit;
+}
+.git-adv-search .count {
+  min-width: 22px;
+  text-align: right;
+  font-family: var(--git-mono);
+  font-size: 11px;
+  color: var(--git-text-3);
+}
+.git-adv-cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  height: 28px;
+  border-bottom: 1px solid var(--git-hairline);
+  background: var(--git-chrome-2);
+  color: var(--git-text-3);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.git-adv-cols > div {
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+}
+.git-adv-cols > div + div {
+  border-left: 1px solid var(--git-hairline);
+}
+.git-adv-body {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: auto;
+  font-family: var(--git-mono);
+  font-size: 12px;
+  line-height: 1.55;
+}
+.git-adv-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  min-width: 980px;
+}
+.git-adv-row.active {
+  outline: 1px solid var(--git-accent);
+  outline-offset: -1px;
+}
+.git-adv-hunk {
+  display: block;
+  padding: 4px 12px;
+  color: color-mix(in srgb, var(--git-accent) 78%, var(--git-text));
+  background: color-mix(in srgb, var(--git-accent) 8%, var(--git-bg));
+  font-weight: 600;
+}
+.git-adv-cell {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  min-width: 0;
+}
+.git-adv-cell + .git-adv-cell {
+  border-left: 1px solid var(--git-hairline);
+}
+.git-adv-cell .no {
+  padding: 0 8px 0 0;
+  text-align: right;
+  color: var(--git-text-3);
+  background: color-mix(in srgb, var(--git-chrome) 74%, var(--git-bg));
+  user-select: none;
+  font-variant-numeric: tabular-nums;
+}
+.git-adv-cell .txt {
+  padding: 0 12px 0 8px;
+  white-space: pre;
+  overflow: hidden;
+  text-overflow: clip;
+}
+.git-adv-cell.add {
+  background: var(--git-diff-add);
+  color: var(--git-add-text);
+}
+.git-adv-cell.add .no {
+  background: var(--git-diff-add-gutter);
+  color: var(--git-add-text);
+}
+.git-adv-cell.del {
+  background: var(--git-diff-del);
+  color: var(--git-del-text);
+}
+.git-adv-cell.del .no {
+  background: var(--git-diff-del-gutter);
+  color: var(--git-del-text);
+}
+.git-adv-cell.blank {
+  background: color-mix(in srgb, var(--git-muted) 50%, var(--git-bg));
+}
+.git-adv-cell.search-hit .txt {
+  background: color-mix(in srgb, var(--git-amber) 26%, transparent);
+}
+
 /* ── working tree pane ──────────────────────────────────────────────────── */
 .git-wt-pane { flex: 0 0 380px; width: 380px; border-right: 1px solid var(--git-hairline); display: flex; flex-direction: column; background: var(--git-bg); overflow: hidden; }
 .git-wt-section-head {

@@ -26,6 +26,7 @@ export function WorkingTree({
   onDiscardFile,
   onDiscardAll,
   onCommit,
+  onOpenDiff,
   committing,
   style,
 }: {
@@ -40,6 +41,7 @@ export function WorkingTree({
   onDiscardFile: (file: GitChangedFile) => void;
   onDiscardAll: () => void;
   onCommit: (message: string, amend: boolean) => Promise<boolean>;
+  onOpenDiff?: (selection: WorkingTreeSelection) => void;
   committing: boolean;
   style?: CSSProperties;
 }) {
@@ -55,6 +57,7 @@ export function WorkingTree({
         key={key}
         className={`git-wt-row${selectedKey === key ? " sel" : ""}`}
         onClick={() => onSelect({ key, file, staged: isStaged, untracked })}
+        onDoubleClick={() => onOpenDiff?.({ key, file, staged: isStaged, untracked })}
       >
         <span
           className={`git-chk${isStaged ? " on" : ""}`}
