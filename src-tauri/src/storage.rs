@@ -1763,6 +1763,15 @@ impl Storage {
         })
     }
 
+    /// Fetch a single Connection by id, across all Workspaces. Used by the IT
+    /// Ops Fleet Rack View to open a placed Connection's Session (docs/FLEET.md
+    /// Phase D); a Fleet may reference Connections in any Workspace, so this is
+    /// not Workspace-scoped.
+    pub fn get_connection(&self, connection_id: &str) -> Result<SavedConnection, String> {
+        let connection = self.lock()?;
+        get_connection_by_id(&connection, connection_id)
+    }
+
     /// Root tree scoped to a single Workspace — the UI Connection Tree path.
     pub fn list_connection_tree_for_workspace(
         &self,

@@ -1,8 +1,9 @@
-// Rack front elevation (docs/FLEET.md Phase C). Renders one Rack as a fixed-
-// height column of U slots with its items placed at their U positions. With the
-// edit callbacks wired it becomes the dialogs-first editor: click an empty U to
-// add a device, click an item to edit it, and edit/delete the rack from its
-// header. Drag-to-place lands in a later slice.
+// Rack front elevation (docs/FLEET.md Phase C/D). Renders one Rack as a fixed-
+// height column of U slots with its items at their U positions. With callbacks
+// wired it is the editor: click an empty U to add a device; a placed host opens
+// its Session on click (Phase D) with a pencil to edit; passive items open the
+// edit dialog. A Connection-backed item whose Connection is gone renders as a
+// dimmed "ghost". Drag-to-place lands in a later slice.
 
 import { useTranslation } from "react-i18next";
 import type { Rack, RackItem, RackItemKind } from "../../types";
@@ -31,17 +32,22 @@ function itemRowStart(rackHeightU: number, item: RackItem): number {
 export function RackElevation({
   rack,
   onSlotClick,
-  onItemClick,
+  onOpenItem,
+  onEditItem,
   onEditRack,
   onDeleteRack,
+  isGhost,
 }: {
   rack: Rack;
   onSlotClick?: (startU: number) => void;
-  onItemClick?: (item: RackItem) => void;
+  onOpenItem?: (item: RackItem) => void;
+  onEditItem?: (item: RackItem) => void;
   onEditRack?: (rack: Rack) => void;
   onDeleteRack?: (rack: Rack) => void;
+  isGhost?: (item: RackItem) => boolean;
 }) {
   const { t } = useTranslation();
+  const editable = !!onEditItem;
   // Top-to-bottom U numbers: heightU … 1.
   const unitNumbers = Array.from({ length: rack.heightU }, (_, i) => rack.heightU - i);
 
@@ -110,8 +116,16 @@ export function RackElevation({
         {/* Items paint over the empty slots they occupy. */}
         {rack.items.map((item) => {
           const icon = KIND_ICON[item.kind];
+          const ghost = item.kind === "connection" && !!isGhost?.(item);
           const text = item.label || t(`itops.racks.kind.${item.kind}`);
-          const body = (
+          // A live host opens on click; everything else (passive, ghost) edits.
+          const opens = item.kind === "connection" && !ghost && !!onOpenItem;
+          const primary = opens ? () => onOpenItem!(item) : () => onEditItem?.(item);
+          const style = {
+            gridColumn: 2,
+            gridRow: `${itemRowStart(rack.heightU, item)} / span ${item.heightU}`,
+          } as const;
+          const inner = (
             <>
               {icon ? (
                 <span className="rk-item-ic">
@@ -119,26 +133,37 @@ export function RackElevation({
                 </span>
               ) : null}
               <span className="rk-item-label">{text}</span>
+              {ghost ? <span className="rk-ghost-badge">{t("itops.racks.ghostBadge")}</span> : null}
             </>
           );
-          const style = {
-            gridColumn: 2,
-            gridRow: `${itemRowStart(rack.heightU, item)} / span ${item.heightU}`,
-          } as const;
-          return onItemClick ? (
-            <button
-              key={item.id}
-              type="button"
-              className={`rk-item rk-item-btn kind-${item.kind}`}
-              style={style}
-              title={text}
-              onClick={() => onItemClick(item)}
-            >
-              {body}
-            </button>
-          ) : (
-            <div key={item.id} className={`rk-item kind-${item.kind}`} style={style} title={text}>
-              {body}
+          const className = `rk-item kind-${item.kind}${ghost ? " ghost" : ""}`;
+          if (!editable) {
+            return (
+              <div key={item.id} className={className} style={style} title={text}>
+                {inner}
+              </div>
+            );
+          }
+          return (
+            <div key={item.id} className={`${className} rk-item-row`} style={style}>
+              <button
+                type="button"
+                className="rk-item-main"
+                title={opens ? t("itops.racks.openTitle", { name: text }) : text}
+                onClick={primary}
+              >
+                {inner}
+              </button>
+              {opens ? (
+                <button
+                  type="button"
+                  className="rk-item-edit"
+                  title={t("itops.racks.editItemTitle")}
+                  onClick={() => onEditItem?.(item)}
+                >
+                  <ItIcon name="edit" size={11} />
+                </button>
+              ) : null}
             </div>
           );
         })}

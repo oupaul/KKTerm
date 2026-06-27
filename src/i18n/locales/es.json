@@ -937,6 +937,8 @@
       "editItemTitle": "Edit device",
       "placeAction": "Place",
       "addAtUnit": "Add a device at U{{unit}}",
+      "openTitle": "Open {{name}}",
+      "ghostBadge": "missing",
       "kindLabel": "Type",
       "connectionLabel": "Connection",
       "noMembers": "Add Connections to this Fleet first to place a host.",

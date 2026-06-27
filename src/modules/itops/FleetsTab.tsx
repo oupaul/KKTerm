@@ -6,6 +6,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ConfirmSheet } from "../../app/ui/dialog";
+import { invokeCommand } from "../../lib/tauri";
 import { useWorkspaceStore } from "../../store";
 import type { Fleet, ItopsTransport, ResolvedHost } from "../../types";
 import { ItIcon, IT_ACCENTS, type ItIconName } from "./icons";
@@ -68,6 +69,7 @@ function groupIcon(group: Fleet): ItIconName {
 export function FleetsTab() {
   const { t } = useTranslation();
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
+  const openConnection = useWorkspaceStore((state) => state.openConnection);
   const fleets = useItOpsStore((state) => state.fleets);
   const loaded = useItOpsStore((state) => state.loaded);
   const updateFleet = useItOpsStore((state) => state.updateFleet);
@@ -147,6 +149,26 @@ export function FleetsTab() {
 
   const racks = activeGroup ? (racksByFleet[activeGroup.id] ?? []) : [];
   const rackRegions = useMemo(() => groupRacksByRegionArea(racks), [racks]);
+
+  // A placed Connection whose id no longer resolves to a Fleet member (deleted
+  // or moved out) is a "ghost" — shown dimmed, not openable, editable/removable.
+  const memberIds = useMemo(() => new Set(members.map((m) => m.connectionId)), [members]);
+  function isGhostItem(item: RackItem): boolean {
+    return item.kind === "connection" && !!item.connectionId && !memberIds.has(item.connectionId);
+  }
+
+  // Open a placed host's Session by hydrating its full Connection (across any
+  // Workspace) and handing it to the existing open path.
+  async function openRackItem(item: RackItem) {
+    if (!item.connectionId) return;
+    try {
+      const connection = await invokeCommand("itops_get_connection", { id: item.connectionId });
+      openConnection(connection);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      showStatusBarNotice(t("itops.errorNotice", { message }), { tone: "error" });
+    }
+  }
 
   async function applyUpdate(
     group: Fleet,
@@ -462,9 +484,11 @@ export function FleetsTab() {
                                 key={rack.id}
                                 rack={rack}
                                 onSlotClick={(startU) => setItemDialog({ rack, item: null, startU })}
-                                onItemClick={(item) => setItemDialog({ rack, item })}
+                                onOpenItem={(item) => void openRackItem(item)}
+                                onEditItem={(item) => setItemDialog({ rack, item })}
                                 onEditRack={(target) => setRackDialog({ rack: target })}
                                 onDeleteRack={(target) => setPendingRackDelete(target)}
+                                isGhost={isGhostItem}
                               />
                             ))}
                           </div>

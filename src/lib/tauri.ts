@@ -1165,6 +1165,10 @@ type CommandMap = {
     args: { id: string };
     result: void;
   };
+  itops_get_connection: {
+    args: { id: string };
+    result: Connection;
+  };
   itops_start_batch_run: {
     args: { fleetId: string; task: BatchTask };
     result: string;

@@ -2172,3 +2172,63 @@
 .itops-page .rk-item-btn:hover {
   filter: brightness(1.06);
 }
+
+/* ── Rack item open/edit affordances + ghost (docs/FLEET.md Phase D) ───────── */
+.itops-page .rk-item.rk-item-row {
+  padding: 0;
+  gap: 0;
+  transition: filter 0.1s;
+}
+.itops-page .rk-item-row:hover {
+  filter: brightness(1.05);
+}
+.itops-page .rk-item-main {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  height: 100%;
+  padding: 0 8px;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  font-weight: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.itops-page .rk-item-edit {
+  flex: 0 0 auto;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 100%;
+  background: transparent;
+  border: 0;
+  border-left: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  color: var(--accent);
+  cursor: pointer;
+}
+.itops-page .rk-item-row:hover .rk-item-edit {
+  display: inline-flex;
+}
+.itops-page .rk-item.ghost {
+  opacity: 0.55;
+  background: var(--surface-muted);
+  border-color: var(--border);
+  border-style: dashed;
+}
+.itops-page .rk-item.ghost .rk-item-ic {
+  color: var(--text-3);
+}
+.itops-page .rk-ghost-badge {
+  flex: 0 0 auto;
+  margin-left: auto;
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--red);
+}

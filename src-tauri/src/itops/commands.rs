@@ -396,3 +396,14 @@ pub fn itops_remove_rack_item(app: AppHandle, id: String) -> Result<(), String> 
         topo::remove_rack_item(conn, &id).map_err(|error| error.to_string())
     })
 }
+
+/// Fetch a single Connection by id so the Rack View can open a placed host's
+/// Session (docs/FLEET.md Phase D). Returns the full Connection across any
+/// Workspace; the frontend hands it to the existing open path.
+#[tauri::command]
+pub fn itops_get_connection(
+    app: AppHandle,
+    id: String,
+) -> Result<crate::storage::SavedConnection, String> {
+    storage(&app).get_connection(&id)
+}

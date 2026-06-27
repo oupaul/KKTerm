@@ -1,8 +1,9 @@
 # Fleet Management — Design & Implementation Plan
 
-Status: **Phases A–B landed**, **Phase C in progress** (read-only Rack View
-shipped; drag-to-place, dialogs, and click-to-connect still to come); Phases
-D–E planned. This document is the detailed plan for evolving the IT Ops **Host
+Status: **Phases A–D landed** (rename, rack data model, Rack View with the
+dialogs-first editor, and click-to-connect with ghost handling). Remaining:
+drag-to-place/resize and scoped Batch Runs (rest of C/D), then Phase E (AI +
+polish). This document is the detailed plan for evolving the IT Ops **Host
 Groups** tab into **Fleet** management with a
 visual virtual-datacenter (rack elevation) layer. It extends `docs/ITOPS.md`
 (which remains the source of truth for shipped IT Ops architecture) and follows
@@ -381,9 +382,14 @@ Each phase is one reviewable PR and leaves the app shippable.
   click an item to edit, with backend overlap/fit validation surfaced as a
   Status Bar error. _Still to come in C:_ drag-to-place/resize (layered on the
   dialog baseline), ghost-item handling, and the `itops-changed` reload listener.
-- **Phase D — Click-to-connect + scoped Batch Runs.** Wire item click to
-  `openConnection`; add rack/area/region-scoped "Run task" via
-  `resolve_fleet_scoped` + `itops_start_batch_run` scope.
+- **Phase D — Click-to-connect + scoped Batch Runs.** _Click-to-connect
+  landed:_ a placed host opens its Session on click via a new
+  `itops_get_connection(id)` command (hydrates the full Connection across any
+  Workspace) handed to the existing `openConnection`; a pencil edits it. Items
+  whose Connection no longer resolves to a Fleet member render as dimmed
+  **ghosts** (not openable, still editable/removable). _Still to come:_
+  rack/area/region-scoped "Run task" via `resolve_fleet_scoped` +
+  `itops_start_batch_run` scope.
 - **Phase E — AI + polish.** Rack metadata in page context, the "draft a rack
   layout" approval-gated tool, accent/icon metadata, manual + tutorial finish.
 
