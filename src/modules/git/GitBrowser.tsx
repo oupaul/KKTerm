@@ -67,6 +67,9 @@ import {
 
 const ROW_HEIGHT = 30; // compact density
 
+// Maps a commit-pane column to its persisted layout field (see useGitLayout).
+const COLUMN_FIELD = { author: "authorW", sha: "shaW", date: "dateW" } as const;
+
 type GitView = "history" | "commit";
 
 interface DetailEntry {
@@ -382,6 +385,10 @@ export function GitBrowser({
 
   const currentBranch = overview?.currentBranch ?? null;
   const ahead = overview?.localBranches.find((b) => b.current)?.ahead ?? 0;
+  // Stash (with --include-untracked) has nothing to save unless the working tree
+  // has staged or unstaged entries; git would otherwise exit 0 with "No local
+  // changes to save" and the UI would falsely report a saved stash.
+  const hasChanges = (status?.staged.length ?? 0) + (status?.unstaged.length ?? 0) > 0;
 
   const filteredCommits = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -437,8 +444,12 @@ export function GitBrowser({
       confirmLabel: t("git.merge"),
       onSubmit: (ref) => void runAction(() => gitMerge(repoRoot, ref), t("git.mergeDone", { ref })),
     });
-  const onStash = () =>
+  const onStash = () => {
+    if (!hasChanges) {
+      return;
+    }
     void runAction(() => gitStashPush(repoRoot, { includeUntracked: true }), t("git.stashed"));
+  };
 
   // ── commit-view actions ───────────────────────────────────────────────────
   const onStageFile = (file: GitChangedFile) =>
@@ -855,6 +866,8 @@ export function GitBrowser({
             setWtSelected(true);
             setFileIndex(0);
           }}
+          columnWidths={{ author: layout.authorW, sha: layout.shaW, date: layout.dateW }}
+          onColumnResize={(column, delta) => nudge(COLUMN_FIELD[column], delta)}
         />
         <GitResizeHandle
           axis="x"
@@ -960,7 +973,7 @@ export function GitBrowser({
                 <span className="gl"><GitIcon name="merge" size={19} /></span>
                 <span className="lbl">{t("git.merge")}</span>
               </button>
-              <button type="button" className="act" onClick={onStash} disabled={busy}>
+              <button type="button" className="act" onClick={onStash} disabled={busy || !hasChanges}>
                 <span className="gl"><GitIcon name="stash" size={19} /></span>
                 <span className="lbl">{t("git.stash")}</span>
               </button>

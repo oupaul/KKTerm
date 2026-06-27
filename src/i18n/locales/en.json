@@ -2900,6 +2900,7 @@
     "resizeSidebar": "Resize sidebar",
     "resizeDetail": "Resize detail pane",
     "resizeWorktree": "Resize working-tree pane",
+    "resizeColumn": "Resize {{column}} column",
     "gitNeededTitle": "Git is not installed",
     "gitNeededBody": "The Git Browser needs the git command-line tool. Install it to continue.",
     "installGit": "Install Git",

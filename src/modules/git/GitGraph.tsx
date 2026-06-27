@@ -13,9 +13,17 @@ import {
   lanePalette,
 } from "./gitPalette";
 import { GitIcon } from "./GitIcon";
+import { GitResizeHandle } from "./GitResizeHandle";
 
 const LANE_W = 22;
 const PAD = 16;
+
+/** Adjustable widths (px) for the commit pane's fixed columns. */
+export interface GitColumnWidths {
+  author: number;
+  sha: number;
+  date: number;
+}
 
 export function Avatar({
   name,
@@ -87,6 +95,8 @@ export function GitGraph({
   showWorkingTree,
   workingTreeSelected,
   onSelectWorkingTree,
+  columnWidths,
+  onColumnResize,
 }: {
   commits: GraphCommit[];
   selectedId: string | null;
@@ -98,6 +108,9 @@ export function GitGraph({
   showWorkingTree: boolean;
   workingTreeSelected: boolean;
   onSelectWorkingTree: () => void;
+  columnWidths: GitColumnWidths;
+  /** Drag delta for a fixed column; the handle sits on the column's left edge. */
+  onColumnResize: (column: keyof GitColumnWidths, delta: number) => void;
 }) {
   const { t } = useTranslation();
   const palette = lanePalette(colorMode, theme);
@@ -159,12 +172,43 @@ export function GitGraph({
   const { nodes, edges, graphW, totalH, laneX, nodeY } = layout;
 
   return (
-    <div className="git-graph-wrap">
+    <div
+      className="git-graph-wrap"
+      style={{
+        ["--git-col-author" as string]: `${columnWidths.author}px`,
+        ["--git-col-sha" as string]: `${columnWidths.sha}px`,
+        ["--git-col-date" as string]: `${columnWidths.date}px`,
+      }}
+    >
       <div className="git-graph-colhead">
         <div className="c-msg" style={{ paddingLeft: graphW }}>{t("git.columnCommit")}</div>
-        <div className="c-author">{t("git.columnAuthor")}</div>
-        <div className="c-sha">{t("git.columnSha")}</div>
-        <div className="c-date">{t("git.columnWhen")}</div>
+        <div className="c-author">
+          <GitResizeHandle
+            axis="x"
+            className="git-col-resizer"
+            ariaLabel={t("git.resizeColumn", { column: t("git.columnAuthor") })}
+            onResize={(dx) => onColumnResize("author", -dx)}
+          />
+          {t("git.columnAuthor")}
+        </div>
+        <div className="c-sha">
+          <GitResizeHandle
+            axis="x"
+            className="git-col-resizer"
+            ariaLabel={t("git.resizeColumn", { column: t("git.columnSha") })}
+            onResize={(dx) => onColumnResize("sha", -dx)}
+          />
+          {t("git.columnSha")}
+        </div>
+        <div className="c-date">
+          <GitResizeHandle
+            axis="x"
+            className="git-col-resizer"
+            ariaLabel={t("git.resizeColumn", { column: t("git.columnWhen") })}
+            onResize={(dx) => onColumnResize("date", -dx)}
+          />
+          {t("git.columnWhen")}
+        </div>
       </div>
       <div className="git-graph-scroll" style={{ ["--git-row-h" as string]: `${rowH}px` }}>
         <svg

@@ -1,8 +1,9 @@
-// Persisted layout for the Git Browser overlay: the window size plus the widths
-// of the three resizable inline panes (sidebar, the History detail pane, and the
-// Commit working-tree pane). State is stored under a single localStorage key so
-// the chosen layout survives reopening, mirroring the prefixed-key convention in
-// `src/store.ts`. Each setter clamps to sane bounds and re-persists.
+// Persisted layout for the Git Browser overlay: the window size, the widths of
+// the three resizable inline panes (sidebar, the History detail pane, and the
+// Commit working-tree pane), and the History commit-pane column widths. State is
+// stored under a single localStorage key so the chosen layout survives reopening,
+// mirroring the prefixed-key convention in `src/store.ts`. Each setter clamps to
+// sane bounds and re-persists.
 import { useCallback, useState } from "react";
 
 const STORAGE_KEY = "kkterm.git.layout";
@@ -17,6 +18,12 @@ export interface GitLayout {
   detailW: number;
   /** Commit view: working-tree pane width. */
   worktreeW: number;
+  /** History commit pane: Author column width. */
+  authorW: number;
+  /** History commit pane: SHA column width. */
+  shaW: number;
+  /** History commit pane: When (date) column width. */
+  dateW: number;
 }
 
 const DEFAULT_LAYOUT: GitLayout = {
@@ -25,6 +32,9 @@ const DEFAULT_LAYOUT: GitLayout = {
   sidebarW: 232,
   detailW: 430,
   worktreeW: 380,
+  authorW: 150,
+  shaW: 78,
+  dateW: 96,
 };
 
 // Per-field bounds; the window is additionally clamped to the viewport at render.
@@ -34,6 +44,9 @@ const BOUNDS = {
   sidebarW: [180, 520] as const,
   detailW: [280, 820] as const,
   worktreeW: [240, 720] as const,
+  authorW: [90, 320] as const,
+  shaW: [56, 160] as const,
+  dateW: [70, 220] as const,
 };
 
 function clampField(field: keyof GitLayout, value: number): number {
@@ -54,6 +67,9 @@ function load(): GitLayout {
       sidebarW: clampField("sidebarW", parsed.sidebarW ?? DEFAULT_LAYOUT.sidebarW),
       detailW: clampField("detailW", parsed.detailW ?? DEFAULT_LAYOUT.detailW),
       worktreeW: clampField("worktreeW", parsed.worktreeW ?? DEFAULT_LAYOUT.worktreeW),
+      authorW: clampField("authorW", parsed.authorW ?? DEFAULT_LAYOUT.authorW),
+      shaW: clampField("shaW", parsed.shaW ?? DEFAULT_LAYOUT.shaW),
+      dateW: clampField("dateW", parsed.dateW ?? DEFAULT_LAYOUT.dateW),
     };
   } catch {
     return DEFAULT_LAYOUT;
