@@ -46,6 +46,7 @@ import type {
   RackItem,
   RackItemKind,
   RackItemMetadata,
+  RunScope,
   ResolvedHost,
   BatchTask,
   RunHistoryEntry,
@@ -1170,7 +1171,7 @@ type CommandMap = {
     result: Connection;
   };
   itops_start_batch_run: {
-    args: { fleetId: string; task: BatchTask };
+    args: { fleetId: string; task: BatchTask; scope?: RunScope | null };
     result: string;
   };
   itops_cancel_batch_run: {

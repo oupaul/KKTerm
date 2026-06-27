@@ -1,10 +1,10 @@
 # Fleet Management — Design & Implementation Plan
 
 Status: **Phases A–D landed** (rename, rack data model, Rack View with the
-dialogs-first editor, and click-to-connect with ghost handling). Remaining:
-drag-to-place/resize and scoped Batch Runs (rest of C/D), then Phase E (AI +
-polish). This document is the detailed plan for evolving the IT Ops **Host
-Groups** tab into **Fleet** management with a
+dialogs-first editor, click-to-connect with ghost handling, and rack/area/region
+scoped Batch Runs). Remaining: drag-to-place/resize, then Phase E (AI + polish).
+This document is the detailed plan for evolving the IT Ops **Host Groups** tab
+into **Fleet** management with a
 visual virtual-datacenter (rack elevation) layer. It extends `docs/ITOPS.md`
 (which remains the source of truth for shipped IT Ops architecture) and follows
 the same durable-vs-live split. When this doc conflicts with `docs/ITOPS.md`
@@ -387,9 +387,11 @@ Each phase is one reviewable PR and leaves the app shippable.
   `itops_get_connection(id)` command (hydrates the full Connection across any
   Workspace) handed to the existing `openConnection`; a pencil edits it. Items
   whose Connection no longer resolves to a Fleet member render as dimmed
-  **ghosts** (not openable, still editable/removable). _Still to come:_
-  rack/area/region-scoped "Run task" via `resolve_fleet_scoped` +
-  `itops_start_batch_run` scope.
+  **ghosts** (not openable, still editable/removable). _Scoped Batch Runs
+  landed:_ a `RunScope { rackId?, region?, area? }` + `resolve_fleet_scoped`
+  (storage) and an optional `scope` on `itops_start_batch_run`; per-rack and
+  per-region/area "Run" affordances launch a run over only the placed hosts in
+  the matching racks, with the launcher showing a scope banner.
 - **Phase E — AI + polish.** Rack metadata in page context, the "draft a rack
   layout" approval-gated tool, accent/icon metadata, manual + tutorial finish.
 

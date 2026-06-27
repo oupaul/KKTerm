@@ -7,7 +7,7 @@ use std::collections::HashSet;
 
 use rusqlite::{Connection as SqliteConnection, OptionalExtension, params, params_from_iter};
 
-use super::types::{Fleet, FleetFilter, ResolvedHost, Transport};
+use super::types::{Fleet, FleetFilter, RackItemKind, ResolvedHost, RunScope, Transport};
 
 #[derive(Debug)]
 pub enum ItopsStorageError {
@@ -268,9 +268,101 @@ pub fn resolve_fleet(conn: &SqliteConnection, group: &Fleet) -> Result<Vec<Resol
     Ok(resolved)
 }
 
+/// Resolve only the placed Connection items in the racks matching `scope`
+/// (docs/FLEET.md Phase D) — the seam for rack/area/region-scoped Batch Runs.
+/// Uses the Fleet's transport default. Returns hosts in rack order, then U
+/// order (top of rack first), deduplicated by Connection id.
+pub fn resolve_fleet_scoped(
+    conn: &SqliteConnection,
+    fleet: &Fleet,
+    scope: &RunScope,
+) -> Result<Vec<ResolvedHost>> {
+    let racks = super::fleet_storage::list_racks(conn, &fleet.id)?;
+    let mut seen: HashSet<String> = HashSet::new();
+    let mut resolved: Vec<ResolvedHost> = Vec::new();
+    for rack in racks {
+        if !rack_matches_scope(&rack, scope) {
+            continue;
+        }
+        // Top of rack first: items come back ascending by start_u, so reverse.
+        let mut items = rack.items;
+        items.sort_by(|a, b| b.start_u.cmp(&a.start_u));
+        for item in items {
+            if item.kind != RackItemKind::Connection {
+                continue;
+            }
+            let Some(connection_id) = item.connection_id else {
+                continue;
+            };
+            if !seen.insert(connection_id.clone()) {
+                continue;
+            }
+            if let Some(host) = fetch_resolved_host(conn, &connection_id, fleet.transport)? {
+                resolved.push(host);
+            }
+        }
+    }
+    Ok(resolved)
+}
+
+/// A rack matches a scope when every provided (non-empty) scope field matches.
+fn rack_matches_scope(rack: &super::types::Rack, scope: &RunScope) -> bool {
+    let matches = |field: &Option<String>, value: &str| match field.as_deref() {
+        Some(wanted) if !wanted.is_empty() => wanted == value,
+        _ => true,
+    };
+    matches(&scope.rack_id, &rack.id)
+        && matches(&scope.region, &rack.region)
+        && matches(&scope.area, &rack.area)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::itops::types::Rack;
+
+    fn test_rack(region: &str, area: &str) -> Rack {
+        Rack {
+            id: "r1".into(),
+            fleet_id: "f1".into(),
+            name: "A12".into(),
+            region: region.into(),
+            area: area.into(),
+            height_u: 42,
+            sort_order: 0,
+            items: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn scope_matching_treats_empty_fields_as_wildcards() {
+        let rack = test_rack("us-east", "Row B");
+        // Empty scope matches anything.
+        assert!(rack_matches_scope(&rack, &RunScope::default()));
+        // Exact rack id matches.
+        assert!(rack_matches_scope(
+            &rack,
+            &RunScope { rack_id: Some("r1".into()), ..Default::default() }
+        ));
+        // Wrong rack id does not.
+        assert!(!rack_matches_scope(
+            &rack,
+            &RunScope { rack_id: Some("other".into()), ..Default::default() }
+        ));
+        // Region matches; mismatched area within it fails the AND.
+        assert!(rack_matches_scope(
+            &rack,
+            &RunScope { region: Some("us-east".into()), ..Default::default() }
+        ));
+        assert!(!rack_matches_scope(
+            &rack,
+            &RunScope {
+                region: Some("us-east".into()),
+                area: Some("Row C".into()),
+                ..Default::default()
+            }
+        ));
+    }
 
     fn open_test_db() -> SqliteConnection {
         let conn = SqliteConnection::open_in_memory().unwrap();

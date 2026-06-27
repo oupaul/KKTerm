@@ -71,7 +71,7 @@ fn run_action(app: &AppHandle, automation: &Automation, action: &AutomationActio
             task,
         } => {
             if let Err(error) =
-                super::commands::start_run(app, fleet_id.clone(), task.clone())
+                super::commands::start_run(app, fleet_id.clone(), task.clone(), None)
             {
                 eprintln!(
                     "IT Ops automation {} runBatch failed: {error}",

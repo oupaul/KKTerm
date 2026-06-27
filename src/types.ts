@@ -205,6 +205,13 @@ export interface Rack {
   items: RackItem[];
 }
 
+// Narrows a Batch Run to part of a Fleet's rack topology (docs/FLEET.md Phase D).
+export interface RunScope {
+  rackId?: string | null;
+  region?: string | null;
+  area?: string | null;
+}
+
 // One step of an interactive Playbook: text sent to the host's PTY shell, then
 // an optional literal substring to wait for before the next step runs.
 export interface PlaybookStep {

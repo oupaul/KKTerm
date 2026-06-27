@@ -36,6 +36,7 @@ export function RackElevation({
   onEditItem,
   onEditRack,
   onDeleteRack,
+  onRunRack,
   isGhost,
 }: {
   rack: Rack;
@@ -44,6 +45,7 @@ export function RackElevation({
   onEditItem?: (item: RackItem) => void;
   onEditRack?: (rack: Rack) => void;
   onDeleteRack?: (rack: Rack) => void;
+  onRunRack?: (rack: Rack) => void;
   isGhost?: (item: RackItem) => boolean;
 }) {
   const { t } = useTranslation();
@@ -63,6 +65,16 @@ export function RackElevation({
               : ""}
           </span>
         </div>
+        {onRunRack ? (
+          <button
+            type="button"
+            className="it-icon-btn sm"
+            title={t("itops.racks.runRack")}
+            onClick={() => onRunRack(rack)}
+          >
+            <ItIcon name="run" size={12} />
+          </button>
+        ) : null}
         {onEditRack ? (
           <button
             type="button"

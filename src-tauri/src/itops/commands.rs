@@ -19,7 +19,7 @@ use super::run_storage;
 use super::storage as ito;
 use super::types::{
     BatchTask, Fleet, FleetFilter, Rack, RackItem, RackItemKind, RackItemMetadata, ResolvedHost,
-    RunEvent, RunEventHost, RunHistoryEntry, Transport,
+    RunEvent, RunEventHost, RunHistoryEntry, RunScope, Transport,
 };
 
 fn storage(app: &AppHandle) -> State<'_, crate::storage::Storage> {
@@ -138,27 +138,35 @@ pub fn itops_start_batch_run(
     app: AppHandle,
     fleet_id: String,
     task: BatchTask,
+    scope: Option<RunScope>,
 ) -> Result<String, String> {
-    start_run(&app, fleet_id, task)
+    start_run(&app, fleet_id, task, scope)
 }
 
 /// Start a Batch Run; reusable by the command above and the Automation
 /// `runBatch` action. Returns the run id immediately; progress streams on
 /// `itops://run` and the report lands in itops_run_history on completion.
+/// A non-empty `scope` narrows the run to the placed hosts in matching racks.
 pub fn start_run(
     app: &AppHandle,
     fleet_id: String,
     task: BatchTask,
+    scope: Option<RunScope>,
 ) -> Result<String, String> {
     let secrets = app.state::<secrets::Secrets>();
     let known_hosts = ssh::app_known_hosts_path(app)?;
+    let scoped = scope.filter(|scope| !scope.is_empty());
     let (hosts, specs) = storage(app).with_connection_infallible(|conn| {
         let group = ito::list_fleets(conn)
             .map_err(|error| error.to_string())?
             .into_iter()
             .find(|group| group.id == fleet_id)
             .ok_or_else(|| "fleet not found".to_string())?;
-        let hosts = ito::resolve_fleet(conn, &group).map_err(|error| error.to_string())?;
+        let hosts = match &scoped {
+            Some(scope) => ito::resolve_fleet_scoped(conn, &group, scope)
+                .map_err(|error| error.to_string())?,
+            None => ito::resolve_fleet(conn, &group).map_err(|error| error.to_string())?,
+        };
         let specs = runner::resolve_ssh_specs(
             conn,
             &secrets,

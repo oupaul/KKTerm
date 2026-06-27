@@ -474,10 +474,41 @@ export function FleetsTab() {
                 <div className="rk-canvas">
                   {rackRegions.map((region) => (
                     <div className="rk-region" key={region.region || "_"}>
-                      {region.region ? <div className="rk-region-h">{region.region}</div> : null}
+                      {region.region ? (
+                        <div className="rk-region-h">
+                          <span>{region.region}</span>
+                          <button
+                            type="button"
+                            className="it-icon-btn sm"
+                            title={t("itops.racks.runRegion")}
+                            onClick={() =>
+                              requestNewBatchRun(activeGroup.id, { region: region.region })
+                            }
+                          >
+                            <ItIcon name="run" size={12} />
+                          </button>
+                        </div>
+                      ) : null}
                       {region.areas.map((area) => (
                         <div className="rk-area" key={area.area || "_"}>
-                          {area.area ? <div className="rk-area-h">{area.area}</div> : null}
+                          {area.area ? (
+                            <div className="rk-area-h">
+                              <span>{area.area}</span>
+                              <button
+                                type="button"
+                                className="it-icon-btn sm"
+                                title={t("itops.racks.runArea")}
+                                onClick={() =>
+                                  requestNewBatchRun(activeGroup.id, {
+                                    region: region.region || null,
+                                    area: area.area,
+                                  })
+                                }
+                              >
+                                <ItIcon name="run" size={12} />
+                              </button>
+                            </div>
+                          ) : null}
                           <div className="rk-row">
                             {area.racks.map((rack) => (
                               <RackElevation
@@ -488,6 +519,7 @@ export function FleetsTab() {
                                 onEditItem={(item) => setItemDialog({ rack, item })}
                                 onEditRack={(target) => setRackDialog({ rack: target })}
                                 onDeleteRack={(target) => setPendingRackDelete(target)}
+                                onRunRack={(target) => requestNewBatchRun(activeGroup.id, { rackId: target.id })}
                                 isGhost={isGhostItem}
                               />
                             ))}

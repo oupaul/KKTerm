@@ -18,6 +18,7 @@ import type {
   ResolvedHost,
   RunEvent,
   RunHistoryEntry,
+  RunScope,
 } from "../../types";
 import type { WatchdogConfig } from "../../watchdog/types";
 
@@ -204,9 +205,11 @@ interface ItOpsState {
   /** Bumped to open the Batch Run launcher; pendingRunGroupId preselects a group. */
   newRunRequest: number;
   pendingRunGroupId: string | null;
-  requestNewBatchRun: (fleetId?: string) => void;
+  /** Optional rack/area/region scope carried into the launcher for a scoped run. */
+  pendingRunScope: RunScope | null;
+  requestNewBatchRun: (fleetId?: string, scope?: RunScope) => void;
   applyRunEvent: (event: RunEvent) => void;
-  startBatchRun: (fleetId: string, task: BatchTask) => Promise<string>;
+  startBatchRun: (fleetId: string, task: BatchTask, scope?: RunScope | null) => Promise<string>;
   cancelRun: (runId: string) => Promise<void>;
   loadRunHistory: () => Promise<void>;
 
@@ -347,11 +350,13 @@ export const useItOpsStore = create<ItOpsState>((set, get) => ({
   historyLoaded: false,
   newRunRequest: 0,
   pendingRunGroupId: null,
+  pendingRunScope: null,
 
-  requestNewBatchRun(fleetId) {
+  requestNewBatchRun(fleetId, scope) {
     set({
       newRunRequest: get().newRunRequest + 1,
       pendingRunGroupId: fleetId ?? null,
+      pendingRunScope: scope ?? null,
     });
   },
 
@@ -362,11 +367,11 @@ export const useItOpsStore = create<ItOpsState>((set, get) => ({
     }
   },
 
-  async startBatchRun(fleetId, task) {
+  async startBatchRun(fleetId, task, scope) {
     // The Started event populates activeRun; clear any prior run first so the
     // grid does not briefly show stale hosts.
     set({ activeRun: null });
-    return invokeCommand("itops_start_batch_run", { fleetId, task });
+    return invokeCommand("itops_start_batch_run", { fleetId, task, scope: scope ?? null });
   },
 
   async cancelRun(runId) {

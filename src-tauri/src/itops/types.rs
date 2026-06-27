@@ -232,6 +232,28 @@ pub struct RackItem {
     pub metadata: RackItemMetadata,
 }
 
+/// Optional narrowing of a Batch Run to part of a Fleet's rack topology
+/// (docs/FLEET.md Phase D). When set, only the placed Connection items in the
+/// matching racks are targeted. All provided (non-empty) fields must match.
+#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct RunScope {
+    #[serde(default)]
+    pub rack_id: Option<String>,
+    #[serde(default)]
+    pub region: Option<String>,
+    #[serde(default)]
+    pub area: Option<String>,
+}
+
+impl RunScope {
+    pub fn is_empty(&self) -> bool {
+        self.rack_id.as_deref().unwrap_or("").is_empty()
+            && self.region.as_deref().unwrap_or("").is_empty()
+            && self.area.as_deref().unwrap_or("").is_empty()
+    }
+}
+
 /// One concrete fleet target produced by resolving a Fleet at run time.
 /// Lightweight and secret-free — the seam the Phase 2 Batch Run executor builds
 /// on. Passwords/keys are never carried here; they stay in the keychain.

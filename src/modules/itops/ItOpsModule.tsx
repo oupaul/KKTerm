@@ -15,7 +15,7 @@ import {
 } from "../../app/ModuleHeader";
 import { isTauriRuntime } from "../../lib/tauri";
 import { useWorkspaceStore } from "../../store";
-import type { RunEvent } from "../../types";
+import type { RunEvent, RunScope } from "../../types";
 import { ItIcon, type ItIconName } from "./icons";
 import { FleetsTab } from "./FleetsTab";
 import { BatchRunsTab } from "./BatchRunsTab";
@@ -50,6 +50,7 @@ export function ItOpsModule() {
   const [batchDialogGroupId, setBatchDialogGroupId] = useState<string | null | undefined>(
     undefined,
   );
+  const [batchDialogScope, setBatchDialogScope] = useState<RunScope | null>(null);
   const [batchDialogOpen, setBatchDialogOpen] = useState(false);
   const [automationPopup, setAutomationPopup] = useState<{ title: string; body: string } | null>(
     null,
@@ -67,6 +68,7 @@ export function ItOpsModule() {
   const activeRun = useItOpsStore((state) => state.activeRun);
   const newRunRequest = useItOpsStore((state) => state.newRunRequest);
   const pendingRunGroupId = useItOpsStore((state) => state.pendingRunGroupId);
+  const pendingRunScope = useItOpsStore((state) => state.pendingRunScope);
 
   useEffect(() => {
     void loadFleets();
@@ -106,21 +108,22 @@ export function ItOpsModule() {
     };
   }, [showStatusBarNotice, t]);
 
-  function openBatchRunDialog(groupId?: string | null) {
+  function openBatchRunDialog(groupId?: string | null, scope?: RunScope | null) {
     setBatchDialogGroupId(groupId);
+    setBatchDialogScope(scope ?? null);
     setBatchDialogOpen(true);
   }
 
   // The "Run task" / "Re-run" affordances request a run; switch to the Batch
-  // Runs tab and open the launcher preselected to that group.
+  // Runs tab and open the launcher preselected to that group (and scope).
   const seenNewRunRequest = useRef(newRunRequest);
   useEffect(() => {
     if (newRunRequest !== seenNewRunRequest.current) {
       seenNewRunRequest.current = newRunRequest;
       setTab("runs");
-      openBatchRunDialog(pendingRunGroupId);
+      openBatchRunDialog(pendingRunGroupId, pendingRunScope);
     }
-  }, [newRunRequest, pendingRunGroupId]);
+  }, [newRunRequest, pendingRunGroupId, pendingRunScope]);
 
   const prim = PRIMARY[tab];
   const runningCount = activeRun
@@ -208,6 +211,7 @@ export function ItOpsModule() {
       {batchDialogOpen ? (
         <BatchRunDialog
           defaultGroupId={batchDialogGroupId}
+          defaultScope={batchDialogScope}
           onClose={() => setBatchDialogOpen(false)}
           onStarted={() => setTab("runs")}
         />
