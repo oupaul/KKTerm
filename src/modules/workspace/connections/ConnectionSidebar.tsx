@@ -5236,7 +5236,12 @@ function ConnectionRowWithChildTabs({
         onPointerDragStart={onPointerDragStart}
         onSelect={onSelect}
       />
-      {childConnections.map((child) => {
+      {/* A single Child Connection is presented as the parent Connection itself:
+          the parent row shows the live green LED and child rows stay hidden.
+          Child rows only appear once a second child is added, so the parent
+          becomes an expandable panorama with one row per child. */}
+      {childConnections.length > 1 &&
+        childConnections.map((child) => {
         const location = childLocationById.get(child.id);
         const tab = location?.tab;
         const active = isChildConnectionRowActive({
