@@ -449,21 +449,23 @@
 .itops-page .hg-detail-head {
   display: flex;
   align-items: center;
-  gap: 13px;
-  margin-bottom: 16px;
+  gap: 11px;
+  margin: -4px -4px 14px;
+  padding: 0 4px 13px;
+  border-bottom: 1px solid var(--hairline);
 }
 .itops-page .hg-detail-head .tile {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
 }
 .itops-page .hg-detail-head .nm {
-  font-size: 19px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  font-size: 16px;
+  font-weight: 680;
+  letter-spacing: -0.015em;
 }
 .itops-page .hg-detail-head .sub {
-  font-size: 12.5px;
+  font-size: 12px;
   color: var(--text-2);
   margin-top: 1px;
 }
@@ -529,11 +531,14 @@
   margin-top: 1px;
 }
 
+/* Finder segmented control (mirrors .sftp-segmented). */
 .itops-page .seg {
   display: inline-flex;
   padding: 2px;
+  gap: 2px;
   border-radius: 8px;
-  background: var(--muted);
+  background: var(--surface-muted);
+  box-shadow: inset 0 0 0 0.5px var(--border);
   flex: 0 0 auto;
 }
 .itops-page .seg button {
@@ -541,16 +546,20 @@
   background: transparent;
   font: inherit;
   font-size: 12px;
-  font-weight: 600;
-  color: var(--text-2);
-  padding: 5px 11px;
+  font-weight: 560;
+  color: var(--text-muted);
+  padding: 4px 11px;
   border-radius: 6px;
   cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.itops-page .seg button:hover {
+  color: var(--text);
 }
 .itops-page .seg button.on {
-  background: var(--bg);
+  background: var(--surface);
   color: var(--text);
-  box-shadow: var(--card-shadow);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18), 0 0 0 0.5px rgba(0, 0, 0, 0.05);
 }
 
 .itops-page .filter-pill {
@@ -2283,11 +2292,18 @@
 }
 
 /* ── Rack View editing affordances (docs/FLEET.md Phase C, dialogs-first) ──── */
+/* Small icon buttons read as flat Finder toolbar buttons (no border/elevation). */
 .itops-page .it-icon-btn.sm {
-  width: 24px;
-  height: 24px;
+  width: 26px;
+  height: 26px;
   border-radius: 7px;
+  background: transparent;
+  border: 0;
   box-shadow: none;
+  color: var(--text-muted);
+}
+.itops-page .it-icon-btn.sm:active {
+  background: var(--press);
 }
 .itops-page .it-btn.sm {
   height: 28px;
@@ -2994,25 +3010,98 @@
 .itops-page .hg.ft {
   display: flex;
 }
+/* The detail pane fills the remaining width (the tree is fixed/resizable).
+   Without this it shrinks to its content, leaving an empty "third column". */
+.itops-page .hg.ft .hg-detail {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+/* Finder source-list sidebar (mirrors .sftp-sidebar / .sftp-sb-row). */
 .itops-page .ft-tree {
   position: relative;
   flex: 0 0 auto;
   border-right: 1px solid var(--hairline);
-  background: var(--bg);
+  background: var(--surface-muted);
   display: flex;
   flex-direction: column;
   min-height: 0;
+}
+.itops-page .ft-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 8px 2px 12px;
+  flex: 0 0 auto;
+}
+.itops-page .ft-head-title {
+  flex: 1 1 auto;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.itops-page .ft-add-wrap {
+  position: relative;
+  flex: 0 0 auto;
+}
+.itops-page .ft-add-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+}
+.itops-page .ft-add-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 41;
+  min-width: 168px;
+  padding: 4px;
+  border-radius: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.itops-page .ft-add-menu button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 7px 9px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 12.5px;
+  text-align: left;
+  cursor: pointer;
+}
+.itops-page .ft-add-menu button:hover {
+  background: var(--hover);
+}
+.itops-page .ft-add-menu button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.itops-page .ft-add-menu button > svg {
+  color: var(--text-muted);
 }
 .itops-page .ft-search {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin: 8px;
+  margin: 4px 10px 8px;
   padding: 0 8px;
-  height: 30px;
-  border-radius: 8px;
-  background: var(--surface-muted);
-  border: 1px solid var(--border);
+  height: 28px;
+  border-radius: 7px;
+  background: var(--surface);
+  box-shadow: inset 0 0 0 0.5px var(--border);
   color: var(--text-faint);
   flex: 0 0 auto;
 }
@@ -3042,21 +3131,22 @@
 .itops-page .ft-row {
   display: flex;
   align-items: center;
-  gap: 5px;
-  height: 28px;
+  gap: 6px;
+  height: 30px;
   padding-right: 8px;
-  border-radius: 6px;
+  border-radius: 7px;
   cursor: pointer;
   color: var(--text);
-  font-size: 12.5px;
+  font-size: 13px;
+  font-weight: 500;
   user-select: none;
 }
 .itops-page .ft-row:hover {
   background: var(--hover);
 }
 .itops-page .ft-row.sel {
-  background: var(--accent-soft);
-  color: var(--accent);
+  background: var(--sel);
+  color: #fff;
 }
 .itops-page .ft-caret {
   flex: 0 0 auto;
@@ -3070,32 +3160,37 @@
   color: var(--text-faint);
   cursor: pointer;
 }
+.itops-page .ft-row.sel .ft-caret {
+  color: rgba(255, 255, 255, 0.85);
+}
 .itops-page .ft-caret.empty {
   cursor: default;
 }
 .itops-page .ft-ic {
   flex: 0 0 auto;
   display: inline-flex;
-  color: var(--text-muted);
+  width: 19px;
+  justify-content: center;
+  color: var(--accent);
 }
 .itops-page .ft-row.sel .ft-ic {
-  color: var(--accent);
+  color: #fff;
 }
 .itops-page .ft-label {
   flex: 1 1 auto;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-weight: 520;
 }
 .itops-page .ft-count {
   flex: 0 0 auto;
-  font-size: 10px;
+  font-size: 10.5px;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
   color: var(--text-faint);
-  background: var(--surface-muted);
-  border-radius: 9px;
-  padding: 1px 6px;
+}
+.itops-page .ft-row.sel .ft-count {
+  color: rgba(255, 255, 255, 0.82);
 }
 .itops-page .ft-resize {
   position: absolute;
@@ -3168,20 +3263,20 @@
   display: flex;
   align-items: center;
   gap: 11px;
-  padding: 14px;
-  border-radius: 13px;
+  padding: 13px 14px;
+  border-radius: var(--r-card);
   background: var(--surface);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-control);
+  border: 0.5px solid var(--border);
+  box-shadow: var(--card-shadow);
   cursor: pointer;
   text-align: left;
   color: var(--text);
   transition: transform 0.16s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.16s, box-shadow 0.16s;
 }
 .itops-page .ft-card:hover {
-  transform: translateY(-2px);
+  transform: translateY(-1px);
   border-color: var(--border-strong);
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-control);
 }
 .itops-page .ft-card-ic {
   flex: 0 0 auto;

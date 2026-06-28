@@ -23,10 +23,13 @@ const SHELL_OPTIONS: RackShell[] = ["black", "white", "grey"];
 export function RackDialog({
   fleetId,
   rack,
+  defaultServerRoom,
   onClose,
 }: {
   fleetId: string;
   rack?: Rack | null;
+  /** Prefill the Server Room for a new rack (e.g. added within a room). */
+  defaultServerRoom?: string;
   onClose: () => void;
 }) {
   const { t } = useTranslation();
@@ -36,7 +39,7 @@ export function RackDialog({
   const updateRack = useItOpsStore((state) => state.updateRack);
 
   const [name, setName] = useState(rack?.name ?? "");
-  const [serverRoom, setServerRoom] = useState(rack?.serverRoom ?? "");
+  const [serverRoom, setServerRoom] = useState(rack?.serverRoom ?? defaultServerRoom ?? "");
   const [shell, setShell] = useState<RackShell>(rack?.shell ?? "black");
   const [heightU, setHeightU] = useState(rack?.heightU ?? 42);
   const [busy, setBusy] = useState(false);

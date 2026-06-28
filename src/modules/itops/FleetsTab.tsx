@@ -74,7 +74,11 @@ export function FleetsTab() {
   const [members, setMembers] = useState<ResolvedHost[]>([]);
   const [dialog, setDialog] = useState<{ group: Fleet | null } | null>(null);
   const [pendingDelete, setPendingDelete] = useState<Fleet | null>(null);
-  const [rackDialog, setRackDialog] = useState<{ rack: Rack | null } | null>(null);
+  const [rackDialog, setRackDialog] = useState<{
+    rack: Rack | null;
+    defaultServerRoom?: string;
+  } | null>(null);
+  const [addMenuOpen, setAddMenuOpen] = useState(false);
   const [itemDialog, setItemDialog] = useState<{
     rack: Rack;
     item: RackItem | null;
@@ -327,6 +331,68 @@ export function FleetsTab() {
     <div className="hg ft">
       {/* ── Tree navigator ── */}
       <div className="ft-tree" style={{ width: treeWidth, flex: `0 0 ${treeWidth}px` }}>
+        <div className="ft-head">
+          <span className="ft-head-title">{t("itops.fleets.heading")}</span>
+          <div className="ft-add-wrap">
+            <button
+              type="button"
+              className="it-icon-btn sm"
+              title={t("itops.racks.addNode")}
+              aria-haspopup="menu"
+              aria-expanded={addMenuOpen}
+              onClick={() => setAddMenuOpen((open) => !open)}
+            >
+              <ItIcon name="plus" size={14} />
+            </button>
+            {addMenuOpen ? (
+              <>
+                <div className="ft-add-backdrop" onClick={() => setAddMenuOpen(false)} />
+                <div className="ft-add-menu" role="menu">
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setAddMenuOpen(false);
+                      setDialog({ group: null });
+                    }}
+                  >
+                    <ItIcon name="group" size={14} />
+                    {t("itops.racks.addFleet")}
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    disabled={!activeGroup}
+                    onClick={() => {
+                      setAddMenuOpen(false);
+                      setView("racks");
+                      setRackDialog({ rack: null, defaultServerRoom: "" });
+                    }}
+                  >
+                    <ItIcon name="ops" size={14} />
+                    {t("itops.racks.addServerRoom")}
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    disabled={!activeGroup}
+                    onClick={() => {
+                      setAddMenuOpen(false);
+                      setView("racks");
+                      setRackDialog({
+                        rack: null,
+                        defaultServerRoom: drill.serverRoom ?? undefined,
+                      });
+                    }}
+                  >
+                    <ItIcon name="server" size={14} />
+                    {t("itops.racks.addRack")}
+                  </button>
+                </div>
+              </>
+            ) : null}
+          </div>
+        </div>
         <div className="ft-search">
           <ItIcon name="search" size={13} />
           <input
@@ -496,7 +562,9 @@ export function FleetsTab() {
               racks={racks}
               drill={drill}
               setDrill={setDrill}
-              onNewRack={() => setRackDialog({ rack: null })}
+              onNewRack={() =>
+                setRackDialog({ rack: null, defaultServerRoom: drill.serverRoom ?? undefined })
+              }
               onRunScope={(scope) => requestNewBatchRun(activeGroup.id, scope)}
               hostForItem={hostForItem}
               isGhostItem={isGhostItem}
@@ -536,6 +604,7 @@ export function FleetsTab() {
         <RackDialog
           fleetId={activeGroup.id}
           rack={rackDialog.rack}
+          defaultServerRoom={rackDialog.defaultServerRoom}
           onClose={() => setRackDialog(null)}
         />
       ) : null}
