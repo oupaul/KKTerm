@@ -122,12 +122,48 @@ The live runtime that executes an armed **Automation** (or an ad-hoc live monito
 _Avoid_: monitor profile, durable watcher (the Automation is the durable part)
 
 **IT Ops Module**:
-A built-in Activity Rail Module for fleet operations: **Fleets**, **Batch Runs**, and **Automations**. Lives with Dashboard and Install Helper above Settings. Not a Connection, Session, or Dashboard widget. See `docs/ITOPS.md` and `docs/ADR/0011-it-ops-module.md`.
+A built-in Activity Rail Module for fleet operations: **Fleets**, **Batch Runs**, and **Automations**. Its current primary UI is the Fleet topology surface: a left **Fleets** tree and a right drill-down through **Fleet View**, **Server Room View**, and **Rack View**. Batch Run and Automation functionality remains part of the Module even when those management surfaces are hidden. Lives with Dashboard and Install Helper above Settings. Not a Connection, Session, or Dashboard widget. See `docs/ITOPS.md` and `docs/ADR/0011-it-ops-module.md`.
 _Avoid_: operations center, fleet manager, orchestrator
 
+**Fleets**:
+The IT Ops collection and navigator for Fleet records. In the current UI it is the left-column tree that contains Fleets and their topology children. A row in Fleets selects a **Fleet**; the plural term names the view/collection, not a durable data type.
+_Avoid_: host groups tab, inventory browser
+
 **Fleet**:
-A durable, named selection of existing Connections (plus an optional dynamic filter by type/folder) used as the target for Batch Runs and Automation `runBatch` actions. Stored in `itops_fleets`; it references Connection ids and owns no Session and no secret. It is not a Connection type. The Fleet topology layer (virtual-datacenter racks) is planned in `docs/FLEET.md`.
+A durable, named selection of existing Connections (plus an optional dynamic filter by type/folder) used as the target for Batch Runs and Automation `runBatch` actions. Stored in `itops_fleets`; it references Connection ids and owns no Session and no secret. It is not a Connection type. A Fleet may own a topology of Server Rooms, Racks, and Rack Devices.
 _Avoid_: host group, inventory, host list, connection group (as a Connection type)
+
+**Fleet View**:
+The top-level right-side view for one selected Fleet. It shows that Fleet's Server Rooms as cards and is the entry point into the topology drill-down. It is not the same thing as the plural **Fleets** navigator.
+_Avoid_: overview, dashboard, host group details
+
+**Server Room**:
+A plain-text grouping tag on a Rack inside a Fleet. The topology path is **Fleet → Server Room → Rack**; blank values group under Unassigned. A Server Room is not a first-class database entity and owns no Connections or Sessions.
+_Avoid_: region, datacenter, site object, zone
+
+**Server Room View**:
+The drill-down view for one Server Room. It shows the room's Racks, optionally grouped by each Rack's `rack_group` tag, as rack elevations.
+_Avoid_: floor plan, area view, datacenter map
+
+**Rack**:
+A durable fixed-height cabinet, usually 42U, that belongs to one Fleet and one Server Room. Stored in `itops_fleet_racks`; it holds Rack Devices at U positions and may carry a cabinet shell finish.
+_Avoid_: shelf, cabinet group, host group
+
+**Rack View**:
+The single-Rack drill-down stage. It centers one Rack elevation and can show per-device callouts for Rack Devices. It is a topology view, not a live Session surface.
+_Avoid_: terminal rack, device session view
+
+**Rack Device**:
+One visual device occupying a contiguous U span in a Rack. It may be Connection-backed (opens the referenced Connection's Session on click) or passive (switch, PDU, patch panel, blank, label, or other visual/inventory item). Stored in `itops_fleet_rack_items`; older code and schema names may still say `RackItem`.
+_Avoid_: slot, node, host card
+
+**Rack Device Type**:
+The device kind used to render behavior and faceplate visuals, such as connection, server, storage, switch, router, firewall, PDU, UPS, KVM, patch panel, equipment, general, blank, or label. Type is presentation/inventory metadata, not a Connection type.
+_Avoid_: connection type, transport, session kind
+
+**Rack Device Properties**:
+Non-secret presentation metadata for a Rack Device: label, U position, height, status, accent, icon, notes, shell/faceplate fields, and kind-specific values such as ports, disks, battery, or load. These properties do not store live Session state or credentials.
+_Avoid_: secrets, runtime status, connection settings
 
 **Batch Run**:
 One execution of a Batch Task (a one-shot script or an interactive, expect-style playbook) across a resolved Fleet, fanned out with bounded concurrency over a per-host transport (SSH, WinRM, or PsExec). Live per-host progress streams to the run grid as it happens; on completion a consolidated report — including each host's captured output — is written to `itops_run_history`, where it can be reopened as a read-only Run Report. The run is live runtime, not a durable definition.

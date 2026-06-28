@@ -63,7 +63,7 @@
 /* ============================ module shell ============================ */
 .itops-page .it {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
   width: 100%;
   height: 100%;
   background: var(--bg);
@@ -104,6 +104,15 @@
   height: 28px;
   font-size: 12.5px;
   line-height: 1;
+}
+.itops-page .it-side-head {
+  min-height: 44px;
+  padding: 0 8px 0 10px;
+  border-bottom: 1px solid var(--hairline);
+  flex: 0 0 auto;
+}
+.itops-page .it-side-head .it-head-txt {
+  flex: 1 1 auto;
 }
 
 .itops-page .it-btn {
@@ -283,9 +292,10 @@
 
 /* ---- content scroll ---- */
 .itops-page .it-content {
+  height: 100%;
   min-height: 0;
   min-width: 0;
-  overflow-y: auto;
+  overflow: hidden;
   background: var(--bg-2);
 }
 .itops-page .it-content::-webkit-scrollbar {
@@ -3061,6 +3071,14 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
+  overflow: visible;
+  transition:
+    width 0.18s cubic-bezier(0.2, 0, 0, 1),
+    flex-basis 0.18s cubic-bezier(0.2, 0, 0, 1);
+}
+.itops-page .ft-collapsed .ft-tree {
+  border-right: 0;
+  overflow: hidden;
 }
 .itops-page .ft-head {
   display: flex;
@@ -3234,6 +3252,10 @@
   height: 100%;
   cursor: col-resize;
   z-index: 2;
+}
+.itops-page .ft-collapsed .ft-resize {
+  cursor: default;
+  pointer-events: none;
 }
 .itops-page .ft-resize:hover {
   background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 40%, transparent));

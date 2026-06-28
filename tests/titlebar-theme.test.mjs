@@ -82,6 +82,16 @@ test("custom titlebar panel buttons match module scope", async () => {
   );
   assert.match(
     titleBarSource,
+    /activePage === "itops"/,
+    "the Fleets navigator titlebar toggle should only render inside IT Ops",
+  );
+  assert.match(
+    titleBarSource,
+    /onToggleItOpsFleetTree/,
+    "the IT Ops titlebar toggle should control the Fleets navigator",
+  );
+  assert.match(
+    titleBarSource,
     /<Bot size=\{15\} strokeWidth=\{1\.8\} \/>/,
     "the AI Assistant titlebar toggle should use the robot icon",
   );

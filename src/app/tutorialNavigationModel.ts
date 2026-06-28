@@ -136,11 +136,8 @@ const DASHBOARD_TUTORIAL_TARGET_IDS = [
 
 const ITOPS_TUTORIAL_TARGET_IDS = [
   "app.activityRailItOps",
-  "itops.tabs",
-  "itops.groups",
-  "itops.runs",
-  "itops.autos",
-  "itops.primaryAction",
+  "itops.fleetsTree",
+  "itops.fleetView",
 ] as const;
 
 const INSTALLER_TUTORIAL_TARGET_IDS = [

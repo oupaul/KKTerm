@@ -170,7 +170,7 @@ export interface ResolvedHost {
 }
 
 // Fleet topology (docs/FLEET.md Phase B). A Rack belongs to one Fleet, grouped
-// grouped by server room, and holds Rack Items at U positions.
+// grouped by server room, and holds Rack Devices at U positions.
 export type RackItemKind =
   | "connection"
   | "switch"

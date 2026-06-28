@@ -283,7 +283,7 @@ pub fn itops_list_run_history(
     })
 }
 
-// ── Fleet topology: Racks + Rack Items (docs/FLEET.md Phase B) ───────────────
+// ── Fleet topology: Racks + Rack Devices (docs/FLEET.md Phase B) ─────────────
 
 #[tauri::command]
 pub fn itops_list_racks(app: AppHandle, fleet_id: String) -> Result<Vec<Rack>, String> {

@@ -293,7 +293,7 @@ When `docs/ARCHITECTURE.md` and `docs/DASHBOARD.md` conflict on Dashboard-intern
 
 ### IT Ops
 
-The IT Ops Module is a planned built-in Activity Rail destination for fleet operations: running one task across many hosts (Batch Runs over a Host Group of existing Connections, via SSH/WinRM/PsExec transports) and durable trigger → condition → action Automations that evolve the in-memory Watchdog into saveable rules. Definitions persist in SQLite and re-arm on launch; live run/poll state stays in-memory, and KKTerm installs no background service. The accepted design and its trade-offs live in `docs/ADR/0011-it-ops-module.md`; the durable architecture lives in `docs/ITOPS.md`. When `docs/ARCHITECTURE.md` and `docs/ITOPS.md` conflict on IT-Ops-internal concerns, `docs/ITOPS.md` wins.
+The IT Ops Module is a built-in Activity Rail destination for fleet operations: Fleet topology over existing Connections, Batch Runs over Fleets via SSH/WinRM/PsExec transports, and durable trigger → condition → action Automations that evolve the in-memory Watchdog into saveable rules. Definitions persist in SQLite and re-arm on launch; live run/poll state stays in-memory, and KKTerm installs no background service. The accepted design and its trade-offs live in `docs/ADR/0011-it-ops-module.md`; the durable architecture lives in `docs/ITOPS.md`; Fleet / Server Room / Rack terminology lives in `docs/FLEET.md` and `CONTEXT.md`. When `docs/ARCHITECTURE.md` and `docs/ITOPS.md` conflict on IT-Ops-internal concerns, `docs/ITOPS.md` wins.
 
 ### Install Helper
 

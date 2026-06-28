@@ -11,9 +11,11 @@ import "./itops.css";
 
 export function ItOpsPage({
   active,
+  fleetTreeCollapsed,
   onAssistantContextChange,
 }: {
   active: boolean;
+  fleetTreeCollapsed: boolean;
   onAssistantContextChange: (context: AssistantPageContext) => void;
 }) {
   const { t } = useTranslation();
@@ -42,7 +44,7 @@ export function ItOpsPage({
       sourceLabel: `${t("itops.title")} context`,
       text: [
         "Active Module: IT Ops.",
-        "Tutorial targets: itops.groups for Fleets, itops.runs for Batch Runs, itops.autos for Automations, and itops.primaryAction for the action that belongs to the selected tab.",
+        "Tutorial targets: itops.fleetsTree for the left Fleets navigator and itops.fleetView for the right Fleet topology drill-down.",
         `Fleets (${fleets.length}): ${fleets.map((group) => `${group.name} [${group.memberIds.length} saved members, ${group.transport}]`).join(", ") || "none"}.`,
         `Rack topology (loaded Fleets only): ${rackSummary || "none loaded"}.`,
         `Automations (${automations.length}): ${automations.map((automation) => `${automation.name} [${automation.enabled ? "armed" : "disabled"}]`).join(", ") || "none"}.`,
@@ -61,7 +63,7 @@ export function ItOpsPage({
       aria-label={t("itops.title")}
       data-active={active ? "true" : "false"}
     >
-      <ItOpsModule />
+      <ItOpsModule fleetTreeCollapsed={fleetTreeCollapsed} />
     </section>
   );
 }

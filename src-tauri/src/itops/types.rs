@@ -154,7 +154,7 @@ pub struct Fleet {
 }
 
 /// A Rack in a Fleet's virtual datacenter (docs/FLEET.md): a fixed-height cabinet
-/// grouped by `server_room`, holding Rack Items at U positions. `items` is
+/// grouped by `server_room`, holding Rack Devices at U positions. `items` is
 /// hydrated on read (storage joins the items in U order). The topology is
 /// Fleet → Server Room → Rack; older region/datacenter/area fields are retired.
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
@@ -180,7 +180,7 @@ pub struct Rack {
     pub items: Vec<RackItem>,
 }
 
-/// What a Rack Item represents. `Connection` items are openable (carry a
+/// What a Rack Device represents. `Connection` items are openable (carry a
 /// `connection_id`); the rest are passive inventory/visual devices.
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -242,7 +242,7 @@ impl RackItemKind {
     }
 }
 
-/// Presentation-only metadata for a Rack Item. No secrets ever land here.
+/// Presentation-only metadata for a Rack Device. No secrets ever land here.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct RackItemMetadata {

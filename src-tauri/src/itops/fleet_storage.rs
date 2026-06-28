@@ -1,4 +1,4 @@
-// Fleet topology storage (docs/FLEET.md Phase B): CRUD for Racks and Rack Items
+// Fleet topology storage (docs/FLEET.md Phase B): CRUD for Racks and Rack Devices
 // plus the pure U-span overlap/fit validator. Mirrors the conventions in
 // `itops/storage.rs` (free functions over `&SqliteConnection`, JSON `TEXT` for
 // non-relational fields, integer `sort_order`). Reuses `ItopsStorageError`.
@@ -352,7 +352,7 @@ pub fn reorder_racks(
     Ok(())
 }
 
-// ── Rack Item CRUD ──────────────────────────────────────────────────────────
+// ── Rack Device CRUD ────────────────────────────────────────────────────────
 
 /// Validate that a Connection-backed item carries a connection id, and passive
 /// items do not masquerade as openable.
@@ -415,7 +415,7 @@ pub fn place_rack_item(
     })
 }
 
-/// Update a Rack Item's non-position fields (label, kind, connection binding,
+/// Update a Rack Device's non-position fields (label, kind, connection binding,
 /// metadata). Position changes go through `move_rack_item`.
 pub fn update_rack_item(
     conn: &SqliteConnection,
@@ -439,7 +439,7 @@ pub fn update_rack_item(
     fetch_item(conn, id)
 }
 
-/// Move and/or resize a Rack Item — possibly into a different Rack. Re-validates
+/// Move and/or resize a Rack Device — possibly into a different Rack. Re-validates
 /// the placement against the target rack (excluding this item).
 pub fn move_rack_item(
     conn: &SqliteConnection,

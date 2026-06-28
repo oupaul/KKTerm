@@ -1,4 +1,4 @@
-// Add / edit a Rack Item (docs/FLEET.md Phase C). A device is either a placed
+// Add / edit a Rack Device (docs/FLEET.md Phase C). A device is either a placed
 // Fleet Connection (openable later) or a passive kind (switch, PDU, patch panel,
 // blank, label). Position is chosen here for the dialogs-first baseline; drag
 // placement lands in a later slice. Built from the shared dialog primitives.

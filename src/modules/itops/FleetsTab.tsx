@@ -1,18 +1,16 @@
 // Fleets tab — durable fleet target groups (docs/ITOPS.md Phase 1). The left
 // panel is a Connection-tree-style navigator over the rack topology
-// (Fleet → Region → Datacenter → Server Room → Rack); the right panel drills
-// down that hierarchy, ending at a single animated rack elevation. Member lists
-// come from the run-time resolver (itops_resolve_fleet) so dynamic-filter groups
-// show the Connections they currently match.
+// (Fleet → Server Room → Rack); the right panel drills down that hierarchy,
+// ending at a single animated rack elevation. Member lists come from the
+// run-time resolver (itops_resolve_fleet) so dynamic-filter groups show the
+// Connections they currently match.
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { ConfirmSheet } from "../../app/ui/dialog";
 import { invokeCommand } from "../../lib/tauri";
 import { useWorkspaceStore } from "../../store";
-import type { Fleet, ItopsTransport, Rack, RackItem, ResolvedHost, RunScope } from "../../types";
+import type { Fleet, Rack, RackItem, ResolvedHost } from "../../types";
 import { ItIcon, IT_ACCENTS, type ItIconName } from "./icons";
-import { TransportChip } from "./TransportChip";
 import { FleetDialog } from "./FleetDialog";
 import { RackElevation } from "./RackElevation";
 import { RackDialog } from "./RackDialog";
@@ -27,10 +25,10 @@ import {
   type DrillPath,
 } from "./rackTopology";
 import { ItOpsBackground } from "./ItOpsBackground";
-import { BackgroundButton } from "./BackgroundButton";
 import { RackStage } from "./RackStage";
 import type { DashboardBackground } from "../dashboard/types";
 import {
+  FLEET_TREE_COLLAPSED_WIDTH,
   FLEET_TREE_MAX_WIDTH,
   FLEET_TREE_MIN_WIDTH,
   loadCollapsedNodeIds,
@@ -39,9 +37,6 @@ import {
   saveFleetTreeWidth,
 } from "./fleetTreeState";
 
-type FleetView = "members" | "racks";
-
-const TRANSPORT_ORDER: ItopsTransport[] = ["auto", "ssh", "winrm", "psexec"];
 const TILE_COLORS = [
   IT_ACCENTS.green,
   IT_ACCENTS.indigo,
@@ -65,30 +60,30 @@ function groupIcon(group: Fleet): ItIconName {
   return group.filter ? "filter" : "group";
 }
 
-export function FleetsTab() {
+export function FleetsTab({
+  renderSidebarHeader,
+  treeCollapsed,
+}: {
+  renderSidebarHeader?: (props: { collapsed: boolean }) => ReactNode;
+  treeCollapsed: boolean;
+}) {
   const { t } = useTranslation();
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
   const openConnection = useWorkspaceStore((state) => state.openConnection);
   const fleets = useItOpsStore((state) => state.fleets);
   const loaded = useItOpsStore((state) => state.loaded);
-  const updateFleet = useItOpsStore((state) => state.updateFleet);
-  const removeFleet = useItOpsStore((state) => state.removeFleet);
   const resolveFleet = useItOpsStore((state) => state.resolveFleet);
-  const requestNewBatchRun = useItOpsStore((state) => state.requestNewBatchRun);
   const newGroupRequest = useItOpsStore((state) => state.newGroupRequest);
   const racksByFleet = useItOpsStore((state) => state.racksByFleet);
   const loadRacks = useItOpsStore((state) => state.loadRacks);
 
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [view, setView] = useState<FleetView>("racks");
   const [drill, setDrill] = useState<DrillPath>(EMPTY_DRILL);
   const [members, setMembers] = useState<ResolvedHost[]>([]);
   const [dialog, setDialog] = useState<{ group: Fleet | null } | null>(null);
-  const [pendingDelete, setPendingDelete] = useState<Fleet | null>(null);
   const [rackDialog, setRackDialog] = useState<{
     rack: Rack | null;
     defaultServerRoom?: string;
-    defaultGroup?: string;
   } | null>(null);
   const [addMenuOpen, setAddMenuOpen] = useState(false);
   const [itemDialog, setItemDialog] = useState<{
@@ -96,18 +91,14 @@ export function FleetsTab() {
     item: RackItem | null;
     startU?: number;
   } | null>(null);
-  const [pendingRackDelete, setPendingRackDelete] = useState<Rack | null>(null);
-  const deleteRack = useItOpsStore((state) => state.deleteRack);
   const moveRackItem = useItOpsStore((state) => state.moveRackItem);
-  const setFleetBackground = useItOpsStore((state) => state.setFleetBackground);
-  const setServerRoomBackground = useItOpsStore((state) => state.setServerRoomBackground);
-  const setRackBackground = useItOpsStore((state) => state.setRackBackground);
 
   // ── Tree navigator state (search, resizable width, collapsed nodes) ──
   const [query, setQuery] = useState("");
   const [treeWidth, setTreeWidth] = useState(loadFleetTreeWidth);
   const [collapsed, setCollapsed] = useState<Set<string>>(loadCollapsedNodeIds);
   const resizing = useRef(false);
+  const treeRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => saveCollapsedNodeIds(collapsed), [collapsed]);
 
@@ -125,7 +116,11 @@ export function FleetsTab() {
   useEffect(() => {
     function onMove(event: MouseEvent) {
       if (!resizing.current) return;
-      const width = Math.min(FLEET_TREE_MAX_WIDTH, Math.max(FLEET_TREE_MIN_WIDTH, event.clientX));
+      const left = treeRef.current?.getBoundingClientRect().left ?? 0;
+      const width = Math.min(
+        FLEET_TREE_MAX_WIDTH,
+        Math.max(FLEET_TREE_MIN_WIDTH, event.clientX - left),
+      );
       setTreeWidth(width);
     }
     function onUp() {
@@ -225,7 +220,6 @@ export function FleetsTab() {
   // Select a node: focus its Fleet, switch to the Rack view, and set the drill.
   function selectNode(fleetId: string, next: DrillPath) {
     setActiveId(fleetId);
-    setView("racks");
     setDrill(next);
   }
 
@@ -252,51 +246,6 @@ export function FleetsTab() {
     try {
       const connection = await invokeCommand("itops_get_connection", { id: item.connectionId });
       openConnection(connection);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      showStatusBarNotice(t("itops.errorNotice", { message }), { tone: "error" });
-    }
-  }
-
-  async function applyUpdate(
-    group: Fleet,
-    changes: Partial<Pick<Fleet, "transport" | "memberIds">>,
-  ) {
-    try {
-      await updateFleet(group.id, {
-        name: group.name,
-        memberIds: changes.memberIds ?? group.memberIds,
-        filter: group.filter ?? null,
-        transport: changes.transport ?? group.transport,
-      });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      showStatusBarNotice(t("itops.errorNotice", { message }), { tone: "error" });
-    }
-  }
-
-  async function confirmRackDelete() {
-    if (!pendingRackDelete || !activeGroup) return;
-    const rack = pendingRackDelete;
-    setPendingRackDelete(null);
-    try {
-      await deleteRack(activeGroup.id, rack.id);
-      if (drill.rackId === rack.id) setDrill((d) => ({ ...d, rackId: null }));
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      showStatusBarNotice(t("itops.errorNotice", { message }), { tone: "error" });
-    }
-  }
-
-  async function confirmDelete() {
-    if (!pendingDelete) return;
-    const group = pendingDelete;
-    setPendingDelete(null);
-    try {
-      await removeFleet(group.id);
-      showStatusBarNotice(t("itops.fleets.deletedNotice", { name: group.name }), {
-        tone: "success",
-      });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       showStatusBarNotice(t("itops.errorNotice", { message }), { tone: "error" });
@@ -339,195 +288,181 @@ export function FleetsTab() {
         ? nodeId.serverRoom(activeGroup.id, drill.serverRoom)
         : nodeId.fleet(activeGroup.id);
 
-  // ── Unified toolbar derivations (breadcrumb + scoped run + per-view bg) ──
+  // ── Per-view background derivation ──
   const drillRack = drill.rackId != null ? racks.find((r) => r.id === drill.rackId) : undefined;
-  const crumbs: { label: string; onClick: () => void }[] = activeGroup
-    ? [{ label: activeGroup.name, onClick: () => setDrill(EMPTY_DRILL) }]
-    : [];
-  if (activeGroup && drill.serverRoom != null) {
-    crumbs.push({
-      label: drill.serverRoom || t("itops.racks.unassigned"),
-      onClick: () => setDrill({ serverRoom: drill.serverRoom, rackId: null }),
-    });
-  }
-  if (drillRack) crumbs.push({ label: drillRack.name, onClick: () => {} });
-
-  // Scoped run for the current level (skip "Unassigned" — empty keys wildcard).
-  const drillScope: RunScope | null = drillRack
-    ? { rackId: drillRack.id }
-    : drill.serverRoom
-      ? { serverRoom: drill.serverRoom }
-      : null;
 
   const viewBackground = drillRack
     ? drillRack.background
     : drill.serverRoom != null
       ? activeGroup?.roomBackgrounds?.[drill.serverRoom]
       : activeGroup?.background;
-  function setViewBackground(bg: DashboardBackground | null) {
-    if (!activeGroup) return;
-    if (drill.rackId) void setRackBackground(activeGroup.id, drill.rackId, bg);
-    else if (drill.serverRoom != null)
-      void setServerRoomBackground(activeGroup.id, drill.serverRoom, bg);
-    else void setFleetBackground(activeGroup.id, bg);
-  }
 
   const q = query.trim().toLowerCase();
   const matchQ = (s: string) => !q || (s || t("itops.racks.unassigned")).toLowerCase().includes(q);
+  const effectiveTreeWidth = treeCollapsed ? FLEET_TREE_COLLAPSED_WIDTH : treeWidth;
 
   return (
-    <div className="hg ft">
+    <div className={`hg ft${treeCollapsed ? " ft-collapsed" : ""}`}>
       {/* ── Tree navigator ── */}
-      <div className="ft-tree" style={{ width: treeWidth, flex: `0 0 ${treeWidth}px` }}>
-        <div className="ft-head">
-          <span className="ft-head-title">{t("itops.fleets.heading")}</span>
-          <div className="ft-add-wrap">
-            <button
-              type="button"
-              className="it-icon-btn sm"
-              title={t("itops.racks.addNode")}
-              aria-haspopup="menu"
-              aria-expanded={addMenuOpen}
-              onClick={() => setAddMenuOpen((open) => !open)}
-            >
-              <ItIcon name="plus" size={14} />
-            </button>
-            {addMenuOpen ? (
-              <>
-                <div className="ft-add-backdrop" onClick={() => setAddMenuOpen(false)} />
-                <div className="ft-add-menu" role="menu">
-                  <button
-                    type="button"
-                    role="menuitem"
-                    onClick={() => {
-                      setAddMenuOpen(false);
-                      setDialog({ group: null });
-                    }}
-                  >
-                    <ItIcon name="group" size={14} />
-                    {t("itops.racks.addFleet")}
-                  </button>
-                  <button
-                    type="button"
-                    role="menuitem"
-                    disabled={!activeGroup}
-                    onClick={() => {
-                      setAddMenuOpen(false);
-                      setView("racks");
-                      setRackDialog({ rack: null, defaultServerRoom: "" });
-                    }}
-                  >
-                    <ItIcon name="ops" size={14} />
-                    {t("itops.racks.addServerRoom")}
-                  </button>
-                  <button
-                    type="button"
-                    role="menuitem"
-                    disabled={!activeGroup}
-                    onClick={() => {
-                      setAddMenuOpen(false);
-                      setView("racks");
-                      setRackDialog({
-                        rack: null,
-                        defaultServerRoom: drill.serverRoom ?? undefined,
-                      });
-                    }}
-                  >
-                    <ItIcon name="server" size={14} />
-                    {t("itops.racks.addRack")}
-                  </button>
-                </div>
-              </>
-            ) : null}
-          </div>
-        </div>
-        <div className="ft-search">
-          <ItIcon name="search" size={13} />
-          <input
-            type="text"
-            value={query}
-            placeholder={t("itops.racks.treeSearchPlaceholder")}
-            onChange={(event) => setQuery(event.currentTarget.value)}
-          />
-          {query ? (
-            <button type="button" className="ft-search-x" onClick={() => setQuery("")}>
-              <ItIcon name="xmark" size={12} />
-            </button>
-          ) : null}
-        </div>
-        <div className="ft-tree-body">
-          {fleets.map((fleet) => {
-            const fId = nodeId.fleet(fleet.id);
-            const fleetRacks = racksByFleet[fleet.id] ?? [];
-            const fleetTopo = groupRackTopology(fleetRacks);
-            const open = isExpanded(fId);
-            return (
-              <div key={fleet.id}>
-                <TreeRow
-                  depth={0}
-                  icon={groupIcon(fleet)}
-                  label={fleet.name}
-                  tint={groupColor(fleet.id)}
-                  hasChildren={fleetRacks.length > 0}
-                  open={open}
-                  selected={selectedId === fId && drill.serverRoom == null}
-                  onToggle={() => toggleNode(fId)}
-                  onSelect={() => {
-                    setActiveId(fleet.id);
-                    setDrill(EMPTY_DRILL);
-                  }}
-                />
-                {open
-                  ? fleetTopo
-                      .filter((room) => matchQ(room.key))
-                      .map((room) => {
-                        const mId = nodeId.serverRoom(fleet.id, room.key);
-                        const mOpen = isExpanded(mId);
-                        return (
-                          <div key={mId}>
-                            <TreeRow
-                              depth={1}
-                              icon="ops"
-                              label={room.key || t("itops.racks.unassigned")}
-                              count={room.racks.length}
-                              hasChildren={room.racks.length > 0}
-                              open={mOpen}
-                              selected={selectedId === mId}
-                              onToggle={() => toggleNode(mId)}
-                              onSelect={() =>
-                                selectNode(fleet.id, { serverRoom: room.key, rackId: null })
-                              }
-                            />
-                            {mOpen
-                              ? room.racks.map((rack) => (
-                                  <TreeRow
-                                    key={rack.id}
-                                    depth={2}
-                                    icon="server"
-                                    label={rack.name}
-                                    hasChildren={false}
-                                    open={false}
-                                    selected={selectedId === nodeId.rack(rack.id)}
-                                    onSelect={() =>
-                                      selectNode(fleet.id, {
-                                        serverRoom: room.key,
-                                        rackId: rack.id,
-                                      })
-                                    }
-                                  />
-                                ))
-                              : null}
-                          </div>
-                        );
-                      })
-                  : null}
+      <div
+        ref={treeRef}
+        className="ft-tree"
+        data-tutorial-id="itops.fleetsTree"
+        style={{ width: effectiveTreeWidth, flex: `0 0 ${effectiveTreeWidth}px` }}
+      >
+        {renderSidebarHeader?.({ collapsed: treeCollapsed })}
+        {!treeCollapsed ? (
+          <>
+            <div className="ft-head">
+              <span className="ft-head-title">{t("itops.fleets.heading")}</span>
+              <div className="ft-add-wrap">
+                <button
+                  type="button"
+                  className="it-icon-btn sm"
+                  title={t("itops.racks.addNode")}
+                  aria-haspopup="menu"
+                  aria-expanded={addMenuOpen}
+                  onClick={() => setAddMenuOpen((open) => !open)}
+                >
+                  <ItIcon name="plus" size={14} />
+                </button>
+                {addMenuOpen ? (
+                  <>
+                    <div className="ft-add-backdrop" onClick={() => setAddMenuOpen(false)} />
+                    <div className="ft-add-menu" role="menu">
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          setAddMenuOpen(false);
+                          setDialog({ group: null });
+                        }}
+                      >
+                        <ItIcon name="group" size={14} />
+                        {t("itops.racks.addFleet")}
+                      </button>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        disabled={!activeGroup}
+                        onClick={() => {
+                          setAddMenuOpen(false);
+                          setRackDialog({ rack: null, defaultServerRoom: "" });
+                        }}
+                      >
+                        <ItIcon name="ops" size={14} />
+                        {t("itops.racks.addServerRoom")}
+                      </button>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        disabled={!activeGroup}
+                        onClick={() => {
+                          setAddMenuOpen(false);
+                          setRackDialog({
+                            rack: null,
+                            defaultServerRoom: drill.serverRoom ?? undefined,
+                          });
+                        }}
+                      >
+                        <ItIcon name="server" size={14} />
+                        {t("itops.racks.addRack")}
+                      </button>
+                    </div>
+                  </>
+                ) : null}
               </div>
-            );
-          })}
-        </div>
+            </div>
+            <div className="ft-search">
+              <ItIcon name="search" size={13} />
+              <input
+                type="text"
+                value={query}
+                placeholder={t("itops.racks.treeSearchPlaceholder")}
+                onChange={(event) => setQuery(event.currentTarget.value)}
+              />
+              {query ? (
+                <button type="button" className="ft-search-x" onClick={() => setQuery("")}>
+                  <ItIcon name="xmark" size={12} />
+                </button>
+              ) : null}
+            </div>
+            <div className="ft-tree-body">
+              {fleets.map((fleet) => {
+                const fId = nodeId.fleet(fleet.id);
+                const fleetRacks = racksByFleet[fleet.id] ?? [];
+                const fleetTopo = groupRackTopology(fleetRacks);
+                const open = isExpanded(fId);
+                return (
+                  <div key={fleet.id}>
+                    <TreeRow
+                      depth={0}
+                      icon={groupIcon(fleet)}
+                      label={fleet.name}
+                      tint={groupColor(fleet.id)}
+                      hasChildren={fleetRacks.length > 0}
+                      open={open}
+                      selected={selectedId === fId && drill.serverRoom == null}
+                      onToggle={() => toggleNode(fId)}
+                      onSelect={() => {
+                        setActiveId(fleet.id);
+                        setDrill(EMPTY_DRILL);
+                      }}
+                    />
+                    {open
+                      ? fleetTopo
+                          .filter((room) => matchQ(room.key))
+                          .map((room) => {
+                            const mId = nodeId.serverRoom(fleet.id, room.key);
+                            const mOpen = isExpanded(mId);
+                            return (
+                              <div key={mId}>
+                                <TreeRow
+                                  depth={1}
+                                  icon="ops"
+                                  label={room.key || t("itops.racks.unassigned")}
+                                  count={room.racks.length}
+                                  hasChildren={room.racks.length > 0}
+                                  open={mOpen}
+                                  selected={selectedId === mId}
+                                  onToggle={() => toggleNode(mId)}
+                                  onSelect={() =>
+                                    selectNode(fleet.id, { serverRoom: room.key, rackId: null })
+                                  }
+                                />
+                                {mOpen
+                                  ? room.racks.map((rack) => (
+                                      <TreeRow
+                                        key={rack.id}
+                                        depth={2}
+                                        icon="server"
+                                        label={rack.name}
+                                        hasChildren={false}
+                                        open={false}
+                                        selected={selectedId === nodeId.rack(rack.id)}
+                                        onSelect={() =>
+                                          selectNode(fleet.id, {
+                                            serverRoom: room.key,
+                                            rackId: rack.id,
+                                          })
+                                        }
+                                      />
+                                    ))
+                                  : null}
+                              </div>
+                            );
+                          })
+                      : null}
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        ) : null}
         <div
           className="ft-resize"
           onMouseDown={() => {
+            if (treeCollapsed) return;
             resizing.current = true;
             document.body.style.cursor = "col-resize";
           }}
@@ -536,131 +471,20 @@ export function FleetsTab() {
 
       {/* ── Detail ── */}
       {activeGroup ? (
-        <div className="hg-detail">
-          {/* Unified compact toolbar: fleet identity + breadcrumb + actions. */}
-          <div className="hg-bar">
-            <span className="hg-bar-tile" style={{ background: groupColor(activeGroup.id) }}>
-              <ItIcon name={groupIcon(activeGroup)} size={15} sw={1.7} />
-            </span>
-            {view === "racks" ? (
-              <nav className="ft-breadcrumb">
-                {crumbs.map((crumb, i) => (
-                  <span key={i} className="ft-crumb">
-                    {i > 0 ? <ItIcon name="chevR" size={11} /> : null}
-                    <button
-                      type="button"
-                      className={i === crumbs.length - 1 ? "cur" : ""}
-                      onClick={crumb.onClick}
-                    >
-                      {crumb.label}
-                    </button>
-                  </span>
-                ))}
-              </nav>
-            ) : (
-              <span className="hg-bar-name">{activeGroup.name}</span>
-            )}
-            <span style={{ flex: "1 1 auto" }} />
-            <div className="seg" role="tablist" aria-label={t("itops.fleets.viewToggleLabel")}>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={view === "members"}
-                className={view === "members" ? "on" : ""}
-                onClick={() => setView("members")}
-              >
-                {t("itops.fleets.viewMembers")}
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={view === "racks"}
-                className={view === "racks" ? "on" : ""}
-                onClick={() => setView("racks")}
-              >
-                {t("itops.fleets.viewRacks")}
-              </button>
-            </div>
-            {view === "racks" ? (
-              <>
-                <BackgroundButton background={viewBackground} onChange={setViewBackground} />
-                {drillScope ? (
-                  <button
-                    type="button"
-                    className="it-icon-btn sm"
-                    title={t("itops.racks.runScope")}
-                    onClick={() => requestNewBatchRun(activeGroup.id, drillScope)}
-                  >
-                    <ItIcon name="run" size={13} />
-                  </button>
-                ) : null}
-                <button
-                  type="button"
-                  className="it-icon-btn sm"
-                  title={t("itops.racks.newTitle")}
-                  onClick={() =>
-                    setRackDialog({
-                      rack: null,
-                      defaultServerRoom: drill.serverRoom ?? undefined,
-                      defaultGroup: drill.rackId ? drillRack?.rackGroup : undefined,
-                    })
-                  }
-                >
-                  <ItIcon name="plus" size={14} />
-                </button>
-              </>
-            ) : null}
-            <button
-              type="button"
-              className="it-icon-btn sm"
-              title={t("itops.actions.edit")}
-              onClick={() => setDialog({ group: activeGroup })}
-            >
-              <ItIcon name="edit" size={14} />
-            </button>
-            <button
-              type="button"
-              className="it-icon-btn sm"
-              title={t("itops.actions.delete")}
-              onClick={() => setPendingDelete(activeGroup)}
-            >
-              <ItIcon name="trash" size={14} />
-            </button>
-            <button type="button" className="it-btn sm" onClick={() => requestNewBatchRun(activeGroup.id)}>
-              <span className="it-btn-ic">
-                <ItIcon name="run" size={13} />
-              </span>
-              {t("itops.actions.runTask")}
-            </button>
-          </div>
-
-          {view === "members" ? (
-            <MembersView
-              group={activeGroup}
-              members={members}
-              onEditGroup={() => setDialog({ group: activeGroup })}
-              applyUpdate={applyUpdate}
-            />
-          ) : (
-            <RackDrill
-              topology={topology}
-              racks={racks}
-              drill={drill}
-              setDrill={setDrill}
-              viewBackground={viewBackground}
-              hostForItem={hostForItem}
-              isGhostItem={isGhostItem}
-              onSlotClick={(rack, startU) => setItemDialog({ rack, item: null, startU })}
-              onOpenItem={(item) => void openRackItem(item)}
-              onEditItem={(rack, item) => setItemDialog({ rack, item })}
-              onEditRack={(rack) => setRackDialog({ rack })}
-              onDeleteRack={(rack) => setPendingRackDelete(rack)}
-              onRunRack={(rack) => requestNewBatchRun(activeGroup.id, { rackId: rack.id })}
-              onMoveItem={(itemId, targetRackId, startU) =>
-                void moveItem(itemId, targetRackId, startU)
-              }
-            />
-          )}
+        <div className="hg-detail" data-tutorial-id="itops.fleetView">
+          <RackDrill
+            topology={topology}
+            racks={racks}
+            drill={drill}
+            setDrill={setDrill}
+            viewBackground={viewBackground}
+            hostForItem={hostForItem}
+            isGhostItem={isGhostItem}
+            onSlotClick={(rack, startU) => setItemDialog({ rack, item: null, startU })}
+            onOpenItem={(item) => void openRackItem(item)}
+            onEditItem={(rack, item) => setItemDialog({ rack, item })}
+            onMoveItem={(itemId, targetRackId, startU) => void moveItem(itemId, targetRackId, startU)}
+          />
         </div>
       ) : null}
 
@@ -669,17 +493,6 @@ export function FleetsTab() {
           group={dialog.group}
           onClose={() => setDialog(null)}
           onSaved={(saved) => setActiveId(saved.id)}
-        />
-      ) : null}
-      {pendingDelete ? (
-        <ConfirmSheet
-          tone="danger"
-          title={t("itops.fleets.deleteTitle")}
-          message={t("itops.fleets.deleteBody", { name: pendingDelete.name })}
-          confirmLabel={t("itops.actions.delete")}
-          confirmIcon="trash"
-          onConfirm={() => void confirmDelete()}
-          onCancel={() => setPendingDelete(null)}
         />
       ) : null}
       {rackDialog && activeGroup ? (
@@ -698,17 +511,6 @@ export function FleetsTab() {
           defaultStartU={itemDialog.startU}
           members={members}
           onClose={() => setItemDialog(null)}
-        />
-      ) : null}
-      {pendingRackDelete ? (
-        <ConfirmSheet
-          tone="danger"
-          title={t("itops.racks.deleteTitle")}
-          message={t("itops.racks.deleteBody", { name: pendingRackDelete.name })}
-          confirmLabel={t("itops.actions.delete")}
-          confirmIcon="trash"
-          onConfirm={() => void confirmRackDelete()}
-          onCancel={() => setPendingRackDelete(null)}
         />
       ) : null}
     </div>
@@ -766,132 +568,7 @@ function TreeRow({
   );
 }
 
-// ── Members view (unchanged behaviour, extracted for clarity) ───────────────
-function MembersView({
-  group,
-  members,
-  onEditGroup,
-  applyUpdate,
-}: {
-  group: Fleet;
-  members: ResolvedHost[];
-  onEditGroup: () => void;
-  applyUpdate: (
-    group: Fleet,
-    changes: Partial<Pick<Fleet, "transport" | "memberIds">>,
-  ) => Promise<void>;
-}) {
-  const { t } = useTranslation();
-  return (
-    <>
-      <div className="it-section-label">{t("itops.fleets.transportDefaultLabel")}</div>
-      <div className="card">
-        <div className="hg-opt">
-          <span className="ic">
-            <ItIcon name="link" size={16} />
-          </span>
-          <div className="hg-opt-txt">
-            <div className="t">{t("itops.fleets.perHostTransport")}</div>
-            <div className="d">{t("itops.fleets.perHostTransportHint")}</div>
-          </div>
-          <div className="seg">
-            {TRANSPORT_ORDER.map((tp) => (
-              <button
-                key={tp}
-                type="button"
-                className={tp === group.transport ? "on" : ""}
-                onClick={() => {
-                  if (tp !== group.transport) void applyUpdate(group, { transport: tp });
-                }}
-              >
-                {tp === "auto" ? t("itops.transport.auto") : tp.toUpperCase()}
-              </button>
-            ))}
-          </div>
-        </div>
-        {group.filter ? (
-          <div className="hg-opt">
-            <span className="ic">
-              <ItIcon name="filter" size={16} />
-            </span>
-            <div className="hg-opt-txt">
-              <div className="t">{t("itops.fleets.dynamicFilter")}</div>
-              <div className="d">{t("itops.fleets.dynamicFilterHint")}</div>
-            </div>
-            <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
-              {group.filter.types.map((type) => (
-                <span key={type} className="filter-pill">
-                  <span className="k">{t("itops.fleets.filterTypeKey")}</span>
-                  {type}
-                </span>
-              ))}
-              {group.filter.folderId ? (
-                <span className="filter-pill">
-                  <span className="k">{t("itops.fleets.filterFolderKey")}</span>
-                  {group.filter.folderId}
-                </span>
-              ) : null}
-            </div>
-          </div>
-        ) : null}
-      </div>
-
-      <div className="it-section-label">
-        <span>{t("itops.fleets.membersLabel")}</span>
-        <span className="ct">{t("itops.fleets.membersCount", { count: members.length })}</span>
-      </div>
-      <div className="card">
-        {members.length === 0 ? (
-          <div className="hg-dlg-empty">{t("itops.fleets.noMembers")}</div>
-        ) : (
-          members.map((member) => (
-            <div key={member.connectionId} className="member">
-              <span className="tile">
-                <ItIcon
-                  name={member.transport === "winrm" ? "windows" : "server"}
-                  size={15}
-                  sw={1.6}
-                />
-              </span>
-              <div className="member-txt">
-                <div className="nm">{member.name}</div>
-                <div className="host">
-                  {member.username ? `${member.username}@` : ""}
-                  {member.host}
-                  {member.port ? `:${member.port}` : ""}
-                </div>
-              </div>
-              <span className="os">{member.connectionType}</span>
-              <TransportChip transport={member.transport} />
-              {group.memberIds.includes(member.connectionId) ? (
-                <button
-                  type="button"
-                  className="x"
-                  title={t("itops.actions.removeFromGroup")}
-                  onClick={() =>
-                    void applyUpdate(group, {
-                      memberIds: group.memberIds.filter((id) => id !== member.connectionId),
-                    })
-                  }
-                >
-                  <ItIcon name="xmark" size={13} />
-                </button>
-              ) : (
-                <span className="dyn">{t("itops.fleets.dynamicBadge")}</span>
-              )}
-            </div>
-          ))
-        )}
-        <button type="button" className="member-add" onClick={onEditGroup}>
-          <ItIcon name="plus" size={14} />
-          {t("itops.actions.addConnections")}
-        </button>
-      </div>
-    </>
-  );
-}
-
-// ── Rack drill body (the toolbar lives in the unified .hg-bar above) ─────────
+// ── Rack drill body ───────────────────────────────────────────────────────
 function RackDrill({
   topology,
   racks,
@@ -903,9 +580,6 @@ function RackDrill({
   onSlotClick,
   onOpenItem,
   onEditItem,
-  onEditRack,
-  onDeleteRack,
-  onRunRack,
   onMoveItem,
 }: {
   topology: ReturnType<typeof groupRackTopology>;
@@ -918,9 +592,6 @@ function RackDrill({
   onSlotClick: (rack: Rack, startU: number) => void;
   onOpenItem: (item: RackItem) => void;
   onEditItem: (rack: Rack, item: RackItem) => void;
-  onEditRack: (rack: Rack) => void;
-  onDeleteRack: (rack: Rack) => void;
-  onRunRack: (rack: Rack) => void;
   onMoveItem: (itemId: string, targetRackId: string, startU: number) => void;
 }) {
   const { t } = useTranslation();
@@ -942,9 +613,6 @@ function RackDrill({
         onSlotClick={(startU) => onSlotClick(r, startU)}
         onOpenItem={onOpenItem}
         onEditItem={(item) => onEditItem(r, item)}
-        onEditRack={onEditRack}
-        onDeleteRack={onDeleteRack}
-        onRunRack={onRunRack}
         onMoveItem={onMoveItem}
         isGhost={isGhostItem}
       />
@@ -966,9 +634,6 @@ function RackDrill({
             onSlotClick={(startU) => onSlotClick(rack, startU)}
             onOpenItem={onOpenItem}
             onEditItem={(item) => onEditItem(rack, item)}
-            onEditRack={onEditRack}
-            onDeleteRack={onDeleteRack}
-            onRunRack={onRunRack}
             onMoveItem={onMoveItem}
           />
         ) : serverRoom ? (

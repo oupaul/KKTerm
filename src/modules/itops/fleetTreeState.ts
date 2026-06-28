@@ -4,11 +4,13 @@
 // ("fleet:<id>", "region:<id>/<region>", …) so collapse survives reloads.
 
 const WIDTH_KEY = "kkterm.itopsFleetTreeWidth";
+const PANEL_COLLAPSED_KEY = "kkterm.itopsFleetTreePanelCollapsed";
 const COLLAPSED_KEY = "kkterm.itopsFleetTreeCollapsed";
 
 export const FLEET_TREE_MIN_WIDTH = 200;
 export const FLEET_TREE_MAX_WIDTH = 460;
 export const FLEET_TREE_DEFAULT_WIDTH = 268;
+export const FLEET_TREE_COLLAPSED_WIDTH = 0;
 
 export function loadFleetTreeWidth(): number {
   if (typeof localStorage === "undefined") return FLEET_TREE_DEFAULT_WIDTH;
@@ -20,6 +22,16 @@ export function loadFleetTreeWidth(): number {
 export function saveFleetTreeWidth(width: number): void {
   if (typeof localStorage === "undefined") return;
   localStorage.setItem(WIDTH_KEY, String(Math.round(width)));
+}
+
+export function loadFleetTreeCollapsed(): boolean {
+  if (typeof localStorage === "undefined") return false;
+  return localStorage.getItem(PANEL_COLLAPSED_KEY) === "true";
+}
+
+export function saveFleetTreeCollapsed(collapsed: boolean): void {
+  if (typeof localStorage === "undefined") return;
+  localStorage.setItem(PANEL_COLLAPSED_KEY, collapsed ? "true" : "false");
 }
 
 export function loadCollapsedNodeIds(): Set<string> {

@@ -352,7 +352,7 @@ pub fn resolve_fleet(conn: &SqliteConnection, group: &Fleet) -> Result<Vec<Resol
 }
 
 /// Resolve only the placed Connection items in the racks matching `scope`
-/// (docs/FLEET.md Phase D) — the seam for rack/area/region-scoped Batch Runs.
+/// (docs/FLEET.md Phase D) — the seam for Rack / Server Room scoped Batch Runs.
 /// Uses the Fleet's transport default. Returns hosts in rack order, then U
 /// order (top of rack first), deduplicated by Connection id.
 pub fn resolve_fleet_scoped(

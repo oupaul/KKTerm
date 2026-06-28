@@ -1116,7 +1116,7 @@ type CommandMap = {
     args: { id: string };
     result: ResolvedHost[];
   };
-  // Fleet topology: Racks + Rack Items (docs/FLEET.md Phase B).
+  // Fleet topology: Racks + Rack Devices (docs/FLEET.md Phase B).
   itops_list_racks: {
     args: { fleetId: string };
     result: Rack[];

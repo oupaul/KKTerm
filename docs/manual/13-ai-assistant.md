@@ -46,7 +46,7 @@ Workspace Send to AI Assistant toolbar actions for terminal buffers and remote d
 Every request includes the user's prompt, recent chat history, the active context label, and any active page context. Page context is intentionally compact:
 
 - Dashboard sends the active Dashboard View, Widget Instance placement, AI Created Widget metadata, health errors, compact visual context, and compact script-library keys/globals. It does not send full widget source, `bodyJson`, `settingsSchemaJson`, or per-instance settings values.
-- IT Ops sends Host Group names/member counts/transports, Automation names/armed state, recent-run count, and a live-run summary. It does not send scripts, host output, secrets, or full trigger/action bodies.
+- IT Ops sends Fleet names/member counts/transports, loaded rack-topology counts, Automation names/armed state, recent-run count, and a live-run summary. It does not send scripts, host output, secrets, Rack Device details, or full trigger/action bodies.
 - Settings sends the active Settings section, visible control keys, and tutorial targets.
 - Workspace context is sent only for explicit attachments or active Session helpers, such as selected terminal output, terminal buffer, screenshots, files, or live Session tools.
 

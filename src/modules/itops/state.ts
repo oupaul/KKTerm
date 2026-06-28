@@ -221,7 +221,7 @@ interface ItOpsState {
   /** Bumped to open the Batch Run launcher; pendingRunGroupId preselects a group. */
   newRunRequest: number;
   pendingRunGroupId: string | null;
-  /** Optional rack/area/region scope carried into the launcher for a scoped run. */
+  /** Optional Rack / Server Room scope carried into the launcher for a scoped run. */
   pendingRunScope: RunScope | null;
   requestNewBatchRun: (fleetId?: string, scope?: RunScope) => void;
   applyRunEvent: (event: RunEvent) => void;

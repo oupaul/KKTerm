@@ -14,14 +14,14 @@ concerns.
 
 The IT Ops Module owns:
 
-- **Host Groups** — durable named selections of existing Connections used
-  as fleet targets.
-- **Batch Runs** — fan-out task execution across a Host Group with
+- **Fleets** — durable named selections of existing Connections used as fleet
+  targets, plus the optional Fleet → Server Room → Rack topology.
+- **Batch Runs** — fan-out task execution across a Fleet with
   per-host live output and a consolidated, saved run report.
 - **Automations** — durable trigger → condition → action rules (the
   evolved Watchdog), including the live run loop and Status Bar surface.
-- The Tauri commands the AI Assistant uses to draft and manage Host
-  Groups and Automations.
+- The Tauri commands the AI Assistant uses to draft and manage Fleets and
+  Automations.
 - The IT Ops page-context projection supplied to the shared AI Assistant
   panel.
 
@@ -39,26 +39,52 @@ It does not own:
 ## Why this is one Module, not three features
 
 Batch Runs and Automations are the same primitive seen from two
-directions. A Batch Run is a task executed **now** against a Host Group.
+directions. A Batch Run is a task executed **now** against a Fleet.
 An Automation is a saved rule that may **run a Batch Run later** when a
-trigger fires. They share the host-targeting model (Host Groups), the
+trigger fires. They share the host-targeting model (Fleets), the
 fan-out executor, the transport adapters, and the run-history store.
 Keeping them in one Module lets an Automation's `runBatch` action reuse
 the exact executor a manual run uses.
 
 ## Domain Concepts
 
-**Host Group** — a durable, named selection of fleet targets, stored in
-`itops_host_groups`. It carries an ordered set of Connection ids plus an
+**Fleet** — a durable, named selection of fleet targets, stored in
+`itops_fleets`. It carries an ordered set of Connection ids plus an
 optional dynamic filter (by Connection type and/or folder) resolved at
-run time. A Host Group is **not** a Connection and owns no Session and no
-secret. Resolving a Host Group yields a concrete list of Connections at
+run time. A Fleet is **not** a Connection and owns no Session and no
+secret. Resolving a Fleet yields a concrete list of Connections at
 the moment a run starts; dynamic filters mean later-added Connections are
 picked up automatically.
 _Avoid_: host list, inventory, connection group (as a Connection type)
 
+**Fleet View** — the top-level topology view for one selected Fleet. It shows
+Server Rooms and is the entry point into Server Room View and Rack View.
+
+**Server Room** — a plain-text grouping tag on a Rack inside a Fleet. It is
+not a first-class database entity and owns no Connections, Sessions, or
+credentials.
+
+**Server Room View** — the drill-down view for one Server Room, showing its
+Racks grouped by the optional per-Rack `rack_group` tag.
+
+**Rack** — a durable fixed-height cabinet in one Fleet and one Server Room.
+It stores Rack Devices at U positions but owns no live Session state.
+
+**Rack View** — the single-Rack drill-down stage where Rack Devices are
+opened, placed, or edited.
+
+**Rack Device** — a visual device occupying a U span in a Rack. It may be
+Connection-backed or passive. It is stored in `itops_fleet_rack_items`; older
+code/schema may still use the `RackItem` name.
+
+**Rack Device Type** — the finite device kind that controls faceplate
+rendering and properties; it is not a Connection type.
+
+**Rack Device Properties** — non-secret presentation metadata for a Rack
+Device. Never store credentials or live Session state here.
+
 **Transport** — how a Batch Run reaches one host. Per host (derived from
-the Connection, overridable per Host Group/run):
+the Connection, overridable per Fleet/run):
 
 | Transport | Reaches | Backend |
 | --- | --- | --- |
@@ -81,7 +107,7 @@ the Connection, overridable per Host Group/run):
   host**, so later steps see the state earlier steps left behind.
 
 **Batch Run** — one execution of a Batch Task against a resolved Host
-Group. Live run state (per-host status, streamed stdout/stderr, exit
+Fleet. Live run state (per-host status, streamed stdout/stderr, exit
 codes, cancellation) is **in-memory**; on completion a consolidated
 report is written to `itops_run_history`. Concurrency is bounded
 (mirroring the Connection Batch Importer's network-scan fan-out in
@@ -114,7 +140,7 @@ executed in order when the rule fires:
 | `popup` | App-owned desktop popup dialog |
 | `email` | SMTP send (credentials from keychain) |
 | `webhook` | Outbound HTTP request to a declared origin |
-| `runBatch` | Start a Batch Run on a named Host Group + Task |
+| `runBatch` | Start a Batch Run on a named Fleet + Task |
 | `aiIntervene` | The existing approval-gated AI sub-turn |
 
 The catalog is closed and typed on purpose: it is the "light n8n" payoff
@@ -125,8 +151,10 @@ between each other (no DAG); each reads the trigger snapshot.
 
 Three SQLite tables (new schema version):
 
-- `itops_host_groups` — id, name, ordered Connection ids, optional
-  dynamic filter, transport defaults.
+- `itops_fleets` — id, name, ordered Connection ids, optional dynamic filter,
+  transport defaults.
+- `itops_fleet_racks` / `itops_fleet_rack_items` — Fleet topology and Rack
+  Devices. Pure metadata; Connection ids are soft references.
 - `itops_automations` — id, name, enabled flag, trigger config, optional
   condition, ordered actions, poll/stop/suppression settings (the durable
   superset of `WatchdogConfig`).
@@ -163,7 +191,7 @@ the Automation runtime, extended rather than rewritten:
 - A startup hook reads `itops_automations` and creates one runtime entry
   per enabled rule.
 
-The Batch Run executor is a sibling worker pool: resolve the Host Group,
+The Batch Run executor is a sibling worker pool: resolve the Fleet,
 open one transport task per host under a concurrency cap, stream progress
 events on a channel, and assemble the report. SSH reuses the existing
 transport; WinRM and PsExec are new transport adapters behind a common
@@ -175,8 +203,12 @@ UI/native thread (`docs/ARCHITECTURE.md` command-runtime boundaries).
 
 ## Frontend
 
-`src/modules/itops/` owns the Module shell with three tabs (Host Groups,
-Batch Runs, Automations). The live Batch Run view renders a per-host grid
+`src/modules/itops/` owns the Module shell. The current visible shell opens
+directly into the Fleet topology surface: a resizable/collapsible left Fleets
+tree and a right Fleet View / Server Room View / Rack View drill-down. Batch
+Run and Automation editors/runtime remain in this source area, but their
+top-level tab chrome is hidden while the Fleet-only UI is active. The live
+Batch Run view renders a per-host grid
 with status chips and **live streamed output** (each host auto-reveals its
 output as it arrives over the `itops://run` `HostOutput` frames; the SSH
 transport streams incrementally via `run_remote_command_capture_streaming`).
@@ -202,11 +234,11 @@ i18n rules in `AGENTS.md`. New dialogs/sheets follow
 ## AI Assistant integration
 
 IT Ops commands are registered as approval-gated assistant tools, the
-same model Dashboard uses. The assistant may draft a Host Group or an
+same model Dashboard uses. The assistant may draft a Fleet or an
 Automation (trigger + condition + actions) from a typed schema; a
 successful mutating tool emits an `itops-changed` backend event that
 reloads the IT Ops store so the new rule appears without restart. The
-page-context payload is a compact projection — Host Group names/counts,
+page-context payload is a compact projection — Fleet names/counts,
 Automation names/states, recent run summaries — never full run output,
 streamed host buffers, secrets, or credential references. Mutating
 actions (starting a Batch Run, enabling an Automation) go through the
@@ -222,24 +254,26 @@ Migration steps, at a design level:
    `WatchdogConfig`; load enabled rows at startup into the existing
    registry.
 3. Extend the trigger dispatcher and action executor with the new kinds.
-4. Build the Host Group resolver and the Batch Run executor (SSH first;
+4. Build the Fleet resolver and the Batch Run executor (SSH first;
    WinRM and PsExec adapters next).
 5. Add the `src/modules/itops/` Module shell and `itops` namespace;
    re-home the existing `WatchdogDetail`/`WatchdogStatusBar` views under
-   the Automations tab while keeping the Status Bar indicator.
+   the Automations runtime while keeping the Status Bar indicator.
 
 `CONTEXT.md`'s Watchdog entry is updated to note Automations are now
 durable IT Ops rules while live run state remains in-memory.
 
 ## Concrete Data Model
 
-This section grounds the durable shape in the existing storage conventions
+This historical section grounds the original durable shape in the existing storage conventions
 (`src-tauri/src/storage.rs`). The schema is a single idempotent
 `CURRENT_SCHEMA` string of `CREATE TABLE IF NOT EXISTS` statements applied
 via `execute_batch` with `PRAGMA user_version`; adding tables is additive
 and only requires bumping `SCHEMA_USER_VERSION` (currently 26 → 27).
 Ordered lists use an integer `sort_order` column, matching
-`dashboard_widget_instances`. Heavy/structured fields that are not queried
+`dashboard_widget_instances`. It predates the Fleet rename and topology tables;
+use the Scope, Domain Concepts, and `docs/FLEET.md` sections above for current
+terminology. Heavy/structured fields that are not queried
 relationally are stored as JSON `TEXT` columns, matching
 `dashboard_custom_widgets.body_json` and `settings_schema_json`.
 
@@ -483,25 +517,21 @@ Phases 4–8 are independent and can be reordered by demand.
 
 ## Planned / Deferred Enhancements
 
-The plumbing above is complete (Host Groups, SSH Batch Runs, durable
+The plumbing above is complete (Fleets, SSH Batch Runs, durable
 Automations + action catalog, playbooks, AI integration), but from an
 operator's seat the Module today is mostly a transport: it returns N raw
 per-host output blobs and a flat list of names. The enhancements below turn it
 into something that produces *answers* and a fleet you *see*. They are captured
 here so the design is not lost; sequence them by demand.
 
-**Fleet management (in progress, planned in `docs/FLEET.md`).** Phase A has
-**landed**: Host Group is renamed to **Fleet** across the product — the table is
-now `itops_fleets`, the run-history soft reference is `fleet_id`, and the IT Ops
-tab/commands/i18n use the Fleet term. The historical design prose above still
-refers to the original "Host Group" naming; treat `docs/FLEET.md` as the source
-of truth for current Fleet naming and the remaining topology phases (B–E).
-The remaining Fleet work adds a virtual-datacenter layer: per-Fleet **Racks**
-grouped by
-Region/Area, drawn as full 42U **rack elevations**, holding placed Connections
-(click to open ssh/rdp/vnc/etc.) and passive items (switch, PDU, patch panel,
-blank, label). Also enables rack/area/region-scoped Batch Runs. See
-`docs/FLEET.md` for the detailed plan and data model.
+**Fleet management (implemented, detailed in `docs/FLEET.md`).** Host Group is
+renamed to **Fleet** across the product: the table is `itops_fleets`, the
+run-history soft reference is `fleet_id`, and commands/i18n use the Fleet term.
+The Fleet topology layer adds per-Fleet **Server Rooms**, **Racks**, and **Rack
+Devices**. Racks are drawn as full 42U rack elevations and may hold placed
+Connections (click to open ssh/rdp/vnc/etc.) or passive items (switch, PDU,
+patch panel, blank, label). Scoped Batch Runs use Server Room / Rack scope. See
+`docs/FLEET.md` for the detailed data model and product terminology.
 
 The following are noted for later consideration (not yet planned in detail):
 
@@ -573,23 +603,24 @@ with the following two entries and add the three new IT Ops terms:
 > _Avoid_: monitor profile, durable watcher (the Automation is the durable part)
 >
 > **IT Ops Module**:
-> A built-in Activity Rail Module for fleet operations: **Host Groups**,
-> **Batch Runs**, and **Automations**. Lives with Dashboard and Install
-> Helper above Settings. Not a Connection, Session, or Dashboard widget.
-> See `docs/ITOPS.md` and `docs/ADR/0011-it-ops-module.md`.
+> A built-in Activity Rail Module for fleet operations: **Fleets**,
+> **Batch Runs**, and **Automations**. Its current primary UI is the Fleet
+> topology surface. Lives with Dashboard and Install Helper above Settings.
+> Not a Connection, Session, or Dashboard widget. See `docs/ITOPS.md` and
+> `docs/ADR/0011-it-ops-module.md`.
 > _Avoid_: operations center, fleet manager, orchestrator
 >
-> **Host Group**:
+> **Fleet**:
 > A durable, named selection of existing Connections (plus an optional
 > dynamic filter by type/folder) used as the fleet target for Batch Runs
-> and Automation `runBatch` actions. Stored in `itops_host_groups`; it
+> and Automation `runBatch` actions. Stored in `itops_fleets`; it
 > references Connection ids and owns no Session and no secret. It is not a
 > Connection type.
-> _Avoid_: inventory, host list, connection group (as a Connection type)
+> _Avoid_: host group, inventory, host list, connection group (as a Connection type)
 >
 > **Batch Run**:
 > One execution of a Batch Task (a one-shot script or an interactive,
-> expect-style playbook) across a resolved Host Group, fanned out with
+> expect-style playbook) across a resolved Fleet, fanned out with
 > bounded concurrency over a per-host transport (SSH, WinRM, or PsExec).
 > Live per-host progress and
 > streamed output are in-memory; a consolidated report is written to
@@ -600,4 +631,3 @@ with the following two entries and add the three new IT Ops terms:
 The matching `Namespace` entry in `CONTEXT.md` also gains an `itops`
 namespace, and the **Activity Rail** entry lists IT Ops among the
 built-in Modules.
-
