@@ -24,12 +24,15 @@ export function RackDialog({
   fleetId,
   rack,
   defaultServerRoom,
+  defaultGroup,
   onClose,
 }: {
   fleetId: string;
   rack?: Rack | null;
   /** Prefill the Server Room for a new rack (e.g. added within a room). */
   defaultServerRoom?: string;
+  /** Prefill the Group for a new rack (e.g. added within a group section). */
+  defaultGroup?: string;
   onClose: () => void;
 }) {
   const { t } = useTranslation();
@@ -40,6 +43,7 @@ export function RackDialog({
 
   const [name, setName] = useState(rack?.name ?? "");
   const [serverRoom, setServerRoom] = useState(rack?.serverRoom ?? defaultServerRoom ?? "");
+  const [rackGroup, setRackGroup] = useState(rack?.rackGroup ?? defaultGroup ?? "");
   const [shell, setShell] = useState<RackShell>(rack?.shell ?? "black");
   const [heightU, setHeightU] = useState(rack?.heightU ?? 42);
   const [busy, setBusy] = useState(false);
@@ -53,6 +57,7 @@ export function RackDialog({
     const input = {
       name: trimmedName,
       serverRoom: serverRoom.trim(),
+      rackGroup: rackGroup.trim(),
       shell,
       heightU,
     };
@@ -95,13 +100,22 @@ export function RackDialog({
             autoFocus
           />
         </Field>
-        <Field label={t("itops.racks.serverRoomLabel")}>
-          <TextInput
-            value={serverRoom}
-            placeholder={t("itops.racks.serverRoomPlaceholder")}
-            onChange={(event) => setServerRoom(event.currentTarget.value)}
-          />
-        </Field>
+        <div style={{ display: "flex", gap: 12 }}>
+          <Field label={t("itops.racks.serverRoomLabel")}>
+            <TextInput
+              value={serverRoom}
+              placeholder={t("itops.racks.serverRoomPlaceholder")}
+              onChange={(event) => setServerRoom(event.currentTarget.value)}
+            />
+          </Field>
+          <Field label={t("itops.racks.groupLabel")}>
+            <TextInput
+              value={rackGroup}
+              placeholder={t("itops.racks.groupPlaceholder")}
+              onChange={(event) => setRackGroup(event.currentTarget.value)}
+            />
+          </Field>
+        </div>
         <Field label={t("itops.racks.shellLabel")}>
           <Select
             value={shell}

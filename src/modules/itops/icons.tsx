@@ -48,6 +48,7 @@ export type ItIconName =
   | "pulse"
   | "arrow"
   | "history"
+  | "image"
   | "power";
 
 type GlyphProps = { size: number; sw: number };
@@ -360,6 +361,13 @@ const GLYPHS: Record<ItIconName, (p: GlyphProps) => ReactNode> = {
     <Svg {...p} sw={1.7}>
       <path d="M12 3.5v8" />
       <path d="M6.8 7A8 8 0 1 0 17.2 7" />
+    </Svg>
+  ),
+  image: (p) => (
+    <Svg {...p} sw={1.6}>
+      <path d="M5 4.5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-13a1 1 0 0 1 1-1Z" />
+      <circle cx="9" cy="9.5" r="1.6" />
+      <path d="M4.5 16.5l4.5-4 3.5 3 3-2.5 4 3.5" />
     </Svg>
   ),
 };

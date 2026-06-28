@@ -76,8 +76,12 @@ Replaces the **Host Group** entry in `CONTEXT.md`; adds the rest. Follows the
   "Unassigned". Plain text, not a first-class entity. (Replaces the retired
   Region/Datacenter/Area tags.) _Avoid_: zone, site object.
 - **Rack View (Datacenter View)** — the Connection-tree-style navigator inside
-  the Fleet tab: a left tree of Fleet → Server Room → Rack and a drill-down that
-  ends at a single animated rack elevation. _Avoid_: floor plan, topology graph.
+  the Fleet tab: a left tree of Fleet → Server Room → Rack and a drill-down
+  (server-room cards → racks grouped by an optional per-rack `rack_group` tag →
+  a single rack centered on a stage with per-device balloon callouts). Each view
+  can carry a custom background, reusing the Dashboard `DashboardBackground`
+  machinery (fleet-view + per-server-room map on the Fleet; per-rack column).
+  _Avoid_: floor plan, topology graph.
 
 `Watchdog`, `Automation`, `Batch Run`, `Playbook`, `Transport` are unchanged.
 

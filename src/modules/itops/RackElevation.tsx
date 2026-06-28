@@ -13,7 +13,7 @@ import { ItIcon } from "./icons";
 import { RackDevice } from "./RackDevice";
 
 // Pixel height of one rack unit (U) row. Kept in sync with `--rk-u` in CSS.
-const U_PX = 26;
+export const U_PX = 26;
 
 function itemStatus(item: RackItem): RackItemStatus {
   return item.metadata?.status ?? "online";

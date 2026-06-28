@@ -1,8 +1,11 @@
 // IT Ops durable types (docs/ITOPS.md). Phase 1 covers Fleets, Phase 2 the
 // Batch Run report shapes, and Phase 3 the durable Automation.
 
+use std::collections::HashMap;
+
 use serde::{Deserialize, Serialize};
 
+use crate::dashboard_storage::DashboardBackground;
 use crate::watchdog::types::WatchdogConfig;
 
 /// A durable Automation (docs/ITOPS.md Phase 3+): the persistent definition of a
@@ -140,6 +143,14 @@ pub struct Fleet {
     #[serde(default)]
     pub filter: Option<FleetFilter>,
     pub transport: Transport,
+    /// Custom background for the Fleet (server-room cards) view; reuses the
+    /// Dashboard background machinery. None = theme default.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub background: Option<DashboardBackground>,
+    /// Per-server-room backgrounds, keyed by the room's string tag. Rooms are
+    /// not entities, so their backgrounds live as a map on the owning Fleet.
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub room_backgrounds: HashMap<String, DashboardBackground>,
 }
 
 /// A Rack in a Fleet's virtual datacenter (docs/FLEET.md): a fixed-height cabinet
@@ -154,9 +165,15 @@ pub struct Rack {
     pub name: String,
     #[serde(default)]
     pub server_room: String,
+    /// Optional group tag within the server room (blank = "Ungrouped").
+    #[serde(default)]
+    pub rack_group: String,
     /// Cabinet shell colour: "black" (default) | "white" | "grey".
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub shell: Option<String>,
+    /// Custom background for this rack's single-rack stage view.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub background: Option<DashboardBackground>,
     pub height_u: u32,
     pub sort_order: i64,
     #[serde(default)]

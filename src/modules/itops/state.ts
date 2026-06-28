@@ -21,6 +21,7 @@ import type {
   RunHistoryEntry,
   RunScope,
 } from "../../types";
+import type { DashboardBackground } from "../dashboard/types";
 import type { WatchdogConfig } from "../../watchdog/types";
 
 export interface FleetInput {
@@ -33,6 +34,7 @@ export interface FleetInput {
 export interface RackInput {
   name: string;
   serverRoom: string;
+  rackGroup: string;
   shell?: string | null;
   heightU: number;
 }
@@ -193,6 +195,17 @@ interface ItOpsState {
   createRack: (fleetId: string, input: RackInput) => Promise<void>;
   updateRack: (fleetId: string, id: string, input: RackInput) => Promise<void>;
   deleteRack: (fleetId: string, id: string) => Promise<void>;
+  setFleetBackground: (fleetId: string, background: DashboardBackground | null) => Promise<void>;
+  setServerRoomBackground: (
+    fleetId: string,
+    serverRoom: string,
+    background: DashboardBackground | null,
+  ) => Promise<void>;
+  setRackBackground: (
+    fleetId: string,
+    rackId: string,
+    background: DashboardBackground | null,
+  ) => Promise<void>;
   placeRackItem: (fleetId: string, input: PlaceItemInput) => Promise<void>;
   updateRackItem: (fleetId: string, input: UpdateItemInput) => Promise<void>;
   moveRackItem: (
@@ -344,6 +357,25 @@ export const useItOpsStore = create<ItOpsState>((set, get) => ({
 
   async removeRackItem(fleetId, id) {
     await invokeCommand("itops_remove_rack_item", { id });
+    await get().loadRacks(fleetId);
+  },
+
+  async setFleetBackground(fleetId, background) {
+    const updated = await invokeCommand("itops_set_fleet_background", { fleetId, background });
+    set({ fleets: get().fleets.map((fleet) => (fleet.id === fleetId ? updated : fleet)) });
+  },
+
+  async setServerRoomBackground(fleetId, serverRoom, background) {
+    const updated = await invokeCommand("itops_set_server_room_background", {
+      fleetId,
+      serverRoom,
+      background,
+    });
+    set({ fleets: get().fleets.map((fleet) => (fleet.id === fleetId ? updated : fleet)) });
+  },
+
+  async setRackBackground(fleetId, rackId, background) {
+    await invokeCommand("itops_set_rack_background", { id: rackId, background });
     await get().loadRacks(fleetId);
   },
 

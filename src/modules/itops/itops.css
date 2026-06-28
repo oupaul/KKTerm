@@ -3395,3 +3395,177 @@
   font-size: 10px;
   color: var(--text-faint);
 }
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Per-view backgrounds (reuses the Dashboard background machinery) + the
+   background picker popover anchor. Mirrors the SFTP background layer.
+   ────────────────────────────────────────────────────────────────────────── */
+.itops-page .itops-bg-host {
+  position: relative;
+  min-height: 0;
+}
+.itops-page .itops-bg-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  border-radius: var(--r-card);
+}
+.itops-page .itops-bg-fill,
+.itops-page .itops-bg-fill video,
+.itops-page .itops-bg-layer .dw-dynamic-background {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.itops-page .itops-bg-media::after {
+  position: absolute;
+  inset: 0;
+  display: block;
+  background: var(--itops-bg-dim-color, transparent);
+  content: "";
+}
+/* Content sits above the background; padding gives the wallpaper a margin. */
+.itops-page .itops-bg-host.has-bg > .itops-bg-content {
+  position: relative;
+  z-index: 1;
+  padding: 14px;
+  border-radius: var(--r-card);
+}
+.itops-page .itops-bg-content {
+  min-height: 0;
+}
+
+/* Background picker popover anchor (the popover styles itself via dw-bg-*). */
+.itops-page .itops-bg-pop-wrap {
+  position: relative;
+  flex: 0 0 auto;
+}
+.itops-page .itops-bg-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 60;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Single-rack stage: centered rack + per-device balloon callouts.
+   ────────────────────────────────────────────────────────────────────────── */
+.itops-page .rk-stage {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  padding: 8px 0 24px;
+  min-height: 0;
+}
+.itops-page .rk-stage-rack {
+  flex: 0 0 auto;
+}
+.itops-page .rk-balloon {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  transform: translateY(-50%);
+  cursor: pointer;
+  z-index: 2;
+}
+.itops-page .rk-balloon.left {
+  justify-content: flex-end;
+  padding-left: 8px;
+}
+.itops-page .rk-balloon.right {
+  justify-content: flex-start;
+  padding-right: 8px;
+}
+.itops-page .rk-balloon-leader {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 1px;
+  background: var(--border-strong);
+}
+.itops-page .rk-balloon-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 200px;
+  min-width: 0;
+  padding: 5px 10px;
+  border-radius: 10px;
+  background: var(--surface);
+  border: 0.5px solid var(--border);
+  box-shadow: var(--shadow-control);
+  transition: border-color 0.14s, box-shadow 0.14s;
+}
+.itops-page .rk-balloon:hover .rk-balloon-box {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow);
+}
+.itops-page .rk-balloon-dot {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.itops-page .rk-balloon-dot.online {
+  background: var(--green);
+  box-shadow: 0 0 5px var(--green);
+}
+.itops-page .rk-balloon-dot.warning {
+  background: var(--amber);
+}
+.itops-page .rk-balloon-dot.offline {
+  background: var(--red);
+}
+.itops-page .rk-balloon-txt {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.itops-page .rk-balloon-nm {
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text);
+}
+.itops-page .rk-balloon-meta {
+  display: flex;
+  gap: 7px;
+  font-size: 10px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.itops-page .rk-balloon-meta .host {
+  font-family: var(--app-mono-font-family, monospace);
+}
+.itops-page .rk-balloon-meta .spec {
+  color: var(--text-faint);
+}
+
+/* Server-room rack groups: labeled sections in the room view. */
+.itops-page .rk-group {
+  margin-bottom: 4px;
+}
+.itops-page .rk-group-h {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 2px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.itops-page .rk-group-h::after {
+  content: "";
+  flex: 1 1 auto;
+  height: 1px;
+  background: var(--hairline);
+}

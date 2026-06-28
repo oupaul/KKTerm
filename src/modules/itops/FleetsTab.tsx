@@ -18,7 +18,17 @@ import { RackElevation } from "./RackElevation";
 import { RackDialog } from "./RackDialog";
 import { RackItemDialog } from "./RackItemDialog";
 import { useItOpsStore } from "./state";
-import { EMPTY_DRILL, groupRackTopology, nodeId, type DrillPath } from "./rackTopology";
+import {
+  EMPTY_DRILL,
+  groupRackTopology,
+  groupRacksByGroup,
+  nodeId,
+  type DrillPath,
+} from "./rackTopology";
+import { ItOpsBackground } from "./ItOpsBackground";
+import { BackgroundButton } from "./BackgroundButton";
+import { RackStage } from "./RackStage";
+import type { DashboardBackground } from "../dashboard/types";
 import {
   FLEET_TREE_MAX_WIDTH,
   FLEET_TREE_MIN_WIDTH,
@@ -77,6 +87,7 @@ export function FleetsTab() {
   const [rackDialog, setRackDialog] = useState<{
     rack: Rack | null;
     defaultServerRoom?: string;
+    defaultGroup?: string;
   } | null>(null);
   const [addMenuOpen, setAddMenuOpen] = useState(false);
   const [itemDialog, setItemDialog] = useState<{
@@ -87,6 +98,9 @@ export function FleetsTab() {
   const [pendingRackDelete, setPendingRackDelete] = useState<Rack | null>(null);
   const deleteRack = useItOpsStore((state) => state.deleteRack);
   const moveRackItem = useItOpsStore((state) => state.moveRackItem);
+  const setFleetBackground = useItOpsStore((state) => state.setFleetBackground);
+  const setServerRoomBackground = useItOpsStore((state) => state.setServerRoomBackground);
+  const setRackBackground = useItOpsStore((state) => state.setRackBackground);
 
   // ── Tree navigator state (search, resizable width, collapsed nodes) ──
   const [query, setQuery] = useState("");
@@ -562,10 +576,21 @@ export function FleetsTab() {
               racks={racks}
               drill={drill}
               setDrill={setDrill}
-              onNewRack={() =>
-                setRackDialog({ rack: null, defaultServerRoom: drill.serverRoom ?? undefined })
+              onNewRack={(group) =>
+                setRackDialog({
+                  rack: null,
+                  defaultServerRoom: drill.serverRoom ?? undefined,
+                  defaultGroup: group,
+                })
               }
               onRunScope={(scope) => requestNewBatchRun(activeGroup.id, scope)}
+              onSetFleetBackground={(bg) => void setFleetBackground(activeGroup.id, bg)}
+              onSetRoomBackground={(room, bg) =>
+                void setServerRoomBackground(activeGroup.id, room, bg)
+              }
+              onSetRackBackground={(rackId, bg) =>
+                void setRackBackground(activeGroup.id, rackId, bg)
+              }
               hostForItem={hostForItem}
               isGhostItem={isGhostItem}
               onSlotClick={(rack, startU) => setItemDialog({ rack, item: null, startU })}
@@ -818,6 +843,9 @@ function RackDrill({
   setDrill,
   onNewRack,
   onRunScope,
+  onSetFleetBackground,
+  onSetRoomBackground,
+  onSetRackBackground,
   hostForItem,
   isGhostItem,
   onSlotClick,
@@ -833,8 +861,11 @@ function RackDrill({
   racks: Rack[];
   drill: DrillPath;
   setDrill: (next: DrillPath) => void;
-  onNewRack: () => void;
+  onNewRack: (group?: string) => void;
   onRunScope: (scope: RunScope) => void;
+  onSetFleetBackground: (bg: DashboardBackground | null) => void;
+  onSetRoomBackground: (room: string, bg: DashboardBackground | null) => void;
+  onSetRackBackground: (rackId: string, bg: DashboardBackground | null) => void;
   hostForItem: (item: RackItem) => string | null;
   isGhostItem: (item: RackItem) => boolean;
   onSlotClick: (rack: Rack, startU: number) => void;
@@ -847,6 +878,19 @@ function RackDrill({
 }) {
   const { t } = useTranslation();
   const unassigned = t("itops.racks.unassigned");
+  const ungrouped = t("itops.racks.ungrouped");
+
+  // Background for the current drill level + its setter.
+  const viewBackground: DashboardBackground | null | undefined = drill.rackId
+    ? racks.find((r) => r.id === drill.rackId)?.background
+    : drill.serverRoom != null
+      ? group.roomBackgrounds?.[drill.serverRoom]
+      : group.background;
+  const onSetBackground = (bg: DashboardBackground | null) => {
+    if (drill.rackId) onSetRackBackground(drill.rackId, bg);
+    else if (drill.serverRoom != null) onSetRoomBackground(drill.serverRoom, bg);
+    else onSetFleetBackground(bg);
+  };
 
   const serverRoom =
     drill.serverRoom != null ? topology.find((s) => s.key === drill.serverRoom) : undefined;
@@ -907,12 +951,13 @@ function RackDrill({
           ))}
         </nav>
         <span style={{ flex: "1 1 auto" }} />
+        <BackgroundButton background={viewBackground} onChange={onSetBackground} />
         {scope ? (
           <button type="button" className="it-icon-btn sm" title={t("itops.racks.runScope")} onClick={() => onRunScope(scope)}>
             <ItIcon name="run" size={12} />
           </button>
         ) : null}
-        <button type="button" className="it-btn sm" onClick={onNewRack}>
+        <button type="button" className="it-btn sm" onClick={() => onNewRack(drill.rackId ? rack?.rackGroup : undefined)}>
           <span className="it-btn-ic">
             <ItIcon name="plus" size={13} />
           </span>
@@ -920,27 +965,47 @@ function RackDrill({
         </button>
       </div>
 
-      {racks.length === 0 ? (
-        <div className="card">
-          <div className="hg-dlg-empty">{t("itops.racks.empty")}</div>
-        </div>
-      ) : rack ? (
-        <div className="ft-rack-detail">{elevation(rack, true)}</div>
-      ) : serverRoom ? (
-        <div className="rk-row">{serverRoom.racks.map((r) => elevation(r))}</div>
-      ) : (
-        <div className="ft-cards">
-          {topology.map((room) => (
-            <DrillCard
-              key={room.key}
-              icon="ops"
-              title={room.key || unassigned}
-              meta={t("itops.racks.rackCount", { count: room.racks.length })}
-              onClick={() => setDrill({ serverRoom: room.key, rackId: null })}
-            />
-          ))}
-        </div>
-      )}
+      <ItOpsBackground background={viewBackground} className="ft-drill-bg">
+        {racks.length === 0 ? (
+          <div className="card">
+            <div className="hg-dlg-empty">{t("itops.racks.empty")}</div>
+          </div>
+        ) : rack ? (
+          <RackStage
+            rack={rack}
+            hostFor={hostForItem}
+            isGhost={isGhostItem}
+            onSlotClick={(startU) => onSlotClick(rack, startU)}
+            onOpenItem={onOpenItem}
+            onEditItem={(item) => onEditItem(rack, item)}
+            onEditRack={onEditRack}
+            onDeleteRack={onDeleteRack}
+            onRunRack={onRunRack}
+            onMoveItem={onMoveItem}
+          />
+        ) : serverRoom ? (
+          groupRacksByGroup(serverRoom.racks).map((g) => (
+            <div className="rk-group" key={g.key}>
+              {groupRacksByGroup(serverRoom.racks).length > 1 || g.key ? (
+                <div className="rk-group-h">{g.key || ungrouped}</div>
+              ) : null}
+              <div className="rk-row">{g.racks.map((r) => elevation(r))}</div>
+            </div>
+          ))
+        ) : (
+          <div className="ft-cards">
+            {topology.map((room) => (
+              <DrillCard
+                key={room.key}
+                icon="ops"
+                title={room.key || unassigned}
+                meta={t("itops.racks.rackCount", { count: room.racks.length })}
+                onClick={() => setDrill({ serverRoom: room.key, rackId: null })}
+              />
+            ))}
+          </div>
+        )}
+      </ItOpsBackground>
     </div>
   );
 }

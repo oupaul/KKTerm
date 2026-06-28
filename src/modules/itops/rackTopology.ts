@@ -27,6 +27,27 @@ export function groupRackTopology(racks: Rack[]): ServerRoomGroup[] {
   return rooms;
 }
 
+export interface RackGroup {
+  /** Stored value ("" = Ungrouped). */
+  key: string;
+  racks: Rack[];
+}
+
+/** Sub-group a server room's racks by their `rackGroup` tag, preserving order. */
+export function groupRacksByGroup(racks: Rack[]): RackGroup[] {
+  const groups: RackGroup[] = [];
+  for (const rack of racks) {
+    const key = rack.rackGroup ?? "";
+    let group = groups.find((entry) => entry.key === key);
+    if (!group) {
+      group = { key, racks: [] };
+      groups.push(group);
+    }
+    group.racks.push(rack);
+  }
+  return groups;
+}
+
 // A drill path into one Fleet's topology: a server room and, at the leaf, a
 // single rack.
 export interface DrillPath {

@@ -3,10 +3,11 @@
 // ordered list of fleet targets. Mirrors the dashboard_storage.rs conventions
 // (free functions over `&SqliteConnection`, JSON `TEXT` columns, `sort_order`).
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use rusqlite::{Connection as SqliteConnection, OptionalExtension, params, params_from_iter};
 
+use crate::dashboard_storage::DashboardBackground;
 use super::types::{Fleet, FleetFilter, RackItemKind, ResolvedHost, RunScope, Transport};
 
 #[derive(Debug)]
@@ -71,6 +72,34 @@ fn parse_filter(raw: Option<String>) -> Option<FleetFilter> {
         .filter(|filter| !filter.is_empty())
 }
 
+/// Parse a stored `DashboardBackground` JSON blob; unparseable/absent → None
+/// (theme default), defensively, like the dashboard's own reader.
+fn parse_background(raw: Option<String>) -> Option<DashboardBackground> {
+    raw.and_then(|json| serde_json::from_str::<DashboardBackground>(&json).ok())
+}
+
+fn background_to_json(background: &Option<DashboardBackground>) -> Result<Option<String>> {
+    match background {
+        None => Ok(None),
+        Some(bg) => {
+            bg.validate()
+                .map_err(|error| ItopsStorageError::Validation(format!("{error:?}")))?;
+            serde_json::to_string(bg)
+                .map(Some)
+                .map_err(|error| ItopsStorageError::Validation(error.to_string()))
+        }
+    }
+}
+
+fn parse_room_backgrounds(raw: Option<String>) -> HashMap<String, DashboardBackground> {
+    raw.and_then(|json| serde_json::from_str(&json).ok())
+        .unwrap_or_default()
+}
+
+fn room_backgrounds_to_json(map: &HashMap<String, DashboardBackground>) -> Result<String> {
+    serde_json::to_string(map).map_err(|error| ItopsStorageError::Validation(error.to_string()))
+}
+
 fn row_to_group(row: &rusqlite::Row<'_>) -> rusqlite::Result<Fleet> {
     let member_ids: String = row.get(3)?;
     let filter_json: Option<String> = row.get(4)?;
@@ -82,11 +111,25 @@ fn row_to_group(row: &rusqlite::Row<'_>) -> rusqlite::Result<Fleet> {
         member_ids: parse_member_ids(&member_ids),
         filter: parse_filter(filter_json),
         transport: Transport::from_db_str(&transport).unwrap_or(Transport::Auto),
+        background: parse_background(row.get(6)?),
+        room_backgrounds: parse_room_backgrounds(row.get(7)?),
     })
 }
 
-const SELECT_GROUP_COLUMNS: &str =
-    "id, name, sort_order, member_ids_json, filter_json, transport FROM itops_fleets";
+const SELECT_GROUP_COLUMNS: &str = "id, name, sort_order, member_ids_json, filter_json, transport, \
+     background_json, room_backgrounds_json FROM itops_fleets";
+
+/// Re-read one Fleet by id (used after a mutation to return preserved fields
+/// such as backgrounds that the mutation does not touch).
+fn load_fleet(conn: &SqliteConnection, id: &str) -> Result<Fleet> {
+    conn.query_row(
+        &format!("SELECT {SELECT_GROUP_COLUMNS} WHERE id = ?"),
+        params![id],
+        row_to_group,
+    )
+    .optional()?
+    .ok_or(ItopsStorageError::NotFound)
+}
 
 pub fn list_fleets(conn: &SqliteConnection) -> Result<Vec<Fleet>> {
     let mut stmt = conn.prepare(&format!("SELECT {SELECT_GROUP_COLUMNS} ORDER BY sort_order"))?;
@@ -124,6 +167,8 @@ pub fn create_fleet(
         member_ids,
         filter: filter.filter(|filter| !filter.is_empty()),
         transport,
+        background: None,
+        room_backgrounds: HashMap::new(),
     })
 }
 
@@ -136,7 +181,8 @@ pub fn update_fleet(
     transport: Transport,
 ) -> Result<Fleet> {
     let name = validate_name(name)?;
-    let sort_order: i64 = conn
+    // Existence check (returns NotFound before the UPDATE).
+    let _sort_order: i64 = conn
         .query_row(
             "SELECT sort_order FROM itops_fleets WHERE id = ?",
             params![id],
@@ -152,14 +198,51 @@ pub fn update_fleet(
          WHERE id = ?",
         params![name, member_json, filter_json, transport.as_db_str(), id],
     )?;
-    Ok(Fleet {
-        id: id.to_string(),
-        name,
-        sort_order,
-        member_ids,
-        filter: filter.filter(|filter| !filter.is_empty()),
-        transport,
-    })
+    // Re-read so preserved fields (backgrounds) round-trip into the response.
+    load_fleet(conn, id)
+}
+
+/// Set (or clear with `None`) the Fleet-view background. Returns the saved Fleet.
+pub fn set_fleet_background(
+    conn: &SqliteConnection,
+    id: &str,
+    background: Option<DashboardBackground>,
+) -> Result<Fleet> {
+    let json = background_to_json(&background)?;
+    let affected = conn.execute(
+        "UPDATE itops_fleets SET background_json = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+        params![json, id],
+    )?;
+    if affected == 0 {
+        return Err(ItopsStorageError::NotFound);
+    }
+    load_fleet(conn, id)
+}
+
+/// Set (or clear) one server room's background in the Fleet's room map.
+pub fn set_server_room_background(
+    conn: &SqliteConnection,
+    fleet_id: &str,
+    server_room: &str,
+    background: Option<DashboardBackground>,
+) -> Result<Fleet> {
+    let mut fleet = load_fleet(conn, fleet_id)?;
+    match background {
+        Some(bg) => {
+            bg.validate()
+                .map_err(|error| ItopsStorageError::Validation(format!("{error:?}")))?;
+            fleet.room_backgrounds.insert(server_room.to_string(), bg);
+        }
+        None => {
+            fleet.room_backgrounds.remove(server_room);
+        }
+    }
+    let json = room_backgrounds_to_json(&fleet.room_backgrounds)?;
+    conn.execute(
+        "UPDATE itops_fleets SET room_backgrounds_json = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+        params![json, fleet_id],
+    )?;
+    load_fleet(conn, fleet_id)
 }
 
 pub fn remove_fleet(conn: &SqliteConnection, id: &str) -> Result<()> {
@@ -325,7 +408,9 @@ mod tests {
             fleet_id: "f1".into(),
             name: "A12".into(),
             server_room: server_room.into(),
+            rack_group: String::new(),
             shell: None,
+            background: None,
             height_u: 42,
             sort_order: 0,
             items: Vec::new(),
@@ -370,6 +455,8 @@ mod tests {
                 filter_json TEXT,
                 transport TEXT NOT NULL DEFAULT 'auto'
                     CHECK (transport IN ('ssh', 'winrm', 'psexec', 'auto')),
+                background_json TEXT,
+                room_backgrounds_json TEXT,
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             );

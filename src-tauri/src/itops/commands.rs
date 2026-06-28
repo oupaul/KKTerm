@@ -9,6 +9,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use tauri::{AppHandle, Emitter, Manager, State};
 
+use crate::dashboard_storage::DashboardBackground;
 use crate::secrets;
 use crate::ssh;
 
@@ -297,13 +298,23 @@ pub fn itops_create_rack(
     fleet_id: String,
     name: String,
     server_room: String,
+    rack_group: String,
     shell: Option<String>,
     height_u: u32,
 ) -> Result<Rack, String> {
     let id = new_itops_id("rack");
     storage(&app).with_connection_infallible(|conn| {
-        topo::create_rack(conn, &id, &fleet_id, &name, &server_room, shell.as_deref(), height_u)
-            .map_err(|error| error.to_string())
+        topo::create_rack(
+            conn,
+            &id,
+            &fleet_id,
+            &name,
+            &server_room,
+            &rack_group,
+            shell.as_deref(),
+            height_u,
+        )
+        .map_err(|error| error.to_string())
     })
 }
 
@@ -313,12 +324,59 @@ pub fn itops_update_rack(
     id: String,
     name: String,
     server_room: String,
+    rack_group: String,
     shell: Option<String>,
     height_u: u32,
 ) -> Result<Rack, String> {
     storage(&app).with_connection_infallible(|conn| {
-        topo::update_rack(conn, &id, &name, &server_room, shell.as_deref(), height_u)
+        topo::update_rack(
+            conn,
+            &id,
+            &name,
+            &server_room,
+            &rack_group,
+            shell.as_deref(),
+            height_u,
+        )
+        .map_err(|error| error.to_string())
+    })
+}
+
+/// Set (or clear) the Fleet-view background.
+#[tauri::command]
+pub fn itops_set_fleet_background(
+    app: AppHandle,
+    fleet_id: String,
+    background: Option<DashboardBackground>,
+) -> Result<Fleet, String> {
+    storage(&app).with_connection_infallible(|conn| {
+        ito::set_fleet_background(conn, &fleet_id, background).map_err(|error| error.to_string())
+    })
+}
+
+/// Set (or clear) a server room's background within a Fleet.
+#[tauri::command]
+pub fn itops_set_server_room_background(
+    app: AppHandle,
+    fleet_id: String,
+    server_room: String,
+    background: Option<DashboardBackground>,
+) -> Result<Fleet, String> {
+    storage(&app).with_connection_infallible(|conn| {
+        ito::set_server_room_background(conn, &fleet_id, &server_room, background)
             .map_err(|error| error.to_string())
+    })
+}
+
+/// Set (or clear) a single rack's stage background.
+#[tauri::command]
+pub fn itops_set_rack_background(
+    app: AppHandle,
+    id: String,
+    background: Option<DashboardBackground>,
+) -> Result<Rack, String> {
+    storage(&app).with_connection_infallible(|conn| {
+        topo::set_rack_background(conn, &id, background).map_err(|error| error.to_string())
     })
 }
 

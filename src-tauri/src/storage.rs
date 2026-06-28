@@ -292,6 +292,9 @@ CREATE TABLE IF NOT EXISTS itops_fleets (
     -- Per-host-group transport default.
     transport       TEXT NOT NULL DEFAULT 'auto'
         CHECK (transport IN ('ssh', 'winrm', 'psexec', 'auto')),
+    -- Rack View customization: Fleet-view background + per-server-room map.
+    background_json       TEXT,
+    room_backgrounds_json TEXT,
     created_at      TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at      TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -338,7 +341,9 @@ CREATE TABLE IF NOT EXISTS itops_fleet_racks (
     fleet_id    TEXT NOT NULL REFERENCES itops_fleets(id) ON DELETE CASCADE,
     name        TEXT NOT NULL,
     server_room TEXT NOT NULL DEFAULT '',
+    rack_group  TEXT NOT NULL DEFAULT '',
     shell       TEXT,
+    background_json TEXT,
     height_u    INTEGER NOT NULL DEFAULT 42,
     sort_order  INTEGER NOT NULL,
     created_at  TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -1911,6 +1916,17 @@ impl Storage {
             "TEXT NOT NULL DEFAULT ''",
         )?;
         ensure_column(&connection, "itops_fleet_racks", "shell", "TEXT")?;
+        // Rack View customization: per-rack group tag + per-view Dashboard
+        // backgrounds (fleet card grid, per server room, single rack stage).
+        ensure_column(
+            &connection,
+            "itops_fleet_racks",
+            "rack_group",
+            "TEXT NOT NULL DEFAULT ''",
+        )?;
+        ensure_column(&connection, "itops_fleet_racks", "background_json", "TEXT")?;
+        ensure_column(&connection, "itops_fleets", "background_json", "TEXT")?;
+        ensure_column(&connection, "itops_fleets", "room_backgrounds_json", "TEXT")?;
         ensure_column(&connection, "connections", "rdp_options", "TEXT")?;
         ensure_column(&connection, "connections", "vnc_options", "TEXT")?;
         ensure_column(&connection, "connections", "ftp_options", "TEXT")?;

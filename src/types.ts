@@ -152,6 +152,11 @@ export interface Fleet {
   memberIds: string[];
   filter?: FleetFilter | null;
   transport: ItopsTransport;
+  // Custom Fleet-view (server-room cards) background; reuses the Dashboard
+  // background machinery. null/undefined = theme default.
+  background?: DashboardBackground | null;
+  // Per-server-room backgrounds, keyed by the room's string tag.
+  roomBackgrounds?: Record<string, DashboardBackground>;
 }
 
 export interface ResolvedHost {
@@ -223,8 +228,12 @@ export interface Rack {
   name: string;
   // Topology is Fleet → Server Room → Rack; blank groups under "Unassigned".
   serverRoom: string;
+  // Optional group tag within the server room (blank → "Ungrouped").
+  rackGroup: string;
   // Cabinet shell colour; null/"black" = default.
   shell?: RackShell | null;
+  // Custom single-rack stage background; null/undefined = theme default.
+  background?: DashboardBackground | null;
   heightU: number;
   sortOrder: number;
   items: RackItem[];

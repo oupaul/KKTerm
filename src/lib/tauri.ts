@@ -1122,11 +1122,37 @@ type CommandMap = {
     result: Rack[];
   };
   itops_create_rack: {
-    args: { fleetId: string; name: string; serverRoom: string; shell?: string | null; heightU: number };
+    args: {
+      fleetId: string;
+      name: string;
+      serverRoom: string;
+      rackGroup: string;
+      shell?: string | null;
+      heightU: number;
+    };
     result: Rack;
   };
   itops_update_rack: {
-    args: { id: string; name: string; serverRoom: string; shell?: string | null; heightU: number };
+    args: {
+      id: string;
+      name: string;
+      serverRoom: string;
+      rackGroup: string;
+      shell?: string | null;
+      heightU: number;
+    };
+    result: Rack;
+  };
+  itops_set_fleet_background: {
+    args: { fleetId: string; background: DashboardBackground | null };
+    result: Fleet;
+  };
+  itops_set_server_room_background: {
+    args: { fleetId: string; serverRoom: string; background: DashboardBackground | null };
+    result: Fleet;
+  };
+  itops_set_rack_background: {
+    args: { id: string; background: DashboardBackground | null };
     result: Rack;
   };
   itops_delete_rack: {
