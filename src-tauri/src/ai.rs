@@ -1726,7 +1726,7 @@ fn model_list_strategy_for_provider(
         "github-copilot" | "github_copilot" | "github copilot" => {
             Ok(AiProviderModelListStrategy::GitHubCopilotSdk)
         }
-        "ollama" => Ok(AiProviderModelListStrategy::OllamaTags),
+        "ollama" | "ollama-cloud" => Ok(AiProviderModelListStrategy::OllamaTags),
         "openai" | "openrouter" | "deepseek" | "gemini" | "grok" | "litellm" | "nvidia"
         | "opencode" | "openai-compatible" | "openai_compatible" | "openai compatible" => {
             Ok(AiProviderModelListStrategy::OpenAiCompatible)
@@ -5700,7 +5700,7 @@ fn model_context_limit_tokens(provider_kind: &str, model: &str) -> (usize, bool)
     }
     if matches!(
         provider.as_str(),
-        "openai-compatible" | "litellm" | "openrouter" | "opencode" | "nvidia"
+        "openai-compatible" | "litellm" | "openrouter" | "opencode" | "nvidia" | "ollama-cloud"
     ) {
         return (32_000, true);
     }

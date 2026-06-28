@@ -7,6 +7,7 @@ import { grokProvider } from "./grok";
 import { liteLlmProvider } from "./litellm";
 import { nvidiaProvider } from "./nvidia";
 import { ollamaProvider } from "./ollama";
+import { ollamaCloudProvider } from "./ollamaCloud";
 import { opencodeProvider } from "./opencode";
 import { openAiCompatibleProvider } from "./openAiCompatible";
 import { openAiProvider } from "./openai";
@@ -27,6 +28,7 @@ export const AI_PROVIDER_DEFINITIONS: AiProviderDefinition[] = [
   liteLlmProvider,
   githubCopilotProvider,
   ollamaProvider,
+  ollamaCloudProvider,
   nvidiaProvider,
   opencodeProvider,
   openAiCompatibleProvider,

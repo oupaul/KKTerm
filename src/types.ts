@@ -939,6 +939,7 @@ export type AiProviderKind =
   | "litellm"
   | "github-copilot"
   | "ollama"
+  | "ollama-cloud"
   | "nvidia"
   | "opencode"
   | "openai-compatible";

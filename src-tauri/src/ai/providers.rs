@@ -6,6 +6,7 @@ mod grok;
 mod litellm;
 mod nvidia;
 mod ollama;
+mod ollama_cloud;
 mod openai;
 mod openai_compatible;
 mod opencode;
@@ -23,6 +24,7 @@ pub(super) fn provider_for(kind: &str) -> Result<AgentProviderAdapter, String> {
         "openai" => Ok(AgentProviderAdapter::OpenAi(openai::provider())),
         "openrouter" => Ok(AgentProviderAdapter::OpenAi(openrouter::provider())),
         "ollama" => Ok(AgentProviderAdapter::OpenAi(ollama::provider())),
+        "ollama-cloud" => Ok(AgentProviderAdapter::OpenAi(ollama_cloud::provider())),
         "nvidia" => Ok(AgentProviderAdapter::OpenAi(nvidia::provider())),
         "opencode" => Ok(AgentProviderAdapter::OpenAi(opencode::provider())),
         "openai-compatible" => Ok(AgentProviderAdapter::OpenAi(openai_compatible::provider())),

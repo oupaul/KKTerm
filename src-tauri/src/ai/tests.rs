@@ -2682,6 +2682,7 @@ fn explicit_strict_tool_flags_are_only_sent_to_openai_family_providers() {
         "litellm",
         "nvidia",
         "ollama",
+        "ollama-cloud",
         "opencode",
         "openai-compatible",
         "openrouter",
