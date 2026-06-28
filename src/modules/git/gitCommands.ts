@@ -48,6 +48,16 @@ export function gitDiffWorktree(
   return invokeCommand("git_diff_worktree", { request: { repoRoot, path, ...options } });
 }
 
+/** Diff two arbitrary local files (outside any repo) via `git diff --no-index`.
+ * Used by the File Compare overlay. */
+export function gitDiffNoIndex(
+  left: string,
+  right: string,
+  options?: { fullContext?: boolean },
+): Promise<GitDiffLine[]> {
+  return invokeCommand("git_diff_no_index", { request: { left, right, ...options } });
+}
+
 export function gitStatus(repoRoot: string): Promise<GitStatus> {
   return invokeCommand("git_status", { request: { repoRoot } });
 }

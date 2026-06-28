@@ -14,7 +14,7 @@ A language-region bundle stored as a JSON file under `src/i18n/locales/`. Englis
 A dot-notation path into the locale JSON (e.g. `settings.general.language`, `ai.waitingPhrases`). Keys are organized by namespace matching the frontend source layout. New UI strings require a new key in all 14 locale files.
 
 **Namespace**:
-A top-level section of the locale JSON mapping to a feature area in the frontend source: `app`, `dashboard`, `appLauncher`, `screenshots`, `installer`, `itops`, `settings`, `connections`, `terminal`, `sftp`, `webview`, `remoteDesktop`, `git`, `ai`, `watchdog`, `workspace`, `common`, `languages`, `manual`. The namespaces are not 1:1 with rail Modules (some Modules use several namespaces; some namespaces cover sub-features inside a single Module). Keep new keys in the namespace closest to the owning component.
+A top-level section of the locale JSON mapping to a feature area in the frontend source: `app`, `dashboard`, `appLauncher`, `screenshots`, `installer`, `itops`, `settings`, `connections`, `terminal`, `sftp`, `webview`, `remoteDesktop`, `git`, `compare`, `ai`, `watchdog`, `workspace`, `common`, `languages`, `manual`. The `compare` namespace owns the File Compare overlay (the right-click "Select Left File for Compare" / "Compare to" workflow shared by the File Explorer and SFTP/FTP browser). The namespaces are not 1:1 with rail Modules (some Modules use several namespaces; some namespaces cover sub-features inside a single Module). Keep new keys in the namespace closest to the owning component.
 
 
 **Connection**:

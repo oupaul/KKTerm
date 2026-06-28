@@ -57,6 +57,7 @@ import { elevatedLocalShellAction } from "./modules/workspace/connections/quickC
 import { resolveDefaultTerminalAppearance } from "./modules/workspace/connections/terminalAppearanceDefaults";
 import type { LocalShellOption } from "./modules/workspace/connections/utils";
 import type { GitBrowserTarget } from "./modules/git/gitTypes";
+import type { CompareEndpoint, CompareView } from "./modules/compare/compareTypes";
 import { markPanesForRuntimeMove } from "./modules/workspace/paneRegistry";
 import {
   collectPreservedParentPanes,
@@ -1160,6 +1161,10 @@ interface WorkspaceState {
   localTerminalPopup?: WorkspaceTab;
   /** Open Git Browser overlay target (repo root + label); undefined when closed. */
   gitBrowser?: GitBrowserTarget;
+  /** App-global "left file" remembered for File Compare; undefined when none picked. */
+  compareLeft?: CompareEndpoint;
+  /** Open File Compare overlay (left + right endpoints); undefined when closed. */
+  compareView?: CompareView;
   /** DOM node in the global Status Bar that the active Document Connection portals
    * its status segments into. Set by `StatusBar`; null when the bar is hidden. */
   documentStatusSlot: HTMLElement | null;
@@ -1258,6 +1263,10 @@ interface WorkspaceState {
   closeLocalTerminalPopup: () => void;
   openGitBrowser: (repoRoot: string, label: string) => void;
   closeGitBrowser: () => void;
+  setCompareLeft: (endpoint: CompareEndpoint) => void;
+  clearCompareLeft: () => void;
+  openCompareView: (left: CompareEndpoint, right: CompareEndpoint) => void;
+  closeCompareView: () => void;
   openElevatedLocalTerminal: (option: LocalShellOption, options?: { cwd?: string }) => Promise<void>;
   splitTerminalPane: (tabId: string) => void;
   splitTerminalPaneDirected: (tabId: string, direction: SplitDirection) => void;
@@ -2519,6 +2528,10 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   closeLocalTerminalPopup: () => set({ localTerminalPopup: undefined }),
   openGitBrowser: (repoRoot, label) => set({ gitBrowser: { repoRoot, label } }),
   closeGitBrowser: () => set({ gitBrowser: undefined }),
+  setCompareLeft: (endpoint) => set({ compareLeft: endpoint }),
+  clearCompareLeft: () => set({ compareLeft: undefined }),
+  openCompareView: (left, right) => set({ compareView: { left, right } }),
+  closeCompareView: () => set({ compareView: undefined }),
   openElevatedLocalTerminal: async (option, options) => {
     const isAppElevated = await invokeCommand("is_app_elevated", undefined).catch(() => false);
     const action = elevatedLocalShellAction({

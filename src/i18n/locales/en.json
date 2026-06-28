@@ -2921,6 +2921,27 @@
     "savePasswordNoPasswordField": "No fillable fields with values were found on this page.",
     "savePasswordFailed": "Could not save the form data from this page."
   },
+  "compare": {
+    "title": "Compare Files",
+    "selectLeft": "Select Left File for Compare",
+    "compareTo": "Compare to '{{name}}'",
+    "leftSelected": "Selected '{{name}}' as the left file to compare.",
+    "versus": "vs",
+    "loading": "Loading comparison…",
+    "modeLabel": "Comparison mode",
+    "mode": {
+      "text": "Text",
+      "image": "Image",
+      "hex": "Hex"
+    },
+    "imageLeft": "Left",
+    "imageRight": "Right",
+    "heatmap": "Difference Heatmap",
+    "tolerance": "Tolerance",
+    "differingPixels": "{{percent}}% differing",
+    "hexTruncated": "Showing the first part of each file; the rest was truncated.",
+    "hexOffset": "Offset"
+  },
   "git": {
     "title": "Git — {{repo}}",
     "openBrowser": "Open Git Browser",

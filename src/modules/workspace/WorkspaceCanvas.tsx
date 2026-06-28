@@ -10,6 +10,7 @@ import { FileViewerWorkspace } from "./connections/file-viewer/FileViewerWorkspa
 import { TerminalWorkspace } from "./connections/terminal/TerminalWorkspace";
 import { WebViewWorkspace } from "./connections/webview/WebViewWorkspace";
 import { GitBrowser } from "../git/GitBrowser";
+import { CompareViewer } from "../compare/CompareViewer";
 import { ConnectionIcon } from "./connections/ConnectionIcon";
 import { ChevronLeft, ChevronRight, Terminal, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -300,6 +301,8 @@ export function WorkspaceCanvas({
   const closeLocalTerminalPopup = useWorkspaceStore((state) => state.closeLocalTerminalPopup);
   const gitBrowser = useWorkspaceStore((state) => state.gitBrowser);
   const closeGitBrowser = useWorkspaceStore((state) => state.closeGitBrowser);
+  const compareView = useWorkspaceStore((state) => state.compareView);
+  const closeCompareView = useWorkspaceStore((state) => state.closeCompareView);
   // The toolbar close button only earns its place when the tab strip is hidden;
   // otherwise the tab strip's own close button already covers it.
   const hideTopTabButtons = useWorkspaceStore((state) => state.generalSettings.hideTopTabButtons);
@@ -356,6 +359,15 @@ export function WorkspaceCanvas({
       )
     : null;
 
+  // The File Compare overlay floats above workspace chrome and native surfaces,
+  // same as the Git Browser, per the overlay rule.
+  const compareOverlay = compareView
+    ? createPortal(
+        <CompareViewer view={compareView} onClose={closeCompareView} />,
+        document.body,
+      )
+    : null;
+
   if (tabs.length === 0) {
     return (
       <>
@@ -368,6 +380,7 @@ export function WorkspaceCanvas({
         </div>
         {terminalPopup}
         {gitBrowserOverlay}
+        {compareOverlay}
       </>
     );
   }
@@ -489,6 +502,7 @@ export function WorkspaceCanvas({
       </div>
       {terminalPopup}
       {gitBrowserOverlay}
+      {compareOverlay}
     </>
   );
 }

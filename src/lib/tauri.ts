@@ -2314,6 +2314,14 @@ type CommandMap = {
     args: { request: { repoRoot: string; path: string; staged?: boolean; untracked?: boolean; fullContext?: boolean } };
     result: GitDiffLine[];
   };
+  git_diff_no_index: {
+    args: { request: { left: string; right: string; fullContext?: boolean } };
+    result: GitDiffLine[];
+  };
+  create_compare_temp_dir: {
+    args: undefined;
+    result: string;
+  };
   git_status: {
     args: { request: { repoRoot: string } };
     result: GitStatus;

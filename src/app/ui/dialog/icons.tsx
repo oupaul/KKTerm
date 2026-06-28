@@ -186,6 +186,14 @@ export const DIALOG_ICONS = {
   back: stroke(<path d="M15 6l-6 6 6 6" />),
   forward: stroke(<path d="M9 6l6 6-6 6" />),
   menu: stroke(<path d="M4 7h16M4 12h16M4 17h16" />),
+  columns: stroke(<path d="M4 5h16v14H4zM12 5v14" />),
+  gitcompare: stroke(
+    <>
+      <circle cx="6" cy="18" r="2.5" />
+      <circle cx="18" cy="6" r="2.5" />
+      <path d="M6 15.5V9a3 3 0 013-3h4M18 8.5V15a3 3 0 01-3 3h-4" />
+    </>,
+  ),
   list: stroke(<path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01" />),
   gallery: stroke(<path d="M4 5h6v6H4zM14 5h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z" />),
   drive: stroke(<path d="M5 5h14a1 1 0 011 1v12a1 1 0 01-1 1H5a1 1 0 01-1-1V6a1 1 0 011-1zM8 9.5h.01" />),

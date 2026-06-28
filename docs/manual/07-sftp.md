@@ -2,9 +2,9 @@
 
 ## AI grep hints
 
-- Keys: `sftp.*` (full namespace), `terminal.openSftp`, `terminal.sftp`
-- Topics: symmetric dual-pane browser, breadcrumb navigation, list/gallery view switch, per-pane view-options (hamburger) menu with item zoom + content-view background, upload, download, conflicts, cut/copy/paste, rename, delete, copy path, new folder, properties, chmod/chown, sort, collapsible transfer activity bar, tutorial targets `sftp.toolbar`, `sftp.upload`, `sftp.download`, `sftp.terminal`, `sftp.localPane`, `sftp.remotePane`, `sftp.transferQueue`
-- Synonyms: "file transfer", "scp", "upload to server", "download from server", "remote files"
+- Keys: `sftp.*` (full namespace), `terminal.openSftp`, `terminal.sftp`, `compare.*` (File Compare overlay)
+- Topics: symmetric dual-pane browser, breadcrumb navigation, list/gallery view switch, per-pane view-options (hamburger) menu with item zoom + content-view background, upload, download, conflicts, cut/copy/paste, rename, delete, copy path, new folder, properties, chmod/chown, sort, collapsible transfer activity bar, file compare (select left / compare to, text/image/hex, difference heatmap), tutorial targets `sftp.toolbar`, `sftp.upload`, `sftp.download`, `sftp.terminal`, `sftp.localPane`, `sftp.remotePane`, `sftp.transferQueue`
+- Synonyms: "file transfer", "scp", "upload to server", "download from server", "remote files", "diff files", "compare files", "beyond compare", "hex compare", "image diff"
 
 ## Opening an SFTP browser
 
@@ -92,7 +92,19 @@ When a transfer would overwrite an existing target, KKTerm shows an app-owned di
 
 ## Context menu
 
-Right-click an item for: transfer (`sftp.upload` / `sftp.download`, hidden in File Explorer), Open (`common.open`, single file selection), Cut (`common.cut`), Copy (`common.copy`), Paste (`common.paste`, also available from empty pane space), Rename (`sftp.renameItem`, single mutable local or remote selection), Copy Path (`sftp.copyPath`, copies the item's full path to the clipboard), Delete (`sftp.deleteLabel`, mutable local or remote selections), and Get Info (`sftp.getInfo`, opens properties). File Explorer's local Open action follows Settings -> Workspace -> `settings.fileExplorerOpenMode`: `settings.fileExplorerOpenModeExternal` opens through the OS default app, while `settings.fileExplorerOpenModeInlineEditor` opens the file in KKTerm's inline Document/light editor. The menu is a styled app-owned DOM menu — a documented exception to the native-menu preference (see [DESIGN_LANGUAGE.md](../DESIGN_LANGUAGE.md)).
+Right-click an item for: transfer (`sftp.upload` / `sftp.download`, hidden in File Explorer), Open (`common.open`, single file selection), Cut (`common.cut`), Copy (`common.copy`), Paste (`common.paste`, also available from empty pane space), Rename (`sftp.renameItem`, single mutable local or remote selection), Copy Path (`sftp.copyPath`, copies the item's full path to the clipboard), Delete (`sftp.deleteLabel`, mutable local or remote selections), Select Left File for Compare / Compare to (`compare.selectLeft` / `compare.compareTo`, single file selection — see File Compare below), and Get Info (`sftp.getInfo`, opens properties). File Explorer's local Open action follows Settings -> Workspace -> `settings.fileExplorerOpenMode`: `settings.fileExplorerOpenModeExternal` opens through the OS default app, while `settings.fileExplorerOpenModeInlineEditor` opens the file in KKTerm's inline Document/light editor. The menu is a styled app-owned DOM menu — a documented exception to the native-menu preference (see [DESIGN_LANGUAGE.md](../DESIGN_LANGUAGE.md)).
+
+## File Compare
+
+Compare any two files with the two-step "select left, then compare" workflow shared by the File Explorer and SFTP/FTP browser. Right-click a single file and choose `compare.selectLeft` to remember it as the left side; a Status Bar confirmation (`compare.leftSelected`) acknowledges the choice. The remembered left file is **app-global**, so the next step can come from a different pane, Tab, or SFTP session. Right-click a second file and choose `compare.compareTo` (which shows the remembered file's name) to open the comparison overlay; the same `compare.selectLeft` item is still present to re-pick the left file. The item is shown only for a single selected file and hides when it would compare a file with itself.
+
+Comparing a **remote** file downloads it to a temporary staging directory at selection time (so a later comparison never depends on the SFTP session staying open); local files are read in place. The overlay (`compare.title`) is an app-window overlay portalled above the workspace, like the Git Browser, and shows the two file names separated by `compare.versus` plus a mode switch (`compare.modeLabel`):
+
+- **Text** (`compare.mode.text`) — a side-by-side line diff with the same search, all/diff/same filter, change navigation, and minimap as the Git Browser's advanced diff.
+- **Image** (`compare.mode.image`, only when both files are images) — the two images (`compare.imageLeft` / `compare.imageRight`) plus a computed `compare.heatmap` whose `compare.tolerance` slider suppresses small per-pixel differences; `compare.differingPixels` reports the share of differing pixels.
+- **Hex** (`compare.mode.hex`) — a side-by-side hexadecimal byte view (`compare.hexOffset`) that highlights every differing byte; `compare.hexTruncated` is shown when a large file is only partially loaded.
+
+Text and Hex are always available; the default mode is auto-detected from both files (both images → Image, both text → Text, otherwise Hex).
 
 ## Properties / chmod / chown
 

@@ -804,6 +804,47 @@ pub fn diff_worktree(request: DiffWorktreeRequest) -> Result<Vec<GitDiffLine>, S
     Ok(parse_unified_diff(&stdout))
 }
 
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DiffNoIndexRequest {
+    /// Left (original) file — any local path, not necessarily inside a repo.
+    pub left: String,
+    /// Right (modified) file — any local path.
+    pub right: String,
+    /// Include unchanged lines so side-by-side viewers can show the full file.
+    #[serde(default)]
+    pub full_context: bool,
+}
+
+/// Diff two arbitrary local files with `git diff --no-index`. This works outside
+/// any repository, so no `-C <repo>` is passed. `--no-index` exits 1 when the
+/// files differ (the common case here), which is expected — only a code >= 2 or
+/// a spawn failure is a real error.
+pub fn diff_no_index(request: DiffNoIndexRequest) -> Result<Vec<GitDiffLine>, String> {
+    let context = if request.full_context {
+        "--unified=999999"
+    } else {
+        "--unified=3"
+    };
+    let out = run_git(
+        None,
+        &[
+            "diff",
+            "--no-color",
+            context,
+            "--no-index",
+            "--",
+            &request.left,
+            &request.right,
+        ],
+    )?;
+    // git diff --no-index: 0 = identical, 1 = differ, >=2 = error.
+    if out.code >= 2 {
+        return Err(git_error(&out));
+    }
+    Ok(parse_unified_diff(&String::from_utf8_lossy(&out.stdout)))
+}
+
 /// Parse a unified diff into renderer line records. Header noise before the
 /// first `@@` hunk is skipped; line numbers track old/new sides.
 fn parse_unified_diff(diff: &str) -> Vec<GitDiffLine> {
@@ -1406,6 +1447,49 @@ mod tests {
         assert_eq!(files[2].status, "R");
         assert_eq!(files[2].path, "src/renamed.rs");
         assert_eq!(files[2].old_path.as_deref(), Some("src/old.rs"));
+    }
+
+    #[test]
+    fn diff_no_index_reports_changes_between_files() {
+        use std::io::Write;
+        let dir = std::env::temp_dir().join(format!(
+            "kkterm-git-noindex-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_nanos())
+                .unwrap_or(0)
+        ));
+        std::fs::create_dir_all(&dir).unwrap();
+        let left = dir.join("left.txt");
+        let right = dir.join("right.txt");
+        std::fs::File::create(&left)
+            .unwrap()
+            .write_all(b"alpha\nbeta\ngamma\n")
+            .unwrap();
+        std::fs::File::create(&right)
+            .unwrap()
+            .write_all(b"alpha\nbeta2\ngamma\n")
+            .unwrap();
+
+        let same = diff_no_index(DiffNoIndexRequest {
+            left: left.to_string_lossy().into_owned(),
+            right: left.to_string_lossy().into_owned(),
+            full_context: true,
+        })
+        .unwrap();
+        assert!(same.iter().all(|line| line.t != "add" && line.t != "del"));
+
+        let changed = diff_no_index(DiffNoIndexRequest {
+            left: left.to_string_lossy().into_owned(),
+            right: right.to_string_lossy().into_owned(),
+            full_context: true,
+        })
+        .unwrap();
+        assert!(changed.iter().any(|line| line.t == "del" && line.c == "beta"));
+        assert!(changed.iter().any(|line| line.t == "add" && line.c == "beta2"));
+
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]

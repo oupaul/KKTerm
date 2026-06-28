@@ -23,6 +23,7 @@ import type { Connection, FileBrowserViewOptions, FileEntry, FtpConnectionOption
 import type { DashboardBackground } from "../../../dashboard/types";
 import { FILE_PANE_ZOOM_DEFAULT, FilePane } from "./SftpFilePane";
 import { fileBrowserConnectionIconSrc } from "../fileBrowserConnectionIcons";
+import type { CompareEndpoint } from "../../../compare/compareTypes";
 import {
   fileExplorerTerminalOptionsForPlatform,
   resolveFileExplorerTerminalOption,
@@ -154,6 +155,9 @@ export function SftpWorkspace({
   const openElevatedLocalTerminal = useWorkspaceStore((state) => state.openElevatedLocalTerminal);
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
   const openGitBrowser = useWorkspaceStore((state) => state.openGitBrowser);
+  const compareLeft = useWorkspaceStore((state) => state.compareLeft);
+  const setCompareLeft = useWorkspaceStore((state) => state.setCompareLeft);
+  const openCompareView = useWorkspaceStore((state) => state.openCompareView);
   const sourceConnection = protocolSourceConnection;
   const initialSshFileBrowserSelection = sourceConnection
     ? readStoredSshFileBrowserProtocol(sourceConnection.id, sourceConnection)
@@ -1656,6 +1660,78 @@ export function SftpWorkspace({
     setContextMenu(null);
   };
 
+  // Resolve a single selected file to a local readable path for File Compare.
+  // Local files use their own path; remote files are downloaded to a fresh temp
+  // dir (the session is live now, so a later compare never depends on it).
+  const resolveCompareEndpoint = async (
+    side: FilePaneSide,
+    name: string,
+  ): Promise<CompareEndpoint | null> => {
+    if (side === "local") {
+      if (isLocalDrivePicker || !localPath) {
+        return null;
+      }
+      return { localPath: joinLocalPath(localPath, name), label: name, origin: localPath };
+    }
+    const sessionId = sessionIdRef.current;
+    if (!sessionId || !commands || !isTauriRuntime()) {
+      showStatusBarNotice(t("sftp.sessionUnavailable"), { tone: "error" });
+      return null;
+    }
+    const remoteFilePath = joinRemotePath(remotePath, name);
+    const hostLabel = connection?.host ?? t("sftp.remote");
+    try {
+      const tempDir = await invokeCommand("create_compare_temp_dir");
+      await commands.downloadPath({
+        sessionId,
+        transferId: uniqueRuntimeId("compare"),
+        remotePath: remoteFilePath,
+        localDirectory: tempDir,
+        overwriteBehavior: "overwrite",
+      });
+      return {
+        localPath: joinLocalPath(tempDir, name),
+        label: name,
+        origin: `${remoteFilePath} @ ${hostLabel}`,
+      };
+    } catch (error) {
+      showStatusBarNotice(error instanceof Error ? error.message : String(error), { tone: "error" });
+      return null;
+    }
+  };
+
+  const handleContextSelectLeft = (menu: SftpContextMenuState) => {
+    setContextMenu(null);
+    const name = menu.names[0];
+    if (!name) {
+      return;
+    }
+    void (async () => {
+      const endpoint = await resolveCompareEndpoint(menu.side, name);
+      if (!endpoint) {
+        return;
+      }
+      setCompareLeft(endpoint);
+      showStatusBarNotice(t("compare.leftSelected", { name: endpoint.label }), { tone: "info" });
+    })();
+  };
+
+  const handleContextCompareTo = (menu: SftpContextMenuState) => {
+    setContextMenu(null);
+    const name = menu.names[0];
+    const left = compareLeft;
+    if (!name || !left) {
+      return;
+    }
+    void (async () => {
+      const right = await resolveCompareEndpoint(menu.side, name);
+      if (!right) {
+        return;
+      }
+      openCompareView(left, right);
+    })();
+  };
+
   const handleUpdateRemoteProperties = async (request: {
     permissions?: string;
     uid?: number;
@@ -2002,6 +2078,19 @@ export function SftpWorkspace({
           onPaste={handleContextPaste}
           onProperties={handleContextProperties}
           onRename={handleContextRename}
+          onSelectLeftForCompare={handleContextSelectLeft}
+          onCompareToLeft={handleContextCompareTo}
+          compareLeftLabel={compareLeft?.label ?? null}
+          canCompareToLeft={
+            !!compareLeft &&
+            contextMenu.openable &&
+            !(
+              contextMenu.side === "local" &&
+              !isLocalDrivePicker &&
+              !!localPath &&
+              compareLeft.localPath === joinLocalPath(localPath, contextMenu.names[0] ?? "")
+            )
+          }
           showTransfer={!isLocalFilesBrowser}
           onTransfer={handleContextTransfer}
         />

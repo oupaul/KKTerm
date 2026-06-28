@@ -1,0 +1,235 @@
+/* compare.css — File Compare overlay. Reuses the `git-adv-*` frame (backdrop,
+   shell, mode toggle, side-by-side diff) and adds the compare-specific header,
+   status, image-heatmap, and dual-hex surfaces. Colors come from the `--git-*`
+   variables the `.git-adv-backdrop` defines from app tokens; no hard-coded hex. */
+
+.compare-head {
+  gap: 10px;
+}
+.compare-head-file {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  max-width: 30%;
+  font-family: var(--git-mono);
+}
+.compare-head-name {
+  color: var(--git-text);
+  font-weight: 700;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.compare-head-origin {
+  color: var(--git-text-3);
+  font-size: 10.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.compare-head-vs {
+  flex: 0 0 auto;
+  color: var(--git-text-3);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.compare-head-spacer {
+  flex: 1 1 auto;
+}
+
+.compare-status {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  color: var(--git-text-3);
+  font-size: 13px;
+}
+.compare-status-error {
+  color: var(--git-del-text);
+}
+
+/* ── image heatmap ──────────────────────────────────────────────────────── */
+.compare-image {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--git-chrome-2);
+}
+.compare-image-pair {
+  flex: 1 1 50%;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--git-hairline);
+}
+.compare-image-cell {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--git-bg);
+}
+.compare-image-cap {
+  flex: 0 0 auto;
+  padding: 4px 12px;
+  color: var(--git-text-3);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  background: var(--git-chrome);
+  border-bottom: 1px solid var(--git-hairline);
+}
+.compare-image-frame {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  background-color: var(--git-chrome-2);
+  background-image:
+    linear-gradient(45deg, var(--git-muted) 25%, transparent 25%),
+    linear-gradient(-45deg, var(--git-muted) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, var(--git-muted) 75%),
+    linear-gradient(-45deg, transparent 75%, var(--git-muted) 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+}
+.compare-image-frame img,
+.compare-image-frame canvas {
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+.compare-image-frame-heat {
+  background-image: none;
+  background-color: #060810;
+}
+.compare-image-heat {
+  flex: 1 1 50%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--git-hairline);
+}
+.compare-image-heat-bar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 4px 12px;
+  background: var(--git-chrome);
+  border-bottom: 1px solid var(--git-hairline);
+}
+.compare-image-tol {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--git-text-2);
+  font-size: 11.5px;
+}
+.compare-image-tol input {
+  width: 160px;
+}
+.compare-image-tol-val {
+  min-width: 26px;
+  font-family: var(--git-mono);
+  color: var(--git-text-3);
+}
+.compare-image-diffpct {
+  margin-left: auto;
+  font-family: var(--git-mono);
+  font-size: 11.5px;
+  color: var(--git-text-3);
+}
+
+/* ── dual hex ───────────────────────────────────────────────────────────── */
+.compare-hex {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  font-family: var(--git-mono);
+  font-size: 12px;
+}
+.compare-hex-notice {
+  flex: 0 0 auto;
+  padding: 4px 12px;
+  background: color-mix(in srgb, var(--git-amber) 14%, var(--git-bg));
+  color: color-mix(in srgb, var(--git-amber) 80%, var(--git-text));
+  font-size: 11px;
+}
+.compare-hex-head,
+.compare-hex-row {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center;
+}
+.compare-hex-head {
+  flex: 0 0 auto;
+  height: 26px;
+  background: var(--git-chrome);
+  border-bottom: 1px solid var(--git-hairline);
+  color: var(--git-text-3);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.compare-hex-off-head,
+.compare-hex-side-head {
+  padding: 0 12px;
+}
+.compare-hex-side-head + .compare-hex-side-head,
+.compare-hex-side + .compare-hex-side {
+  border-left: 1px solid var(--git-hairline);
+}
+.compare-hex-body {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: auto;
+  line-height: 1.5;
+}
+.compare-hex-row:nth-child(even) {
+  background: color-mix(in srgb, var(--git-muted) 36%, var(--git-bg));
+}
+.compare-hex-off {
+  padding: 0 12px;
+  color: var(--git-text-3);
+  user-select: none;
+}
+.compare-hex-side {
+  display: flex;
+  gap: 14px;
+  padding: 0 12px;
+  min-width: 0;
+  overflow: hidden;
+}
+.compare-hex-bytes {
+  white-space: pre;
+}
+.compare-hex-byte {
+  padding: 0 1px;
+}
+.compare-hex-byte.diff,
+.compare-hex-ascii-ch.diff {
+  background: var(--git-diff-del-gutter);
+  color: var(--git-del-text);
+  border-radius: 2px;
+}
+.compare-hex-ascii {
+  color: var(--git-text-2);
+  white-space: pre;
+}
+.compare-hex-ascii-ch.np {
+  color: var(--git-text-3);
+}

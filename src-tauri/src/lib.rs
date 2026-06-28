@@ -2518,6 +2518,31 @@ async fn git_diff_worktree(
 }
 
 #[tauri::command]
+async fn git_diff_no_index(
+    request: git::DiffNoIndexRequest,
+) -> Result<Vec<git::GitDiffLine>, String> {
+    run_blocking_command("git diff no-index", move || git::diff_no_index(request)).await
+}
+
+/// Allocate a fresh, unique temp directory used to stage remote files before a
+/// File Compare. Each call returns a distinct empty directory so two compared
+/// files with the same base name never collide.
+#[tauri::command]
+fn create_compare_temp_dir() -> Result<String, String> {
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|delta| delta.as_nanos())
+        .unwrap_or(0);
+    let dir = std::env::temp_dir().join(format!(
+        "kkterm-compare-{}-{nanos}",
+        std::process::id()
+    ));
+    std::fs::create_dir_all(&dir)
+        .map_err(|error| format!("failed to create compare staging directory: {error}"))?;
+    Ok(dir.to_string_lossy().into_owned())
+}
+
+#[tauri::command]
 async fn git_status(request: git::RepoRequest) -> Result<git::GitStatus, String> {
     run_blocking_command("git status", move || git::status(request)).await
 }
@@ -3806,6 +3831,8 @@ pub fn run() {
             git_commit_files,
             git_diff_commit,
             git_diff_worktree,
+            git_diff_no_index,
+            create_compare_temp_dir,
             git_status,
             git_stage,
             git_unstage,
