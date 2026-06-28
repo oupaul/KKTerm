@@ -1855,10 +1855,16 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     );
     const childIds = new Set(uniqueChildren.map((child) => child.id));
     const groupPaneByChildId = new Map<string, WorkspacePane>();
+    const convertedPlainPaneIds = new Set<string>();
     if (existingGroupTab) {
       for (const pane of existingGroupTab.panes) {
         if (pane.childConnectionId && childIds.has(pane.childConnectionId)) {
           groupPaneByChildId.set(pane.childConnectionId, pane);
+          continue;
+        }
+        if (!pane.childConnectionId && pane.connection?.id === connection.id && childIds.has(pane.id)) {
+          groupPaneByChildId.set(pane.id, pane);
+          convertedPlainPaneIds.add(pane.id);
         }
       }
     }
@@ -1875,12 +1881,17 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
         continue;
       }
       for (const pane of tab.panes) {
-        if (
-          pane.childConnectionId &&
-          childIds.has(pane.childConnectionId) &&
-          !externalPaneByChildId.has(pane.childConnectionId)
-        ) {
-          externalPaneByChildId.set(pane.childConnectionId, { pane, tab });
+        const paneChildId =
+          pane.childConnectionId && childIds.has(pane.childConnectionId)
+            ? pane.childConnectionId
+            : !pane.childConnectionId && pane.connection?.id === connection.id && childIds.has(pane.id)
+              ? pane.id
+              : undefined;
+        if (paneChildId && !externalPaneByChildId.has(paneChildId)) {
+          if (!pane.childConnectionId) {
+            convertedPlainPaneIds.add(pane.id);
+          }
+          externalPaneByChildId.set(paneChildId, { pane, tab });
         }
       }
     }
@@ -1928,15 +1939,16 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
         return pane;
       })
       .filter((pane): pane is WorkspacePane => Boolean(pane));
-    // Preserve the parent's original session and any in-panorama split Panes so a
-    // layout rebuild from the children list never orphans them (issue #430).
+    const claimedPaneIds = new Set(namedChildPanes.map((pane) => pane.id));
+    // Preserve unnamed in-panorama split Panes only after all named children,
+    // including Panes converted from the old top Tab Strip mode, are claimed.
     const { carriedGroupPanes, adoptedOrphanPanes } = collectPreservedParentPanes({
       parentConnectionId: connection.id,
       activeWorkspaceId,
       defaultWorkspaceId: DEFAULT_WORKSPACE_ID,
       existingGroupTab,
       tabs: state.tabs,
-      excludedPaneIds: movedPaneIds,
+      excludedPaneIds: new Set([...movedPaneIds, ...claimedPaneIds]),
     });
     for (const pane of adoptedOrphanPanes) {
       movedPaneIds.add(pane.id);
@@ -1957,7 +1969,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       subtitle: terminalConnectionSubtitle(connection),
       kind: "terminal",
       panes: childPanes,
-      layout: existingGroupTab
+      layout: existingGroupTab && convertedPlainPaneIds.size === 0
         ? ensureLayout(existingGroupTab.layout, childPanes)
         : layoutForChildPanes(childPanes),
       focusedPaneId: focusedPaneIdForChildLayout(existingGroupTab, childPanes),

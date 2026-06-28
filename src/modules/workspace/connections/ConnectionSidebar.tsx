@@ -19,6 +19,7 @@ import { VncConnectionFields, VncConnectionOptions } from "./connection-dialog/V
 import { ImportDialog } from "./ImportDialog";
 import {
   isChildConnectionRowActive,
+  convertOpenTabsToChildConnections,
   loadStoredChildConnections,
   persistStoredChildConnections,
   syncChildConnectionsFromTabs,
@@ -402,8 +403,15 @@ export function ConnectionSidebar({
     if (!showChildTabsInTree) {
       return;
     }
-    setChildConnections((current) => syncChildConnectionsFromTabs(current, tabs));
-  }, [showChildTabsInTree, tabs]);
+    setChildConnections((current) =>
+      convertOpenTabsToChildConnections({
+        children: syncChildConnectionsFromTabs(current, tabs),
+        tabs,
+        activeWorkspaceId,
+        defaultWorkspaceId: DEFAULT_WORKSPACE_ID,
+      }),
+    );
+  }, [activeWorkspaceId, showChildTabsInTree, tabs]);
 
   useEffect(() => {
     function handleConnectionTabContextMenu(event: Event) {
@@ -732,8 +740,14 @@ export function ConnectionSidebar({
       return;
     }
     const children = childrenForConnection(connection.id);
-    if (children.length > 0) {
-      openChildConnectionLayout(connection, children);
+    if (showChildTabsInTree && isTerminalConnectionType(connection.type)) {
+      if (children.length > 0) {
+        openChildConnectionLayout(connection, children);
+        return;
+      }
+      void createChildConnection(connection).then((child) => {
+        openChildConnectionLayout(connection, [child]);
+      });
       return;
     }
     openConnection(connection);

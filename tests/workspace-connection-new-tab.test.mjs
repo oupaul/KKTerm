@@ -29,8 +29,8 @@ test("Connection Tree supports forced new Tabs from Ctrl-click and Add to menu",
   );
   assert.match(
     storeSource,
-    /layout: existingGroupTab\s*\?\s*ensureLayout\(existingGroupTab\.layout,\s*childPanes\)\s*:\s*layoutForChildPanes\(childPanes\)/,
-    "parent panorama rebuilds should preserve the saved split layout when a live child panorama already exists",
+    /layout: existingGroupTab && convertedPlainPaneIds\.size === 0\s*\?\s*ensureLayout\(existingGroupTab\.layout,\s*childPanes\)\s*:\s*layoutForChildPanes\(childPanes\)/,
+    "parent panorama rebuilds should reset to the balanced grid when plain parent Panes are converted",
   );
   assert.match(
     storeSource,
@@ -76,6 +76,11 @@ test("Connection Tree supports forced new Tabs from Ctrl-click and Add to menu",
     sidebarSource,
     /activeTab\?\.childConnectionGroupParentId === connection\.id/,
     "parent Connection rows should remain active when a focused child Pane is restored in the panorama",
+  );
+  assert.match(
+    sidebarSource,
+    /if \(showChildTabsInTree && isTerminalConnectionType\(connection\.type\)\) \{[\s\S]*?if \(children\.length > 0\) \{[\s\S]*?openChildConnectionLayout\(connection,\s*children\);[\s\S]*?createChildConnection\(connection\)\.then\(\(child\) => \{[\s\S]*?openChildConnectionLayout\(connection,\s*\[child\]\);/,
+    "clicking a terminal parent with zero children in child mode should create one child and show it",
   );
   assert.match(
     sidebarSource,
@@ -188,8 +193,12 @@ test("Connection Tree supports forced new Tabs from Ctrl-click and Add to menu",
   );
 });
 
-test("Child Connection panorama preserves the parent's original session and split Panes (issue #430)", async () => {
+test("Child Connection panorama converts parent Panes and preserves unnamed split Panes", async () => {
   const storeSource = await readFile(new URL("../src/store.ts", import.meta.url), "utf8");
+  const sidebarSource = await readFile(
+    new URL("../src/modules/workspace/connections/ConnectionSidebar.tsx", import.meta.url),
+    "utf8",
+  );
   const childConnectionsSource = await readFile(
     new URL("../src/modules/workspace/connections/childConnections.ts", import.meta.url),
     "utf8",
@@ -197,18 +206,23 @@ test("Child Connection panorama preserves the parent's original session and spli
 
   assert.match(
     childConnectionsSource,
+    /export function convertOpenTabsToChildConnections/,
+    "child mode should expose a testable helper for converting open top-strip Tabs",
+  );
+  assert.match(
+    childConnectionsSource,
+    /id: pane\.id,[\s\S]*?parentConnectionId: paneConnection\.id,/,
+    "converted parent Panes should become child rows keyed by the live Pane id",
+  );
+  assert.match(
+    childConnectionsSource,
     /export function collectPreservedParentPanes/,
-    "child layout reconciliation should expose a testable helper for preserved Panes",
+    "child layout reconciliation should still expose a testable helper for preserved Panes",
   );
   assert.match(
     childConnectionsSource,
-    /existingGroupTab\s*\n?\s*\?\s*existingGroupTab\.panes\.filter\(\(pane\) => !pane\.childConnectionId\)/,
-    "in-panorama split Panes (no childConnectionId) must be carried forward on rebuild",
-  );
-  assert.match(
-    childConnectionsSource,
-    /sourceTab\.childConnectionGroupParentId \|\|\s*\n?\s*sourceTab\.connection\?\.id !== parentConnectionId/,
-    "orphan adoption must stay scoped to plain Tabs of the target parent Connection",
+    /existingGroupTab\s*\n?\s*\?\s*existingGroupTab\.panes\.filter\(\(pane\) => !pane\.childConnectionId && !claimed\.has\(pane\.id\)\)/,
+    "in-panorama split Panes (no childConnectionId) must be carried forward only when not claimed as converted children",
   );
   assert.match(
     storeSource,
@@ -217,12 +231,17 @@ test("Child Connection panorama preserves the parent's original session and spli
   );
   assert.match(
     storeSource,
-    /for \(const pane of adoptedOrphanPanes\) \{\s*movedPaneIds\.add\(pane\.id\);/,
-    "adopted orphan Panes must be moved out of their original Tab so it is not left behind",
+    /convertedPlainPaneIds\.add\(pane\.id\);[\s\S]*?externalPaneByChildId\.set\(paneChildId,\s*\{ pane,\s*tab \}\);/,
+    "plain parent Panes matching converted child ids must be claimed as named child Panes",
   );
   assert.match(
     storeSource,
     /const childPanes = \[\.\.\.namedChildPanes, \.\.\.carriedGroupPanes, \.\.\.adoptedOrphanPanes\];/,
-    "the rebuilt panorama must include named children plus carried and adopted Panes",
+    "the rebuilt panorama must include named children plus any unclaimed carried Panes",
+  );
+  assert.match(
+    sidebarSource,
+    /convertOpenTabsToChildConnections\(\{[\s\S]*?children: syncChildConnectionsFromTabs\(current,\s*tabs\),[\s\S]*?activeWorkspaceId,[\s\S]*?defaultWorkspaceId: DEFAULT_WORKSPACE_ID,/,
+    "enabling child mode should convert already-open terminal Tabs into Child Connection Tabs",
   );
 });

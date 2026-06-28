@@ -1,5 +1,5 @@
 import type { DashboardBackground } from "../../dashboard/types";
-import type { TerminalPane, WorkspaceChildConnection, WorkspacePane, WorkspaceTab } from "../../../types";
+import type { Connection, TerminalPane, WorkspaceChildConnection, WorkspacePane, WorkspaceTab } from "../../../types";
 
 export const CHILD_CONNECTIONS_STORAGE_KEY = "kkterm.workspace.childConnections.v1";
 
@@ -101,19 +101,84 @@ export function syncChildConnectionsFromTabs(
   return changed ? next : children;
 }
 
+function isTerminalConnectionType(connection: WorkspacePane["connection"]): connection is Connection {
+  return (
+    connection?.type === "local" ||
+    connection?.type === "ssh" ||
+    connection?.type === "telnet" ||
+    connection?.type === "serial"
+  );
+}
+
+function convertedChildName(tab: WorkspaceTab, pane: TerminalPane) {
+  return (
+    pane.tmuxSessionId ||
+    tab.displayTitle?.trim() ||
+    tab.title.trim() ||
+    pane.connection?.name ||
+    pane.title
+  );
+}
+
+export function convertOpenTabsToChildConnections(params: {
+  children: WorkspaceChildConnection[];
+  tabs: WorkspaceTab[];
+  activeWorkspaceId: string;
+  defaultWorkspaceId: string;
+}): WorkspaceChildConnection[] {
+  const { children, tabs, activeWorkspaceId, defaultWorkspaceId } = params;
+  const existingIds = new Set(children.map((child) => child.id));
+  let changed = false;
+  const next = [...children];
+
+  for (const tab of tabs) {
+    if (tab.kind !== "terminal" || (tab.workspaceId ?? defaultWorkspaceId) !== activeWorkspaceId) {
+      continue;
+    }
+    for (const pane of tab.panes) {
+      const paneConnection = pane.connection;
+      if (pane.childConnectionId || !isTerminalWorkspacePane(pane) || !isTerminalConnectionType(paneConnection)) {
+        continue;
+      }
+      if (existingIds.has(pane.id)) {
+        continue;
+      }
+      const name = convertedChildName(tab, pane).trim();
+      existingIds.add(pane.id);
+      changed = true;
+      next.push({
+        id: pane.id,
+        workspaceId: activeWorkspaceId,
+        parentConnectionId: paneConnection.id,
+        name: name || paneConnection.name,
+        tmuxSessionId: pane.tmuxSessionId,
+        cwd: pane.cwd.trim() || undefined,
+        fontSize: pane.fontSize,
+        terminalOpacity: paneConnection.terminalOpacity,
+        terminalBackground:
+          pane.terminalBackground !== undefined
+            ? pane.terminalBackground
+            : paneConnection.terminalBackground,
+        iconDataUrl: paneConnection.iconDataUrl,
+        iconBackgroundColor: paneConnection.iconBackgroundColor,
+      });
+    }
+  }
+
+  return changed ? next : children;
+}
+
 /**
  * Gather the Panes that must survive when (re)building a parent Connection's
- * child panorama Tab, beyond the named child Connections themselves (issue #430):
+ * child panorama Tab, beyond the named child Connections themselves:
  *
  *  - `carriedGroupPanes`: Panes already inside the group Tab that never became
  *    named children — e.g. a "split right" created within the panorama.
  *    Rebuilding the layout strictly from the children list would drop them.
- *  - `adoptedOrphanPanes`: the parent Connection's original session, opened as a
- *    plain Tab with no `childConnectionId`. Without adoption it is left behind as
- *    an unreachable orphan Tab once child Tabs take over the Connection.
  *
- * `excludedPaneIds` holds Panes the caller has already claimed (e.g. child Panes
- * being moved in from other Tabs) so they are not adopted a second time.
+ * Plain parent Tabs are converted into Child Connection Tabs separately when
+ * child mode is enabled, so this helper must not keep adding the parent as an
+ * unnamed panorama Pane.
  */
 export function collectPreservedParentPanes(params: {
   parentConnectionId: string;
@@ -123,44 +188,14 @@ export function collectPreservedParentPanes(params: {
   tabs: WorkspaceTab[];
   excludedPaneIds?: ReadonlySet<string>;
 }): { carriedGroupPanes: WorkspacePane[]; adoptedOrphanPanes: WorkspacePane[] } {
-  const {
-    parentConnectionId,
-    activeWorkspaceId,
-    defaultWorkspaceId,
-    existingGroupTab,
-    tabs,
-    excludedPaneIds,
-  } = params;
+  const { existingGroupTab, excludedPaneIds } = params;
+  const claimed = new Set(excludedPaneIds ?? []);
 
   const carriedGroupPanes = existingGroupTab
-    ? existingGroupTab.panes.filter((pane) => !pane.childConnectionId)
+    ? existingGroupTab.panes.filter((pane) => !pane.childConnectionId && !claimed.has(pane.id))
     : [];
 
-  const claimed = new Set(excludedPaneIds ?? []);
-  const adoptedOrphanPanes: WorkspacePane[] = [];
-  for (const sourceTab of tabs) {
-    if (
-      sourceTab.kind !== "terminal" ||
-      sourceTab.childConnectionGroupParentId ||
-      sourceTab.connection?.id !== parentConnectionId ||
-      (sourceTab.workspaceId ?? defaultWorkspaceId) !== activeWorkspaceId
-    ) {
-      continue;
-    }
-    for (const pane of sourceTab.panes) {
-      if (
-        pane.childConnectionId ||
-        claimed.has(pane.id) ||
-        pane.connection?.id !== parentConnectionId
-      ) {
-        continue;
-      }
-      claimed.add(pane.id);
-      adoptedOrphanPanes.push(pane);
-    }
-  }
-
-  return { carriedGroupPanes, adoptedOrphanPanes };
+  return { carriedGroupPanes, adoptedOrphanPanes: [] };
 }
 
 export function focusedPaneIdForChildLayout(

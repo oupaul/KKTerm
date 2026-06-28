@@ -1,5 +1,6 @@
 import {
   collectPreservedParentPanes,
+  convertOpenTabsToChildConnections,
   focusedPaneIdForChildLayout,
   isChildConnectionRowActive,
   syncChildConnectionsFromTabs,
@@ -132,12 +133,25 @@ function terminalTab(id: string, panes: WorkspacePane[], overrides: Partial<Work
   };
 }
 
-// Bug 1: the parent's original plain Tab (no childConnectionId) must be adopted
-// into the panorama instead of being left as an unreachable orphan.
+// Enabling Child Connection Tabs converts existing plain parent Panes into
+// child rows instead of letting the parent remain a standalone Connection.
 const orphanPlainTab = terminalTab("tab-parent-1", [terminalPane("pane-original")]);
 const newChildTab = terminalTab("tab-parent-1-new", [
   terminalPane("pane-new-child", { childConnectionId: "child-2" }),
 ]);
+const converted = convertOpenTabsToChildConnections({
+  children: [],
+  tabs: [orphanPlainTab, newChildTab],
+  activeWorkspaceId: "default",
+  defaultWorkspaceId: "default",
+});
+const convertedChild = converted[0];
+if (converted.length !== 1 || convertedChild?.id !== "pane-original") {
+  throw new Error("A live parent Pane should become a stored Child Connection Tab when child mode is enabled.");
+}
+if (convertedChild.parentConnectionId !== parentConnection.id || convertedChild.name !== "tab-parent-1") {
+  throw new Error("Converted Child Connection Tabs should keep the parent Connection identity and a usable name.");
+}
 const bug1 = collectPreservedParentPanes({
   parentConnectionId: parentConnection.id,
   activeWorkspaceId: "default",
@@ -145,24 +159,11 @@ const bug1 = collectPreservedParentPanes({
   existingGroupTab: undefined,
   tabs: [orphanPlainTab, newChildTab],
 });
-if (bug1.adoptedOrphanPanes.map((pane) => pane.id).join(",") !== "pane-original") {
-  throw new Error("Adding a child Tab must adopt the parent's original session, not orphan it (Bug 1).");
+if (bug1.adoptedOrphanPanes.length !== 0) {
+  throw new Error("Plain parent Panes should be converted to child rows, not adopted as unnamed panorama Panes.");
 }
 if (bug1.carriedGroupPanes.length !== 0) {
   throw new Error("With no existing group Tab there are no carried Panes.");
-}
-
-// The named child Pane already being moved in must not be adopted a second time.
-const bug1Excluded = collectPreservedParentPanes({
-  parentConnectionId: parentConnection.id,
-  activeWorkspaceId: "default",
-  defaultWorkspaceId: "default",
-  existingGroupTab: undefined,
-  tabs: [orphanPlainTab, newChildTab],
-  excludedPaneIds: new Set(["pane-original"]),
-});
-if (bug1Excluded.adoptedOrphanPanes.length !== 0) {
-  throw new Error("Panes already claimed by the caller must not be adopted again.");
 }
 
 // Bug 2: a "split right" inside the panorama produces a childless Pane that must
@@ -188,40 +189,46 @@ if (bug2.carriedGroupPanes.map((pane) => pane.id).join(",") !== "pane-split") {
 if (bug2.adoptedOrphanPanes.length !== 0) {
   throw new Error("The group Tab itself must not be re-adopted as an orphan.");
 }
-
-// Panes from other Workspaces or other Connections must never be adopted.
-const foreignWorkspaceTab = terminalTab("tab-foreign-ws", [terminalPane("pane-foreign-ws")], {
-  workspaceId: "other",
-});
-const foreignConnectionTab = terminalTab("tab-foreign-conn", [terminalPane("pane-foreign-conn")], {
-  connection: { ...parentConnection, id: "parent-2" },
-});
-const scoped = collectPreservedParentPanes({
+const bug2Excluded = collectPreservedParentPanes({
   parentConnectionId: parentConnection.id,
   activeWorkspaceId: "default",
   defaultWorkspaceId: "default",
-  existingGroupTab: undefined,
-  tabs: [foreignWorkspaceTab, foreignConnectionTab],
+  existingGroupTab: groupTab,
+  tabs: [groupTab],
+  excludedPaneIds: new Set(["pane-split"]),
 });
-if (scoped.adoptedOrphanPanes.length !== 0) {
-  throw new Error("Adoption must stay scoped to the active Workspace and the target Connection.");
+if (bug2Excluded.carriedGroupPanes.length !== 0) {
+  throw new Error("Panes already claimed as converted children must not be carried as unnamed Panes.");
+}
+
+// Panes from other Workspaces must not be converted into active Workspace children.
+const foreignWorkspaceTab = terminalTab("tab-foreign-ws", [terminalPane("pane-foreign-ws")], {
+  workspaceId: "other",
+});
+const scoped = convertOpenTabsToChildConnections({
+  children: [],
+  tabs: [foreignWorkspaceTab],
+  activeWorkspaceId: "default",
+  defaultWorkspaceId: "default",
+});
+if (scoped.length !== 0) {
+  throw new Error("Conversion must stay scoped to the active Workspace.");
 }
 
 // A plain parent Tab can temporarily contain Panes for other Connections after
-// drag-to-dock or split workflows. Only the parent's own childless Panes should
-// move into the child panorama.
+// drag-to-dock or split workflows. Each terminal Pane should become a child of
+// its own durable parent Connection.
 const otherConnection = { ...parentConnection, id: "other-connection" };
 const mixedParentTab = terminalTab("tab-mixed-parent", [
   terminalPane("pane-parent"),
   terminalPane("pane-other", { connection: otherConnection }),
 ]);
-const mixed = collectPreservedParentPanes({
-  parentConnectionId: parentConnection.id,
+const mixed = convertOpenTabsToChildConnections({
+  children: [],
+  tabs: [mixedParentTab],
   activeWorkspaceId: "default",
   defaultWorkspaceId: "default",
-  existingGroupTab: undefined,
-  tabs: [mixedParentTab],
 });
-if (mixed.adoptedOrphanPanes.map((pane) => pane.id).join(",") !== "pane-parent") {
-  throw new Error("Adoption must not pull unrelated split Panes into a parent's child panorama.");
+if (mixed.map((entry) => `${entry.id}:${entry.parentConnectionId}`).join(",") !== "pane-parent:parent-1,pane-other:other-connection") {
+  throw new Error("Conversion should keep each Pane under its own parent Connection.");
 }
