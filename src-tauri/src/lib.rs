@@ -28,6 +28,7 @@ mod mcp_tool_catalog;
 mod media;
 mod native_tooltip;
 mod net;
+mod pc_info;
 mod performance;
 mod power;
 mod rdp;
@@ -1538,6 +1539,25 @@ fn get_system_performance_counters(
     performance: tauri::State<'_, performance::PerformanceMonitor>,
 ) -> performance::SystemPerformanceCountersSnapshot {
     performance.system_performance_counters_snapshot()
+}
+
+#[tauri::command]
+async fn pc_info_get(app: tauri::AppHandle) -> Result<pc_info::PcInfoSnapshot, String> {
+    // Cheap when cached; only the first call spawns the collector process. The
+    // gather runs on the blocking pool so the OS-command wait never stalls the
+    // async runtime or the UI.
+    tauri::async_runtime::spawn_blocking(move || {
+        app.state::<pc_info::PcInfoCache>().get_or_gather()
+    })
+    .await
+    .map_err(|error| format!("PC info collection task failed: {error}"))
+}
+
+#[tauri::command]
+async fn pc_info_refresh(app: tauri::AppHandle) -> Result<pc_info::PcInfoSnapshot, String> {
+    tauri::async_runtime::spawn_blocking(move || app.state::<pc_info::PcInfoCache>().refresh())
+        .await
+        .map_err(|error| format!("PC info refresh task failed: {error}"))
 }
 
 #[tauri::command]
@@ -3461,6 +3481,7 @@ pub fn run() {
             let secret_db_path = storage.db_path();
             app.manage(storage);
             app.manage(performance::PerformanceMonitor::new());
+            app.manage(pc_info::PcInfoCache::new());
             app.manage(power_manager);
             app.manage(secrets::Secrets::new(
                 credential_settings.secret_store(),
@@ -3695,6 +3716,8 @@ pub fn run() {
             get_performance_snapshot,
             get_host_usage_snapshot,
             get_system_performance_counters,
+            pc_info_get,
+            pc_info_refresh,
             open_windows_task_manager,
             create_diagnostics_bundle,
             get_dont_sleep_enabled,

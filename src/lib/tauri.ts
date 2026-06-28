@@ -112,6 +112,7 @@ import type {
   AiCodingUsageProviderState,
   AiCodingUsageState,
 } from "../modules/dashboard/widgets/builtin/ai-coding-usage/types";
+import type { PcInfoSnapshot } from "../modules/dashboard/widgets/builtin/pc-info/types";
 import type {
   GitChangedFile,
   GitCommit,
@@ -1729,6 +1730,14 @@ type CommandMap = {
   get_system_performance_counters: {
     args: undefined;
     result: SystemPerformanceCountersSnapshot;
+  };
+  pc_info_get: {
+    args: undefined;
+    result: PcInfoSnapshot;
+  };
+  pc_info_refresh: {
+    args: undefined;
+    result: PcInfoSnapshot;
   };
   open_windows_task_manager: {
     args: undefined;

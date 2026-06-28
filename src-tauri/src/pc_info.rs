@@ -1,0 +1,1053 @@
+//! PC Info — a Speccy-style system information snapshot for the Dashboard
+//! "PC Info" built-in widget.
+//!
+//! Gathering strategy follows the product preference of "system command with a
+//! hidden window, locale-aware". The primary Windows path runs a single hidden
+//! PowerShell process that queries CIM/WMI classes and emits **structured JSON**
+//! via `ConvertTo-Json`. CIM class *property names* are invariant English, so the
+//! parse is immune to the localized label problem that text reports such as
+//! `msinfo32 /report` or `systeminfo` suffer from. When CIM/WMI is unavailable
+//! (the service is disabled or PowerShell is locked down) the Windows path
+//! degrades to native Win32 + registry reads for the core OS/CPU/memory fields so
+//! the widget still shows something useful.
+//!
+//! macOS uses `system_profiler -json` (also stable English keys); other Unix
+//! targets read `/proc` best-effort. Every field is optional so a partial gather
+//! is never an error.
+//!
+//! The snapshot is cached in memory. The widget loads the cache on first mount
+//! and only re-gathers when the user clicks Refresh, so the (relatively
+//! expensive) process spawn does not run on every render or view switch.
+
+use serde::Serialize;
+use std::sync::Mutex;
+use std::time::{SystemTime, UNIX_EPOCH};
+
+#[derive(Clone, Serialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct PcInfoSnapshot {
+    /// Unix seconds the snapshot was gathered.
+    pub generated_at_unix_seconds: u64,
+    /// Which collection path produced this snapshot (for diagnostics/UI footer).
+    pub source: String,
+    /// Non-fatal collection notes (e.g. a fallback was used).
+    pub warnings: Vec<String>,
+    pub os: OsInfo,
+    pub cpu: CpuInfo,
+    pub memory: MemoryInfo,
+    pub motherboard: MotherboardInfo,
+    pub graphics: Vec<GpuInfo>,
+    pub displays: Vec<DisplayInfo>,
+    pub storage: Vec<DiskInfo>,
+    pub volumes: Vec<VolumeInfo>,
+    pub network: Vec<NetworkAdapterInfo>,
+    pub audio: Vec<AudioDeviceInfo>,
+}
+
+#[derive(Clone, Serialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct OsInfo {
+    pub name: Option<String>,
+    pub version: Option<String>,
+    pub build: Option<String>,
+    pub architecture: Option<String>,
+    pub hostname: Option<String>,
+    pub registered_user: Option<String>,
+    pub logged_in_user: Option<String>,
+    pub locale: Option<String>,
+    pub install_date_unix_seconds: Option<u64>,
+    pub uptime_seconds: Option<u64>,
+}
+
+#[derive(Clone, Serialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct CpuInfo {
+    pub name: Option<String>,
+    pub vendor: Option<String>,
+    pub physical_cores: Option<u32>,
+    pub logical_processors: Option<u32>,
+    pub max_clock_mhz: Option<u64>,
+    pub l2_cache_bytes: Option<u64>,
+    pub l3_cache_bytes: Option<u64>,
+    pub address_width_bits: Option<u32>,
+    pub socket: Option<String>,
+}
+
+#[derive(Clone, Serialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct MemoryInfo {
+    pub total_bytes: Option<u64>,
+    pub available_bytes: Option<u64>,
+    pub used_percent: Option<f64>,
+    pub modules: Vec<MemoryModuleInfo>,
+}
+
+#[derive(Clone, Serialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct MemoryModuleInfo {
+    pub slot: Option<String>,
+    pub capacity_bytes: Option<u64>,
+    pub speed_mhz: Option<u64>,
+    pub manufacturer: Option<String>,
+    pub part_number: Option<String>,
+    pub form_factor: Option<String>,
+    pub memory_type: Option<String>,
+}
+
+#[derive(Clone, Serialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct MotherboardInfo {
+    pub manufacturer: Option<String>,
+    pub product: Option<String>,
+    pub version: Option<String>,
+    pub serial_number: Option<String>,
+    pub bios_vendor: Option<String>,
+    pub bios_version: Option<String>,
+    pub bios_date: Option<String>,
+}
+
+#[derive(Clone, Serialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct GpuInfo {
+    pub name: Option<String>,
+    pub vendor: Option<String>,
+    pub vram_bytes: Option<u64>,
+    pub driver_version: Option<String>,
+    pub current_mode: Option<String>,
+}
+
+#[derive(Clone, Serialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct DisplayInfo {
+    pub name: Option<String>,
+    pub resolution: Option<String>,
+    pub refresh_hz: Option<u32>,
+}
+
+#[derive(Clone, Serialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct DiskInfo {
+    pub model: Option<String>,
+    pub size_bytes: Option<u64>,
+    pub media_type: Option<String>,
+    pub interface: Option<String>,
+    pub serial_number: Option<String>,
+}
+
+#[derive(Clone, Serialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct VolumeInfo {
+    pub mount: Option<String>,
+    pub label: Option<String>,
+    pub file_system: Option<String>,
+    pub total_bytes: Option<u64>,
+    pub free_bytes: Option<u64>,
+}
+
+#[derive(Clone, Serialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct NetworkAdapterInfo {
+    pub name: Option<String>,
+    pub mac_address: Option<String>,
+    pub adapter_type: Option<String>,
+    pub speed_bits_per_second: Option<u64>,
+    pub ip_addresses: Vec<String>,
+    pub gateways: Vec<String>,
+    pub dns_servers: Vec<String>,
+}
+
+#[derive(Clone, Serialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct AudioDeviceInfo {
+    pub name: Option<String>,
+    pub manufacturer: Option<String>,
+}
+
+/// In-memory cache for the PC Info snapshot. One per app; the machine does not
+/// change between gathers, so a single cached value is sufficient.
+#[derive(Default)]
+pub struct PcInfoCache {
+    snapshot: Mutex<Option<PcInfoSnapshot>>,
+}
+
+impl PcInfoCache {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Return the cached snapshot, gathering once if the cache is empty. Used for
+    /// the widget's lazy first load.
+    pub fn get_or_gather(&self) -> PcInfoSnapshot {
+        if let Ok(guard) = self.snapshot.lock() {
+            if let Some(existing) = guard.as_ref() {
+                return existing.clone();
+            }
+        }
+        self.refresh()
+    }
+
+    /// Force a fresh gather and replace the cache. Used by the Refresh button.
+    pub fn refresh(&self) -> PcInfoSnapshot {
+        let snapshot = gather_snapshot();
+        if let Ok(mut guard) = self.snapshot.lock() {
+            *guard = Some(snapshot.clone());
+        }
+        snapshot
+    }
+}
+
+fn unix_seconds() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_secs())
+        .unwrap_or_default()
+}
+
+fn gather_snapshot() -> PcInfoSnapshot {
+    let mut snapshot = platform::gather();
+    snapshot.generated_at_unix_seconds = unix_seconds();
+    snapshot
+}
+
+/// Trim a string and treat empty/whitespace as absent.
+fn clean(value: Option<String>) -> Option<String> {
+    value
+        .map(|text| text.trim().to_string())
+        .filter(|text| !text.is_empty())
+}
+
+#[cfg(target_os = "windows")]
+mod platform {
+    use super::*;
+    use serde_json::Value;
+    use std::os::windows::process::CommandExt;
+    use std::process::Command;
+
+    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+
+    // One hidden PowerShell pass that returns every section as structured JSON.
+    // CIM property names are invariant English, so values like Caption/Model are
+    // stable regardless of the Windows display language.
+    const QUERY: &str = r#"$ErrorActionPreference='SilentlyContinue';
+function E($d){ if($d){[int64]([math]::Floor((($d).ToUniversalTime() - [datetime]'1970-01-01').TotalSeconds))} else {$null} }
+$os=Get-CimInstance Win32_OperatingSystem;
+$cs=Get-CimInstance Win32_ComputerSystem;
+$out=[ordered]@{
+ os=$os | Select-Object Caption,Version,BuildNumber,OSArchitecture,CSName,RegisteredUser,Locale,@{n='InstallDateEpoch';e={E $_.InstallDate}},@{n='LastBootEpoch';e={E $_.LastBootUpTime}};
+ cs=$cs | Select-Object Manufacturer,Model,SystemType,TotalPhysicalMemory,UserName,NumberOfLogicalProcessors;
+ cpu=@(Get-CimInstance Win32_Processor | Select-Object Name,Manufacturer,NumberOfCores,NumberOfLogicalProcessors,MaxClockSpeed,L2CacheSize,L3CacheSize,AddressWidth,SocketDesignation);
+ mem=@(Get-CimInstance Win32_PhysicalMemory | Select-Object Capacity,Speed,ConfiguredClockSpeed,Manufacturer,PartNumber,DeviceLocator,FormFactor,SMBIOSMemoryType);
+ board=Get-CimInstance Win32_BaseBoard | Select-Object Manufacturer,Product,Version,SerialNumber;
+ bios=Get-CimInstance Win32_BIOS | Select-Object Manufacturer,SMBIOSBIOSVersion,@{n='ReleaseEpoch';e={E $_.ReleaseDate}};
+ gpu=@(Get-CimInstance Win32_VideoController | Select-Object Name,AdapterRAM,DriverVersion,VideoProcessor,CurrentHorizontalResolution,CurrentVerticalResolution,CurrentRefreshRate);
+ disk=@(Get-CimInstance Win32_DiskDrive | Select-Object Model,Size,InterfaceType,MediaType,SerialNumber);
+ vol=@(Get-CimInstance Win32_LogicalDisk -Filter 'DriveType=3' | Select-Object DeviceID,FileSystem,Size,FreeSpace,VolumeName);
+ audio=@(Get-CimInstance Win32_SoundDevice | Select-Object Name,Manufacturer);
+ net=@(Get-CimInstance Win32_NetworkAdapter -Filter 'PhysicalAdapter=TRUE' | Select-Object Name,MACAddress,AdapterType,Speed,InterfaceIndex);
+ netcfg=@(Get-CimInstance Win32_NetworkAdapterConfiguration -Filter 'IPEnabled=TRUE' | Select-Object Description,MACAddress,IPAddress,DefaultIPGateway,DNSServerSearchOrder,InterfaceIndex)
+};
+$out | ConvertTo-Json -Depth 5 -Compress"#;
+
+    pub fn gather() -> PcInfoSnapshot {
+        match run_powershell() {
+            Some(json) => from_cim(json),
+            None => fallback(),
+        }
+    }
+
+    fn run_powershell() -> Option<Value> {
+        let output = Command::new("powershell")
+            .args([
+                "-NoProfile",
+                "-NonInteractive",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-Command",
+                QUERY,
+            ])
+            .creation_flags(CREATE_NO_WINDOW)
+            .output()
+            .ok()?;
+        if !output.status.success() {
+            return None;
+        }
+        let text = String::from_utf8_lossy(&output.stdout);
+        serde_json::from_str::<Value>(text.trim()).ok()
+    }
+
+    fn from_cim(root: Value) -> PcInfoSnapshot {
+        let mut snapshot = PcInfoSnapshot {
+            source: "windows-cim".to_string(),
+            ..Default::default()
+        };
+
+        let os = root.get("os").cloned().unwrap_or(Value::Null);
+        let cs = root.get("cs").cloned().unwrap_or(Value::Null);
+        snapshot.os = OsInfo {
+            name: clean(j_str(&os, "Caption")),
+            version: clean(j_str(&os, "Version")),
+            build: clean(j_str(&os, "BuildNumber")),
+            architecture: clean(j_str(&os, "OSArchitecture")),
+            hostname: clean(j_str(&os, "CSName")),
+            registered_user: clean(j_str(&os, "RegisteredUser")),
+            logged_in_user: clean(j_str(&cs, "UserName")),
+            locale: clean(j_str(&os, "Locale")),
+            install_date_unix_seconds: j_u64(&os, "InstallDateEpoch"),
+            uptime_seconds: j_u64(&os, "LastBootEpoch").map(|boot| unix_seconds().saturating_sub(boot)),
+        };
+
+        // CPU: Win32_Processor is an array of sockets; the first describes the
+        // package and logical/physical counts are summed across sockets.
+        let cpus = j_array(&root, "cpu");
+        if let Some(first) = cpus.first() {
+            let physical: u32 = cpus.iter().filter_map(|c| j_u64(c, "NumberOfCores")).sum::<u64>() as u32;
+            let logical: u32 = cpus
+                .iter()
+                .filter_map(|c| j_u64(c, "NumberOfLogicalProcessors"))
+                .sum::<u64>() as u32;
+            snapshot.cpu = CpuInfo {
+                name: clean(j_str(first, "Name")),
+                vendor: clean(j_str(first, "Manufacturer")),
+                physical_cores: (physical > 0).then_some(physical),
+                logical_processors: (logical > 0)
+                    .then_some(logical)
+                    .or_else(|| j_u64(&cs, "NumberOfLogicalProcessors").map(|v| v as u32)),
+                max_clock_mhz: j_u64(first, "MaxClockSpeed"),
+                l2_cache_bytes: j_u64(first, "L2CacheSize").map(|kb| kb * 1024),
+                l3_cache_bytes: j_u64(first, "L3CacheSize").map(|kb| kb * 1024),
+                address_width_bits: j_u64(first, "AddressWidth").map(|v| v as u32),
+                socket: clean(j_str(first, "SocketDesignation")),
+            };
+        }
+
+        let total_phys = j_u64(&cs, "TotalPhysicalMemory");
+        snapshot.memory = MemoryInfo {
+            total_bytes: total_phys,
+            available_bytes: None,
+            used_percent: None,
+            modules: j_array(&root, "mem")
+                .iter()
+                .map(|m| MemoryModuleInfo {
+                    slot: clean(j_str(m, "DeviceLocator")),
+                    capacity_bytes: j_u64(m, "Capacity"),
+                    speed_mhz: j_u64(m, "ConfiguredClockSpeed").or_else(|| j_u64(m, "Speed")),
+                    manufacturer: clean(j_str(m, "Manufacturer")),
+                    part_number: clean(j_str(m, "PartNumber")),
+                    form_factor: memory_form_factor(j_u64(m, "FormFactor")),
+                    memory_type: smbios_memory_type(j_u64(m, "SMBIOSMemoryType")),
+                })
+                .collect(),
+        };
+        // Fill available/used from the live Win32 counter so the RAM section has
+        // headroom data even though CIM omits it here.
+        if let Some((avail, used_percent)) = win32_memory_available() {
+            snapshot.memory.available_bytes = Some(avail);
+            snapshot.memory.used_percent = Some(used_percent);
+        }
+
+        let board = root.get("board").cloned().unwrap_or(Value::Null);
+        let bios = root.get("bios").cloned().unwrap_or(Value::Null);
+        snapshot.motherboard = MotherboardInfo {
+            manufacturer: clean(j_str(&board, "Manufacturer")),
+            product: clean(j_str(&board, "Product")),
+            version: clean(j_str(&board, "Version")),
+            serial_number: clean(j_str(&board, "SerialNumber")),
+            bios_vendor: clean(j_str(&bios, "Manufacturer")),
+            bios_version: clean(j_str(&bios, "SMBIOSBIOSVersion")),
+            bios_date: j_u64(&bios, "ReleaseEpoch").map(format_epoch_date),
+        };
+
+        for g in j_array(&root, "gpu") {
+            let width = j_u64(&g, "CurrentHorizontalResolution");
+            let height = j_u64(&g, "CurrentVerticalResolution");
+            let refresh = j_u64(&g, "CurrentRefreshRate");
+            let current_mode = match (width, height) {
+                (Some(w), Some(h)) => Some(match refresh {
+                    Some(r) => format!("{w} × {h} @ {r} Hz"),
+                    None => format!("{w} × {h}"),
+                }),
+                _ => None,
+            };
+            // AdapterRAM is a 32-bit field and is unreliable / capped for modern
+            // GPUs; keep it only when it reports a sane positive value.
+            let vram = j_u64(&g, "AdapterRAM").filter(|&bytes| bytes > 0);
+            snapshot.graphics.push(GpuInfo {
+                name: clean(j_str(&g, "Name")),
+                vendor: clean(j_str(&g, "VideoProcessor")),
+                vram_bytes: vram,
+                driver_version: clean(j_str(&g, "DriverVersion")),
+                current_mode: current_mode.clone(),
+            });
+            if let (Some(w), Some(h)) = (width, height) {
+                snapshot.displays.push(DisplayInfo {
+                    name: clean(j_str(&g, "Name")),
+                    resolution: Some(format!("{w} × {h}")),
+                    refresh_hz: refresh.map(|r| r as u32),
+                });
+            }
+        }
+
+        snapshot.storage = j_array(&root, "disk")
+            .iter()
+            .map(|d| DiskInfo {
+                model: clean(j_str(d, "Model")),
+                size_bytes: j_u64(d, "Size"),
+                media_type: clean(j_str(d, "MediaType")),
+                interface: clean(j_str(d, "InterfaceType")),
+                serial_number: clean(j_str(d, "SerialNumber")),
+            })
+            .collect();
+
+        snapshot.volumes = j_array(&root, "vol")
+            .iter()
+            .map(|v| VolumeInfo {
+                mount: clean(j_str(v, "DeviceID")),
+                label: clean(j_str(v, "VolumeName")),
+                file_system: clean(j_str(v, "FileSystem")),
+                total_bytes: j_u64(v, "Size"),
+                free_bytes: j_u64(v, "FreeSpace"),
+            })
+            .collect();
+
+        snapshot.audio = j_array(&root, "audio")
+            .iter()
+            .map(|a| AudioDeviceInfo {
+                name: clean(j_str(a, "Name")),
+                manufacturer: clean(j_str(a, "Manufacturer")),
+            })
+            .collect();
+
+        snapshot.network = build_network(&root);
+
+        snapshot
+    }
+
+    fn build_network(root: &Value) -> Vec<NetworkAdapterInfo> {
+        let adapters = j_array(root, "net");
+        let configs = j_array(root, "netcfg");
+        // Index configs by InterfaceIndex so IP/gateway/DNS attach to the right
+        // adapter; fall back to listing config-only entries when no adapter row
+        // matches.
+        configs
+            .iter()
+            .map(|cfg| {
+                let index = j_u64(cfg, "InterfaceIndex");
+                let adapter = adapters
+                    .iter()
+                    .find(|a| j_u64(a, "InterfaceIndex") == index && index.is_some());
+                NetworkAdapterInfo {
+                    name: adapter
+                        .and_then(|a| clean(j_str(a, "Name")))
+                        .or_else(|| clean(j_str(cfg, "Description"))),
+                    mac_address: clean(j_str(cfg, "MACAddress"))
+                        .or_else(|| adapter.and_then(|a| clean(j_str(a, "MACAddress")))),
+                    adapter_type: adapter.and_then(|a| clean(j_str(a, "AdapterType"))),
+                    speed_bits_per_second: adapter.and_then(|a| j_u64(a, "Speed")),
+                    ip_addresses: j_str_array(cfg, "IPAddress"),
+                    gateways: j_str_array(cfg, "DefaultIPGateway"),
+                    dns_servers: j_str_array(cfg, "DNSServerSearchOrder"),
+                }
+            })
+            .collect()
+    }
+
+    // ── JSON extraction helpers ───────────────────────────────────────────────
+
+    fn j_str(value: &Value, key: &str) -> Option<String> {
+        value.get(key).and_then(|v| match v {
+            Value::String(s) => Some(s.clone()),
+            Value::Number(n) => Some(n.to_string()),
+            _ => None,
+        })
+    }
+
+    fn j_u64(value: &Value, key: &str) -> Option<u64> {
+        value.get(key).and_then(|v| match v {
+            Value::Number(n) => n
+                .as_u64()
+                .or_else(|| n.as_i64().filter(|&i| i >= 0).map(|i| i as u64))
+                .or_else(|| n.as_f64().filter(|f| f.is_finite() && *f >= 0.0).map(|f| f as u64)),
+            Value::String(s) => s.trim().parse::<u64>().ok(),
+            _ => None,
+        })
+    }
+
+    fn j_array(value: &Value, key: &str) -> Vec<Value> {
+        match value.get(key) {
+            Some(Value::Array(items)) => items.clone(),
+            Some(Value::Null) | None => Vec::new(),
+            Some(other) => vec![other.clone()],
+        }
+    }
+
+    fn j_str_array(value: &Value, key: &str) -> Vec<String> {
+        match value.get(key) {
+            Some(Value::Array(items)) => items
+                .iter()
+                .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                .filter(|s| !s.trim().is_empty())
+                .collect(),
+            Some(Value::String(s)) if !s.trim().is_empty() => vec![s.clone()],
+            _ => Vec::new(),
+        }
+    }
+
+    fn memory_form_factor(code: Option<u64>) -> Option<String> {
+        Some(
+            match code? {
+                8 => "DIMM",
+                12 => "SODIMM",
+                13 => "SRIMM",
+                _ => return None,
+            }
+            .to_string(),
+        )
+    }
+
+    fn smbios_memory_type(code: Option<u64>) -> Option<String> {
+        Some(
+            match code? {
+                20 => "DDR",
+                21 => "DDR2",
+                24 => "DDR3",
+                26 => "DDR4",
+                34 => "DDR5",
+                _ => return None,
+            }
+            .to_string(),
+        )
+    }
+
+    fn format_epoch_date(epoch: u64) -> String {
+        // Lightweight YYYY-MM-DD without pulling chrono; BIOS dates only need day
+        // resolution.
+        let days = (epoch / 86_400) as i64;
+        let (year, month, day) = civil_from_days(days);
+        format!("{year:04}-{month:02}-{day:02}")
+    }
+
+    fn win32_memory_available() -> Option<(u64, f64)> {
+        use std::mem::{size_of, zeroed};
+        use windows_sys::Win32::System::SystemInformation::{GlobalMemoryStatusEx, MEMORYSTATUSEX};
+        unsafe {
+            let mut status: MEMORYSTATUSEX = zeroed();
+            status.dwLength = size_of::<MEMORYSTATUSEX>() as u32;
+            if GlobalMemoryStatusEx(&mut status) != 0 {
+                Some((status.ullAvailPhys, status.dwMemoryLoad as f64))
+            } else {
+                None
+            }
+        }
+    }
+
+    // ── Native fallback (WMI/PowerShell unavailable) ──────────────────────────
+
+    fn fallback() -> PcInfoSnapshot {
+        let mut snapshot = PcInfoSnapshot {
+            source: "windows-win32-fallback".to_string(),
+            warnings: vec![
+                "WMI/PowerShell query failed; showing core fields from native Windows APIs."
+                    .to_string(),
+            ],
+            ..Default::default()
+        };
+
+        snapshot.os = OsInfo {
+            name: clean(reg_string(
+                "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion",
+                "ProductName",
+            )),
+            version: clean(reg_string(
+                "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion",
+                "DisplayVersion",
+            )),
+            build: clean(reg_string(
+                "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion",
+                "CurrentBuildNumber",
+            )),
+            architecture: Some(if cfg!(target_pointer_width = "64") {
+                "64-bit".to_string()
+            } else {
+                "32-bit".to_string()
+            }),
+            hostname: std::env::var("COMPUTERNAME").ok(),
+            registered_user: clean(reg_string(
+                "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion",
+                "RegisteredOwner",
+            )),
+            logged_in_user: std::env::var("USERNAME").ok(),
+            locale: None,
+            install_date_unix_seconds: None,
+            uptime_seconds: win32_uptime_seconds(),
+        };
+
+        snapshot.cpu = CpuInfo {
+            name: clean(reg_string(
+                "HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0",
+                "ProcessorNameString",
+            )),
+            vendor: clean(reg_string(
+                "HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0",
+                "VendorIdentifier",
+            )),
+            physical_cores: None,
+            logical_processors: std::thread::available_parallelism()
+                .ok()
+                .map(|c| c.get() as u32),
+            max_clock_mhz: None,
+            l2_cache_bytes: None,
+            l3_cache_bytes: None,
+            address_width_bits: Some(if cfg!(target_pointer_width = "64") { 64 } else { 32 }),
+            socket: None,
+        };
+
+        if let Some((total, avail, used)) = win32_memory_full() {
+            snapshot.memory = MemoryInfo {
+                total_bytes: Some(total),
+                available_bytes: Some(avail),
+                used_percent: Some(used),
+                modules: Vec::new(),
+            };
+        }
+
+        snapshot
+    }
+
+    fn win32_memory_full() -> Option<(u64, u64, f64)> {
+        use std::mem::{size_of, zeroed};
+        use windows_sys::Win32::System::SystemInformation::{GlobalMemoryStatusEx, MEMORYSTATUSEX};
+        unsafe {
+            let mut status: MEMORYSTATUSEX = zeroed();
+            status.dwLength = size_of::<MEMORYSTATUSEX>() as u32;
+            if GlobalMemoryStatusEx(&mut status) != 0 {
+                Some((status.ullTotalPhys, status.ullAvailPhys, status.dwMemoryLoad as f64))
+            } else {
+                None
+            }
+        }
+    }
+
+    fn win32_uptime_seconds() -> Option<u64> {
+        use windows_sys::Win32::System::SystemInformation::GetTickCount64;
+        Some(unsafe { GetTickCount64() } / 1_000)
+    }
+
+    fn reg_string(subkey: &str, value_name: &str) -> Option<String> {
+        use std::os::windows::ffi::OsStrExt;
+        use windows_sys::Win32::System::Registry::{
+            RegGetValueW, HKEY_LOCAL_MACHINE, RRF_RT_REG_SZ,
+        };
+
+        fn wide(text: &str) -> Vec<u16> {
+            std::ffi::OsStr::new(text)
+                .encode_wide()
+                .chain(std::iter::once(0))
+                .collect()
+        }
+
+        let subkey_w = wide(subkey);
+        let value_w = wide(value_name);
+        let mut size: u32 = 0;
+        unsafe {
+            // First call sizes the buffer.
+            if RegGetValueW(
+                HKEY_LOCAL_MACHINE,
+                subkey_w.as_ptr(),
+                value_w.as_ptr(),
+                RRF_RT_REG_SZ,
+                std::ptr::null_mut(),
+                std::ptr::null_mut(),
+                &mut size,
+            ) != 0
+                || size == 0
+            {
+                return None;
+            }
+            let mut buffer = vec![0u16; (size as usize / 2) + 1];
+            let mut actual = size;
+            if RegGetValueW(
+                HKEY_LOCAL_MACHINE,
+                subkey_w.as_ptr(),
+                value_w.as_ptr(),
+                RRF_RT_REG_SZ,
+                std::ptr::null_mut(),
+                buffer.as_mut_ptr().cast(),
+                &mut actual,
+            ) != 0
+            {
+                return None;
+            }
+            let len = buffer.iter().position(|&c| c == 0).unwrap_or(buffer.len());
+            Some(String::from_utf16_lossy(&buffer[..len]))
+        }
+    }
+}
+
+// Shared civil-date conversion (Howard Hinnant's algorithm) used by date
+// formatting on platforms that emit epoch seconds.
+#[allow(dead_code)]
+fn civil_from_days(z: i64) -> (i64, u32, u32) {
+    let z = z + 719_468;
+    let era = if z >= 0 { z } else { z - 146_096 } / 146_097;
+    let doe = z - era * 146_097;
+    let yoe = (doe - doe / 1_460 + doe / 36_524 - doe / 146_096) / 365;
+    let y = yoe + era * 400;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let d = (doy - (153 * mp + 2) / 5 + 1) as u32;
+    let m = if mp < 10 { mp + 3 } else { mp - 9 } as u32;
+    (if m <= 2 { y + 1 } else { y }, m, d)
+}
+
+#[cfg(target_os = "macos")]
+mod platform {
+    use super::*;
+    use serde_json::Value;
+    use std::process::Command;
+
+    pub fn gather() -> PcInfoSnapshot {
+        let mut snapshot = match run_system_profiler() {
+            Some(json) => from_system_profiler(json),
+            None => PcInfoSnapshot {
+                source: "macos-unavailable".to_string(),
+                warnings: vec!["system_profiler returned no data.".to_string()],
+                ..Default::default()
+            },
+        };
+        fill_from_sysinfo(&mut snapshot);
+        snapshot
+    }
+
+    fn run_system_profiler() -> Option<Value> {
+        let output = Command::new("system_profiler")
+            .args([
+                "-json",
+                "SPSoftwareDataType",
+                "SPHardwareDataType",
+                "SPDisplaysDataType",
+                "SPStorageDataType",
+                "SPMemoryDataType",
+                "SPAudioDataType",
+                "SPNetworkDataType",
+            ])
+            .output()
+            .ok()?;
+        if !output.status.success() {
+            return None;
+        }
+        serde_json::from_slice::<Value>(&output.stdout).ok()
+    }
+
+    fn first<'a>(root: &'a Value, key: &str) -> Option<&'a Value> {
+        root.get(key).and_then(|v| v.as_array()).and_then(|a| a.first())
+    }
+
+    fn s(value: &Value, key: &str) -> Option<String> {
+        clean(value.get(key).and_then(|v| v.as_str()).map(|s| s.to_string()))
+    }
+
+    fn from_system_profiler(root: Value) -> PcInfoSnapshot {
+        let mut snapshot = PcInfoSnapshot {
+            source: "macos-system_profiler".to_string(),
+            ..Default::default()
+        };
+
+        if let Some(sw) = first(&root, "SPSoftwareDataType") {
+            snapshot.os.name = s(sw, "os_version");
+            snapshot.os.hostname = s(sw, "local_host_name");
+            snapshot.os.logged_in_user = s(sw, "user_name");
+            snapshot.os.version = s(sw, "kernel_version");
+        }
+        if let Some(hw) = first(&root, "SPHardwareDataType") {
+            snapshot.cpu.name = s(hw, "chip_type").or_else(|| s(hw, "cpu_type"));
+            snapshot.motherboard.product = s(hw, "machine_model").or_else(|| s(hw, "machine_name"));
+            snapshot.motherboard.serial_number = s(hw, "serial_number");
+            snapshot.motherboard.bios_version = s(hw, "boot_rom_version");
+            if let Some(cores) = hw.get("number_processors").and_then(|v| v.as_str()) {
+                // Either a plain count ("10") or Apple's "proc 10:6:4" total:perf:eff
+                // shape; take the first integer as the logical core count.
+                snapshot.cpu.logical_processors = cores
+                    .split_whitespace()
+                    .last()
+                    .and_then(|token| token.split(':').next())
+                    .and_then(|n| n.parse().ok());
+            }
+        }
+
+        for gpu in root
+            .get("SPDisplaysDataType")
+            .and_then(|v| v.as_array())
+            .map(|a| a.as_slice())
+            .unwrap_or(&[])
+        {
+            snapshot.graphics.push(GpuInfo {
+                name: s(gpu, "sppci_model"),
+                vendor: s(gpu, "spdisplays_vendor"),
+                vram_bytes: None,
+                driver_version: None,
+                current_mode: None,
+            });
+            for display in gpu
+                .get("spdisplays_ndrvs")
+                .and_then(|v| v.as_array())
+                .map(|a| a.as_slice())
+                .unwrap_or(&[])
+            {
+                snapshot.displays.push(DisplayInfo {
+                    name: s(display, "_name"),
+                    resolution: s(display, "_spdisplays_resolution")
+                        .or_else(|| s(display, "spdisplays_resolution")),
+                    refresh_hz: None,
+                });
+            }
+        }
+
+        for vol in root
+            .get("SPStorageDataType")
+            .and_then(|v| v.as_array())
+            .map(|a| a.as_slice())
+            .unwrap_or(&[])
+        {
+            snapshot.volumes.push(VolumeInfo {
+                mount: s(vol, "mount_point"),
+                label: s(vol, "_name"),
+                file_system: s(vol, "file_system"),
+                total_bytes: vol.get("size_in_bytes").and_then(|v| v.as_u64()),
+                free_bytes: vol.get("free_space_in_bytes").and_then(|v| v.as_u64()),
+            });
+        }
+
+        for dimm in root
+            .get("SPMemoryDataType")
+            .and_then(|v| v.as_array())
+            .map(|a| a.as_slice())
+            .unwrap_or(&[])
+        {
+            // Apple Silicon reports a single memory blob; Intel Macs list DIMMs
+            // under "_items".
+            if let Some(items) = dimm.get("_items").and_then(|v| v.as_array()) {
+                for item in items {
+                    snapshot.memory.modules.push(MemoryModuleInfo {
+                        slot: s(item, "_name"),
+                        capacity_bytes: None,
+                        speed_mhz: None,
+                        manufacturer: s(item, "dimm_manufacturer"),
+                        part_number: s(item, "dimm_part_number"),
+                        form_factor: None,
+                        memory_type: s(item, "dimm_type"),
+                    });
+                }
+            }
+        }
+
+        for audio in root
+            .get("SPAudioDataType")
+            .and_then(|v| v.as_array())
+            .map(|a| a.as_slice())
+            .unwrap_or(&[])
+        {
+            snapshot.audio.push(AudioDeviceInfo {
+                name: s(audio, "_name"),
+                manufacturer: None,
+            });
+        }
+
+        for net in root
+            .get("SPNetworkDataType")
+            .and_then(|v| v.as_array())
+            .map(|a| a.as_slice())
+            .unwrap_or(&[])
+        {
+            let ips = net
+                .get("IPv4")
+                .and_then(|v| v.get("Addresses"))
+                .and_then(|v| v.as_array())
+                .map(|a| {
+                    a.iter()
+                        .filter_map(|x| x.as_str().map(|s| s.to_string()))
+                        .collect()
+                })
+                .unwrap_or_default();
+            snapshot.network.push(NetworkAdapterInfo {
+                name: s(net, "_name"),
+                mac_address: s(net, "spnetwork_macaddress"),
+                adapter_type: s(net, "hardware"),
+                speed_bits_per_second: None,
+                ip_addresses: ips,
+                gateways: Vec::new(),
+                dns_servers: Vec::new(),
+            });
+        }
+
+        snapshot
+    }
+
+    fn fill_from_sysinfo(snapshot: &mut PcInfoSnapshot) {
+        use sysinfo::System;
+        let mut system = System::new();
+        system.refresh_memory();
+        let total = system.total_memory();
+        if total > 0 {
+            snapshot.memory.total_bytes = Some(total);
+            snapshot.memory.available_bytes = Some(system.available_memory());
+            snapshot.memory.used_percent =
+                Some(system.used_memory() as f64 / total as f64 * 100.0);
+        }
+        if snapshot.cpu.logical_processors.is_none() {
+            snapshot.cpu.logical_processors = std::thread::available_parallelism()
+                .ok()
+                .map(|c| c.get() as u32);
+        }
+        snapshot.os.uptime_seconds = Some(System::uptime());
+        if snapshot.os.name.is_none() {
+            snapshot.os.name = System::long_os_version();
+        }
+    }
+}
+
+#[cfg(not(any(target_os = "windows", target_os = "macos")))]
+mod platform {
+    use super::*;
+    use std::fs;
+
+    pub fn gather() -> PcInfoSnapshot {
+        let mut snapshot = PcInfoSnapshot {
+            source: "linux-proc".to_string(),
+            ..Default::default()
+        };
+
+        snapshot.os = OsInfo {
+            name: os_release_pretty_name(),
+            version: read_trimmed("/proc/sys/kernel/osrelease"),
+            build: None,
+            architecture: Some(std::env::consts::ARCH.to_string()),
+            hostname: read_trimmed("/proc/sys/kernel/hostname")
+                .or_else(|| std::env::var("HOSTNAME").ok()),
+            registered_user: None,
+            logged_in_user: std::env::var("USER").ok(),
+            locale: std::env::var("LANG").ok(),
+            install_date_unix_seconds: None,
+            uptime_seconds: read_uptime_seconds(),
+        };
+
+        snapshot.cpu = cpu_from_proc();
+        snapshot.memory = memory_from_proc();
+        snapshot
+    }
+
+    fn read_trimmed(path: &str) -> Option<String> {
+        clean(fs::read_to_string(path).ok())
+    }
+
+    fn os_release_pretty_name() -> Option<String> {
+        let text = fs::read_to_string("/etc/os-release").ok()?;
+        for line in text.lines() {
+            if let Some(value) = line.strip_prefix("PRETTY_NAME=") {
+                return clean(Some(value.trim_matches('"').to_string()));
+            }
+        }
+        None
+    }
+
+    fn read_uptime_seconds() -> Option<u64> {
+        let text = fs::read_to_string("/proc/uptime").ok()?;
+        text.split_whitespace()
+            .next()
+            .and_then(|v| v.parse::<f64>().ok())
+            .map(|secs| secs as u64)
+    }
+
+    fn cpu_from_proc() -> CpuInfo {
+        let mut info = CpuInfo {
+            logical_processors: std::thread::available_parallelism()
+                .ok()
+                .map(|c| c.get() as u32),
+            address_width_bits: Some(if cfg!(target_pointer_width = "64") { 64 } else { 32 }),
+            ..Default::default()
+        };
+        if let Ok(text) = fs::read_to_string("/proc/cpuinfo") {
+            for line in text.lines() {
+                if let Some((key, value)) = line.split_once(':') {
+                    let key = key.trim();
+                    let value = value.trim();
+                    match key {
+                        "model name" if info.name.is_none() => {
+                            info.name = clean(Some(value.to_string()));
+                        }
+                        "vendor_id" if info.vendor.is_none() => {
+                            info.vendor = clean(Some(value.to_string()));
+                        }
+                        "cpu MHz" if info.max_clock_mhz.is_none() => {
+                            info.max_clock_mhz = value.parse::<f64>().ok().map(|v| v as u64);
+                        }
+                        _ => {}
+                    }
+                }
+            }
+        }
+        info
+    }
+
+    fn memory_from_proc() -> MemoryInfo {
+        let mut total = None;
+        let mut available = None;
+        if let Ok(text) = fs::read_to_string("/proc/meminfo") {
+            for line in text.lines() {
+                if let Some(rest) = line.strip_prefix("MemTotal:") {
+                    total = parse_kb(rest);
+                } else if let Some(rest) = line.strip_prefix("MemAvailable:") {
+                    available = parse_kb(rest);
+                }
+            }
+        }
+        let used_percent = match (total, available) {
+            (Some(t), Some(a)) if t > 0 => Some((t.saturating_sub(a)) as f64 / t as f64 * 100.0),
+            _ => None,
+        };
+        MemoryInfo {
+            total_bytes: total,
+            available_bytes: available,
+            used_percent,
+            modules: Vec::new(),
+        }
+    }
+
+    fn parse_kb(rest: &str) -> Option<u64> {
+        rest.split_whitespace()
+            .next()
+            .and_then(|v| v.parse::<u64>().ok())
+            .map(|kb| kb * 1024)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn cache_gathers_once_then_reuses() {
+        let cache = PcInfoCache::new();
+        let first = cache.get_or_gather();
+        assert!(first.generated_at_unix_seconds > 0);
+        assert!(!first.source.is_empty());
+        let second = cache.get_or_gather();
+        // Cached value is returned unchanged (same gather timestamp).
+        assert_eq!(first.generated_at_unix_seconds, second.generated_at_unix_seconds);
+    }
+
+    #[test]
+    fn refresh_replaces_cache() {
+        let cache = PcInfoCache::new();
+        let _ = cache.get_or_gather();
+        let refreshed = cache.refresh();
+        assert!(!refreshed.source.is_empty());
+    }
+
+    #[test]
+    fn civil_from_days_matches_known_dates() {
+        // 1970-01-01 is day 0.
+        assert_eq!(civil_from_days(0), (1970, 1, 1));
+        // 2000-01-01 is day 10957.
+        assert_eq!(civil_from_days(10_957), (2000, 1, 1));
+    }
+}

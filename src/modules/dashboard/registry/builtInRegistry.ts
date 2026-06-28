@@ -7,6 +7,7 @@ import { ConvertersBody } from "../widgets/ConvertersBody";
 import { GeneratorToolsBody } from "../widgets/GeneratorToolsBody";
 import { NetworkToolsBody } from "../widgets/NetworkToolsBody";
 import { NotesBody } from "../widgets/NotesBody";
+import { PcInfoBody } from "../widgets/PcInfoBody";
 import type { DashboardWidgetInstance } from "../types";
 
 export interface BuiltInWidgetBodyProps {
@@ -71,6 +72,17 @@ export const BUILT_IN_WIDGETS: BuiltInWidgetEntry[] = [
     defaultIcon: "Pin",
     defaultSize: { w: 3, h: 3 },
     Body: NotesBody,
+  },
+  {
+    id: "pcInfo",
+    titleKey: "dashboard.pcInfoTitle",
+    summaryKey: "dashboard.pcInfoSummary",
+    category: "monitor",
+    defaultPreset: "panel",
+    defaultAccent: "slate",
+    defaultIcon: "Cpu",
+    defaultSize: { w: 5, h: 6 },
+    Body: PcInfoBody,
   },
   {
     id: "networkTools",

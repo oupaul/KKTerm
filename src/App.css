@@ -27,6 +27,7 @@
 @import "./modules/dashboard/widgets/builtin/dns-lookup/dns-lookup.css";
 @import "./modules/dashboard/widgets/builtin/speedtest/speedtest.css";
 @import "./modules/dashboard/widgets/builtin/ping-tool/ping-tool.css";
+@import "./modules/dashboard/widgets/builtin/pc-info/pc-info.css";
 @import "./modules/dashboard/widgets/builtin/whois-lookup/whois-lookup.css";
 @import "./modules/dashboard/widgets/builtin/converters/converters.css";
 @import "./modules/dashboard/widgets/builtin/tool-group/tool-group.css";
