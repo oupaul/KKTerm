@@ -133,6 +133,9 @@ _Avoid_: host groups tab, inventory browser
 A durable, named selection of existing Connections (plus an optional dynamic filter by type/folder) used as the target for Batch Runs and Automation `runBatch` actions. Stored in `itops_fleets`; it references Connection ids and owns no Session and no secret. It is not a Connection type. A Fleet may own a topology of Server Rooms, Racks, and Rack Devices.
 _Avoid_: host group, inventory, host list, connection group (as a Connection type)
 
+**Default Fleet**:
+The undeletable fallback Fleet (`default-fleet`) that exists when IT Ops has no other Fleet rows. It is a safe top-level parent for Server Rooms, Racks, and Rack Devices, not a Connection or Session.
+
 **Fleet View**:
 The top-level right-side view for one selected Fleet. It shows that Fleet's Server Rooms as cards and is the entry point into the topology drill-down. It is not the same thing as the plural **Fleets** navigator.
 _Avoid_: overview, dashboard, host group details

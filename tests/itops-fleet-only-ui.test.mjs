@@ -50,3 +50,21 @@ test("Fleet tree state persists width, collapse state, and clamps like a panel",
   assert.match(state, /FLEET_TREE_MIN_WIDTH/);
   assert.match(state, /FLEET_TREE_MAX_WIDTH/);
 });
+
+test("Fleet tree add menu opens distinct Fleet, Server Room, and Rack dialogs", async () => {
+  const fleets = await read("src/modules/itops/FleetsTab.tsx");
+  const fleetDialog = await read("src/modules/itops/FleetDialog.tsx");
+  const rackDialog = await read("src/modules/itops/RackDialog.tsx");
+  const serverRoomDialog = await read("src/modules/itops/ServerRoomDialog.tsx");
+
+  assert.match(fleets, /<ServerRoomDialog\b/);
+  assert.match(fleets, /selectedFleetIdForDialog/);
+  assert.match(fleets, /selectedServerRoomForDialog/);
+  assert.match(fleets, /setServerRoomDialogOpen\(true\)/);
+  assert.match(fleets, /setRackDialog\(\{[\s\S]*fleetId: selectedFleetIdForDialog[\s\S]*rack: null/);
+  assert.match(fleetDialog, /itops\.fleets\.createHelp/);
+  assert.match(serverRoomDialog, /itops\.racks\.serverRoomFleetLabel/);
+  assert.match(serverRoomDialog, /createRack\(/);
+  assert.match(rackDialog, /itops\.racks\.fleetLabel/);
+  assert.match(rackDialog, /itops\.racks\.serverRoomSelectLabel/);
+});

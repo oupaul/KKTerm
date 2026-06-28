@@ -126,6 +126,7 @@ export function FleetDialog({
           />
         }
       >
+        {isEdit ? null : <p className="hg-dlg-help">{t("itops.fleets.createHelp")}</p>}
         <Field label={t("itops.fleets.nameLabel")} req>
           <TextInput
             value={name}

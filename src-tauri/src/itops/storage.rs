@@ -35,6 +35,9 @@ impl From<rusqlite::Error> for ItopsStorageError {
 
 type Result<T> = std::result::Result<T, ItopsStorageError>;
 
+pub const DEFAULT_FLEET_ID: &str = "default-fleet";
+pub const DEFAULT_FLEET_NAME: &str = "Default Fleet";
+
 fn validate_name(name: &str) -> Result<String> {
     let trimmed = name.trim();
     if trimmed.is_empty() {
@@ -131,7 +134,21 @@ fn load_fleet(conn: &SqliteConnection, id: &str) -> Result<Fleet> {
     .ok_or(ItopsStorageError::NotFound)
 }
 
+fn ensure_default_fleet(conn: &SqliteConnection) -> Result<()> {
+    let count: i64 = conn.query_row("SELECT COUNT(*) FROM itops_fleets", [], |row| row.get(0))?;
+    if count > 0 {
+        return Ok(());
+    }
+    conn.execute(
+        "INSERT INTO itops_fleets (id, name, sort_order, member_ids_json, filter_json, transport)
+         VALUES (?, ?, 0, '[]', NULL, 'auto')",
+        params![DEFAULT_FLEET_ID, DEFAULT_FLEET_NAME],
+    )?;
+    Ok(())
+}
+
 pub fn list_fleets(conn: &SqliteConnection) -> Result<Vec<Fleet>> {
+    ensure_default_fleet(conn)?;
     let mut stmt = conn.prepare(&format!("SELECT {SELECT_GROUP_COLUMNS} ORDER BY sort_order"))?;
     let groups = stmt
         .query_map([], row_to_group)?
@@ -246,6 +263,11 @@ pub fn set_server_room_background(
 }
 
 pub fn remove_fleet(conn: &SqliteConnection, id: &str) -> Result<()> {
+    if id == DEFAULT_FLEET_ID {
+        return Err(ItopsStorageError::Validation(
+            "Default Fleet cannot be deleted".to_string(),
+        ));
+    }
     let affected = conn.execute("DELETE FROM itops_fleets WHERE id = ?", params![id])?;
     if affected == 0 {
         return Err(ItopsStorageError::NotFound);
@@ -529,7 +551,9 @@ mod tests {
         assert!(updated.filter.is_some());
 
         remove_fleet(&conn, "hg-1").unwrap();
-        assert!(list_fleets(&conn).unwrap().is_empty());
+        let listed_after_delete = list_fleets(&conn).unwrap();
+        assert_eq!(listed_after_delete.len(), 1);
+        assert_eq!(listed_after_delete[0].id, DEFAULT_FLEET_ID);
         assert!(matches!(
             remove_fleet(&conn, "hg-1"),
             Err(ItopsStorageError::NotFound)
@@ -603,5 +627,25 @@ mod tests {
             .map(|g| g.id)
             .collect();
         assert_eq!(order, vec!["b", "a"]);
+    }
+
+    #[test]
+    fn list_seeds_default_fleet_and_default_cannot_be_deleted() {
+        let conn = open_test_db();
+
+        let listed = list_fleets(&conn).unwrap();
+        assert_eq!(listed.len(), 1);
+        assert_eq!(listed[0].id, DEFAULT_FLEET_ID);
+        assert_eq!(listed[0].name, DEFAULT_FLEET_NAME);
+        assert_eq!(listed[0].sort_order, 0);
+
+        assert!(matches!(
+            remove_fleet(&conn, DEFAULT_FLEET_ID),
+            Err(ItopsStorageError::Validation(_))
+        ));
+
+        let listed_again = list_fleets(&conn).unwrap();
+        assert_eq!(listed_again.len(), 1);
+        assert_eq!(listed_again[0].id, DEFAULT_FLEET_ID);
     }
 }

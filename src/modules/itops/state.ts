@@ -192,7 +192,7 @@ interface ItOpsState {
   /** Racks per Fleet id, hydrated with their items. Loaded on demand. */
   racksByFleet: Record<string, Rack[]>;
   loadRacks: (fleetId: string) => Promise<void>;
-  createRack: (fleetId: string, input: RackInput) => Promise<void>;
+  createRack: (fleetId: string, input: RackInput) => Promise<Rack>;
   updateRack: (fleetId: string, id: string, input: RackInput) => Promise<void>;
   deleteRack: (fleetId: string, id: string) => Promise<void>;
   setFleetBackground: (fleetId: string, background: DashboardBackground | null) => Promise<void>;
@@ -326,8 +326,9 @@ export const useItOpsStore = create<ItOpsState>((set, get) => ({
   },
 
   async createRack(fleetId, input) {
-    await invokeCommand("itops_create_rack", { fleetId, ...input });
+    const created = await invokeCommand("itops_create_rack", { fleetId, ...input });
     await get().loadRacks(fleetId);
+    return created;
   },
 
   async updateRack(fleetId, id, input) {

@@ -65,6 +65,9 @@ Replaces the **Host Group** entry in `CONTEXT.md`; adds the rest. Follows the
   datacenter of Racks. Stored in `itops_fleets`. References Connection ids;
   owns no Session and no secret. It is not a Connection type. _Avoid_: host
   group, inventory, host list, connection group (as a Connection type).
+- **Default Fleet** — the undeletable fallback Fleet seeded when IT Ops has no
+  Fleet rows. It keeps the Fleet topology from starting without a parent
+  container; users can add their own Fleets beside it.
 - **Fleet View** — the top-level right-side view for one selected Fleet. It
   shows the Fleet's Server Rooms as cards and is the entry point into the
   topology drill-down. _Avoid_: members view, list mode.
@@ -72,7 +75,8 @@ Replaces the **Host Group** entry in `CONTEXT.md`; adds the rest. Follows the
   nests the Fleets tree and scopes a Batch Run; blank server rooms group under
   "Unassigned". Plain text, not a first-class database entity. (Replaces the
   retired Region/Datacenter/Area tags.) _Avoid_: zone, site object,
-  datacenter entity.
+  datacenter entity. Creating a Server Room in the UI creates its first Rack,
+  because the current durable model stores rooms through Rack records.
 - **Server Room View** — the drill-down view for one Server Room. It shows the
   room's Racks, optionally grouped by each Rack's `rack_group` tag. _Avoid_:
   area view, region view.

@@ -1,7 +1,7 @@
 // Create / edit a Rack in a Fleet's virtual datacenter (docs/FLEET.md Phase C).
 // Built from the shared dialog primitives (docs/DESIGN_LANGUAGE.md).
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Actions,
@@ -14,26 +14,32 @@ import {
   TextInput,
 } from "../../app/ui/dialog";
 import { useWorkspaceStore } from "../../store";
-import type { Rack, RackShell } from "../../types";
+import type { Fleet, Rack, RackShell } from "../../types";
 import { useItOpsStore } from "./state";
 
 const MAX_RACK_U = 100;
 const SHELL_OPTIONS: RackShell[] = ["black", "white", "grey"];
 
 export function RackDialog({
-  fleetId,
+  defaultFleetId,
+  fleets,
+  racksByFleet,
   rack,
   defaultServerRoom,
   defaultGroup,
   onClose,
+  onSaved,
 }: {
-  fleetId: string;
+  defaultFleetId: string;
+  fleets: Fleet[];
+  racksByFleet: Record<string, Rack[]>;
   rack?: Rack | null;
   /** Prefill the Server Room for a new rack (e.g. added within a room). */
   defaultServerRoom?: string;
   /** Prefill the Group for a new rack (e.g. added within a group section). */
   defaultGroup?: string;
   onClose: () => void;
+  onSaved?: (rack: Rack) => void;
 }) {
   const { t } = useTranslation();
   const isEdit = !!rack;
@@ -41,6 +47,7 @@ export function RackDialog({
   const createRack = useItOpsStore((state) => state.createRack);
   const updateRack = useItOpsStore((state) => state.updateRack);
 
+  const [fleetId, setFleetId] = useState(rack?.fleetId ?? defaultFleetId);
   const [name, setName] = useState(rack?.name ?? "");
   const [serverRoom, setServerRoom] = useState(rack?.serverRoom ?? defaultServerRoom ?? "");
   const [rackGroup, setRackGroup] = useState(rack?.rackGroup ?? defaultGroup ?? "");
@@ -49,7 +56,27 @@ export function RackDialog({
   const [busy, setBusy] = useState(false);
 
   const trimmedName = name.trim();
-  const canSave = trimmedName.length > 0 && !busy;
+  const canSave = trimmedName.length > 0 && fleetId.length > 0 && !busy;
+
+  const serverRoomOptions = useMemo(() => {
+    const names = new Set(
+      (racksByFleet[fleetId] ?? []).map((entry) => entry.serverRoom.trim()).filter(Boolean),
+    );
+    if (serverRoom.trim()) {
+      names.add(serverRoom.trim());
+    }
+    return [
+      { value: "", label: t("itops.racks.unassigned") },
+      ...[...names].sort((a, b) => a.localeCompare(b)).map((value) => ({ value, label: value })),
+    ];
+  }, [fleetId, racksByFleet, serverRoom, t]);
+
+  useEffect(() => {
+    if (fleetId && fleets.some((fleet) => fleet.id === fleetId)) {
+      return;
+    }
+    setFleetId(defaultFleetId || fleets[0]?.id || "");
+  }, [defaultFleetId, fleetId, fleets]);
 
   async function handleSave() {
     if (!canSave) return;
@@ -64,8 +91,10 @@ export function RackDialog({
     try {
       if (isEdit) {
         await updateRack(fleetId, rack!.id, input);
+        onSaved?.({ ...rack!, ...input, shell: shell ?? null });
       } else {
-        await createRack(fleetId, input);
+        const created = await createRack(fleetId, input);
+        onSaved?.(created);
       }
       onClose();
     } catch (error) {
@@ -100,12 +129,20 @@ export function RackDialog({
             autoFocus
           />
         </Field>
+        <Field label={t("itops.racks.fleetLabel")} req>
+          <Select
+            value={fleetId}
+            disabled={isEdit || fleets.length <= 1}
+            onChange={(event) => setFleetId(event.currentTarget.value)}
+            options={fleets.map((fleet) => ({ value: fleet.id, label: fleet.name }))}
+          />
+        </Field>
         <div style={{ display: "flex", gap: 12 }}>
-          <Field label={t("itops.racks.serverRoomLabel")}>
-            <TextInput
+          <Field label={t("itops.racks.serverRoomSelectLabel")}>
+            <Select
               value={serverRoom}
-              placeholder={t("itops.racks.serverRoomPlaceholder")}
               onChange={(event) => setServerRoom(event.currentTarget.value)}
+              options={serverRoomOptions}
             />
           </Field>
           <Field label={t("itops.racks.groupLabel")}>

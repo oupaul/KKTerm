@@ -14,6 +14,7 @@ import { ItIcon, IT_ACCENTS, type ItIconName } from "./icons";
 import { FleetDialog } from "./FleetDialog";
 import { RackElevation } from "./RackElevation";
 import { RackDialog } from "./RackDialog";
+import { ServerRoomDialog } from "./ServerRoomDialog";
 import { RackItemDialog } from "./RackItemDialog";
 import { useItOpsStore } from "./state";
 import {
@@ -82,9 +83,11 @@ export function FleetsTab({
   const [members, setMembers] = useState<ResolvedHost[]>([]);
   const [dialog, setDialog] = useState<{ group: Fleet | null } | null>(null);
   const [rackDialog, setRackDialog] = useState<{
+    fleetId: string;
     rack: Rack | null;
     defaultServerRoom?: string;
   } | null>(null);
+  const [serverRoomDialogOpen, setServerRoomDialogOpen] = useState(false);
   const [addMenuOpen, setAddMenuOpen] = useState(false);
   const [itemDialog, setItemDialog] = useState<{
     rack: Rack;
@@ -199,6 +202,9 @@ export function FleetsTab({
     [activeGroup, racksByFleet],
   );
   const topology = useMemo(() => groupRackTopology(racks), [racks]);
+  const selectedFleetIdForDialog = activeGroup?.id ?? fleets[0]?.id ?? "";
+  const selectedServerRoomForDialog =
+    drill.serverRoom ?? (drill.rackId ? racks.find((rack) => rack.id === drill.rackId)?.serverRoom : undefined);
 
   // A placed Connection whose id no longer resolves to a Fleet member (deleted
   // or moved out) is a "ghost" — shown dimmed, not openable, editable/removable.
@@ -347,7 +353,7 @@ export function FleetsTab({
                         disabled={!activeGroup}
                         onClick={() => {
                           setAddMenuOpen(false);
-                          setRackDialog({ rack: null, defaultServerRoom: "" });
+                          setServerRoomDialogOpen(true);
                         }}
                       >
                         <ItIcon name="ops" size={14} />
@@ -360,8 +366,9 @@ export function FleetsTab({
                         onClick={() => {
                           setAddMenuOpen(false);
                           setRackDialog({
+                            fleetId: selectedFleetIdForDialog,
                             rack: null,
-                            defaultServerRoom: drill.serverRoom ?? undefined,
+                            defaultServerRoom: selectedServerRoomForDialog,
                           });
                         }}
                       >
@@ -497,10 +504,27 @@ export function FleetsTab({
       ) : null}
       {rackDialog && activeGroup ? (
         <RackDialog
-          fleetId={activeGroup.id}
+          defaultFleetId={rackDialog.fleetId}
+          fleets={fleets}
+          racksByFleet={racksByFleet}
           rack={rackDialog.rack}
           defaultServerRoom={rackDialog.defaultServerRoom}
           onClose={() => setRackDialog(null)}
+          onSaved={(saved) => {
+            setActiveId(saved.fleetId);
+            setDrill({ serverRoom: saved.serverRoom, rackId: saved.id });
+          }}
+        />
+      ) : null}
+      {serverRoomDialogOpen ? (
+        <ServerRoomDialog
+          fleets={fleets}
+          defaultFleetId={selectedFleetIdForDialog}
+          onClose={() => setServerRoomDialogOpen(false)}
+          onCreated={(saved) => {
+            setActiveId(saved.fleetId);
+            setDrill({ serverRoom: saved.serverRoom, rackId: null });
+          }}
         />
       ) : null}
       {itemDialog && activeGroup ? (
