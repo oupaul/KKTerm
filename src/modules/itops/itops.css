@@ -2128,21 +2128,8 @@
   flex: 0 0 auto;
   width: 300px;
 }
-/* ── Cabinet shell finishes (frame + default device palette for its devices) ── */
+/* ── Cabinet shell finishes (frame only; devices default to metallic black) ── */
 .itops-page .rk[data-shell="white"] {
-  --rkd-face-top: #f5f5f6;
-  --rkd-face-mid: #e9e9ec;
-  --rkd-face-bot: #dcdce0;
-  --rkd-ear-a: #d6d6da;
-  --rkd-ear-b: #ececef;
-  --rkd-line: #c2c2c8;
-  --rkd-well: #d2d2d7;
-  --rkd-slot: #cacace;
-  --rkd-hi: #b0b0b6;
-  --rkd-dim: #bcbcc2;
-  --rkd-cell-off: #d8d8dc;
-  --rkd-text: #1a1a1c;
-  --rkd-text-muted: #55555a;
   --rk-frame-top: #e4e4e7;
   --rk-frame-bot: #d2d2d7;
   --rk-frame-border: #c2c2c8;
@@ -2150,19 +2137,6 @@
   --rk-rail-b: #bcbcc2;
 }
 .itops-page .rk[data-shell="grey"] {
-  --rkd-face-top: #9a9aa0;
-  --rkd-face-mid: #86868c;
-  --rkd-face-bot: #76767c;
-  --rkd-ear-a: #6a6a70;
-  --rkd-ear-b: #8a8a90;
-  --rkd-line: #5e5e64;
-  --rkd-well: #6e6e74;
-  --rkd-slot: #646468;
-  --rkd-hi: #565258;
-  --rkd-dim: #6a6a70;
-  --rkd-cell-off: #7a7a80;
-  --rkd-text: #16161a;
-  --rkd-text-muted: #3a3a40;
   --rk-frame-top: #82828a;
   --rk-frame-bot: #6a6a72;
   --rk-frame-border: #58585e;
@@ -2684,14 +2658,14 @@
   display: flex;
   flex-wrap: wrap;
   align-content: center;
-  gap: 3px;
+  gap: 2px;
   max-height: 100%;
-  padding: 2px 0;
+  padding: 0;
 }
 .itops-page .rkd-port {
   position: relative;
-  width: 13px;
-  height: 11px;
+  width: 10px;
+  height: 8px;
   border-radius: 2px;
   background: var(--rkd-slot);
   border: 0.5px solid var(--rkd-line);
@@ -2699,16 +2673,16 @@
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  padding-bottom: 1.5px;
+  padding-bottom: 1px;
 }
 .itops-page .rkd-port.wan {
-  width: 15px;
-  height: 12px;
+  width: 12px;
+  height: 10px;
   border-color: var(--rkd-accent);
 }
 .itops-page .rkd-port-led {
-  width: 5px;
-  height: 2px;
+  width: 4px;
+  height: 1.5px;
   border-radius: 1px;
 }
 .itops-page .rkd-shimmer {
@@ -2744,7 +2718,7 @@
   overflow: hidden;
 }
 .itops-page .rkd-router {
-  gap: 8px;
+  gap: 5px;
 }
 .itops-page .rkd-wan-label,
 .itops-page .rkd-fw-label {
