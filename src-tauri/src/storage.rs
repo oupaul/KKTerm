@@ -1500,6 +1500,7 @@ const AI_PROVIDER_CREDENTIALS: &[(&str, &str, &str)] = &[
     ("litellm", "LiteLLM", "LiteLLM key"),
     ("github-copilot", "GitHub Copilot", "GitHub OAuth token"),
     ("ollama", "Ollama", "Ollama API key"),
+    ("ollama-cloud", "Ollama Cloud", "Ollama API key"),
     ("nvidia", "NVIDIA", "NVIDIA API key"),
     ("opencode", "OpenCode", "OpenCode API key"),
     ("openai-compatible", "OpenAI-compatible", "API key"),
@@ -5527,6 +5528,7 @@ fn validate_ai_provider_settings(
         "litellm" | "lite-llm" | "lite_llm" => "litellm".to_string(),
         "github-copilot" | "github_copilot" | "github copilot" => "github-copilot".to_string(),
         "ollama" => "ollama".to_string(),
+        "ollama-cloud" | "ollama_cloud" | "ollama cloud" => "ollama-cloud".to_string(),
         "nvidia" => "nvidia".to_string(),
         "opencode" | "open-code" | "open_code" | "open code" => "opencode".to_string(),
         "openai-compatible" | "openai_compatible" | "openai compatible" => {

@@ -142,6 +142,27 @@ export const AI_PROVIDER_MODEL_CATALOG: AiProviderModelCatalog = {
       { id: "llama3.2-vision", label: "Llama 3.2 Vision", supportsImageInput: true },
       { id: "qwen3", label: "Qwen3", supportsImageInput: false },
       { id: "deepseek-r1", label: "DeepSeek-R1", supportsImageInput: false },
+      // Cloud models reached through a local signed-in Ollama (`ollama signin`
+      // then `ollama pull <model>-cloud`). The local daemon proxies these to the
+      // cloud; direct ollama.com access lives on the `ollama-cloud` provider.
+      { id: "gpt-oss:120b-cloud", label: "gpt-oss 120B (cloud)", supportsImageInput: false },
+      { id: "qwen3-coder:480b-cloud", label: "Qwen3 Coder 480B (cloud)", supportsImageInput: false },
+      { id: "qwen3.5:122b-cloud", label: "Qwen3.5 122B (cloud)", supportsImageInput: true },
+    ],
+  },
+  "ollama-cloud": {
+    defaultModel: "gpt-oss:120b",
+    defaultReasoningEffort: "default",
+    models: [
+      { id: "gpt-oss:120b", label: "gpt-oss 120B", recommended: true, supportsImageInput: false },
+      { id: "glm-5.2", label: "GLM-5.2", recommended: true, supportsImageInput: false },
+      { id: "deepseek-v4-pro", label: "DeepSeek V4 Pro", recommended: true, supportsImageInput: false },
+      { id: "qwen3-coder:480b", label: "Qwen3 Coder 480B", recommended: true, supportsImageInput: false },
+      { id: "kimi-k2.6", label: "Kimi K2.6", supportsImageInput: false },
+      { id: "minimax-m2.7", label: "MiniMax M2.7", supportsImageInput: false },
+      { id: "nemotron-3-super:120b", label: "Nemotron 3 Super 120B", supportsImageInput: false },
+      { id: "qwen3.5:122b", label: "Qwen3.5 122B", supportsImageInput: true },
+      { id: "gemma4", label: "Gemma 4", supportsImageInput: true },
     ],
   },
   nvidia: {

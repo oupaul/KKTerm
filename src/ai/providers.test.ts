@@ -44,6 +44,20 @@ if (!ollamaDefinition.settingsFields.includes("apiKey") || ollamaDefinition.requ
 }
 validateAiProviderForChat(providerDefaultsFor("ollama"), false);
 
+const ollamaCloudDefinition = getAiProviderDefinition("ollama-cloud");
+if (ollamaCloudDefinition.modelListStrategy !== "ollamaTags") {
+  throw new Error("Ollama Cloud should refresh models from the native tags endpoint.");
+}
+if (ollamaCloudDefinition.baseUrl !== "https://ollama.com/v1") {
+  throw new Error(
+    `Ollama Cloud should target the direct cloud endpoint, got: ${ollamaCloudDefinition.baseUrl}`,
+  );
+}
+if (!ollamaCloudDefinition.requiresApiKey || ollamaCloudDefinition.allowsCustomBaseUrl) {
+  throw new Error("Ollama Cloud should require a bearer API key against the fixed cloud endpoint.");
+}
+validateAiProviderForChat(providerDefaultsFor("ollama-cloud"), true);
+
 const opencodeDefinition = getAiProviderDefinition("opencode");
 if (opencodeDefinition.baseUrl !== "https://opencode.ai/zen/go/v1") {
   throw new Error(`OpenCode should use the Go OpenAI-compatible base URL, got: ${opencodeDefinition.baseUrl}`);
