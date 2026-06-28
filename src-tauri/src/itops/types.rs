@@ -142,9 +142,11 @@ pub struct Fleet {
     pub transport: Transport,
 }
 
-/// A Rack in a Fleet's virtual datacenter (docs/FLEET.md Phase B): a fixed-height
-/// cabinet grouped by `region` and `area`, holding Rack Items at U positions.
-/// `items` is hydrated on read (storage joins the items in U order).
+/// A Rack in a Fleet's virtual datacenter (docs/FLEET.md): a fixed-height cabinet
+/// grouped down the topology `region → datacenter → server_room`, holding Rack
+/// Items at U positions. `items` is hydrated on read (storage joins the items in
+/// U order). The legacy `area` field was retired in favour of the deeper
+/// datacenter/server_room split; old exports that still carry `area` ignore it.
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Rack {
@@ -154,7 +156,12 @@ pub struct Rack {
     #[serde(default)]
     pub region: String,
     #[serde(default)]
-    pub area: String,
+    pub datacenter: String,
+    #[serde(default)]
+    pub server_room: String,
+    /// Cabinet shell colour: "black" (default) | "white" | "grey".
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub shell: Option<String>,
     pub height_u: u32,
     pub sort_order: i64,
     #[serde(default)]
@@ -247,6 +254,9 @@ pub struct RackItemMetadata {
     pub battery: Option<u32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub load: Option<u32>,
+    /// Device shell colour: "black" (default) | "white" | "grey".
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub shell: Option<String>,
 }
 
 /// One device occupying a contiguous `start_u..start_u + height_u` span in a
@@ -278,14 +288,17 @@ pub struct RunScope {
     #[serde(default)]
     pub region: Option<String>,
     #[serde(default)]
-    pub area: Option<String>,
+    pub datacenter: Option<String>,
+    #[serde(default)]
+    pub server_room: Option<String>,
 }
 
 impl RunScope {
     pub fn is_empty(&self) -> bool {
         self.rack_id.as_deref().unwrap_or("").is_empty()
             && self.region.as_deref().unwrap_or("").is_empty()
-            && self.area.as_deref().unwrap_or("").is_empty()
+            && self.datacenter.as_deref().unwrap_or("").is_empty()
+            && self.server_room.as_deref().unwrap_or("").is_empty()
     }
 }
 

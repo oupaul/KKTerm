@@ -2057,7 +2057,9 @@
    ────────────────────────────────────────────────────────────────────────── */
 .itops-page .rk {
   --rk-u: 26px;
-  /* Fixed hardware palette — physical equipment greys, not theme tokens. */
+  /* Fixed hardware palette — physical equipment greys, not theme tokens. The
+     default is Metallic Black; cabinet/device `data-shell` attrs override these
+     vars for Milky White / Metal Grey finishes. */
   --rkd-face-top: #313134;
   --rkd-face-mid: #28282b;
   --rkd-face-bot: #222225;
@@ -2069,8 +2071,88 @@
   --rkd-hi: #48484c;
   --rkd-dim: #2c2c30;
   --rkd-cell-off: #1a1a1c;
+  --rkd-text: #f5f5f7;
+  --rkd-text-muted: #a1a1a6;
+  /* Cabinet frame finish (black default). */
+  --rk-frame-top: #1e1e21;
+  --rk-frame-bot: #161618;
+  --rk-frame-border: #38383a;
+  --rk-rail-a: #2a2a2d;
+  --rk-rail-b: #202022;
   flex: 0 0 auto;
   width: 300px;
+}
+/* ── Cabinet shell finishes (frame + default device palette for its devices) ── */
+.itops-page .rk[data-shell="white"] {
+  --rkd-face-top: #f5f5f6;
+  --rkd-face-mid: #e9e9ec;
+  --rkd-face-bot: #dcdce0;
+  --rkd-ear-a: #d6d6da;
+  --rkd-ear-b: #ececef;
+  --rkd-line: #c2c2c8;
+  --rkd-well: #d2d2d7;
+  --rkd-slot: #cacace;
+  --rkd-hi: #b0b0b6;
+  --rkd-dim: #bcbcc2;
+  --rkd-cell-off: #d8d8dc;
+  --rkd-text: #1a1a1c;
+  --rkd-text-muted: #55555a;
+  --rk-frame-top: #e4e4e7;
+  --rk-frame-bot: #d2d2d7;
+  --rk-frame-border: #c2c2c8;
+  --rk-rail-a: #cfcfd4;
+  --rk-rail-b: #bcbcc2;
+}
+.itops-page .rk[data-shell="grey"] {
+  --rkd-face-top: #9a9aa0;
+  --rkd-face-mid: #86868c;
+  --rkd-face-bot: #76767c;
+  --rkd-ear-a: #6a6a70;
+  --rkd-ear-b: #8a8a90;
+  --rkd-line: #5e5e64;
+  --rkd-well: #6e6e74;
+  --rkd-slot: #646468;
+  --rkd-hi: #565258;
+  --rkd-dim: #6a6a70;
+  --rkd-cell-off: #7a7a80;
+  --rkd-text: #16161a;
+  --rkd-text-muted: #3a3a40;
+  --rk-frame-top: #82828a;
+  --rk-frame-bot: #6a6a72;
+  --rk-frame-border: #58585e;
+  --rk-rail-a: #74747a;
+  --rk-rail-b: #62626a;
+}
+/* ── Per-device shell finishes (override the cabinet default for one device) ── */
+.itops-page .rkd[data-shell="white"] {
+  --rkd-face-top: #f5f5f6;
+  --rkd-face-mid: #e9e9ec;
+  --rkd-face-bot: #dcdce0;
+  --rkd-ear-a: #d6d6da;
+  --rkd-ear-b: #ececef;
+  --rkd-line: #c2c2c8;
+  --rkd-well: #d2d2d7;
+  --rkd-slot: #cacace;
+  --rkd-hi: #b0b0b6;
+  --rkd-dim: #bcbcc2;
+  --rkd-cell-off: #d8d8dc;
+  --rkd-text: #1a1a1c;
+  --rkd-text-muted: #55555a;
+}
+.itops-page .rkd[data-shell="grey"] {
+  --rkd-face-top: #9a9aa0;
+  --rkd-face-mid: #86868c;
+  --rkd-face-bot: #76767c;
+  --rkd-ear-a: #6a6a70;
+  --rkd-ear-b: #8a8a90;
+  --rkd-line: #5e5e64;
+  --rkd-well: #6e6e74;
+  --rkd-slot: #646468;
+  --rkd-hi: #565258;
+  --rkd-dim: #6a6a70;
+  --rkd-cell-off: #7a7a80;
+  --rkd-text: #16161a;
+  --rkd-text-muted: #3a3a40;
 }
 .itops-page .rk-head {
   display: flex;
@@ -2146,8 +2228,8 @@
   position: relative;
   border-radius: 14px;
   padding: 12px;
-  background: linear-gradient(180deg, #1e1e21, #161618);
-  border: 0.5px solid #38383a;
+  background: linear-gradient(180deg, var(--rk-frame-top), var(--rk-frame-bot));
+  border: 0.5px solid var(--rk-frame-border);
   box-shadow:
     0 22px 50px -24px rgba(0, 0, 0, 0.8),
     inset 0 0.5px 0 rgba(255, 255, 255, 0.05);
@@ -2155,7 +2237,7 @@
 .itops-page .rk-rail {
   height: 7px;
   border-radius: 5px;
-  background: repeating-linear-gradient(90deg, #2a2a2d 0 7px, #202022 7px 11px);
+  background: repeating-linear-gradient(90deg, var(--rk-rail-a) 0 7px, var(--rk-rail-b) 7px 11px);
   box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.5);
 }
 .itops-page .rk-bay {
@@ -2391,7 +2473,9 @@
     inset 0 0.5px 0 rgba(255, 255, 255, 0.06),
     inset 0 0 0 0.5px rgba(0, 0, 0, 0.4),
     0 1px 2px rgba(0, 0, 0, 0.45);
-  color: var(--text);
+  /* Text tracks the shell, not the app scheme — the faceplate is always a
+     physical finish (dark metal = light text; white/grey metal = black text). */
+  color: var(--rkd-text);
   transition: transform 0.16s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.16s;
 }
 .itops-page .rk-item-row:hover .rkd {
@@ -2450,7 +2534,7 @@
   font-size: 11.5px;
   font-weight: 640;
   letter-spacing: -0.01em;
-  color: var(--text);
+  color: var(--rkd-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2458,7 +2542,7 @@
 .itops-page .rkd-sub {
   font-family: var(--app-mono-font-family, monospace);
   font-size: 9px;
-  color: var(--text-muted);
+  color: var(--rkd-text-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2886,7 +2970,7 @@
   font-size: 8px;
   font-weight: 600;
   letter-spacing: 0.06em;
-  color: var(--text-faint);
+  color: var(--rkd-text-muted);
   text-transform: uppercase;
   white-space: nowrap;
 }
@@ -2902,4 +2986,317 @@
   border-radius: 2px;
   background: repeating-linear-gradient(90deg, #26262a 0 6px, #1c1c1e 6px 12px);
   opacity: 0.55;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Fleets tree navigator + rack drill-down (docs/FLEET.md Rack View).
+   ────────────────────────────────────────────────────────────────────────── */
+.itops-page .hg.ft {
+  display: flex;
+}
+.itops-page .ft-tree {
+  position: relative;
+  flex: 0 0 auto;
+  border-right: 1px solid var(--hairline);
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.itops-page .ft-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px;
+  padding: 0 8px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  color: var(--text-faint);
+  flex: 0 0 auto;
+}
+.itops-page .ft-search input {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 12.5px;
+  outline: none;
+}
+.itops-page .ft-search-x {
+  display: inline-flex;
+  border: 0;
+  background: transparent;
+  color: var(--text-faint);
+  cursor: pointer;
+  padding: 2px;
+}
+.itops-page .ft-tree-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 2px 4px 10px;
+}
+.itops-page .ft-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding-right: 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--text);
+  font-size: 12.5px;
+  user-select: none;
+}
+.itops-page .ft-row:hover {
+  background: var(--hover);
+}
+.itops-page .ft-row.sel {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.itops-page .ft-caret {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border: 0;
+  background: transparent;
+  color: var(--text-faint);
+  cursor: pointer;
+}
+.itops-page .ft-caret.empty {
+  cursor: default;
+}
+.itops-page .ft-ic {
+  flex: 0 0 auto;
+  display: inline-flex;
+  color: var(--text-muted);
+}
+.itops-page .ft-row.sel .ft-ic {
+  color: var(--accent);
+}
+.itops-page .ft-label {
+  flex: 1 1 auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 520;
+}
+.itops-page .ft-count {
+  flex: 0 0 auto;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-faint);
+  background: var(--surface-muted);
+  border-radius: 9px;
+  padding: 1px 6px;
+}
+.itops-page .ft-resize {
+  position: absolute;
+  top: 0;
+  right: -3px;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 2;
+}
+.itops-page .ft-resize:hover {
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 40%, transparent));
+}
+
+/* Drill-down detail. */
+.itops-page .ft-drill {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 0;
+  overflow: auto;
+  padding: 2px;
+}
+.itops-page .ft-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.itops-page .ft-breadcrumb {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px;
+  min-width: 0;
+}
+.itops-page .ft-crumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--text-faint);
+}
+.itops-page .ft-crumb button {
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 560;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 5px;
+}
+.itops-page .ft-crumb button:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+.itops-page .ft-crumb button.cur {
+  color: var(--text);
+  font-weight: 660;
+  cursor: default;
+}
+
+/* Drill cards (regions / datacenters / server rooms). */
+.itops-page .ft-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+.itops-page .ft-card {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 14px;
+  border-radius: 13px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-control);
+  cursor: pointer;
+  text-align: left;
+  color: var(--text);
+  transition: transform 0.16s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.16s, box-shadow 0.16s;
+}
+.itops-page .ft-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow);
+}
+.itops-page .ft-card-ic {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.itops-page .ft-card-txt {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.itops-page .ft-card-title {
+  font-size: 13.5px;
+  font-weight: 620;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.itops-page .ft-card-meta {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.itops-page .ft-card > svg:last-child {
+  flex: 0 0 auto;
+  color: var(--text-faint);
+}
+.itops-page .ft-rack-detail {
+  display: flex;
+  justify-content: flex-start;
+}
+
+/* Single-rack detail: wider cabinet + placed-device summary list. */
+.itops-page .rk.rk-detailed {
+  width: auto;
+  display: grid;
+  grid-template-columns: 340px minmax(180px, 280px);
+  gap: 18px;
+  align-items: start;
+}
+.itops-page .rk-detailed .rk-head {
+  grid-column: 1 / -1;
+}
+.itops-page .rk-detail-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px;
+  border-radius: var(--r-card, 12px);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  align-self: stretch;
+}
+.itops-page .rk-detail-h {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  padding: 6px 8px 8px;
+}
+.itops-page .rk-detail-empty {
+  padding: 10px;
+  color: var(--text-faint);
+  font-size: 12px;
+}
+.itops-page .rk-detail-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+}
+.itops-page .rk-detail-row:hover {
+  background: var(--hover);
+}
+.itops-page .rk-detail-dot {
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+.itops-page .rk-detail-dot.online {
+  background: var(--green);
+  box-shadow: 0 0 5px var(--green);
+}
+.itops-page .rk-detail-dot.warning {
+  background: var(--amber);
+}
+.itops-page .rk-detail-dot.offline {
+  background: var(--red);
+}
+.itops-page .rk-detail-nm {
+  flex: 1 1 auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.itops-page .rk-detail-u {
+  flex: 0 0 auto;
+  font-family: var(--app-mono-font-family, monospace);
+  font-size: 10px;
+  color: var(--text-faint);
 }

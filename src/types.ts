@@ -165,7 +165,7 @@ export interface ResolvedHost {
 }
 
 // Fleet topology (docs/FLEET.md Phase B). A Rack belongs to one Fleet, grouped
-// by region/area, and holds Rack Items at U positions.
+// down region → datacenter → server room, and holds Rack Items at U positions.
 export type RackItemKind =
   | "connection"
   | "switch"
@@ -196,7 +196,13 @@ export interface RackItemMetadata {
   disks?: number | null;
   battery?: number | null;
   load?: number | null;
+  // Device faceplate shell colour; null/"black" = default metallic black.
+  shell?: RackShell | null;
 }
+
+// Skeuomorphic shell finish for a rack cabinet or a device faceplate. White and
+// grey shells render with black text; black (the default) uses light text.
+export type RackShell = "black" | "white" | "grey";
 
 export interface RackItem {
   id: string;
@@ -215,8 +221,13 @@ export interface Rack {
   id: string;
   fleetId: string;
   name: string;
+  // Topology: region → datacenter → server room. All optional (blank groups
+  // under "Unassigned"). Replaces the retired flat `area`.
   region: string;
-  area: string;
+  datacenter: string;
+  serverRoom: string;
+  // Cabinet shell colour; null/"black" = default.
+  shell?: RackShell | null;
   heightU: number;
   sortOrder: number;
   items: RackItem[];
@@ -226,7 +237,8 @@ export interface Rack {
 export interface RunScope {
   rackId?: string | null;
   region?: string | null;
-  area?: string | null;
+  datacenter?: string | null;
+  serverRoom?: string | null;
 }
 
 // One step of an interactive Playbook: text sent to the host's PTY shell, then

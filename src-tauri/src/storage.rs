@@ -338,7 +338,9 @@ CREATE TABLE IF NOT EXISTS itops_fleet_racks (
     fleet_id    TEXT NOT NULL REFERENCES itops_fleets(id) ON DELETE CASCADE,
     name        TEXT NOT NULL,
     region      TEXT NOT NULL DEFAULT '',
-    area        TEXT NOT NULL DEFAULT '',
+    datacenter  TEXT NOT NULL DEFAULT '',
+    server_room TEXT NOT NULL DEFAULT '',
+    shell       TEXT,
     height_u    INTEGER NOT NULL DEFAULT 42,
     sort_order  INTEGER NOT NULL,
     created_at  TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -1901,6 +1903,22 @@ impl Storage {
             "actions_json",
             "TEXT NOT NULL DEFAULT '[]'",
         )?;
+        // Rack View round 2: the flat region/area topology deepens to
+        // region → datacenter → server_room, and racks gain a shell colour.
+        // The legacy `area` column is retired in place (left untouched).
+        ensure_column(
+            &connection,
+            "itops_fleet_racks",
+            "datacenter",
+            "TEXT NOT NULL DEFAULT ''",
+        )?;
+        ensure_column(
+            &connection,
+            "itops_fleet_racks",
+            "server_room",
+            "TEXT NOT NULL DEFAULT ''",
+        )?;
+        ensure_column(&connection, "itops_fleet_racks", "shell", "TEXT")?;
         ensure_column(&connection, "connections", "rdp_options", "TEXT")?;
         ensure_column(&connection, "connections", "vnc_options", "TEXT")?;
         ensure_column(&connection, "connections", "ftp_options", "TEXT")?;

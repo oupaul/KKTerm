@@ -3,12 +3,22 @@
 
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Actions, Btn, DialogShell, Field, Sheet, Stepper, TextInput } from "../../app/ui/dialog";
+import {
+  Actions,
+  Btn,
+  DialogShell,
+  Field,
+  Select,
+  Sheet,
+  Stepper,
+  TextInput,
+} from "../../app/ui/dialog";
 import { useWorkspaceStore } from "../../store";
-import type { Rack } from "../../types";
+import type { Rack, RackShell } from "../../types";
 import { useItOpsStore } from "./state";
 
 const MAX_RACK_U = 100;
+const SHELL_OPTIONS: RackShell[] = ["black", "white", "grey"];
 
 export function RackDialog({
   fleetId,
@@ -27,7 +37,9 @@ export function RackDialog({
 
   const [name, setName] = useState(rack?.name ?? "");
   const [region, setRegion] = useState(rack?.region ?? "");
-  const [area, setArea] = useState(rack?.area ?? "");
+  const [datacenter, setDatacenter] = useState(rack?.datacenter ?? "");
+  const [serverRoom, setServerRoom] = useState(rack?.serverRoom ?? "");
+  const [shell, setShell] = useState<RackShell>(rack?.shell ?? "black");
   const [heightU, setHeightU] = useState(rack?.heightU ?? 42);
   const [busy, setBusy] = useState(false);
 
@@ -37,7 +49,14 @@ export function RackDialog({
   async function handleSave() {
     if (!canSave) return;
     setBusy(true);
-    const input = { name: trimmedName, region: region.trim(), area: area.trim(), heightU };
+    const input = {
+      name: trimmedName,
+      region: region.trim(),
+      datacenter: datacenter.trim(),
+      serverRoom: serverRoom.trim(),
+      shell,
+      heightU,
+    };
     try {
       if (isEdit) {
         await updateRack(fleetId, rack!.id, input);
@@ -84,11 +103,30 @@ export function RackDialog({
             onChange={(event) => setRegion(event.currentTarget.value)}
           />
         </Field>
-        <Field label={t("itops.racks.areaLabel")}>
-          <TextInput
-            value={area}
-            placeholder={t("itops.racks.areaPlaceholder")}
-            onChange={(event) => setArea(event.currentTarget.value)}
+        <div style={{ display: "flex", gap: 12 }}>
+          <Field label={t("itops.racks.datacenterLabel")}>
+            <TextInput
+              value={datacenter}
+              placeholder={t("itops.racks.datacenterPlaceholder")}
+              onChange={(event) => setDatacenter(event.currentTarget.value)}
+            />
+          </Field>
+          <Field label={t("itops.racks.serverRoomLabel")}>
+            <TextInput
+              value={serverRoom}
+              placeholder={t("itops.racks.serverRoomPlaceholder")}
+              onChange={(event) => setServerRoom(event.currentTarget.value)}
+            />
+          </Field>
+        </div>
+        <Field label={t("itops.racks.shellLabel")}>
+          <Select
+            value={shell}
+            onChange={(event) => setShell(event.currentTarget.value as RackShell)}
+            options={SHELL_OPTIONS.map((value) => ({
+              value,
+              label: t(`itops.racks.shell.${value}`),
+            }))}
           />
         </Field>
         <Field label={t("itops.racks.heightLabel")}>

@@ -3,7 +3,7 @@
 ## AI grep hints
 
 - Keys: `itops.*`, `settings.sectionItOps`, `watchdog.*`
-- Topics: IT Ops Module, Fleets, Rack View, racks, rack unit (U), region, area, virtual datacenter, click-to-connect, Batch Runs, Automations, fleet task, run history, Run Report, transport, SSH, WinRM, PsExec, trigger, condition, action, armed, disabled, Watchdog Status Bar
+- Topics: IT Ops Module, Fleets, Rack View, racks, rack unit (U), region, datacenter, server room, rack shell, tree navigator, drill-down, virtual datacenter, click-to-connect, Batch Runs, Automations, fleet task, run history, Run Report, transport, SSH, WinRM, PsExec, trigger, condition, action, armed, disabled, Watchdog Status Bar
 - Tutorial targets: `app.activityRailItOps`, `itops.tabs`, `itops.groups`, `itops.runs`, `itops.autos`, `itops.primaryAction`
 - Synonyms: "run on many hosts", "bulk command", "fleet", "host group" (renamed to Fleet), "host collection", "rack diagram", "rack elevation", "virtual datacenter", "data center map", "open from rack", "scheduled monitor", "saved watchdog", "automation rule", "batch script", "run report"
 
@@ -19,7 +19,7 @@ The Fleet detail view can edit or delete the Fleet, add Connections, change tran
 
 ### Rack View
 
-The Fleet detail has a `itops.fleets.viewMembers` / `itops.fleets.viewRacks` toggle. **Rack View** renders the Fleet as a virtual datacenter: **Racks** grouped by region and area, each drawn as a front elevation measured in rack units (U). Choose `itops.racks.newTitle` to add a Rack (`itops.racks.nameLabel`, `itops.racks.regionLabel`, `itops.racks.areaLabel`, `itops.racks.heightLabel`).
+The Fleet detail has a `itops.fleets.viewMembers` / `itops.fleets.viewRacks` toggle. **Rack View** is a Connection-tree-style navigator: the left panel nests **Fleet → Region → Datacenter → Server Room → Rack** as collapsible, searchable (`itops.racks.treeSearchPlaceholder`), resizable subfolders, and the main area drills down that hierarchy — clicking a Fleet lists its Regions, a Region its Datacenters, a Datacenter its Server Rooms, a Server Room its racks, and a Rack opens the single elevation with a placed-device list (`itops.racks.placedDevices`). A breadcrumb climbs back up. Blank levels group under `itops.racks.unassigned`. Choose `itops.racks.newTitle` to add a Rack (`itops.racks.nameLabel`, `itops.racks.regionLabel`, `itops.racks.datacenterLabel`, `itops.racks.serverRoomLabel`, `itops.racks.shellLabel`, `itops.racks.heightLabel`). A rack cabinet and each device can use a `itops.racks.shellLabel` finish — `itops.racks.shell.black`, `itops.racks.shell.white`, or `itops.racks.shell.grey`.
 
 Each Rack is drawn as an animated metal elevation: rail caps, a U-number gutter, and every device painted as its own faceplate that animates to match its kind and status (server fan spin and drive-bay LEDs, switch/router port blink, firewall throughput bars, disk-array grid, PDU load meter, UPS battery cells, KVM channels, patch-panel ports, blanking plate). The Rack header shows online / warning / offline tallies, and devices slide in on load.
 

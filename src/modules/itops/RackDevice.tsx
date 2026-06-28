@@ -10,7 +10,7 @@
 // physical-hardware palette, like the terminal surfaces); status/accent colour
 // reads the shared theme tokens.
 
-import type { RackItemKind, RackItemStatus } from "../../types";
+import type { RackItemKind, RackItemStatus, RackShell } from "../../types";
 
 export interface RackDeviceProps {
   kind: RackItemKind;
@@ -25,6 +25,8 @@ export interface RackDeviceProps {
   heightU: number;
   /** User accent override; falls back to the per-kind device colour. */
   accent?: string | null;
+  /** Faceplate shell finish; defaults to metallic black (light text). */
+  shell?: RackShell | null;
   /** Stable seed (the rack item id) for deterministic activity flicker. */
   seed: string;
 }
@@ -88,6 +90,7 @@ export function RackDevice({
   battery,
   load,
   accent,
+  shell,
   seed,
 }: RackDeviceProps) {
   const rand = makeRng(hash(`${seed}|${kind}`));
@@ -164,7 +167,11 @@ export function RackDevice({
   const showMeta = !isBlank;
 
   return (
-    <div className="rkd" style={{ ["--rkd-accent" as string]: devAccent }}>
+    <div
+      className="rkd"
+      data-shell={shell && shell !== "black" ? shell : undefined}
+      style={{ ["--rkd-accent" as string]: devAccent }}
+    >
       {/* left rack ear */}
       <div className="rkd-ear">
         <span className="rkd-ear-bolt" />

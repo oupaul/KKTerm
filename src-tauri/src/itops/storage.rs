@@ -313,7 +313,8 @@ fn rack_matches_scope(rack: &super::types::Rack, scope: &RunScope) -> bool {
     };
     matches(&scope.rack_id, &rack.id)
         && matches(&scope.region, &rack.region)
-        && matches(&scope.area, &rack.area)
+        && matches(&scope.datacenter, &rack.datacenter)
+        && matches(&scope.server_room, &rack.server_room)
 }
 
 #[cfg(test)]
@@ -321,13 +322,15 @@ mod tests {
     use super::*;
     use crate::itops::types::Rack;
 
-    fn test_rack(region: &str, area: &str) -> Rack {
+    fn test_rack(region: &str, datacenter: &str, server_room: &str) -> Rack {
         Rack {
             id: "r1".into(),
             fleet_id: "f1".into(),
             name: "A12".into(),
             region: region.into(),
-            area: area.into(),
+            datacenter: datacenter.into(),
+            server_room: server_room.into(),
+            shell: None,
             height_u: 42,
             sort_order: 0,
             items: Vec::new(),
@@ -336,7 +339,7 @@ mod tests {
 
     #[test]
     fn scope_matching_treats_empty_fields_as_wildcards() {
-        let rack = test_rack("us-east", "Row B");
+        let rack = test_rack("us-east", "dc1", "Room B");
         // Empty scope matches anything.
         assert!(rack_matches_scope(&rack, &RunScope::default()));
         // Exact rack id matches.
@@ -349,16 +352,24 @@ mod tests {
             &rack,
             &RunScope { rack_id: Some("other".into()), ..Default::default() }
         ));
-        // Region matches; mismatched area within it fails the AND.
+        // Region matches; mismatched server room within it fails the AND.
         assert!(rack_matches_scope(
             &rack,
             &RunScope { region: Some("us-east".into()), ..Default::default() }
+        ));
+        assert!(rack_matches_scope(
+            &rack,
+            &RunScope {
+                region: Some("us-east".into()),
+                datacenter: Some("dc1".into()),
+                ..Default::default()
+            }
         ));
         assert!(!rack_matches_scope(
             &rack,
             &RunScope {
                 region: Some("us-east".into()),
-                area: Some("Row C".into()),
+                server_room: Some("Room C".into()),
                 ..Default::default()
             }
         ));

@@ -37,6 +37,7 @@ export function RackElevation({
   onRunRack,
   onMoveItem,
   isGhost,
+  detailed,
 }: {
   rack: Rack;
   /** Resolve a placed Connection's host/ip for the faceplate sub-line. */
@@ -50,6 +51,8 @@ export function RackElevation({
   /** Drag-drop a device onto a U slot (move/restack, possibly across racks). */
   onMoveItem?: (itemId: string, targetRackId: string, startU: number) => void;
   isGhost?: (item: RackItem) => boolean;
+  /** Single-rack detail view: wider cabinet + a placed-device summary list. */
+  detailed?: boolean;
 }) {
   const { t } = useTranslation();
   const editable = !!onEditItem;
@@ -74,8 +77,14 @@ export function RackElevation({
       .map((item, index) => [item.id, index] as const),
   );
 
+  const cabShell = rack.shell && rack.shell !== "black" ? rack.shell : undefined;
+  // Placed devices, top-of-rack first, for the detail summary list.
+  const placed = [...rack.items].sort(
+    (a, b) => b.startU + b.heightU - (a.startU + a.heightU),
+  );
+
   return (
-    <div className="rk">
+    <div className={`rk${detailed ? " rk-detailed" : ""}`} data-shell={cabShell}>
       <div className="rk-head">
         <div className="rk-head-txt">
           <span className="rk-name">{rack.name}</span>
@@ -212,6 +221,7 @@ export function RackElevation({
                   load={item.metadata?.load ?? null}
                   heightU={item.heightU}
                   accent={item.metadata?.accent ?? null}
+                  shell={item.metadata?.shell ?? null}
                   seed={item.id}
                 />
               );
@@ -269,6 +279,35 @@ export function RackElevation({
         </div>
         <div className="rk-rail" />
       </div>
+      {detailed ? (
+        <div className="rk-detail-list">
+          <div className="rk-detail-h">{t("itops.racks.placedDevices")}</div>
+          {placed.length === 0 ? (
+            <div className="rk-detail-empty">{t("itops.racks.empty")}</div>
+          ) : (
+            placed.map((item) => {
+              const status = itemStatus(item);
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  className="rk-detail-row"
+                  onClick={() => onEditItem?.(item)}
+                >
+                  <span className={`rk-detail-dot ${status}`} />
+                  <span className="rk-detail-nm">
+                    {item.label || t(`itops.racks.kind.${item.kind}`)}
+                  </span>
+                  <span className="rk-detail-u">
+                    {`U${item.startU}`}
+                    {item.heightU > 1 ? `–${item.startU + item.heightU - 1}` : ""}
+                  </span>
+                </button>
+              );
+            })
+          )}
+        </div>
+      ) : null}
     </div>
   );
 }

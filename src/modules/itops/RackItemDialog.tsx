@@ -23,9 +23,12 @@ import type {
   RackItemKind,
   RackItemMetadata,
   RackItemStatus,
+  RackShell,
   ResolvedHost,
 } from "../../types";
 import { useItOpsStore } from "./state";
+
+const SHELL_OPTIONS: RackShell[] = ["black", "white", "grey"];
 
 const PASSIVE_KINDS: RackItemKind[] = [
   "server",
@@ -89,11 +92,13 @@ export function RackItemDialog({
   const [disks, setDisks] = useState(item?.metadata?.disks ?? 4);
   const [battery, setBattery] = useState(item?.metadata?.battery ?? 90);
   const [load, setLoad] = useState(item?.metadata?.load ?? 60);
+  const [shell, setShell] = useState<RackShell>(item?.metadata?.shell ?? "black");
   const [busy, setBusy] = useState(false);
 
   const metadata: RackItemMetadata = {
     accent: accent === "none" ? null : accent,
     status,
+    shell: shell === "black" ? null : shell,
     ...(showsPorts(kind) ? { ports } : {}),
     ...(showsDisks(kind) ? { disks } : {}),
     ...(kind === "ups" ? { battery } : {}),
@@ -209,16 +214,28 @@ export function RackItemDialog({
           />
         </Field>
 
-        <Field label={t("itops.racks.statusLabel")}>
-          <Select
-            value={status}
-            onChange={(event) => setStatus(event.currentTarget.value as RackItemStatus)}
-            options={STATUS_OPTIONS.map((value) => ({
-              value,
-              label: t(`itops.racks.status.${value}`),
-            }))}
-          />
-        </Field>
+        <div style={{ display: "flex", gap: 12 }}>
+          <Field label={t("itops.racks.statusLabel")}>
+            <Select
+              value={status}
+              onChange={(event) => setStatus(event.currentTarget.value as RackItemStatus)}
+              options={STATUS_OPTIONS.map((value) => ({
+                value,
+                label: t(`itops.racks.status.${value}`),
+              }))}
+            />
+          </Field>
+          <Field label={t("itops.racks.shellLabel")}>
+            <Select
+              value={shell}
+              onChange={(event) => setShell(event.currentTarget.value as RackShell)}
+              options={SHELL_OPTIONS.map((value) => ({
+                value,
+                label: t(`itops.racks.shell.${value}`),
+              }))}
+            />
+          </Field>
+        </div>
 
         {showsPorts(kind) || showsDisks(kind) || kind === "ups" || kind === "pdu" ? (
           <div style={{ display: "flex", gap: 12 }}>

@@ -297,13 +297,25 @@ pub fn itops_create_rack(
     fleet_id: String,
     name: String,
     region: String,
-    area: String,
+    datacenter: String,
+    server_room: String,
+    shell: Option<String>,
     height_u: u32,
 ) -> Result<Rack, String> {
     let id = new_itops_id("rack");
     storage(&app).with_connection_infallible(|conn| {
-        topo::create_rack(conn, &id, &fleet_id, &name, &region, &area, height_u)
-            .map_err(|error| error.to_string())
+        topo::create_rack(
+            conn,
+            &id,
+            &fleet_id,
+            &name,
+            &region,
+            &datacenter,
+            &server_room,
+            shell.as_deref(),
+            height_u,
+        )
+        .map_err(|error| error.to_string())
     })
 }
 
@@ -313,12 +325,23 @@ pub fn itops_update_rack(
     id: String,
     name: String,
     region: String,
-    area: String,
+    datacenter: String,
+    server_room: String,
+    shell: Option<String>,
     height_u: u32,
 ) -> Result<Rack, String> {
     storage(&app).with_connection_infallible(|conn| {
-        topo::update_rack(conn, &id, &name, &region, &area, height_u)
-            .map_err(|error| error.to_string())
+        topo::update_rack(
+            conn,
+            &id,
+            &name,
+            &region,
+            &datacenter,
+            &server_room,
+            shell.as_deref(),
+            height_u,
+        )
+        .map_err(|error| error.to_string())
     })
 }
 
