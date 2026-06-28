@@ -2898,6 +2898,7 @@
     "searchDiff": "ค้นหาใน diff…",
     "previousDifference": "จุดต่างก่อนหน้า",
     "nextDifference": "จุดต่างถัดไป",
+    "wordWrap": "ตัดบรรทัด",
     "diffOriginal": "ต้นฉบับ",
     "diffModified": "ที่แก้ไข",
     "diffDisplayMode": "โหมดการแสดงผล",

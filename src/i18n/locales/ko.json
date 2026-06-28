@@ -2898,6 +2898,7 @@
     "searchDiff": "diff 검색…",
     "previousDifference": "이전 차이점",
     "nextDifference": "다음 차이점",
+    "wordWrap": "자동 줄 바꿈",
     "diffOriginal": "원본",
     "diffModified": "수정됨",
     "diffDisplayMode": "표시 모드",

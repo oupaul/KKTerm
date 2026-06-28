@@ -2898,6 +2898,7 @@
     "searchDiff": "差分を検索…",
     "previousDifference": "前の差分",
     "nextDifference": "次の差分",
+    "wordWrap": "折り返し",
     "diffOriginal": "オリジナル",
     "diffModified": "変更後",
     "diffDisplayMode": "表示モード",

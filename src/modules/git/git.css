@@ -92,6 +92,10 @@
   background: transparent; border: 0; color: var(--git-text-2); cursor: pointer;
 }
 .git-icon-btn:hover { background: var(--git-hover); color: var(--git-text); }
+.git-icon-btn.is-active {
+  background: color-mix(in srgb, var(--git-accent) 18%, transparent);
+  color: var(--git-accent);
+}
 
 /* ── toolbar ────────────────────────────────────────────────────────────── */
 .git-toolbar {
@@ -417,11 +421,17 @@
   background: rgba(0, 0, 0, 0.34);
 }
 .git-adv {
-  width: min(1320px, 92vw);
-  height: min(760px, 86vh);
+  width: min(1848px, 96vw);
+  height: min(1064px, 92vh);
+  min-width: 640px;
+  min-height: 420px;
+  max-width: 96vw;
+  max-height: 92vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  /* User-resizable from the bottom-right corner. */
+  resize: both;
   border-radius: 10px;
   border: 1px solid var(--git-border);
   background: var(--git-bg);
@@ -594,6 +604,19 @@
 }
 .git-adv-cell.search-hit .txt {
   background: color-mix(in srgb, var(--git-amber) 26%, transparent);
+}
+/* Word-wrap mode: let long lines wrap instead of forcing horizontal scroll. */
+.diff-sbs.wrap .git-adv-content {
+  min-width: 0;
+}
+.diff-sbs.wrap .git-adv-row {
+  min-width: 0;
+}
+.diff-sbs.wrap .git-adv-cell .txt {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  overflow: visible;
+  text-overflow: clip;
 }
 .git-adv-mode {
   display: inline-flex;

@@ -6,7 +6,7 @@
 // caller's responsibility. Reuses the `git-adv-*` classes from git.css.
 import { type PointerEvent as ReactPointerEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronDown, ChevronUp, Search } from "lucide-react";
+import { ChevronDown, ChevronUp, Search, WrapText } from "lucide-react";
 import type { GitDiffLine } from "../git/gitTypes";
 
 type DiffSideKind = "ctx" | "add" | "del" | "blank";
@@ -149,6 +149,7 @@ export function DiffSideBySide({
   const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const [mode, setMode] = useState<DiffViewMode>("all");
+  const [wrap, setWrap] = useState(false);
   const [activeChange, setActiveChange] = useState(0);
   const [viewport, setViewport] = useState({ top: 0, height: 0, fill: 1, scrollable: false });
   const pendingScrollRow = useRef<number | null>(null);
@@ -312,7 +313,7 @@ export function DiffSideBySide({
   };
 
   return (
-    <div className="diff-sbs">
+    <div className={`diff-sbs${wrap ? " wrap" : ""}`}>
       <div className="diff-sbs-toolbar">
         <div className="git-adv-search">
           <Search size={14} />
@@ -336,6 +337,16 @@ export function DiffSideBySide({
           ))}
         </div>
         <div className="diff-sbs-toolbar-spacer" />
+        <button
+          type="button"
+          className={`git-icon-btn${wrap ? " is-active" : ""}`}
+          onClick={() => setWrap((value) => !value)}
+          aria-label={t("git.wordWrap")}
+          aria-pressed={wrap}
+          title={t("git.wordWrap")}
+        >
+          <WrapText size={16} />
+        </button>
         <button type="button" className="git-icon-btn" onClick={() => goChange(-1)} aria-label={t("git.previousDifference")}>
           <ChevronUp size={16} />
         </button>

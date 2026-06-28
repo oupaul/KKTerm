@@ -2898,6 +2898,7 @@
     "searchDiff": "搜尋差異…",
     "previousDifference": "上一個差異",
     "nextDifference": "下一個差異",
+    "wordWrap": "自動換行",
     "diffOriginal": "原始",
     "diffModified": "已修改",
     "diffDisplayMode": "顯示模式",

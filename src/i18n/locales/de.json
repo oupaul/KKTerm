@@ -2898,6 +2898,7 @@
     "searchDiff": "Diff durchsuchen…",
     "previousDifference": "Vorherige Differenz",
     "nextDifference": "Nächste Differenz",
+    "wordWrap": "Zeilenumbruch",
     "diffOriginal": "Original",
     "diffModified": "Geändert",
     "diffDisplayMode": "Anzeigemodus",
