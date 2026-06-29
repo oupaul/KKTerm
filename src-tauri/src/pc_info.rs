@@ -240,6 +240,7 @@ $out=[ordered]@{
  board=Get-CimInstance Win32_BaseBoard | Select-Object Manufacturer,Product,Version,SerialNumber;
  bios=Get-CimInstance Win32_BIOS | Select-Object Manufacturer,SMBIOSBIOSVersion,@{n='ReleaseEpoch';e={E $_.ReleaseDate}};
  gpu=@(Get-CimInstance Win32_VideoController | Select-Object Name,AdapterRAM,DriverVersion,VideoProcessor,CurrentHorizontalResolution,CurrentVerticalResolution,CurrentRefreshRate);
+ gpumem=@(Get-ChildItem 'HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}' -ErrorAction SilentlyContinue | ForEach-Object { $p=Get-ItemProperty $_.PSPath -ErrorAction SilentlyContinue; if($p.'HardwareInformation.qwMemorySize'){[ordered]@{name=$p.DriverDesc;bytes=[int64]$p.'HardwareInformation.qwMemorySize'}} });
  disk=@(Get-CimInstance Win32_DiskDrive | Select-Object Model,Size,InterfaceType,MediaType,SerialNumber);
  vol=@(Get-CimInstance Win32_LogicalDisk -Filter 'DriveType=3' | Select-Object DeviceID,FileSystem,Size,FreeSpace,VolumeName);
  audio=@(Get-CimInstance Win32_SoundDevice | Select-Object Name,Manufacturer);
@@ -357,6 +358,15 @@ $out | ConvertTo-Json -Depth 5 -Compress"#;
             bios_date: j_u64(&bios, "ReleaseEpoch").map(format_epoch_date),
         };
 
+        // True VRAM comes from the display-adapter class registry key
+        // (`HardwareInformation.qwMemorySize`, a 64-bit value). `AdapterRAM` from
+        // Win32_VideoController is a signed 32-bit field that saturates at ~4 GB,
+        // so a 16 GB card would otherwise report 4 GB. Match by adapter name.
+        let vram_by_name: Vec<(String, u64)> = j_array(&root, "gpumem")
+            .iter()
+            .filter_map(|m| Some((j_str(m, "name")?, j_u64(m, "bytes")?)))
+            .collect();
+
         for g in j_array(&root, "gpu") {
             let width = j_u64(&g, "CurrentHorizontalResolution");
             let height = j_u64(&g, "CurrentVerticalResolution");
@@ -368,11 +378,20 @@ $out | ConvertTo-Json -Depth 5 -Compress"#;
                 }),
                 _ => None,
             };
-            // AdapterRAM is a 32-bit field and is unreliable / capped for modern
-            // GPUs; keep it only when it reports a sane positive value.
-            let vram = j_u64(&g, "AdapterRAM").filter(|&bytes| bytes > 0);
+            let name = clean(j_str(&g, "Name"));
+            // Prefer the accurate 64-bit registry value; fall back to the capped
+            // AdapterRAM only when no registry match is found.
+            let vram = name
+                .as_ref()
+                .and_then(|n| {
+                    vram_by_name
+                        .iter()
+                        .find(|(reg_name, _)| reg_name == n)
+                        .map(|(_, bytes)| *bytes)
+                })
+                .or_else(|| j_u64(&g, "AdapterRAM").filter(|&bytes| bytes > 0));
             snapshot.graphics.push(GpuInfo {
-                name: clean(j_str(&g, "Name")),
+                name: name.clone(),
                 vendor: clean(j_str(&g, "VideoProcessor")),
                 vram_bytes: vram,
                 driver_version: clean(j_str(&g, "DriverVersion")),
