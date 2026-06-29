@@ -3025,7 +3025,8 @@
     "folderCountDifferent": "{{count}} berbeda",
     "folderCountLeftOnly": "{{count}} hanya kiri",
     "folderCountRightOnly": "{{count}} hanya kanan",
-    "folderCountSame": "{{count}} sama"
+    "folderCountSame": "{{count}} sama",
+    "folderTruncated": "Pohon ini sangat besar — menampilkan {{count}} entri pertama."
   },
   "git": {
     "title": "Git — {{repo}}",

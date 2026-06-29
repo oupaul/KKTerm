@@ -3025,7 +3025,8 @@
     "folderCountDifferent": "{{count}} 个不同",
     "folderCountLeftOnly": "{{count}} 个仅左侧",
     "folderCountRightOnly": "{{count}} 个仅右侧",
-    "folderCountSame": "{{count}} 个相同"
+    "folderCountSame": "{{count}} 个相同",
+    "folderTruncated": "此目录树非常大 — 仅显示前 {{count}} 个条目。"
   },
   "git": {
     "title": "Git — {{repo}}",

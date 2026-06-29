@@ -3025,7 +3025,8 @@
     "folderCountDifferent": "{{count}} 件が相違",
     "folderCountLeftOnly": "{{count}} 件が左のみ",
     "folderCountRightOnly": "{{count}} 件が右のみ",
-    "folderCountSame": "{{count}} 件が同一"
+    "folderCountSame": "{{count}} 件が同一",
+    "folderTruncated": "このツリーは非常に大きいため、最初の {{count}} 件を表示しています。"
   },
   "git": {
     "title": "Git — {{repo}}",

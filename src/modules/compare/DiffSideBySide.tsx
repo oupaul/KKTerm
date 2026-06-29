@@ -22,6 +22,133 @@ interface SideBySideRow {
   oldKind: DiffSideKind;
   newKind: DiffSideKind;
   hunkText?: string;
+  /** Intra-line segments for a modification pair; absent for ctx/pure add/del. */
+  oldSegs?: TextSeg[];
+  newSegs?: TextSeg[];
+}
+
+// A run of characters within a changed line, flagged as same or differing,
+// used to paint Beyond Compare-style per-character highlights.
+interface TextSeg {
+  text: string;
+  changed: boolean;
+}
+
+// Below this character count on either side we skip the O(n*m) intra-line LCS
+// and fall back to a whole-middle highlight, keeping very long lines cheap.
+const INTRALINE_LCS_MAX = 2500;
+
+function appendSeg(segs: TextSeg[], text: string, changed: boolean) {
+  if (!text) {
+    return;
+  }
+  const last = segs[segs.length - 1];
+  if (last && last.changed === changed) {
+    last.text += text;
+  } else {
+    segs.push({ text, changed });
+  }
+}
+
+// Character-level diff of a left/right line pair. Trims the shared prefix and
+// suffix (cheap, and what makes most edits show as a tight changed block), then
+// runs an LCS over the differing middle so multiple same/changed blocks survive
+// — matching the way Beyond Compare paints unchanged runs black and changed
+// runs red within a single line.
+function charSegments(a: string, b: string): { a: TextSeg[]; b: TextSeg[] } {
+  const aSegs: TextSeg[] = [];
+  const bSegs: TextSeg[] = [];
+
+  let start = 0;
+  const minLen = Math.min(a.length, b.length);
+  while (start < minLen && a[start] === b[start]) {
+    start += 1;
+  }
+  let aEnd = a.length;
+  let bEnd = b.length;
+  while (aEnd > start && bEnd > start && a[aEnd - 1] === b[bEnd - 1]) {
+    aEnd -= 1;
+    bEnd -= 1;
+  }
+
+  const prefix = a.slice(0, start);
+  appendSeg(aSegs, prefix, false);
+  appendSeg(bSegs, prefix, false);
+
+  const aMid = a.slice(start, aEnd);
+  const bMid = b.slice(start, bEnd);
+  if (aMid.length === 0 || bMid.length === 0 || aMid.length > INTRALINE_LCS_MAX || bMid.length > INTRALINE_LCS_MAX) {
+    appendSeg(aSegs, aMid, aMid.length > 0);
+    appendSeg(bSegs, bMid, bMid.length > 0);
+  } else {
+    for (const op of lcsOps(aMid, bMid)) {
+      if (op.type === "eq") {
+        appendSeg(aSegs, op.text, false);
+        appendSeg(bSegs, op.text, false);
+      } else if (op.type === "del") {
+        appendSeg(aSegs, op.text, true);
+      } else {
+        appendSeg(bSegs, op.text, true);
+      }
+    }
+  }
+
+  const suffix = a.slice(aEnd);
+  appendSeg(aSegs, suffix, false);
+  appendSeg(bSegs, b.slice(bEnd), false);
+  return { a: aSegs, b: bSegs };
+}
+
+type LcsOp = { type: "eq" | "del" | "ins"; text: string };
+
+// Longest-common-subsequence backtrack over two char strings, returned as
+// merged eq/del/ins runs.
+function lcsOps(a: string, b: string): LcsOp[] {
+  const n = a.length;
+  const m = b.length;
+  const width = m + 1;
+  const dp = new Uint32Array((n + 1) * width);
+  for (let i = n - 1; i >= 0; i -= 1) {
+    for (let j = m - 1; j >= 0; j -= 1) {
+      dp[i * width + j] =
+        a[i] === b[j]
+          ? dp[(i + 1) * width + (j + 1)] + 1
+          : Math.max(dp[(i + 1) * width + j], dp[i * width + (j + 1)]);
+    }
+  }
+  const ops: LcsOp[] = [];
+  const push = (type: LcsOp["type"], ch: string) => {
+    const last = ops[ops.length - 1];
+    if (last && last.type === type) {
+      last.text += ch;
+    } else {
+      ops.push({ type, text: ch });
+    }
+  };
+  let i = 0;
+  let j = 0;
+  while (i < n && j < m) {
+    if (a[i] === b[j]) {
+      push("eq", a[i]);
+      i += 1;
+      j += 1;
+    } else if (dp[(i + 1) * width + j] >= dp[i * width + (j + 1)]) {
+      push("del", a[i]);
+      i += 1;
+    } else {
+      push("ins", b[j]);
+      j += 1;
+    }
+  }
+  while (i < n) {
+    push("del", a[i]);
+    i += 1;
+  }
+  while (j < m) {
+    push("ins", b[j]);
+    j += 1;
+  }
+  return ops;
 }
 
 interface ChangeMarker {
@@ -81,15 +208,22 @@ function buildRows(lines: GitDiffLine[]): SideBySideRow[] {
     for (let offset = 0; offset < count; offset += 1) {
       const oldLine = deleted[offset] ?? null;
       const newLine = added[offset] ?? null;
+      const oldText = oldLine?.c ?? "";
+      const newText = newLine?.c ?? "";
+      // Only a genuine modification pair (both a deleted and an added line)
+      // gets per-character segments; pure add/del lines stay fully highlighted.
+      const segs = oldLine && newLine ? charSegments(oldText, newText) : null;
       rows.push({
         id: `d${index}-${offset}`,
         kind: "line",
         oldNo: oldLine?.o ?? null,
         newNo: newLine?.n ?? null,
-        oldText: oldLine?.c ?? "",
-        newText: newLine?.c ?? "",
+        oldText,
+        newText,
         oldKind: oldLine ? "del" : "blank",
         newKind: newLine ? "add" : "blank",
+        oldSegs: segs?.a,
+        newSegs: segs?.b,
       });
     }
   }
@@ -106,6 +240,23 @@ function includesQuery(row: SideBySideRow, query: string) {
 
 function cellClass(kind: DiffSideKind, activeSearch: boolean) {
   return `git-adv-cell ${kind}${activeSearch ? " search-hit" : ""}`;
+}
+
+// Render a cell's text, painting differing character runs when intra-line
+// segments are available; otherwise just the plain text.
+function renderCellText(text: string, segs?: TextSeg[]) {
+  if (!segs) {
+    return text;
+  }
+  return segs.map((seg, index) =>
+    seg.changed ? (
+      <span key={index} className="seg-diff">
+        {seg.text}
+      </span>
+    ) : (
+      <span key={index}>{seg.text}</span>
+    ),
+  );
 }
 
 function isChangedRow(row: SideBySideRow) {
@@ -405,11 +556,11 @@ export function DiffSideBySide({
                   <div key={row.id} className={`git-adv-row${activeRow === i ? " active" : ""}`} data-row-index={i}>
                     <div className={cellClass(row.oldKind, searchHit)}>
                       <span className="no">{row.oldNo ?? ""}</span>
-                      <span className="txt">{row.oldText}</span>
+                      <span className="txt">{renderCellText(row.oldText, row.oldSegs)}</span>
                     </div>
                     <div className={cellClass(row.newKind, searchHit)}>
                       <span className="no">{row.newNo ?? ""}</span>
-                      <span className="txt">{row.newText}</span>
+                      <span className="txt">{renderCellText(row.newText, row.newSegs)}</span>
                     </div>
                   </div>
                 );

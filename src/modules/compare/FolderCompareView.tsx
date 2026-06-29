@@ -5,7 +5,7 @@
 // side, refresh, and open a differing file pair in the File Compare overlay.
 // Mounted as an app-window overlay portalled to document.body, reusing the
 // `git-adv-*` frame for chrome and color variables.
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ArrowLeft,
@@ -24,6 +24,12 @@ import { formatFileSize, formatRemoteTime, joinLocalPath } from "../workspace/co
 import type { CompareView } from "./compareTypes";
 
 type FolderCompareFilter = "all" | "diff" | "same";
+
+// Fixed row height (must match `.folder-cmp-row` cell height in compare.css) so
+// the virtualized list can map scroll offset to row indices.
+const ROW_HEIGHT = 24;
+// Extra rows above/below the viewport to keep scrolling smooth.
+const ROW_OVERSCAN = 12;
 
 // Build a full OS path for an entry from a root + its forward-slash relative
 // path, letting joinLocalPath pick the right separator for the platform.
@@ -54,6 +60,12 @@ export function FolderCompareView({ view, onClose }: { view: CompareView; onClos
   const [selected, setSelected] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<{ row: FolderCompareRow; side: "left" | "right" } | null>(null);
+  // Virtualization: only the rows in (and near) the viewport are rendered, so a
+  // huge tree doesn't build tens of thousands of DOM nodes — the cause of the
+  // launch freeze on macOS (WKWebView chokes on very large lists).
+  const bodyRef = useRef<HTMLDivElement | null>(null);
+  const [scrollTop, setScrollTop] = useState(0);
+  const [viewportHeight, setViewportHeight] = useState(0);
 
   const leftRoot = result?.leftRoot ?? view.left.localPath;
   const rightRoot = result?.rightRoot ?? view.right.localPath;
@@ -104,6 +116,32 @@ export function FolderCompareView({ view, onClose }: { view: CompareView; onClos
     }
     return out;
   }, [result, collapsed, filter]);
+
+  // Track the scroll viewport so the window of rendered rows stays in sync; a
+  // ResizeObserver covers the resizable overlay changing height.
+  useEffect(() => {
+    const node = bodyRef.current;
+    if (!node) {
+      return;
+    }
+    setViewportHeight(node.clientHeight);
+    if (typeof ResizeObserver === "undefined") {
+      return;
+    }
+    const observer = new ResizeObserver(() => setViewportHeight(node.clientHeight));
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [loading, error]);
+
+  const total = visibleRows.length;
+  const startIndex = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - ROW_OVERSCAN);
+  const endIndex = Math.min(
+    total,
+    Math.ceil((scrollTop + (viewportHeight || ROW_HEIGHT * 40)) / ROW_HEIGHT) + ROW_OVERSCAN,
+  );
+  const windowRows = visibleRows.slice(startIndex, endIndex);
+  const topPad = startIndex * ROW_HEIGHT;
+  const bottomPad = Math.max(0, (total - endIndex) * ROW_HEIGHT);
 
   const toggleCollapse = (relativePath: string) => {
     setCollapsed((prev) => {
@@ -282,6 +320,12 @@ export function FolderCompareView({ view, onClose }: { view: CompareView; onClos
           <div>{view.right.label}</div>
         </div>
 
+        {result?.truncated ? (
+          <div className="folder-cmp-truncated" role="status">
+            {t("compare.folderTruncated", { count: total })}
+          </div>
+        ) : null}
+
         {confirmDelete ? (
           <div className="folder-cmp-confirm" role="alertdialog" aria-label={t("compare.folderDelete")}>
             <span>
@@ -309,7 +353,11 @@ export function FolderCompareView({ view, onClose }: { view: CompareView; onClos
           </div>
         ) : null}
 
-        <div className="folder-cmp-body">
+        <div
+          className="folder-cmp-body"
+          ref={bodyRef}
+          onScroll={(event) => setScrollTop(event.currentTarget.scrollTop)}
+        >
           {error ? (
             <div className="compare-status compare-status-error">{error}</div>
           ) : loading ? (
@@ -317,7 +365,9 @@ export function FolderCompareView({ view, onClose }: { view: CompareView; onClos
           ) : visibleRows.length === 0 ? (
             <div className="compare-status">{t("compare.folderNoEntries")}</div>
           ) : (
-            visibleRows.map((row) => {
+            <>
+              {topPad > 0 ? <div style={{ height: topPad }} aria-hidden /> : null}
+              {windowRows.map((row) => {
               const isCollapsed = row.isDir && collapsed.has(row.relativePath);
               const Chevron = isCollapsed ? ChevronRight : ChevronDown;
               const Glyph = row.isDir ? FolderIcon : FileIcon;
@@ -403,7 +453,9 @@ export function FolderCompareView({ view, onClose }: { view: CompareView; onClos
                   </div>
                 </div>
               );
-            })
+              })}
+              {bottomPad > 0 ? <div style={{ height: bottomPad }} aria-hidden /> : null}
+            </>
           )}
         </div>
       </div>

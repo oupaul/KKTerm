@@ -3025,7 +3025,8 @@
     "folderCountDifferent": "{{count}} 個不同",
     "folderCountLeftOnly": "{{count}} 個僅左側",
     "folderCountRightOnly": "{{count}} 個僅右側",
-    "folderCountSame": "{{count}} 個相同"
+    "folderCountSame": "{{count}} 個相同",
+    "folderTruncated": "此目錄樹非常大 — 僅顯示前 {{count}} 個項目。"
   },
   "git": {
     "title": "Git — {{repo}}",

@@ -322,6 +322,8 @@ export interface FolderCompareResult {
   rightRoot: string;
   rows: FolderCompareRow[];
   summary: FolderCompareSummary;
+  /** True when the scan hit the entry cap and the tree shown is partial. */
+  truncated: boolean;
 }
 
 export interface LocalPlace {

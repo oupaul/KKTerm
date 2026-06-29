@@ -3025,7 +3025,8 @@
     "folderCountDifferent": "{{count}} khác biệt",
     "folderCountLeftOnly": "{{count}} chỉ bên trái",
     "folderCountRightOnly": "{{count}} chỉ bên phải",
-    "folderCountSame": "{{count}} giống nhau"
+    "folderCountSame": "{{count}} giống nhau",
+    "folderTruncated": "Cây này rất lớn — hiển thị {{count}} mục đầu tiên."
   },
   "git": {
     "title": "Git — {{repo}}",
