@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ComponentType } from "react";
+import { dynamicBackgroundDevicePixelRatio } from "./dynamicBackgroundCanvas";
 import { FujiBg } from "./fujiBackground";
 import {
   DashboardAnimationGate,
@@ -41,7 +42,7 @@ function useCanvasAnim<State extends CanvasAnimLifecycle>(draw: CanvasDraw<State
     let height = 0;
     let elapsed = 0;
     let lastNow = 0;
-    const dpr = Math.max(1, window.devicePixelRatio || 1);
+    const dpr = dynamicBackgroundDevicePixelRatio(window.devicePixelRatio);
     const state = {} as State;
 
     function resize() {
@@ -438,11 +439,93 @@ interface RainyWindowState extends CanvasAnimLifecycle {
   reveal?: HTMLCanvasElement;
   revealCtx?: CanvasRenderingContext2D;
   mist?: RainyWindowMist[];
-  studs?: RainyWindowStud[];
+  stationaryDrops?: HTMLCanvasElement;
+  mistGlowSprite?: HTMLCanvasElement;
+  mistHighlightSprite?: HTMLCanvasElement;
   slides?: RainyWindowSlide[];
   last?: number;
   canvasWidth?: number;
   canvasHeight?: number;
+}
+
+function drawRainyWindowLensDrop(
+  ctx: CanvasRenderingContext2D,
+  sharp: HTMLCanvasElement,
+  x: number,
+  y: number,
+  r: number,
+  magnification: number,
+) {
+  const shadow = ctx.createRadialGradient(x + r * 0.25, y + r * 0.4, 0, x + r * 0.25, y + r * 0.4, r * 1.5);
+  shadow.addColorStop(0, "rgba(0,0,0,0.32)");
+  shadow.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = shadow;
+  ctx.beginPath();
+  ctx.arc(x + r * 0.25, y + r * 0.4, r * 1.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.clip();
+  const sampleRadius = r / magnification;
+  ctx.drawImage(
+    sharp,
+    x - sampleRadius,
+    y - sampleRadius + r * 0.22,
+    sampleRadius * 2,
+    sampleRadius * 2,
+    x - r,
+    y - r,
+    r * 2,
+    r * 2,
+  );
+  ctx.fillStyle = "rgba(190,210,235,0.10)";
+  ctx.fillRect(x - r, y - r, r * 2, r * 2);
+  const bottomLight = ctx.createLinearGradient(0, y, 0, y + r);
+  bottomLight.addColorStop(0, "rgba(210,225,245,0)");
+  bottomLight.addColorStop(1, "rgba(210,225,245,0.22)");
+  ctx.fillStyle = bottomLight;
+  ctx.fillRect(x - r, y, r * 2, r);
+  ctx.restore();
+
+  ctx.lineWidth = Math.max(0.6, r * 0.1);
+  ctx.strokeStyle = "rgba(8,14,22,0.45)";
+  ctx.beginPath();
+  ctx.arc(x, y, r - ctx.lineWidth * 0.5, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.fillStyle = "rgba(255,255,255,0.85)";
+  ctx.beginPath();
+  ctx.arc(x - r * 0.34, y - r * 0.38, Math.max(0.7, r * 0.16), 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "rgba(255,255,255,0.35)";
+  ctx.beginPath();
+  ctx.arc(x + r * 0.2, y + r * 0.18, Math.max(0.5, r * 0.1), 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function createRainyWindowMistSprite(dpr: number, highlight: boolean): HTMLCanvasElement {
+  const size = 16;
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.ceil(size * dpr);
+  canvas.height = Math.ceil(size * dpr);
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return canvas;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  if (highlight) {
+    ctx.fillStyle = "rgb(255,255,255)";
+    ctx.beginPath();
+    ctx.arc(8, 8, 8, 0, Math.PI * 2);
+    ctx.fill();
+  } else {
+    const glow = ctx.createRadialGradient(5.6, 5.6, 0, 8, 8, 8);
+    glow.addColorStop(0, "rgb(220,232,248)");
+    glow.addColorStop(1, "rgba(150,175,205,0)");
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, size, size);
+  }
+  return canvas;
 }
 
 function RainyWindowBg() {
@@ -526,6 +609,21 @@ function RainyWindowBg() {
       const mistCount = Math.max(120, Math.min(360, Math.floor((nextWidth * nextHeight) / 5200)));
       const studCount = Math.max(26, Math.min(80, Math.floor((nextWidth * nextHeight) / 26000)));
       const slideCount = Math.max(10, Math.min(30, Math.floor(nextWidth / 90)));
+      const studs: RainyWindowStud[] = Array.from({ length: studCount }, () => ({
+        x: Math.random() * nextWidth,
+        y: Math.random() * nextHeight,
+        r: 3 + Math.random() * 6,
+      }));
+      const dpr = dynamicBackgroundDevicePixelRatio(window.devicePixelRatio);
+      const stationaryDrops = document.createElement("canvas");
+      stationaryDrops.width = Math.ceil(nextWidth * dpr);
+      stationaryDrops.height = Math.ceil(nextHeight * dpr);
+      const stationaryDropsCtx = stationaryDrops.getContext("2d");
+      if (!stationaryDropsCtx) return;
+      stationaryDropsCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      for (const stud of studs) {
+        drawRainyWindowLensDrop(stationaryDropsCtx, sharp, stud.x, stud.y, stud.r, 1.45);
+      }
       state.sharp = sharp;
       state.fog = fog;
       state.reveal = reveal;
@@ -536,11 +634,9 @@ function RainyWindowBg() {
         r: 0.8 + Math.random() * 2.6,
         ph: Math.random() * Math.PI * 2,
       }));
-      state.studs = Array.from({ length: studCount }, () => ({
-        x: Math.random() * nextWidth,
-        y: Math.random() * nextHeight,
-        r: 3 + Math.random() * 6,
-      }));
+      state.stationaryDrops = stationaryDrops;
+      state.mistGlowSprite = createRainyWindowMistSprite(dpr, false);
+      state.mistHighlightSprite = createRainyWindowMistSprite(dpr, true);
       state.slides = Array.from({ length: slideCount }, () => createSlide(nextWidth, nextHeight, true));
       state.canvasWidth = nextWidth;
       state.canvasHeight = nextHeight;
@@ -553,7 +649,9 @@ function RainyWindowBg() {
       || !state.reveal
       || !state.revealCtx
       || !state.mist
-      || !state.studs
+      || !state.stationaryDrops
+      || !state.mistGlowSprite
+      || !state.mistHighlightSprite
       || !state.slides
       || !state.canvasWidth
       || !state.canvasHeight
@@ -566,56 +664,6 @@ function RainyWindowBg() {
     const canvasWidth = state.canvasWidth;
     const canvasHeight = state.canvasHeight;
     const revealCtx = state.revealCtx;
-
-    function lensDrop(x: number, y: number, r: number, magnification: number) {
-      if (!state.sharp) return;
-      const shadow = ctx.createRadialGradient(x + r * 0.25, y + r * 0.4, 0, x + r * 0.25, y + r * 0.4, r * 1.5);
-      shadow.addColorStop(0, "rgba(0,0,0,0.32)");
-      shadow.addColorStop(1, "rgba(0,0,0,0)");
-      ctx.fillStyle = shadow;
-      ctx.beginPath();
-      ctx.arc(x + r * 0.25, y + r * 0.4, r * 1.5, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(x, y, r, 0, Math.PI * 2);
-      ctx.clip();
-      const sampleRadius = r / magnification;
-      ctx.drawImage(
-        state.sharp,
-        x - sampleRadius,
-        y - sampleRadius + r * 0.22,
-        sampleRadius * 2,
-        sampleRadius * 2,
-        x - r,
-        y - r,
-        r * 2,
-        r * 2,
-      );
-      ctx.fillStyle = "rgba(190,210,235,0.10)";
-      ctx.fillRect(x - r, y - r, r * 2, r * 2);
-      const bottomLight = ctx.createLinearGradient(0, y, 0, y + r);
-      bottomLight.addColorStop(0, "rgba(210,225,245,0)");
-      bottomLight.addColorStop(1, "rgba(210,225,245,0.22)");
-      ctx.fillStyle = bottomLight;
-      ctx.fillRect(x - r, y, r * 2, r);
-      ctx.restore();
-
-      ctx.lineWidth = Math.max(0.6, r * 0.1);
-      ctx.strokeStyle = "rgba(8,14,22,0.45)";
-      ctx.beginPath();
-      ctx.arc(x, y, r - ctx.lineWidth * 0.5, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.fillStyle = "rgba(255,255,255,0.85)";
-      ctx.beginPath();
-      ctx.arc(x - r * 0.34, y - r * 0.38, Math.max(0.7, r * 0.16), 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = "rgba(255,255,255,0.35)";
-      ctx.beginPath();
-      ctx.arc(x + r * 0.2, y + r * 0.18, Math.max(0.5, r * 0.1), 0, Math.PI * 2);
-      ctx.fill();
-    }
 
     ctx.fillStyle = "#0a1320";
     ctx.fillRect(0, 0, width, height);
@@ -671,7 +719,7 @@ function RainyWindowBg() {
     }
 
     ctx.drawImage(state.reveal, 0, 0, canvasWidth, canvasHeight);
-    for (const stud of state.studs) lensDrop(stud.x, stud.y, stud.r, 1.45);
+    ctx.drawImage(state.stationaryDrops, 0, 0, canvasWidth, canvasHeight);
 
     for (let i = state.mist.length - 1; i >= 0; i -= 1) {
       const mist = state.mist[i];
@@ -684,20 +732,23 @@ function RainyWindowBg() {
       }
       const decay = mist.decay ?? 1;
       const alpha = (0.22 + 0.12 * Math.sin(time * 0.6 + mist.ph)) * decay;
-      const glow = ctx.createRadialGradient(mist.x - mist.r * 0.3, mist.y - mist.r * 0.3, 0, mist.x, mist.y, mist.r);
-      glow.addColorStop(0, `rgba(220,232,248,${alpha + 0.18})`);
-      glow.addColorStop(1, "rgba(150,175,205,0)");
-      ctx.fillStyle = glow;
-      ctx.beginPath();
-      ctx.arc(mist.x, mist.y, mist.r, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = `rgba(255,255,255,${0.5 * decay})`;
-      ctx.beginPath();
-      ctx.arc(mist.x - mist.r * 0.35, mist.y - mist.r * 0.35, Math.max(0.4, mist.r * 0.28), 0, Math.PI * 2);
-      ctx.fill();
+      ctx.globalAlpha = alpha + 0.18;
+      ctx.drawImage(state.mistGlowSprite, mist.x - mist.r, mist.y - mist.r, mist.r * 2, mist.r * 2);
+      ctx.globalAlpha = 0.5 * decay;
+      const highlightRadius = Math.max(0.4, mist.r * 0.28);
+      ctx.drawImage(
+        state.mistHighlightSprite,
+        mist.x - mist.r * 0.35 - highlightRadius,
+        mist.y - mist.r * 0.35 - highlightRadius,
+        highlightRadius * 2,
+        highlightRadius * 2,
+      );
     }
+    ctx.globalAlpha = 1;
 
-    for (const drop of state.slides) lensDrop(drop.x, drop.y, drop.r, 1.6);
+    for (const drop of state.slides) {
+      drawRainyWindowLensDrop(ctx, state.sharp, drop.x, drop.y, drop.r, 1.6);
+    }
   };
   const ref = useCanvasAnim(draw);
   return <canvas ref={ref} className="dw-dynamic-bg-canvas" style={{ background: "#0a1320" }} />;
@@ -3579,7 +3630,7 @@ function useParticleCursorAnim() {
     const rows = 13;
     const center = (rows - 1) / 2;
     const maxGridDist = Math.hypot(center, center);
-    const dpr = Math.max(1, window.devicePixelRatio || 1);
+    const dpr = dynamicBackgroundDevicePixelRatio(window.devicePixelRatio);
 
     let raf = 0;
     let width = 0;

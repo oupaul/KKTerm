@@ -1,6 +1,7 @@
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- untyped canvas-art module; full typing is out of scope
 // @ts-nocheck
 import { useEffect, useRef } from "react";
+import { dynamicBackgroundDevicePixelRatio } from "./dynamicBackgroundCanvas";
 import { useDashboardAnimationActive } from "../view/animationGating";
 
 function useCanvasAnim(draw) {
@@ -23,7 +24,7 @@ function useCanvasAnim(draw) {
     let h = 0;
     let elapsed = 0;
     let lastNow = 0;
-    const dpr = Math.max(1, window.devicePixelRatio || 1);
+    const dpr = dynamicBackgroundDevicePixelRatio(window.devicePixelRatio);
     const state = {};
 
     function resize() {
