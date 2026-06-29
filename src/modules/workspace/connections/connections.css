@@ -677,6 +677,7 @@
   justify-content: center;
   width: var(--connection-icon-shell-size);
   height: var(--connection-icon-shell-size);
+  color: var(--connection-icon-fg);
   background: var(--connection-icon-bg);
   border-radius: 6px;
   vertical-align: middle;

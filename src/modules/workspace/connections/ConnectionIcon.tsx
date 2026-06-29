@@ -101,6 +101,9 @@ export function ConnectionIcon({
   const shellSize = hasBackground ? size + 6 : size;
   const style = {
     "--connection-icon-bg": iconBackgroundColor ?? "transparent",
+    "--connection-icon-fg": hasBackground
+      ? iconForegroundForBackground(iconBackgroundColor)
+      : "currentColor",
     "--connection-icon-size": `${size}px`,
     "--connection-icon-shell-size": `${shellSize}px`,
   } as CSSProperties;
@@ -126,4 +129,15 @@ export function ConnectionIcon({
       )}
     </span>
   );
+}
+
+function iconForegroundForBackground(color?: string | null) {
+  if (!color || !/^#[0-9a-f]{6}$/i.test(color)) {
+    return "var(--surface)";
+  }
+  const red = Number.parseInt(color.slice(1, 3), 16);
+  const green = Number.parseInt(color.slice(3, 5), 16);
+  const blue = Number.parseInt(color.slice(5, 7), 16);
+  const luminance = (0.2126 * red + 0.7152 * green + 0.0722 * blue) / 255;
+  return luminance > 0.72 ? "var(--text)" : "var(--surface)";
 }

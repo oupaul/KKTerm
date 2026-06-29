@@ -65,7 +65,7 @@ function groupColor(id: string): string {
 }
 
 function groupIcon(group: Fleet): ItIconName {
-  return group.filter ? "filter" : "network";
+  return group.filter ? "filter" : "fleet";
 }
 
 export function FleetsTab({
@@ -285,7 +285,7 @@ export function FleetsTab({
       <>
         <div className="it-empty">
           <span className="glyph">
-            <ItIcon name="network" size={30} sw={1.5} />
+            <ItIcon name="fleet" size={30} sw={1.5} />
           </span>
           <h2>{t("itops.fleets.emptyTitle")}</h2>
           <p>{t("itops.fleets.emptyBody")}</p>
@@ -366,7 +366,7 @@ export function FleetsTab({
                           setDialog({ group: null });
                         }}
                       >
-                        <ItIcon name="network" size={14} />
+                        <ItIcon name="fleet" size={14} />
                         {t("itops.racks.addFleet")}
                       </button>
                       <button
@@ -394,7 +394,7 @@ export function FleetsTab({
                           });
                         }}
                       >
-                        <ItIcon name="server" size={14} />
+                        <ItIcon name="rack" size={14} />
                         {t("itops.racks.addRack")}
                       </button>
                     </div>
@@ -466,7 +466,7 @@ export function FleetsTab({
                                       <TreeRow
                                         key={rack.id}
                                         depth={2}
-                                        icon="server"
+                                        icon="rack"
                                         label={rack.name}
                                         hasChildren={false}
                                         open={false}

@@ -1,15 +1,18 @@
 // Shared SF-Symbols-flavoured glyph set for the IT Ops Module, ported from the
-// redesign mockup (itops-icons.jsx). Self-contained inline SVG so the module's
-// dense status/transport/trigger iconography stays pixel-matched to the design
-// instead of mapping onto lucide approximations.
+// redesign mockup (itops-icons.jsx). Most glyphs stay self-contained inline SVG
+// so dense status/transport/trigger iconography remains pixel-matched; topology
+// entity icons use the product's Lucide defaults.
 
-import type { ReactNode } from "react";
+import type { ComponentType, ReactNode } from "react";
+import { Building2, Server, ShelvingUnit } from "lucide-react";
 
 export type ItIconName =
   | "ops"
+  | "fleet"
   | "group"
   | "network"
   | "room"
+  | "rack"
   | "run"
   | "auto"
   | "server"
@@ -55,6 +58,12 @@ export type ItIconName =
 
 type GlyphProps = { size: number; sw: number };
 
+type LucideIconComponent = ComponentType<{ size?: number; strokeWidth?: number }>;
+
+function LucideGlyph(Icon: LucideIconComponent, { size, sw }: GlyphProps) {
+  return <Icon size={size} strokeWidth={sw} />;
+}
+
 function Svg({
   size,
   sw,
@@ -79,6 +88,7 @@ function Svg({
 }
 
 const GLYPHS: Record<ItIconName, (p: GlyphProps) => ReactNode> = {
+  fleet: (p) => LucideGlyph(Building2, p),
   ops: (p) => (
     <Svg {...p}>
       <path d="M4 5.5h16a1 1 0 0 1 1 1V9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6.5a1 1 0 0 1 1-1Z" />
@@ -105,17 +115,8 @@ const GLYPHS: Record<ItIconName, (p: GlyphProps) => ReactNode> = {
       <path d="M12 11l5 6" />
     </Svg>
   ),
-  room: (p) => (
-    <Svg {...p} sw={1.6}>
-      <path d="M4 21V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v16" />
-      <path d="M4 21h16" />
-      <path d="M9 21v-5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v5" />
-      <path d="M8 8h2" />
-      <path d="M14 8h2" />
-      <path d="M8 11h2" />
-      <path d="M14 11h2" />
-    </Svg>
-  ),
+  room: (p) => LucideGlyph(Server, p),
+  rack: (p) => LucideGlyph(ShelvingUnit, p),
   run: (p) => (
     <Svg {...p} sw={1.8}>
       <path d="M8 5.5l10 6.5-10 6.5z" />

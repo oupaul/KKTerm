@@ -11,6 +11,7 @@ export const WORKSPACE_ICON_NAMES = [
   "Folder",
   "FolderOpen",
   "Server",
+  "ShelvingUnit",
   "Terminal",
   "Command",
   "Globe",

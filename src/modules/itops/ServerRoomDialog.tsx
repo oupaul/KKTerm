@@ -13,6 +13,7 @@ import {
   Sheet,
   TextInput,
 } from "../../app/ui/dialog";
+import { lucideIconRefForName } from "../../lib/iconCatalog";
 import { ConnectionIconBackgroundPicker } from "../workspace/connections/ConnectionIconBackgroundPicker";
 import { ConnectionIconPicker } from "../workspace/connections/ConnectionIconPicker";
 import { useWorkspaceStore } from "../../store";
@@ -20,6 +21,7 @@ import type { Fleet, Rack, RackShell } from "../../types";
 import { useItOpsStore } from "./state";
 
 const DEFAULT_SHELL: RackShell = "black";
+const DEFAULT_SERVER_ROOM_ICON_REF = lucideIconRefForName("Server");
 
 export function ServerRoomDialog({
   fleets,
@@ -102,6 +104,9 @@ export function ServerRoomDialog({
         <div className="connection-type-summary">
           <ConnectionIconPicker
             customIconDataUrls={[]}
+            defaultIconDataUrl={DEFAULT_SERVER_ROOM_ICON_REF}
+            defaultIconKeywords={["server", "room", "default"]}
+            defaultIconLabel={t("itops.racks.addServerRoom")}
             iconBackgroundColor={iconBackgroundColor}
             iconDataUrl={iconDataUrl}
             onChange={setIconDataUrl}

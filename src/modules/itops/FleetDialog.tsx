@@ -6,6 +6,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Actions, Btn, DialogShell, Field, Sheet, TextInput } from "../../app/ui/dialog";
+import { lucideIconRefForName } from "../../lib/iconCatalog";
 import { invokeCommand, isTauriRuntime } from "../../lib/tauri";
 import { flattenConnections } from "../workspace/connections/treeUtils";
 import { ConnectionIconBackgroundPicker } from "../workspace/connections/ConnectionIconBackgroundPicker";
@@ -16,6 +17,7 @@ import { ItIcon } from "./icons";
 import { useItOpsStore } from "./state";
 
 const TRANSPORTS: ItopsTransport[] = ["auto", "ssh", "winrm", "psexec"];
+const DEFAULT_FLEET_ICON_REF = lucideIconRefForName("Building2");
 
 export function FleetDialog({
   group,
@@ -136,6 +138,9 @@ export function FleetDialog({
         <div className="connection-type-summary">
           <ConnectionIconPicker
             customIconDataUrls={[]}
+            defaultIconDataUrl={DEFAULT_FLEET_ICON_REF}
+            defaultIconKeywords={["fleet", "building", "default"]}
+            defaultIconLabel={t("itops.fleets.heading")}
             iconBackgroundColor={iconBackgroundColor}
             iconDataUrl={iconDataUrl}
             onChange={setIconDataUrl}

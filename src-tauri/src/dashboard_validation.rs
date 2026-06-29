@@ -19,6 +19,8 @@ pub const ICONS: &[&str] = &[
     "Network",
     "Terminal",
     "Server",
+    "Building2",
+    "ShelvingUnit",
     "Cpu",
     "Activity",
     "Bolt",

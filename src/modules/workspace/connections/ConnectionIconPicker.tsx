@@ -21,6 +21,9 @@ const MAX_SOURCE_ICON_FILE_BYTES = 20 * 1024 * 1024;
 
 export function ConnectionIconPicker({
   customIconDataUrls,
+  defaultIconDataUrl,
+  defaultIconLabel,
+  defaultIconKeywords,
   iconBackgroundColor,
   iconDataUrl,
   localShell,
@@ -28,6 +31,9 @@ export function ConnectionIconPicker({
   type,
 }: {
   customIconDataUrls: string[];
+  defaultIconDataUrl?: string | null;
+  defaultIconLabel?: string;
+  defaultIconKeywords?: string[];
   iconBackgroundColor?: string | null;
   iconDataUrl?: string | null;
   localShell?: string;
@@ -40,6 +46,7 @@ export function ConnectionIconPicker({
   const rootRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const currentIconDataUrl = iconDataUrl ?? null;
+  const previewIconDataUrl = currentIconDataUrl ?? defaultIconDataUrl ?? null;
   const currentSavedImageDataUrl = currentIconDataUrl?.startsWith("data:image/") ? currentIconDataUrl : null;
   const defaultIconSrc = connectionIconSrcForConnection({ localShell, type });
   const predefinedOptions = useMemo(
@@ -145,7 +152,7 @@ export function ConnectionIconPicker({
       >
         <ConnectionIcon
           iconBackgroundColor={iconBackgroundColor}
-          iconDataUrl={currentIconDataUrl}
+          iconDataUrl={previewIconDataUrl}
           localShell={localShell}
           size={44}
           type={type}
@@ -159,9 +166,16 @@ export function ConnectionIconPicker({
           <IconLibraryPicker
             defaultOption={{
               value: null,
-              label: t("connections.useDefaultIcon"),
-              keywords: [connectionTypeLabel(type), "default"],
-              icon: <ConnectionIcon localShell={localShell} size={22} type={type} />,
+              label: defaultIconLabel ?? t("connections.useDefaultIcon"),
+              keywords: defaultIconKeywords ?? [connectionTypeLabel(type), "default"],
+              icon: (
+                <ConnectionIcon
+                  iconDataUrl={defaultIconDataUrl}
+                  localShell={localShell}
+                  size={22}
+                  type={type}
+                />
+              ),
             }}
             lucideNames={ICON_NAMES}
             lucideValueForName={lucideIconRefForName}

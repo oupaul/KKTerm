@@ -49,7 +49,7 @@ export const ACCENT_NAMES = [
 export type AccentName = (typeof ACCENT_NAMES)[number] | `#${string}`;
 
 export const ICON_NAMES = [
-  "Hash","Network","Terminal","Server","Cpu","Activity","Bolt","Sun",
+  "Hash","Network","Terminal","Server","Building2","ShelvingUnit","Cpu","Activity","Bolt","Sun",
   "Bell","Bot","Wrench","Folder","Clock","Doc","Cloud","Calendar",
   "Database","Globe","Lock","Key","Mail","Mic","Monitor","Music",
   "Package","Phone","Pin","Power","Printer","Radio","Search",
