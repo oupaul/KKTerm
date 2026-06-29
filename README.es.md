@@ -160,7 +160,7 @@ La misma app. La misma ventana. Los mismos atajos. El mismo tema, que ojalá no 
 
 ### Descarga pequeña, arranque relámpago
 
-KKTerm está pensado para sentirse como una utilidad, no como una plataforma. Las versiones de escritorio actuales rondan los 10-13 MB, se instalan rápido y arrancan lo bastante deprisa como para que abrir tu espacio de administración no se sienta como iniciar un segundo sistema operativo.
+KKTerm está pensado para sentirse como una utilidad, no como una plataforma. Las versiones de escritorio actuales pesan menos de 20 MB, se instalan rápido y arrancan lo bastante deprisa como para que abrir tu espacio de administración no se sienta como iniciar un segundo sistema operativo.
 
 Ese tamaño pequeño importa en jump boxes, portátiles viejos y VM donde cada servicio en segundo plano extra es una cosa más de la que desconfiar. KKTerm se abre, restaura tu espacio de trabajo y se quita de en medio.
 

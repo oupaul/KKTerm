@@ -160,7 +160,7 @@ Same app. Same window. Same hotkeys. Same hopefully-not-eye-bleeding theme.
 
 ### Tiny download, instant launch
 
-KKTerm is built to feel like a utility, not a platform. Current desktop builds land around 10-13 MB-ish, install quickly, and launch fast enough that opening your admin workspace does not feel like starting a second operating system.
+KKTerm is built to feel like a utility, not a platform. Current desktop builds land under 20 MB, install quickly, and launch fast enough that opening your admin workspace does not feel like starting a second operating system.
 
 The small footprint matters on jump boxes, old laptops, and VMs where every extra background service is one more thing to distrust. KKTerm opens, restores your workspace, and gets out of the way.
 

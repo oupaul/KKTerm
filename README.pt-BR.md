@@ -160,7 +160,7 @@ O mesmo app. A mesma janela. Os mesmos atalhos. O mesmo tema, que tomara não fa
 
 ### Download pequeno, abertura relâmpago
 
-O KKTerm foi feito para parecer uma utilidade, não uma plataforma. As builds desktop atuais ficam por volta de 10-13 MB, instalam rápido e abrem tão depressa que abrir seu workspace de administração não parece iniciar um segundo sistema operacional.
+O KKTerm foi feito para parecer uma utilidade, não uma plataforma. As builds desktop atuais ficam abaixo de 20 MB, instalam rápido e abrem tão depressa que abrir seu workspace de administração não parece iniciar um segundo sistema operacional.
 
 Esse tamanho pequeno importa em jump boxes, notebooks antigos e VMs, onde cada serviço em segundo plano a mais é mais uma coisa para desconfiar. O KKTerm abre, restaura seu workspace e sai do caminho.
 

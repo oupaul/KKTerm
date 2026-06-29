@@ -160,7 +160,7 @@ Dieselbe App. Dasselbe Fenster. Dieselben Hotkeys. Dasselbe, hoffentlich nicht a
 
 ### Kleiner Download, Blitzstart
 
-KKTerm soll sich wie ein Werkzeug anfühlen, nicht wie eine Plattform. Aktuelle Desktop-Builds liegen ungefähr bei 10-13 MB, installieren schnell und starten so flott, dass sich das Öffnen deines Admin-Workspace nicht wie das Starten eines zweiten Betriebssystems anfühlt.
+KKTerm soll sich wie ein Werkzeug anfühlen, nicht wie eine Plattform. Aktuelle Desktop-Builds liegen unter 20 MB, installieren schnell und starten so flott, dass sich das Öffnen deines Admin-Workspace nicht wie das Starten eines zweiten Betriebssystems anfühlt.
 
 Der kleine Footprint zählt auf Jump-Hosts, alten Laptops und VMs, wo jeder zusätzliche Hintergrunddienst eine weitere Sache ist, der man misstraut. KKTerm öffnet sich, stellt deinen Workspace wieder her und bleibt aus dem Weg.
 

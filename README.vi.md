@@ -160,7 +160,7 @@ Cùng một app. Cùng một cửa sổ. Cùng phím tắt. Cùng một theme, m
 
 ### Tải xuống nhỏ, khởi động nhanh như chớp
 
-KKTerm được xây để có cảm giác như một tiện ích, không phải một nền tảng. Các bản desktop hiện tại chỉ khoảng 10-13 MB, cài nhanh và khởi động đủ nhanh để việc mở workspace quản trị không giống như đang bật thêm một hệ điều hành thứ hai.
+KKTerm được xây để có cảm giác như một tiện ích, không phải một nền tảng. Các bản desktop hiện tại dưới 20 MB, cài nhanh và khởi động đủ nhanh để việc mở workspace quản trị không giống như đang bật thêm một hệ điều hành thứ hai.
 
 Dấu chân nhỏ này quan trọng trên jump box, laptop cũ và VM, nơi mỗi dịch vụ nền thêm vào là một thứ nữa phải nghi ngờ. KKTerm mở lên, khôi phục workspace của bạn, rồi nhường chỗ cho bạn làm việc.
 

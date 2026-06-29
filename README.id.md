@@ -160,7 +160,7 @@ Aplikasi yang sama. Jendela yang sama. Pintasan yang sama. Tema yang sama, yang 
 
 ### Unduhan kecil, peluncuran secepat kilat
 
-KKTerm dibuat agar terasa seperti utilitas, bukan platform. Build desktop saat ini sekitar 10-13 MB, cepat dipasang, dan meluncur cukup cepat sehingga membuka workspace admin-mu tidak terasa seperti menyalakan sistem operasi kedua.
+KKTerm dibuat agar terasa seperti utilitas, bukan platform. Build desktop saat ini di bawah 20 MB, cepat dipasang, dan meluncur cukup cepat sehingga membuka workspace admin-mu tidak terasa seperti menyalakan sistem operasi kedua.
 
 Jejak kecil ini penting di jump box, laptop lama, dan VM, tempat setiap layanan latar belakang tambahan adalah satu hal lagi yang patut dicurigai. KKTerm terbuka, memulihkan workspace-mu, lalu menyingkir.
 
