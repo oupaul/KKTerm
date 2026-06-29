@@ -7,6 +7,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { invokeCommand } from "../../lib/tauri";
 import { fileExtension } from "../workspace/connections/file-viewer/fileViewerModel";
+import { buildHeatmapInWorker } from "./compareWorkerClient";
 
 const IMAGE_MAX_BYTES = 25 * 1024 * 1024;
 
@@ -118,38 +119,30 @@ export function CompareImageView({ leftPath, rightPath }: { leftPath: string; ri
     if (!ctx || !leftData || !rightData) {
       return;
     }
-    const out = ctx.createImageData(width, height);
-    const lp = leftData.data;
-    const rp = rightData.data;
-    const op = out.data;
-    let changed = 0;
-    const total = width * height;
-    for (let i = 0; i < op.length; i += 4) {
-      const lLum = (lp[i] * 0.299 + lp[i + 1] * 0.587 + lp[i + 2] * 0.114) * (lp[i + 3] / 255);
-      const rLum = (rp[i] * 0.299 + rp[i + 1] * 0.587 + rp[i + 2] * 0.114) * (rp[i + 3] / 255);
-      const delta = lLum - rLum;
-      if (Math.abs(delta) <= tolerance) {
-        op[i] = 12;
-        op[i + 1] = 16;
-        op[i + 2] = 24;
-        op[i + 3] = 255;
-        continue;
+    let alive = true;
+    void (async () => {
+      try {
+        const { imageData, percent } = await buildHeatmapInWorker({
+          width,
+          height,
+          tolerance,
+          left: leftData.data,
+          right: rightData.data,
+        });
+        if (!alive) {
+          return;
+        }
+        ctx.putImageData(imageData, 0, 0);
+        setDiffPercent(percent);
+      } catch (heatmapError) {
+        if (alive) {
+          setError(heatmapError instanceof Error ? heatmapError.message : String(heatmapError));
+        }
       }
-      changed += 1;
-      const magnitude = Math.min(255, 80 + Math.abs(delta));
-      if (delta > 0) {
-        op[i] = magnitude;
-        op[i + 1] = 30;
-        op[i + 2] = 40;
-      } else {
-        op[i] = 40;
-        op[i + 1] = 60;
-        op[i + 2] = magnitude;
-      }
-      op[i + 3] = 255;
-    }
-    ctx.putImageData(out, 0, 0);
-    setDiffPercent(total > 0 ? (changed / total) * 100 : 0);
+    })();
+    return () => {
+      alive = false;
+    };
   }, [images, dims, tolerance]);
 
   if (error) {
