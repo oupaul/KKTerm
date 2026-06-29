@@ -3070,6 +3070,7 @@
     "loadingDiff": "diff를 불러오는 중…",
     "noDiff": "표시할 변경 사항 없음",
     "filteredLines": "필터링된 {{count}}줄 — 클릭하여 펼치기",
+    "collapseLines": "{{count}}줄 — 클릭하여 접기",
     "advancedDiffTitle": "비교 — {{file}}",
     "searchDiff": "diff 검색…",
     "previousDifference": "이전 차이점",

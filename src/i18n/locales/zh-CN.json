@@ -3070,6 +3070,7 @@
     "loadingDiff": "正在加载差异…",
     "noDiff": "没有可显示的更改",
     "filteredLines": "已过滤 {{count}} 行 — 点击展开",
+    "collapseLines": "{{count}} 行 — 点击折叠",
     "advancedDiffTitle": "比较 — {{file}}",
     "searchDiff": "搜索差异…",
     "previousDifference": "上一个差异",

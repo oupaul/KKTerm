@@ -3070,6 +3070,7 @@
     "loadingDiff": "Carregando diff…",
     "noDiff": "Sem alterações para mostrar",
     "filteredLines": "{{count}} linhas filtradas — clique para expandir",
+    "collapseLines": "{{count}} linhas — clique para recolher",
     "advancedDiffTitle": "Comparar — {{file}}",
     "searchDiff": "Buscar no diff…",
     "previousDifference": "Diferença anterior",

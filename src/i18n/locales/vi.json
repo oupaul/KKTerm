@@ -3070,6 +3070,7 @@
     "loadingDiff": "Đang tải diff…",
     "noDiff": "Không có thay đổi để hiển thị",
     "filteredLines": "{{count}} dòng đã lọc — nhấp để mở rộng",
+    "collapseLines": "{{count}} dòng — nhấp để thu gọn",
     "advancedDiffTitle": "So sánh — {{file}}",
     "searchDiff": "Tìm trong diff…",
     "previousDifference": "Khác biệt trước",

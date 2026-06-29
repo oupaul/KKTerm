@@ -592,6 +592,15 @@
   flex: 0 0 auto;
   opacity: 0.8;
 }
+/* The header above an expanded run reads as the inverse of a collapsed fold —
+   a faint accent tint so it's clearly the "collapse again" control. */
+.git-adv-row.git-adv-fold-open {
+  background: color-mix(in srgb, var(--git-accent) 9%, var(--git-bg));
+  color: color-mix(in srgb, var(--git-accent) 60%, var(--git-text));
+}
+.git-adv-row.git-adv-fold-open:hover {
+  background: color-mix(in srgb, var(--git-accent) 16%, var(--git-bg));
+}
 .git-adv-cell {
   display: grid;
   grid-template-columns: 52px minmax(0, 1fr);

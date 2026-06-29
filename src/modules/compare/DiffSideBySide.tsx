@@ -6,18 +6,20 @@
 // caller's responsibility. Reuses the `git-adv-*` classes from git.css.
 import { type PointerEvent as ReactPointerEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronDown, ChevronsUpDown, ChevronUp, Search, WrapText } from "lucide-react";
+import { ChevronDown, ChevronsDownUp, ChevronsUpDown, ChevronUp, Search, WrapText } from "lucide-react";
 import type { GitDiffLine } from "../git/gitTypes";
 
 type DiffSideKind = "ctx" | "add" | "del" | "blank";
 type DiffViewMode = "all" | "diff" | "same";
 
-// A rendered item in the body: either a real diff row, or a fold standing in for
-// a contiguous run of rows the active filter hid, which the user can expand —
-// the Beyond Compare "X filtered lines" divider.
+// A rendered item in the body: a real diff row, a collapsed fold standing in for
+// a contiguous run of rows the active filter hid (click to expand), or the header
+// above an expanded run (click to re-collapse) — the Beyond Compare
+// "X filtered lines" dividers.
 type RenderItem =
   | { kind: "row"; row: SideBySideRow; index: number }
-  | { kind: "gap"; start: number; count: number };
+  | { kind: "gap"; start: number; count: number }
+  | { kind: "collapse"; start: number; count: number };
 
 interface SideBySideRow {
   id: string;
@@ -345,6 +347,7 @@ export function DiffSideBySide({
         idx += 1;
       }
       if (expandedGaps.has(start)) {
+        items.push({ kind: "collapse", start, count: idx - start });
         for (let j = start; j < idx; j += 1) {
           items.push({ kind: "row", row: rows[j], index: j });
         }
@@ -387,6 +390,14 @@ export function DiffSideBySide({
     setExpandedGaps((prev) => {
       const next = new Set(prev);
       next.add(start);
+      return next;
+    });
+  };
+
+  const collapseGap = (start: number) => {
+    setExpandedGaps((prev) => {
+      const next = new Set(prev);
+      next.delete(start);
       return next;
     });
   };
@@ -607,6 +618,27 @@ export function DiffSideBySide({
                     >
                       <ChevronsUpDown size={12} className="git-adv-fold-icon" />
                       <span>{t("git.filteredLines", { count: item.count })}</span>
+                    </div>
+                  );
+                }
+                if (item.kind === "collapse") {
+                  return (
+                    <div
+                      key={`collapse-${item.start}`}
+                      className="git-adv-row git-adv-fold git-adv-fold-open"
+                      role="button"
+                      tabIndex={0}
+                      aria-label={t("git.collapseLines", { count: item.count })}
+                      onClick={() => collapseGap(item.start)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          collapseGap(item.start);
+                        }
+                      }}
+                    >
+                      <ChevronsDownUp size={12} className="git-adv-fold-icon" />
+                      <span>{t("git.collapseLines", { count: item.count })}</span>
                     </div>
                   );
                 }

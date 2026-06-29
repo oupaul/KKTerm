@@ -3070,6 +3070,7 @@
     "loadingDiff": "正在載入差異…",
     "noDiff": "沒有可顯示的變更",
     "filteredLines": "已篩選 {{count}} 行 — 點按以展開",
+    "collapseLines": "{{count}} 行 — 點按以收合",
     "advancedDiffTitle": "比較 — {{file}}",
     "searchDiff": "搜尋差異…",
     "previousDifference": "上一個差異",
