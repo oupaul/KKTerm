@@ -149,7 +149,7 @@ export function DiffSideBySide({
   const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const [mode, setMode] = useState<DiffViewMode>("all");
-  const [wrap, setWrap] = useState(false);
+  const [wrap, setWrap] = useState(true);
   const [activeChange, setActiveChange] = useState(0);
   const [viewport, setViewport] = useState({ top: 0, height: 0, fill: 1, scrollable: false });
   const pendingScrollRow = useRef<number | null>(null);
