@@ -82,7 +82,7 @@ Mais umas coisas que você não sabia que queria:
 - **Painéis SSH que se reconectam à sua sessão remota `claude` / `codex`** depois de cada chilique do Wi-Fi, pra um trabalho de seis horas sobreviver a uma queda.
 - **Workspaces** que mantêm o seu homelab, o trabalho e os servidores daquele cliente em contêineres separados e alternáveis.
 - Um **Install Helper** que acha, instala, atualiza e abre as ferramentas pra dev do Windows que você normalmente caça por dez abas do navegador.
-- **Vinte e cinco fundos animados** pro painel *e pros seus terminais* (sim, incluindo `matrix`), porque a gente não tem vergonha.
+- **Vinte e seis fundos animados** pro painel *e pros seus terminais* (sim, incluindo `matrix`), porque a gente não tem vergonha.
 
 E a melhor parte: o assistente de IA consegue transformar uma única frase numa pequena ferramenta de painel que você realmente continua usando.
 
@@ -220,7 +220,7 @@ Alguns são simples painéis de exibição (markdown, listas de tarefas, um núm
 
 #### Fundos animados do painel/terminal (porque a gente quis)
 
-Escolha um clima — por visão do painel, *ou atrás de qualquer terminal* — entre **vinte e cinco** fundos animados em canvas:
+Escolha um clima — por visão do painel, *ou atrás de qualquer terminal* — entre **vinte e seis** fundos animados em canvas:
 
 | Clima | Fundos |
 | --- | --- |
@@ -266,7 +266,7 @@ O homelab, o trabalho e os servidores daquele cliente não pertencem à mesma li
 
 ### Vista do seu jeito: temas de cores
 
-Os fundos são a parte divertida; os **temas de cores** são o que você de fato encara o dia todo. O KKTerm traz **quatorze** esquemas de cores que reestilizam todo o chrome do app — Activity Rail, árvore de conexões, abas, diálogos — com uma miniprévia ao vivo de cada um em Configurações ▸ Aparência:
+Os fundos são a parte divertida; os **temas de cores** são o que você de fato encara o dia todo. O KKTerm traz **vinte e seis** esquemas de cores que reestilizam todo o chrome do app — Activity Rail, árvore de conexões, abas, diálogos — com uma miniprévia ao vivo de cada um em Configurações ▸ Aparência:
 
 | Clima | Esquemas |
 | --- | --- |

@@ -82,7 +82,7 @@ Ditambah beberapa hal yang kamu tak tahu kamu inginkan:
 - **Panel SSH yang menyambung kembali ke sesi remote `claude` / `codex`-mu** setelah setiap amukan Wi-Fi, agar kerja enam jam selamat dari putusnya koneksi.
 - **Workspaces** yang menjaga homelab, pekerjaan kantor, dan server klien itu dalam wadah-wadah terpisah yang bisa kamu tukar dengan sekali klik.
 - Sebuah **Install Helper** yang menemukan, memasang, memperbarui, dan menjalankan alat dev Windows yang biasanya kamu kejar lewat sepuluh tab browser.
-- **Dua puluh lima latar animasi** untuk dashboard *dan terminalmu* (ya, termasuk `matrix`), karena kami tak terlalu jaim untuk itu.
+- **Dua puluh enam latar animasi** untuk dashboard *dan terminalmu* (ya, termasuk `matrix`), karena kami tak terlalu jaim untuk itu.
 
 Dan bagian terbaiknya: asisten AI bisa mengubah satu kalimat menjadi alat dashboard kecil yang benar-benar terus kamu pakai.
 
@@ -220,7 +220,7 @@ Sebagian adalah panel tampilan sederhana (markdown, checklist, satu angka besar)
 
 #### Latar animasi dashboard/terminal (karena kami mau saja)
 
-Pilih satu suasana — per tampilan dashboard, *atau di belakang terminal mana pun* — dari **dua puluh lima** latar animasi canvas:
+Pilih satu suasana — per tampilan dashboard, *atau di belakang terminal mana pun* — dari **dua puluh enam** latar animasi canvas:
 
 | Suasana | Latar |
 | --- | --- |
@@ -266,7 +266,7 @@ Homelab, pekerjaan kantor, dan server klien itu tidak pantas berada di daftar ya
 
 ### Dandani sesukamu: tema warna
 
-Latar adalah bagian serunya; **tema warna** adalah yang benar-benar kamu pandangi seharian. KKTerm membawa **empat belas** skema warna yang mendandani ulang seluruh chrome aplikasi — Activity Rail, pohon koneksi, tab, dialog — dengan pratinjau mini langsung untuk masing-masing di Pengaturan ▸ Tampilan:
+Latar adalah bagian serunya; **tema warna** adalah yang benar-benar kamu pandangi seharian. KKTerm membawa **dua puluh enam** skema warna yang mendandani ulang seluruh chrome aplikasi — Activity Rail, pohon koneksi, tab, dialog — dengan pratinjau mini langsung untuk masing-masing di Pengaturan ▸ Tampilan:
 
 | Suasana | Skema |
 | --- | --- |

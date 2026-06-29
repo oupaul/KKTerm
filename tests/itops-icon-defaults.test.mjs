@@ -58,3 +58,14 @@ test("Connection icon picker keeps Lucide background and foreground separate", a
   assert.match(types, /iconColor\?: string \| null;[\s\S]*iconDataUrl\?: string \| null;[\s\S]*iconBackgroundColor\?: string \| null;/);
   assert.match(tauri, /update_connection_icon_color/);
 });
+
+test("IT Ops topology icons choose a readable default foreground for light backgrounds", async () => {
+  const fleets = await read("src/modules/itops/FleetsTab.tsx");
+
+  assert.match(fleets, /function iconForegroundForBackground/);
+  assert.match(
+    fleets,
+    /background: customIcon\.iconBackgroundColor,[\s\S]*color: iconForegroundForBackground\(customIcon\.iconBackgroundColor\)/,
+    "Fleet and Server Room glyphs should not stay white when their selected background is light",
+  );
+});

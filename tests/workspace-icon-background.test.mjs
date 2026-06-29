@@ -26,6 +26,15 @@ test("Workspace icon backgrounds separate glyph size from chip padding", () => {
   assert.match(iconSource, /"--workspace-icon-shell-size": `\$\{resolvedShellSize\}px`/);
 });
 
+test("Workspace icons choose a readable default foreground for light backgrounds", () => {
+  assert.match(iconSource, /function iconForegroundForBackground/);
+  assert.match(
+    iconSource,
+    /"--workspace-icon-color": color \?\? \(hasBackground[\s\S]*iconForegroundForBackground\(backgroundColor\)/,
+    "an unset foreground should derive contrast from the selected background instead of always using the surface color",
+  );
+});
+
 test("Activity Rail Workspace icons keep the padded rail chip", () => {
   assert.match(activityRailSource, /const WORKSPACE_RAIL_ICON_SIZE = 18;/);
   assert.match(activityRailSource, /const WORKSPACE_RAIL_ICON_SHELL_SIZE = 24;/);

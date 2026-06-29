@@ -266,7 +266,7 @@ The home lab, the day job, and that one client's servers do not belong in the sa
 
 ### Dress it up: color themes
 
-Backgrounds are the fun part; **color themes** are the part you actually stare at all day. KKTerm ships **fourteen** color schemes that restyle the whole app chrome — Activity Rail, Connection Tree, tabs, dialogs — with a live mini-preview of each under Settings ▸ Appearance:
+Backgrounds are the fun part; **color themes** are the part you actually stare at all day. KKTerm ships **twenty-six** color schemes that restyle the whole app chrome — Activity Rail, Connection Tree, tabs, dialogs — with a live mini-preview of each under Settings ▸ Appearance:
 
 | Mood | Schemes |
 | --- | --- |
