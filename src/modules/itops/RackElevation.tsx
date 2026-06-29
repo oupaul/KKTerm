@@ -219,6 +219,9 @@ export function RackElevation({
                   disks={item.metadata?.disks ?? null}
                   battery={item.metadata?.battery ?? null}
                   load={item.metadata?.load ?? null}
+                  expiry={item.metadata?.expiry ?? null}
+                  rotation={item.metadata?.rotation ?? null}
+                  yaw={item.metadata?.yaw ?? null}
                   heightU={item.heightU}
                   accent={item.metadata?.accent ?? null}
                   shell={item.metadata?.shell ?? null}

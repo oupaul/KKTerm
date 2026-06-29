@@ -195,7 +195,8 @@ export type RackItemKind =
   | "ups"
   | "kvm"
   | "equipment"
-  | "general";
+  | "general"
+  | "kuaiguai";
 
 export type RackItemStatus = "online" | "warning" | "offline";
 
@@ -213,6 +214,26 @@ export interface RackItemMetadata {
   load?: number | null;
   // Device faceplate shell colour; null/"black" = default metallic black.
   shell?: RackShell | null;
+  /** Expiry date for consumables or support windows (ISO yyyy-mm-dd when set). */
+  expiry?: string | null;
+  /** Faceplate/package rotation in degrees for novelty inventory such as 乖乖. */
+  rotation?: number | null;
+  /** Faceplate/package yaw in degrees for novelty inventory such as 乖乖. */
+  yaw?: number | null;
+  /** Freeform comma-separated tag labels for the rack device. */
+  tags?: string[] | null;
+  /** Rack audit trail such as 上架/下架/maintenance notes. */
+  auditRecords?: string[] | null;
+  /** Additional Connection ids bound to this rack device. */
+  connectionIds?: string[] | null;
+  /** Switch/router port speeds, e.g. gigabit/10g, optionally filled from SNMP polling. */
+  networkPorts?: string[] | null;
+  /** SNMP target or OID hint for polling this device. */
+  snmp?: string | null;
+  /** Relationship model: host/vm, storage/ap, VSAN, SAN, NAS, hyper-converged, etc. */
+  relationship?: string | null;
+  /** Hardware shell preview vendor, e.g. Dell or HP. */
+  vendor?: string | null;
 }
 
 // Skeuomorphic shell finish for a rack cabinet or a device faceplate. White and

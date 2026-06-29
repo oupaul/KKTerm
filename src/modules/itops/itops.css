@@ -2716,6 +2716,7 @@
     transparent
   );
 }
+.itops-page .rkd-kuaiguai,
 .itops-page .rkd-switch,
 .itops-page .rkd-router,
 .itops-page .rkd-firewall,
@@ -3647,4 +3648,77 @@
   flex: 1 1 auto;
   height: 1px;
   background: var(--hairline);
+}
+
+
+.itops-page .rkd-kuaiguai {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-width: 88px;
+  perspective: 280px;
+}
+
+.itops-page .rkd-kk-pack {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-width: 76px;
+  height: 34px;
+  border-radius: 8px 13px 8px 13px;
+  color: #063b1a;
+  background:
+    radial-gradient(circle at 78% 28%, rgba(255, 255, 255, .68), transparent 20%),
+    linear-gradient(135deg, #c9ff70 0%, #34c759 52%, #188a34 100%);
+  border: 1px solid rgba(255, 255, 255, .55);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.66), 0 6px 12px rgba(0,0,0,.28);
+  transform: rotate(var(--rkd-rotate, -2deg)) rotateY(var(--rkd-yaw, 0deg));
+  transform-style: preserve-3d;
+  overflow: hidden;
+}
+
+.itops-page .rkd-kk-pack::before,
+.itops-page .rkd-kk-pack::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 9px;
+  background: repeating-linear-gradient(180deg, rgba(255,255,255,.72) 0 3px, rgba(255,255,255,.18) 3px 6px);
+}
+
+.itops-page .rkd-kk-pack::before { left: 0; }
+.itops-page .rkd-kk-pack::after { right: 0; }
+
+.itops-page .rkd-kk-brand {
+  position: absolute;
+  top: 3px;
+  left: 13px;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .05em;
+}
+
+.itops-page .rkd-kk-name {
+  font-size: 16px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.itops-page .rkd-kk-art {
+  position: absolute;
+  right: 12px;
+  bottom: 4px;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.itops-page .rkd-kk-exp {
+  position: absolute;
+  left: 13px;
+  bottom: 4px;
+  font-size: 6px;
+  font-weight: 800;
+  opacity: .82;
 }

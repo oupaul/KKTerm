@@ -217,6 +217,7 @@ pub enum RackItemKind {
     Kvm,
     Equipment,
     General,
+    Kuaiguai,
 }
 
 impl RackItemKind {
@@ -236,6 +237,7 @@ impl RackItemKind {
             RackItemKind::Kvm => "kvm",
             RackItemKind::Equipment => "equipment",
             RackItemKind::General => "general",
+            RackItemKind::Kuaiguai => "kuaiguai",
         }
     }
 
@@ -255,6 +257,7 @@ impl RackItemKind {
             "kvm" => Some(RackItemKind::Kvm),
             "equipment" => Some(RackItemKind::Equipment),
             "general" => Some(RackItemKind::General),
+            "kuaiguai" => Some(RackItemKind::Kuaiguai),
             _ => None,
         }
     }
@@ -287,6 +290,26 @@ pub struct RackItemMetadata {
     /// Device shell colour: "black" (default) | "white" | "grey".
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub shell: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub expiry: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rotation: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub yaw: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tags: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub audit_records: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub connection_ids: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub network_ports: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub snmp: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub relationship: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub vendor: Option<String>,
 }
 
 /// One device occupying a contiguous `start_u..start_u + height_u` span in a

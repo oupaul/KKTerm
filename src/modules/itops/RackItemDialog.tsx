@@ -14,6 +14,7 @@ import {
   Sheet,
   Stepper,
   Swatches,
+  TextArea,
   TextInput,
 } from "../../app/ui/dialog";
 import { useWorkspaceStore } from "../../store";
@@ -42,6 +43,7 @@ const PASSIVE_KINDS: RackItemKind[] = [
   "patchPanel",
   "equipment",
   "general",
+  "kuaiguai",
   "blank",
   "label",
 ];
@@ -54,6 +56,13 @@ function showsPorts(kind: RackItemKind): boolean {
 }
 function showsDisks(kind: RackItemKind): boolean {
   return kind === "server" || kind === "storage" || kind === "connection";
+}
+function splitLines(value: string): string[] | null {
+  const rows = value.split(/\r?\n|,/).map((entry) => entry.trim()).filter(Boolean);
+  return rows.length > 0 ? rows : null;
+}
+function joinValues(value: string[] | null | undefined): string {
+  return (value ?? []).join("\n");
 }
 
 const DISKS_PER_U = 24;
@@ -100,6 +109,17 @@ export function RackItemDialog({
   const [battery, setBattery] = useState(item?.metadata?.battery ?? 90);
   const [load, setLoad] = useState(item?.metadata?.load ?? 60);
   const [shell, setShell] = useState<RackShell>(item?.metadata?.shell ?? "black");
+  const [expiry, setExpiry] = useState(item?.metadata?.expiry ?? "");
+  const [rotation, setRotation] = useState(item?.metadata?.rotation ?? -2);
+  const [yaw, setYaw] = useState(item?.metadata?.yaw ?? 0);
+  const [notes, setNotes] = useState(item?.metadata?.notes ?? "");
+  const [tags, setTags] = useState(joinValues(item?.metadata?.tags));
+  const [auditRecords, setAuditRecords] = useState(joinValues(item?.metadata?.auditRecords));
+  const [connectionIds, setConnectionIds] = useState(joinValues(item?.metadata?.connectionIds));
+  const [networkPorts, setNetworkPorts] = useState(joinValues(item?.metadata?.networkPorts));
+  const [snmp, setSnmp] = useState(item?.metadata?.snmp ?? "");
+  const [relationship, setRelationship] = useState(item?.metadata?.relationship ?? "");
+  const [vendor, setVendor] = useState(item?.metadata?.vendor ?? "");
   const [busy, setBusy] = useState(false);
   const maxDisks = Math.max(1, heightU) * DISKS_PER_U;
   const placedStartU = clampStartUForHeight(startU, heightU, rack.heightU);
@@ -108,6 +128,15 @@ export function RackItemDialog({
     accent: accent === "none" ? null : accent,
     status,
     shell: shell === "black" ? null : shell,
+    notes: notes.trim() || null,
+    tags: splitLines(tags),
+    auditRecords: splitLines(auditRecords),
+    connectionIds: splitLines(connectionIds),
+    networkPorts: splitLines(networkPorts),
+    snmp: snmp.trim() || null,
+    relationship: relationship.trim() || null,
+    vendor: vendor.trim() || null,
+    ...(kind === "kuaiguai" ? { expiry: expiry.trim() || null, rotation, yaw } : {}),
     ...(showsPorts(kind) ? { ports } : {}),
     ...(showsDisks(kind) ? { disks } : {}),
     ...(kind === "ups" ? { battery } : {}),
@@ -292,6 +321,61 @@ export function RackItemDialog({
                 />
               </Field>
             ) : null}
+          </div>
+        ) : null}
+
+
+
+        <Field label={t("itops.racks.notesLabel")} hint={t("itops.racks.notesHint")}>
+          <TextArea rows={3} value={notes} onChange={(event) => setNotes(event.currentTarget.value)} />
+        </Field>
+
+        <div style={{ display: "flex", gap: 12 }}>
+          <Field label={t("itops.racks.tagsLabel")} hint={t("itops.racks.listHint")}>
+            <TextArea rows={2} value={tags} onChange={(event) => setTags(event.currentTarget.value)} />
+          </Field>
+          <Field label={t("itops.racks.auditLabel")} hint={t("itops.racks.auditHint")}>
+            <TextArea rows={2} value={auditRecords} onChange={(event) => setAuditRecords(event.currentTarget.value)} />
+          </Field>
+        </div>
+
+        <Field label={t("itops.racks.bindingsLabel")} hint={t("itops.racks.bindingsHint")}>
+          <TextArea rows={2} value={connectionIds} onChange={(event) => setConnectionIds(event.currentTarget.value)} />
+        </Field>
+
+        {kind === "switch" || kind === "router" ? (
+          <div style={{ display: "flex", gap: 12 }}>
+            <Field label={t("itops.racks.portSpeedsLabel")} hint={t("itops.racks.portSpeedsHint")}>
+              <TextArea rows={2} value={networkPorts} onChange={(event) => setNetworkPorts(event.currentTarget.value)} />
+            </Field>
+            <Field label={t("itops.racks.snmpLabel")} hint={t("itops.racks.snmpHint")}>
+              <TextInput value={snmp} onChange={(event) => setSnmp(event.currentTarget.value)} />
+            </Field>
+          </div>
+        ) : null}
+
+        {kind === "server" || kind === "storage" || kind === "connection" ? (
+          <div style={{ display: "flex", gap: 12 }}>
+            <Field label={t("itops.racks.vendorLabel")} hint={t("itops.racks.vendorHint")}>
+              <TextInput value={vendor} onChange={(event) => setVendor(event.currentTarget.value)} />
+            </Field>
+            <Field label={t("itops.racks.relationshipLabel")} hint={t("itops.racks.relationshipHint")}>
+              <TextInput value={relationship} onChange={(event) => setRelationship(event.currentTarget.value)} />
+            </Field>
+          </div>
+        ) : null}
+
+        {kind === "kuaiguai" ? (
+          <div style={{ display: "flex", gap: 12 }}>
+            <Field label={t("itops.racks.expiryLabel")}>
+              <TextInput value={expiry} placeholder="2026-12-31" onChange={(event) => setExpiry(event.currentTarget.value)} />
+            </Field>
+            <Field label={t("itops.racks.rotationLabel")}>
+              <Stepper value={rotation} min={-45} onChange={(next) => setRotation(Math.max(-45, Math.min(45, next)))} ariaDecrease={t("itops.racks.rotationDecrease")} ariaIncrease={t("itops.racks.rotationIncrease")} />
+            </Field>
+            <Field label={t("itops.racks.yawLabel")}>
+              <Stepper value={yaw} min={-45} onChange={(next) => setYaw(Math.max(-45, Math.min(45, next)))} ariaDecrease={t("itops.racks.yawDecrease")} ariaIncrease={t("itops.racks.yawIncrease")} />
+            </Field>
           </div>
         ) : null}
 

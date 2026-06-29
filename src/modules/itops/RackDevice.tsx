@@ -22,6 +22,9 @@ export interface RackDeviceProps {
   disks?: number | null;
   battery?: number | null;
   load?: number | null;
+  expiry?: string | null;
+  rotation?: number | null;
+  yaw?: number | null;
   heightU: number;
   /** User accent override; falls back to the per-kind device colour. */
   accent?: string | null;
@@ -47,6 +50,7 @@ const KIND_ACCENT: Record<RackItemKind, string> = {
   label: "#48484a",
   general: "#8e8e93",
   equipment: "#8e8e93",
+  kuaiguai: "#30d158",
 };
 
 // FNV-1a hash → small-PRNG, mirrored from the comp so activity is deterministic.
@@ -89,6 +93,9 @@ export function RackDevice({
   disks,
   battery,
   load,
+  expiry,
+  rotation,
+  yaw,
   heightU,
   accent,
   shell,
@@ -101,6 +108,7 @@ export function RackDevice({
   const isPanel = kind === "patchPanel";
   const isBlank = kind === "blank" || kind === "label";
   const isEquip = kind === "general" || kind === "equipment";
+  const isKuaiguai = kind === "kuaiguai";
   const isServer = kind === "server" || kind === "connection";
   const isStorage = kind === "storage";
   const isSwitch = kind === "switch";
@@ -164,14 +172,18 @@ export function RackDevice({
     : [];
 
   const hasName = !!label && !isBlank;
-  const showLeds = !isBlank && !isPanel;
-  const showMeta = !isBlank;
+  const showLeds = !isBlank && !isPanel && !isKuaiguai;
+  const showMeta = !isBlank && !isKuaiguai;
 
   return (
     <div
       className="rkd"
       data-shell={shell ?? undefined}
-      style={{ ["--rkd-accent" as string]: devAccent }}
+      style={{
+        ["--rkd-accent" as string]: devAccent,
+        ["--rkd-rotate" as string]: `${rotation ?? -2}deg`,
+        ["--rkd-yaw" as string]: `${yaw ?? 0}deg`,
+      }}
     >
       {/* left rack ear */}
       <div className="rkd-ear">
@@ -203,6 +215,19 @@ export function RackDevice({
         ) : null}
 
         <div className="rkd-visual">
+
+          {/* 乖乖 novelty keep-good-luck package */}
+          {isKuaiguai ? (
+            <div className="rkd-kuaiguai" title={expiry ? `Expires ${expiry}` : undefined}>
+              <div className="rkd-kk-pack">
+                <span className="rkd-kk-brand">KK</span>
+                <span className="rkd-kk-name">乖乖</span>
+                <span className="rkd-kk-art">◕‿◕</span>
+                {expiry ? <span className="rkd-kk-exp">EXP {expiry}</span> : null}
+              </div>
+            </div>
+          ) : null}
+
           {/* SWITCH */}
           {isSwitch ? (
             <div className="rkd-switch">
