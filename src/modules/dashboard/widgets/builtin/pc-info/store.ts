@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { create } from "zustand";
 import { invokeCommand, isTauriRuntime } from "../../../../../lib/tauri";
+import { parsePcInfoSnapshotCache } from "./normalize";
 import type { PcInfoSnapshot } from "./types";
 
 // PC Info uses a cache-and-manual-refresh model: the snapshot is gathered once
@@ -20,7 +21,7 @@ function readCache(): PcInfoSnapshot | null {
   }
   try {
     const raw = window.localStorage.getItem(CACHE_STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as PcInfoSnapshot) : null;
+    return parsePcInfoSnapshotCache(raw);
   } catch {
     return null;
   }
