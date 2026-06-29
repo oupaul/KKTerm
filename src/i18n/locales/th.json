@@ -3025,7 +3025,8 @@
     "folderCountDifferent": "ต่างกัน {{count}} รายการ",
     "folderCountLeftOnly": "เฉพาะด้านซ้าย {{count}} รายการ",
     "folderCountRightOnly": "เฉพาะด้านขวา {{count}} รายการ",
-    "folderCountSame": "เหมือนกัน {{count}} รายการ"
+    "folderCountSame": "เหมือนกัน {{count}} รายการ",
+    "folderTruncated": "ทรีนี้มีขนาดใหญ่มาก — แสดง {{count}} รายการแรก"
   },
   "git": {
     "title": "Git — {{repo}}",

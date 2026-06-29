@@ -602,6 +602,16 @@
 .git-adv-cell.blank {
   background: color-mix(in srgb, var(--git-muted) 50%, var(--git-bg));
 }
+/* Beyond Compare-style per-character highlight: unchanged runs sit on the line's
+   light tint, while the differing runs get a stronger block of the side color. */
+.git-adv-cell.add .txt .seg-diff {
+  background: color-mix(in srgb, var(--git-green) 34%, transparent);
+  border-radius: 2px;
+}
+.git-adv-cell.del .txt .seg-diff {
+  background: color-mix(in srgb, var(--git-red) 34%, transparent);
+  border-radius: 2px;
+}
 .git-adv-cell.search-hit .txt {
   background: color-mix(in srgb, var(--git-amber) 26%, transparent);
 }

@@ -3025,7 +3025,8 @@
     "folderCountDifferent": "{{count}}개 다름",
     "folderCountLeftOnly": "{{count}}개 왼쪽만",
     "folderCountRightOnly": "{{count}}개 오른쪽만",
-    "folderCountSame": "{{count}}개 동일"
+    "folderCountSame": "{{count}}개 동일",
+    "folderTruncated": "이 트리가 매우 커서 처음 {{count}}개 항목만 표시합니다."
   },
   "git": {
     "title": "Git — {{repo}}",

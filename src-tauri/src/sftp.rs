@@ -1436,12 +1436,22 @@ pub struct FolderCompareResult {
     right_root: String,
     rows: Vec<FolderCompareRow>,
     summary: FolderCompareSummary,
+    /// True when the walk hit the entry cap and stopped early, so the tree shown
+    /// is partial. Keeps a pathological tree (e.g. comparing a huge root) from
+    /// freezing the UI with an unbounded result.
+    truncated: bool,
 }
 
 const COMPARE_STATUS_SAME: &str = "same";
 const COMPARE_STATUS_DIFFERENT: &str = "different";
 const COMPARE_STATUS_LEFT_ONLY: &str = "left-only";
 const COMPARE_STATUS_RIGHT_ONLY: &str = "right-only";
+// Stop after this many aligned entries; protects against pathologically large
+// trees producing an unbounded payload the renderer can't handle.
+const FOLDER_COMPARE_MAX_ENTRIES: usize = 200_000;
+// Above this size, decide equal-size files by modification time instead of
+// reading their full contents, so a tree of large files can't stall the scan.
+const FOLDER_COMPARE_MAX_CONTENT_BYTES: u64 = 64 * 1024 * 1024;
 
 pub fn compare_folders(request: CompareFoldersRequest) -> Result<FolderCompareResult, String> {
     let left_root = resolve_local_directory(Some(&request.left))?;
@@ -1455,6 +1465,7 @@ pub fn compare_folders(request: CompareFoldersRequest) -> Result<FolderCompareRe
 
     let mut rows = Vec::new();
     let mut summary = FolderCompareSummary::default();
+    let mut count = 0usize;
     compare_dir_level(
         Some(left_root.as_path()),
         Some(right_root.as_path()),
@@ -1462,6 +1473,7 @@ pub fn compare_folders(request: CompareFoldersRequest) -> Result<FolderCompareRe
         0,
         &mut rows,
         &mut summary,
+        &mut count,
     )?;
 
     Ok(FolderCompareResult {
@@ -1469,6 +1481,7 @@ pub fn compare_folders(request: CompareFoldersRequest) -> Result<FolderCompareRe
         right_root: display_local_path(&right_root),
         rows,
         summary,
+        truncated: count >= FOLDER_COMPARE_MAX_ENTRIES,
     })
 }
 
@@ -1532,6 +1545,7 @@ fn compare_dir_level(
     depth: usize,
     rows: &mut Vec<FolderCompareRow>,
     summary: &mut FolderCompareSummary,
+    count: &mut usize,
 ) -> Result<bool, String> {
     let left_entries = read_level_entries(left_dir);
     let right_entries = read_level_entries(right_dir);
@@ -1563,6 +1577,11 @@ fn compare_dir_level(
 
     let mut level_differs = false;
     for name in names {
+        // Honor the global entry cap so an enormous tree can't run unbounded.
+        if *count >= FOLDER_COMPARE_MAX_ENTRIES {
+            break;
+        }
+        *count += 1;
         let left = left_entries.get(&name);
         let right = right_entries.get(&name);
         let relative_path = if parent_rel.is_empty() {
@@ -1596,6 +1615,7 @@ fn compare_dir_level(
                 depth + 1,
                 rows,
                 summary,
+                count,
             )?;
 
             let status = if left.is_none() {
@@ -1617,8 +1637,8 @@ fn compare_dir_level(
 
         // File (or symlink/other) row.
         let status = match (left, right) {
-            (Some(left), Some(right)) => {
-                if files_equal(&left.path, &right.path).unwrap_or(false) {
+            (Some(left_entry), Some(right_entry)) => {
+                if file_entries_same(left_entry, right_entry) {
                     COMPARE_STATUS_SAME
                 } else {
                     COMPARE_STATUS_DIFFERENT
@@ -1644,6 +1664,19 @@ fn compare_dir_level(
     }
 
     Ok(level_differs)
+}
+
+// Decide whether two file entries are identical. Differing sizes are an instant
+// "no"; equal-size files are byte-compared, except very large ones which fall
+// back to a modification-time check so the scan stays bounded.
+fn file_entries_same(left: &LevelEntry, right: &LevelEntry) -> bool {
+    if left.size != right.size {
+        return false;
+    }
+    if left.size.unwrap_or(0) > FOLDER_COMPARE_MAX_CONTENT_BYTES {
+        return left.modified == right.modified;
+    }
+    files_equal(&left.path, &right.path).unwrap_or(false)
 }
 
 fn bump_summary(summary: &mut FolderCompareSummary, status: &str) {
@@ -2925,6 +2958,7 @@ mod tests {
         assert_eq!(result.summary.left_only, 3); // only_left.txt, left_dir, left_dir/child.txt
         assert_eq!(result.summary.right_only, 1);
         assert_eq!(result.summary.same, 1);
+        assert!(!result.truncated);
 
         let _ = fs::remove_dir_all(&root);
     }

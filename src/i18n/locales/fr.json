@@ -3025,7 +3025,8 @@
     "folderCountDifferent": "{{count}} différents",
     "folderCountLeftOnly": "{{count}} à gauche uniquement",
     "folderCountRightOnly": "{{count}} à droite uniquement",
-    "folderCountSame": "{{count}} identiques"
+    "folderCountSame": "{{count}} identiques",
+    "folderTruncated": "Cette arborescence est très volumineuse — affichage des {{count}} premières entrées."
   },
   "git": {
     "title": "Git — {{repo}}",

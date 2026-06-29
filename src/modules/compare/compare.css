@@ -84,6 +84,14 @@
   border-left: 1px solid var(--git-hairline);
 }
 
+.folder-cmp-truncated {
+  flex: 0 0 auto;
+  padding: 6px 14px;
+  background: color-mix(in srgb, var(--git-amber) 16%, var(--git-bg));
+  color: color-mix(in srgb, var(--git-amber) 82%, var(--git-text));
+  border-bottom: 1px solid var(--git-hairline);
+  font-size: 11.5px;
+}
 .folder-cmp-confirm {
   flex: 0 0 auto;
   display: flex;
