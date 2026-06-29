@@ -8,6 +8,7 @@ import {
   formatBitsPerSecond,
   formatBytes,
   formatDate,
+  formatDateTime,
   formatMhz,
   formatPercent,
   formatUptime,
@@ -26,6 +27,7 @@ const SECTIONS = [
   "storage",
   "network",
   "audio",
+  "battery",
 ] as const;
 type SectionId = (typeof SECTIONS)[number];
 
@@ -61,17 +63,24 @@ export function PcInfoBody({ instance }: BuiltInWidgetBodyProps) {
   }
 
   const busy = loading || refreshing;
+  // The Battery tab only appears on machines that actually have a battery.
+  const visibleSections = SECTIONS.filter(
+    (section) => section !== "battery" || (snapshot?.battery.length ?? 0) > 0,
+  );
+  const activeSection = visibleSections.includes(config.activeSection)
+    ? config.activeSection
+    : "summary";
 
   return (
     <div className="dw-pcinfo">
       <div className="dw-pcinfo-tabs" role="tablist" aria-label={t("dashboard.pcInfoTitle")}>
-        {SECTIONS.map((section) => (
+        {visibleSections.map((section) => (
           <button
             key={section}
             type="button"
             role="tab"
-            aria-selected={section === config.activeSection}
-            className={`dw-pcinfo-tab${section === config.activeSection ? " is-active" : ""}`}
+            aria-selected={section === activeSection}
+            className={`dw-pcinfo-tab${section === activeSection ? " is-active" : ""}`}
             onClick={() => setConfig({ activeSection: section })}
           >
             {t(`dashboard.pcInfoSection.${section}`)}
@@ -82,7 +91,7 @@ export function PcInfoBody({ instance }: BuiltInWidgetBodyProps) {
       <div className="dw-pcinfo-body">
         {error ? <div className="dw-pcinfo-error">{error}</div> : null}
         {snapshot ? (
-          <SectionView section={config.activeSection} snapshot={snapshot} />
+          <SectionView section={activeSection} snapshot={snapshot} />
         ) : (
           <div className="dw-pcinfo-empty">
             {loading ? t("dashboard.pcInfoLoading") : t("dashboard.pcInfoEmpty")}
@@ -133,9 +142,21 @@ function SectionView({ section, snapshot }: { section: SectionId; snapshot: PcIn
       return <NetworkSection snapshot={snapshot} />;
     case "audio":
       return <AudioSection snapshot={snapshot} />;
+    case "battery":
+      return <BatterySection snapshot={snapshot} />;
     default:
       return <div className="dw-pcinfo-empty">{t("dashboard.pcInfoEmpty")}</div>;
   }
+}
+
+function useBoolText() {
+  const { t } = useTranslation();
+  return (value: boolean | null | undefined): string =>
+    value === null || value === undefined
+      ? "—"
+      : value
+        ? t("dashboard.pcInfoYes")
+        : t("dashboard.pcInfoNo");
 }
 
 function Row({ label, value }: { label: string; value: ReactNode }) {
@@ -193,9 +214,16 @@ function OsSection({ snapshot }: { snapshot: PcInfoSnapshot }) {
       <Row label={t("dashboard.pcInfoField.loggedInUser")} value={orDash(os.loggedInUser)} />
       <Row label={t("dashboard.pcInfoField.registeredUser")} value={orDash(os.registeredUser)} />
       <Row label={t("dashboard.pcInfoField.locale")} value={orDash(os.locale)} />
+      <Row label={t("dashboard.pcInfoField.timeZone")} value={orDash(os.timeZone)} />
+      <Row label={t("dashboard.pcInfoField.systemDrive")} value={orDash(os.systemDrive)} />
+      <Row label={t("dashboard.pcInfoField.productId")} value={orDash(os.productId)} />
       <Row
         label={t("dashboard.pcInfoField.installDate")}
         value={formatDate(os.installDateUnixSeconds)}
+      />
+      <Row
+        label={t("dashboard.pcInfoField.lastBoot")}
+        value={formatDateTime(os.lastBootUnixSeconds)}
       />
       <Row label={t("dashboard.pcInfoField.uptime")} value={formatUptime(os.uptimeSeconds)} />
     </div>
@@ -204,23 +232,34 @@ function OsSection({ snapshot }: { snapshot: PcInfoSnapshot }) {
 
 function CpuSection({ snapshot }: { snapshot: PcInfoSnapshot }) {
   const { t } = useTranslation();
+  const boolText = useBoolText();
   const { cpu } = snapshot;
+  const cores =
+    cpu.enabledCores && cpu.physicalCores && cpu.enabledCores !== cpu.physicalCores
+      ? `${cpu.enabledCores} / ${cpu.physicalCores}`
+      : cpu.physicalCores
+        ? String(cpu.physicalCores)
+        : "—";
   return (
     <div className="dw-pcinfo-section">
       <Row label={t("dashboard.pcInfoField.name")} value={orDash(cpu.name)} />
       <Row label={t("dashboard.pcInfoField.vendor")} value={orDash(cpu.vendor)} />
-      <Row
-        label={t("dashboard.pcInfoField.cores")}
-        value={cpu.physicalCores ? String(cpu.physicalCores) : "—"}
-      />
+      <Row label={t("dashboard.pcInfoField.family")} value={orDash(cpu.family)} />
+      <Row label={t("dashboard.pcInfoField.cores")} value={cores} />
       <Row
         label={t("dashboard.pcInfoField.threads")}
         value={cpu.logicalProcessors ? String(cpu.logicalProcessors) : "—"}
       />
       <Row label={t("dashboard.pcInfoField.maxClock")} value={formatMhz(cpu.maxClockMhz)} />
+      <Row label={t("dashboard.pcInfoField.currentClock")} value={formatMhz(cpu.currentClockMhz)} />
+      <Row label={t("dashboard.pcInfoField.l1Cache")} value={formatBytes(cpu.l1CacheBytes)} />
       <Row label={t("dashboard.pcInfoField.l2Cache")} value={formatBytes(cpu.l2CacheBytes)} />
       <Row label={t("dashboard.pcInfoField.l3Cache")} value={formatBytes(cpu.l3CacheBytes)} />
       <Row label={t("dashboard.pcInfoField.socket")} value={orDash(cpu.socket)} />
+      <Row
+        label={t("dashboard.pcInfoField.virtualization")}
+        value={boolText(cpu.virtualizationEnabled)}
+      />
       <Row
         label={t("dashboard.pcInfoField.addressWidth")}
         value={cpu.addressWidthBits ? `${cpu.addressWidthBits}-bit` : "—"}
@@ -237,6 +276,23 @@ function MemorySection({ snapshot }: { snapshot: PcInfoSnapshot }) {
       <Row label={t("dashboard.pcInfoField.total")} value={formatBytes(memory.totalBytes)} />
       <Row label={t("dashboard.pcInfoField.available")} value={formatBytes(memory.availableBytes)} />
       <Row label={t("dashboard.pcInfoField.used")} value={formatPercent(memory.usedPercent)} />
+      <Row
+        label={t("dashboard.pcInfoField.slots")}
+        value={
+          memory.slotsTotal
+            ? t("dashboard.pcInfoSlotsValue", {
+                used: memory.slotsUsed ?? memory.modules.length,
+                total: memory.slotsTotal,
+              })
+            : memory.slotsUsed
+              ? String(memory.slotsUsed)
+              : "—"
+        }
+      />
+      <Row
+        label={t("dashboard.pcInfoField.maxCapacity")}
+        value={formatBytes(memory.maxCapacityBytes)}
+      />
       {memory.modules.length > 0 ? (
         memory.modules.map((module, index) => (
           <Group
@@ -250,6 +306,11 @@ function MemorySection({ snapshot }: { snapshot: PcInfoSnapshot }) {
             <Row label={t("dashboard.pcInfoField.speed")} value={formatMhz(module.speedMhz)} />
             <Row label={t("dashboard.pcInfoField.type")} value={orDash(module.memoryType)} />
             <Row label={t("dashboard.pcInfoField.formFactor")} value={orDash(module.formFactor)} />
+            <Row label={t("dashboard.pcInfoField.bank")} value={orDash(module.bank)} />
+            <Row
+              label={t("dashboard.pcInfoField.voltage")}
+              value={module.voltageMillivolts ? `${module.voltageMillivolts} mV` : "—"}
+            />
             <Row
               label={t("dashboard.pcInfoField.manufacturer")}
               value={orDash(module.manufacturer)}
@@ -276,6 +337,10 @@ function MotherboardSection({ snapshot }: { snapshot: PcInfoSnapshot }) {
       <Row label={t("dashboard.pcInfoField.product")} value={orDash(motherboard.product)} />
       <Row label={t("dashboard.pcInfoField.version")} value={orDash(motherboard.version)} />
       <Row label={t("dashboard.pcInfoField.serialNumber")} value={orDash(motherboard.serialNumber)} />
+      <Row label={t("dashboard.pcInfoField.systemType")} value={orDash(motherboard.systemType)} />
+      <Row label={t("dashboard.pcInfoField.chassis")} value={orDash(motherboard.chassisType)} />
+      <Row label={t("dashboard.pcInfoField.systemSku")} value={orDash(motherboard.systemSku)} />
+      <Row label={t("dashboard.pcInfoField.systemUuid")} value={orDash(motherboard.systemUuid)} />
       <Group title={t("dashboard.pcInfoField.bios")}>
         <Row label={t("dashboard.pcInfoField.vendor")} value={orDash(motherboard.biosVendor)} />
         <Row label={t("dashboard.pcInfoField.version")} value={orDash(motherboard.biosVersion)} />
@@ -293,8 +358,10 @@ function GraphicsSection({ snapshot }: { snapshot: PcInfoSnapshot }) {
         snapshot.graphics.map((gpu, index) => (
           <Group key={gpu.name ?? index} title={orDash(gpu.name)}>
             <Row label={t("dashboard.pcInfoField.vendor")} value={orDash(gpu.vendor)} />
+            <Row label={t("dashboard.pcInfoField.chip")} value={orDash(gpu.chip)} />
             <Row label={t("dashboard.pcInfoField.vram")} value={formatBytes(gpu.vramBytes)} />
             <Row label={t("dashboard.pcInfoField.driver")} value={orDash(gpu.driverVersion)} />
+            <Row label={t("dashboard.pcInfoField.driverDate")} value={orDash(gpu.driverDate)} />
             <Row label={t("dashboard.pcInfoField.mode")} value={orDash(gpu.currentMode)} />
           </Group>
         ))
@@ -306,16 +373,32 @@ function GraphicsSection({ snapshot }: { snapshot: PcInfoSnapshot }) {
           {snapshot.displays.map((display, index) => (
             <Row
               key={display.name ?? index}
-              label={orDash(display.name)}
-              value={`${orDash(display.resolution)}${
-                display.refreshHz ? ` @ ${display.refreshHz} Hz` : ""
-              }`}
+              label={`${display.manufacturer?.trim() ? `${display.manufacturer.trim()} ` : ""}${orDash(
+                display.name,
+              )}`}
+              value={describeDisplay(display)}
             />
           ))}
         </Group>
       ) : null}
     </div>
   );
+}
+
+function describeDisplay(display: PcInfoSnapshot["displays"][number]): string {
+  const parts: string[] = [];
+  if (display.resolution?.trim()) {
+    parts.push(
+      `${display.resolution.trim()}${display.refreshHz ? ` @ ${display.refreshHz} Hz` : ""}`,
+    );
+  }
+  if (display.sizeInches) {
+    parts.push(`${display.sizeInches}"`);
+  }
+  if (display.year) {
+    parts.push(String(display.year));
+  }
+  return parts.length > 0 ? parts.join(" · ") : "—";
 }
 
 function StorageSection({ snapshot }: { snapshot: PcInfoSnapshot }) {
@@ -328,6 +411,11 @@ function StorageSection({ snapshot }: { snapshot: PcInfoSnapshot }) {
             <Row label={t("dashboard.pcInfoField.capacity")} value={formatBytes(disk.sizeBytes)} />
             <Row label={t("dashboard.pcInfoField.type")} value={orDash(disk.mediaType)} />
             <Row label={t("dashboard.pcInfoField.interface")} value={orDash(disk.interface)} />
+            <Row label={t("dashboard.pcInfoField.health")} value={orDash(disk.healthStatus)} />
+            <Row
+              label={t("dashboard.pcInfoField.rpm")}
+              value={disk.spindleSpeedRpm ? `${disk.spindleSpeedRpm} RPM` : "—"}
+            />
             <Row label={t("dashboard.pcInfoField.serialNumber")} value={orDash(disk.serialNumber)} />
           </Group>
         ))
@@ -355,11 +443,16 @@ function StorageSection({ snapshot }: { snapshot: PcInfoSnapshot }) {
 
 function NetworkSection({ snapshot }: { snapshot: PcInfoSnapshot }) {
   const { t } = useTranslation();
+  const boolText = useBoolText();
   return (
     <div className="dw-pcinfo-section">
       {snapshot.network.length > 0 ? (
         snapshot.network.map((adapter, index) => (
           <Group key={adapter.macAddress ?? adapter.name ?? index} title={orDash(adapter.name)}>
+            <Row
+              label={t("dashboard.pcInfoField.status")}
+              value={boolText(adapter.connected)}
+            />
             <Row label={t("dashboard.pcInfoField.macAddress")} value={orDash(adapter.macAddress)} />
             <Row label={t("dashboard.pcInfoField.adapterType")} value={orDash(adapter.adapterType)} />
             <Row
@@ -370,12 +463,66 @@ function NetworkSection({ snapshot }: { snapshot: PcInfoSnapshot }) {
               label={t("dashboard.pcInfoField.ipAddresses")}
               value={adapter.ipAddresses.length > 0 ? adapter.ipAddresses.join(", ") : "—"}
             />
+            {adapter.subnetMasks.length > 0 ? (
+              <Row
+                label={t("dashboard.pcInfoField.subnetMask")}
+                value={adapter.subnetMasks.join(", ")}
+              />
+            ) : null}
             {adapter.gateways.length > 0 ? (
               <Row label={t("dashboard.pcInfoField.gateway")} value={adapter.gateways.join(", ")} />
             ) : null}
             {adapter.dnsServers.length > 0 ? (
               <Row label={t("dashboard.pcInfoField.dns")} value={adapter.dnsServers.join(", ")} />
             ) : null}
+            {adapter.dnsSuffix?.trim() ? (
+              <Row label={t("dashboard.pcInfoField.dnsSuffix")} value={adapter.dnsSuffix.trim()} />
+            ) : null}
+            <Row label={t("dashboard.pcInfoField.dhcp")} value={boolText(adapter.dhcpEnabled)} />
+            {adapter.dhcpServer?.trim() ? (
+              <Row
+                label={t("dashboard.pcInfoField.dhcpServer")}
+                value={adapter.dhcpServer.trim()}
+              />
+            ) : null}
+          </Group>
+        ))
+      ) : (
+        <EmptyHint />
+      )}
+    </div>
+  );
+}
+
+function BatterySection({ snapshot }: { snapshot: PcInfoSnapshot }) {
+  const { t } = useTranslation();
+  return (
+    <div className="dw-pcinfo-section">
+      {snapshot.battery.length > 0 ? (
+        snapshot.battery.map((battery, index) => (
+          <Group key={battery.name ?? index} title={orDash(battery.name)}>
+            <Row
+              label={t("dashboard.pcInfoField.charge")}
+              value={
+                battery.chargePercent !== null && battery.chargePercent !== undefined
+                  ? `${battery.chargePercent}%`
+                  : "—"
+              }
+            />
+            <Row label={t("dashboard.pcInfoField.status")} value={orDash(battery.status)} />
+            <Row label={t("dashboard.pcInfoField.wear")} value={formatPercent(battery.wearPercent)} />
+            <Row
+              label={t("dashboard.pcInfoField.designCapacity")}
+              value={
+                battery.designCapacityMwh ? `${battery.designCapacityMwh} mWh` : "—"
+              }
+            />
+            <Row
+              label={t("dashboard.pcInfoField.fullCapacity")}
+              value={
+                battery.fullChargeCapacityMwh ? `${battery.fullChargeCapacityMwh} mWh` : "—"
+              }
+            />
           </Group>
         ))
       ) : (

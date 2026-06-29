@@ -71,6 +71,13 @@ export function formatDate(unixSeconds: number | null | undefined): string {
   return new Date(unixSeconds * 1000).toLocaleDateString();
 }
 
+export function formatDateTime(unixSeconds: number | null | undefined): string {
+  if (unixSeconds === null || unixSeconds === undefined || unixSeconds <= 0) {
+    return EM_DASH;
+  }
+  return new Date(unixSeconds * 1000).toLocaleString();
+}
+
 export function orDash(value: string | null | undefined): string {
   const trimmed = value?.trim();
   return trimmed ? trimmed : EM_DASH;

@@ -42,6 +42,7 @@ pub struct PcInfoSnapshot {
     pub volumes: Vec<VolumeInfo>,
     pub network: Vec<NetworkAdapterInfo>,
     pub audio: Vec<AudioDeviceInfo>,
+    pub battery: Vec<BatteryInfo>,
 }
 
 #[derive(Clone, Serialize, Default)]
@@ -55,7 +56,11 @@ pub struct OsInfo {
     pub registered_user: Option<String>,
     pub logged_in_user: Option<String>,
     pub locale: Option<String>,
+    pub time_zone: Option<String>,
+    pub product_id: Option<String>,
+    pub system_drive: Option<String>,
     pub install_date_unix_seconds: Option<u64>,
+    pub last_boot_unix_seconds: Option<u64>,
     pub uptime_seconds: Option<u64>,
 }
 
@@ -64,12 +69,17 @@ pub struct OsInfo {
 pub struct CpuInfo {
     pub name: Option<String>,
     pub vendor: Option<String>,
+    pub family: Option<String>,
     pub physical_cores: Option<u32>,
+    pub enabled_cores: Option<u32>,
     pub logical_processors: Option<u32>,
     pub max_clock_mhz: Option<u64>,
+    pub current_clock_mhz: Option<u64>,
+    pub l1_cache_bytes: Option<u64>,
     pub l2_cache_bytes: Option<u64>,
     pub l3_cache_bytes: Option<u64>,
     pub address_width_bits: Option<u32>,
+    pub virtualization_enabled: Option<bool>,
     pub socket: Option<String>,
 }
 
@@ -79,6 +89,9 @@ pub struct MemoryInfo {
     pub total_bytes: Option<u64>,
     pub available_bytes: Option<u64>,
     pub used_percent: Option<f64>,
+    pub slots_used: Option<u32>,
+    pub slots_total: Option<u32>,
+    pub max_capacity_bytes: Option<u64>,
     pub modules: Vec<MemoryModuleInfo>,
 }
 
@@ -86,8 +99,10 @@ pub struct MemoryInfo {
 #[serde(rename_all = "camelCase")]
 pub struct MemoryModuleInfo {
     pub slot: Option<String>,
+    pub bank: Option<String>,
     pub capacity_bytes: Option<u64>,
     pub speed_mhz: Option<u64>,
+    pub voltage_millivolts: Option<u64>,
     pub manufacturer: Option<String>,
     pub part_number: Option<String>,
     pub form_factor: Option<String>,
@@ -104,6 +119,10 @@ pub struct MotherboardInfo {
     pub bios_vendor: Option<String>,
     pub bios_version: Option<String>,
     pub bios_date: Option<String>,
+    pub system_type: Option<String>,
+    pub chassis_type: Option<String>,
+    pub system_sku: Option<String>,
+    pub system_uuid: Option<String>,
 }
 
 #[derive(Clone, Serialize, Default)]
@@ -111,8 +130,10 @@ pub struct MotherboardInfo {
 pub struct GpuInfo {
     pub name: Option<String>,
     pub vendor: Option<String>,
+    pub chip: Option<String>,
     pub vram_bytes: Option<u64>,
     pub driver_version: Option<String>,
+    pub driver_date: Option<String>,
     pub current_mode: Option<String>,
 }
 
@@ -120,8 +141,11 @@ pub struct GpuInfo {
 #[serde(rename_all = "camelCase")]
 pub struct DisplayInfo {
     pub name: Option<String>,
+    pub manufacturer: Option<String>,
     pub resolution: Option<String>,
     pub refresh_hz: Option<u32>,
+    pub size_inches: Option<f64>,
+    pub year: Option<u32>,
 }
 
 #[derive(Clone, Serialize, Default)]
@@ -132,6 +156,8 @@ pub struct DiskInfo {
     pub media_type: Option<String>,
     pub interface: Option<String>,
     pub serial_number: Option<String>,
+    pub health_status: Option<String>,
+    pub spindle_speed_rpm: Option<u32>,
 }
 
 #[derive(Clone, Serialize, Default)]
@@ -151,7 +177,12 @@ pub struct NetworkAdapterInfo {
     pub mac_address: Option<String>,
     pub adapter_type: Option<String>,
     pub speed_bits_per_second: Option<u64>,
+    pub connected: Option<bool>,
+    pub dhcp_enabled: Option<bool>,
+    pub dhcp_server: Option<String>,
+    pub dns_suffix: Option<String>,
     pub ip_addresses: Vec<String>,
+    pub subnet_masks: Vec<String>,
     pub gateways: Vec<String>,
     pub dns_servers: Vec<String>,
 }
@@ -161,6 +192,17 @@ pub struct NetworkAdapterInfo {
 pub struct AudioDeviceInfo {
     pub name: Option<String>,
     pub manufacturer: Option<String>,
+}
+
+#[derive(Clone, Serialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct BatteryInfo {
+    pub name: Option<String>,
+    pub charge_percent: Option<u32>,
+    pub status: Option<String>,
+    pub design_capacity_mwh: Option<u64>,
+    pub full_charge_capacity_mwh: Option<u64>,
+    pub wear_percent: Option<f64>,
 }
 
 /// In-memory cache for the PC Info snapshot. One per app; the machine does not
@@ -250,23 +292,34 @@ mod platform {
     // stable regardless of the Windows display language.
     const QUERY: &str = r#"$ErrorActionPreference='SilentlyContinue';
 function E($d){ if($d){[int64]([math]::Floor((($d).ToUniversalTime() - [datetime]'1970-01-01').TotalSeconds))} else {$null} }
+function S($a){ if($a){ (($a | Where-Object {$_ -gt 0} | ForEach-Object {[char]$_}) -join '').Trim() } else {$null} }
 $os=Get-CimInstance Win32_OperatingSystem;
 $cs=Get-CimInstance Win32_ComputerSystem;
 $out=[ordered]@{
- os=$os | Select-Object Caption,Version,BuildNumber,OSArchitecture,CSName,RegisteredUser,Locale,@{n='InstallDateEpoch';e={E $_.InstallDate}},@{n='LastBootEpoch';e={E $_.LastBootUpTime}};
- cs=$cs | Select-Object Manufacturer,Model,SystemType,TotalPhysicalMemory,UserName,NumberOfLogicalProcessors;
- cpu=@(Get-CimInstance Win32_Processor | Select-Object Name,Manufacturer,NumberOfCores,NumberOfLogicalProcessors,MaxClockSpeed,L2CacheSize,L3CacheSize,AddressWidth,SocketDesignation);
- mem=@(Get-CimInstance Win32_PhysicalMemory | Select-Object Capacity,Speed,ConfiguredClockSpeed,Manufacturer,PartNumber,DeviceLocator,FormFactor,SMBIOSMemoryType);
+ os=$os | Select-Object Caption,Version,BuildNumber,OSArchitecture,CSName,RegisteredUser,Locale,SerialNumber,SystemDrive,@{n='InstallDateEpoch';e={E $_.InstallDate}},@{n='LastBootEpoch';e={E $_.LastBootUpTime}};
+ tz=(Get-CimInstance Win32_TimeZone | Select-Object -First 1).Caption;
+ cs=$cs | Select-Object Manufacturer,Model,SystemType,TotalPhysicalMemory,UserName,NumberOfLogicalProcessors,PCSystemType,SystemSKUNumber;
+ csp=Get-CimInstance Win32_ComputerSystemProduct | Select-Object UUID,IdentifyingNumber;
+ chassis=@(Get-CimInstance Win32_SystemEnclosure | Select-Object -ExpandProperty ChassisTypes);
+ cpu=@(Get-CimInstance Win32_Processor | Select-Object Name,Manufacturer,Description,NumberOfCores,NumberOfEnabledCore,NumberOfLogicalProcessors,MaxClockSpeed,CurrentClockSpeed,L2CacheSize,L3CacheSize,AddressWidth,SocketDesignation,VirtualizationFirmwareEnabled);
+ l1=@(Get-CimInstance Win32_CacheMemory -Filter 'Level=3' | Select-Object InstalledSize);
+ mem=@(Get-CimInstance Win32_PhysicalMemory | Select-Object Capacity,Speed,ConfiguredClockSpeed,Manufacturer,PartNumber,DeviceLocator,BankLabel,FormFactor,SMBIOSMemoryType,ConfiguredVoltage);
+ memarray=Get-CimInstance Win32_PhysicalMemoryArray | Select-Object -First 1 MemoryDevices,MaxCapacityEx;
  board=Get-CimInstance Win32_BaseBoard | Select-Object Manufacturer,Product,Version,SerialNumber;
  bios=Get-CimInstance Win32_BIOS | Select-Object Manufacturer,SMBIOSBIOSVersion,@{n='ReleaseEpoch';e={E $_.ReleaseDate}};
- gpu=@(Get-CimInstance Win32_VideoController | Select-Object Name,AdapterRAM,DriverVersion,VideoProcessor,CurrentHorizontalResolution,CurrentVerticalResolution,CurrentRefreshRate);
+ gpu=@(Get-CimInstance Win32_VideoController | Select-Object Name,AdapterRAM,AdapterCompatibility,DriverVersion,VideoProcessor,@{n='DriverEpoch';e={E $_.DriverDate}},CurrentHorizontalResolution,CurrentVerticalResolution,CurrentRefreshRate);
  gpumem=@(Get-ChildItem 'HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}' -ErrorAction SilentlyContinue | ForEach-Object { $p=Get-ItemProperty $_.PSPath -ErrorAction SilentlyContinue; if($p.'HardwareInformation.qwMemorySize'){[ordered]@{name=$p.DriverDesc;bytes=[int64]$p.'HardwareInformation.qwMemorySize'}} });
  disk=@(Get-CimInstance Win32_DiskDrive | Select-Object Model,Size,InterfaceType,MediaType,SerialNumber);
- phys=@(Get-CimInstance -Namespace root/Microsoft/Windows/Storage -ClassName MSFT_PhysicalDisk -ErrorAction SilentlyContinue | Select-Object FriendlyName,Size,MediaType,BusType,SerialNumber);
+ phys=@(Get-CimInstance -Namespace root/Microsoft/Windows/Storage -ClassName MSFT_PhysicalDisk -ErrorAction SilentlyContinue | Select-Object FriendlyName,Size,MediaType,BusType,SerialNumber,HealthStatus,SpindleSpeed);
  vol=@(Get-CimInstance Win32_LogicalDisk -Filter 'DriveType=3' | Select-Object DeviceID,FileSystem,Size,FreeSpace,VolumeName);
  audio=@(Get-CimInstance Win32_SoundDevice | Select-Object Name,Manufacturer);
- net=@(Get-CimInstance Win32_NetworkAdapter -Filter 'PhysicalAdapter=TRUE' | Select-Object Name,MACAddress,AdapterType,Speed,InterfaceIndex);
- netcfg=@(Get-CimInstance Win32_NetworkAdapterConfiguration -Filter 'IPEnabled=TRUE' | Select-Object Description,MACAddress,IPAddress,DefaultIPGateway,DNSServerSearchOrder,InterfaceIndex)
+ net=@(Get-CimInstance Win32_NetworkAdapter -Filter 'PhysicalAdapter=TRUE' | Select-Object Name,MACAddress,AdapterType,Speed,NetConnectionStatus,InterfaceIndex);
+ netcfg=@(Get-CimInstance Win32_NetworkAdapterConfiguration -Filter 'IPEnabled=TRUE' | Select-Object Description,MACAddress,IPAddress,IPSubnet,DefaultIPGateway,DNSServerSearchOrder,DNSDomain,DHCPEnabled,DHCPServer,InterfaceIndex);
+ battery=@(Get-CimInstance Win32_Battery | Select-Object Name,EstimatedChargeRemaining,BatteryStatus);
+ battdesign=@(Get-CimInstance -Namespace root/wmi -ClassName BatteryStaticData -ErrorAction SilentlyContinue | Select-Object DesignedCapacity);
+ battfull=@(Get-CimInstance -Namespace root/wmi -ClassName BatteryFullChargedCapacity -ErrorAction SilentlyContinue | Select-Object FullChargedCapacity);
+ monid=@(Get-CimInstance -Namespace root/wmi -ClassName WmiMonitorID -ErrorAction SilentlyContinue | ForEach-Object { [ordered]@{ name=(S $_.UserFriendlyName); manufacturer=(S $_.ManufacturerName); year=$_.YearOfManufacture } });
+ monsz=@(Get-CimInstance -Namespace root/wmi -ClassName WmiMonitorBasicDisplayParams -ErrorAction SilentlyContinue | Select-Object MaxHorizontalImageSize,MaxVerticalImageSize)
 };
 $out | ConvertTo-Json -Depth 5 -Compress"#;
 
@@ -305,6 +358,8 @@ $out | ConvertTo-Json -Depth 5 -Compress"#;
 
         let os = root.get("os").cloned().unwrap_or(Value::Null);
         let cs = root.get("cs").cloned().unwrap_or(Value::Null);
+        let csp = root.get("csp").cloned().unwrap_or(Value::Null);
+        let last_boot = j_u64(&os, "LastBootEpoch");
         snapshot.os = OsInfo {
             name: clean(j_str(&os, "Caption")),
             version: clean(j_str(&os, "Version")),
@@ -314,8 +369,12 @@ $out | ConvertTo-Json -Depth 5 -Compress"#;
             registered_user: clean(j_str(&os, "RegisteredUser")),
             logged_in_user: clean(j_str(&cs, "UserName")),
             locale: clean(j_str(&os, "Locale")),
+            time_zone: clean(j_str(&root, "tz")),
+            product_id: clean(j_str(&os, "SerialNumber")),
+            system_drive: clean(j_str(&os, "SystemDrive")),
             install_date_unix_seconds: j_u64(&os, "InstallDateEpoch"),
-            uptime_seconds: j_u64(&os, "LastBootEpoch").map(|boot| unix_seconds().saturating_sub(boot)),
+            last_boot_unix_seconds: last_boot,
+            uptime_seconds: last_boot.map(|boot| unix_seconds().saturating_sub(boot)),
         };
 
         // CPU: Win32_Processor is an array of sockets; the first describes the
@@ -323,42 +382,66 @@ $out | ConvertTo-Json -Depth 5 -Compress"#;
         let cpus = j_array(&root, "cpu");
         if let Some(first) = cpus.first() {
             let physical: u32 = cpus.iter().filter_map(|c| j_u64(c, "NumberOfCores")).sum::<u64>() as u32;
+            let enabled: u32 = cpus
+                .iter()
+                .filter_map(|c| j_u64(c, "NumberOfEnabledCore"))
+                .sum::<u64>() as u32;
             let logical: u32 = cpus
                 .iter()
                 .filter_map(|c| j_u64(c, "NumberOfLogicalProcessors"))
                 .sum::<u64>() as u32;
+            // L1 is not on Win32_Processor; sum InstalledSize (KB) of the
+            // Level=3 (primary) Win32_CacheMemory rows.
+            let l1_kb: u64 = j_array(&root, "l1")
+                .iter()
+                .filter_map(|c| j_u64(c, "InstalledSize"))
+                .sum();
             snapshot.cpu = CpuInfo {
                 name: clean(j_str(first, "Name")),
                 vendor: clean(j_str(first, "Manufacturer")),
+                family: clean(j_str(first, "Description")),
                 physical_cores: (physical > 0).then_some(physical),
+                enabled_cores: (enabled > 0).then_some(enabled),
                 logical_processors: (logical > 0)
                     .then_some(logical)
                     .or_else(|| j_u64(&cs, "NumberOfLogicalProcessors").map(|v| v as u32)),
                 max_clock_mhz: j_u64(first, "MaxClockSpeed"),
+                current_clock_mhz: j_u64(first, "CurrentClockSpeed"),
+                l1_cache_bytes: (l1_kb > 0).then_some(l1_kb * 1024),
                 l2_cache_bytes: j_u64(first, "L2CacheSize").map(|kb| kb * 1024),
                 l3_cache_bytes: j_u64(first, "L3CacheSize").map(|kb| kb * 1024),
                 address_width_bits: j_u64(first, "AddressWidth").map(|v| v as u32),
+                virtualization_enabled: first.get("VirtualizationFirmwareEnabled").and_then(Value::as_bool),
                 socket: clean(j_str(first, "SocketDesignation")),
             };
         }
 
         let total_phys = j_u64(&cs, "TotalPhysicalMemory");
+        let memarray = root.get("memarray").cloned().unwrap_or(Value::Null);
+        let modules: Vec<MemoryModuleInfo> = j_array(&root, "mem")
+            .iter()
+            .map(|m| MemoryModuleInfo {
+                slot: clean(j_str(m, "DeviceLocator")),
+                bank: clean(j_str(m, "BankLabel")),
+                capacity_bytes: j_u64(m, "Capacity"),
+                speed_mhz: j_u64(m, "ConfiguredClockSpeed").or_else(|| j_u64(m, "Speed")),
+                voltage_millivolts: j_u64(m, "ConfiguredVoltage").filter(|&mv| mv > 0),
+                manufacturer: clean(j_str(m, "Manufacturer")),
+                part_number: clean(j_str(m, "PartNumber")),
+                form_factor: memory_form_factor(j_u64(m, "FormFactor")),
+                memory_type: smbios_memory_type(j_u64(m, "SMBIOSMemoryType")),
+            })
+            .collect();
+        let slots_used = u32::try_from(modules.len()).ok().filter(|&n| n > 0);
         snapshot.memory = MemoryInfo {
             total_bytes: total_phys,
             available_bytes: None,
             used_percent: None,
-            modules: j_array(&root, "mem")
-                .iter()
-                .map(|m| MemoryModuleInfo {
-                    slot: clean(j_str(m, "DeviceLocator")),
-                    capacity_bytes: j_u64(m, "Capacity"),
-                    speed_mhz: j_u64(m, "ConfiguredClockSpeed").or_else(|| j_u64(m, "Speed")),
-                    manufacturer: clean(j_str(m, "Manufacturer")),
-                    part_number: clean(j_str(m, "PartNumber")),
-                    form_factor: memory_form_factor(j_u64(m, "FormFactor")),
-                    memory_type: smbios_memory_type(j_u64(m, "SMBIOSMemoryType")),
-                })
-                .collect(),
+            slots_used,
+            slots_total: j_u64(&memarray, "MemoryDevices").map(|v| v as u32),
+            // MaxCapacityEx is reported in KB.
+            max_capacity_bytes: j_u64(&memarray, "MaxCapacityEx").map(|kb| kb * 1024),
+            modules,
         };
         // Fill available/used from the live Win32 counter so the RAM section has
         // headroom data even though CIM omits it here.
@@ -377,6 +460,10 @@ $out | ConvertTo-Json -Depth 5 -Compress"#;
             bios_vendor: clean(j_str(&bios, "Manufacturer")),
             bios_version: clean(j_str(&bios, "SMBIOSBIOSVersion")),
             bios_date: j_u64(&bios, "ReleaseEpoch").map(format_epoch_date),
+            system_type: pc_system_type(j_u64(&cs, "PCSystemType")),
+            chassis_type: chassis_type(j_array(&root, "chassis").first().and_then(Value::as_u64)),
+            system_sku: clean(j_str(&cs, "SystemSKUNumber")),
+            system_uuid: clean(j_str(&csp, "UUID")),
         };
 
         // True VRAM comes from the display-adapter class registry key
@@ -413,16 +500,53 @@ $out | ConvertTo-Json -Depth 5 -Compress"#;
                 .or_else(|| j_u64(&g, "AdapterRAM").filter(|&bytes| bytes > 0));
             snapshot.graphics.push(GpuInfo {
                 name: name.clone(),
-                vendor: clean(j_str(&g, "VideoProcessor")),
+                vendor: clean(j_str(&g, "AdapterCompatibility")),
+                chip: clean(j_str(&g, "VideoProcessor")),
                 vram_bytes: vram,
                 driver_version: clean(j_str(&g, "DriverVersion")),
+                driver_date: j_u64(&g, "DriverEpoch").map(format_epoch_date),
                 current_mode: current_mode.clone(),
             });
-            if let (Some(w), Some(h)) = (width, height) {
+        }
+
+        // Real monitor identity (make/model/year + physical size) comes from the
+        // EDID-backed root\wmi classes; pair WmiMonitorID with the size class by
+        // index. Attach the active resolution from the GPU list when counts line
+        // up. Fall back to GPU-derived resolution rows when no EDID is exposed.
+        let monitor_ids = j_array(&root, "monid");
+        let monitor_sizes = j_array(&root, "monsz");
+        if monitor_ids.is_empty() {
+            for g in j_array(&root, "gpu") {
+                let width = j_u64(&g, "CurrentHorizontalResolution");
+                let height = j_u64(&g, "CurrentVerticalResolution");
+                if let (Some(w), Some(h)) = (width, height) {
+                    snapshot.displays.push(DisplayInfo {
+                        name: clean(j_str(&g, "Name")),
+                        resolution: Some(format!("{w} × {h}")),
+                        refresh_hz: j_u64(&g, "CurrentRefreshRate").map(|r| r as u32),
+                        ..Default::default()
+                    });
+                }
+            }
+        } else {
+            for (index, mon) in monitor_ids.iter().enumerate() {
+                let size = monitor_sizes.get(index).and_then(|s| {
+                    let cm_h = j_u64(s, "MaxHorizontalImageSize")? as f64;
+                    let cm_v = j_u64(s, "MaxVerticalImageSize")? as f64;
+                    if cm_h <= 0.0 || cm_v <= 0.0 {
+                        return None;
+                    }
+                    // Diagonal in cm → inches, one decimal.
+                    let inches = (cm_h * cm_h + cm_v * cm_v).sqrt() / 2.54;
+                    Some((inches * 10.0).round() / 10.0)
+                });
                 snapshot.displays.push(DisplayInfo {
-                    name: clean(j_str(&g, "Name")),
-                    resolution: Some(format!("{w} × {h}")),
-                    refresh_hz: refresh.map(|r| r as u32),
+                    name: clean(j_str(mon, "name")),
+                    manufacturer: clean(j_str(mon, "manufacturer")),
+                    resolution: None,
+                    refresh_hz: None,
+                    size_inches: size,
+                    year: j_u64(mon, "year").filter(|&y| y > 1990).map(|y| y as u32),
                 });
             }
         }
@@ -439,6 +563,11 @@ $out | ConvertTo-Json -Depth 5 -Compress"#;
                     media_type: physical_media_type(j_u64(d, "MediaType")),
                     interface: physical_bus_type(j_u64(d, "BusType")),
                     serial_number: clean(j_str(d, "SerialNumber")),
+                    health_status: disk_health(j_u64(d, "HealthStatus")),
+                    // 0 / 0xFFFFFFFF means SSD or unknown — only report real RPM.
+                    spindle_speed_rpm: j_u64(d, "SpindleSpeed")
+                        .filter(|&rpm| rpm > 0 && rpm < 0xFFFF_FFFF)
+                        .map(|rpm| rpm as u32),
                 })
                 .collect()
         } else {
@@ -450,6 +579,8 @@ $out | ConvertTo-Json -Depth 5 -Compress"#;
                     media_type: clean(j_str(d, "MediaType")),
                     interface: clean(j_str(d, "InterfaceType")),
                     serial_number: clean(j_str(d, "SerialNumber")),
+                    health_status: None,
+                    spindle_speed_rpm: None,
                 })
                 .collect()
         };
@@ -474,8 +605,38 @@ $out | ConvertTo-Json -Depth 5 -Compress"#;
             .collect();
 
         snapshot.network = build_network(&root);
+        snapshot.battery = build_battery(&root);
 
         snapshot
+    }
+
+    fn build_battery(root: &Value) -> Vec<BatteryInfo> {
+        let designs = j_array(root, "battdesign");
+        let fulls = j_array(root, "battfull");
+        j_array(root, "battery")
+            .iter()
+            .enumerate()
+            .map(|(index, b)| {
+                let design = designs.get(index).and_then(|d| j_u64(d, "DesignedCapacity"));
+                let full = fulls.get(index).and_then(|f| j_u64(f, "FullChargedCapacity"));
+                // Wear = how much the full-charge capacity has dropped below the
+                // factory design capacity.
+                let wear = match (design, full) {
+                    (Some(d), Some(f)) if d > 0 && f <= d => {
+                        Some((1.0 - f as f64 / d as f64) * 100.0)
+                    }
+                    _ => None,
+                };
+                BatteryInfo {
+                    name: clean(j_str(b, "Name")),
+                    charge_percent: j_u64(b, "EstimatedChargeRemaining").map(|v| v as u32),
+                    status: battery_status(j_u64(b, "BatteryStatus")),
+                    design_capacity_mwh: design,
+                    full_charge_capacity_mwh: full,
+                    wear_percent: wear.map(|w| (w * 10.0).round() / 10.0),
+                }
+            })
+            .collect()
     }
 
     fn build_network(root: &Value) -> Vec<NetworkAdapterInfo> {
@@ -499,7 +660,13 @@ $out | ConvertTo-Json -Depth 5 -Compress"#;
                         .or_else(|| adapter.and_then(|a| clean(j_str(a, "MACAddress")))),
                     adapter_type: adapter.and_then(|a| clean(j_str(a, "AdapterType"))),
                     speed_bits_per_second: adapter.and_then(|a| j_u64(a, "Speed")),
+                    // NetConnectionStatus == 2 means "Connected".
+                    connected: adapter.and_then(|a| j_u64(a, "NetConnectionStatus")).map(|s| s == 2),
+                    dhcp_enabled: cfg.get("DHCPEnabled").and_then(Value::as_bool),
+                    dhcp_server: clean(j_str(cfg, "DHCPServer")),
+                    dns_suffix: clean(j_str(cfg, "DNSDomain")),
                     ip_addresses: j_str_array(cfg, "IPAddress"),
+                    subnet_masks: j_str_array(cfg, "IPSubnet"),
                     gateways: j_str_array(cfg, "DefaultIPGateway"),
                     dns_servers: j_str_array(cfg, "DNSServerSearchOrder"),
                 }
@@ -546,6 +713,69 @@ $out | ConvertTo-Json -Depth 5 -Compress"#;
             Some(Value::String(s)) if !s.trim().is_empty() => vec![s.clone()],
             _ => Vec::new(),
         }
+    }
+
+    fn pc_system_type(code: Option<u64>) -> Option<String> {
+        Some(
+            match code? {
+                1 => "Desktop",
+                2 => "Laptop",
+                3 => "Workstation",
+                4 | 5 | 7 => "Server",
+                6 => "Appliance",
+                8 => "Slate",
+                _ => return None,
+            }
+            .to_string(),
+        )
+    }
+
+    fn chassis_type(code: Option<u64>) -> Option<String> {
+        Some(
+            match code? {
+                3 | 4 | 6 | 7 => "Desktop",
+                5 => "Pizza Box",
+                8 | 9 | 10 | 14 => "Laptop",
+                11 => "Handheld",
+                12 | 13 => "Docking Station",
+                15 | 16 => "Desktop",
+                17 | 23 => "Rack Server",
+                18 | 19 => "Sub Chassis",
+                30 | 31 | 32 => "Tablet",
+                _ => return None,
+            }
+            .to_string(),
+        )
+    }
+
+    fn disk_health(code: Option<u64>) -> Option<String> {
+        Some(
+            match code? {
+                0 => "Healthy",
+                1 => "Warning",
+                2 => "Unhealthy",
+                _ => return None,
+            }
+            .to_string(),
+        )
+    }
+
+    fn battery_status(code: Option<u64>) -> Option<String> {
+        Some(
+            match code? {
+                1 => "Discharging",
+                2 => "On AC",
+                3 => "Fully charged",
+                4 => "Low",
+                5 => "Critical",
+                6 | 7 | 8 => "Charging",
+                9 => "Undefined",
+                10 => "Partially charged",
+                11 => "On AC",
+                _ => return None,
+            }
+            .to_string(),
+        )
     }
 
     fn physical_media_type(code: Option<u64>) -> Option<String> {
@@ -667,8 +897,8 @@ $out | ConvertTo-Json -Depth 5 -Compress"#;
             )),
             logged_in_user: std::env::var("USERNAME").ok(),
             locale: None,
-            install_date_unix_seconds: None,
             uptime_seconds: win32_uptime_seconds(),
+            ..Default::default()
         };
 
         snapshot.cpu = CpuInfo {
@@ -680,15 +910,11 @@ $out | ConvertTo-Json -Depth 5 -Compress"#;
                 "HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0",
                 "VendorIdentifier",
             )),
-            physical_cores: None,
             logical_processors: std::thread::available_parallelism()
                 .ok()
                 .map(|c| c.get() as u32),
-            max_clock_mhz: None,
-            l2_cache_bytes: None,
-            l3_cache_bytes: None,
             address_width_bits: Some(if cfg!(target_pointer_width = "64") { 64 } else { 32 }),
-            socket: None,
+            ..Default::default()
         };
 
         if let Some((total, avail, used)) = win32_memory_full() {
@@ -696,7 +922,7 @@ $out | ConvertTo-Json -Depth 5 -Compress"#;
                 total_bytes: Some(total),
                 available_bytes: Some(avail),
                 used_percent: Some(used),
-                modules: Vec::new(),
+                ..Default::default()
             };
         }
 
@@ -873,9 +1099,7 @@ mod platform {
             snapshot.graphics.push(GpuInfo {
                 name: s(gpu, "sppci_model"),
                 vendor: s(gpu, "spdisplays_vendor"),
-                vram_bytes: None,
-                driver_version: None,
-                current_mode: None,
+                ..Default::default()
             });
             for display in gpu
                 .get("spdisplays_ndrvs")
@@ -887,7 +1111,7 @@ mod platform {
                     name: s(display, "_name"),
                     resolution: s(display, "_spdisplays_resolution")
                         .or_else(|| s(display, "spdisplays_resolution")),
-                    refresh_hz: None,
+                    ..Default::default()
                 });
             }
         }
@@ -919,12 +1143,10 @@ mod platform {
                 for item in items {
                     snapshot.memory.modules.push(MemoryModuleInfo {
                         slot: s(item, "_name"),
-                        capacity_bytes: None,
-                        speed_mhz: None,
                         manufacturer: s(item, "dimm_manufacturer"),
                         part_number: s(item, "dimm_part_number"),
-                        form_factor: None,
                         memory_type: s(item, "dimm_type"),
+                        ..Default::default()
                     });
                 }
             }
@@ -962,10 +1184,8 @@ mod platform {
                 name: s(net, "_name"),
                 mac_address: s(net, "spnetwork_macaddress"),
                 adapter_type: s(net, "hardware"),
-                speed_bits_per_second: None,
                 ip_addresses: ips,
-                gateways: Vec::new(),
-                dns_servers: Vec::new(),
+                ..Default::default()
             });
         }
 
@@ -1016,8 +1236,8 @@ mod platform {
             registered_user: None,
             logged_in_user: std::env::var("USER").ok(),
             locale: std::env::var("LANG").ok(),
-            install_date_unix_seconds: None,
             uptime_seconds: read_uptime_seconds(),
+            ..Default::default()
         };
 
         snapshot.cpu = cpu_from_proc();
@@ -1168,7 +1388,7 @@ mod platform {
             total_bytes: total,
             available_bytes: available,
             used_percent,
-            modules: Vec::new(),
+            ..Default::default()
         }
     }
 
