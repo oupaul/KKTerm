@@ -209,11 +209,31 @@ fn gather_snapshot() -> PcInfoSnapshot {
     snapshot
 }
 
-/// Trim a string and treat empty/whitespace as absent.
+/// Trim a string, treat empty/whitespace as absent, and drop the placeholder
+/// junk that vendors leave in SMBIOS fields ("To Be Filled By O.E.M.",
+/// "Default string", "System manufacturer", …) so the UI shows nothing instead
+/// of meaningless boilerplate.
 fn clean(value: Option<String>) -> Option<String> {
-    value
-        .map(|text| text.trim().to_string())
-        .filter(|text| !text.is_empty())
+    let text = value?;
+    let trimmed = text.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+    const PLACEHOLDERS: [&str; 9] = [
+        "to be filled by o.e.m.",
+        "to be filled by oem",
+        "default string",
+        "system manufacturer",
+        "system product name",
+        "none",
+        "n/a",
+        "not specified",
+        "not available",
+    ];
+    if PLACEHOLDERS.contains(&trimmed.to_ascii_lowercase().as_str()) {
+        return None;
+    }
+    Some(trimmed.to_string())
 }
 
 #[cfg(target_os = "windows")]
@@ -242,6 +262,7 @@ $out=[ordered]@{
  gpu=@(Get-CimInstance Win32_VideoController | Select-Object Name,AdapterRAM,DriverVersion,VideoProcessor,CurrentHorizontalResolution,CurrentVerticalResolution,CurrentRefreshRate);
  gpumem=@(Get-ChildItem 'HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}' -ErrorAction SilentlyContinue | ForEach-Object { $p=Get-ItemProperty $_.PSPath -ErrorAction SilentlyContinue; if($p.'HardwareInformation.qwMemorySize'){[ordered]@{name=$p.DriverDesc;bytes=[int64]$p.'HardwareInformation.qwMemorySize'}} });
  disk=@(Get-CimInstance Win32_DiskDrive | Select-Object Model,Size,InterfaceType,MediaType,SerialNumber);
+ phys=@(Get-CimInstance -Namespace root/Microsoft/Windows/Storage -ClassName MSFT_PhysicalDisk -ErrorAction SilentlyContinue | Select-Object FriendlyName,Size,MediaType,BusType,SerialNumber);
  vol=@(Get-CimInstance Win32_LogicalDisk -Filter 'DriveType=3' | Select-Object DeviceID,FileSystem,Size,FreeSpace,VolumeName);
  audio=@(Get-CimInstance Win32_SoundDevice | Select-Object Name,Manufacturer);
  net=@(Get-CimInstance Win32_NetworkAdapter -Filter 'PhysicalAdapter=TRUE' | Select-Object Name,MACAddress,AdapterType,Speed,InterfaceIndex);
@@ -406,16 +427,32 @@ $out | ConvertTo-Json -Depth 5 -Compress"#;
             }
         }
 
-        snapshot.storage = j_array(&root, "disk")
-            .iter()
-            .map(|d| DiskInfo {
-                model: clean(j_str(d, "Model")),
-                size_bytes: j_u64(d, "Size"),
-                media_type: clean(j_str(d, "MediaType")),
-                interface: clean(j_str(d, "InterfaceType")),
-                serial_number: clean(j_str(d, "SerialNumber")),
-            })
-            .collect();
+        // Prefer MSFT_PhysicalDisk (Storage namespace): it reports real SSD/HDD
+        // media and the bus type (NVMe / SATA / USB …) as stable numeric codes.
+        // Fall back to Win32_DiskDrive whose MediaType is just "Fixed hard disk".
+        let phys = j_array(&root, "phys");
+        snapshot.storage = if !phys.is_empty() {
+            phys.iter()
+                .map(|d| DiskInfo {
+                    model: clean(j_str(d, "FriendlyName")),
+                    size_bytes: j_u64(d, "Size"),
+                    media_type: physical_media_type(j_u64(d, "MediaType")),
+                    interface: physical_bus_type(j_u64(d, "BusType")),
+                    serial_number: clean(j_str(d, "SerialNumber")),
+                })
+                .collect()
+        } else {
+            j_array(&root, "disk")
+                .iter()
+                .map(|d| DiskInfo {
+                    model: clean(j_str(d, "Model")),
+                    size_bytes: j_u64(d, "Size"),
+                    media_type: clean(j_str(d, "MediaType")),
+                    interface: clean(j_str(d, "InterfaceType")),
+                    serial_number: clean(j_str(d, "SerialNumber")),
+                })
+                .collect()
+        };
 
         snapshot.volumes = j_array(&root, "vol")
             .iter()
@@ -509,6 +546,40 @@ $out | ConvertTo-Json -Depth 5 -Compress"#;
             Some(Value::String(s)) if !s.trim().is_empty() => vec![s.clone()],
             _ => Vec::new(),
         }
+    }
+
+    fn physical_media_type(code: Option<u64>) -> Option<String> {
+        Some(
+            match code? {
+                3 => "HDD",
+                4 => "SSD",
+                5 => "SCM",
+                _ => return None,
+            }
+            .to_string(),
+        )
+    }
+
+    fn physical_bus_type(code: Option<u64>) -> Option<String> {
+        Some(
+            match code? {
+                1 => "SCSI",
+                3 => "ATA",
+                4 => "IEEE 1394",
+                7 => "USB",
+                8 => "RAID",
+                9 => "iSCSI",
+                10 => "SAS",
+                11 => "SATA",
+                12 => "SD",
+                13 => "MMC",
+                17 => "NVMe",
+                18 => "SCM",
+                19 => "UFS",
+                _ => return None,
+            }
+            .to_string(),
+        )
     }
 
     fn memory_form_factor(code: Option<u64>) -> Option<String> {
@@ -1004,7 +1075,77 @@ mod platform {
                 }
             }
         }
+        enrich_from_lscpu(&mut info);
         info
+    }
+
+    // lscpu fills clock, cache sizes, socket/core counts, and vendor that
+    // /proc/cpuinfo does not expose cleanly. Force the C locale so the field
+    // labels stay English regardless of the system language.
+    fn enrich_from_lscpu(info: &mut CpuInfo) {
+        let Ok(output) = std::process::Command::new("lscpu").env("LC_ALL", "C").output() else {
+            return;
+        };
+        if !output.status.success() {
+            return;
+        }
+        let text = String::from_utf8_lossy(&output.stdout);
+        let mut sockets: Option<u64> = None;
+        let mut cores_per_socket: Option<u64> = None;
+        for line in text.lines() {
+            let Some((key, value)) = line.split_once(':') else {
+                continue;
+            };
+            let value = value.trim();
+            match key.trim() {
+                "CPU max MHz" => {
+                    if let Ok(mhz) = value.parse::<f64>() {
+                        info.max_clock_mhz = Some(mhz as u64);
+                    }
+                }
+                "L2 cache" if info.l2_cache_bytes.is_none() => {
+                    info.l2_cache_bytes = parse_lscpu_size(value);
+                }
+                "L3 cache" if info.l3_cache_bytes.is_none() => {
+                    info.l3_cache_bytes = parse_lscpu_size(value);
+                }
+                "Socket(s)" => sockets = value.parse().ok(),
+                "Core(s) per socket" => cores_per_socket = value.parse().ok(),
+                "Vendor ID" if info.vendor.is_none() => {
+                    info.vendor = clean(Some(value.to_string()));
+                }
+                _ => {}
+            }
+        }
+        if info.physical_cores.is_none() {
+            if let (Some(s), Some(c)) = (sockets, cores_per_socket) {
+                let total = s.saturating_mul(c);
+                if total > 0 {
+                    info.physical_cores = u32::try_from(total).ok();
+                }
+            }
+        }
+    }
+
+    // Parse an lscpu size such as "1 MiB", "512 KiB", or "30 MiB (8 instances)".
+    fn parse_lscpu_size(value: &str) -> Option<u64> {
+        let value = value.trim();
+        let digits: String = value
+            .chars()
+            .take_while(|c| c.is_ascii_digit() || *c == '.')
+            .collect();
+        let number: f64 = digits.parse().ok()?;
+        let unit = value[digits.len()..].trim_start().to_ascii_lowercase();
+        let multiplier = if unit.starts_with("kib") || unit.starts_with('k') {
+            1024.0
+        } else if unit.starts_with("mib") || unit.starts_with('m') {
+            1024.0 * 1024.0
+        } else if unit.starts_with("gib") || unit.starts_with('g') {
+            1024.0 * 1024.0 * 1024.0
+        } else {
+            1.0
+        };
+        Some((number * multiplier) as u64)
     }
 
     fn memory_from_proc() -> MemoryInfo {
