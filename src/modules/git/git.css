@@ -602,14 +602,26 @@
 .git-adv-cell.blank {
   background: color-mix(in srgb, var(--git-muted) 50%, var(--git-bg));
 }
-/* Beyond Compare-style per-character highlight: unchanged runs sit on the line's
-   light tint, while the differing runs get a stronger block of the side color. */
-.git-adv-cell.add .txt .seg-diff {
-  background: color-mix(in srgb, var(--git-green) 34%, transparent);
-  border-radius: 2px;
+
+/* Beyond Compare-style intra-line diff. A modification pair (both sides changed)
+   keeps the line clean — only a faint neutral wash plus a muted line-number
+   gutter — instead of a full red/green fill, so the per-character highlights
+   stand out. Only the differing character runs get a clear red block with red
+   text; unchanged runs stay normal-colored. Pure add/del lines (one side only,
+   no char segments) keep their solid green/red fill above. */
+.git-adv-row.mod-pair .git-adv-cell.del,
+.git-adv-row.mod-pair .git-adv-cell.add {
+  background: color-mix(in srgb, var(--git-amber) 7%, transparent);
+  color: var(--git-text);
 }
-.git-adv-cell.del .txt .seg-diff {
-  background: color-mix(in srgb, var(--git-red) 34%, transparent);
+.git-adv-row.mod-pair .git-adv-cell.del .no,
+.git-adv-row.mod-pair .git-adv-cell.add .no {
+  background: color-mix(in srgb, var(--git-amber) 16%, var(--git-chrome));
+  color: var(--git-text-3);
+}
+.git-adv-cell .txt .seg-diff {
+  background: color-mix(in srgb, var(--git-red) 26%, transparent);
+  color: var(--git-del-text);
   border-radius: 2px;
 }
 .git-adv-cell.search-hit .txt {

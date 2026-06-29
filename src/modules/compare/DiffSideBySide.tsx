@@ -552,8 +552,16 @@ export function DiffSideBySide({
                   );
                 }
                 const searchHit = includesQuery(row, normalizedQuery);
+                // A modification pair carries per-character segments; it gets a
+                // light wash (not a full-line fill) so the red character runs
+                // read clearly, Beyond Compare-style.
+                const modPair = !!row.oldSegs || !!row.newSegs;
                 return (
-                  <div key={row.id} className={`git-adv-row${activeRow === i ? " active" : ""}`} data-row-index={i}>
+                  <div
+                    key={row.id}
+                    className={`git-adv-row${modPair ? " mod-pair" : ""}${activeRow === i ? " active" : ""}`}
+                    data-row-index={i}
+                  >
                     <div className={cellClass(row.oldKind, searchHit)}>
                       <span className="no">{row.oldNo ?? ""}</span>
                       <span className="txt">{renderCellText(row.oldText, row.oldSegs)}</span>
