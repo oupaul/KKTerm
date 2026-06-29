@@ -54,6 +54,199 @@
   color: var(--git-del-text);
 }
 
+/* ── folder compare ─────────────────────────────────────────────────────── */
+.folder-cmp {
+  --folder-cmp-gutter: 64px;
+}
+.git-icon-btn.danger:hover {
+  background: color-mix(in srgb, var(--git-red) 20%, transparent);
+  color: var(--git-del-text);
+}
+.folder-cmp-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--git-mono);
+  font-size: 11px;
+  color: var(--git-text-3);
+}
+.folder-cmp-summary .different {
+  color: color-mix(in srgb, var(--git-amber) 82%, var(--git-text));
+}
+.folder-cmp-summary .left-only,
+.folder-cmp-summary .right-only {
+  color: var(--git-add-text);
+}
+.folder-cmp-cols {
+  grid-template-columns: minmax(0, 1fr) var(--folder-cmp-gutter) minmax(0, 1fr);
+}
+.folder-cmp-cols > div:nth-child(2) {
+  border-left: 1px solid var(--git-hairline);
+}
+
+.folder-cmp-confirm {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 14px;
+  background: color-mix(in srgb, var(--git-red) 12%, var(--git-chrome));
+  border-bottom: 1px solid var(--git-hairline);
+  color: var(--git-text);
+  font-size: 12px;
+}
+.folder-cmp-confirm-actions {
+  margin-left: auto;
+  display: inline-flex;
+  gap: 8px;
+}
+.folder-cmp-confirm-actions button {
+  height: 26px;
+  padding: 0 12px;
+  border-radius: 7px;
+  border: 1px solid var(--git-border);
+  background: var(--git-muted);
+  color: var(--git-text);
+  font: inherit;
+  cursor: pointer;
+}
+.folder-cmp-confirm-actions button.danger {
+  background: var(--git-red);
+  border-color: var(--git-red);
+  color: #fff;
+}
+
+.folder-cmp-body {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: auto;
+  font-family: var(--git-mono);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.folder-cmp-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--folder-cmp-gutter) minmax(0, 1fr);
+  cursor: default;
+}
+.folder-cmp-row:hover {
+  background: color-mix(in srgb, var(--git-muted) 40%, transparent);
+}
+.folder-cmp-row.selected {
+  outline: 1px solid var(--git-accent);
+  outline-offset: -1px;
+}
+.folder-cmp-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 0 10px;
+  height: 24px;
+}
+.folder-cmp-cell.right {
+  border-left: 1px solid var(--git-hairline);
+}
+.folder-cmp-cell .indent {
+  flex: 0 0 auto;
+}
+.folder-cmp-twisty {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border: 0;
+  background: transparent;
+  color: var(--git-text-3);
+  cursor: pointer;
+}
+.folder-cmp-twisty.placeholder {
+  pointer-events: none;
+}
+.folder-cmp-cell .glyph {
+  flex: 0 0 auto;
+  color: var(--git-text-3);
+}
+.folder-cmp-cell .name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--git-text);
+}
+.folder-cmp-cell .meta {
+  flex: 0 0 auto;
+  color: var(--git-text-3);
+  font-variant-numeric: tabular-nums;
+}
+.folder-cmp-cell .meta.size {
+  width: 64px;
+  text-align: right;
+}
+.folder-cmp-cell .meta.date {
+  width: 116px;
+  text-align: right;
+}
+.folder-cmp-cell .missing {
+  color: var(--git-text-3);
+  opacity: 0.5;
+}
+
+/* Status tints: green = present here (would copy over), amber = differs. */
+.folder-cmp-row.different .folder-cmp-cell {
+  background: color-mix(in srgb, var(--git-amber) 12%, transparent);
+}
+.folder-cmp-row.different .name {
+  color: color-mix(in srgb, var(--git-amber) 80%, var(--git-text));
+}
+.folder-cmp-row.left-only .folder-cmp-cell.left,
+.folder-cmp-row.right-only .folder-cmp-cell.right {
+  background: var(--git-diff-add);
+}
+.folder-cmp-row.left-only .folder-cmp-cell.left .name,
+.folder-cmp-row.right-only .folder-cmp-cell.right .name {
+  color: var(--git-add-text);
+}
+.folder-cmp-row.left-only .folder-cmp-cell.right,
+.folder-cmp-row.right-only .folder-cmp-cell.left {
+  background: color-mix(in srgb, var(--git-muted) 45%, var(--git-bg));
+}
+
+.folder-cmp-gutter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border-left: 1px solid var(--git-hairline);
+}
+.folder-cmp-act {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 18px;
+  border: 0;
+  border-radius: 5px;
+  background: var(--git-muted);
+  color: var(--git-text-2);
+  cursor: pointer;
+}
+.folder-cmp-act:hover {
+  background: var(--git-accent);
+  color: #fff;
+}
+.folder-cmp-row:hover .folder-cmp-act,
+.folder-cmp-row.selected .folder-cmp-act {
+  display: inline-flex;
+}
+.folder-cmp-act:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
 /* ── image heatmap ──────────────────────────────────────────────────────── */
 .compare-image {
   flex: 1 1 0;

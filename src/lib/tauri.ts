@@ -292,6 +292,38 @@ export interface LocalDirectoryListing {
   entries: LocalDirectoryEntry[];
 }
 
+export type FolderCompareStatus = "same" | "different" | "left-only" | "right-only";
+
+export interface FolderCompareSide {
+  size?: number;
+  modified?: number;
+}
+
+export interface FolderCompareRow {
+  /** Forward-slash relative path from the compared roots, e.g. "src/main.rs". */
+  relativePath: string;
+  name: string;
+  depth: number;
+  isDir: boolean;
+  status: FolderCompareStatus;
+  left?: FolderCompareSide;
+  right?: FolderCompareSide;
+}
+
+export interface FolderCompareSummary {
+  same: number;
+  different: number;
+  leftOnly: number;
+  rightOnly: number;
+}
+
+export interface FolderCompareResult {
+  leftRoot: string;
+  rightRoot: string;
+  rows: FolderCompareRow[];
+  summary: FolderCompareSummary;
+}
+
 export interface LocalPlace {
   id: string;
   label: string;
@@ -2325,6 +2357,14 @@ type CommandMap = {
   create_compare_temp_dir: {
     args: undefined;
     result: string;
+  };
+  compare_folders: {
+    args: { request: { left: string; right: string } };
+    result: FolderCompareResult;
+  };
+  copy_local_path_to: {
+    args: { request: { sourcePath: string; destinationPath: string } };
+    result: SftpTransferResult;
   };
   git_status: {
     args: { request: { repoRoot: string } };

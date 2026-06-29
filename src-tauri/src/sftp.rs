@@ -1385,6 +1385,369 @@ fn count_local_recursive(
     Ok(())
 }
 
+// ── Folder Compare (Beyond Compare-style two-pane directory diff) ──────────
+// Walks two local directory trees, aligns entries by their relative path, and
+// classifies each as same / different / left-only / right-only. Folders
+// aggregate their descendants: a folder is "different" when any child differs
+// or exists on only one side. The result is a flat, depth-first pre-order list
+// the frontend renders as a collapsible tree.
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CompareFoldersRequest {
+    left: String,
+    right: String,
+}
+
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct FolderCompareSide {
+    size: Option<u64>,
+    modified: Option<u64>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FolderCompareRow {
+    /// Forward-slash relative path from the compared roots, e.g. "src/main.rs".
+    relative_path: String,
+    name: String,
+    depth: usize,
+    is_dir: bool,
+    /// "same" | "different" | "left-only" | "right-only".
+    status: String,
+    left: Option<FolderCompareSide>,
+    right: Option<FolderCompareSide>,
+}
+
+#[derive(Serialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct FolderCompareSummary {
+    same: u64,
+    different: u64,
+    left_only: u64,
+    right_only: u64,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FolderCompareResult {
+    left_root: String,
+    right_root: String,
+    rows: Vec<FolderCompareRow>,
+    summary: FolderCompareSummary,
+}
+
+const COMPARE_STATUS_SAME: &str = "same";
+const COMPARE_STATUS_DIFFERENT: &str = "different";
+const COMPARE_STATUS_LEFT_ONLY: &str = "left-only";
+const COMPARE_STATUS_RIGHT_ONLY: &str = "right-only";
+
+pub fn compare_folders(request: CompareFoldersRequest) -> Result<FolderCompareResult, String> {
+    let left_root = resolve_local_directory(Some(&request.left))?;
+    let right_root = resolve_local_directory(Some(&request.right))?;
+    if !left_root.is_dir() {
+        return Err(format!("not a folder: {}", left_root.display()));
+    }
+    if !right_root.is_dir() {
+        return Err(format!("not a folder: {}", right_root.display()));
+    }
+
+    let mut rows = Vec::new();
+    let mut summary = FolderCompareSummary::default();
+    compare_dir_level(
+        Some(left_root.as_path()),
+        Some(right_root.as_path()),
+        "",
+        0,
+        &mut rows,
+        &mut summary,
+    )?;
+
+    Ok(FolderCompareResult {
+        left_root: display_local_path(&left_root),
+        right_root: display_local_path(&right_root),
+        rows,
+        summary,
+    })
+}
+
+// A single child of the level currently being compared.
+struct LevelEntry {
+    is_dir: bool,
+    path: PathBuf,
+    size: Option<u64>,
+    modified: Option<u64>,
+}
+
+fn read_level_entries(dir: Option<&Path>) -> HashMap<String, LevelEntry> {
+    let mut map = HashMap::new();
+    let Some(dir) = dir else {
+        return map;
+    };
+    let Ok(read) = fs::read_dir(dir) else {
+        return map;
+    };
+    for entry in read.flatten() {
+        let Ok(file_type) = entry.file_type() else {
+            continue;
+        };
+        let metadata = entry.metadata().ok();
+        let is_dir = file_type.is_dir();
+        let name = entry.file_name().to_string_lossy().to_string();
+        map.insert(
+            name,
+            LevelEntry {
+                is_dir,
+                path: entry.path(),
+                size: metadata
+                    .as_ref()
+                    .filter(|_| !is_dir)
+                    .map(|metadata| metadata.len()),
+                modified: metadata
+                    .as_ref()
+                    .and_then(|metadata| metadata.modified().ok())
+                    .and_then(|time| unix_timestamp(time).ok()),
+            },
+        );
+    }
+    map
+}
+
+fn side_of(entry: Option<&LevelEntry>) -> Option<FolderCompareSide> {
+    entry.map(|entry| FolderCompareSide {
+        size: entry.size,
+        modified: entry.modified,
+    })
+}
+
+// Compare one directory level. Either side may be absent (None) when the
+// containing folder exists on only one side; in that case every descendant is
+// emitted as left-only / right-only. Returns true when this level (recursively)
+// contains any difference, so the parent can label its folder row.
+fn compare_dir_level(
+    left_dir: Option<&Path>,
+    right_dir: Option<&Path>,
+    parent_rel: &str,
+    depth: usize,
+    rows: &mut Vec<FolderCompareRow>,
+    summary: &mut FolderCompareSummary,
+) -> Result<bool, String> {
+    let left_entries = read_level_entries(left_dir);
+    let right_entries = read_level_entries(right_dir);
+
+    // Union of names, sorted folders-first then case-insensitive by name to
+    // match the rest of the file browser's ordering.
+    let mut names: Vec<String> = left_entries
+        .keys()
+        .chain(right_entries.keys())
+        .cloned()
+        .collect();
+    names.sort();
+    names.dedup();
+    names.sort_by(|left, right| {
+        let left_dir = left_entries
+            .get(left)
+            .or_else(|| right_entries.get(left))
+            .map(|entry| entry.is_dir)
+            .unwrap_or(false);
+        let right_dir = left_entries
+            .get(right)
+            .or_else(|| right_entries.get(right))
+            .map(|entry| entry.is_dir)
+            .unwrap_or(false);
+        (!left_dir)
+            .cmp(&(!right_dir))
+            .then_with(|| left.to_lowercase().cmp(&right.to_lowercase()))
+    });
+
+    let mut level_differs = false;
+    for name in names {
+        let left = left_entries.get(&name);
+        let right = right_entries.get(&name);
+        let relative_path = if parent_rel.is_empty() {
+            name.clone()
+        } else {
+            format!("{parent_rel}/{name}")
+        };
+        let left_is_dir = left.map(|entry| entry.is_dir).unwrap_or(false);
+        let right_is_dir = right.map(|entry| entry.is_dir).unwrap_or(false);
+        // Treat as a folder row whenever either side is a directory.
+        let is_dir = left_is_dir || right_is_dir;
+
+        if is_dir {
+            // Reserve this folder's row; its status is filled in after the
+            // subtree is walked so it can reflect descendant differences.
+            let row_index = rows.len();
+            rows.push(FolderCompareRow {
+                relative_path: relative_path.clone(),
+                name: name.clone(),
+                depth,
+                is_dir: true,
+                status: COMPARE_STATUS_SAME.to_string(),
+                left: side_of(left),
+                right: side_of(right),
+            });
+
+            let subtree_differs = compare_dir_level(
+                left.filter(|entry| entry.is_dir).map(|entry| entry.path.as_path()),
+                right.filter(|entry| entry.is_dir).map(|entry| entry.path.as_path()),
+                &relative_path,
+                depth + 1,
+                rows,
+                summary,
+            )?;
+
+            let status = if left.is_none() {
+                COMPARE_STATUS_RIGHT_ONLY
+            } else if right.is_none() {
+                COMPARE_STATUS_LEFT_ONLY
+            } else if subtree_differs || left_is_dir != right_is_dir {
+                COMPARE_STATUS_DIFFERENT
+            } else {
+                COMPARE_STATUS_SAME
+            };
+            bump_summary(summary, status);
+            if status != COMPARE_STATUS_SAME {
+                level_differs = true;
+            }
+            rows[row_index].status = status.to_string();
+            continue;
+        }
+
+        // File (or symlink/other) row.
+        let status = match (left, right) {
+            (Some(left), Some(right)) => {
+                if files_equal(&left.path, &right.path).unwrap_or(false) {
+                    COMPARE_STATUS_SAME
+                } else {
+                    COMPARE_STATUS_DIFFERENT
+                }
+            }
+            (Some(_), None) => COMPARE_STATUS_LEFT_ONLY,
+            (None, Some(_)) => COMPARE_STATUS_RIGHT_ONLY,
+            (None, None) => COMPARE_STATUS_SAME,
+        };
+        bump_summary(summary, status);
+        if status != COMPARE_STATUS_SAME {
+            level_differs = true;
+        }
+        rows.push(FolderCompareRow {
+            relative_path,
+            name,
+            depth,
+            is_dir: false,
+            status: status.to_string(),
+            left: side_of(left),
+            right: side_of(right),
+        });
+    }
+
+    Ok(level_differs)
+}
+
+fn bump_summary(summary: &mut FolderCompareSummary, status: &str) {
+    match status {
+        COMPARE_STATUS_SAME => summary.same += 1,
+        COMPARE_STATUS_DIFFERENT => summary.different += 1,
+        COMPARE_STATUS_LEFT_ONLY => summary.left_only += 1,
+        COMPARE_STATUS_RIGHT_ONLY => summary.right_only += 1,
+        _ => {}
+    }
+}
+
+// Byte-exact file comparison: cheap size check first, then a streamed chunk
+// compare that bails at the first mismatch.
+fn files_equal(left: &Path, right: &Path) -> Result<bool, String> {
+    let left_meta = fs::metadata(left)
+        .map_err(|error| format!("cannot read {}: {error}", left.display()))?;
+    let right_meta = fs::metadata(right)
+        .map_err(|error| format!("cannot read {}: {error}", right.display()))?;
+    if left_meta.len() != right_meta.len() {
+        return Ok(false);
+    }
+    let mut left_file = fs::File::open(left)
+        .map_err(|error| format!("cannot open {}: {error}", left.display()))?;
+    let mut right_file = fs::File::open(right)
+        .map_err(|error| format!("cannot open {}: {error}", right.display()))?;
+    let mut left_buf = vec![0u8; TRANSFER_CHUNK_SIZE];
+    let mut right_buf = vec![0u8; TRANSFER_CHUNK_SIZE];
+    loop {
+        let left_read = read_full(&mut left_file, &mut left_buf)?;
+        let right_read = read_full(&mut right_file, &mut right_buf)?;
+        if left_read != right_read {
+            return Ok(false);
+        }
+        if left_read == 0 {
+            return Ok(true);
+        }
+        if left_buf[..left_read] != right_buf[..right_read] {
+            return Ok(false);
+        }
+    }
+}
+
+// Read until the buffer is full or EOF, so chunk boundaries line up between the
+// two files regardless of how the OS splits reads.
+fn read_full(file: &mut fs::File, buf: &mut [u8]) -> Result<usize, String> {
+    let mut filled = 0;
+    while filled < buf.len() {
+        let read = file
+            .read(&mut buf[filled..])
+            .map_err(|error| format!("read failed: {error}"))?;
+        if read == 0 {
+            break;
+        }
+        filled += read;
+    }
+    Ok(filled)
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CopyLocalPathToRequest {
+    source_path: String,
+    /// Full destination path (not a directory): the source is copied to exactly
+    /// this path, creating parent directories as needed and overwriting.
+    destination_path: String,
+}
+
+// Copy a file or folder to an explicit destination path, used by Folder Compare
+// to mirror an entry to the matching location on the other side. Parent
+// directories are created; existing files are overwritten and existing folders
+// merged.
+pub fn copy_local_path_to(request: CopyLocalPathToRequest) -> Result<SftpTransferResult, String> {
+    let source = PathBuf::from(&request.source_path);
+    let target = PathBuf::from(&request.destination_path);
+    let source_metadata = fs::symlink_metadata(&source)
+        .map_err(|error| format!("cannot read {}: {error}", source.display()))?;
+    let source_canonical = fs::canonicalize(&source)
+        .map_err(|error| format!("cannot resolve {}: {error}", source.display()))?;
+    if let Ok(target_canonical) = fs::canonicalize(&target) {
+        if target_canonical == source_canonical {
+            return Err("source and destination are the same".to_string());
+        }
+        if source_metadata.is_dir() && target_canonical.starts_with(&source_canonical) {
+            return Err("cannot copy a folder into itself or one of its subfolders".to_string());
+        }
+    }
+    if let Some(parent) = target.parent() {
+        fs::create_dir_all(parent)
+            .map_err(|error| format!("failed to create {}: {error}", parent.display()))?;
+    }
+    let name = local_path_name(&source)?;
+    let mut files = 0u64;
+    let mut folders = 0u64;
+    let mut bytes = 0u64;
+    copy_local_recursive(&source, &target, &mut files, &mut folders, &mut bytes)?;
+    Ok(SftpTransferResult {
+        name,
+        files,
+        folders,
+        bytes,
+    })
+}
+
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LocalFileClipboard {
@@ -2502,6 +2865,102 @@ mod tests {
             result,
             Err(message) if message.contains("cannot copy a folder into itself")
         ));
+    }
+
+    fn compare_test_root(tag: &str) -> PathBuf {
+        let unique = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("system time is after epoch")
+            .as_nanos();
+        std::env::temp_dir().join(format!("kkterm-{tag}-{unique}"))
+    }
+
+    fn write_file(path: &Path, contents: &str) {
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent).expect("parent dir is created");
+        }
+        fs::write(path, contents).expect("file is written");
+    }
+
+    fn row_status<'a>(result: &'a FolderCompareResult, relative_path: &str) -> Option<&'a str> {
+        result
+            .rows
+            .iter()
+            .find(|row| row.relative_path == relative_path)
+            .map(|row| row.status.as_str())
+    }
+
+    #[test]
+    fn folder_compare_classifies_entries() {
+        let root = compare_test_root("folder-compare");
+        let left = root.join("left");
+        let right = root.join("right");
+        write_file(&left.join("same.txt"), "hello");
+        write_file(&right.join("same.txt"), "hello");
+        write_file(&left.join("diff.txt"), "alpha");
+        write_file(&right.join("diff.txt"), "beta!");
+        write_file(&left.join("only_left.txt"), "L");
+        write_file(&right.join("only_right.txt"), "R");
+        // A subfolder that differs only deep down marks its folder row different.
+        write_file(&left.join("common/inner.txt"), "1");
+        write_file(&right.join("common/inner.txt"), "2");
+        // A folder present on only one side is an orphan.
+        write_file(&left.join("left_dir/child.txt"), "x");
+
+        let result = compare_folders(CompareFoldersRequest {
+            left: display_local_path(&left),
+            right: display_local_path(&right),
+        })
+        .expect("comparison succeeds");
+
+        assert_eq!(row_status(&result, "same.txt"), Some("same"));
+        assert_eq!(row_status(&result, "diff.txt"), Some("different"));
+        assert_eq!(row_status(&result, "only_left.txt"), Some("left-only"));
+        assert_eq!(row_status(&result, "only_right.txt"), Some("right-only"));
+        assert_eq!(row_status(&result, "common"), Some("different"));
+        assert_eq!(row_status(&result, "common/inner.txt"), Some("different"));
+        assert_eq!(row_status(&result, "left_dir"), Some("left-only"));
+        assert_eq!(row_status(&result, "left_dir/child.txt"), Some("left-only"));
+        assert_eq!(result.summary.different, 3); // diff.txt, common, common/inner.txt
+        assert_eq!(result.summary.left_only, 3); // only_left.txt, left_dir, left_dir/child.txt
+        assert_eq!(result.summary.right_only, 1);
+        assert_eq!(result.summary.same, 1);
+
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn copy_local_path_to_mirrors_into_missing_parents() {
+        let root = compare_test_root("copy-to");
+        let source = root.join("left/nested/file.txt");
+        write_file(&source, "payload");
+        let destination = root.join("right/nested/file.txt");
+
+        copy_local_path_to(CopyLocalPathToRequest {
+            source_path: display_local_path(&source),
+            destination_path: display_local_path(&destination),
+        })
+        .expect("copy succeeds");
+
+        assert_eq!(
+            fs::read_to_string(&destination).expect("destination exists"),
+            "payload"
+        );
+
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn files_equal_detects_content_difference_at_same_size() {
+        let root = compare_test_root("files-equal");
+        let left = root.join("a.bin");
+        let right = root.join("b.bin");
+        write_file(&left, "abcde");
+        write_file(&right, "abcde");
+        assert_eq!(files_equal(&left, &right), Ok(true));
+        write_file(&right, "abcdX");
+        assert_eq!(files_equal(&left, &right), Ok(false));
+        let _ = fs::remove_dir_all(&root);
     }
 
     fn sftp_request() -> StartSftpSessionRequest {

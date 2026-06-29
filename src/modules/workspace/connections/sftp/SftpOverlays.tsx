@@ -176,6 +176,7 @@ export function SftpContextMenu({
   onSelectLeftForCompare,
   onCompareToLeft,
   compareLeftLabel = null,
+  canSelectForCompare = false,
   canCompareToLeft = false,
   onClose,
   showTransfer = true,
@@ -194,6 +195,8 @@ export function SftpContextMenu({
   onCompareToLeft: (menu: SftpContextMenuState) => void;
   /** Display name of the remembered left file, or null when none is selected. */
   compareLeftLabel?: string | null;
+  /** Whether "Select for Compare" should be enabled (single file, or local folder). */
+  canSelectForCompare?: boolean;
   /** Whether "Compare to '<left>'" should be enabled (left exists and differs). */
   canCompareToLeft?: boolean;
   onClose: () => void;
@@ -297,7 +300,7 @@ export function SftpContextMenu({
         {t("sftp.deleteLabel")}
       </button>
       <div className="sftp-ctx-sep" />
-      <button disabled={!canOpen} onClick={() => onSelectLeftForCompare(menu)} role="menuitem" type="button">
+      <button disabled={!canSelectForCompare} onClick={() => onSelectLeftForCompare(menu)} role="menuitem" type="button">
         <DIcon name="columns" size={15} />
         {t("compare.selectLeft")}
       </button>

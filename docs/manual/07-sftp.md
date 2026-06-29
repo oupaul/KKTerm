@@ -92,7 +92,7 @@ When a transfer would overwrite an existing target, KKTerm shows an app-owned di
 
 ## Context menu
 
-Right-click an item for: transfer (`sftp.upload` / `sftp.download`, hidden in File Explorer), Open (`common.open`, single file selection), Cut (`common.cut`), Copy (`common.copy`), Paste (`common.paste`, also available from empty pane space), Rename (`sftp.renameItem`, single mutable local or remote selection), Copy Path (`sftp.copyPath`, copies the item's full path to the clipboard), Delete (`sftp.deleteLabel`, mutable local or remote selections), Select Left File for Compare / Compare to (`compare.selectLeft` / `compare.compareTo`, single file selection — see File Compare below), and Get Info (`sftp.getInfo`, opens properties). File Explorer's local Open action follows Settings -> Workspace -> `settings.fileExplorerOpenMode`: `settings.fileExplorerOpenModeExternal` opens through the OS default app, while `settings.fileExplorerOpenModeInlineEditor` opens the file in KKTerm's inline Document/light editor. The menu is a styled app-owned DOM menu — a documented exception to the native-menu preference (see [DESIGN_LANGUAGE.md](../DESIGN_LANGUAGE.md)).
+Right-click an item for: transfer (`sftp.upload` / `sftp.download`, hidden in File Explorer), Open (`common.open`, single file selection), Cut (`common.cut`), Copy (`common.copy`), Paste (`common.paste`, also available from empty pane space), Rename (`sftp.renameItem`, single mutable local or remote selection), Copy Path (`sftp.copyPath`, copies the item's full path to the clipboard), Delete (`sftp.deleteLabel`, mutable local or remote selections), Select Left Side for Compare / Compare to (`compare.selectLeft` / `compare.compareTo`, single file — or single local folder — selection; see File Compare and Folder Compare below), and Get Info (`sftp.getInfo`, opens properties). File Explorer's local Open action follows Settings -> Workspace -> `settings.fileExplorerOpenMode`: `settings.fileExplorerOpenModeExternal` opens through the OS default app, while `settings.fileExplorerOpenModeInlineEditor` opens the file in KKTerm's inline Document/light editor. The menu is a styled app-owned DOM menu — a documented exception to the native-menu preference (see [DESIGN_LANGUAGE.md](../DESIGN_LANGUAGE.md)).
 
 ## File Compare
 
@@ -105,6 +105,20 @@ Comparing a **remote** file downloads it to a temporary staging directory at sel
 - **Hex** (`compare.mode.hex`) — a side-by-side hexadecimal byte view (`compare.hexOffset`) that highlights every differing byte; `compare.hexTruncated` is shown when a large file is only partially loaded.
 
 Text and Hex are always available; the default mode is auto-detected from both files (both images → Image, both text → Text, otherwise Hex).
+
+## Folder Compare
+
+Selecting a **folder** as the left side and choosing `compare.compareTo` on a second folder opens **Folder Compare** (`compare.folderTitle`) instead of the file overlay — a Beyond Compare-style two-pane directory diff. Both sides must be **local** folders: Folder Compare recursively reads and mirrors local paths, so picking a remote folder is rejected with `compare.folderRemoteUnsupported`, and selecting one file and one folder reports `compare.mismatch`.
+
+The backend `compare_folders` command walks both trees and aligns entries by relative path, classifying each as **same**, **different** (byte-exact content comparison — equal size then a streamed chunk compare), **left-only**, or **right-only**; a folder row is "different" when any descendant differs or exists on only one side. The header shows per-status counts (`compare.folderCountDifferent` / `compare.folderCountLeftOnly` / `compare.folderCountRightOnly` / `compare.folderCountSame`) and an All/Differences/Same filter reusing the diff `git.diffMode.*` labels.
+
+From the tree you can:
+
+- **Expand / collapse** folders (`compare.folderExpand` / `compare.folderCollapse`); double-clicking a folder toggles it.
+- **Mirror** the selected (or hovered) entry to the other side — `compare.folderCopyToRight` / `compare.folderCopyToLeft` (backend `copy_local_path_to`, which creates missing parent folders and overwrites/merges). A `compare.folderCopied` Status Bar notice confirms.
+- **Delete** the selected entry from one side (`compare.folderDelete`) after an inline confirmation (`compare.folderDeleteConfirm`); a `compare.folderDeleted` notice confirms.
+- **Rescan** both folders (`compare.folderRefresh`); every copy/delete also re-runs the comparison.
+- **Open a differing file pair** in the File Compare overlay above by double-clicking a file row present on both sides.
 
 ## Properties / chmod / chown
 

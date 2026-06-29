@@ -11,6 +11,7 @@ import { TerminalWorkspace } from "./connections/terminal/TerminalWorkspace";
 import { WebViewWorkspace } from "./connections/webview/WebViewWorkspace";
 import { GitBrowser } from "../git/GitBrowser";
 import { CompareViewer } from "../compare/CompareViewer";
+import { FolderCompareView } from "../compare/FolderCompareView";
 import { ConnectionIcon } from "./connections/ConnectionIcon";
 import { ChevronLeft, ChevronRight, Terminal, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -303,6 +304,8 @@ export function WorkspaceCanvas({
   const closeGitBrowser = useWorkspaceStore((state) => state.closeGitBrowser);
   const compareView = useWorkspaceStore((state) => state.compareView);
   const closeCompareView = useWorkspaceStore((state) => state.closeCompareView);
+  const folderCompareView = useWorkspaceStore((state) => state.folderCompareView);
+  const closeFolderCompareView = useWorkspaceStore((state) => state.closeFolderCompareView);
   // The toolbar close button only earns its place when the tab strip is hidden;
   // otherwise the tab strip's own close button already covers it.
   const hideTopTabButtons = useWorkspaceStore((state) => state.generalSettings.hideTopTabButtons);
@@ -368,6 +371,15 @@ export function WorkspaceCanvas({
       )
     : null;
 
+  // The Folder Compare overlay (Beyond Compare-style directory diff) floats
+  // above workspace chrome the same way, per the overlay rule.
+  const folderCompareOverlay = folderCompareView
+    ? createPortal(
+        <FolderCompareView view={folderCompareView} onClose={closeFolderCompareView} />,
+        document.body,
+      )
+    : null;
+
   if (tabs.length === 0) {
     return (
       <>
@@ -381,6 +393,7 @@ export function WorkspaceCanvas({
         {terminalPopup}
         {gitBrowserOverlay}
         {compareOverlay}
+        {folderCompareOverlay}
       </>
     );
   }
@@ -503,6 +516,7 @@ export function WorkspaceCanvas({
       {terminalPopup}
       {gitBrowserOverlay}
       {compareOverlay}
+      {folderCompareOverlay}
     </>
   );
 }

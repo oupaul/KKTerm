@@ -158,6 +158,7 @@ export function SftpWorkspace({
   const compareLeft = useWorkspaceStore((state) => state.compareLeft);
   const setCompareLeft = useWorkspaceStore((state) => state.setCompareLeft);
   const openCompareView = useWorkspaceStore((state) => state.openCompareView);
+  const openFolderCompareView = useWorkspaceStore((state) => state.openFolderCompareView);
   const sourceConnection = protocolSourceConnection;
   const initialSshFileBrowserSelection = sourceConnection
     ? readStoredSshFileBrowserProtocol(sourceConnection.id, sourceConnection)
@@ -1671,7 +1672,19 @@ export function SftpWorkspace({
       if (isLocalDrivePicker || !localPath) {
         return null;
       }
-      return { localPath: joinLocalPath(localPath, name), label: name, origin: localPath };
+      const isFolder = localFiles.some((file) => file.name === name && file.kind === "folder");
+      return {
+        localPath: joinLocalPath(localPath, name),
+        label: name,
+        origin: localPath,
+        isDirectory: isFolder,
+      };
+    }
+    // Folder Compare recursively reads + mirrors local paths, so a remote folder
+    // can't be a compare endpoint (we don't mirror an entire remote tree).
+    if (remoteFiles.some((file) => file.name === name && file.kind === "folder")) {
+      showStatusBarNotice(t("compare.folderRemoteUnsupported"), { tone: "warning" });
+      return null;
     }
     const sessionId = sessionIdRef.current;
     if (!sessionId || !commands || !isTauriRuntime()) {
@@ -1728,7 +1741,13 @@ export function SftpWorkspace({
       if (!right) {
         return;
       }
-      openCompareView(left, right);
+      if (left.isDirectory && right.isDirectory) {
+        openFolderCompareView(left, right);
+      } else if (!left.isDirectory && !right.isDirectory) {
+        openCompareView(left, right);
+      } else {
+        showStatusBarNotice(t("compare.mismatch"), { tone: "warning" });
+      }
     })();
   };
 
@@ -2066,7 +2085,28 @@ export function SftpWorkspace({
           onCancel={(transfer) => void handleCancelTransfer(transfer)}
         />
       ) : null}
-      {contextMenu ? (
+      {contextMenu ? (() => {
+        // A single file is always compare-selectable; a folder only when local,
+        // since Folder Compare mirrors local paths (remote trees aren't mirrored).
+        const compareEntry =
+          contextMenu.names.length === 1
+            ? (contextMenu.side === "local" ? localFiles : remoteFiles).find(
+                (file) => file.name === contextMenu.names[0],
+              )
+            : undefined;
+        const compareEntryIsFolder = compareEntry?.kind === "folder";
+        const canSelectForCompare =
+          !!compareEntry &&
+          !(contextMenu.side === "local" && isLocalDrivePicker) &&
+          (compareEntryIsFolder ? contextMenu.side === "local" : true);
+        const isSameAsLeft =
+          contextMenu.side === "local" &&
+          !isLocalDrivePicker &&
+          !!localPath &&
+          compareLeft?.localPath === joinLocalPath(localPath, contextMenu.names[0] ?? "");
+        // Only compare like-with-like: folder↔folder or file↔file.
+        const typesMatch = !!compareLeft && !!compareLeft.isDirectory === compareEntryIsFolder;
+        return (
         <SftpContextMenu
           menu={contextMenu}
           onClose={() => setContextMenu(null)}
@@ -2081,20 +2121,13 @@ export function SftpWorkspace({
           onSelectLeftForCompare={handleContextSelectLeft}
           onCompareToLeft={handleContextCompareTo}
           compareLeftLabel={compareLeft?.label ?? null}
-          canCompareToLeft={
-            !!compareLeft &&
-            contextMenu.openable &&
-            !(
-              contextMenu.side === "local" &&
-              !isLocalDrivePicker &&
-              !!localPath &&
-              compareLeft.localPath === joinLocalPath(localPath, contextMenu.names[0] ?? "")
-            )
-          }
+          canSelectForCompare={canSelectForCompare}
+          canCompareToLeft={!!compareLeft && canSelectForCompare && typesMatch && !isSameAsLeft}
           showTransfer={!isLocalFilesBrowser}
           onTransfer={handleContextTransfer}
         />
-      ) : null}
+        );
+      })() : null}
       {propertiesState ? (
         <SftpPropertiesPopup
           properties={propertiesState}

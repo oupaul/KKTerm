@@ -2436,6 +2436,23 @@ async fn copy_local_path(
 }
 
 #[tauri::command]
+async fn copy_local_path_to(
+    request: sftp::CopyLocalPathToRequest,
+) -> Result<sftp::SftpTransferResult, String> {
+    run_blocking_command("copy local path to", move || {
+        sftp::copy_local_path_to(request)
+    })
+    .await
+}
+
+#[tauri::command]
+async fn compare_folders(
+    request: sftp::CompareFoldersRequest,
+) -> Result<sftp::FolderCompareResult, String> {
+    run_blocking_command("compare folders", move || sftp::compare_folders(request)).await
+}
+
+#[tauri::command]
 async fn probe_file_view(
     request: file_viewer::FileViewProbeRequest,
 ) -> Result<file_viewer::FileViewProbe, String> {
@@ -3861,6 +3878,8 @@ pub fn run() {
             git_worktree_remove,
             open_filesystem_path,
             copy_local_path,
+            copy_local_path_to,
+            compare_folders,
             move_local_path,
             set_local_file_clipboard,
             read_local_file_clipboard,

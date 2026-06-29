@@ -1165,6 +1165,8 @@ interface WorkspaceState {
   compareLeft?: CompareEndpoint;
   /** Open File Compare overlay (left + right endpoints); undefined when closed. */
   compareView?: CompareView;
+  /** Open Folder Compare overlay (two local folder endpoints); undefined when closed. */
+  folderCompareView?: CompareView;
   /** DOM node in the global Status Bar that the active Document Connection portals
    * its status segments into. Set by `StatusBar`; null when the bar is hidden. */
   documentStatusSlot: HTMLElement | null;
@@ -1267,6 +1269,8 @@ interface WorkspaceState {
   clearCompareLeft: () => void;
   openCompareView: (left: CompareEndpoint, right: CompareEndpoint) => void;
   closeCompareView: () => void;
+  openFolderCompareView: (left: CompareEndpoint, right: CompareEndpoint) => void;
+  closeFolderCompareView: () => void;
   openElevatedLocalTerminal: (option: LocalShellOption, options?: { cwd?: string }) => Promise<void>;
   splitTerminalPane: (tabId: string) => void;
   splitTerminalPaneDirected: (tabId: string, direction: SplitDirection) => void;
@@ -2532,6 +2536,8 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   clearCompareLeft: () => set({ compareLeft: undefined }),
   openCompareView: (left, right) => set({ compareView: { left, right } }),
   closeCompareView: () => set({ compareView: undefined }),
+  openFolderCompareView: (left, right) => set({ folderCompareView: { left, right } }),
+  closeFolderCompareView: () => set({ folderCompareView: undefined }),
   openElevatedLocalTerminal: async (option, options) => {
     const isAppElevated = await invokeCommand("is_app_elevated", undefined).catch(() => false);
     const action = elevatedLocalShellAction({
