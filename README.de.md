@@ -82,7 +82,7 @@ Dazu ein paar Dinge, von denen du nicht wusstest, dass du sie wolltest:
 - **SSH-Panes, die sich nach jedem WLAN-Anfall wieder an deine entfernte `claude` / `codex`-Session anhängen**, damit ein Sechs-Stunden-Job eine Verbindungsunterbrechung überlebt.
 - **Workspaces**, die dein Homelab, den Hauptjob und die Server dieses einen Kunden in getrennten, umschaltbaren Containern halten.
 - Ein **Install Helper**, der die Windows-Dev-Tools, die du sonst durch zehn Browser-Tabs jagst, findet, installiert, aktualisiert und startet.
-- **Fünfundzwanzig animierte Hintergründe** fürs Dashboard *und deine Terminals* (ja, inklusive `matrix`), weil wir nicht zu erhaben dafür sind.
+- **Sechsundzwanzig animierte Hintergründe** fürs Dashboard *und deine Terminals* (ja, inklusive `matrix`), weil wir nicht zu erhaben dafür sind.
 
 Und das Beste: Der KI-Assistent kann aus einem einzigen Satz ein winziges Dashboard-Tool machen, das du tatsächlich behältst.
 
@@ -220,7 +220,7 @@ Manche sind schlichte Anzeige-Panels (Markdown, Checklisten, eine große Zahl); 
 
 #### Animierte Dashboard-/Terminal-Hintergründe (weil wir wollten)
 
-Wähl eine Stimmung — pro Dashboard-Ansicht *oder hinter jedem Terminal* — aus **fünfundzwanzig** Canvas-animierten Hintergründen:
+Wähl eine Stimmung — pro Dashboard-Ansicht *oder hinter jedem Terminal* — aus **sechsundzwanzig** Canvas-animierten Hintergründen:
 
 | Stimmung | Hintergründe |
 | --- | --- |
@@ -266,7 +266,7 @@ Das Homelab, der Hauptjob und die Server dieses einen Kunden gehören nicht in d
 
 ### Mach's dir schön: Farbthemen
 
-Hintergründe sind der Spaß; **Farbthemen** sind das, worauf du den ganzen Tag tatsächlich starrst. KKTerm bringt **vierzehn** Farbschemata mit, die die ganze App-Oberfläche neu einkleiden — Activity Rail, Verbindungsbaum, Tabs, Dialoge — mit einer Live-Mini-Vorschau für jedes unter Einstellungen ▸ Darstellung:
+Hintergründe sind der Spaß; **Farbthemen** sind das, worauf du den ganzen Tag tatsächlich starrst. KKTerm bringt **sechsundzwanzig** Farbschemata mit, die die ganze App-Oberfläche neu einkleiden — Activity Rail, Verbindungsbaum, Tabs, Dialoge — mit einer Live-Mini-Vorschau für jedes unter Einstellungen ▸ Darstellung:
 
 | Stimmung | Schemata |
 | --- | --- |

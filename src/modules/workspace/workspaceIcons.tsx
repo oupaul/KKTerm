@@ -64,6 +64,17 @@ function resolveIcon(name?: string | null): LucideIcon | null {
   return lookup[name] ?? null;
 }
 
+function iconForegroundForBackground(color?: string | null) {
+  if (!color || !/^#[0-9a-f]{6}$/i.test(color)) {
+    return "var(--surface)";
+  }
+  const red = Number.parseInt(color.slice(1, 3), 16);
+  const green = Number.parseInt(color.slice(3, 5), 16);
+  const blue = Number.parseInt(color.slice(5, 7), 16);
+  const luminance = (0.2126 * red + 0.7152 * green + 0.0722 * blue) / 255;
+  return luminance > 0.72 ? "var(--text)" : "var(--surface)";
+}
+
 /**
  * Render a Workspace's icon by lucide name, falling back to a letter avatar
  * (the Workspace name's first character) when no icon is set or the name is
@@ -88,7 +99,9 @@ export function WorkspaceIcon({
   const resolvedShellSize = shellSize ?? (hasBackground ? size + 6 : size);
   const style = {
     "--workspace-icon-bg": backgroundColor ?? "transparent",
-    "--workspace-icon-color": color ?? (hasBackground ? "var(--surface)" : "var(--accent)"),
+    "--workspace-icon-color": color ?? (hasBackground
+      ? iconForegroundForBackground(backgroundColor)
+      : "var(--accent)"),
     "--workspace-icon-size": `${size}px`,
     "--workspace-icon-shell-size": `${resolvedShellSize}px`,
   } as CSSProperties;

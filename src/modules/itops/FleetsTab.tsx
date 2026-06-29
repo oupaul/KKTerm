@@ -69,6 +69,17 @@ function groupIcon(group: Fleet): ItIconName {
   return group.filter ? "filter" : "fleet";
 }
 
+function iconForegroundForBackground(color?: string | null) {
+  if (!color || !/^#[0-9a-f]{6}$/i.test(color)) {
+    return "var(--surface)";
+  }
+  const red = Number.parseInt(color.slice(1, 3), 16);
+  const green = Number.parseInt(color.slice(3, 5), 16);
+  const blue = Number.parseInt(color.slice(5, 7), 16);
+  const luminance = (0.2126 * red + 0.7152 * green + 0.0722 * blue) / 255;
+  return luminance > 0.72 ? "var(--text)" : "var(--surface)";
+}
+
 export function FleetsTab({
   renderSidebarHeader,
   treeCollapsed,
@@ -585,7 +596,13 @@ function ItOpsIcon({
   }
   if (customIcon?.iconBackgroundColor) {
     return (
-      <span className="ft-custom-icon" style={{ background: customIcon.iconBackgroundColor }}>
+      <span
+        className="ft-custom-icon"
+        style={{
+          background: customIcon.iconBackgroundColor,
+          color: iconForegroundForBackground(customIcon.iconBackgroundColor),
+        }}
+      >
         {customIcon.iconColor ? (
           <span style={{ color: customIcon.iconColor }}>
             <ItIcon name={icon} size={size} sw={1.6} />

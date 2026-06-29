@@ -82,7 +82,7 @@ Y unas cuantas cosas que no sabías que querías:
 - **Paneles SSH que se vuelven a enganchar a tu sesión remota `claude` / `codex`** tras cada rabieta del wifi, para que un trabajo de seis horas sobreviva a una caída.
 - **Espacios de trabajo (Workspaces)** que mantienen tu homelab, el trabajo y los servidores de ese cliente en contenedores separados e intercambiables.
 - Un **Install Helper** que encuentra, instala, actualiza y lanza las herramientas para devs de Windows que normalmente persigues por diez pestañas del navegador.
-- **Veinticinco fondos animados** para el panel *y tus terminales* (sí, incluido `matrix`), porque no estamos por encima de eso.
+- **Veintiséis fondos animados** para el panel *y tus terminales* (sí, incluido `matrix`), porque no estamos por encima de eso.
 
 Y lo mejor: el asistente de IA puede convertir una sola frase en una pequeña herramienta de panel que de verdad acabas usando.
 
@@ -220,7 +220,7 @@ Algunos son simples paneles de visualización (markdown, listas de tareas, una c
 
 #### Fondos animados del panel/terminal (porque nos apetecía)
 
-Elige un ambiente — por vista del panel, *o detrás de cualquier terminal* — entre **veinticinco** fondos animados sobre canvas:
+Elige un ambiente — por vista del panel, *o detrás de cualquier terminal* — entre **veintiséis** fondos animados sobre canvas:
 
 | Ambiente | Fondos |
 | --- | --- |
@@ -266,7 +266,7 @@ El homelab, el trabajo y los servidores de ese cliente no pertenecen a la misma 
 
 ### Vístelo a tu gusto: temas de color
 
-Los fondos son la parte divertida; los **temas de color** son lo que de verdad miras todo el día. KKTerm trae **catorce** esquemas de color que reestilizan todo el chrome de la app — Activity Rail, árbol de conexiones, pestañas, diálogos — con una minivista previa en vivo de cada uno en Ajustes ▸ Apariencia:
+Los fondos son la parte divertida; los **temas de color** son lo que de verdad miras todo el día. KKTerm trae **veintiséis** esquemas de color que reestilizan todo el chrome de la app — Activity Rail, árbol de conexiones, pestañas, diálogos — con una minivista previa en vivo de cada uno en Ajustes ▸ Apariencia:
 
 | Ambiente | Esquemas |
 | --- | --- |

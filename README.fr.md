@@ -82,7 +82,7 @@ Plus quelques trucs que vous ne saviez pas vouloir :
 - **Des panneaux SSH qui se rattachent à votre session distante `claude` / `codex`** après chaque caprice du Wi-Fi, pour qu'un travail de six heures survive à une coupure.
 - Des **espaces de travail (Workspaces)** qui gardent votre homelab, le boulot et les serveurs de ce client-là dans des conteneurs séparés et commutables.
 - Un **Install Helper** qui trouve, installe, met à jour et lance les outils dev Windows que vous traquez d'habitude à travers dix onglets de navigateur.
-- **Vingt-cinq fonds animés** pour le tableau de bord *et vos terminaux* (oui, dont `matrix`), parce qu'on n'est pas au-dessus de ça.
+- **Vingt-six fonds animés** pour le tableau de bord *et vos terminaux* (oui, dont `matrix`), parce qu'on n'est pas au-dessus de ça.
 
 Et le meilleur : l'assistant IA peut transformer une seule phrase en un petit outil de tableau de bord que vous gardez vraiment.
 
@@ -220,7 +220,7 @@ Certains sont de simples panneaux d'affichage (markdown, listes à cocher, un gr
 
 #### Fonds animés du tableau de bord/terminal (parce qu'on en avait envie)
 
-Choisissez une ambiance — par vue de tableau de bord, *ou derrière n'importe quel terminal* — parmi **vingt-cinq** fonds animés sur canvas :
+Choisissez une ambiance — par vue de tableau de bord, *ou derrière n'importe quel terminal* — parmi **vingt-six** fonds animés sur canvas :
 
 | Ambiance | Fonds |
 | --- | --- |
@@ -266,7 +266,7 @@ Le homelab, le boulot et les serveurs de ce client-là n'ont pas leur place dans
 
 ### Habillez-le : thèmes de couleurs
 
-Les fonds, c'est le côté fun ; les **thèmes de couleurs**, c'est ce que vous fixez vraiment toute la journée. KKTerm propose **quatorze** schémas de couleurs qui restylent tout l'habillage de l'appli — Activity Rail, arbre des connexions, onglets, boîtes de dialogue — avec un mini-aperçu en direct de chacun sous Réglages ▸ Apparence :
+Les fonds, c'est le côté fun ; les **thèmes de couleurs**, c'est ce que vous fixez vraiment toute la journée. KKTerm propose **vingt-six** schémas de couleurs qui restylent tout l'habillage de l'appli — Activity Rail, arbre des connexions, onglets, boîtes de dialogue — avec un mini-aperçu en direct de chacun sous Réglages ▸ Apparence :
 
 | Ambiance | Schémas |
 | --- | --- |

@@ -82,7 +82,7 @@ Più un paio di cose che non sapevi di volere:
 - **Pannelli SSH che si riagganciano alla tua sessione remota `claude` / `codex`** dopo ogni capriccio del Wi-Fi, così un lavoro di sei ore sopravvive a una caduta.
 - **Workspace** che tengono il tuo homelab, il lavoro e i server di quel cliente in contenitori separati e commutabili.
 - Un **Install Helper** che trova, installa, aggiorna e avvia i tool da dev per Windows che di solito insegui per dieci schede del browser.
-- **Venticinque sfondi animati** per la dashboard *e i tuoi terminali* (sì, incluso `matrix`), perché non siamo troppo seri per farlo.
+- **Ventisei sfondi animati** per la dashboard *e i tuoi terminali* (sì, incluso `matrix`), perché non siamo troppo seri per farlo.
 
 E la parte migliore: l'assistente IA può trasformare una sola frase in un piccolo strumento da dashboard che davvero continui a usare.
 
@@ -220,7 +220,7 @@ Alcuni sono semplici pannelli di visualizzazione (markdown, checklist, un numero
 
 #### Sfondi animati di dashboard/terminale (perché ne avevamo voglia)
 
-Scegli un'atmosfera — per ogni vista della dashboard, *o dietro qualsiasi terminale* — tra **venticinque** sfondi animati su canvas:
+Scegli un'atmosfera — per ogni vista della dashboard, *o dietro qualsiasi terminale* — tra **ventisei** sfondi animati su canvas:
 
 | Atmosfera | Sfondi |
 | --- | --- |
@@ -266,7 +266,7 @@ L'homelab, il lavoro e i server di quel cliente non appartengono alla stessa lis
 
 ### Vestilo come vuoi: temi di colore
 
-Gli sfondi sono la parte divertente; i **temi di colore** sono quello che fissi davvero tutto il giorno. KKTerm porta **quattordici** schemi di colore che ridisegnano tutta la cornice dell'app — Activity Rail, albero delle connessioni, schede, finestre — con una mini-anteprima dal vivo di ciascuno in Impostazioni ▸ Aspetto:
+Gli sfondi sono la parte divertente; i **temi di colore** sono quello che fissi davvero tutto il giorno. KKTerm porta **ventisei** schemi di colore che ridisegnano tutta la cornice dell'app — Activity Rail, albero delle connessioni, schede, finestre — con una mini-anteprima dal vivo di ciascuno in Impostazioni ▸ Aspetto:
 
 | Atmosfera | Schemi |
 | --- | --- |
