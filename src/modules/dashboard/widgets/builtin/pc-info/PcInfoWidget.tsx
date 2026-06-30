@@ -717,9 +717,53 @@ function MotherboardSection({ snapshot }: { snapshot: PcInfoSnapshot }) {
   );
 }
 
+// Software/indirect display adapters (Remote Desktop, virtual KVM/streaming
+// drivers, hypervisor framebuffers) are not real graphics hardware, so they are
+// hidden from the GPU section.
+function isVirtualGpu(gpu: PcInfoSnapshot["graphics"][number]): boolean {
+  const haystack = `${gpu.name ?? ""} ${gpu.vendor ?? ""} ${gpu.chip ?? ""}`.toLowerCase();
+  return /virtual|basic (?:display|render)|microsoft basic|remote display|indirect display|\bidd\b|displaylink|spacedesk|parsec|citrix|vmware|virtualbox|\brdp\b|mirage|sunshine|duet display/.test(
+    haystack,
+  );
+}
+
+// Sort weight so discrete GPUs come before integrated/embedded ones: 0 discrete,
+// 1 unknown, 2 integrated. Name keywords decide first; a card with >= 2 GB of
+// dedicated VRAM is treated as discrete when the name is ambiguous.
+function gpuRank(gpu: PcInfoSnapshot["graphics"][number]): number {
+  const haystack = `${gpu.name ?? ""} ${gpu.chip ?? ""}`.toLowerCase();
+  if (
+    /geforce|\brtx\b|\bgtx\b|quadro|tesla|titan|radeon (?:rx|pro)|\brx ?\d|\bmx ?\d{3}|firepro|\barc\b|instinct/.test(
+      haystack,
+    )
+  ) {
+    return 0;
+  }
+  if (/uhd|\bhd graphics|iris|integrated|\bvega\b|apple m\d|radeon graphics|aspeed|matrox/.test(haystack)) {
+    return 2;
+  }
+  return (gpu.vramBytes ?? 0) >= 2 * 1024 ** 3 ? 0 : 1;
+}
+
+// Hide virtual adapters (unless every GPU is virtual — then show them so the
+// section is not empty) and order discrete cards before embedded ones, keeping
+// the original order as a stable tie-breaker.
+function orderGpus(
+  list: PcInfoSnapshot["graphics"],
+): PcInfoSnapshot["graphics"] {
+  const real = list.filter((gpu) => !isVirtualGpu(gpu));
+  const base = real.length > 0 ? real : list;
+  return base
+    .map((gpu, index) => ({ gpu, index }))
+    .sort((a, b) => gpuRank(a.gpu) - gpuRank(b.gpu) || a.index - b.index)
+    .map((entry) => entry.gpu);
+}
+
 function GraphicsSection({ snapshot }: { snapshot: PcInfoSnapshot }) {
   const { t } = useTranslation();
-  const gpu = snapshot.graphics[0];
+  const gpus = orderGpus(snapshot.graphics);
+  const gpu = gpus[0];
+  const others = gpus.slice(1);
   if (!gpu && snapshot.displays.length === 0) {
     return (
       <div className="dw-pcinfo-section">
@@ -757,6 +801,26 @@ function GraphicsSection({ snapshot }: { snapshot: PcInfoSnapshot }) {
           </div>
         </div>
       </div>
+      {others.length > 0 ? (
+        <div className="dw-pcinfo-drives">
+          {others.map((other, index) => (
+            <div className="dw-pcinfo-drive" key={other.name ?? index}>
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <rect x="3" y="6" width="18" height="9" rx="2" />
+                <path d="M9.5 10.5a2.5 2.5 0 1 0 5 0 2.5 2.5 0 0 0-5 0M6 15v4M18 15v4" />
+              </svg>
+              <div className="dw-pcinfo-drive-text">
+                <span className="dw-pcinfo-drive-name">{orDash(other.name)}</span>
+                <span className="dw-pcinfo-drive-sub">
+                  {orDash(other.vendor)}
+                  {other.driverVersion ? ` · ${t("dashboard.pcInfoField.driver")} ${other.driverVersion}` : ""}
+                </span>
+              </div>
+              <span className="dw-pcinfo-mono dw-pcinfo-drive-size">{formatBytes(other.vramBytes)}</span>
+            </div>
+          ))}
+        </div>
+      ) : null}
       {snapshot.displays.length > 0 ? (
         <>
           <div className="dw-pcinfo-panel-title dw-pcinfo-block-title">{t("dashboard.pcInfoField.displays")}</div>
