@@ -1669,10 +1669,15 @@ export function ConnectionSidebar({
   }, [deferredQuery, treeWithLiveStatuses]);
   // The tree actually rendered: the search-filtered tree, optionally narrowed to
   // connected-only by the "Show Connected" filter. Both the folder view and the
-  // "Hide Folders" flat view read from this so the two filters compose.
+  // "Hide Folders" flat view read from this so the two filters compose. An active
+  // search query takes precedence over "Show Connected" so a search still surfaces
+  // matching connections that aren't currently connected — better UX than hiding
+  // them behind the toggle.
+  const hasSearchQuery = deferredQuery.trim().length > 0;
   const displayTree = useMemo(
-    () => (showConnectedOnly ? filterConnectedConnections(filteredTree) : filteredTree),
-    [filteredTree, showConnectedOnly],
+    () =>
+      showConnectedOnly && !hasSearchQuery ? filterConnectedConnections(filteredTree) : filteredTree,
+    [filteredTree, showConnectedOnly, hasSearchQuery],
   );
   const quickConnectShellOptions = useMemo(
     () => localShellOptionsForPlatform(terminalSettings.customShells),
