@@ -1,4 +1,4 @@
-// Single-rack stage (docs/FLEET.md Rack View). Centers a <RackElevation> and
+// Single-rack stage (docs/SITE.md Rack View). Centers a <RackElevation> and
 // overlays per-device "balloon" callouts that point to each device's U slot,
 // alternating left and right with a leader line to the rack edge. Balloon Y is
 // measured from the live device grid so it tracks the rack's variable header

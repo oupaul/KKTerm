@@ -956,12 +956,12 @@
     "railLabel": "IT Ops",
     "title": "IT Ops",
     "tabs": {
-      "fleets": "กลุ่มโฮสต์",
+      "sites": "กลุ่มโฮสต์",
       "runs": "การทำงานเป็นชุด",
       "autos": "การทำงานอัตโนมัติ"
     },
     "actions": {
-      "newFleet": "กลุ่มโฮสต์ใหม่",
+      "newSite": "กลุ่มโฮสต์ใหม่",
       "newBatchRun": "การทำงานเป็นชุดใหม่",
       "startBatchRun": "เริ่มการทำงานเป็นชุด",
       "newAutomation": "การทำงานอัตโนมัติใหม่",
@@ -984,7 +984,7 @@
     "transport": {
       "auto": "อัตโนมัติ"
     },
-    "fleets": {
+    "sites": {
       "heading": "กลุ่มโฮสต์",
       "emptyTitle": "ยังไม่มีกลุ่มโฮสต์",
       "emptyBody": "กลุ่มโฮสต์คือการเลือกที่มีชื่อของการเชื่อมต่อที่มีอยู่ซึ่งใช้เป็นเป้าหมายกลุ่มสำหรับการทำงานเป็นชุดและการทำงานอัตโนมัติ",
@@ -1029,9 +1029,9 @@
       "deleteBody": "“{{name}}” และอุปกรณ์ที่วางไว้จะถูกลบ การเชื่อมต่อที่อ้างอิงจะไม่ได้รับผลกระทบ",
       "nameLabel": "ชื่อ",
       "namePlaceholder": "เช่น A12",
-      "fleetLabel": "กลุ่มโฮสต์",
+      "siteLabel": "กลุ่มโฮสต์",
       "serverRoomLabel": "ห้องเซิร์ฟเวอร์",
-      "serverRoomFleetLabel": "กลุ่มโฮสต์",
+      "serverRoomSiteLabel": "กลุ่มโฮสต์",
       "serverRoomNameLabel": "ชื่อห้องเซิร์ฟเวอร์",
       "serverRoomSelectLabel": "ห้องเซิร์ฟเวอร์",
       "serverRoomPlaceholder": "เช่น ห้อง B",
@@ -1055,7 +1055,7 @@
       "portsSpec": "{{count}} พอร์ต",
       "disksSpec": "{{count}} ช่อง",
       "addNode": "เพิ่ม…",
-      "addFleet": "กลุ่มโฮสต์ใหม่",
+      "addSite": "กลุ่มโฮสต์ใหม่",
       "addServerRoom": "ห้องเซิร์ฟเวอร์ใหม่",
       "addRack": "แร็คใหม่",
       "heightLabel": "ความสูง (U)",
@@ -1205,7 +1205,7 @@
       "codeQueued": "อยู่ในคิว",
       "savedReport": "บันทึกรายงานรวมไปยังประวัติการทำงาน · แหล่งที่มาด้วยตนเอง · {{ok}}/{{total}} สำเร็จ",
       "launchTitle": "การทำงานเป็นชุดใหม่",
-      "fleetLabel": "กลุ่มโฮสต์",
+      "siteLabel": "กลุ่มโฮสต์",
       "scopeRack": "กำหนดเป้าหมายเฉพาะแร็ค {{name}}",
       "scopeServerRoom": "กำหนดเป้าหมายเฉพาะห้องเซิร์ฟเวอร์ {{name}}",
       "scriptLabel": "สคริปต์",

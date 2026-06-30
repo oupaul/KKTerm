@@ -367,7 +367,7 @@ function defaultAction(kind: ActionKind, firstGroupId: string): AutomationAction
     case "webhook":
       return { kind: "webhook", url: "", method: "POST", body: null };
     case "runBatch":
-      return { kind: "runBatch", fleetId: firstGroupId, task: { kind: "script", body: "" } };
+      return { kind: "runBatch", siteId: firstGroupId, task: { kind: "script", body: "" } };
   }
 }
 
@@ -425,12 +425,12 @@ export function AutomationEditor({
   onClose: () => void;
 }) {
   const { t } = useTranslation();
-  const fleets = useItOpsStore((state) => state.fleets);
+  const sites = useItOpsStore((state) => state.sites);
   const createAutomation = useItOpsStore((state) => state.createAutomation);
   const updateAutomation = useItOpsStore((state) => state.updateAutomation);
   const testAutomation = useItOpsStore((state) => state.testAutomation);
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
-  const firstGroupId = fleets[0]?.id ?? "";
+  const firstGroupId = sites[0]?.id ?? "";
 
   const [state, setState] = useState<EditorState>(() =>
     automation ? fromAutomation(automation) : defaultState(),
@@ -654,7 +654,7 @@ export function AutomationEditor({
               update={update}
               setState={setState}
               firstGroupId={firstGroupId}
-              fleets={fleets}
+              sites={sites}
               onAddAction={addAction}
               testResult={testResult}
             />
@@ -693,7 +693,7 @@ function SidePanel({
   update,
   setState,
   firstGroupId,
-  fleets,
+  sites,
   onAddAction,
   testResult,
 }: {
@@ -702,7 +702,7 @@ function SidePanel({
   update: (patch: Partial<EditorState>) => void;
   setState: React.Dispatch<React.SetStateAction<EditorState>>;
   firstGroupId: string;
-  fleets: { id: string; name: string }[];
+  sites: { id: string; name: string }[];
   onAddAction: () => void;
   testResult: AutomationTestResult | null;
 }) {
@@ -915,7 +915,7 @@ function SidePanel({
             }))}
           />
         </Field>
-        <ActionFields action={action} fleets={fleets} onChange={onChange} />
+        <ActionFields action={action} sites={sites} onChange={onChange} />
       </div>
     );
   }
@@ -1011,11 +1011,11 @@ function dryRunText(action: AutomationAction, t: TFunction): string {
 
 function ActionFields({
   action,
-  fleets,
+  sites,
   onChange,
 }: {
   action: AutomationAction;
-  fleets: { id: string; name: string }[];
+  sites: { id: string; name: string }[];
   onChange: (next: AutomationAction) => void;
 }) {
   const { t } = useTranslation();
@@ -1111,11 +1111,11 @@ function ActionFields({
     case "runBatch":
       return (
         <>
-          <Field label={t("itops.tabs.fleets")}>
+          <Field label={t("itops.tabs.sites")}>
             <Select
-              value={action.fleetId}
-              onChange={(event) => onChange({ ...action, fleetId: event.currentTarget.value })}
-              options={fleets.map((group) => ({ value: group.id, label: group.name }))}
+              value={action.siteId}
+              onChange={(event) => onChange({ ...action, siteId: event.currentTarget.value })}
+              options={sites.map((group) => ({ value: group.id, label: group.name }))}
             />
           </Field>
           <Field label={t("itops.batchRuns.scriptLabel")}>

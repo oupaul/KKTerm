@@ -956,12 +956,12 @@
     "railLabel": "IT Ops",
     "title": "IT Ops",
     "tabs": {
-      "fleets": "ホストグループ",
+      "sites": "ホストグループ",
       "runs": "バッチ実行",
       "autos": "オートメーション"
     },
     "actions": {
-      "newFleet": "新規ホストグループ",
+      "newSite": "新規ホストグループ",
       "newBatchRun": "新規バッチ実行",
       "startBatchRun": "バッチ実行を開始",
       "newAutomation": "新規オートメーション",
@@ -984,7 +984,7 @@
     "transport": {
       "auto": "自動"
     },
-    "fleets": {
+    "sites": {
       "heading": "ホストグループ",
       "emptyTitle": "ホストグループはまだありません",
       "emptyBody": "ホストグループは、バッチ実行やオートメーションのフリートターゲットとして使用される、既存の接続の名前付き選択です。",
@@ -1029,9 +1029,9 @@
       "deleteBody": "“{{name}}” とその配置済みデバイスは削除されます。参照されている接続には影響しません。",
       "nameLabel": "名前",
       "namePlaceholder": "例: A12",
-      "fleetLabel": "ホストグループ",
+      "siteLabel": "ホストグループ",
       "serverRoomLabel": "サーバールーム",
-      "serverRoomFleetLabel": "ホストグループ",
+      "serverRoomSiteLabel": "ホストグループ",
       "serverRoomNameLabel": "サーバールーム名",
       "serverRoomSelectLabel": "サーバールーム",
       "serverRoomPlaceholder": "例: ルームB",
@@ -1055,7 +1055,7 @@
       "portsSpec": "{{count}} ポート",
       "disksSpec": "{{count}} ベイ",
       "addNode": "追加…",
-      "addFleet": "新規ホストグループ",
+      "addSite": "新規ホストグループ",
       "addServerRoom": "新規サーバールーム",
       "addRack": "新規ラック",
       "heightLabel": "高さ (U)",
@@ -1205,7 +1205,7 @@
       "codeQueued": "キューに追加済み",
       "savedReport": "統合レポートが実行履歴に保存されました · 手動実行 · {{ok}}/{{total}} 件成功",
       "launchTitle": "新規バッチ実行",
-      "fleetLabel": "ホストグループ",
+      "siteLabel": "ホストグループ",
       "scopeRack": "ラック {{name}} のみを対象",
       "scopeServerRoom": "サーバールーム {{name}} のみを対象",
       "scriptLabel": "スクリプト",

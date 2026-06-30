@@ -956,12 +956,12 @@
     "railLabel": "IT Ops",
     "title": "IT Ops",
     "tabs": {
-      "fleets": "Hostgruppen",
+      "sites": "Hostgruppen",
       "runs": "Batch-Ausführungen",
       "autos": "Automationen"
     },
     "actions": {
-      "newFleet": "Neue Hostgruppe",
+      "newSite": "Neue Hostgruppe",
       "newBatchRun": "Neue Batch-Ausführung",
       "startBatchRun": "Batch-Ausführung starten",
       "newAutomation": "Neue Automation",
@@ -984,7 +984,7 @@
     "transport": {
       "auto": "Auto"
     },
-    "fleets": {
+    "sites": {
       "heading": "Hostgruppen",
       "emptyTitle": "Noch keine Hostgruppen",
       "emptyBody": "Eine Hostgruppe ist eine benannte Auswahl bestehender Verbindungen, die als Flottenziel für Batch-Ausführungen und Automationen verwendet wird.",
@@ -1029,9 +1029,9 @@
       "deleteBody": "„{{name}}“ und die darin platzierten Geräte werden entfernt. Die referenzierten Verbindungen sind nicht betroffen.",
       "nameLabel": "Name",
       "namePlaceholder": "z. B. A12",
-      "fleetLabel": "Hostgruppe",
+      "siteLabel": "Hostgruppe",
       "serverRoomLabel": "Serverraum",
-      "serverRoomFleetLabel": "Hostgruppe",
+      "serverRoomSiteLabel": "Hostgruppe",
       "serverRoomNameLabel": "Serverraumname",
       "serverRoomSelectLabel": "Serverraum",
       "serverRoomPlaceholder": "z. B. Raum B",
@@ -1055,7 +1055,7 @@
       "portsSpec": "{{count}} Ports",
       "disksSpec": "{{count}} Schächte",
       "addNode": "Hinzufügen…",
-      "addFleet": "Neue Hostgruppe",
+      "addSite": "Neue Hostgruppe",
       "addServerRoom": "Neuer Serverraum",
       "addRack": "Neuer Rack",
       "heightLabel": "Höhe (U)",
@@ -1205,7 +1205,7 @@
       "codeQueued": "in Warteschlange",
       "savedReport": "Konsolidierter Bericht im Ausführungsverlauf gespeichert · Quelle manuell · {{ok}}/{{total}} erfolgreich",
       "launchTitle": "Neue Batch-Ausführung",
-      "fleetLabel": "Hostgruppe",
+      "siteLabel": "Hostgruppe",
       "scopeRack": "Nur Rack {{name}} als Ziel",
       "scopeServerRoom": "Nur Serverraum {{name}} als Ziel",
       "scriptLabel": "Script",

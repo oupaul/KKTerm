@@ -6,26 +6,26 @@ const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
 test("IT Ops topology defaults use the requested Lucide icons", async () => {
   const icons = await read("src/modules/itops/icons.tsx");
-  const fleets = await read("src/modules/itops/FleetsTab.tsx");
-  const fleetDialog = await read("src/modules/itops/FleetDialog.tsx");
+  const sites = await read("src/modules/itops/SitesTab.tsx");
+  const siteDialog = await read("src/modules/itops/SiteDialog.tsx");
   const serverRoomDialog = await read("src/modules/itops/ServerRoomDialog.tsx");
 
   assert.match(icons, /import \{ Building2, Server, ShelvingUnit \} from "lucide-react"/);
-  assert.match(icons, /fleet: \(p\) => LucideGlyph\(Building2, p\)/);
+  assert.match(icons, /site: \(p\) => LucideGlyph\(Building2, p\)/);
   assert.match(icons, /room: \(p\) => LucideGlyph\(Server, p\)/);
   assert.match(icons, /rack: \(p\) => LucideGlyph\(ShelvingUnit, p\)/);
-  assert.match(fleets, /return group\.filter \? "filter" : "fleet"/);
-  assert.match(fleets, /<ItIcon name="fleet" size=\{14\} \/>/);
-  assert.match(fleets, /<ItIcon name="rack" size=\{14\} \/>/);
-  assert.match(fleets, /icon="room"/);
-  assert.match(fleets, /icon="rack"/);
-  assert.match(fleetDialog, /DEFAULT_FLEET_ICON_REF = lucideIconRefForName\("Building2"\)/);
-  assert.match(fleetDialog, /defaultIconDataUrl=\{DEFAULT_FLEET_ICON_REF\}/);
+  assert.match(sites, /return group\.filter \? "filter" : "site"/);
+  assert.match(sites, /<ItIcon name="site" size=\{14\} \/>/);
+  assert.match(sites, /<ItIcon name="rack" size=\{14\} \/>/);
+  assert.match(sites, /icon="room"/);
+  assert.match(sites, /icon="rack"/);
+  assert.match(siteDialog, /DEFAULT_SITE_ICON_REF = lucideIconRefForName\("Building2"\)/);
+  assert.match(siteDialog, /defaultIconDataUrl=\{DEFAULT_SITE_ICON_REF\}/);
   assert.match(serverRoomDialog, /DEFAULT_SERVER_ROOM_ICON_REF = lucideIconRefForName\("Server"\)/);
   assert.match(serverRoomDialog, /defaultIconDataUrl=\{DEFAULT_SERVER_ROOM_ICON_REF\}/);
 });
 
-test("shared Lucide icon selectors expose Fleet, Server Room, and Rack icons", async () => {
+test("shared Lucide icon selectors expose Site, Server Room, and Rack icons", async () => {
   const dashboardTypes = await read("src/modules/dashboard/types.ts");
   const workspaceIcons = await read("src/modules/workspace/workspaceIcons.tsx");
   const dashboardValidation = await read("src-tauri/src/dashboard_validation.rs");
@@ -68,12 +68,12 @@ test("Connection icon picker keeps Lucide background and foreground separate", a
 });
 
 test("IT Ops topology icons choose a readable default foreground for light backgrounds", async () => {
-  const fleets = await read("src/modules/itops/FleetsTab.tsx");
+  const sites = await read("src/modules/itops/SitesTab.tsx");
 
-  assert.match(fleets, /function iconForegroundForBackground/);
+  assert.match(sites, /function iconForegroundForBackground/);
   assert.match(
-    fleets,
+    sites,
     /background: customIcon\.iconBackgroundColor,[\s\S]*color: iconForegroundForBackground\(customIcon\.iconBackgroundColor\)/,
-    "Fleet and Server Room glyphs should not stay white when their selected background is light",
+    "Site and Server Room glyphs should not stay white when their selected background is light",
   );
 });

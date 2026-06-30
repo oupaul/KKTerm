@@ -956,12 +956,12 @@
     "railLabel": "IT Ops",
     "title": "IT Ops",
     "tabs": {
-      "fleets": "Grupos de hosts",
+      "sites": "Grupos de hosts",
       "runs": "Ejecuciones por lotes",
       "autos": "Automatizaciones"
     },
     "actions": {
-      "newFleet": "Nuevo grupo de hosts",
+      "newSite": "Nuevo grupo de hosts",
       "newBatchRun": "Nueva ejecución por lotes",
       "startBatchRun": "Iniciar una ejecución por lotes",
       "newAutomation": "Nueva automatización",
@@ -984,7 +984,7 @@
     "transport": {
       "auto": "Automático"
     },
-    "fleets": {
+    "sites": {
       "heading": "Grupos de hosts",
       "emptyTitle": "Aún no hay grupos de hosts",
       "emptyBody": "Un grupo de hosts es una selección con nombre de conexiones existentes usada como destino de flota para ejecuciones por lotes y automatizaciones.",
@@ -1029,9 +1029,9 @@
       "deleteBody": "“{{name}}” y sus dispositivos colocados se eliminarán. Las conexiones referenciadas no se ven afectadas.",
       "nameLabel": "Nombre",
       "namePlaceholder": "p. ej. A12",
-      "fleetLabel": "Grupo de hosts",
+      "siteLabel": "Grupo de hosts",
       "serverRoomLabel": "Sala de servidores",
-      "serverRoomFleetLabel": "Grupo de hosts",
+      "serverRoomSiteLabel": "Grupo de hosts",
       "serverRoomNameLabel": "Nombre de la sala de servidores",
       "serverRoomSelectLabel": "Sala de servidores",
       "serverRoomPlaceholder": "p. ej. Sala B",
@@ -1055,7 +1055,7 @@
       "portsSpec": "{{count}} puertos",
       "disksSpec": "{{count}} bahías",
       "addNode": "Agregar…",
-      "addFleet": "Nuevo grupo de hosts",
+      "addSite": "Nuevo grupo de hosts",
       "addServerRoom": "Nueva sala de servidores",
       "addRack": "Nuevo rack",
       "heightLabel": "Altura (U)",
@@ -1205,7 +1205,7 @@
       "codeQueued": "en cola",
       "savedReport": "Informe consolidado guardado en el historial de ejecuciones · origen manual · {{ok}}/{{total}} con éxito",
       "launchTitle": "Nueva ejecución por lotes",
-      "fleetLabel": "Grupo de hosts",
+      "siteLabel": "Grupo de hosts",
       "scopeRack": "Apuntando solo al rack {{name}}",
       "scopeServerRoom": "Apuntando solo a la sala de servidores {{name}}",
       "scriptLabel": "Script",

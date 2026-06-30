@@ -83,12 +83,12 @@ test("custom titlebar panel buttons match module scope", async () => {
   assert.match(
     titleBarSource,
     /activePage === "itops"/,
-    "the Fleets navigator titlebar toggle should only render inside IT Ops",
+    "the Sites navigator titlebar toggle should only render inside IT Ops",
   );
   assert.match(
     titleBarSource,
-    /onToggleItOpsFleetTree/,
-    "the IT Ops titlebar toggle should control the Fleets navigator",
+    /onToggleItOpsSiteTree/,
+    "the IT Ops titlebar toggle should control the Sites navigator",
   );
   assert.match(
     titleBarSource,

@@ -1,4 +1,4 @@
-// Animated rack-device faceplate (docs/FLEET.md Rack View). A presentation-only
+// Animated rack-device faceplate (docs/SITE.md Rack View). A presentation-only
 // port of the "IT Ops Racks" design comp: each RackItemKind paints its own
 // skeuomorphic 1U face — server fans + drive LEDs, switch/router port blink,
 // firewall shield + throughput bars, storage disk grid, PDU outlets + load

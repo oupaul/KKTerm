@@ -1,5 +1,5 @@
 // Renders a DashboardBackground (preset / dynamic / image / video) as an
-// absolutely-positioned layer behind an IT Ops drill view (fleet cards, server
+// absolutely-positioned layer behind an IT Ops drill view (site cards, server
 // room racks, single rack stage). A direct port of SftpBackgroundLayer using
 // itops-scoped CSS classes so the IT Ops surface stays independent of terminal/
 // file-browser styling, while reusing the same Dashboard background machinery.

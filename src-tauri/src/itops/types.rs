@@ -1,4 +1,4 @@
-// IT Ops durable types (docs/ITOPS.md). Phase 1 covers Fleets, Phase 2 the
+// IT Ops durable types (docs/ITOPS.md). Phase 1 covers Sites, Phase 2 the
 // Batch Run report shapes, and Phase 3 the durable Automation.
 
 use std::collections::HashMap;
@@ -67,9 +67,9 @@ pub enum AutomationAction {
     },
     RunBatch {
         // `hostGroupId` alias keeps Automation actions persisted before the
-        // Fleet rename (docs/FLEET.md Phase A) deserializable from actions_json.
+        // Site rename (docs/SITE.md Phase A) deserializable from actions_json.
         #[serde(alias = "hostGroupId")]
-        fleet_id: String,
+        site_id: String,
         task: BatchTask,
     },
 }
@@ -78,7 +78,7 @@ fn default_webhook_method() -> String {
     "POST".to_string()
 }
 
-/// How a Batch Run reaches one host. Stored per Fleet as the default;
+/// How a Batch Run reaches one host. Stored per Site as the default;
 /// `Auto` means "derive from the Connection at run time" (resolved in Phase 2+).
 #[derive(Clone, Copy, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -111,12 +111,12 @@ impl Transport {
     }
 }
 
-/// Optional dynamic membership filter resolved at run time: a Fleet picks up
+/// Optional dynamic membership filter resolved at run time: a Site picks up
 /// later-added Connections that match these criteria. An empty filter is treated
 /// as "no filter" and stored as NULL.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-pub struct FleetFilter {
+pub struct SiteFilter {
     /// Connection `connection_type` values to include (e.g. `["ssh"]`).
     #[serde(default)]
     pub types: Vec<String>,
@@ -125,13 +125,13 @@ pub struct FleetFilter {
     pub folder_id: Option<String>,
 }
 
-impl FleetFilter {
+impl SiteFilter {
     pub fn is_empty(&self) -> bool {
         self.types.is_empty() && self.folder_id.is_none()
     }
 }
 
-/// Icon + background colour for a server room, stored on the owning Fleet.
+/// Icon + background colour for a server room, stored on the owning Site.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RoomIcon {
@@ -143,24 +143,24 @@ pub struct RoomIcon {
     pub icon_background_color: Option<String>,
 }
 
-/// A durable, named selection of existing Connections used as a fleet target.
+/// A durable, named selection of existing Connections used as a site target.
 /// References Connection ids; owns no Session and no secret.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Fleet {
+pub struct Site {
     pub id: String,
     pub name: String,
     pub sort_order: i64,
     pub member_ids: Vec<String>,
     #[serde(default)]
-    pub filter: Option<FleetFilter>,
+    pub filter: Option<SiteFilter>,
     pub transport: Transport,
-    /// Custom background for the Fleet (server-room cards) view; reuses the
+    /// Custom background for the Site (server-room cards) view; reuses the
     /// Dashboard background machinery. None = theme default.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub background: Option<DashboardBackground>,
     /// Per-server-room backgrounds, keyed by the room's string tag. Rooms are
-    /// not entities, so their backgrounds live as a map on the owning Fleet.
+    /// not entities, so their backgrounds live as a map on the owning Site.
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub room_backgrounds: HashMap<String, DashboardBackground>,
     /// Custom icon (data URL or lucide/material ref), foreground colour, and background colour.
@@ -175,15 +175,15 @@ pub struct Fleet {
     pub room_icons: HashMap<String, RoomIcon>,
 }
 
-/// A Rack in a Fleet's virtual datacenter (docs/FLEET.md): a fixed-height cabinet
+/// A Rack in a Site's virtual datacenter (docs/SITE.md): a fixed-height cabinet
 /// grouped by `server_room`, holding Rack Devices at U positions. `items` is
 /// hydrated on read (storage joins the items in U order). The topology is
-/// Fleet → Server Room → Rack; older region/datacenter/area fields are retired.
+/// Site → Server Room → Rack; older region/datacenter/area fields are retired.
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Rack {
     pub id: String,
-    pub fleet_id: String,
+    pub site_id: String,
     pub name: String,
     #[serde(default)]
     pub server_room: String,
@@ -612,8 +612,8 @@ pub struct RackItem {
     pub metadata: RackItemMetadata,
 }
 
-/// Optional narrowing of a Batch Run to part of a Fleet's rack topology
-/// (docs/FLEET.md Phase D). When set, only the placed Connection items in the
+/// Optional narrowing of a Batch Run to part of a Site's rack topology
+/// (docs/SITE.md Phase D). When set, only the placed Connection items in the
 /// matching racks are targeted. All provided (non-empty) fields must match.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -631,7 +631,7 @@ impl RunScope {
     }
 }
 
-/// One concrete fleet target produced by resolving a Fleet at run time.
+/// One concrete site target produced by resolving a Site at run time.
 /// Lightweight and secret-free — the seam the Phase 2 Batch Run executor builds
 /// on. Passwords/keys are never carried here; they stay in the keychain.
 #[derive(Clone, Debug, Serialize, PartialEq, Eq)]
@@ -795,7 +795,7 @@ pub struct RunReport {
 pub struct RunHistoryEntry {
     pub id: String,
     pub source: String,
-    pub fleet_id: Option<String>,
+    pub site_id: Option<String>,
     pub task_summary: String,
     pub started_at: String,
     pub finished_at: Option<String>,
@@ -819,7 +819,7 @@ pub struct RunEventHost {
 pub enum RunEvent {
     Started {
         run_id: String,
-        fleet_id: Option<String>,
+        site_id: Option<String>,
         task_summary: String,
         hosts: Vec<RunEventHost>,
     },

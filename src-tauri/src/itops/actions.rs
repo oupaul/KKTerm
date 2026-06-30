@@ -67,11 +67,11 @@ fn run_action(app: &AppHandle, automation: &Automation, action: &AutomationActio
             run_webhook(url, method, body.as_deref());
         }
         AutomationAction::RunBatch {
-            fleet_id,
+            site_id,
             task,
         } => {
             if let Err(error) =
-                super::commands::start_run(app, fleet_id.clone(), task.clone(), None)
+                super::commands::start_run(app, site_id.clone(), task.clone(), None)
             {
                 eprintln!(
                     "IT Ops automation {} runBatch failed: {error}",
