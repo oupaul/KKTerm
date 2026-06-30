@@ -54,7 +54,7 @@ export const INSTALLER_CATEGORY_SECTIONS: InstallerSection[] = [
   {
     id: "aiPlatforms",
     titleKey: "installer.section.aiPlatforms",
-    ids: ["ollama", "n8n", "open-webui", "flowise", "langflow"],
+    ids: ["ollama", "n8n", "open-webui", "flowise", "langflow", "comfyui", "lmstudio"],
     Icon: Cpu,
     tintVar: "--installer-tint-ai-platforms",
   },
@@ -68,7 +68,7 @@ export const INSTALLER_CATEGORY_SECTIONS: InstallerSection[] = [
   {
     id: "design",
     titleKey: "installer.section.design",
-    ids: ["excalidraw", "openflowkit", "drawio", "krita", "inkscape"],
+    ids: ["excalidraw", "openflowkit", "drawio", "krita", "inkscape", "blender"],
     Icon: Brush,
     tintVar: "--installer-tint-design",
   },

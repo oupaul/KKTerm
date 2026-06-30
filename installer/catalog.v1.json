@@ -1023,6 +1023,89 @@
       }
     },
     {
+      "id": "comfyui",
+      "name": "ComfyUI",
+      "descriptionEn": "Node-based GUI for Stable Diffusion and diffusion-model image and video workflows.",
+      "category": "ai-platform",
+      "icon": "Workflow",
+      "needs": [
+        "winget"
+      ],
+      "homepage": "https://www.comfy.org/",
+      "releaseNotesUrl": "https://github.com/Comfy-Org/desktop/releases",
+      "detection": {
+        "displayNames": [
+          "ComfyUI",
+          "ComfyUI Desktop"
+        ]
+      },
+      "provider": {
+        "kind": "winget",
+        "id": "Comfy.ComfyUI-Desktop"
+      },
+      "options": [
+        "provider",
+        "scope",
+        "version"
+      ],
+      "descriptionLocales": {
+        "fr": "Interface à nœuds pour les workflows d’images et de vidéos avec Stable Diffusion et modèles de diffusion.",
+        "it": "Interfaccia a nodi per flussi di lavoro di immagini e video con Stable Diffusion e modelli di diffusione.",
+        "de": "Knotenbasierte Oberfläche für Bild- und Video-Workflows mit Stable Diffusion und Diffusionsmodellen.",
+        "es": "Interfaz basada en nodos para flujos de trabajo de imagen y vídeo con Stable Diffusion y modelos de difusión.",
+        "es-MX": "Interfaz basada en nodos para flujos de trabajo de imagen y video con Stable Diffusion y modelos de difusión.",
+        "pt-BR": "Interface baseada em nós para fluxos de trabalho de imagem e vídeo com Stable Diffusion e modelos de difusão.",
+        "zh-TW": "節點式圖形介面，用於 Stable Diffusion 與擴散模型的圖片和影片工作流程。",
+        "zh-CN": "基于节点的图形界面，用于 Stable Diffusion 和扩散模型的图像与视频工作流。",
+        "ja": "Stable Diffusion と拡散モデルの画像・動画ワークフロー向けのノードベース GUI。",
+        "ko": "Stable Diffusion 및 확산 모델의 이미지·영상 워크플로를 위한 노드 기반 GUI입니다.",
+        "th": "GUI แบบโหนดสำหรับเวิร์กโฟลว์ภาพและวิดีโอด้วย Stable Diffusion และโมเดลดิฟฟิวชัน",
+        "id": "GUI berbasis simpul untuk alur kerja gambar dan video Stable Diffusion dan model difusi.",
+        "vi": "Giao diện dạng nút cho quy trình tạo ảnh và video bằng Stable Diffusion và mô hình khuếch tán."
+      }
+    },
+    {
+      "id": "lmstudio",
+      "name": "LM Studio",
+      "descriptionEn": "Desktop app to discover, download, and run local LLMs with an OpenAI-compatible server.",
+      "category": "ai-platform",
+      "icon": "Cpu",
+      "needs": [
+        "winget"
+      ],
+      "homepage": "https://lmstudio.ai/",
+      "releaseNotesUrl": "https://lmstudio.ai/blog",
+      "detection": {
+        "displayNames": [
+          "LM Studio"
+        ]
+      },
+      "provider": {
+        "kind": "winget",
+        "id": "ElementLabs.LMStudio"
+      },
+      "options": [
+        "provider",
+        "scope",
+        "version"
+      ],
+      "descriptionLocales": {
+        "fr": "Application de bureau pour découvrir, télécharger et exécuter des LLM locaux avec un serveur compatible OpenAI.",
+        "it": "App desktop per scoprire, scaricare ed eseguire LLM locali con un server compatibile con OpenAI.",
+        "de": "Desktop-App zum Entdecken, Herunterladen und Ausführen lokaler LLMs mit OpenAI-kompatiblem Server.",
+        "es": "Aplicación de escritorio para descubrir, descargar y ejecutar LLM locales con un servidor compatible con OpenAI.",
+        "es-MX": "Aplicación de escritorio para descubrir, descargar y ejecutar LLM locales con un servidor compatible con OpenAI.",
+        "pt-BR": "Aplicativo de desktop para descobrir, baixar e executar LLMs locais com um servidor compatível com OpenAI.",
+        "zh-TW": "桌面應用程式，可探索、下載並執行本機 LLM，並提供相容 OpenAI 的伺服器。",
+        "zh-CN": "桌面应用程序，可发现、下载并运行本地 LLM，并提供兼容 OpenAI 的服务器。",
+        "ja": "ローカル LLM を検索・ダウンロード・実行できるデスクトップ アプリ。OpenAI 互換サーバーを搭載。",
+        "ko": "로컬 LLM을 검색·다운로드·실행하는 데스크톱 앱으로 OpenAI 호환 서버를 제공합니다.",
+        "th": "แอปเดสก์ท็อปสำหรับค้นหา ดาวน์โหลด และรัน LLM ในเครื่อง พร้อมเซิร์ฟเวอร์ที่เข้ากันได้กับ OpenAI",
+        "id": "Aplikasi desktop untuk menemukan, mengunduh, dan menjalankan LLM lokal dengan server yang kompatibel dengan OpenAI.",
+        "vi": "Ứng dụng desktop để khám phá, tải xuống và chạy LLM cục bộ với máy chủ tương thích OpenAI."
+      }
+    },
+    {
       "id": "bruno",
       "name": "Bruno",
       "descriptionEn": "Open-source API client. Postman alternative with git-friendly request files.",
@@ -2414,6 +2497,51 @@
         "th": "โปรแกรมแก้ไขกราฟิกเวกเตอร์สำหรับสร้างและแก้ไขงานศิลป์ SVG",
         "id": "Editor grafis vektor untuk membuat dan mengedit karya SVG.",
         "vi": "Trình chỉnh sửa đồ họa vector để tạo và chỉnh sửa tác phẩm SVG."
+      }
+    },
+    {
+      "id": "blender",
+      "name": "Blender",
+      "descriptionEn": "Open-source 3D creation suite for modeling, animation, rendering, and VFX.",
+      "category": "design",
+      "icon": "Box",
+      "needs": [
+        "winget"
+      ],
+      "homepage": "https://www.blender.org/",
+      "releaseNotesUrl": "https://www.blender.org/download/releases/",
+      "detection": {
+        "displayNames": [
+          "Blender"
+        ]
+      },
+      "provider": {
+        "kind": "winget",
+        "id": "BlenderFoundation.Blender"
+      },
+      "chocolateyProvider": {
+        "kind": "chocolatey",
+        "id": "blender"
+      },
+      "options": [
+        "provider",
+        "scope",
+        "version"
+      ],
+      "descriptionLocales": {
+        "fr": "Suite de création 3D open source pour la modélisation, l’animation, le rendu et les effets visuels.",
+        "it": "Suite di creazione 3D open source per modellazione, animazione, rendering ed effetti visivi.",
+        "de": "Open-Source-3D-Software für Modellierung, Animation, Rendering und VFX.",
+        "es": "Suite de creación 3D de código abierto para modelado, animación, renderizado y VFX.",
+        "es-MX": "Suite de creación 3D de código abierto para modelado, animación, renderizado y VFX.",
+        "pt-BR": "Suíte de criação 3D de código aberto para modelagem, animação, renderização e VFX.",
+        "zh-TW": "開源 3D 創作軟體，支援建模、動畫、算圖與視覺特效。",
+        "zh-CN": "开源 3D 创作套件，支持建模、动画、渲染和视觉特效。",
+        "ja": "モデリング、アニメーション、レンダリング、VFX に対応するオープンソースの 3D 制作スイート。",
+        "ko": "모델링, 애니메이션, 렌더링, VFX를 위한 오픈 소스 3D 제작 도구입니다.",
+        "th": "ชุดเครื่องมือสร้างงาน 3D โอเพนซอร์สสำหรับการสร้างโมเดล แอนิเมชัน การเรนเดอร์ และวิชวลเอฟเฟกต์",
+        "id": "Rangkaian pembuatan 3D sumber terbuka untuk pemodelan, animasi, rendering, dan VFX.",
+        "vi": "Bộ công cụ sáng tạo 3D mã nguồn mở cho mô hình hóa, hoạt ảnh, kết xuất và VFX."
       }
     },
     {
