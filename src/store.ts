@@ -3428,9 +3428,9 @@ function sftpBrowserConnectionFromFtpConnection(connection: Connection): Connect
   return {
     ...connection,
     type: "ssh",
-    authMethod: "password",
+    authMethod: connection.authMethod,
     port: connection.port ?? 22,
-    keyPath: undefined,
+    keyPath: connection.authMethod === "keyFile" ? connection.keyPath : undefined,
     proxyJump: undefined,
     ftpOptions: undefined,
     // Keep the file-browser identity for the rail/tab glyph instead of the

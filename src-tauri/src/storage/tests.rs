@@ -3007,6 +3007,56 @@ fn rdp_and_vnc_settings_round_trip_through_settings_table() {
 }
 
 #[test]
+fn sftp_protocol_ftp_connection_persists_ssh_auth_fields() {
+    let storage = Storage::open(temp_db_path("sftp-protocol-ftp-auth")).expect("storage opens");
+
+    let created = storage
+        .create_connection(CreateConnectionRequest {
+            name: "SFTP Files".to_string(),
+            host: "files.internal".to_string(),
+            user: "deploy".to_string(),
+            connection_type: "ftp".to_string(),
+            folder_id: None,
+            workspace_id: None,
+            port: Some(22),
+            key_path: Some("C:\\Users\\example\\.ssh\\files_ed25519".to_string()),
+            proxy_jump: None,
+            ssh_socks_proxy: None,
+            ssh_socks_proxy_username: None,
+            ssh_socks_proxy_inherit_defaults: None,
+            ssh_compression: None,
+            auth_method: Some("keyFile".to_string()),
+            local_shell: None,
+            local_startup_directory: None,
+            local_startup_script: None,
+            url: None,
+            data_partition: None,
+            url_proxy: None,
+            url_proxy_inherit_defaults: None,
+            use_tmux_sessions: None,
+            use_psmux_sessions: None,
+            serial_line: None,
+            serial_speed: None,
+            rdp_options: None,
+            vnc_options: None,
+            ftp_options: Some(crate::ftp::FtpOptions {
+                protocol: crate::ftp::FtpProtocol::Sftp,
+                ..crate::ftp::FtpOptions::default()
+            }),
+            file_view_open_external: false,
+            ssh_port_forwardings: None,
+        })
+        .expect("SFTP protocol FTP connection is created");
+
+    assert_eq!(created.connection_type, "ftp");
+    assert_eq!(created.auth_method, "keyFile");
+    assert_eq!(
+        created.key_path.as_deref(),
+        Some("C:\\Users\\example\\.ssh\\files_ed25519")
+    );
+}
+
+#[test]
 fn remote_desktop_connection_options_are_optional_protocol_overrides() {
     let storage =
         Storage::open(temp_db_path("remote-desktop-connection-options")).expect("storage opens");

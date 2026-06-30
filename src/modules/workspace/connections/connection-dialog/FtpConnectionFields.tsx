@@ -1,4 +1,17 @@
-import { Activity, ArrowLeftRight, Eye, FileType, Lock, Network, ShieldOff, Timer, Type } from "lucide-react";
+import {
+  Activity,
+  ArrowLeftRight,
+  Eye,
+  FileType,
+  Fingerprint,
+  KeyRound,
+  Lock,
+  LockKeyhole,
+  Network,
+  ShieldOff,
+  Timer,
+  Type,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { technicalInputProps } from "../../../../lib/inputBehavior";
 import type { Connection, SshSettings, StoredCredentialSummary } from "../../../../types";
@@ -6,24 +19,42 @@ import { defaultPortForConnectionType } from "../utils";
 import { PasswordCredentialSelect, PasswordField } from "./ConnectionPasswordFields";
 
 export function FtpConnectionFields({
+  authMethod,
   hasStoredConnectionPassword,
+  hasStoredConnectionPassphrase,
   initialConnection,
   isEditMode,
+  keyPassphraseDraft,
+  keyPath,
   matchingPasswordCredentials,
+  onAuthMethodChange,
+  onBrowseKeyFile,
+  onKeyPathChange,
+  onOpenKeyEmailDialog,
   onPortDraftChange,
   onSelectedPasswordCredentialIdChange,
   portDraft,
   selectedPasswordCredentialId,
+  ftpProtocol,
   sshSettings,
 }: {
+  authMethod: "keyFile" | "password" | "agent";
   hasStoredConnectionPassword: boolean;
+  hasStoredConnectionPassphrase: boolean;
   initialConnection?: Connection;
   isEditMode: boolean;
+  keyPassphraseDraft: string;
+  keyPath: string;
   matchingPasswordCredentials: StoredCredentialSummary[];
+  onAuthMethodChange: (authMethod: "keyFile" | "password" | "agent") => void;
+  onBrowseKeyFile: () => void;
+  onKeyPathChange: (keyPath: string) => void;
+  onOpenKeyEmailDialog: () => void;
   onPortDraftChange: (port: string) => void;
   onSelectedPasswordCredentialIdChange: (credentialId: string) => void;
   portDraft: string;
   selectedPasswordCredentialId: string;
+  ftpProtocol: "ftp" | "ftps" | "sftp";
   sshSettings: SshSettings;
 }) {
   const { t } = useTranslation();
@@ -72,17 +103,94 @@ export function FtpConnectionFields({
             required
           />
         </label>
-        <PasswordField
-          hasStoredSecret={isEditMode && hasStoredConnectionPassword}
-          label={t("connections.password")}
-          name="password"
-          placeholder={isEditMode ? t("connections.leaveBlankPassword") : t("connections.storedInKeychain")}
-        />
-        <PasswordCredentialSelect
-          credentials={matchingPasswordCredentials}
-          onChange={onSelectedPasswordCredentialIdChange}
-          selectedCredentialId={selectedPasswordCredentialId}
-        />
+        {ftpProtocol === "sftp" ? (
+          <div className="auth-mode-row">
+            <span id="ftp-sftp-auth-method-label">{t("connections.auth")}*</span>
+            <input name="authMethod" type="hidden" value={authMethod} />
+            <div
+              className="auth-method-selector"
+              data-auth-method={authMethod}
+              role="tablist"
+              aria-label={t("connections.auth")}
+              aria-labelledby="ftp-sftp-auth-method-label"
+            >
+              <button
+                type="button"
+                role="tab"
+                aria-selected={authMethod === "keyFile"}
+                className={authMethod === "keyFile" ? "active" : ""}
+                onClick={() => onAuthMethodChange("keyFile")}
+              >
+                <KeyRound size={15} aria-hidden />
+                <span>{t("connections.keyFile")}</span>
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={authMethod === "password"}
+                className={authMethod === "password" ? "active" : ""}
+                onClick={() => onAuthMethodChange("password")}
+              >
+                <LockKeyhole size={15} aria-hidden />
+                <span>{t("connections.password")}</span>
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={authMethod === "agent"}
+                className={authMethod === "agent" ? "active" : ""}
+                onClick={() => onAuthMethodChange("agent")}
+              >
+                <Fingerprint size={15} aria-hidden />
+                <span>{t("connections.sshAgent")}</span>
+              </button>
+            </div>
+          </div>
+        ) : null}
+        {ftpProtocol === "sftp" && authMethod === "keyFile" ? (
+          <>
+            <label>
+              <span>{t("connections.keyPath")}</span>
+              <div className="input-with-button ssh-key-input-actions">
+                <input
+                  name="keyPath"
+                  {...technicalInputProps}
+                  onChange={(event) => onKeyPathChange(event.currentTarget.value)}
+                  placeholder={t("connections.keyPathExample")}
+                  value={keyPath}
+                />
+                <button className="toolbar-button" onClick={onBrowseKeyFile} type="button">
+                  {t("connections.browse")}
+                </button>
+                <button className="toolbar-button" onClick={onOpenKeyEmailDialog} type="button">
+                  <KeyRound size={15} />
+                  {t("settings.generateSshKey")}
+                </button>
+              </div>
+            </label>
+            <PasswordField
+              hasStoredSecret={isEditMode && hasStoredConnectionPassphrase}
+              initialValue={keyPassphraseDraft}
+              label={t("connections.keyPassphraseOptional")}
+              name="keyPassphrase"
+              placeholder={isEditMode ? t("connections.leaveBlankPassphrase") : t("connections.keyPassphraseHint")}
+            />
+          </>
+        ) : ftpProtocol !== "sftp" || authMethod === "password" ? (
+          <>
+            <PasswordField
+              hasStoredSecret={isEditMode && hasStoredConnectionPassword}
+              label={ftpProtocol === "sftp" ? t("connections.passwordLabel") : t("connections.password")}
+              name="password"
+              placeholder={isEditMode ? t("connections.leaveBlankPassword") : t("connections.storedInKeychain")}
+            />
+            <PasswordCredentialSelect
+              credentials={matchingPasswordCredentials}
+              onChange={onSelectedPasswordCredentialIdChange}
+              selectedCredentialId={selectedPasswordCredentialId}
+            />
+          </>
+        ) : null}
       </div>
     </>
   );

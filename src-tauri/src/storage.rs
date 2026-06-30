@@ -4039,6 +4039,20 @@ fn normalize_ssh_optional_field(value: Option<String>, connection_type: &str) ->
         .filter(|value| !value.is_empty())
 }
 
+fn normalize_ssh_auth_key_path(
+    value: Option<String>,
+    connection_type: &str,
+    ftp_options: &Option<crate::ftp::FtpOptions>,
+) -> Option<String> {
+    if connection_type != "ssh" && !is_sftp_protocol_ftp_connection(connection_type, ftp_options) {
+        return None;
+    }
+
+    value
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+}
+
 /// Normalize a per-connection SSH compression override. Only SSH connections
 /// carry it; `None` (or any non-SSH type) means "inherit the global default".
 /// The only meaningful explicit values are `off` and `fast` (russh's zlib level
@@ -4253,12 +4267,16 @@ fn normalize_auth_method(
     value: Option<String>,
     connection_type: &str,
     key_path: &Option<String>,
+    ftp_options: &Option<crate::ftp::FtpOptions>,
 ) -> Result<String, String> {
-    if connection_type == "telnet" {
+    if connection_type == "telnet"
+        || (connection_type == "ftp"
+            && !is_sftp_protocol_ftp_connection(connection_type, ftp_options))
+    {
         return Ok("password".to_string());
     }
 
-    if connection_type != "ssh" {
+    if connection_type != "ssh" && !is_sftp_protocol_ftp_connection(connection_type, ftp_options) {
         return Ok("keyFile".to_string());
     }
 
@@ -4274,6 +4292,16 @@ fn normalize_auth_method(
         None if key_path.is_some() => Ok("keyFile".to_string()),
         None => Ok("agent".to_string()),
     }
+}
+
+fn is_sftp_protocol_ftp_connection(
+    connection_type: &str,
+    ftp_options: &Option<crate::ftp::FtpOptions>,
+) -> bool {
+    connection_type == "ftp"
+        && ftp_options
+            .as_ref()
+            .is_some_and(|options| options.protocol == crate::ftp::FtpProtocol::Sftp)
 }
 
 fn folder_name_for(folder_id: &str) -> &str {
