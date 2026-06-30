@@ -1807,13 +1807,10 @@ function TerminalPaneView({
     return () => document.removeEventListener("pointerdown", handleExternalPointerDown, true);
   }, []);
 
-  // On macOS WKWebView, xterm.js's accessibility manager listens to
-  // `selectionchange` and calls terminal.clearSelection() when the browser DOM
-  // selection collapses after a drag. Event order on mouseup:
-  //   pointerup → xterm canvas mouseup (finalizes selection) → document mouseup bubble → selectionchange
-  // We capture in the document mouseup bubble phase — after xterm has written the
-  // final selection but before selectionchange fires and xterm clears it.
-  // pointerdown (capture) resets the saved text at the start of each click/drag.
+  // On macOS WKWebView, xterm.js's accessibility manager clears the terminal
+  // selection in response to `selectionchange`. We preserve the last non-empty
+  // selection in selectedTerminalTextRef so Cmd+C can still use it.
+  // mousedown (capture) resets the saved text at the start of each new drag.
   useEffect(() => {
     if (!isMacPlatform()) {
       return;
@@ -1824,21 +1821,37 @@ function TerminalPaneView({
       }
       setSelection("");
     }
-    function handleMouseUp(event: MouseEvent) {
-      if (event.button !== 0) {
-        return;
-      }
-      const selection = terminalRendererRef.current?.getSelection();
-      if (selection) {
-        setSelection(selection);
-      }
-    }
-    // capture for mousedown (clear before new drag), bubble for mouseup (after xterm finalizes)
     document.addEventListener("mousedown", handleMouseDown, true);
-    document.addEventListener("mouseup", handleMouseUp);
     return () => {
       document.removeEventListener("mousedown", handleMouseDown, true);
-      document.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, []);
+
+  // On macOS, intercept the native 'copy' event (Cmd+C / Edit > Copy) at the
+  // document level. navigator.clipboard.writeText() is unreliable in Tauri's
+  // WKWebView because it requires user-gesture context, which is lost across
+  // async boundaries. event.clipboardData.setData() is synchronous and always
+  // works. We only act when the terminal element contains the active element
+  // (i.e., xterm's hidden textarea has focus).
+  useEffect(() => {
+    if (!isMacPlatform()) {
+      return;
+    }
+    function handleCopy(event: ClipboardEvent) {
+      const termEl = terminalElementRef.current;
+      if (!termEl || !termEl.contains(document.activeElement)) {
+        return;
+      }
+      const text = terminalRendererRef.current?.getSelection() || selectedTerminalTextRef.current;
+      if (!text) {
+        return;
+      }
+      event.preventDefault();
+      event.clipboardData?.setData("text/plain", text);
+    }
+    document.addEventListener("copy", handleCopy);
+    return () => {
+      document.removeEventListener("copy", handleCopy);
     };
   }, []);
 
@@ -1906,17 +1919,24 @@ function TerminalPaneView({
 
       const key = event.key.toLowerCase();
 
-      // On Mac, Cmd+C copies the terminal selection (xterm stores its own
-      // selection state separate from the browser DOM selection, so the
-      // native macOS copy command would copy nothing without this handler).
-      // Fall back to selectedTerminalText because WKWebView's accessibility
-      // manager can clear xterm's selection before Cmd+C fires; pointerup
-      // captures it there before the clear happens.
+      // On Mac, Cmd+C with a terminal selection: copy synchronously using a
+      // temporary textarea + execCommand so we stay within the keydown user-gesture
+      // context. navigator.clipboard.writeText is async and loses that context in
+      // Tauri WKWebView, causing it to fail silently. Return false to prevent xterm
+      // from treating this as a Meta+C PTY input sequence.
       if (isMacPlatform() && event.metaKey && !event.ctrlKey && key === "c") {
         const selection = terminal.getSelection() || selectedTerminalTextRef.current;
         if (selection) {
-          void writeToClipboard(selection);
-          setSelection(selection);
+          const el = document.createElement("textarea");
+          el.value = selection;
+          el.style.cssText = "position:fixed;top:0;left:0;opacity:0;pointer-events:none;width:1px;height:1px";
+          document.body.appendChild(el);
+          const prevFocus = document.activeElement as HTMLElement | null;
+          el.focus();
+          el.select();
+          document.execCommand("copy");
+          document.body.removeChild(el);
+          prevFocus?.focus();
           setContextMenu(null);
           return false;
         }
