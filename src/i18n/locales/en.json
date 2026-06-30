@@ -1182,6 +1182,29 @@
       "boundConnectionCount_one": "{{count}} bound Connection",
       "boundConnectionCount_other": "{{count}} bound Connections"
     },
+    "floorPlan": {
+      "viewLabel": "Room view mode",
+      "viewElevation": "Elevations",
+      "viewFloor": "Floor plan",
+      "metricLabel": "Color racks by",
+      "metricHealth": "Health",
+      "metricUtilization": "Utilization",
+      "utilizationValue": "{{percent}}% full",
+      "tileTitle": "{{name}} — {{detail}}",
+      "health": {
+        "empty": "Empty",
+        "ok": "Healthy",
+        "warning": "Warning",
+        "critical": "Critical"
+      },
+      "util": {
+        "empty": "Empty",
+        "low": "Low",
+        "med": "Moderate",
+        "high": "High",
+        "full": "Full"
+      }
+    },
     "batchRuns": {
       "emptyTitle": "No Batch Runs yet",
       "emptyBody": "Send a script or an interactive playbook to every host in a Site at once, with per-host live output and a saved report.",

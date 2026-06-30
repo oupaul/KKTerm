@@ -1182,6 +1182,29 @@
       "boundConnectionCount_one": "{{count}} koneksi terikat",
       "boundConnectionCount_other": "{{count}} koneksi terikat"
     },
+    "floorPlan": {
+      "viewLabel": "Mode tampilan ruangan",
+      "viewElevation": "Tampak depan",
+      "viewFloor": "Denah lantai",
+      "metricLabel": "Warnai rak menurut",
+      "metricHealth": "Kesehatan",
+      "metricUtilization": "Pemanfaatan",
+      "utilizationValue": "{{percent}}% terisi",
+      "tileTitle": "{{name}} — {{detail}}",
+      "health": {
+        "empty": "Kosong",
+        "ok": "Sehat",
+        "warning": "Peringatan",
+        "critical": "Kritis"
+      },
+      "util": {
+        "empty": "Kosong",
+        "low": "Rendah",
+        "med": "Sedang",
+        "high": "Tinggi",
+        "full": "Penuh"
+      }
+    },
     "batchRuns": {
       "emptyTitle": "Belum ada eksekusi batch",
       "emptyBody": "Kirim skrip atau playbook interaktif ke setiap host dalam grup host sekaligus, dengan keluaran langsung per host dan laporan tersimpan.",

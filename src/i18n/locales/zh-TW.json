@@ -1182,6 +1182,29 @@
       "boundConnectionCount_one": "{{count}} 個已繫結連線",
       "boundConnectionCount_other": "{{count}} 個已繫結連線"
     },
+    "floorPlan": {
+      "viewLabel": "機房檢視模式",
+      "viewElevation": "正視圖",
+      "viewFloor": "平面圖",
+      "metricLabel": "機架著色依據",
+      "metricHealth": "健康狀態",
+      "metricUtilization": "使用率",
+      "utilizationValue": "已用 {{percent}}%",
+      "tileTitle": "{{name}} — {{detail}}",
+      "health": {
+        "empty": "空閒",
+        "ok": "正常",
+        "warning": "警告",
+        "critical": "嚴重"
+      },
+      "util": {
+        "empty": "空閒",
+        "low": "低",
+        "med": "中",
+        "high": "高",
+        "full": "已滿"
+      }
+    },
     "batchRuns": {
       "emptyTitle": "尚無批次執行",
       "emptyBody": "一次將指令碼或互動式 Playbook 傳送至主機群組中的每台主機，提供逐主機即時輸出與已儲存的報告。",

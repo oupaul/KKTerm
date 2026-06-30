@@ -1182,6 +1182,29 @@
       "boundConnectionCount_one": "การเชื่อมต่อที่ผูกไว้ {{count}} รายการ",
       "boundConnectionCount_other": "การเชื่อมต่อที่ผูกไว้ {{count}} รายการ"
     },
+    "floorPlan": {
+      "viewLabel": "โหมดมุมมองห้อง",
+      "viewElevation": "ภาพด้านหน้า",
+      "viewFloor": "ผังพื้น",
+      "metricLabel": "ระบายสีแร็คตาม",
+      "metricHealth": "สถานะ",
+      "metricUtilization": "การใช้งาน",
+      "utilizationValue": "ใช้ {{percent}}%",
+      "tileTitle": "{{name}} — {{detail}}",
+      "health": {
+        "empty": "ว่าง",
+        "ok": "ปกติ",
+        "warning": "คำเตือน",
+        "critical": "วิกฤต"
+      },
+      "util": {
+        "empty": "ว่าง",
+        "low": "ต่ำ",
+        "med": "ปานกลาง",
+        "high": "สูง",
+        "full": "เต็ม"
+      }
+    },
     "batchRuns": {
       "emptyTitle": "ยังไม่มีการทำงานเป็นชุด",
       "emptyBody": "ส่งสคริปต์หรือ Playbook แบบโต้ตอบไปยังทุกโฮสต์ในกลุ่มโฮสต์พร้อมกัน พร้อมเอาต์พุตสดต่อโฮสต์และรายงานที่บันทึกไว้",

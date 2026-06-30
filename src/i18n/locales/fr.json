@@ -1182,6 +1182,29 @@
       "boundConnectionCount_one": "{{count}} connexion liée",
       "boundConnectionCount_other": "{{count}} connexions liées"
     },
+    "floorPlan": {
+      "viewLabel": "Mode d'affichage de la salle",
+      "viewElevation": "Élévations",
+      "viewFloor": "Plan au sol",
+      "metricLabel": "Colorer les racks par",
+      "metricHealth": "État",
+      "metricUtilization": "Utilisation",
+      "utilizationValue": "{{percent}} % occupé",
+      "tileTitle": "{{name}} — {{detail}}",
+      "health": {
+        "empty": "Vide",
+        "ok": "Sain",
+        "warning": "Avertissement",
+        "critical": "Critique"
+      },
+      "util": {
+        "empty": "Vide",
+        "low": "Faible",
+        "med": "Modéré",
+        "high": "Élevé",
+        "full": "Plein"
+      }
+    },
     "batchRuns": {
       "emptyTitle": "Aucune exécution par lot pour le moment",
       "emptyBody": "Envoyez un script ou un playbook interactif à chaque hôte d'un groupe d'hôtes en une fois, avec une sortie en direct par hôte et un rapport enregistré.",

@@ -146,8 +146,8 @@ A plain-text grouping tag on a Rack inside a Site. The topology path is **Site â
 _Avoid_: region, datacenter, site object, zone
 
 **Server Room View**:
-The drill-down view for one Server Room. It shows the room's Racks, optionally grouped by each Rack's `rack_group` tag, as rack elevations.
-_Avoid_: floor plan, area view, datacenter map
+The drill-down view for one Server Room. It offers two layouts: rack elevations (the default, racks drawn as front elevations, optionally grouped by each Rack's `rack_group` tag) and a top-down 2D floor plan that lays each Rack out as a footprint tile colored by health (worst placed-device status) or utilization (occupied U vs. capacity), the DCIM floor-plan pattern. The chosen layout and metric persist.
+_Avoid_: area view, datacenter map
 
 **Rack**:
 A durable fixed-height cabinet, usually 42U, that belongs to one Site and one Server Room. Stored in `itops_site_racks`; it holds Rack Devices at U positions and may carry a cabinet shell finish.

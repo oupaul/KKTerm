@@ -3650,6 +3650,258 @@
   background: var(--hairline);
 }
 
+/* ──────────────────────────────────────────────────────────────────────────
+   Top-down Server Room View — a 2D room footprint where each Rack is a tile
+   coloured by health or utilisation (DCIM floor-plan pattern). Status/heat
+   colours read the shared theme tokens; `--tile` is the per-band accent set
+   by `data-metric` + `data-health`/`data-util`.
+   ────────────────────────────────────────────────────────────────────────── */
+.itops-page .rm-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 0 2px 2px;
+}
+.itops-page .rm-segmented {
+  display: inline-flex;
+  border: 0.5px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--surface);
+}
+.itops-page .rm-segmented button {
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 560;
+  padding: 5px 12px;
+  cursor: pointer;
+  transition: background 0.14s, color 0.14s;
+}
+.itops-page .rm-segmented button + button {
+  border-left: 0.5px solid var(--border);
+}
+.itops-page .rm-segmented button:hover:not([data-active="true"]) {
+  background: var(--hover);
+  color: var(--text);
+}
+.itops-page .rm-segmented button[data-active="true"] {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.itops-page .rm-floor {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 6px 4px 8px;
+}
+.itops-page .rm-floor-row {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.itops-page .rm-floor-row-h {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 2px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.itops-page .rm-floor-row-h::after {
+  content: "";
+  flex: 1 1 auto;
+  height: 1px;
+  background: var(--hairline);
+}
+.itops-page .rm-floor-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* One rack footprint. `--tile` defaults to a neutral hue; the band rules
+   below override it for the active metric. */
+.itops-page .rm-tile {
+  --tile: var(--text-faint);
+  position: relative;
+  width: 120px;
+  min-height: 94px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 9px 11px 9px 13px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--tile) 40%, var(--border));
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--tile) 13%, var(--surface)),
+    color-mix(in srgb, var(--tile) 5%, var(--surface))
+  );
+  box-shadow: var(--card-shadow);
+  cursor: pointer;
+  text-align: left;
+  color: var(--text);
+  overflow: hidden;
+  transition: transform 0.16s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.16s, box-shadow 0.16s;
+}
+.itops-page .rm-tile::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: var(--tile);
+}
+.itops-page .rm-tile:hover {
+  transform: translateY(-1px);
+  border-color: var(--tile);
+  box-shadow: var(--shadow-control);
+}
+.itops-page .rm-tile-name {
+  font-size: 12.5px;
+  font-weight: 640;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.itops-page .rm-tile-fill {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+}
+.itops-page .rm-tile-bar {
+  width: 100%;
+  height: 8px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--tile) 16%, var(--surface-muted));
+  overflow: hidden;
+}
+.itops-page .rm-tile-bar > span {
+  display: block;
+  height: 100%;
+  min-width: 2px;
+  border-radius: 4px;
+  background: var(--tile);
+}
+.itops-page .rm-tile-dots {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+.itops-page .rm-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+}
+.itops-page .rm-dot i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.itops-page .rm-dot.on i {
+  background: var(--green);
+}
+.itops-page .rm-dot.warn i {
+  background: var(--amber);
+}
+.itops-page .rm-dot.off i {
+  background: var(--red);
+}
+.itops-page .rm-tile-meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+}
+.itops-page .rm-tile-val {
+  font-size: 11px;
+  font-weight: 660;
+  color: color-mix(in srgb, var(--tile) 78%, var(--text));
+  white-space: nowrap;
+}
+.itops-page .rm-tile-cap {
+  font-size: 10px;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Band → colour mapping. Health: worst placed-device status. Utilisation:
+   cool (low) → hot (full). Empty racks stay neutral in both metrics. */
+.itops-page .rm-floor[data-metric="health"] .rm-tile[data-health="ok"] {
+  --tile: var(--green);
+}
+.itops-page .rm-floor[data-metric="health"] .rm-tile[data-health="warning"] {
+  --tile: var(--amber);
+}
+.itops-page .rm-floor[data-metric="health"] .rm-tile[data-health="critical"] {
+  --tile: var(--red);
+}
+.itops-page .rm-floor[data-metric="utilization"] .rm-tile[data-util="low"] {
+  --tile: var(--green);
+}
+.itops-page .rm-floor[data-metric="utilization"] .rm-tile[data-util="med"] {
+  --tile: color-mix(in srgb, var(--green) 45%, var(--amber));
+}
+.itops-page .rm-floor[data-metric="utilization"] .rm-tile[data-util="high"] {
+  --tile: var(--amber);
+}
+.itops-page .rm-floor[data-metric="utilization"] .rm-tile[data-util="full"] {
+  --tile: var(--red);
+}
+
+/* Legend. */
+.itops-page .rm-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 13px;
+  padding: 6px 2px 12px;
+}
+.itops-page .rm-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.itops-page .rm-legend-sw {
+  width: 11px;
+  height: 11px;
+  border-radius: 3px;
+  background: var(--text-faint);
+  border: 0.5px solid color-mix(in srgb, var(--border) 60%, transparent);
+}
+.itops-page .rm-legend-sw.ok,
+.itops-page .rm-legend-sw.low {
+  background: var(--green);
+}
+.itops-page .rm-legend-sw.med {
+  background: color-mix(in srgb, var(--green) 45%, var(--amber));
+}
+.itops-page .rm-legend-sw.warning,
+.itops-page .rm-legend-sw.high {
+  background: var(--amber);
+}
+.itops-page .rm-legend-sw.critical,
+.itops-page .rm-legend-sw.full {
+  background: var(--red);
+}
+
 .itops-page .rack-item-preview {
   height: 48px;
   padding: 7px;

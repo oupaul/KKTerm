@@ -1182,6 +1182,29 @@
       "boundConnectionCount_one": "{{count}} conexão vinculada",
       "boundConnectionCount_other": "{{count}} conexões vinculadas"
     },
+    "floorPlan": {
+      "viewLabel": "Modo de exibição da sala",
+      "viewElevation": "Elevações",
+      "viewFloor": "Planta baixa",
+      "metricLabel": "Colorir racks por",
+      "metricHealth": "Integridade",
+      "metricUtilization": "Utilização",
+      "utilizationValue": "{{percent}}% ocupado",
+      "tileTitle": "{{name}} — {{detail}}",
+      "health": {
+        "empty": "Vazio",
+        "ok": "Saudável",
+        "warning": "Aviso",
+        "critical": "Crítico"
+      },
+      "util": {
+        "empty": "Vazio",
+        "low": "Baixa",
+        "med": "Moderada",
+        "high": "Alta",
+        "full": "Cheio"
+      }
+    },
     "batchRuns": {
       "emptyTitle": "Ainda não há execuções em lote",
       "emptyBody": "Envie um script ou um playbook interativo para todos os hosts de um grupo de hosts de uma vez, com saída ao vivo por host e um relatório salvo.",

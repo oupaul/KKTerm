@@ -6,6 +6,8 @@
 const WIDTH_KEY = "kkterm.itopsSiteTreeWidth";
 const PANEL_COLLAPSED_KEY = "kkterm.itopsSiteTreePanelCollapsed";
 const COLLAPSED_KEY = "kkterm.itopsSiteTreeCollapsed";
+const ROOM_VIEW_KEY = "kkterm.itopsRoomViewMode";
+const ROOM_METRIC_KEY = "kkterm.itopsRoomFloorMetric";
 
 export const SITE_TREE_MIN_WIDTH = 200;
 export const SITE_TREE_MAX_WIDTH = 460;
@@ -49,4 +51,30 @@ export function loadCollapsedNodeIds(): Set<string> {
 export function saveCollapsedNodeIds(ids: Set<string>): void {
   if (typeof localStorage === "undefined") return;
   localStorage.setItem(COLLAPSED_KEY, JSON.stringify([...ids]));
+}
+
+// Server Room View layout: rack elevations (default) or the top-down floor plan.
+export type RoomViewMode = "elevation" | "floor";
+
+export function loadRoomViewMode(): RoomViewMode {
+  if (typeof localStorage === "undefined") return "elevation";
+  return localStorage.getItem(ROOM_VIEW_KEY) === "floor" ? "floor" : "elevation";
+}
+
+export function saveRoomViewMode(mode: RoomViewMode): void {
+  if (typeof localStorage === "undefined") return;
+  localStorage.setItem(ROOM_VIEW_KEY, mode);
+}
+
+// Which dimension colours the floor-plan tiles.
+export type RoomFloorMetric = "health" | "utilization";
+
+export function loadRoomFloorMetric(): RoomFloorMetric {
+  if (typeof localStorage === "undefined") return "health";
+  return localStorage.getItem(ROOM_METRIC_KEY) === "utilization" ? "utilization" : "health";
+}
+
+export function saveRoomFloorMetric(metric: RoomFloorMetric): void {
+  if (typeof localStorage === "undefined") return;
+  localStorage.setItem(ROOM_METRIC_KEY, metric);
 }

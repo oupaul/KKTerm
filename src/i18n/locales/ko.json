@@ -1182,6 +1182,29 @@
       "boundConnectionCount_one": "바인딩된 연결 {{count}}개",
       "boundConnectionCount_other": "바인딩된 연결 {{count}}개"
     },
+    "floorPlan": {
+      "viewLabel": "룸 보기 모드",
+      "viewElevation": "정면도",
+      "viewFloor": "평면도",
+      "metricLabel": "랙 색상 기준",
+      "metricHealth": "상태",
+      "metricUtilization": "사용률",
+      "utilizationValue": "{{percent}}% 사용",
+      "tileTitle": "{{name}} — {{detail}}",
+      "health": {
+        "empty": "비어 있음",
+        "ok": "정상",
+        "warning": "경고",
+        "critical": "심각"
+      },
+      "util": {
+        "empty": "비어 있음",
+        "low": "낮음",
+        "med": "보통",
+        "high": "높음",
+        "full": "가득 참"
+      }
+    },
     "batchRuns": {
       "emptyTitle": "아직 일괄 실행이 없습니다",
       "emptyBody": "스크립트 또는 대화형 플레이북을 호스트 그룹의 모든 호스트에 한 번에 전송하고, 호스트별 실시간 출력과 저장된 보고서를 제공합니다.",

@@ -1182,6 +1182,29 @@
       "boundConnectionCount_one": "{{count}} kết nối đã liên kết",
       "boundConnectionCount_other": "{{count}} kết nối đã liên kết"
     },
+    "floorPlan": {
+      "viewLabel": "Chế độ xem phòng",
+      "viewElevation": "Mặt đứng",
+      "viewFloor": "Sơ đồ mặt bằng",
+      "metricLabel": "Tô màu tủ rack theo",
+      "metricHealth": "Tình trạng",
+      "metricUtilization": "Mức sử dụng",
+      "utilizationValue": "Đã dùng {{percent}}%",
+      "tileTitle": "{{name}} — {{detail}}",
+      "health": {
+        "empty": "Trống",
+        "ok": "Tốt",
+        "warning": "Cảnh báo",
+        "critical": "Nghiêm trọng"
+      },
+      "util": {
+        "empty": "Trống",
+        "low": "Thấp",
+        "med": "Trung bình",
+        "high": "Cao",
+        "full": "Đầy"
+      }
+    },
     "batchRuns": {
       "emptyTitle": "Chưa có lần chạy hàng loạt nào",
       "emptyBody": "Gửi tập lệnh hoặc playbook tương tác đến từng máy chủ trong nhóm máy chủ cùng lúc, với đầu ra trực tiếp theo từng máy chủ và báo cáo đã lưu.",

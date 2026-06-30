@@ -28,6 +28,7 @@ import {
 } from "./rackTopology";
 import { ItOpsBackground } from "./ItOpsBackground";
 import { RackStage } from "./RackStage";
+import { ServerRoomFloorPlan } from "./ServerRoomFloorPlan";
 import { selectRandomRackCallouts } from "./rackInventory";
 import type { DashboardBackground } from "../dashboard/types";
 import {
@@ -35,9 +36,15 @@ import {
   SITE_TREE_MAX_WIDTH,
   SITE_TREE_MIN_WIDTH,
   loadCollapsedNodeIds,
+  loadRoomFloorMetric,
+  loadRoomViewMode,
   loadSiteTreeWidth,
   saveCollapsedNodeIds,
+  saveRoomFloorMetric,
+  saveRoomViewMode,
   saveSiteTreeWidth,
+  type RoomFloorMetric,
+  type RoomViewMode,
 } from "./siteTreeState";
 
 const TILE_COLORS = [
@@ -708,6 +715,13 @@ function RackDrill({
   const unassigned = t("itops.racks.unassigned");
   const ungrouped = t("itops.racks.ungrouped");
 
+  // Server Room View layout: rack elevations (default) or the top-down floor
+  // plan, plus which dimension colours the floor-plan tiles. Both persist.
+  const [roomView, setRoomView] = useState<RoomViewMode>(loadRoomViewMode);
+  const [floorMetric, setFloorMetric] = useState<RoomFloorMetric>(loadRoomFloorMetric);
+  useEffect(() => saveRoomViewMode(roomView), [roomView]);
+  useEffect(() => saveRoomFloorMetric(floorMetric), [floorMetric]);
+
   const serverRoom =
     drill.serverRoom != null
       ? topology.find((s) => topologyGroupKey(s.key) === topologyGroupKey(drill.serverRoom))
@@ -755,6 +769,50 @@ function RackDrill({
           />
         ) : serverRoom ? (
           <>
+            <div className="rm-toolbar">
+              <div
+                className="rm-segmented"
+                role="group"
+                aria-label={t("itops.floorPlan.viewLabel")}
+              >
+                <button
+                  type="button"
+                  data-active={roomView === "elevation"}
+                  onClick={() => setRoomView("elevation")}
+                >
+                  {t("itops.floorPlan.viewElevation")}
+                </button>
+                <button
+                  type="button"
+                  data-active={roomView === "floor"}
+                  onClick={() => setRoomView("floor")}
+                >
+                  {t("itops.floorPlan.viewFloor")}
+                </button>
+              </div>
+              {roomView === "floor" ? (
+                <div
+                  className="rm-segmented"
+                  role="group"
+                  aria-label={t("itops.floorPlan.metricLabel")}
+                >
+                  <button
+                    type="button"
+                    data-active={floorMetric === "health"}
+                    onClick={() => setFloorMetric("health")}
+                  >
+                    {t("itops.floorPlan.metricHealth")}
+                  </button>
+                  <button
+                    type="button"
+                    data-active={floorMetric === "utilization"}
+                    onClick={() => setFloorMetric("utilization")}
+                  >
+                    {t("itops.floorPlan.metricUtilization")}
+                  </button>
+                </div>
+              ) : null}
+            </div>
             {roomCallouts.length > 0 ? (
               <div className="rack-random-callouts room">
                 {roomCallouts.map((callout) => {
@@ -778,14 +836,22 @@ function RackDrill({
                 })}
               </div>
             ) : null}
-            {groupRacksByGroup(serverRoom.racks).map((g) => (
-              <div className="rk-group" key={g.key}>
-                {groupRacksByGroup(serverRoom.racks).length > 1 || g.key ? (
-                  <div className="rk-group-h">{g.key || ungrouped}</div>
-                ) : null}
-                <div className="rk-row">{g.racks.map((r) => elevation(r))}</div>
-              </div>
-            ))}
+            {roomView === "floor" ? (
+              <ServerRoomFloorPlan
+                racks={serverRoom.racks}
+                metric={floorMetric}
+                onSelectRack={(rackId) => setDrill({ serverRoom: serverRoom.key, rackId })}
+              />
+            ) : (
+              groupRacksByGroup(serverRoom.racks).map((g) => (
+                <div className="rk-group" key={g.key}>
+                  {groupRacksByGroup(serverRoom.racks).length > 1 || g.key ? (
+                    <div className="rk-group-h">{g.key || ungrouped}</div>
+                  ) : null}
+                  <div className="rk-row">{g.racks.map((r) => elevation(r))}</div>
+                </div>
+              ))
+            )}
           </>
         ) : (
           <div className="ft-cards">

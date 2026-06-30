@@ -1182,6 +1182,29 @@
       "boundConnectionCount_one": "バインドされた接続 {{count}} 件",
       "boundConnectionCount_other": "バインドされた接続 {{count}} 件"
     },
+    "floorPlan": {
+      "viewLabel": "ルーム表示モード",
+      "viewElevation": "正面図",
+      "viewFloor": "フロアプラン",
+      "metricLabel": "ラックの色分け基準",
+      "metricHealth": "稼働状態",
+      "metricUtilization": "使用率",
+      "utilizationValue": "{{percent}}% 使用",
+      "tileTitle": "{{name}} — {{detail}}",
+      "health": {
+        "empty": "空き",
+        "ok": "正常",
+        "warning": "警告",
+        "critical": "重大"
+      },
+      "util": {
+        "empty": "空き",
+        "low": "低",
+        "med": "中",
+        "high": "高",
+        "full": "満杯"
+      }
+    },
     "batchRuns": {
       "emptyTitle": "バッチ実行はまだありません",
       "emptyBody": "スクリプトまたはインタラクティブなプレイブックをホストグループ内のすべてのホストに一括で送信し、ホストごとのライブ出力と保存されたレポートを取得します。",

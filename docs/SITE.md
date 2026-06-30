@@ -77,9 +77,11 @@ Replaces the **Host Group** entry in `CONTEXT.md`; adds the rest. Follows the
   retired Region/Datacenter/Area tags.) _Avoid_: zone, site object,
   datacenter entity. Creating a Server Room in the UI creates its first Rack,
   because the current durable model stores rooms through Rack records.
-- **Server Room View** — the drill-down view for one Server Room. It shows the
-  room's Racks, optionally grouped by each Rack's `rack_group` tag. _Avoid_:
-  area view, region view.
+- **Server Room View** — the drill-down view for one Server Room. It has two
+  layouts: rack elevations (default, optionally grouped by each Rack's
+  `rack_group` tag) and a top-down 2D floor plan that paints each Rack as a
+  footprint tile coloured by health or utilisation (DCIM floor-plan pattern).
+  _Avoid_: area view, region view.
 - **Rack** — a durable, fixed-height (default 42U) cabinet that belongs to one
   Site, grouped by **Server Room** (topology Site → Server Room → Rack), with
   an optional **shell** finish (black/white/grey). Holds Rack Devices at U
@@ -301,7 +303,10 @@ The visible IT Ops Module opens directly into the Site topology surface:
   and hidden state persist.
 - **Site View** — selecting a Site shows Server Room cards.
 - **Server Room View** — selecting a Server Room shows its Racks, optionally
-  grouped by each Rack's `rack_group` tag.
+  grouped by each Rack's `rack_group` tag, in one of two layouts: rack
+  elevations (default) or a top-down 2D floor plan coloured by health or
+  utilisation (`ServerRoomFloorPlan.tsx` + the pure `roomFloorPlan.ts`
+  metrics).
 - **Rack View** — selecting a Rack centers its front elevation and Rack Device
   properties/placement interactions.
 
