@@ -1,6 +1,6 @@
-// IT Ops durable storage (docs/ITOPS.md). Phase 1: the `itops_fleets`
-// repository plus the run-time resolver that turns a Fleet into a concrete
-// ordered list of fleet targets. Mirrors the dashboard_storage.rs conventions
+// IT Ops durable storage (docs/ITOPS.md). Phase 1: the `itops_sites`
+// repository plus the run-time resolver that turns a Site into a concrete
+// ordered list of site targets. Mirrors the dashboard_storage.rs conventions
 // (free functions over `&SqliteConnection`, JSON `TEXT` columns, `sort_order`).
 
 use std::collections::{HashMap, HashSet};
@@ -8,7 +8,7 @@ use std::collections::{HashMap, HashSet};
 use rusqlite::{Connection as SqliteConnection, OptionalExtension, params, params_from_iter};
 
 use crate::dashboard_storage::DashboardBackground;
-use super::types::{Fleet, FleetFilter, RackItemKind, ResolvedHost, RoomIcon, RunScope, Transport};
+use super::types::{Site, SiteFilter, RackItemKind, ResolvedHost, RoomIcon, RunScope, Transport};
 
 #[derive(Debug)]
 pub enum ItopsStorageError {
@@ -21,7 +21,7 @@ impl std::fmt::Display for ItopsStorageError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Validation(reason) => write!(f, "{reason}"),
-            Self::NotFound => write!(f, "fleet not found"),
+            Self::NotFound => write!(f, "site not found"),
             Self::Sqlite(error) => write!(f, "{error}"),
         }
     }
@@ -35,14 +35,17 @@ impl From<rusqlite::Error> for ItopsStorageError {
 
 type Result<T> = std::result::Result<T, ItopsStorageError>;
 
-pub const DEFAULT_FLEET_ID: &str = "default-fleet";
-pub const DEFAULT_FLEET_NAME: &str = "Default Fleet";
+// Stored id is intentionally the legacy "default-fleet" literal: it is an opaque
+// internal primary key referenced by existing rows (racks, run history), so the
+// Fleet -> Site rename keeps the value to avoid orphaning data on upgrade.
+pub const DEFAULT_SITE_ID: &str = "default-fleet";
+pub const DEFAULT_SITE_NAME: &str = "Default Site";
 
 fn validate_name(name: &str) -> Result<String> {
     let trimmed = name.trim();
     if trimmed.is_empty() {
         return Err(ItopsStorageError::Validation(
-            "fleet name must not be empty".to_string(),
+            "site name must not be empty".to_string(),
         ));
     }
     Ok(trimmed.to_string())
@@ -58,7 +61,7 @@ fn parse_member_ids(raw: &str) -> Vec<String> {
 
 /// Serialize a filter to JSON, collapsing an empty filter to NULL so a Host
 /// Group never claims dynamic membership it does not have.
-fn filter_to_json(filter: &Option<FleetFilter>) -> Result<Option<String>> {
+fn filter_to_json(filter: &Option<SiteFilter>) -> Result<Option<String>> {
     match filter {
         Some(filter) if !filter.is_empty() => Ok(Some(
             serde_json::to_string(filter)
@@ -68,9 +71,9 @@ fn filter_to_json(filter: &Option<FleetFilter>) -> Result<Option<String>> {
     }
 }
 
-fn parse_filter(raw: Option<String>) -> Option<FleetFilter> {
+fn parse_filter(raw: Option<String>) -> Option<SiteFilter> {
     let raw = raw?;
-    serde_json::from_str::<FleetFilter>(&raw)
+    serde_json::from_str::<SiteFilter>(&raw)
         .ok()
         .filter(|filter| !filter.is_empty())
 }
@@ -112,11 +115,11 @@ fn room_icons_to_json(map: &HashMap<String, RoomIcon>) -> Result<String> {
     serde_json::to_string(map).map_err(|error| ItopsStorageError::Validation(error.to_string()))
 }
 
-fn row_to_group(row: &rusqlite::Row<'_>) -> rusqlite::Result<Fleet> {
+fn row_to_group(row: &rusqlite::Row<'_>) -> rusqlite::Result<Site> {
     let member_ids: String = row.get(3)?;
     let filter_json: Option<String> = row.get(4)?;
     let transport: String = row.get(5)?;
-    Ok(Fleet {
+    Ok(Site {
         id: row.get(0)?,
         name: row.get(1)?,
         sort_order: row.get(2)?,
@@ -134,11 +137,11 @@ fn row_to_group(row: &rusqlite::Row<'_>) -> rusqlite::Result<Fleet> {
 
 const SELECT_GROUP_COLUMNS: &str = "id, name, sort_order, member_ids_json, filter_json, transport, \
      background_json, room_backgrounds_json, icon_color, icon_data_url, icon_background_color, \
-     room_icons_json FROM itops_fleets";
+     room_icons_json FROM itops_sites";
 
-/// Re-read one Fleet by id (used after a mutation to return preserved fields
+/// Re-read one Site by id (used after a mutation to return preserved fields
 /// such as backgrounds that the mutation does not touch).
-fn load_fleet(conn: &SqliteConnection, id: &str) -> Result<Fleet> {
+fn load_site(conn: &SqliteConnection, id: &str) -> Result<Site> {
     conn.query_row(
         &format!("SELECT {SELECT_GROUP_COLUMNS} WHERE id = ?"),
         params![id],
@@ -148,21 +151,21 @@ fn load_fleet(conn: &SqliteConnection, id: &str) -> Result<Fleet> {
     .ok_or(ItopsStorageError::NotFound)
 }
 
-fn ensure_default_fleet(conn: &SqliteConnection) -> Result<()> {
-    let count: i64 = conn.query_row("SELECT COUNT(*) FROM itops_fleets", [], |row| row.get(0))?;
+fn ensure_default_site(conn: &SqliteConnection) -> Result<()> {
+    let count: i64 = conn.query_row("SELECT COUNT(*) FROM itops_sites", [], |row| row.get(0))?;
     if count > 0 {
         return Ok(());
     }
     conn.execute(
-        "INSERT INTO itops_fleets (id, name, sort_order, member_ids_json, filter_json, transport)
+        "INSERT INTO itops_sites (id, name, sort_order, member_ids_json, filter_json, transport)
          VALUES (?, ?, 0, '[]', NULL, 'auto')",
-        params![DEFAULT_FLEET_ID, DEFAULT_FLEET_NAME],
+        params![DEFAULT_SITE_ID, DEFAULT_SITE_NAME],
     )?;
     Ok(())
 }
 
-pub fn list_fleets(conn: &SqliteConnection) -> Result<Vec<Fleet>> {
-    ensure_default_fleet(conn)?;
+pub fn list_sites(conn: &SqliteConnection) -> Result<Vec<Site>> {
+    ensure_default_site(conn)?;
     let mut stmt = conn.prepare(&format!("SELECT {SELECT_GROUP_COLUMNS} ORDER BY sort_order"))?;
     let groups = stmt
         .query_map([], row_to_group)?
@@ -170,31 +173,31 @@ pub fn list_fleets(conn: &SqliteConnection) -> Result<Vec<Fleet>> {
     Ok(groups)
 }
 
-pub fn create_fleet(
+pub fn create_site(
     conn: &SqliteConnection,
     id: &str,
     name: &str,
     member_ids: Vec<String>,
-    filter: Option<FleetFilter>,
+    filter: Option<SiteFilter>,
     transport: Transport,
     icon_color: Option<&str>,
     icon_data_url: Option<&str>,
     icon_background_color: Option<&str>,
-) -> Result<Fleet> {
+) -> Result<Site> {
     let name = validate_name(name)?;
     let next_sort: i64 = conn.query_row(
-        "SELECT COALESCE(MAX(sort_order), -1) + 1 FROM itops_fleets",
+        "SELECT COALESCE(MAX(sort_order), -1) + 1 FROM itops_sites",
         [],
         |row| row.get(0),
     )?;
     let member_json = member_ids_to_json(&member_ids)?;
     let filter_json = filter_to_json(&filter)?;
     conn.execute(
-        "INSERT INTO itops_fleets (id, name, sort_order, member_ids_json, filter_json, transport, icon_color, icon_data_url, icon_background_color)
+        "INSERT INTO itops_sites (id, name, sort_order, member_ids_json, filter_json, transport, icon_color, icon_data_url, icon_background_color)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
         params![id, name, next_sort, member_json, filter_json, transport.as_db_str(), icon_color, icon_data_url, icon_background_color],
     )?;
-    Ok(Fleet {
+    Ok(Site {
         id: id.to_string(),
         name,
         sort_order: next_sort,
@@ -210,22 +213,22 @@ pub fn create_fleet(
     })
 }
 
-pub fn update_fleet(
+pub fn update_site(
     conn: &SqliteConnection,
     id: &str,
     name: &str,
     member_ids: Vec<String>,
-    filter: Option<FleetFilter>,
+    filter: Option<SiteFilter>,
     transport: Transport,
     icon_color: Option<&str>,
     icon_data_url: Option<&str>,
     icon_background_color: Option<&str>,
-) -> Result<Fleet> {
+) -> Result<Site> {
     let name = validate_name(name)?;
     // Existence check (returns NotFound before the UPDATE).
     let _sort_order: i64 = conn
         .query_row(
-            "SELECT sort_order FROM itops_fleets WHERE id = ?",
+            "SELECT sort_order FROM itops_sites WHERE id = ?",
             params![id],
             |row| row.get(0),
         )
@@ -234,99 +237,99 @@ pub fn update_fleet(
     let member_json = member_ids_to_json(&member_ids)?;
     let filter_json = filter_to_json(&filter)?;
     conn.execute(
-        "UPDATE itops_fleets
+        "UPDATE itops_sites
          SET name = ?, member_ids_json = ?, filter_json = ?, transport = ?, icon_color = ?, icon_data_url = ?, icon_background_color = ?, updated_at = CURRENT_TIMESTAMP
          WHERE id = ?",
         params![name, member_json, filter_json, transport.as_db_str(), icon_color, icon_data_url, icon_background_color, id],
     )?;
     // Re-read so preserved fields (backgrounds, room icons) round-trip into the response.
-    load_fleet(conn, id)
+    load_site(conn, id)
 }
 
-/// Set (or clear with `None`) the Fleet-view background. Returns the saved Fleet.
-pub fn set_fleet_background(
+/// Set (or clear with `None`) the Site-view background. Returns the saved Site.
+pub fn set_site_background(
     conn: &SqliteConnection,
     id: &str,
     background: Option<DashboardBackground>,
-) -> Result<Fleet> {
+) -> Result<Site> {
     let json = background_to_json(&background)?;
     let affected = conn.execute(
-        "UPDATE itops_fleets SET background_json = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+        "UPDATE itops_sites SET background_json = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
         params![json, id],
     )?;
     if affected == 0 {
         return Err(ItopsStorageError::NotFound);
     }
-    load_fleet(conn, id)
+    load_site(conn, id)
 }
 
-/// Set (or clear) one server room's background in the Fleet's room map.
+/// Set (or clear) one server room's background in the Site's room map.
 pub fn set_server_room_background(
     conn: &SqliteConnection,
-    fleet_id: &str,
+    site_id: &str,
     server_room: &str,
     background: Option<DashboardBackground>,
-) -> Result<Fleet> {
-    let mut fleet = load_fleet(conn, fleet_id)?;
+) -> Result<Site> {
+    let mut site = load_site(conn, site_id)?;
     match background {
         Some(bg) => {
             bg.validate()
                 .map_err(|error| ItopsStorageError::Validation(format!("{error:?}")))?;
-            fleet.room_backgrounds.insert(server_room.to_string(), bg);
+            site.room_backgrounds.insert(server_room.to_string(), bg);
         }
         None => {
-            fleet.room_backgrounds.remove(server_room);
+            site.room_backgrounds.remove(server_room);
         }
     }
-    let json = room_backgrounds_to_json(&fleet.room_backgrounds)?;
+    let json = room_backgrounds_to_json(&site.room_backgrounds)?;
     conn.execute(
-        "UPDATE itops_fleets SET room_backgrounds_json = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-        params![json, fleet_id],
+        "UPDATE itops_sites SET room_backgrounds_json = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+        params![json, site_id],
     )?;
-    load_fleet(conn, fleet_id)
+    load_site(conn, site_id)
 }
 
-/// Set (or clear with `None`) a server room's icon. Stored on the owning Fleet.
+/// Set (or clear with `None`) a server room's icon. Stored on the owning Site.
 pub fn set_room_icon(
     conn: &SqliteConnection,
-    fleet_id: &str,
+    site_id: &str,
     server_room: &str,
     icon: Option<RoomIcon>,
-) -> Result<Fleet> {
-    let mut fleet = load_fleet(conn, fleet_id)?;
+) -> Result<Site> {
+    let mut site = load_site(conn, site_id)?;
     match icon {
         Some(entry) => {
-            fleet.room_icons.insert(server_room.to_string(), entry);
+            site.room_icons.insert(server_room.to_string(), entry);
         }
         None => {
-            fleet.room_icons.remove(server_room);
+            site.room_icons.remove(server_room);
         }
     }
-    let json = room_icons_to_json(&fleet.room_icons)?;
+    let json = room_icons_to_json(&site.room_icons)?;
     conn.execute(
-        "UPDATE itops_fleets SET room_icons_json = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-        params![json, fleet_id],
+        "UPDATE itops_sites SET room_icons_json = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+        params![json, site_id],
     )?;
-    load_fleet(conn, fleet_id)
+    load_site(conn, site_id)
 }
 
-pub fn remove_fleet(conn: &SqliteConnection, id: &str) -> Result<()> {
-    if id == DEFAULT_FLEET_ID {
+pub fn remove_site(conn: &SqliteConnection, id: &str) -> Result<()> {
+    if id == DEFAULT_SITE_ID {
         return Err(ItopsStorageError::Validation(
-            "Default Fleet cannot be deleted".to_string(),
+            "Default Site cannot be deleted".to_string(),
         ));
     }
-    let affected = conn.execute("DELETE FROM itops_fleets WHERE id = ?", params![id])?;
+    let affected = conn.execute("DELETE FROM itops_sites WHERE id = ?", params![id])?;
     if affected == 0 {
         return Err(ItopsStorageError::NotFound);
     }
     Ok(())
 }
 
-pub fn reorder_fleets(conn: &SqliteConnection, ordered_ids: &[String]) -> Result<()> {
+pub fn reorder_sites(conn: &SqliteConnection, ordered_ids: &[String]) -> Result<()> {
     for (index, id) in ordered_ids.iter().enumerate() {
         conn.execute(
-            "UPDATE itops_fleets SET sort_order = ? WHERE id = ?",
+            "UPDATE itops_sites SET sort_order = ? WHERE id = ?",
             params![index as i64, id],
         )?;
     }
@@ -359,7 +362,7 @@ fn fetch_resolved_host(
 
 fn fetch_filtered_hosts(
     conn: &SqliteConnection,
-    filter: &FleetFilter,
+    filter: &SiteFilter,
     transport: Transport,
 ) -> Result<Vec<ResolvedHost>> {
     let mut sql =
@@ -392,11 +395,11 @@ fn fetch_filtered_hosts(
     Ok(rows)
 }
 
-/// Resolve a Fleet into a concrete ordered list of fleet targets at call
+/// Resolve a Site into a concrete ordered list of site targets at call
 /// time: explicit members first (in stored order, skipping any since-deleted
 /// Connections), then dynamic-filter matches not already included. Deduplicated
 /// by Connection id so a member that also matches the filter appears once.
-pub fn resolve_fleet(conn: &SqliteConnection, group: &Fleet) -> Result<Vec<ResolvedHost>> {
+pub fn resolve_site(conn: &SqliteConnection, group: &Site) -> Result<Vec<ResolvedHost>> {
     let mut seen: HashSet<String> = HashSet::new();
     let mut resolved: Vec<ResolvedHost> = Vec::new();
 
@@ -422,15 +425,15 @@ pub fn resolve_fleet(conn: &SqliteConnection, group: &Fleet) -> Result<Vec<Resol
 }
 
 /// Resolve only the placed Connection items in the racks matching `scope`
-/// (docs/FLEET.md Phase D) — the seam for Rack / Server Room scoped Batch Runs.
-/// Uses the Fleet's transport default. Returns hosts in rack order, then U
+/// (docs/SITE.md Phase D) — the seam for Rack / Server Room scoped Batch Runs.
+/// Uses the Site's transport default. Returns hosts in rack order, then U
 /// order (top of rack first), deduplicated by Connection id.
-pub fn resolve_fleet_scoped(
+pub fn resolve_site_scoped(
     conn: &SqliteConnection,
-    fleet: &Fleet,
+    site: &Site,
     scope: &RunScope,
 ) -> Result<Vec<ResolvedHost>> {
-    let racks = super::fleet_storage::list_racks(conn, &fleet.id)?;
+    let racks = super::site_storage::list_racks(conn, &site.id)?;
     let mut seen: HashSet<String> = HashSet::new();
     let mut resolved: Vec<ResolvedHost> = Vec::new();
     for rack in racks {
@@ -450,7 +453,7 @@ pub fn resolve_fleet_scoped(
             if !seen.insert(connection_id.clone()) {
                 continue;
             }
-            if let Some(host) = fetch_resolved_host(conn, &connection_id, fleet.transport)? {
+            if let Some(host) = fetch_resolved_host(conn, &connection_id, site.transport)? {
                 resolved.push(host);
             }
         }
@@ -475,7 +478,7 @@ mod tests {
     fn test_rack(server_room: &str) -> Rack {
         Rack {
             id: "r1".into(),
-            fleet_id: "f1".into(),
+            site_id: "f1".into(),
             name: "A12".into(),
             server_room: server_room.into(),
             rack_group: String::new(),
@@ -517,7 +520,7 @@ mod tests {
         let conn = SqliteConnection::open_in_memory().unwrap();
         conn.execute_batch(
             r#"
-            CREATE TABLE itops_fleets (
+            CREATE TABLE itops_sites (
                 id TEXT PRIMARY KEY,
                 name TEXT NOT NULL,
                 sort_order INTEGER NOT NULL,
@@ -568,7 +571,7 @@ mod tests {
     #[test]
     fn create_list_update_remove_roundtrip() {
         let conn = open_test_db();
-        let created = create_fleet(
+        let created = create_site(
             &conn,
             "hg-1",
             "  Production Web  ",
@@ -585,16 +588,16 @@ mod tests {
         assert_eq!(created.transport, Transport::Ssh);
         assert!(created.filter.is_none());
 
-        let listed = list_fleets(&conn).unwrap();
+        let listed = list_sites(&conn).unwrap();
         assert_eq!(listed.len(), 1);
         assert_eq!(listed[0].member_ids, vec!["c1", "c2"]);
 
-        let updated = update_fleet(
+        let updated = update_site(
             &conn,
             "hg-1",
             "Web",
             vec!["c2".into()],
-            Some(FleetFilter {
+            Some(SiteFilter {
                 types: vec!["ssh".into()],
                 folder_id: Some("f1".into()),
             }),
@@ -608,12 +611,12 @@ mod tests {
         assert_eq!(updated.sort_order, 0); // preserved
         assert!(updated.filter.is_some());
 
-        remove_fleet(&conn, "hg-1").unwrap();
-        let listed_after_delete = list_fleets(&conn).unwrap();
+        remove_site(&conn, "hg-1").unwrap();
+        let listed_after_delete = list_sites(&conn).unwrap();
         assert_eq!(listed_after_delete.len(), 1);
-        assert_eq!(listed_after_delete[0].id, DEFAULT_FLEET_ID);
+        assert_eq!(listed_after_delete[0].id, DEFAULT_SITE_ID);
         assert!(matches!(
-            remove_fleet(&conn, "hg-1"),
+            remove_site(&conn, "hg-1"),
             Err(ItopsStorageError::NotFound)
         ));
     }
@@ -622,7 +625,7 @@ mod tests {
     fn empty_name_is_rejected() {
         let conn = open_test_db();
         assert!(matches!(
-            create_fleet(&conn, "hg-x", "   ", vec![], None, Transport::Auto, None, None, None),
+            create_site(&conn, "hg-x", "   ", vec![], None, Transport::Auto, None, None, None),
             Err(ItopsStorageError::Validation(_))
         ));
     }
@@ -630,12 +633,12 @@ mod tests {
     #[test]
     fn empty_filter_is_stored_as_none() {
         let conn = open_test_db();
-        let group = create_fleet(
+        let group = create_site(
             &conn,
             "hg-2",
             "Group",
             vec![],
-            Some(FleetFilter::default()),
+            Some(SiteFilter::default()),
             Transport::Auto,
             None,
             None,
@@ -643,7 +646,7 @@ mod tests {
         )
         .unwrap();
         assert!(group.filter.is_none());
-        assert!(list_fleets(&conn).unwrap()[0].filter.is_none());
+        assert!(list_sites(&conn).unwrap()[0].filter.is_none());
     }
 
     #[test]
@@ -654,13 +657,13 @@ mod tests {
         insert_connection(&conn, "c3", "rdp", Some("prod"), 2);
         insert_connection(&conn, "gone", "ssh", None, 3);
 
-        let group = create_fleet(
+        let group = create_site(
             &conn,
             "hg-3",
             "Mixed",
             // explicit members: c2 first, then a deleted-style id, then c1 also in filter
             vec!["c2".into(), "missing".into()],
-            Some(FleetFilter {
+            Some(SiteFilter {
                 types: vec!["ssh".into()],
                 folder_id: Some("prod".into()),
             }),
@@ -671,7 +674,7 @@ mod tests {
         )
         .unwrap();
 
-        let resolved = resolve_fleet(&conn, &group).unwrap();
+        let resolved = resolve_site(&conn, &group).unwrap();
         let ids: Vec<&str> = resolved.iter().map(|h| h.connection_id.as_str()).collect();
         // c2 explicit first; "missing" skipped; then filter adds c1 (ssh+prod);
         // c3 excluded (rdp); "gone" excluded (folder None); c2 not duplicated.
@@ -682,10 +685,10 @@ mod tests {
     #[test]
     fn reorder_rewrites_sort_order() {
         let conn = open_test_db();
-        create_fleet(&conn, "a", "A", vec![], None, Transport::Auto, None, None, None).unwrap();
-        create_fleet(&conn, "b", "B", vec![], None, Transport::Auto, None, None, None).unwrap();
-        reorder_fleets(&conn, &["b".to_string(), "a".to_string()]).unwrap();
-        let order: Vec<String> = list_fleets(&conn)
+        create_site(&conn, "a", "A", vec![], None, Transport::Auto, None, None, None).unwrap();
+        create_site(&conn, "b", "B", vec![], None, Transport::Auto, None, None, None).unwrap();
+        reorder_sites(&conn, &["b".to_string(), "a".to_string()]).unwrap();
+        let order: Vec<String> = list_sites(&conn)
             .unwrap()
             .into_iter()
             .map(|g| g.id)
@@ -694,22 +697,22 @@ mod tests {
     }
 
     #[test]
-    fn list_seeds_default_fleet_and_default_cannot_be_deleted() {
+    fn list_seeds_default_site_and_default_cannot_be_deleted() {
         let conn = open_test_db();
 
-        let listed = list_fleets(&conn).unwrap();
+        let listed = list_sites(&conn).unwrap();
         assert_eq!(listed.len(), 1);
-        assert_eq!(listed[0].id, DEFAULT_FLEET_ID);
-        assert_eq!(listed[0].name, DEFAULT_FLEET_NAME);
+        assert_eq!(listed[0].id, DEFAULT_SITE_ID);
+        assert_eq!(listed[0].name, DEFAULT_SITE_NAME);
         assert_eq!(listed[0].sort_order, 0);
 
         assert!(matches!(
-            remove_fleet(&conn, DEFAULT_FLEET_ID),
+            remove_site(&conn, DEFAULT_SITE_ID),
             Err(ItopsStorageError::Validation(_))
         ));
 
-        let listed_again = list_fleets(&conn).unwrap();
+        let listed_again = list_sites(&conn).unwrap();
         assert_eq!(listed_again.len(), 1);
-        assert_eq!(listed_again[0].id, DEFAULT_FLEET_ID);
+        assert_eq!(listed_again[0].id, DEFAULT_SITE_ID);
     }
 }

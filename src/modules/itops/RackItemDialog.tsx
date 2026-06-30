@@ -1,5 +1,5 @@
-// Add / edit a Rack Device (docs/FLEET.md Phase C). A device is either a placed
-// Fleet Connection (openable later) or a passive kind (switch, PDU, patch panel,
+// Add / edit a Rack Device (docs/SITE.md Phase C). A device is either a placed
+// Site Connection (openable later) or a passive kind (switch, PDU, patch panel,
 // blank, label). Position is chosen here for the dialogs-first baseline; drag
 // placement lands in a later slice. Built from the shared dialog primitives.
 
@@ -106,14 +106,14 @@ function clampStartUForHeight(startU: number, heightU: number, rackHeightU: numb
 const DISKS_PER_U = 24;
 
 export function RackItemDialog({
-  fleetId,
+  siteId,
   rack,
   item,
   defaultStartU,
   members,
   onClose,
 }: {
-  fleetId: string;
+  siteId: string;
   rack: Rack;
   item?: RackItem | null;
   defaultStartU?: number;
@@ -260,7 +260,7 @@ export function RackItemDialog({
     const resolvedConnectionId = needsConnection ? connectionId : null;
     try {
       if (isEdit) {
-        await updateRackItem(fleetId, {
+        await updateRackItem(siteId, {
           id: item!.id,
           kind,
           connectionId: resolvedConnectionId,
@@ -268,10 +268,10 @@ export function RackItemDialog({
           metadata,
         });
         if (placedStartU !== item!.startU || heightU !== item!.heightU) {
-          await moveRackItem(fleetId, { id: item!.id, rackId: rack.id, startU: placedStartU, heightU });
+          await moveRackItem(siteId, { id: item!.id, rackId: rack.id, startU: placedStartU, heightU });
         }
       } else {
-        await placeRackItem(fleetId, {
+        await placeRackItem(siteId, {
           rackId: rack.id,
           connectionId: resolvedConnectionId,
           kind,
@@ -293,7 +293,7 @@ export function RackItemDialog({
     if (!item) return;
     setBusy(true);
     try {
-      await refreshRackItemSnmp(fleetId, item.id);
+      await refreshRackItemSnmp(siteId, item.id);
       showStatusBarNotice(t("itops.racks.snmpRefreshComplete"), { tone: "success" });
       onClose();
     } catch (error) {
@@ -307,7 +307,7 @@ export function RackItemDialog({
     if (!item) return;
     setBusy(true);
     try {
-      await removeRackItem(fleetId, item.id);
+      await removeRackItem(siteId, item.id);
       onClose();
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);

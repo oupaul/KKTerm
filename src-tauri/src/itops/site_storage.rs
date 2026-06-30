@@ -1,4 +1,4 @@
-// Fleet topology storage (docs/FLEET.md Phase B): CRUD for Racks and Rack Devices
+// Site topology storage (docs/SITE.md Phase B): CRUD for Racks and Rack Devices
 // plus the pure U-span overlap/fit validator. Mirrors the conventions in
 // `itops/storage.rs` (free functions over `&SqliteConnection`, JSON `TEXT` for
 // non-relational fields, integer `sort_order`). Reuses `ItopsStorageError`.
@@ -122,7 +122,7 @@ fn row_to_item(row: &rusqlite::Row<'_>) -> rusqlite::Result<RackItem> {
 }
 
 const SELECT_ITEM_COLUMNS: &str = "id, rack_id, connection_id, kind, label, start_u, height_u, metadata_json \
-     FROM itops_fleet_rack_items";
+     FROM itops_site_rack_items";
 
 fn list_items_for_rack(conn: &SqliteConnection, rack_id: &str) -> Result<Vec<RackItem>> {
     let mut stmt = conn.prepare(&format!(
@@ -152,7 +152,7 @@ fn existing_spans(conn: &SqliteConnection, rack_id: &str) -> Result<Vec<(String,
 
 fn fetch_rack_height(conn: &SqliteConnection, rack_id: &str) -> Result<u32> {
     conn.query_row(
-        "SELECT height_u FROM itops_fleet_racks WHERE id = ?",
+        "SELECT height_u FROM itops_site_racks WHERE id = ?",
         params![rack_id],
         |row| row.get(0),
     )
@@ -166,7 +166,7 @@ fn row_to_rack(row: &rusqlite::Row<'_>) -> rusqlite::Result<Rack> {
     let background: Option<String> = row.get(6)?;
     Ok(Rack {
         id: row.get(0)?,
-        fleet_id: row.get(1)?,
+        site_id: row.get(1)?,
         name: row.get(2)?,
         server_room: row.get(3)?,
         rack_group: row.get(4)?,
@@ -178,8 +178,8 @@ fn row_to_rack(row: &rusqlite::Row<'_>) -> rusqlite::Result<Rack> {
     })
 }
 
-const SELECT_RACK_COLUMNS: &str = "id, fleet_id, name, server_room, rack_group, shell, \
-     background_json, height_u, sort_order FROM itops_fleet_racks";
+const SELECT_RACK_COLUMNS: &str = "id, site_id, name, server_room, rack_group, shell, \
+     background_json, height_u, sort_order FROM itops_site_racks";
 
 /// Normalize a shell choice to a stored value: blank/"black"/None → NULL (the
 /// default), otherwise the trimmed colour name.
@@ -204,13 +204,13 @@ fn rack_background_to_json(background: &Option<DashboardBackground>) -> Result<O
     }
 }
 
-/// All Racks in a Fleet, ordered by `sort_order`, each with its items hydrated.
-pub fn list_racks(conn: &SqliteConnection, fleet_id: &str) -> Result<Vec<Rack>> {
+/// All Racks in a Site, ordered by `sort_order`, each with its items hydrated.
+pub fn list_racks(conn: &SqliteConnection, site_id: &str) -> Result<Vec<Rack>> {
     let mut stmt = conn.prepare(&format!(
-        "SELECT {SELECT_RACK_COLUMNS} WHERE fleet_id = ? ORDER BY sort_order"
+        "SELECT {SELECT_RACK_COLUMNS} WHERE site_id = ? ORDER BY sort_order"
     ))?;
     let mut racks = stmt
-        .query_map(params![fleet_id], row_to_rack)?
+        .query_map(params![site_id], row_to_rack)?
         .collect::<rusqlite::Result<Vec<_>>>()?;
     for rack in &mut racks {
         rack.items = list_items_for_rack(conn, &rack.id)?;
@@ -223,7 +223,7 @@ pub fn list_racks(conn: &SqliteConnection, fleet_id: &str) -> Result<Vec<Rack>> 
 pub fn create_rack(
     conn: &SqliteConnection,
     id: &str,
-    fleet_id: &str,
+    site_id: &str,
     name: &str,
     server_room: &str,
     rack_group: &str,
@@ -234,17 +234,17 @@ pub fn create_rack(
     let height_u = validate_height(height_u)?;
     let shell = normalize_shell(shell);
     let next_sort: i64 = conn.query_row(
-        "SELECT COALESCE(MAX(sort_order), -1) + 1 FROM itops_fleet_racks WHERE fleet_id = ?",
-        params![fleet_id],
+        "SELECT COALESCE(MAX(sort_order), -1) + 1 FROM itops_site_racks WHERE site_id = ?",
+        params![site_id],
         |row| row.get(0),
     )?;
     conn.execute(
-        "INSERT INTO itops_fleet_racks
-            (id, fleet_id, name, server_room, rack_group, shell, height_u, sort_order)
+        "INSERT INTO itops_site_racks
+            (id, site_id, name, server_room, rack_group, shell, height_u, sort_order)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
         params![
             id,
-            fleet_id,
+            site_id,
             name,
             server_room.trim(),
             rack_group.trim(),
@@ -255,7 +255,7 @@ pub fn create_rack(
     )?;
     Ok(Rack {
         id: id.to_string(),
-        fleet_id: fleet_id.to_string(),
+        site_id: site_id.to_string(),
         name,
         server_room: server_room.trim().to_string(),
         rack_group: rack_group.trim().to_string(),
@@ -285,7 +285,7 @@ pub fn update_rack(
     // Existence check (returns NotFound early before the height-shrink scan).
     let _sort_order: i64 = conn
         .query_row(
-            "SELECT sort_order FROM itops_fleet_racks WHERE id = ?",
+            "SELECT sort_order FROM itops_site_racks WHERE id = ?",
             params![id],
             |row| row.get(0),
         )
@@ -300,7 +300,7 @@ pub fn update_rack(
         }
     }
     conn.execute(
-        "UPDATE itops_fleet_racks
+        "UPDATE itops_site_racks
          SET name = ?, server_room = ?, rack_group = ?, shell = ?, height_u = ?,
              updated_at = CURRENT_TIMESTAMP
          WHERE id = ?",
@@ -339,7 +339,7 @@ pub fn set_rack_background(
 ) -> Result<Rack> {
     let json = rack_background_to_json(&background)?;
     let affected = conn.execute(
-        "UPDATE itops_fleet_racks SET background_json = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+        "UPDATE itops_site_racks SET background_json = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
         params![json, id],
     )?;
     if affected == 0 {
@@ -350,7 +350,7 @@ pub fn set_rack_background(
 
 pub fn delete_rack(conn: &SqliteConnection, id: &str) -> Result<()> {
     // Items cascade via the FK ON DELETE CASCADE.
-    let affected = conn.execute("DELETE FROM itops_fleet_racks WHERE id = ?", params![id])?;
+    let affected = conn.execute("DELETE FROM itops_site_racks WHERE id = ?", params![id])?;
     if affected == 0 {
         return Err(ItopsStorageError::NotFound);
     }
@@ -359,13 +359,13 @@ pub fn delete_rack(conn: &SqliteConnection, id: &str) -> Result<()> {
 
 pub fn reorder_racks(
     conn: &SqliteConnection,
-    fleet_id: &str,
+    site_id: &str,
     ordered_ids: &[String],
 ) -> Result<()> {
     for (index, id) in ordered_ids.iter().enumerate() {
         conn.execute(
-            "UPDATE itops_fleet_racks SET sort_order = ? WHERE id = ? AND fleet_id = ?",
-            params![index as i64, id, fleet_id],
+            "UPDATE itops_site_racks SET sort_order = ? WHERE id = ? AND site_id = ?",
+            params![index as i64, id, site_id],
         )?;
     }
     Ok(())
@@ -408,7 +408,7 @@ pub fn place_rack_item(
     validate_placement(rack_height, &existing, None, Span { start_u, height_u })?;
     let metadata_json = metadata_to_json(&metadata)?;
     conn.execute(
-        "INSERT INTO itops_fleet_rack_items
+        "INSERT INTO itops_site_rack_items
             (id, rack_id, connection_id, kind, label, start_u, height_u, metadata_json)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
         params![
@@ -447,7 +447,7 @@ pub fn update_rack_item(
     let connection_id = normalize_item_connection(kind, connection_id)?;
     let metadata_json = metadata_to_json(&metadata)?;
     let affected = conn.execute(
-        "UPDATE itops_fleet_rack_items
+        "UPDATE itops_site_rack_items
          SET kind = ?, connection_id = ?, label = ?, metadata_json = ?, updated_at = CURRENT_TIMESTAMP
          WHERE id = ?",
         params![kind.as_db_str(), connection_id, label.trim(), metadata_json, id],
@@ -471,7 +471,7 @@ pub fn move_rack_item(
     let existing = existing_spans(conn, rack_id)?;
     validate_placement(rack_height, &existing, Some(id), Span { start_u, height_u })?;
     let affected = conn.execute(
-        "UPDATE itops_fleet_rack_items
+        "UPDATE itops_site_rack_items
          SET rack_id = ?, start_u = ?, height_u = ?, updated_at = CURRENT_TIMESTAMP
          WHERE id = ?",
         params![rack_id, start_u, height_u, id],
@@ -484,7 +484,7 @@ pub fn move_rack_item(
 
 pub fn remove_rack_item(conn: &SqliteConnection, id: &str) -> Result<()> {
     let affected = conn.execute(
-        "DELETE FROM itops_fleet_rack_items WHERE id = ?",
+        "DELETE FROM itops_site_rack_items WHERE id = ?",
         params![id],
     )?;
     if affected == 0 {
@@ -515,9 +515,9 @@ mod tests {
         let conn = SqliteConnection::open_in_memory().unwrap();
         conn.execute_batch(
             r#"
-            CREATE TABLE itops_fleet_racks (
+            CREATE TABLE itops_site_racks (
                 id TEXT PRIMARY KEY,
-                fleet_id TEXT NOT NULL,
+                site_id TEXT NOT NULL,
                 name TEXT NOT NULL,
                 server_room TEXT NOT NULL DEFAULT '',
                 rack_group TEXT NOT NULL DEFAULT '',
@@ -528,7 +528,7 @@ mod tests {
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
-            CREATE TABLE itops_fleet_rack_items (
+            CREATE TABLE itops_site_rack_items (
                 id TEXT PRIMARY KEY,
                 rack_id TEXT NOT NULL,
                 connection_id TEXT,
@@ -764,7 +764,7 @@ mod tests {
     }
 
     #[test]
-    fn reorder_scopes_to_fleet() {
+    fn reorder_scopes_to_site() {
         let conn = open_test_db();
         create_rack(&conn, "a", "f1", "A", "", "", None, 42).unwrap();
         create_rack(&conn, "b", "f1", "B", "", "", None, 42).unwrap();

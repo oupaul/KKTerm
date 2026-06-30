@@ -956,12 +956,12 @@
     "railLabel": "IT Ops",
     "title": "IT Ops",
     "tabs": {
-      "fleets": "Grupos de hosts",
+      "sites": "Grupos de hosts",
       "runs": "Execuções em lote",
       "autos": "Automações"
     },
     "actions": {
-      "newFleet": "Novo grupo de hosts",
+      "newSite": "Novo grupo de hosts",
       "newBatchRun": "Nova execução em lote",
       "startBatchRun": "Iniciar uma execução em lote",
       "newAutomation": "Nova automação",
@@ -984,7 +984,7 @@
     "transport": {
       "auto": "Automático"
     },
-    "fleets": {
+    "sites": {
       "heading": "Grupos de hosts",
       "emptyTitle": "Ainda não há grupos de hosts",
       "emptyBody": "Um grupo de hosts é uma seleção nomeada de conexões existentes usada como destino de frota para execuções em lote e automações.",
@@ -1029,9 +1029,9 @@
       "deleteBody": "“{{name}}” e seus dispositivos posicionados serão removidos. As conexões referenciadas não são afetadas.",
       "nameLabel": "Nome",
       "namePlaceholder": "ex.: A12",
-      "fleetLabel": "Grupo de hosts",
+      "siteLabel": "Grupo de hosts",
       "serverRoomLabel": "Sala de servidores",
-      "serverRoomFleetLabel": "Grupo de hosts",
+      "serverRoomSiteLabel": "Grupo de hosts",
       "serverRoomNameLabel": "Nome da sala de servidores",
       "serverRoomSelectLabel": "Sala de servidores",
       "serverRoomPlaceholder": "ex.: Sala B",
@@ -1055,7 +1055,7 @@
       "portsSpec": "{{count}} portas",
       "disksSpec": "{{count}} compartimentos",
       "addNode": "Adicionar…",
-      "addFleet": "Novo grupo de hosts",
+      "addSite": "Novo grupo de hosts",
       "addServerRoom": "Nova sala de servidores",
       "addRack": "Novo rack",
       "heightLabel": "Altura (U)",
@@ -1205,7 +1205,7 @@
       "codeQueued": "na fila",
       "savedReport": "Relatório consolidado salvo no histórico de execuções · origem manual · {{ok}}/{{total}} com êxito",
       "launchTitle": "Nova execução em lote",
-      "fleetLabel": "Grupo de hosts",
+      "siteLabel": "Grupo de hosts",
       "scopeRack": "Direcionando apenas o rack {{name}}",
       "scopeServerRoom": "Direcionando apenas a sala de servidores {{name}}",
       "scriptLabel": "Script",

@@ -1,6 +1,6 @@
-// Rack topology grouping for the Fleets tree + drill-down (docs/FLEET.md Rack
-// View). Folds a Fleet's flat rack list into the hierarchy
-// Fleet → Server Room → Rack, preserving stored order. A blank server room
+// Rack topology grouping for the Sites tree + drill-down (docs/SITE.md Rack
+// View). Folds a Site's flat rack list into the hierarchy
+// Site → Server Room → Rack, preserving stored order. A blank server room
 // collapses under an "Unassigned" bucket (empty key, ""). Node ids are stable
 // strings so the tree's collapse state and the drill path survive reloads and
 // identify a node unambiguously.
@@ -54,7 +54,7 @@ export function groupRacksByGroup(racks: Rack[]): RackGroup[] {
   return groups;
 }
 
-// A drill path into one Fleet's topology: a server room and, at the leaf, a
+// A drill path into one Site's topology: a server room and, at the leaf, a
 // single rack.
 export interface DrillPath {
   serverRoom: string | null;
@@ -68,7 +68,7 @@ export const EMPTY_DRILL: DrillPath = {
 
 // Stable node ids for tree collapse + selection.
 export const nodeId = {
-  fleet: (fleetId: string) => `fleet:${fleetId}`,
-  serverRoom: (fleetId: string, room: string) => `room:${fleetId}/${room}`,
+  site: (siteId: string) => `site:${siteId}`,
+  serverRoom: (siteId: string, room: string) => `room:${siteId}/${room}`,
   rack: (rackId: string) => `rack:${rackId}`,
 };

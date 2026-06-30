@@ -1,5 +1,5 @@
-// IT Ops Module frontend store. Phase 1 owns durable Fleets: a thin cache
-// over the itops_* Tauri commands so the rail badge, the Fleets tab, and
+// IT Ops Module frontend store. Phase 1 owns durable Sites: a thin cache
+// over the itops_* Tauri commands so the rail badge, the Sites tab, and
 // any dialog share one source of truth and update live after a mutation without
 // a full reload. Live Batch Run / Automation state arrives in later phases.
 
@@ -10,8 +10,8 @@ import type {
   AutomationAction,
   AutomationTestResult,
   BatchTask,
-  Fleet,
-  FleetFilter,
+  Site,
+  SiteFilter,
   ItopsTransport,
   Rack,
   RackItemKind,
@@ -25,10 +25,10 @@ import type {
 import type { DashboardBackground } from "../dashboard/types";
 import type { WatchdogConfig } from "../../watchdog/types";
 
-export interface FleetInput {
+export interface SiteInput {
   name: string;
   memberIds: string[];
-  filter: FleetFilter | null;
+  filter: SiteFilter | null;
   transport: ItopsTransport;
   iconColor?: string | null;
   iconDataUrl?: string | null;
@@ -77,7 +77,7 @@ export interface LiveRunHost {
 
 export interface LiveRun {
   runId: string;
-  fleetId?: string | null;
+  siteId?: string | null;
   taskSummary: string;
   hosts: LiveRunHost[];
   state: "running" | "done" | "canceled";
@@ -97,7 +97,7 @@ function reduceRun(run: LiveRun | null, event: RunEvent): LiveRun | null {
     case "started":
       return {
         runId: event.runId,
-        fleetId: event.fleetId,
+        siteId: event.siteId,
         taskSummary: event.taskSummary,
         hosts: event.hosts.map((host) => ({ ...host, status: "pending" as const })),
         state: "running",
@@ -179,50 +179,50 @@ function reduceRun(run: LiveRun | null, event: RunEvent): LiveRun | null {
 }
 
 interface ItOpsState {
-  fleets: Fleet[];
+  sites: Site[];
   loaded: boolean;
   loading: boolean;
-  /** Bumped when the module header's "New Fleet" button is pressed so the
-   *  Fleets tab (which owns the dialog + selection) opens the create flow. */
+  /** Bumped when the module header's "New Site" button is pressed so the
+   *  Sites tab (which owns the dialog + selection) opens the create flow. */
   newGroupRequest: number;
-  requestNewFleet: () => void;
-  loadFleets: () => Promise<void>;
-  createFleet: (input: FleetInput) => Promise<Fleet>;
-  updateFleet: (id: string, input: FleetInput) => Promise<Fleet>;
-  removeFleet: (id: string) => Promise<void>;
-  resolveFleet: (id: string) => Promise<ResolvedHost[]>;
+  requestNewSite: () => void;
+  loadSites: () => Promise<void>;
+  createSite: (input: SiteInput) => Promise<Site>;
+  updateSite: (id: string, input: SiteInput) => Promise<Site>;
+  removeSite: (id: string) => Promise<void>;
+  resolveSite: (id: string) => Promise<ResolvedHost[]>;
 
-  // ── Fleet topology / Rack View (docs/FLEET.md Phase C) ──
-  /** Racks per Fleet id, hydrated with their items. Loaded on demand. */
-  racksByFleet: Record<string, Rack[]>;
-  loadRacks: (fleetId: string) => Promise<void>;
-  createRack: (fleetId: string, input: RackInput) => Promise<Rack>;
-  updateRack: (fleetId: string, id: string, input: RackInput) => Promise<void>;
-  deleteRack: (fleetId: string, id: string) => Promise<void>;
-  setFleetBackground: (fleetId: string, background: DashboardBackground | null) => Promise<void>;
+  // ── Site topology / Rack View (docs/SITE.md Phase C) ──
+  /** Racks per Site id, hydrated with their items. Loaded on demand. */
+  racksBySite: Record<string, Rack[]>;
+  loadRacks: (siteId: string) => Promise<void>;
+  createRack: (siteId: string, input: RackInput) => Promise<Rack>;
+  updateRack: (siteId: string, id: string, input: RackInput) => Promise<void>;
+  deleteRack: (siteId: string, id: string) => Promise<void>;
+  setSiteBackground: (siteId: string, background: DashboardBackground | null) => Promise<void>;
   setServerRoomBackground: (
-    fleetId: string,
+    siteId: string,
     serverRoom: string,
     background: DashboardBackground | null,
   ) => Promise<void>;
   setRoomIcon: (
-    fleetId: string,
+    siteId: string,
     serverRoom: string,
     icon: RoomIconEntry | null,
   ) => Promise<void>;
   setRackBackground: (
-    fleetId: string,
+    siteId: string,
     rackId: string,
     background: DashboardBackground | null,
   ) => Promise<void>;
-  placeRackItem: (fleetId: string, input: PlaceItemInput) => Promise<void>;
-  updateRackItem: (fleetId: string, input: UpdateItemInput) => Promise<void>;
+  placeRackItem: (siteId: string, input: PlaceItemInput) => Promise<void>;
+  updateRackItem: (siteId: string, input: UpdateItemInput) => Promise<void>;
   moveRackItem: (
-    fleetId: string,
+    siteId: string,
     input: { id: string; rackId: string; startU: number; heightU: number },
   ) => Promise<void>;
-  removeRackItem: (fleetId: string, id: string) => Promise<void>;
-  refreshRackItemSnmp: (fleetId: string, id: string) => Promise<void>;
+  removeRackItem: (siteId: string, id: string) => Promise<void>;
+  refreshRackItemSnmp: (siteId: string, id: string) => Promise<void>;
 
   // ── Batch Runs (Phase 2) ──
   activeRun: LiveRun | null;
@@ -233,9 +233,9 @@ interface ItOpsState {
   pendingRunGroupId: string | null;
   /** Optional Rack / Server Room scope carried into the launcher for a scoped run. */
   pendingRunScope: RunScope | null;
-  requestNewBatchRun: (fleetId?: string, scope?: RunScope) => void;
+  requestNewBatchRun: (siteId?: string, scope?: RunScope) => void;
   applyRunEvent: (event: RunEvent) => void;
-  startBatchRun: (fleetId: string, task: BatchTask, scope?: RunScope | null) => Promise<string>;
+  startBatchRun: (siteId: string, task: BatchTask, scope?: RunScope | null) => Promise<string>;
   cancelRun: (runId: string) => Promise<void>;
   loadRunHistory: () => Promise<void>;
 
@@ -263,31 +263,31 @@ interface ItOpsState {
 }
 
 export const useItOpsStore = create<ItOpsState>((set, get) => ({
-  fleets: [],
+  sites: [],
   loaded: false,
   loading: false,
   newGroupRequest: 0,
 
-  requestNewFleet() {
+  requestNewSite() {
     set({ newGroupRequest: get().newGroupRequest + 1 });
   },
 
-  async loadFleets() {
+  async loadSites() {
     if (!isTauriRuntime()) {
       set({ loaded: true });
       return;
     }
     set({ loading: true });
     try {
-      const fleets = await invokeCommand("itops_list_fleets");
-      set({ fleets, loaded: true });
+      const sites = await invokeCommand("itops_list_sites");
+      set({ sites, loaded: true });
     } finally {
       set({ loading: false });
     }
   },
 
-  async createFleet(input) {
-    const created = await invokeCommand("itops_create_fleet", {
+  async createSite(input) {
+    const created = await invokeCommand("itops_create_site", {
       name: input.name,
       memberIds: input.memberIds,
       filter: input.filter,
@@ -296,12 +296,12 @@ export const useItOpsStore = create<ItOpsState>((set, get) => ({
       iconDataUrl: input.iconDataUrl ?? null,
       iconBackgroundColor: input.iconBackgroundColor ?? null,
     });
-    set({ fleets: [...get().fleets, created] });
+    set({ sites: [...get().sites, created] });
     return created;
   },
 
-  async updateFleet(id, input) {
-    const updated = await invokeCommand("itops_update_fleet", {
+  async updateSite(id, input) {
+    const updated = await invokeCommand("itops_update_site", {
       id,
       name: input.name,
       memberIds: input.memberIds,
@@ -312,102 +312,102 @@ export const useItOpsStore = create<ItOpsState>((set, get) => ({
       iconBackgroundColor: input.iconBackgroundColor ?? null,
     });
     set({
-      fleets: get().fleets.map((group) => (group.id === id ? updated : group)),
+      sites: get().sites.map((group) => (group.id === id ? updated : group)),
     });
     return updated;
   },
 
-  async removeFleet(id) {
-    await invokeCommand("itops_remove_fleet", { id });
-    set({ fleets: get().fleets.filter((group) => group.id !== id) });
+  async removeSite(id) {
+    await invokeCommand("itops_remove_site", { id });
+    set({ sites: get().sites.filter((group) => group.id !== id) });
   },
 
-  async resolveFleet(id) {
+  async resolveSite(id) {
     if (!isTauriRuntime()) {
       return [];
     }
-    return invokeCommand("itops_resolve_fleet", { id });
+    return invokeCommand("itops_resolve_site", { id });
   },
 
-  // ── Fleet topology / Rack View ──
-  racksByFleet: {},
+  // ── Site topology / Rack View ──
+  racksBySite: {},
 
-  async loadRacks(fleetId) {
+  async loadRacks(siteId) {
     if (!isTauriRuntime()) {
-      set({ racksByFleet: { ...get().racksByFleet, [fleetId]: [] } });
+      set({ racksBySite: { ...get().racksBySite, [siteId]: [] } });
       return;
     }
-    const racks = await invokeCommand("itops_list_racks", { fleetId });
-    set({ racksByFleet: { ...get().racksByFleet, [fleetId]: racks } });
+    const racks = await invokeCommand("itops_list_racks", { siteId });
+    set({ racksBySite: { ...get().racksBySite, [siteId]: racks } });
   },
 
-  async createRack(fleetId, input) {
-    const created = await invokeCommand("itops_create_rack", { fleetId, ...input });
-    await get().loadRacks(fleetId);
+  async createRack(siteId, input) {
+    const created = await invokeCommand("itops_create_rack", { siteId, ...input });
+    await get().loadRacks(siteId);
     return created;
   },
 
-  async updateRack(fleetId, id, input) {
+  async updateRack(siteId, id, input) {
     await invokeCommand("itops_update_rack", { id, ...input });
-    await get().loadRacks(fleetId);
+    await get().loadRacks(siteId);
   },
 
-  async deleteRack(fleetId, id) {
+  async deleteRack(siteId, id) {
     await invokeCommand("itops_delete_rack", { id });
-    await get().loadRacks(fleetId);
+    await get().loadRacks(siteId);
   },
 
-  async placeRackItem(fleetId, input) {
+  async placeRackItem(siteId, input) {
     await invokeCommand("itops_place_rack_item", input);
-    await get().loadRacks(fleetId);
+    await get().loadRacks(siteId);
   },
 
-  async updateRackItem(fleetId, input) {
+  async updateRackItem(siteId, input) {
     await invokeCommand("itops_update_rack_item", input);
-    await get().loadRacks(fleetId);
+    await get().loadRacks(siteId);
   },
 
-  async moveRackItem(fleetId, input) {
+  async moveRackItem(siteId, input) {
     await invokeCommand("itops_move_rack_item", input);
-    await get().loadRacks(fleetId);
+    await get().loadRacks(siteId);
   },
 
-  async removeRackItem(fleetId, id) {
+  async removeRackItem(siteId, id) {
     await invokeCommand("itops_remove_rack_item", { id });
-    await get().loadRacks(fleetId);
+    await get().loadRacks(siteId);
   },
 
-  async refreshRackItemSnmp(fleetId, id) {
+  async refreshRackItemSnmp(siteId, id) {
     await invokeCommand("itops_refresh_rack_item_snmp", { id });
-    await get().loadRacks(fleetId);
+    await get().loadRacks(siteId);
   },
 
-  async setFleetBackground(fleetId, background) {
-    const updated = await invokeCommand("itops_set_fleet_background", { fleetId, background });
-    set({ fleets: get().fleets.map((fleet) => (fleet.id === fleetId ? updated : fleet)) });
+  async setSiteBackground(siteId, background) {
+    const updated = await invokeCommand("itops_set_site_background", { siteId, background });
+    set({ sites: get().sites.map((site) => (site.id === siteId ? updated : site)) });
   },
 
-  async setServerRoomBackground(fleetId, serverRoom, background) {
+  async setServerRoomBackground(siteId, serverRoom, background) {
     const updated = await invokeCommand("itops_set_server_room_background", {
-      fleetId,
+      siteId,
       serverRoom,
       background,
     });
-    set({ fleets: get().fleets.map((fleet) => (fleet.id === fleetId ? updated : fleet)) });
+    set({ sites: get().sites.map((site) => (site.id === siteId ? updated : site)) });
   },
 
-  async setRoomIcon(fleetId, serverRoom, icon) {
+  async setRoomIcon(siteId, serverRoom, icon) {
     const updated = await invokeCommand("itops_set_room_icon", {
-      fleetId,
+      siteId,
       serverRoom,
       icon,
     });
-    set({ fleets: get().fleets.map((fleet) => (fleet.id === fleetId ? updated : fleet)) });
+    set({ sites: get().sites.map((site) => (site.id === siteId ? updated : site)) });
   },
 
-  async setRackBackground(fleetId, rackId, background) {
+  async setRackBackground(siteId, rackId, background) {
     await invokeCommand("itops_set_rack_background", { id: rackId, background });
-    await get().loadRacks(fleetId);
+    await get().loadRacks(siteId);
   },
 
   // ── Batch Runs ──
@@ -418,10 +418,10 @@ export const useItOpsStore = create<ItOpsState>((set, get) => ({
   pendingRunGroupId: null,
   pendingRunScope: null,
 
-  requestNewBatchRun(fleetId, scope) {
+  requestNewBatchRun(siteId, scope) {
     set({
       newRunRequest: get().newRunRequest + 1,
-      pendingRunGroupId: fleetId ?? null,
+      pendingRunGroupId: siteId ?? null,
       pendingRunScope: scope ?? null,
     });
   },
@@ -433,11 +433,11 @@ export const useItOpsStore = create<ItOpsState>((set, get) => ({
     }
   },
 
-  async startBatchRun(fleetId, task, scope) {
+  async startBatchRun(siteId, task, scope) {
     // The Started event populates activeRun; clear any prior run first so the
     // grid does not briefly show stale hosts.
     set({ activeRun: null });
-    return invokeCommand("itops_start_batch_run", { fleetId, task, scope: scope ?? null });
+    return invokeCommand("itops_start_batch_run", { siteId, task, scope: scope ?? null });
   },
 
   async cancelRun(runId) {

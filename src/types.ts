@@ -139,24 +139,24 @@ export interface ConnectionTree {
   folders: ConnectionFolder[];
 }
 
-// IT Ops Module (docs/ITOPS.md). A Fleet is a durable, named selection of
-// existing Connections used as a fleet target; ResolvedHost is one concrete
+// IT Ops Module (docs/ITOPS.md). A Site is a durable, named selection of
+// existing Connections used as a site target; ResolvedHost is one concrete
 // target produced by resolving a group at run time.
 export type ItopsTransport = "ssh" | "winrm" | "psexec" | "auto";
 
-export interface FleetFilter {
+export interface SiteFilter {
   types: string[];
   folderId?: string | null;
 }
 
-export interface Fleet {
+export interface Site {
   id: string;
   name: string;
   sortOrder: number;
   memberIds: string[];
-  filter?: FleetFilter | null;
+  filter?: SiteFilter | null;
   transport: ItopsTransport;
-  // Custom Fleet-view (server-room cards) background; reuses the Dashboard
+  // Custom Site-view (server-room cards) background; reuses the Dashboard
   // background machinery. null/undefined = theme default.
   background?: DashboardBackground | null;
   // Per-server-room backgrounds, keyed by the room's string tag.
@@ -185,7 +185,7 @@ export interface ResolvedHost {
   transport: ItopsTransport;
 }
 
-// Fleet topology (docs/FLEET.md Phase B). A Rack belongs to one Fleet, grouped
+// Site topology (docs/SITE.md Phase B). A Rack belongs to one Site, grouped
 // grouped by server room, and holds Rack Devices at U positions.
 export type RackItemKind =
   | "connection"
@@ -320,9 +320,9 @@ export interface RackItem {
 
 export interface Rack {
   id: string;
-  fleetId: string;
+  siteId: string;
   name: string;
-  // Topology is Fleet → Server Room → Rack; blank groups under "Unassigned".
+  // Topology is Site → Server Room → Rack; blank groups under "Unassigned".
   serverRoom: string;
   // Optional group tag within the server room (blank → "Ungrouped").
   rackGroup: string;
@@ -335,7 +335,7 @@ export interface Rack {
   items: RackItem[];
 }
 
-// Narrows a Batch Run to part of a Fleet's rack topology (docs/FLEET.md Phase D).
+// Narrows a Batch Run to part of a Site's rack topology (docs/SITE.md Phase D).
 export interface RunScope {
   rackId?: string | null;
   serverRoom?: string | null;
@@ -381,7 +381,7 @@ export interface RunReport {
 export interface RunHistoryEntry {
   id: string;
   source: string;
-  fleetId?: string | null;
+  siteId?: string | null;
   taskSummary: string;
   startedAt: string;
   finishedAt?: string | null;
@@ -400,7 +400,7 @@ export type RunEvent =
   | {
       kind: "started";
       runId: string;
-      fleetId?: string | null;
+      siteId?: string | null;
       taskSummary: string;
       hosts: RunEventHost[];
     }
@@ -428,7 +428,7 @@ export type AutomationAction =
   | { kind: "popup"; title: string; body: string }
   | { kind: "email"; to: string[]; subject: string; body: string }
   | { kind: "webhook"; url: string; method: string; body?: string | null }
-  | { kind: "runBatch"; fleetId: string; task: BatchTask };
+  | { kind: "runBatch"; siteId: string; task: BatchTask };
 
 export interface Automation {
   id: string;

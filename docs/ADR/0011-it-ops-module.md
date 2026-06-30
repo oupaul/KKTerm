@@ -9,7 +9,7 @@ Accepted
 KKTerm manages many saved Connections, but every action today is
 single-host and interactive: open one Session, type in one terminal,
 browse one SFTP tree. Operators repeatedly need the opposite — run the
-same task across a fleet (push an update script to every SSH host, drive
+same task across a site (push an update script to every SSH host, drive
 a Windows Update pass across a set of servers) and get one consolidated
 result — and they need unattended *monitoring* that watches a signal and
 reacts without a human staring at a terminal.
@@ -51,7 +51,7 @@ is not a Connection, not a Session, and not a Dashboard widget.
 The Module owns three surfaces:
 
 1. **Host Groups** — durable named selections of existing Connections
-   (plus ad-hoc filters by type/folder). A Host Group is the fleet target
+   (plus ad-hoc filters by type/folder). A Host Group is the site target
    for both batch runs and automations. It references Connection ids; it
    is **not** a new Connection type and stores no secrets.
 
@@ -139,7 +139,7 @@ Connection Batch Importer's network scan (`src-tauri/src/import.rs`).
   Rust run-loop and pure predicate evaluator are preserved. The Status Bar
   indicator and detail panel remain as the live view of running
   Automations.
-- KKTerm gains true fleet operations without taking on a background
+- KKTerm gains true site operations without taking on a background
   service, a cloud control plane, or autonomous AI — staying inside the
   local-first, approval-gated scope the PRD defines.
 - New durable state (Host Groups, Automations, run history) means a new

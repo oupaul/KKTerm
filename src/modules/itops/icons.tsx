@@ -8,7 +8,7 @@ import { Building2, Server, ShelvingUnit } from "lucide-react";
 
 export type ItIconName =
   | "ops"
-  | "fleet"
+  | "site"
   | "group"
   | "network"
   | "room"
@@ -88,7 +88,7 @@ function Svg({
 }
 
 const GLYPHS: Record<ItIconName, (p: GlyphProps) => ReactNode> = {
-  fleet: (p) => LucideGlyph(Building2, p),
+  site: (p) => LucideGlyph(Building2, p),
   ops: (p) => (
     <Svg {...p}>
       <path d="M4 5.5h16a1 1 0 0 1 1 1V9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6.5a1 1 0 0 1 1-1Z" />
@@ -409,8 +409,8 @@ export function ItIcon({
   return glyph({ size, sw: sw ?? 1.7 });
 }
 
-// Fleet-status accent palette for tiles and action chips. These are content
-// accents (a fleet's chosen colour, an action's category hue), not theme
+// Site-status accent palette for tiles and action chips. These are content
+// accents (a site's chosen colour, an action's category hue), not theme
 // chrome, so they live here as fixed values rather than scheme tokens.
 export const IT_ACCENTS = {
   blue: "#0a84ff",

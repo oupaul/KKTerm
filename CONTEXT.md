@@ -122,26 +122,27 @@ The live runtime that executes an armed **Automation** (or an ad-hoc live monito
 _Avoid_: monitor profile, durable watcher (the Automation is the durable part)
 
 **IT Ops Module**:
-A built-in Activity Rail Module for fleet operations: **Fleets**, **Batch Runs**, and **Automations**. Its current primary UI is the Fleet topology surface: a left **Fleets** tree and a right drill-down through **Fleet View**, **Server Room View**, and **Rack View**. Batch Run and Automation functionality remains part of the Module even when those management surfaces are hidden. Lives with Dashboard and Install Helper above Settings. Not a Connection, Session, or Dashboard widget. See `docs/ITOPS.md` and `docs/ADR/0011-it-ops-module.md`.
-_Avoid_: operations center, fleet manager, orchestrator
+A built-in Activity Rail Module for site operations: **Sites**, **Batch Runs**, and **Automations**. Its current primary UI is the Site topology surface: a left **Sites** tree and a right drill-down through **Site View**, **Server Room View**, and **Rack View**. Batch Run and Automation functionality remains part of the Module even when those management surfaces are hidden. Lives with Dashboard and Install Helper above Settings. Not a Connection, Session, or Dashboard widget. See `docs/ITOPS.md` and `docs/ADR/0011-it-ops-module.md`.
+_Avoid_: operations center, site manager, orchestrator
 
-**Fleets**:
-The IT Ops collection and navigator for Fleet records. In the current UI it is the left-column tree that contains Fleets and their topology children. A row in Fleets selects a **Fleet**; the plural term names the view/collection, not a durable data type.
-_Avoid_: host groups tab, inventory browser
+**Sites**:
+The IT Ops collection and navigator for Site records. In the current UI it is the left-column tree that contains Sites and their topology children. A row in Sites selects a **Site**; the plural term names the view/collection, not a durable data type.
+_Avoid_: fleets, host groups tab, inventory browser
 
-**Fleet**:
-A durable, named selection of existing Connections (plus an optional dynamic filter by type/folder) used as the target for Batch Runs and Automation `runBatch` actions. Stored in `itops_fleets`; it references Connection ids and owns no Session and no secret. It is not a Connection type. A Fleet may own a topology of Server Rooms, Racks, and Rack Devices.
-_Avoid_: host group, inventory, host list, connection group (as a Connection type)
+**Site**:
+A durable, named selection of existing Connections (plus an optional dynamic filter by type/folder) used as the target for Batch Runs and Automation `runBatch` actions. Stored in `itops_sites`; it references Connection ids and owns no Session and no secret. It is not a Connection type. A Site may own a topology of Server Rooms, Racks, and Rack Devices.
+_Avoid_: fleet, host group, inventory, host list, connection group (as a Connection type)
 
-**Default Fleet**:
-The undeletable fallback Fleet (`default-fleet`) that exists when IT Ops has no other Fleet rows. It is a safe top-level parent for Server Rooms, Racks, and Rack Devices, not a Connection or Session.
+**Default Site**:
+The undeletable fallback Site (stored id `default-fleet`, a legacy literal kept across the
+Fleet→Site rename) that exists when IT Ops has no other Site rows. It is a safe top-level parent for Server Rooms, Racks, and Rack Devices, not a Connection or Session.
 
-**Fleet View**:
-The top-level right-side view for one selected Fleet. It shows that Fleet's Server Rooms as cards and is the entry point into the topology drill-down. It is not the same thing as the plural **Fleets** navigator.
+**Site View**:
+The top-level right-side view for one selected Site. It shows that Site's Server Rooms as cards and is the entry point into the topology drill-down. It is not the same thing as the plural **Sites** navigator.
 _Avoid_: overview, dashboard, host group details
 
 **Server Room**:
-A plain-text grouping tag on a Rack inside a Fleet. The topology path is **Fleet → Server Room → Rack**; blank values group under Unassigned. A Server Room is not a first-class database entity and owns no Connections or Sessions.
+A plain-text grouping tag on a Rack inside a Site. The topology path is **Site → Server Room → Rack**; blank values group under Unassigned. A Server Room is not a first-class database entity and owns no Connections or Sessions.
 _Avoid_: region, datacenter, site object, zone
 
 **Server Room View**:
@@ -149,7 +150,7 @@ The drill-down view for one Server Room. It shows the room's Racks, optionally g
 _Avoid_: floor plan, area view, datacenter map
 
 **Rack**:
-A durable fixed-height cabinet, usually 42U, that belongs to one Fleet and one Server Room. Stored in `itops_fleet_racks`; it holds Rack Devices at U positions and may carry a cabinet shell finish.
+A durable fixed-height cabinet, usually 42U, that belongs to one Site and one Server Room. Stored in `itops_site_racks`; it holds Rack Devices at U positions and may carry a cabinet shell finish.
 _Avoid_: shelf, cabinet group, host group
 
 **Rack View**:
@@ -157,7 +158,7 @@ The single-Rack drill-down stage. It centers one Rack elevation and can show per
 _Avoid_: terminal rack, device session view
 
 **Rack Device**:
-One visual device occupying a contiguous U span in a Rack. It may be Connection-backed (opens the referenced Connection's Session on click) or passive (switch, PDU, patch panel, blank, label, or other visual/inventory item). Stored in `itops_fleet_rack_items`; older code and schema names may still say `RackItem`.
+One visual device occupying a contiguous U span in a Rack. It may be Connection-backed (opens the referenced Connection's Session on click) or passive (switch, PDU, patch panel, blank, label, or other visual/inventory item). Stored in `itops_site_rack_items`; older code and schema names may still say `RackItem`.
 _Avoid_: slot, node, host card
 
 **Rack Device Type**:
@@ -169,7 +170,7 @@ Non-secret presentation metadata for a Rack Device: label, U position, height, s
 _Avoid_: secrets, runtime status, connection settings
 
 **Batch Run**:
-One execution of a Batch Task (a one-shot script or an interactive, expect-style playbook) across a resolved Fleet, fanned out with bounded concurrency over a per-host transport (SSH, WinRM, or PsExec). Live per-host progress streams to the run grid as it happens; on completion a consolidated report — including each host's captured output — is written to `itops_run_history`, where it can be reopened as a read-only Run Report. The run is live runtime, not a durable definition.
+One execution of a Batch Task (a one-shot script or an interactive, expect-style playbook) across a resolved Site, fanned out with bounded concurrency over a per-host transport (SSH, WinRM, or PsExec). Live per-host progress streams to the run grid as it happens; on completion a consolidated report — including each host's captured output — is written to `itops_run_history`, where it can be reopened as a read-only Run Report. The run is live runtime, not a durable definition.
 _Avoid_: broadcast, job, deployment
 
 **Playbook**:

@@ -956,12 +956,12 @@
     "railLabel": "IT Ops",
     "title": "IT Ops",
     "tabs": {
-      "fleets": "主机组",
+      "sites": "主机组",
       "runs": "批量运行",
       "autos": "自动化"
     },
     "actions": {
-      "newFleet": "新建主机组",
+      "newSite": "新建主机组",
       "newBatchRun": "新建批量运行",
       "startBatchRun": "开始批量运行",
       "newAutomation": "新建自动化",
@@ -984,7 +984,7 @@
     "transport": {
       "auto": "自动"
     },
-    "fleets": {
+    "sites": {
       "heading": "主机组",
       "emptyTitle": "暂无主机组",
       "emptyBody": "主机组是现有连接的命名选择，作为批量运行和自动化的机群目标。",
@@ -1029,9 +1029,9 @@
       "deleteBody": "“{{name}}” 及其已放置的设备将被移除。引用的连接不受影响。",
       "nameLabel": "名称",
       "namePlaceholder": "例如，A12",
-      "fleetLabel": "主机组",
+      "siteLabel": "主机组",
       "serverRoomLabel": "服务器机房",
-      "serverRoomFleetLabel": "主机组",
+      "serverRoomSiteLabel": "主机组",
       "serverRoomNameLabel": "机房名称",
       "serverRoomSelectLabel": "机房",
       "serverRoomPlaceholder": "例如 机房 B",
@@ -1055,7 +1055,7 @@
       "portsSpec": "{{count}} 个端口",
       "disksSpec": "{{count}} 个托架",
       "addNode": "添加…",
-      "addFleet": "新建主机组",
+      "addSite": "新建主机组",
       "addServerRoom": "新建服务器机房",
       "addRack": "新建机架",
       "heightLabel": "高度 (U)",
@@ -1205,7 +1205,7 @@
       "codeQueued": "已排队",
       "savedReport": "汇总报告已保存至运行历史 · 来源手动 · {{ok}}/{{total}} 成功",
       "launchTitle": "新建批量运行",
-      "fleetLabel": "主机组",
+      "siteLabel": "主机组",
       "scopeRack": "仅针对机架 {{name}}",
       "scopeServerRoom": "仅针对服务器机房 {{name}}",
       "scriptLabel": "脚本",

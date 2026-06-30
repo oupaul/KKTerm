@@ -956,12 +956,12 @@
     "railLabel": "IT Ops",
     "title": "IT Ops",
     "tabs": {
-      "fleets": "호스트 그룹",
+      "sites": "호스트 그룹",
       "runs": "일괄 실행",
       "autos": "자동화"
     },
     "actions": {
-      "newFleet": "새 호스트 그룹",
+      "newSite": "새 호스트 그룹",
       "newBatchRun": "새 일괄 실행",
       "startBatchRun": "일괄 실행 시작",
       "newAutomation": "새 자동화",
@@ -984,7 +984,7 @@
     "transport": {
       "auto": "자동"
     },
-    "fleets": {
+    "sites": {
       "heading": "호스트 그룹",
       "emptyTitle": "아직 호스트 그룹이 없습니다",
       "emptyBody": "호스트 그룹은 일괄 실행과 자동화의 플릿 대상으로 사용되는 기존 연결의 명명된 선택입니다.",
@@ -1029,9 +1029,9 @@
       "deleteBody": "“{{name}}” 및 배치된 장치가 제거됩니다. 참조된 연결은 영향을 받지 않습니다.",
       "nameLabel": "이름",
       "namePlaceholder": "예: A12",
-      "fleetLabel": "호스트 그룹",
+      "siteLabel": "호스트 그룹",
       "serverRoomLabel": "서버실",
-      "serverRoomFleetLabel": "호스트 그룹",
+      "serverRoomSiteLabel": "호스트 그룹",
       "serverRoomNameLabel": "서버실 이름",
       "serverRoomSelectLabel": "서버실",
       "serverRoomPlaceholder": "예: B실",
@@ -1055,7 +1055,7 @@
       "portsSpec": "포트 {{count}}개",
       "disksSpec": "베이 {{count}}개",
       "addNode": "추가…",
-      "addFleet": "새 호스트 그룹",
+      "addSite": "새 호스트 그룹",
       "addServerRoom": "새 서버실",
       "addRack": "새 랙",
       "heightLabel": "높이 (U)",
@@ -1205,7 +1205,7 @@
       "codeQueued": "대기 중",
       "savedReport": "통합 보고서가 실행 이력에 저장되었습니다 · 수동 실행 · {{ok}}/{{total}}개 성공",
       "launchTitle": "새 일괄 실행",
-      "fleetLabel": "호스트 그룹",
+      "siteLabel": "호스트 그룹",
       "scopeRack": "랙 {{name}}만 대상으로 지정",
       "scopeServerRoom": "서버실 {{name}}만 대상으로 지정",
       "scriptLabel": "스크립트",

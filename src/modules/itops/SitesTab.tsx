@@ -1,18 +1,18 @@
-// Fleets tab — durable fleet target groups (docs/ITOPS.md Phase 1). The left
+// Sites tab — durable site target groups (docs/ITOPS.md Phase 1). The left
 // panel is a Connection-tree-style navigator over the rack topology
-// (Fleet → Server Room → Rack); the right panel drills down that hierarchy,
+// (Site → Server Room → Rack); the right panel drills down that hierarchy,
 // ending at a single animated rack elevation. Member lists come from the
-// run-time resolver (itops_resolve_fleet) so dynamic-filter groups show the
+// run-time resolver (itops_resolve_site) so dynamic-filter groups show the
 // Connections they currently match.
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { invokeCommand } from "../../lib/tauri";
 import { useWorkspaceStore } from "../../store";
-import type { Fleet, Rack, RackItem, ResolvedHost } from "../../types";
+import type { Site, Rack, RackItem, ResolvedHost } from "../../types";
 import { ConnectionIcon } from "../workspace/connections/ConnectionIcon";
 import { ItIcon, IT_ACCENTS, type ItIconName } from "./icons";
-import { FleetDialog } from "./FleetDialog";
+import { SiteDialog } from "./SiteDialog";
 import { RackElevation } from "./RackElevation";
 import { RackDialog } from "./RackDialog";
 import { ServerRoomDialog } from "./ServerRoomDialog";
@@ -31,14 +31,14 @@ import { RackStage } from "./RackStage";
 import { selectRandomRackCallouts } from "./rackInventory";
 import type { DashboardBackground } from "../dashboard/types";
 import {
-  FLEET_TREE_COLLAPSED_WIDTH,
-  FLEET_TREE_MAX_WIDTH,
-  FLEET_TREE_MIN_WIDTH,
+  SITE_TREE_COLLAPSED_WIDTH,
+  SITE_TREE_MAX_WIDTH,
+  SITE_TREE_MIN_WIDTH,
   loadCollapsedNodeIds,
-  loadFleetTreeWidth,
+  loadSiteTreeWidth,
   saveCollapsedNodeIds,
-  saveFleetTreeWidth,
-} from "./fleetTreeState";
+  saveSiteTreeWidth,
+} from "./siteTreeState";
 
 const TILE_COLORS = [
   IT_ACCENTS.green,
@@ -55,7 +55,7 @@ type ItOpsCustomIcon = {
   iconBackgroundColor?: string | null;
 };
 
-// A stable per-group tile colour (Fleets don't store one); hashing the id
+// A stable per-group tile colour (Sites don't store one); hashing the id
 // keeps a group's colour steady across reloads without a durable field.
 function groupColor(id: string): string {
   let hash = 0;
@@ -65,8 +65,8 @@ function groupColor(id: string): string {
   return TILE_COLORS[hash % TILE_COLORS.length];
 }
 
-function groupIcon(group: Fleet): ItIconName {
-  return group.filter ? "filter" : "fleet";
+function groupIcon(group: Site): ItIconName {
+  return group.filter ? "filter" : "site";
 }
 
 function iconForegroundForBackground(color?: string | null) {
@@ -80,7 +80,7 @@ function iconForegroundForBackground(color?: string | null) {
   return luminance > 0.72 ? "var(--text)" : "var(--surface)";
 }
 
-export function FleetsTab({
+export function SitesTab({
   renderSidebarHeader,
   treeCollapsed,
 }: {
@@ -90,19 +90,19 @@ export function FleetsTab({
   const { t } = useTranslation();
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
   const openConnection = useWorkspaceStore((state) => state.openConnection);
-  const fleets = useItOpsStore((state) => state.fleets);
+  const sites = useItOpsStore((state) => state.sites);
   const loaded = useItOpsStore((state) => state.loaded);
-  const resolveFleet = useItOpsStore((state) => state.resolveFleet);
+  const resolveSite = useItOpsStore((state) => state.resolveSite);
   const newGroupRequest = useItOpsStore((state) => state.newGroupRequest);
-  const racksByFleet = useItOpsStore((state) => state.racksByFleet);
+  const racksBySite = useItOpsStore((state) => state.racksBySite);
   const loadRacks = useItOpsStore((state) => state.loadRacks);
 
   const [activeId, setActiveId] = useState<string | null>(null);
   const [drill, setDrill] = useState<DrillPath>(EMPTY_DRILL);
   const [members, setMembers] = useState<ResolvedHost[]>([]);
-  const [dialog, setDialog] = useState<{ group: Fleet | null } | null>(null);
+  const [dialog, setDialog] = useState<{ group: Site | null } | null>(null);
   const [rackDialog, setRackDialog] = useState<{
-    fleetId: string;
+    siteId: string;
     rack: Rack | null;
     defaultServerRoom?: string;
   } | null>(null);
@@ -117,7 +117,7 @@ export function FleetsTab({
 
   // ── Tree navigator state (search, resizable width, collapsed nodes) ──
   const [query, setQuery] = useState("");
-  const [treeWidth, setTreeWidth] = useState(loadFleetTreeWidth);
+  const [treeWidth, setTreeWidth] = useState(loadSiteTreeWidth);
   const [collapsed, setCollapsed] = useState<Set<string>>(loadCollapsedNodeIds);
   const resizing = useRef(false);
   const treeRef = useRef<HTMLDivElement | null>(null);
@@ -154,8 +154,8 @@ export function FleetsTab({
     function onMove(event: PointerEvent) {
       if (!resizing.current || !el) return;
       lastWidth = Math.min(
-        FLEET_TREE_MAX_WIDTH,
-        Math.max(FLEET_TREE_MIN_WIDTH, startWidth + event.clientX - startX),
+        SITE_TREE_MAX_WIDTH,
+        Math.max(SITE_TREE_MIN_WIDTH, startWidth + event.clientX - startX),
       );
       el.style.width = `${lastWidth}px`;
       el.style.flex = `0 0 ${lastWidth}px`;
@@ -166,7 +166,7 @@ export function FleetsTab({
       resizing.current = false;
       document.body.style.cursor = "";
       setTreeWidth(lastWidth);
-      saveFleetTreeWidth(lastWidth);
+      saveSiteTreeWidth(lastWidth);
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("pointercancel", onUp);
@@ -178,8 +178,8 @@ export function FleetsTab({
   }, [treeCollapsed, treeWidth]);
 
   const activeGroup = useMemo(
-    () => fleets.find((group) => group.id === activeId) ?? fleets[0] ?? null,
-    [fleets, activeId],
+    () => sites.find((group) => group.id === activeId) ?? sites[0] ?? null,
+    [sites, activeId],
   );
 
   // Open the create dialog when the module header's primary button signals.
@@ -193,14 +193,14 @@ export function FleetsTab({
 
   // Keep a valid selection as the list loads or its active group is removed.
   useEffect(() => {
-    if (fleets.length === 0) {
+    if (sites.length === 0) {
       if (activeId !== null) setActiveId(null);
       return;
     }
-    if (!fleets.some((group) => group.id === activeId)) {
-      setActiveId(fleets[0].id);
+    if (!sites.some((group) => group.id === activeId)) {
+      setActiveId(sites[0].id);
     }
-  }, [fleets, activeId]);
+  }, [sites, activeId]);
 
   // Resolve the active group's members whenever the group (or its definition)
   // changes. The group object identity changes after an edit, re-running this.
@@ -210,7 +210,7 @@ export function FleetsTab({
       setMembers([]);
       return;
     }
-    void resolveFleet(activeGroup.id)
+    void resolveSite(activeGroup.id)
       .then((resolved) => {
         if (!disposed) setMembers(resolved);
       })
@@ -220,27 +220,27 @@ export function FleetsTab({
     return () => {
       disposed = true;
     };
-  }, [activeGroup, resolveFleet]);
+  }, [activeGroup, resolveSite]);
 
-  // Load racks for every expanded Fleet node so the tree can show its topology.
+  // Load racks for every expanded Site node so the tree can show its topology.
   useEffect(() => {
-    for (const fleet of fleets) {
-      if (isExpanded(nodeId.fleet(fleet.id)) && !racksByFleet[fleet.id]) {
-        void loadRacks(fleet.id);
+    for (const site of sites) {
+      if (isExpanded(nodeId.site(site.id)) && !racksBySite[site.id]) {
+        void loadRacks(site.id);
       }
     }
-  }, [fleets, racksByFleet, isExpanded, loadRacks]);
+  }, [sites, racksBySite, isExpanded, loadRacks]);
 
   const racks = useMemo(
-    () => (activeGroup ? (racksByFleet[activeGroup.id] ?? []) : []),
-    [activeGroup, racksByFleet],
+    () => (activeGroup ? (racksBySite[activeGroup.id] ?? []) : []),
+    [activeGroup, racksBySite],
   );
   const topology = useMemo(() => groupRackTopology(racks), [racks]);
-  const selectedFleetIdForDialog = activeGroup?.id ?? fleets[0]?.id ?? "";
+  const selectedSiteIdForDialog = activeGroup?.id ?? sites[0]?.id ?? "";
   const selectedServerRoomForDialog =
     drill.serverRoom ?? (drill.rackId ? racks.find((rack) => rack.id === drill.rackId)?.serverRoom : undefined);
 
-  // A placed Connection whose id no longer resolves to a Fleet member (deleted
+  // A placed Connection whose id no longer resolves to a Site member (deleted
   // or moved out) is a "ghost" — shown dimmed, not openable, editable/removable.
   const memberIds = useMemo(() => new Set(members.map((m) => m.connectionId)), [members]);
   function isGhostItem(item: RackItem): boolean {
@@ -257,9 +257,9 @@ export function FleetsTab({
     return item.connectionId ? (hostById.get(item.connectionId) ?? null) : null;
   }
 
-  // Select a node: focus its Fleet, switch to the Rack view, and set the drill.
-  function selectNode(fleetId: string, next: DrillPath) {
-    setActiveId(fleetId);
+  // Select a node: focus its Site, switch to the Rack view, and set the drill.
+  function selectNode(siteId: string, next: DrillPath) {
+    setActiveId(siteId);
     setDrill(next);
   }
 
@@ -292,24 +292,24 @@ export function FleetsTab({
     }
   }
 
-  if (loaded && fleets.length === 0) {
+  if (loaded && sites.length === 0) {
     return (
       <>
         <div className="it-empty">
           <span className="glyph">
-            <ItIcon name="fleet" size={30} sw={1.5} />
+            <ItIcon name="site" size={30} sw={1.5} />
           </span>
-          <h2>{t("itops.fleets.emptyTitle")}</h2>
-          <p>{t("itops.fleets.emptyBody")}</p>
+          <h2>{t("itops.sites.emptyTitle")}</h2>
+          <p>{t("itops.sites.emptyBody")}</p>
           <button type="button" className="it-btn primary" onClick={() => setDialog({ group: null })}>
             <span className="it-btn-ic">
               <ItIcon name="plus" size={15} />
             </span>
-            {t("itops.actions.newFleet")}
+            {t("itops.actions.newSite")}
           </button>
         </div>
         {dialog ? (
-          <FleetDialog
+          <SiteDialog
             group={dialog.group}
             onClose={() => setDialog(null)}
             onSaved={(saved) => setActiveId(saved.id)}
@@ -326,7 +326,7 @@ export function FleetsTab({
       ? nodeId.rack(drill.rackId)
       : drill.serverRoom != null
         ? nodeId.serverRoom(activeGroup.id, drill.serverRoom)
-        : nodeId.fleet(activeGroup.id);
+        : nodeId.site(activeGroup.id);
 
   // ── Per-view background derivation ──
   const drillRack = drill.rackId != null ? racks.find((r) => r.id === drill.rackId) : undefined;
@@ -339,7 +339,7 @@ export function FleetsTab({
 
   const q = query.trim().toLowerCase();
   const matchQ = (s: string) => !q || (s || t("itops.racks.unassigned")).toLowerCase().includes(q);
-  const effectiveTreeWidth = treeCollapsed ? FLEET_TREE_COLLAPSED_WIDTH : treeWidth;
+  const effectiveTreeWidth = treeCollapsed ? SITE_TREE_COLLAPSED_WIDTH : treeWidth;
 
   return (
     <div className={`hg ft${treeCollapsed ? " ft-collapsed" : ""}`}>
@@ -347,14 +347,14 @@ export function FleetsTab({
       <div
         ref={treeRef}
         className="ft-tree"
-        data-tutorial-id="itops.fleetsTree"
+        data-tutorial-id="itops.sitesTree"
         style={{ width: effectiveTreeWidth, flex: `0 0 ${effectiveTreeWidth}px` }}
       >
         {renderSidebarHeader?.({ collapsed: treeCollapsed })}
         {!treeCollapsed ? (
           <>
             <div className="ft-head">
-              <span className="ft-head-title">{t("itops.fleets.heading")}</span>
+              <span className="ft-head-title">{t("itops.sites.heading")}</span>
               <div className="ft-add-wrap">
                 <button
                   type="button"
@@ -378,8 +378,8 @@ export function FleetsTab({
                           setDialog({ group: null });
                         }}
                       >
-                        <ItIcon name="fleet" size={14} />
-                        {t("itops.racks.addFleet")}
+                        <ItIcon name="site" size={14} />
+                        {t("itops.racks.addSite")}
                       </button>
                       <button
                         type="button"
@@ -400,7 +400,7 @@ export function FleetsTab({
                         onClick={() => {
                           setAddMenuOpen(false);
                           setRackDialog({
-                            fleetId: selectedFleetIdForDialog,
+                            siteId: selectedSiteIdForDialog,
                             rack: null,
                             defaultServerRoom: selectedServerRoomForDialog,
                           });
@@ -429,40 +429,40 @@ export function FleetsTab({
               ) : null}
             </div>
             <div className="ft-tree-body">
-              {fleets.map((fleet) => {
-                const fId = nodeId.fleet(fleet.id);
-                const fleetRacks = racksByFleet[fleet.id] ?? [];
-                const fleetTopo = groupRackTopology(fleetRacks);
+              {sites.map((site) => {
+                const fId = nodeId.site(site.id);
+                const siteRacks = racksBySite[site.id] ?? [];
+                const siteTopo = groupRackTopology(siteRacks);
                 const open = isExpanded(fId);
                 return (
-                  <div key={fleet.id}>
+                  <div key={site.id}>
                     <TreeRow
                       depth={0}
-                      icon={groupIcon(fleet)}
-                      customIcon={fleet}
-                      label={fleet.name}
-                      tint={groupColor(fleet.id)}
-                      hasChildren={fleetRacks.length > 0}
+                      icon={groupIcon(site)}
+                      customIcon={site}
+                      label={site.name}
+                      tint={groupColor(site.id)}
+                      hasChildren={siteRacks.length > 0}
                       open={open}
                       selected={selectedId === fId && drill.serverRoom == null}
                       onToggle={() => toggleNode(fId)}
                       onSelect={() => {
-                        setActiveId(fleet.id);
+                        setActiveId(site.id);
                         setDrill(EMPTY_DRILL);
                       }}
                     />
                     {open
-                      ? fleetTopo
+                      ? siteTopo
                           .filter((room) => matchQ(room.key))
                           .map((room) => {
-                            const mId = nodeId.serverRoom(fleet.id, room.key);
+                            const mId = nodeId.serverRoom(site.id, room.key);
                             const mOpen = isExpanded(mId);
                             return (
                               <div key={mId}>
                                 <TreeRow
                                   depth={1}
                                   icon="room"
-                                  customIcon={fleet.roomIcons?.[room.key]}
+                                  customIcon={site.roomIcons?.[room.key]}
                                   label={room.key || t("itops.racks.unassigned")}
                                   count={room.racks.length}
                                   hasChildren={room.racks.length > 0}
@@ -470,7 +470,7 @@ export function FleetsTab({
                                   selected={selectedId === mId}
                                   onToggle={() => toggleNode(mId)}
                                   onSelect={() =>
-                                    selectNode(fleet.id, { serverRoom: room.key, rackId: null })
+                                    selectNode(site.id, { serverRoom: room.key, rackId: null })
                                   }
                                 />
                                 {mOpen
@@ -484,7 +484,7 @@ export function FleetsTab({
                                         open={false}
                                         selected={selectedId === nodeId.rack(rack.id)}
                                         onSelect={() =>
-                                          selectNode(fleet.id, {
+                                          selectNode(site.id, {
                                             serverRoom: room.key,
                                             rackId: rack.id,
                                           })
@@ -510,7 +510,7 @@ export function FleetsTab({
 
       {/* ── Detail ── */}
       {activeGroup ? (
-        <div className="hg-detail" data-tutorial-id="itops.fleetView">
+        <div className="hg-detail" data-tutorial-id="itops.siteView">
           <RackDrill
             topology={topology}
             racks={racks}
@@ -529,7 +529,7 @@ export function FleetsTab({
       ) : null}
 
       {dialog ? (
-        <FleetDialog
+        <SiteDialog
           group={dialog.group}
           onClose={() => setDialog(null)}
           onSaved={(saved) => setActiveId(saved.id)}
@@ -537,32 +537,32 @@ export function FleetsTab({
       ) : null}
       {rackDialog && activeGroup ? (
         <RackDialog
-          defaultFleetId={rackDialog.fleetId}
-          fleets={fleets}
-          racksByFleet={racksByFleet}
+          defaultSiteId={rackDialog.siteId}
+          sites={sites}
+          racksBySite={racksBySite}
           rack={rackDialog.rack}
           defaultServerRoom={rackDialog.defaultServerRoom}
           onClose={() => setRackDialog(null)}
           onSaved={(saved) => {
-            setActiveId(saved.fleetId);
+            setActiveId(saved.siteId);
             setDrill({ serverRoom: saved.serverRoom, rackId: saved.id });
           }}
         />
       ) : null}
       {serverRoomDialogOpen ? (
         <ServerRoomDialog
-          fleets={fleets}
-          defaultFleetId={selectedFleetIdForDialog}
+          sites={sites}
+          defaultSiteId={selectedSiteIdForDialog}
           onClose={() => setServerRoomDialogOpen(false)}
           onCreated={(saved) => {
-            setActiveId(saved.fleetId);
+            setActiveId(saved.siteId);
             setDrill({ serverRoom: saved.serverRoom, rackId: null });
           }}
         />
       ) : null}
       {itemDialog && activeGroup ? (
         <RackItemDialog
-          fleetId={activeGroup.id}
+          siteId={activeGroup.id}
           rack={itemDialog.rack}
           item={itemDialog.item}
           defaultStartU={itemDialog.startU}

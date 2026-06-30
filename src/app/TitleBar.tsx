@@ -108,18 +108,18 @@ export function TitleBar({
   activePage,
   aiPanelCollapsed,
   connectionPanelCollapsed,
-  itOpsFleetTreeCollapsed,
+  itOpsSiteTreeCollapsed,
   onToggleAiPanel,
   onToggleConnectionPanel,
-  onToggleItOpsFleetTree,
+  onToggleItOpsSiteTree,
 }: {
   activePage: ActivePage;
   aiPanelCollapsed: boolean;
   connectionPanelCollapsed: boolean;
-  itOpsFleetTreeCollapsed: boolean;
+  itOpsSiteTreeCollapsed: boolean;
   onToggleAiPanel: () => void;
   onToggleConnectionPanel: () => void;
-  onToggleItOpsFleetTree: () => void;
+  onToggleItOpsSiteTree: () => void;
 }) {
   const { t } = useTranslation();
   const nativeWindowControls = usesNativeWindowControls();
@@ -190,12 +190,12 @@ export function TitleBar({
           <button
             type="button"
             className={`app-titlebar-button app-titlebar-panel-button ${
-              itOpsFleetTreeCollapsed ? "" : "active"
+              itOpsSiteTreeCollapsed ? "" : "active"
             }`}
-            onClick={onToggleItOpsFleetTree}
-            aria-label={t("itops.fleets.heading")}
-            aria-pressed={!itOpsFleetTreeCollapsed}
-            title={t("itops.fleets.heading")}
+            onClick={onToggleItOpsSiteTree}
+            aria-label={t("itops.sites.heading")}
+            aria-pressed={!itOpsSiteTreeCollapsed}
+            title={t("itops.sites.heading")}
           >
             <PanelLeft size={15} strokeWidth={1.8} />
           </button>

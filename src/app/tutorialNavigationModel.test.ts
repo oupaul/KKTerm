@@ -112,8 +112,8 @@ for (const targetId of dashboardTargets) {
 
 const itOpsTargets = [
   "app.activityRailItOps",
-  "itops.fleetsTree",
-  "itops.fleetView",
+  "itops.sitesTree",
+  "itops.siteView",
 ] as const;
 
 for (const targetId of itOpsTargets) {

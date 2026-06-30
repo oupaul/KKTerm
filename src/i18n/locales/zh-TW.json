@@ -956,12 +956,12 @@
     "railLabel": "IT Ops",
     "title": "IT Ops",
     "tabs": {
-      "fleets": "主機群組",
+      "sites": "主機群組",
       "runs": "批次執行",
       "autos": "自動化"
     },
     "actions": {
-      "newFleet": "新增主機群組",
+      "newSite": "新增主機群組",
       "newBatchRun": "新增批次執行",
       "startBatchRun": "開始批次執行",
       "newAutomation": "新增自動化",
@@ -984,7 +984,7 @@
     "transport": {
       "auto": "自動"
     },
-    "fleets": {
+    "sites": {
       "heading": "主機群組",
       "emptyTitle": "尚無主機群組",
       "emptyBody": "主機群組是現有連線的命名選取，作為批次執行與自動化的機群目標。",
@@ -1029,9 +1029,9 @@
       "deleteBody": "「{{name}}」與其已放置的裝置將被移除。所參照的連線不受影響。",
       "nameLabel": "名稱",
       "namePlaceholder": "例如，A12",
-      "fleetLabel": "主機群組",
+      "siteLabel": "主機群組",
       "serverRoomLabel": "伺服器機房",
-      "serverRoomFleetLabel": "主機群組",
+      "serverRoomSiteLabel": "主機群組",
       "serverRoomNameLabel": "機房名稱",
       "serverRoomSelectLabel": "機房",
       "serverRoomPlaceholder": "例如 機房 B",
@@ -1055,7 +1055,7 @@
       "portsSpec": "{{count}} 個連接埠",
       "disksSpec": "{{count}} 個機槽",
       "addNode": "新增…",
-      "addFleet": "新增主機群組",
+      "addSite": "新增主機群組",
       "addServerRoom": "新增伺服器機房",
       "addRack": "新增機架",
       "heightLabel": "高度 (U)",
@@ -1205,7 +1205,7 @@
       "codeQueued": "已排入佇列",
       "savedReport": "彙總報告已儲存至執行歷程 · 來源手動 · {{ok}}/{{total}} 成功",
       "launchTitle": "新增批次執行",
-      "fleetLabel": "主機群組",
+      "siteLabel": "主機群組",
       "scopeRack": "僅以機架 {{name}} 為目標",
       "scopeServerRoom": "僅以伺服器機房 {{name}} 為目標",
       "scriptLabel": "指令碼",

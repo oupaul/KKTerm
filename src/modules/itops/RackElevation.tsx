@@ -1,4 +1,4 @@
-// Rack front elevation (docs/FLEET.md Rack View). Renders one Rack as a
+// Rack front elevation (docs/SITE.md Rack View). Renders one Rack as a
 // skeuomorphic metal frame — rail caps, a U-number gutter, and a slatted device
 // column — with each Rack Device drawn as an animated <RackDevice> faceplate at
 // its U position (ported from the "IT Ops Racks" design comp). With callbacks

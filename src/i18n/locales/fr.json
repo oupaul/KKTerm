@@ -956,12 +956,12 @@
     "railLabel": "IT Ops",
     "title": "IT Ops",
     "tabs": {
-      "fleets": "Groupes d'hôtes",
+      "sites": "Groupes d'hôtes",
       "runs": "Exécutions par lot",
       "autos": "Automatisations"
     },
     "actions": {
-      "newFleet": "Nouveau groupe d'hôtes",
+      "newSite": "Nouveau groupe d'hôtes",
       "newBatchRun": "Nouvelle exécution par lot",
       "startBatchRun": "Démarrer une exécution par lot",
       "newAutomation": "Nouvelle automatisation",
@@ -984,7 +984,7 @@
     "transport": {
       "auto": "Auto"
     },
-    "fleets": {
+    "sites": {
       "heading": "Groupes d'hôtes",
       "emptyTitle": "Aucun groupe d'hôtes pour le moment",
       "emptyBody": "Un groupe d'hôtes est une sélection nommée de connexions existantes utilisée comme cible de flotte pour les exécutions par lot et les automatisations.",
@@ -1029,9 +1029,9 @@
       "deleteBody": "« {{name}} » et ses appareils placés seront supprimés. Les connexions référencées ne sont pas affectées.",
       "nameLabel": "Nom",
       "namePlaceholder": "ex. A12",
-      "fleetLabel": "Groupe d'hôtes",
+      "siteLabel": "Groupe d'hôtes",
       "serverRoomLabel": "Salle des serveurs",
-      "serverRoomFleetLabel": "Groupe d'hôtes",
+      "serverRoomSiteLabel": "Groupe d'hôtes",
       "serverRoomNameLabel": "Nom de la salle de serveurs",
       "serverRoomSelectLabel": "Salle de serveurs",
       "serverRoomPlaceholder": "p. ex. Salle B",
@@ -1055,7 +1055,7 @@
       "portsSpec": "{{count}} ports",
       "disksSpec": "{{count}} baies",
       "addNode": "Ajouter…",
-      "addFleet": "Nouveau groupe d'hôtes",
+      "addSite": "Nouveau groupe d'hôtes",
       "addServerRoom": "Nouvelle salle des serveurs",
       "addRack": "Nouveau rack",
       "heightLabel": "Hauteur (U)",
@@ -1205,7 +1205,7 @@
       "codeQueued": "en file d'attente",
       "savedReport": "Rapport consolidé enregistré dans l'historique d'exécution · source manuel · {{ok}}/{{total}} réussis",
       "launchTitle": "Nouvelle exécution par lot",
-      "fleetLabel": "Groupe d'hôtes",
+      "siteLabel": "Groupe d'hôtes",
       "scopeRack": "Cible : rack {{name}} uniquement",
       "scopeServerRoom": "Cible : salle des serveurs {{name}} uniquement",
       "scriptLabel": "Script",

@@ -6,7 +6,7 @@ import { groupRackTopology, groupRacksByGroup } from "../src/modules/itops/rackT
 function rack(id: string, serverRoom: string, rackGroup: string): Rack {
   return {
     id,
-    fleetId: "fleet-1",
+    siteId: "site-1",
     name: id,
     serverRoom,
     rackGroup,

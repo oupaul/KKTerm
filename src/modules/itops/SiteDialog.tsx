@@ -1,4 +1,4 @@
-// Create / edit a Fleet. Built from the shared dialog primitives
+// Create / edit a Site. Built from the shared dialog primitives
 // (docs/DESIGN_LANGUAGE.md): a name field, an icon picker, the per-host
 // transport default (edit only), and a multi-select of the active Workspace's
 // Connections for static membership.
@@ -12,28 +12,28 @@ import { flattenConnections } from "../workspace/connections/treeUtils";
 import { ConnectionIconBackgroundPicker } from "../workspace/connections/ConnectionIconBackgroundPicker";
 import { ConnectionIconPicker } from "../workspace/connections/ConnectionIconPicker";
 import { useWorkspaceStore } from "../../store";
-import type { Connection, Fleet, ItopsTransport } from "../../types";
+import type { Connection, Site, ItopsTransport } from "../../types";
 import { ItIcon } from "./icons";
 import { useItOpsStore } from "./state";
 
 const TRANSPORTS: ItopsTransport[] = ["auto", "ssh", "winrm", "psexec"];
-const DEFAULT_FLEET_ICON_REF = lucideIconRefForName("Building2");
+const DEFAULT_SITE_ICON_REF = lucideIconRefForName("Building2");
 
-export function FleetDialog({
+export function SiteDialog({
   group,
   onClose,
   onSaved,
 }: {
-  group?: Fleet | null;
+  group?: Site | null;
   onClose: () => void;
-  onSaved: (group: Fleet) => void;
+  onSaved: (group: Site) => void;
 }) {
   const { t } = useTranslation();
   const isEdit = !!group;
   const activeWorkspaceId = useWorkspaceStore((state) => state.activeWorkspaceId);
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
-  const createFleet = useItOpsStore((state) => state.createFleet);
-  const updateFleet = useItOpsStore((state) => state.updateFleet);
+  const createSite = useItOpsStore((state) => state.createSite);
+  const updateSite = useItOpsStore((state) => state.updateSite);
 
   const [name, setName] = useState(group?.name ?? "");
   const [transport, setTransport] = useState<ItopsTransport>(group?.transport ?? "auto");
@@ -105,9 +105,9 @@ export function FleetDialog({
     };
     try {
       const saved = isEdit
-        ? await updateFleet(group!.id, input)
-        : await createFleet(input);
-      showStatusBarNotice(t("itops.fleets.savedNotice", { name: saved.name }), {
+        ? await updateSite(group!.id, input)
+        : await createSite(input);
+      showStatusBarNotice(t("itops.sites.savedNotice", { name: saved.name }), {
         tone: "success",
       });
       onSaved(saved);
@@ -123,8 +123,8 @@ export function FleetDialog({
     <DialogShell onBackdrop={onClose}>
       <Sheet
         width={560}
-        title={isEdit ? t("itops.fleets.editTitle") : t("itops.actions.newFleet")}
-        ariaLabel={isEdit ? t("itops.fleets.editTitle") : t("itops.actions.newFleet")}
+        title={isEdit ? t("itops.sites.editTitle") : t("itops.actions.newSite")}
+        ariaLabel={isEdit ? t("itops.sites.editTitle") : t("itops.actions.newSite")}
         footer={
           <Actions
             cancel={<Btn onClick={onClose}>{t("itops.actions.cancel")}</Btn>}
@@ -136,13 +136,13 @@ export function FleetDialog({
           />
         }
       >
-        {isEdit ? null : <p className="hg-dlg-help">{t("itops.fleets.createHelp")}</p>}
+        {isEdit ? null : <p className="hg-dlg-help">{t("itops.sites.createHelp")}</p>}
         <div className="connection-type-summary">
           <ConnectionIconPicker
             customIconDataUrls={[]}
-            defaultIconDataUrl={DEFAULT_FLEET_ICON_REF}
-            defaultIconKeywords={["fleet", "building", "default"]}
-            defaultIconLabel={t("itops.fleets.heading")}
+            defaultIconDataUrl={DEFAULT_SITE_ICON_REF}
+            defaultIconKeywords={["site", "building", "default"]}
+            defaultIconLabel={t("itops.sites.heading")}
             iconBackgroundColor={iconBackgroundColor}
             iconColor={iconColor}
             iconDataUrl={iconDataUrl}
@@ -157,17 +157,17 @@ export function FleetDialog({
             />
           </div>
         </div>
-        <Field label={t("itops.fleets.nameLabel")} req>
+        <Field label={t("itops.sites.nameLabel")} req>
           <TextInput
             value={name}
-            placeholder={t("itops.fleets.namePlaceholder")}
+            placeholder={t("itops.sites.namePlaceholder")}
             onChange={(event) => setName(event.currentTarget.value)}
             autoFocus
           />
         </Field>
 
         {isEdit ? (
-          <Field label={t("itops.fleets.perHostTransport")}>
+          <Field label={t("itops.sites.perHostTransport")}>
             <div className="hg-dlg-seg">
               {TRANSPORTS.map((value) => (
                 <button
@@ -184,12 +184,12 @@ export function FleetDialog({
         ) : null}
 
         <Field
-          label={t("itops.fleets.connectionsLabel")}
-          hint={t("itops.fleets.selectedCount", { count: selected.size })}
+          label={t("itops.sites.connectionsLabel")}
+          hint={t("itops.sites.selectedCount", { count: selected.size })}
         >
           <div className="hg-dlg-list">
             {orderedConnections.length === 0 ? (
-              <div className="hg-dlg-empty">{t("itops.fleets.noConnections")}</div>
+              <div className="hg-dlg-empty">{t("itops.sites.noConnections")}</div>
             ) : (
               orderedConnections.map((connection) => {
                 const checked = selected.has(connection.id);

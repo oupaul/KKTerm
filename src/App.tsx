@@ -37,9 +37,9 @@ import { useDashboardBackendInvalidation } from "./modules/dashboard/state/inval
 import { InstallerPage } from "./modules/installer/InstallerPage";
 import { ItOpsPage } from "./modules/itops/ItOpsPage";
 import {
-  loadFleetTreeCollapsed,
-  saveFleetTreeCollapsed,
-} from "./modules/itops/fleetTreeState";
+  loadSiteTreeCollapsed,
+  saveSiteTreeCollapsed,
+} from "./modules/itops/siteTreeState";
 import {
   tutorialSurfaceKindForTarget,
   type TutorialSurfaceKind,
@@ -168,8 +168,8 @@ function App() {
     useState<AssistantPageContext>();
   const [itOpsAssistantContext, setItOpsAssistantContext] =
     useState<AssistantPageContext>();
-  const [itOpsFleetTreeCollapsed, setItOpsFleetTreeCollapsed] =
-    useState(loadFleetTreeCollapsed);
+  const [itOpsSiteTreeCollapsed, setItOpsSiteTreeCollapsed] =
+    useState(loadSiteTreeCollapsed);
   const [settingsAssistantContext, setSettingsAssistantContext] =
     useState<SettingsAssistantContext>();
   const [tutorialHighlightRequest, setTutorialHighlightRequest] =
@@ -282,8 +282,8 @@ function App() {
     return targetId.trim().startsWith("connections.");
   }
 
-  function shouldRevealItOpsFleetTreeForTutorial(targetId: string) {
-    return targetId.trim() === "itops.fleetsTree";
+  function shouldRevealItOpsSiteTreeForTutorial(targetId: string) {
+    return targetId.trim() === "itops.sitesTree";
   }
 
   async function handleTutorialRequest(request: TutorialHighlightRequest) {
@@ -291,8 +291,8 @@ function App() {
     if (shouldRevealConnectionPanelForTutorial(request.targetId)) {
       expandConnectionPanel();
     }
-    if (shouldRevealItOpsFleetTreeForTutorial(request.targetId)) {
-      setItOpsFleetTreeCollapsed(false);
+    if (shouldRevealItOpsSiteTreeForTutorial(request.targetId)) {
+      setItOpsSiteTreeCollapsed(false);
     }
     const surfaceKind = tutorialSurfaceKindForTarget(request.targetId);
     if (surfaceKind && !activateWorkspaceTabForSurface(surfaceKind)) {
@@ -323,8 +323,8 @@ function App() {
   }, [showItOps, activePage]);
 
   useEffect(() => {
-    saveFleetTreeCollapsed(itOpsFleetTreeCollapsed);
-  }, [itOpsFleetTreeCollapsed]);
+    saveSiteTreeCollapsed(itOpsSiteTreeCollapsed);
+  }, [itOpsSiteTreeCollapsed]);
 
   const visibleBasePage = isOverlayPage(activePage)
     ? previousBasePageRef.current
@@ -341,11 +341,11 @@ function App() {
         activePage={activePage}
         aiPanelCollapsed={aiPanelLayout.collapsed}
         connectionPanelCollapsed={connectionPanelLayout.collapsed}
-        itOpsFleetTreeCollapsed={itOpsFleetTreeCollapsed}
+        itOpsSiteTreeCollapsed={itOpsSiteTreeCollapsed}
         onToggleAiPanel={toggleAiPanel}
         onToggleConnectionPanel={toggleConnectionPanel}
-        onToggleItOpsFleetTree={() =>
-          setItOpsFleetTreeCollapsed((collapsed) => !collapsed)
+        onToggleItOpsSiteTree={() =>
+          setItOpsSiteTreeCollapsed((collapsed) => !collapsed)
         }
       />
       <div
@@ -437,7 +437,7 @@ function App() {
         <ItOpsPage
           key="itops-page"
           active={visibleBasePage === "itops"}
-          fleetTreeCollapsed={itOpsFleetTreeCollapsed}
+          siteTreeCollapsed={itOpsSiteTreeCollapsed}
           onAssistantContextChange={setItOpsAssistantContext}
         />
       ) : null}
