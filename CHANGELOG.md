@@ -3,6 +3,72 @@
 All notable changes to KKTerm are documented here.
 
 ## Direct Downloads
+* 💻 [Download for Windows (64-bit)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.108/kkterm-0.1.108-windows-x64-setup.exe)
+* 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.108/kkterm-0.1.108-windows-arm64-setup.exe)
+
+## Highlights
+- **Connection search now beats the “Show Connected” filter** (so you’ll actually find the connection you typed). 🫡  
+- **Dashboard PC Info widget gets an animated refresh** and richer macOS/Linux details.  
+- **Server Room View adds a top-down floor-plan layout** with health/utilization metrics.
+
+## New
+- **Server Room View:** Added a **top-down floor-plan** layout (tiles by rack, with legend and persisted metric choice).  
+  - PR #506 (see also #506 in highlights below context)
+
+## Improved
+- **Dashboard (PC Info):** Updated to an **animated PC Info widget** with per-section transitions/graphics and macOS/Linux enrichment.
+
+- **IT Ops dialogs:** Moved the **icon foreground palette into the selector popover** so it fits the recolor-capable icons flow better.  
+  - PR #501
+
+## Fixed
+- **Connections:** **Search overrides the “Show Connected” filter**, surfacing matching connections by name even when the live-status toggle would otherwise hide them.  
+  - PR #503
+
+- **Dashboard:** **Fix URL widget webviews covering overlays** when Dashboard overlays are open.  
+  - PR #502  
+- **Dashboard (PC Info):** Show **all real GPUs** (discrete-first) and avoid hiding secondary cards.  
+  - PR #508
+
+## Internal
+- Updated stale docs and usage counts across localized READMEs. PR #500  
+- Rename IT Ops terminology from **“Fleet” to “Site”** globally (product-vocabulary + related i18n/docs/schema renames). PR #504  
+- Installer catalog updates for additional app entries (including Blender / ComfyUI / LM Studio, plus other design/AI tools). PR #506–#509 PR list in generated notes.  
+- Various localization/doc updates for UI consistency and terminology. (Includes PC Info i18n cleanup and i18n additions.)
+
+---
+
+## 0.1.108 亮點（Highlights）
+- **連線搜尋現在會覆蓋「只顯示已連線（Show Connected）」篩選**（不然你打字找不到，就很像在終端機裡迷路）。🫡  
+- **儀表板的 PC Info Widget 改版為動畫風格**，並增加 macOS/Linux 的資訊內容。  
+- **機房（Server Room）檢視新增俯視平面圖**，可顯示健康度/使用率指標。
+
+## 新增（New）
+- **機房檢視（Server Room View）：** 新增 **俯視的平面圖（floor-plan）布局**（用磚塊呈現機架，並附圖例與指標選擇的保留設定）。  
+  - PR #506
+
+## 改善（Improved）
+- **儀表板（Dashboard / PC Info）：** 將 **PC Info Widget 更新為動畫版本**，包含各分段的切換/圖形動效，並強化 macOS/Linux 的資料整理。
+
+- **IT Ops 對話框：** 將 **圖示前景色（icon foreground）調色盤**移到「圖示選擇器（selector popover）」內，讓可重新上色的圖示流程更順。  
+  - PR #501
+
+## 修正（Fixed）
+- **連線（Connections）：** **搜尋會優先於「只顯示已連線」**，即使切換已連線篩選，輸入的連線名稱仍會被找出。  
+  - PR #503
+
+- **儀表板（Dashboard）：** 修正 **URL Widget 的 WebView 會蓋住 Dashboard overlay** 的問題。  
+  - PR #502  
+- **儀表板（PC Info）：** 修正 GPU 顯示，**會顯示所有真實 GPU（Discrete-first）**，避免次要顯示卡被隱藏。  
+  - PR #508
+
+## 內部（Internal）
+- 更新各語系 README 的舊文件與使用數據。PR #500  
+- 將 IT Ops 用語全面從 **「Fleet」改為「Site」**（包含產品用語/i18n/文件與相關命名）。PR #504  
+- 安裝程式（Installer）目錄新增/更新應用條目（包含 Blender / ComfyUI / LM Studio 等）。PR #506–#509（依 GitHub 自動彙整清單）。  
+- 其他語系/文件更新以提升 UI 一致性與用語正確性（包含 PC Info 的 i18n 清理與新增）。
+
+## Direct Downloads
 * 💻 [Download for Windows (64-bit)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.107/kkterm-0.1.107-windows-x64-setup.exe)
 * 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.107/kkterm-0.1.107-windows-arm64-setup.exe)
 
