@@ -570,6 +570,35 @@
       "designCapacity": "设计容量",
       "fullCapacity": "满充电容量"
     },
+    "pcInfoTab": {
+      "summary": "概要",
+      "os": "系统",
+      "cpu": "CPU",
+      "memory": "内存",
+      "motherboard": "主板",
+      "graphics": "GPU",
+      "storage": "磁盘",
+      "network": "网络",
+      "audio": "音频",
+      "battery": "电池"
+    },
+    "pcInfoLabel": {
+      "systemInventory": "系统清单",
+      "cpuLoad": "CPU 负载",
+      "liveLoad": "实时负载",
+      "liveThroughput": "实时吞吐量",
+      "inUse": "已用",
+      "daysUp": "运行天数",
+      "maxGhz": "最大 GHz",
+      "gbTotal": "GB 总计",
+      "gbFree": "GB 可用",
+      "slotsPopulated": "已用插槽",
+      "typeSpeed": "类型 · 速度",
+      "freeOfTotal": "{{free}} 可用 · {{total}}",
+      "audioDevices": "音频设备",
+      "sourceCached": "来源：{{source}} · 已缓存快照",
+      "monitorOff": "实时指标已关闭 — 请启用状态栏监视器"
+    },
     "networkToolsTitle": "网络工具",
     "networkToolsSummary": "一个分页组件中包含子网计算、DNS、测速、ping 扫描和 WHOIS。",
     "networkToolsTab": {

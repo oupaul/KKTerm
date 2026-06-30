@@ -570,6 +570,35 @@
       "designCapacity": "ความจุตามการออกแบบ",
       "fullCapacity": "ความจุเมื่อชาร์จเต็ม"
     },
+    "pcInfoTab": {
+      "summary": "สรุป",
+      "os": "OS",
+      "cpu": "CPU",
+      "memory": "หน่วยความจำ",
+      "motherboard": "บอร์ด",
+      "graphics": "GPU",
+      "storage": "ดิสก์",
+      "network": "เครือข่าย",
+      "audio": "เสียง",
+      "battery": "แบตเตอรี่"
+    },
+    "pcInfoLabel": {
+      "systemInventory": "ข้อมูลระบบ",
+      "cpuLoad": "โหลด CPU",
+      "liveLoad": "โหลดสด",
+      "liveThroughput": "ทรูพุตสด",
+      "inUse": "ใช้งานอยู่",
+      "daysUp": "วันทำงาน",
+      "maxGhz": "GHz สูงสุด",
+      "gbTotal": "GB ทั้งหมด",
+      "gbFree": "GB ว่าง",
+      "slotsPopulated": "สล็อตที่ใช้",
+      "typeSpeed": "ชนิด · ความเร็ว",
+      "freeOfTotal": "ว่าง {{free}} · {{total}}",
+      "audioDevices": "อุปกรณ์เสียง",
+      "sourceCached": "แหล่งที่มา: {{source}} · แคชสแนปช็อต",
+      "monitorOff": "ปิดเมตริกสด — เปิดการมอนิเตอร์แถบสถานะ"
+    },
     "networkToolsTitle": "เครื่องมือเครือข่าย",
     "networkToolsSummary": "คำนวณซับเน็ต, DNS, ทดสอบความเร็ว, กวาด ping และ WHOIS ในวิดเจ็ตแบบแท็บเดียว",
     "networkToolsTab": {

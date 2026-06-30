@@ -570,6 +570,35 @@
       "designCapacity": "Dung lượng thiết kế",
       "fullCapacity": "Dung lượng sạc đầy"
     },
+    "pcInfoTab": {
+      "summary": "Tóm tắt",
+      "os": "OS",
+      "cpu": "CPU",
+      "memory": "Bộ nhớ",
+      "motherboard": "Bo mạch",
+      "graphics": "GPU",
+      "storage": "Ổ đĩa",
+      "network": "Mạng",
+      "audio": "Âm thanh",
+      "battery": "Pin"
+    },
+    "pcInfoLabel": {
+      "systemInventory": "Thông tin hệ thống",
+      "cpuLoad": "Tải CPU",
+      "liveLoad": "Tải trực tiếp",
+      "liveThroughput": "Thông lượng trực tiếp",
+      "inUse": "Đang dùng",
+      "daysUp": "Số ngày hoạt động",
+      "maxGhz": "GHz tối đa",
+      "gbTotal": "GB tổng",
+      "gbFree": "GB trống",
+      "slotsPopulated": "Khe đã dùng",
+      "typeSpeed": "Loại · Tốc độ",
+      "freeOfTotal": "{{free}} trống · {{total}}",
+      "audioDevices": "Thiết bị âm thanh",
+      "sourceCached": "Nguồn: {{source}} · ảnh chụp đã lưu đệm",
+      "monitorOff": "Tắt số liệu trực tiếp — bật trình giám sát thanh trạng thái"
+    },
     "networkToolsTitle": "Công cụ mạng",
     "networkToolsSummary": "Tính subnet, DNS, kiểm tra tốc độ, quét ping và WHOIS trong một widget có tab.",
     "networkToolsTab": {

@@ -570,6 +570,35 @@
       "designCapacity": "Kapasitas desain",
       "fullCapacity": "Kapasitas isi penuh"
     },
+    "pcInfoTab": {
+      "summary": "Ringkasan",
+      "os": "OS",
+      "cpu": "CPU",
+      "memory": "Memori",
+      "motherboard": "Board",
+      "graphics": "GPU",
+      "storage": "Disk",
+      "network": "Jaringan",
+      "audio": "Audio",
+      "battery": "Baterai"
+    },
+    "pcInfoLabel": {
+      "systemInventory": "Inventaris sistem",
+      "cpuLoad": "Beban CPU",
+      "liveLoad": "Beban langsung",
+      "liveThroughput": "Throughput langsung",
+      "inUse": "Terpakai",
+      "daysUp": "Hari aktif",
+      "maxGhz": "GHz maks",
+      "gbTotal": "GB total",
+      "gbFree": "GB bebas",
+      "slotsPopulated": "Slot terisi",
+      "typeSpeed": "Tipe · Kecepatan",
+      "freeOfTotal": "{{free}} bebas · {{total}}",
+      "audioDevices": "Perangkat audio",
+      "sourceCached": "Sumber: {{source}} · snapshot di-cache",
+      "monitorOff": "Metrik langsung nonaktif — aktifkan monitor bilah status"
+    },
     "networkToolsTitle": "Alat Jaringan",
     "networkToolsSummary": "Perhitungan subnet, DNS, uji kecepatan, sweep ping, dan WHOIS dalam satu widget bertab.",
     "networkToolsTab": {

@@ -570,6 +570,35 @@
       "designCapacity": "Capacidade de projeto",
       "fullCapacity": "Capacidade de carga total"
     },
+    "pcInfoTab": {
+      "summary": "Resumo",
+      "os": "SO",
+      "cpu": "CPU",
+      "memory": "Memória",
+      "motherboard": "Placa",
+      "graphics": "GPU",
+      "storage": "Disco",
+      "network": "Rede",
+      "audio": "Áudio",
+      "battery": "Bateria"
+    },
+    "pcInfoLabel": {
+      "systemInventory": "Inventário do sistema",
+      "cpuLoad": "Carga da CPU",
+      "liveLoad": "Carga ao vivo",
+      "liveThroughput": "Taxa ao vivo",
+      "inUse": "Em uso",
+      "daysUp": "Dias ativo",
+      "maxGhz": "GHz máx",
+      "gbTotal": "GB total",
+      "gbFree": "GB livre",
+      "slotsPopulated": "Slots ocupados",
+      "typeSpeed": "Tipo · Velocidade",
+      "freeOfTotal": "{{free}} livre · {{total}}",
+      "audioDevices": "Dispositivos de áudio",
+      "sourceCached": "Origem: {{source}} · snapshot em cache",
+      "monitorOff": "Métricas ao vivo desativadas — ative o monitor da barra de status"
+    },
     "networkToolsTitle": "Ferramentas de rede",
     "networkToolsSummary": "Cálculo de sub-redes, DNS, testes de velocidade, varreduras de ping e WHOIS em um widget com abas.",
     "networkToolsTab": {

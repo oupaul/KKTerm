@@ -570,6 +570,35 @@
       "designCapacity": "設計容量",
       "fullCapacity": "満充電容量"
     },
+    "pcInfoTab": {
+      "summary": "概要",
+      "os": "OS",
+      "cpu": "CPU",
+      "memory": "メモリ",
+      "motherboard": "ボード",
+      "graphics": "GPU",
+      "storage": "ディスク",
+      "network": "ネット",
+      "audio": "オーディオ",
+      "battery": "バッテリー"
+    },
+    "pcInfoLabel": {
+      "systemInventory": "システム情報",
+      "cpuLoad": "CPU負荷",
+      "liveLoad": "ライブ負荷",
+      "liveThroughput": "ライブスループット",
+      "inUse": "使用中",
+      "daysUp": "稼働日数",
+      "maxGhz": "最大GHz",
+      "gbTotal": "GB合計",
+      "gbFree": "GB空き",
+      "slotsPopulated": "使用スロット",
+      "typeSpeed": "種類 · 速度",
+      "freeOfTotal": "{{free}} 空き · {{total}}",
+      "audioDevices": "オーディオデバイス",
+      "sourceCached": "ソース: {{source}} · スナップショットをキャッシュ",
+      "monitorOff": "ライブ計測オフ — ステータスバーのモニターを有効にしてください"
+    },
     "networkToolsTitle": "ネットワークツール",
     "networkToolsSummary": "サブネット計算、DNS、速度テスト、ping スイープ、WHOIS を 1 つのタブ付きウィジェットにまとめます。",
     "networkToolsTab": {

@@ -570,6 +570,35 @@
       "designCapacity": "Design capacity",
       "fullCapacity": "Full-charge capacity"
     },
+    "pcInfoTab": {
+      "summary": "Summary",
+      "os": "OS",
+      "cpu": "CPU",
+      "memory": "Memory",
+      "motherboard": "Board",
+      "graphics": "GPU",
+      "storage": "Disk",
+      "network": "Net",
+      "audio": "Audio",
+      "battery": "Battery"
+    },
+    "pcInfoLabel": {
+      "systemInventory": "System inventory",
+      "cpuLoad": "CPU load",
+      "liveLoad": "Live load",
+      "liveThroughput": "Live throughput",
+      "inUse": "In use",
+      "daysUp": "Days up",
+      "maxGhz": "GHz max",
+      "gbTotal": "GB total",
+      "gbFree": "GB free",
+      "slotsPopulated": "Slots populated",
+      "typeSpeed": "Type · Speed",
+      "freeOfTotal": "{{free}} free · {{total}}",
+      "audioDevices": "Audio devices",
+      "sourceCached": "Source: {{source}} · snapshot cached",
+      "monitorOff": "Live metrics off — enable the status-bar monitor"
+    },
     "networkToolsTitle": "Network Tools",
     "networkToolsSummary": "Subnet math, DNS, speed tests, ping sweeps, and WHOIS in one tabbed widget.",
     "networkToolsTab": {

@@ -570,6 +570,35 @@
       "designCapacity": "설계 용량",
       "fullCapacity": "완전 충전 용량"
     },
+    "pcInfoTab": {
+      "summary": "요약",
+      "os": "OS",
+      "cpu": "CPU",
+      "memory": "메모리",
+      "motherboard": "보드",
+      "graphics": "GPU",
+      "storage": "디스크",
+      "network": "네트워크",
+      "audio": "오디오",
+      "battery": "배터리"
+    },
+    "pcInfoLabel": {
+      "systemInventory": "시스템 정보",
+      "cpuLoad": "CPU 부하",
+      "liveLoad": "실시간 부하",
+      "liveThroughput": "실시간 처리량",
+      "inUse": "사용 중",
+      "daysUp": "가동 일수",
+      "maxGhz": "최대 GHz",
+      "gbTotal": "GB 전체",
+      "gbFree": "GB 여유",
+      "slotsPopulated": "사용 슬롯",
+      "typeSpeed": "종류 · 속도",
+      "freeOfTotal": "{{free}} 여유 · {{total}}",
+      "audioDevices": "오디오 장치",
+      "sourceCached": "출처: {{source}} · 스냅샷 캐시됨",
+      "monitorOff": "실시간 측정 꺼짐 — 상태 표시줄 모니터를 켜세요"
+    },
     "networkToolsTitle": "네트워크 도구",
     "networkToolsSummary": "서브넷 계산, DNS, 속도 테스트, ping 스윕, WHOIS를 하나의 탭 위젯에 제공합니다.",
     "networkToolsTab": {

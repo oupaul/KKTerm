@@ -570,6 +570,35 @@
       "designCapacity": "設計容量",
       "fullCapacity": "滿充電容量"
     },
+    "pcInfoTab": {
+      "summary": "概要",
+      "os": "系統",
+      "cpu": "CPU",
+      "memory": "記憶體",
+      "motherboard": "主機板",
+      "graphics": "GPU",
+      "storage": "磁碟",
+      "network": "網路",
+      "audio": "音訊",
+      "battery": "電池"
+    },
+    "pcInfoLabel": {
+      "systemInventory": "系統清單",
+      "cpuLoad": "CPU 負載",
+      "liveLoad": "即時負載",
+      "liveThroughput": "即時吞吐量",
+      "inUse": "已用",
+      "daysUp": "運作天數",
+      "maxGhz": "最大 GHz",
+      "gbTotal": "GB 總計",
+      "gbFree": "GB 可用",
+      "slotsPopulated": "已用插槽",
+      "typeSpeed": "類型 · 速度",
+      "freeOfTotal": "{{free}} 可用 · {{total}}",
+      "audioDevices": "音訊裝置",
+      "sourceCached": "來源：{{source}} · 已快取快照",
+      "monitorOff": "即時指標已關閉 — 請啟用狀態列監視器"
+    },
     "networkToolsTitle": "網路工具",
     "networkToolsSummary": "在單一分頁小工具中提供子網路計算、DNS、測速、ping 掃描和 WHOIS。",
     "networkToolsTab": {
