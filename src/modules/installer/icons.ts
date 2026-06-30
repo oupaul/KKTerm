@@ -14,10 +14,12 @@ import anthropic from "../../assets/installer-icons/anthropic.svg?url";
 import antigravity from "../../assets/installer-icons/antigravity.svg?url";
 import astral from "../../assets/installer-icons/astral.svg?url";
 import bentopdf from "../../assets/installer-icons/bentopdf.svg?url";
+import blender from "../../assets/installer-icons/blender.svg?url";
 import bruno from "../../assets/installer-icons/bruno.svg?url";
 import bun from "../../assets/installer-icons/bun.svg?url";
 import claudeCode from "../../assets/installer-icons/claude-code.svg?url";
 import codex from "../../assets/installer-icons/codex.svg?url";
+import comfyui from "../../assets/installer-icons/comfyui.svg?url";
 import cursor from "../../assets/installer-icons/cursor.svg?url";
 import ditto from "../../assets/installer-icons/ditto.png?url";
 import docker from "../../assets/installer-icons/docker.svg?url";
@@ -33,6 +35,7 @@ import inkscape from "../../assets/installer-icons/inkscape.svg?url";
 import krita from "../../assets/installer-icons/krita.svg?url";
 import langflow from "../../assets/installer-icons/langflow.svg?url";
 import linux from "../../assets/installer-icons/linux.svg?url";
+import lmstudio from "../../assets/installer-icons/lmstudio.svg?url";
 import n8n from "../../assets/installer-icons/n8n.svg?url";
 import nodedotjs from "../../assets/installer-icons/nodedotjs.svg?url";
 import notepadpp from "../../assets/installer-icons/notepadpp.svg?url";
@@ -77,6 +80,8 @@ const RECIPE_ICON_URLS: Record<string, string> = {
   "open-webui": openWebui,
   flowise,
   langflow,
+  comfyui,
+  lmstudio,
   bruno,
   ripgrep: defaultIcon,
   jq: defaultIcon,
@@ -105,6 +110,7 @@ const RECIPE_ICON_URLS: Record<string, string> = {
   drawio,
   krita,
   inkscape,
+  blender,
   bentopdf,
   openflowkit,
   openclaw,

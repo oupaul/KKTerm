@@ -134,6 +134,11 @@ export const BRAND_ICON_ENTRIES: BrandIconEntry[] = [
     keywords: ["bentopdf", "bento pdf", "pdf", "document", "file"],
   },
   {
+    id: "blender",
+    label: "Blender",
+    keywords: ["blender", "3d", "modeling", "animation", "render", "vfx", "design"],
+  },
+  {
     id: "bruno",
     label: "Bruno",
     keywords: ["bruno", "api", "network", "developer"],
@@ -152,6 +157,11 @@ export const BRAND_ICON_ENTRIES: BrandIconEntry[] = [
     id: "codex",
     label: "OpenAI Codex",
     keywords: ["openai", "codex", "ai", "assistant", "code", "developer", "cli"],
+  },
+  {
+    id: "comfyui",
+    label: "ComfyUI",
+    keywords: ["comfyui", "comfy", "stable diffusion", "diffusion", "ai", "image", "workflow"],
   },
   {
     id: "ditto",
@@ -222,6 +232,11 @@ export const BRAND_ICON_ENTRIES: BrandIconEntry[] = [
     id: "langflow",
     label: "Langflow",
     keywords: ["langflow", "ai", "assistant", "workflow", "developer"],
+  },
+  {
+    id: "lmstudio",
+    label: "LM Studio",
+    keywords: ["lmstudio", "lm studio", "ai", "llm", "local", "model", "assistant"],
   },
   {
     id: "n8n",
