@@ -843,7 +843,8 @@
       "windowsPowerUser": "Windows パワー ユーザー",
       "remoteAccess": "リモート アクセス",
       "packageManagers": "パッケージ マネージャー",
-      "utilities": "ユーティリティ"
+      "utilities": "ユーティリティ",
+      "design": "デザイン"
     },
     "actions": {
       "install": "インストール",

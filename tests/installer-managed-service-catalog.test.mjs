@@ -280,11 +280,11 @@ test("BentoPDF is visible in the Install Helper Utilities section", async () => 
   );
 });
 
-test("OpenFlowKit is a Utilities managed web app", () => {
+test("OpenFlowKit is a Design managed web app", () => {
   const openflowkit = byId.get("openflowkit");
 
   assert.ok(openflowkit, "OpenFlowKit should be present in the installer catalog");
-  assert.equal(openflowkit.category, "utilities");
+  assert.equal(openflowkit.category, "design");
   assert.ok(
     openflowkit.needs?.includes("node-bundle"),
     "OpenFlowKit should install Node before building the managed web app",
@@ -295,7 +295,7 @@ test("OpenFlowKit is a Utilities managed web app", () => {
   });
 });
 
-test("OpenFlowKit is visible in the Install Helper Utilities section", async () => {
+test("Design tools are visible in the Install Helper Design section", async () => {
   const source = await readFile(
     new URL("../src/modules/installer/sections.ts", import.meta.url),
     "utf8",
@@ -303,8 +303,46 @@ test("OpenFlowKit is visible in the Install Helper Utilities section", async () 
 
   assert.match(
     source,
-    /titleKey:\s*"installer\.section\.utilities"[\s\S]*ids:\s*\[[^\]]*"openflowkit"/,
-    "OpenFlowKit should be listed in the visible Utilities section",
+    /titleKey:\s*"installer\.section\.design"[\s\S]*ids:\s*\[[^\]]*"excalidraw"[^\]]*"openflowkit"[^\]]*"drawio"[^\]]*"krita"[^\]]*"inkscape"/,
+    "Design tools should be listed in the visible Design section",
+  );
+});
+
+test("Draw.IO, Krita, and Inkscape are Design tools installed via winget", () => {
+  const expected = new Map([
+    ["drawio", "JGraph.Draw"],
+    ["krita", "KDE.Krita"],
+    ["inkscape", "Inkscape.Inkscape"],
+  ]);
+
+  for (const [toolId, wingetId] of expected) {
+    const recipe = byId.get(toolId);
+    assert.ok(recipe, `${toolId} should be present in the installer catalog`);
+    assert.equal(recipe.category, "design");
+    assert.deepEqual(recipe.provider, { kind: "winget", id: wingetId });
+    assert.ok(recipe.options?.includes("provider"));
+  }
+});
+
+test("Hermes Desktop is visible in AI Agents and uses a direct installer source", async () => {
+  const recipe = byId.get("hermes-desktop");
+  assert.ok(recipe, "Hermes Desktop should be present in the installer catalog");
+  assert.equal(recipe.category, "ai-agent");
+  assert.deepEqual(recipe.provider, {
+    kind: "downloadInstaller",
+    url: "https://hermes-assets.nousresearch.com/Hermes-Setup.exe?build=c9269fbfb689",
+    fileName: "Hermes-Setup.exe",
+  });
+
+  const source = await readFile(
+    new URL("../src/modules/installer/sections.ts", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(
+    source,
+    /titleKey:\s*"installer\.section\.aiAgents"[\s\S]*ids:\s*\[[^\]]*"hermes-agent"[^\]]*"hermes-desktop"/,
+    "Hermes Desktop should be listed in the visible AI Agents section",
   );
 });
 

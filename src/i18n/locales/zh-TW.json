@@ -843,7 +843,8 @@
       "windowsPowerUser": "Windows 進階使用者",
       "remoteAccess": "遠端存取",
       "packageManagers": "套件管理員",
-      "utilities": "公用程式"
+      "utilities": "公用程式",
+      "design": "設計"
     },
     "actions": {
       "install": "安裝",

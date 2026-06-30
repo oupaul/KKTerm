@@ -843,7 +843,8 @@
       "windowsPowerUser": "Windows 高级用户",
       "remoteAccess": "远程访问",
       "packageManagers": "包管理器",
-      "utilities": "实用工具"
+      "utilities": "实用工具",
+      "design": "设计"
     },
     "actions": {
       "install": "安装",

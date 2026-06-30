@@ -843,7 +843,8 @@
       "windowsPowerUser": "Windows 고급 사용자",
       "remoteAccess": "원격 액세스",
       "packageManagers": "패키지 관리자",
-      "utilities": "유틸리티"
+      "utilities": "유틸리티",
+      "design": "디자인"
     },
     "actions": {
       "install": "설치",

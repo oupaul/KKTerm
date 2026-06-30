@@ -843,7 +843,8 @@
       "windowsPowerUser": "Pengguna Mahir Windows",
       "remoteAccess": "Akses Jarak Jauh",
       "packageManagers": "Manajer Paket",
-      "utilities": "Utilitas"
+      "utilities": "Utilitas",
+      "design": "Desain"
     },
     "actions": {
       "install": "Instal",

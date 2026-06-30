@@ -164,6 +164,11 @@ export const BRAND_ICON_ENTRIES: BrandIconEntry[] = [
     keywords: ["docker", "container", "package", "developer"],
   },
   {
+    id: "drawio",
+    label: "Draw.IO",
+    keywords: ["drawio", "draw.io", "diagrams.net", "diagram", "flowchart", "design"],
+  },
+  {
     id: "everything",
     label: "Everything",
     keywords: ["everything", "voidtools", "search", "file", "utility"],
@@ -197,6 +202,21 @@ export const BRAND_ICON_ENTRIES: BrandIconEntry[] = [
     id: "hermes-agent",
     label: "Hermes Agent",
     keywords: ["hermes", "agent", "ai", "assistant", "bot"],
+  },
+  {
+    id: "hermes-desktop",
+    label: "Hermes Desktop",
+    keywords: ["hermes", "desktop", "agent", "ai", "assistant", "bot"],
+  },
+  {
+    id: "inkscape",
+    label: "Inkscape",
+    keywords: ["inkscape", "svg", "vector", "design", "drawing"],
+  },
+  {
+    id: "krita",
+    label: "Krita",
+    keywords: ["krita", "painting", "drawing", "illustration", "design"],
   },
   {
     id: "langflow",

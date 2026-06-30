@@ -843,7 +843,8 @@
       "windowsPowerUser": "Windows Power User",
       "remoteAccess": "Remote Access",
       "packageManagers": "Package Managers",
-      "utilities": "Utilities"
+      "utilities": "Utilities",
+      "design": "Design"
     },
     "actions": {
       "install": "Install",

@@ -843,7 +843,8 @@
       "windowsPowerUser": "Usuario avanzado de Windows",
       "remoteAccess": "Acceso remoto",
       "packageManagers": "Gestores de paquetes",
-      "utilities": "Utilidades"
+      "utilities": "Utilidades",
+      "design": "Diseño"
     },
     "actions": {
       "install": "Instalar",

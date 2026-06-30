@@ -843,7 +843,8 @@
       "windowsPowerUser": "ผู้ใช้ Windows ขั้นสูง",
       "remoteAccess": "การเข้าถึงระยะไกล",
       "packageManagers": "ตัวจัดการแพ็กเกจ",
-      "utilities": "ยูทิลิตี"
+      "utilities": "ยูทิลิตี",
+      "design": "ออกแบบ"
     },
     "actions": {
       "install": "ติดตั้ง",

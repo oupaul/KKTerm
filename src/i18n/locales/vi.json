@@ -843,7 +843,8 @@
       "windowsPowerUser": "Người dùng Windows nâng cao",
       "remoteAccess": "Truy cập từ xa",
       "packageManagers": "Trình quản lý gói",
-      "utilities": "Tiện ích"
+      "utilities": "Tiện ích",
+      "design": "Thiết kế"
     },
     "actions": {
       "install": "Cài đặt",

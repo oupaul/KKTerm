@@ -8,7 +8,7 @@
 // Each section also carries a lucide glyph and a CSS tint variable (defined in
 // src/styles/colorSchemes.css) so the rail rows match the house-style mockup.
 
-import { Bot, Box, Boxes, Code2, Cpu, Globe, Wrench, Zap } from "lucide-react";
+import { Bot, Box, Boxes, Brush, Code2, Cpu, Globe, Wrench, Zap } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 export interface InstallerSection {
@@ -46,6 +46,7 @@ export const INSTALLER_CATEGORY_SECTIONS: InstallerSection[] = [
       "codex-desktop",
       "claude-desktop",
       "hermes-agent",
+      "hermes-desktop",
     ],
     Icon: Bot,
     tintVar: "--installer-tint-ai-agents",
@@ -63,6 +64,13 @@ export const INSTALLER_CATEGORY_SECTIONS: InstallerSection[] = [
     ids: ["vscode", "cursor", "docker-desktop", "bruno", "wsl", "rustup", "bun"],
     Icon: Code2,
     tintVar: "--installer-tint-development",
+  },
+  {
+    id: "design",
+    titleKey: "installer.section.design",
+    ids: ["excalidraw", "openflowkit", "drawio", "krita", "inkscape"],
+    Icon: Brush,
+    tintVar: "--installer-tint-design",
   },
   {
     id: "windowsPowerUser",
@@ -108,9 +116,7 @@ export const INSTALLER_CATEGORY_SECTIONS: InstallerSection[] = [
       "sharex",
       "ffmpeg",
       "scrcpy",
-      "excalidraw",
       "bentopdf",
-      "openflowkit",
     ],
     Icon: Wrench,
     tintVar: "--installer-tint-utilities",

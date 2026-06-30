@@ -1528,6 +1528,41 @@
       }
     },
     {
+      "id": "hermes-desktop",
+      "name": "Hermes Desktop",
+      "descriptionEn": "Desktop app for local Hermes AI agent workflows from Nous Research.",
+      "category": "ai-agent",
+      "icon": "Bot",
+      "homepage": "https://hermes-agent.nousresearch.com/",
+      "releaseNotesUrl": "https://github.com/NousResearch/hermes-agent/releases",
+      "detection": {
+        "displayNames": [
+          "Hermes Desktop",
+          "Hermes"
+        ]
+      },
+      "provider": {
+        "kind": "downloadInstaller",
+        "url": "https://hermes-assets.nousresearch.com/Hermes-Setup.exe?build=c9269fbfb689",
+        "fileName": "Hermes-Setup.exe"
+      },
+      "descriptionLocales": {
+        "fr": "Application de bureau pour les workflows locaux d’agents IA Hermes de Nous Research.",
+        "it": "App desktop per workflow locali degli agenti IA Hermes di Nous Research.",
+        "de": "Desktop-App für lokale Hermes-KI-Agent-Workflows von Nous Research.",
+        "es": "Aplicación de escritorio para flujos de trabajo locales de agentes de IA Hermes de Nous Research.",
+        "es-MX": "Aplicación de escritorio para flujos de trabajo locales de agentes de IA Hermes de Nous Research.",
+        "pt-BR": "Aplicativo de desktop para fluxos de trabalho locais de agentes de IA Hermes da Nous Research.",
+        "zh-TW": "Nous Research 的 Hermes 桌面應用程式，用於本機 AI 代理工作流程。",
+        "zh-CN": "Nous Research 的 Hermes 桌面应用程序，用于本地 AI 代理工作流。",
+        "ja": "Nous Research のローカル Hermes AI エージェントワークフロー向けデスクトップアプリ。",
+        "ko": "Nous Research의 로컬 Hermes AI 에이전트 워크플로용 데스크톱 앱입니다.",
+        "th": "แอปเดสก์ท็อปสำหรับเวิร์กโฟลว์เอเจนต์ AI Hermes ในเครื่องจาก Nous Research",
+        "id": "Aplikasi desktop untuk alur kerja agen AI Hermes lokal dari Nous Research.",
+        "vi": "Ứng dụng desktop cho quy trình tác nhân AI Hermes cục bộ từ Nous Research."
+      }
+    },
+    {
       "id": "powertoys",
       "name": "Microsoft PowerToys",
       "descriptionEn": "Microsoft's Windows productivity utilities, including launcher, window management, and file tools.",
@@ -2145,7 +2180,7 @@
       "id": "excalidraw",
       "name": "Excalidraw",
       "descriptionEn": "Whiteboard sketching app hosted from a KKTerm app-local React project.",
-      "category": "utilities",
+      "category": "design",
       "icon": "PenTool",
       "needs": [
         "node-bundle"
@@ -2211,7 +2246,7 @@
       "id": "openflowkit",
       "name": "OpenFlowKit",
       "descriptionEn": "Local-first AI diagramming studio hosted from a KKTerm app-local web project.",
-      "category": "utilities",
+      "category": "design",
       "icon": "Workflow",
       "needs": [
         "node-bundle"
@@ -2237,6 +2272,148 @@
         "es": "Estudio de diagramación con IA local-first alojado desde un proyecto web local de aplicación KKTerm.",
         "vi": "Studio sơ đồ AI ưu tiên cục bộ được lưu trữ từ dự án web cục bộ ứng dụng KKTerm.",
         "id": "Studio diagram AI yang mengutamakan lokal dihosting dari proyek web lokal aplikasi KKTerm."
+      }
+    },
+    {
+      "id": "drawio",
+      "name": "Draw.IO",
+      "descriptionEn": "Diagram editor for flowcharts, architecture diagrams, and network maps.",
+      "category": "design",
+      "icon": "Shapes",
+      "needs": [
+        "winget"
+      ],
+      "homepage": "https://www.drawio.com/",
+      "releaseNotesUrl": "https://github.com/jgraph/drawio-desktop/releases",
+      "detection": {
+        "displayNames": [
+          "draw.io",
+          "draw.io Desktop",
+          "diagrams.net"
+        ]
+      },
+      "provider": {
+        "kind": "winget",
+        "id": "JGraph.Draw"
+      },
+      "downloadProvider": {
+        "kind": "downloadInstaller",
+        "url": "https://github.com/jgraph/drawio-desktop/releases/latest/download/draw.io-windows-installer.exe",
+        "fileName": "draw.io-windows-installer.exe"
+      },
+      "chocolateyProvider": {
+        "kind": "chocolatey",
+        "id": "drawio"
+      },
+      "options": [
+        "provider",
+        "scope",
+        "version"
+      ],
+      "descriptionLocales": {
+        "fr": "Éditeur de diagrammes pour organigrammes, schémas d’architecture et cartes réseau.",
+        "it": "Editor di diagrammi per flowchart, schemi di architettura e mappe di rete.",
+        "de": "Diagrammeditor für Flussdiagramme, Architekturdiagramme und Netzwerkkarten.",
+        "es": "Editor de diagramas para diagramas de flujo, arquitectura y mapas de red.",
+        "es-MX": "Editor de diagramas para diagramas de flujo, arquitectura y mapas de red.",
+        "pt-BR": "Editor de diagramas para fluxogramas, diagramas de arquitetura e mapas de rede.",
+        "zh-TW": "圖表編輯器，可建立流程圖、架構圖和網路圖。",
+        "zh-CN": "用于流程图、架构图和网络图的图表编辑器。",
+        "ja": "フローチャート、アーキテクチャ図、ネットワーク図向けのダイアグラムエディター。",
+        "ko": "순서도, 아키텍처 다이어그램, 네트워크 맵용 다이어그램 편집기입니다.",
+        "th": "โปรแกรมแก้ไขไดอะแกรมสำหรับผังงาน ไดอะแกรมสถาปัตยกรรม และแผนที่เครือข่าย",
+        "id": "Editor diagram untuk bagan alur, diagram arsitektur, dan peta jaringan.",
+        "vi": "Trình chỉnh sửa sơ đồ cho lưu đồ, sơ đồ kiến trúc và bản đồ mạng."
+      }
+    },
+    {
+      "id": "krita",
+      "name": "Krita",
+      "descriptionEn": "Digital painting and 2D animation app for illustration and concept art.",
+      "category": "design",
+      "icon": "Brush",
+      "needs": [
+        "winget"
+      ],
+      "homepage": "https://krita.org/",
+      "releaseNotesUrl": "https://krita.org/en/posts/",
+      "detection": {
+        "displayNames": [
+          "Krita"
+        ]
+      },
+      "provider": {
+        "kind": "winget",
+        "id": "KDE.Krita"
+      },
+      "chocolateyProvider": {
+        "kind": "chocolatey",
+        "id": "krita"
+      },
+      "options": [
+        "provider",
+        "scope",
+        "version"
+      ],
+      "descriptionLocales": {
+        "fr": "Application de peinture numérique et d’animation 2D pour l’illustration et le concept art.",
+        "it": "App di pittura digitale e animazione 2D per illustrazione e concept art.",
+        "de": "Digitale Mal- und 2D-Animations-App für Illustration und Konzeptkunst.",
+        "es": "Aplicación de pintura digital y animación 2D para ilustración y arte conceptual.",
+        "es-MX": "Aplicación de pintura digital y animación 2D para ilustración y arte conceptual.",
+        "pt-BR": "Aplicativo de pintura digital e animação 2D para ilustração e arte conceitual.",
+        "zh-TW": "數位繪圖與 2D 動畫應用程式，適合插畫與概念設計。",
+        "zh-CN": "用于插画和概念艺术的数字绘画与 2D 动画应用。",
+        "ja": "イラスト制作とコンセプトアート向けのデジタルペイントおよび 2D アニメーションアプリ。",
+        "ko": "일러스트와 콘셉트 아트를 위한 디지털 페인팅 및 2D 애니메이션 앱입니다.",
+        "th": "แอปวาดภาพดิจิทัลและแอนิเมชัน 2D สำหรับภาพประกอบและคอนเซ็ปต์อาร์ต",
+        "id": "Aplikasi lukis digital dan animasi 2D untuk ilustrasi dan seni konsep.",
+        "vi": "Ứng dụng vẽ kỹ thuật số và hoạt ảnh 2D cho minh họa và concept art."
+      }
+    },
+    {
+      "id": "inkscape",
+      "name": "Inkscape",
+      "descriptionEn": "Vector graphics editor for creating and editing SVG artwork.",
+      "category": "design",
+      "icon": "PenTool",
+      "needs": [
+        "winget"
+      ],
+      "homepage": "https://inkscape.org/",
+      "releaseNotesUrl": "https://inkscape.org/release/",
+      "detection": {
+        "displayNames": [
+          "Inkscape"
+        ]
+      },
+      "provider": {
+        "kind": "winget",
+        "id": "Inkscape.Inkscape"
+      },
+      "chocolateyProvider": {
+        "kind": "chocolatey",
+        "id": "inkscape"
+      },
+      "options": [
+        "provider",
+        "scope",
+        "version"
+      ],
+      "descriptionLocales": {
+        "fr": "Éditeur de graphismes vectoriels pour créer et modifier des illustrations SVG.",
+        "it": "Editor di grafica vettoriale per creare e modificare illustrazioni SVG.",
+        "de": "Vektorgrafikeditor zum Erstellen und Bearbeiten von SVG-Grafiken.",
+        "es": "Editor de gráficos vectoriales para crear y editar ilustraciones SVG.",
+        "es-MX": "Editor de gráficos vectoriales para crear y editar ilustraciones SVG.",
+        "pt-BR": "Editor de gráficos vetoriais para criar e editar arte SVG.",
+        "zh-TW": "向量圖形編輯器，可建立和編輯 SVG 圖稿。",
+        "zh-CN": "用于创建和编辑 SVG 图稿的矢量图形编辑器。",
+        "ja": "SVG アートワークの作成と編集に使うベクターグラフィックエディター。",
+        "ko": "SVG 아트워크를 만들고 편집하는 벡터 그래픽 편집기입니다.",
+        "th": "โปรแกรมแก้ไขกราฟิกเวกเตอร์สำหรับสร้างและแก้ไขงานศิลป์ SVG",
+        "id": "Editor grafis vektor untuk membuat dan mengedit karya SVG.",
+        "vi": "Trình chỉnh sửa đồ họa vector để tạo và chỉnh sửa tác phẩm SVG."
       }
     },
     {
