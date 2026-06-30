@@ -49,6 +49,14 @@ test("Connection icon picker keeps Lucide background and foreground separate", a
   assert.match(palette, /kind=\{[\s\S]*?"foreground"[\s\S]*\}/);
   assert.match(picker, /iconColor\?: string \| null/);
   assert.match(picker, /iconColor=\{iconColor\}/);
+  // The foreground palette now lives inside the icon selector popover and only
+  // renders for Lucide-capable glyphs.
+  assert.match(icon, /export function iconSupportsForegroundColor/);
+  assert.match(icon, /lucideIconNameFromRef\(src\) !== null/);
+  assert.match(picker, /import \{ ConnectionIconColorPicker \} from "\.\/ConnectionIconBackgroundPicker"/);
+  assert.match(picker, /onIconColorChange\?: \(iconColor: string \| null\) => void/);
+  assert.match(picker, /const supportsForeground = iconSupportsForegroundColor\(/);
+  assert.match(picker, /onIconColorChange && supportsForeground \? \([\s\S]*?ConnectionIconColorPicker color=\{iconColor\} kind="foreground"/);
   assert.match(picker, /defaultIconDataUrl\?: string \| null/);
   assert.match(picker, /previewIconDataUrl = currentIconDataUrl \?\? defaultIconDataUrl \?\? null/);
   assert.match(picker, /iconDataUrl=\{previewIconDataUrl\}/);

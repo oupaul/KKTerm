@@ -9,7 +9,7 @@ import { Actions, Btn, DialogShell, Field, Sheet, TextInput } from "../../app/ui
 import { lucideIconRefForName } from "../../lib/iconCatalog";
 import { invokeCommand, isTauriRuntime } from "../../lib/tauri";
 import { flattenConnections } from "../workspace/connections/treeUtils";
-import { ConnectionIconBackgroundPicker, ConnectionIconColorPicker } from "../workspace/connections/ConnectionIconBackgroundPicker";
+import { ConnectionIconBackgroundPicker } from "../workspace/connections/ConnectionIconBackgroundPicker";
 import { ConnectionIconPicker } from "../workspace/connections/ConnectionIconPicker";
 import { useWorkspaceStore } from "../../store";
 import type { Connection, Fleet, ItopsTransport } from "../../types";
@@ -147,14 +147,10 @@ export function FleetDialog({
             iconColor={iconColor}
             iconDataUrl={iconDataUrl}
             onChange={setIconDataUrl}
+            onIconColorChange={setIconColor}
             type="localFiles"
           />
           <div className="connection-icon-palettes">
-            <ConnectionIconColorPicker
-              color={iconColor}
-              kind="foreground"
-              onChange={setIconColor}
-            />
             <ConnectionIconBackgroundPicker
               color={iconBackgroundColor}
               onChange={setIconBackgroundColor}

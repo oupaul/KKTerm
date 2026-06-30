@@ -10,7 +10,9 @@ import {
   ConnectionIcon,
   PREDEFINED_CONNECTION_ICON_TYPES,
   connectionIconSrcForConnection,
+  iconSupportsForegroundColor,
 } from "./ConnectionIcon";
+import { ConnectionIconColorPicker } from "./ConnectionIconBackgroundPicker";
 import { connectionTypeLabel } from "./utils";
 import { blobToDataUrl, resizeImageBlobToIconDataUrl } from "./iconImage";
 import { dialogButtonAria } from "../../../lib/aria";
@@ -29,6 +31,7 @@ export function ConnectionIconPicker({
   iconDataUrl,
   localShell,
   onChange,
+  onIconColorChange,
   type,
 }: {
   customIconDataUrls: string[];
@@ -40,6 +43,7 @@ export function ConnectionIconPicker({
   iconDataUrl?: string | null;
   localShell?: string;
   onChange: (iconDataUrl: string | null) => void;
+  onIconColorChange?: (iconColor: string | null) => void;
   type: ConnectionType;
 }) {
   const { t } = useTranslation();
@@ -49,6 +53,7 @@ export function ConnectionIconPicker({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const currentIconDataUrl = iconDataUrl ?? null;
   const previewIconDataUrl = currentIconDataUrl ?? defaultIconDataUrl ?? null;
+  const supportsForeground = iconSupportsForegroundColor({ iconDataUrl: previewIconDataUrl, localShell, type });
   const currentSavedImageDataUrl = currentIconDataUrl?.startsWith("data:image/") ? currentIconDataUrl : null;
   const defaultIconSrc = connectionIconSrcForConnection({ localShell, type });
   const predefinedOptions = useMemo(
@@ -102,11 +107,22 @@ export function ConnectionIconPicker({
     }
   }
 
+  // Keep the popover open after picking a foreground-capable (Lucide) icon so
+  // the foreground swatches appear and the user can recolor it in one flow;
+  // close it after picking an image icon that ignores the foreground color.
+  function closeAfterSelect(nextValue: string | null) {
+    const effective = nextValue ?? defaultIconDataUrl ?? null;
+    if (onIconColorChange && iconSupportsForegroundColor({ iconDataUrl: effective, localShell, type })) {
+      return;
+    }
+    setOpen(false);
+  }
+
   async function handleSelectIcon(nextIcon: string | null) {
     setError("");
     if (!nextIcon) {
       onChange(null);
-      setOpen(false);
+      closeAfterSelect(null);
       return;
     }
     if (nextIcon.startsWith("connection:")) {
@@ -118,7 +134,7 @@ export function ConnectionIconPicker({
       return;
     }
     onChange(nextIcon);
-    setOpen(false);
+    closeAfterSelect(nextIcon);
   }
 
   async function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
@@ -192,6 +208,12 @@ export function ConnectionIconPicker({
             staticOptions={predefinedOptions}
             value={currentIconDataUrl}
           />
+          {onIconColorChange && supportsForeground ? (
+            <div className="connection-icon-picker-section connection-icon-foreground-section">
+              <p>{t("connections.iconForeground")}</p>
+              <ConnectionIconColorPicker color={iconColor} kind="foreground" onChange={onIconColorChange} />
+            </div>
+          ) : null}
           <div className="connection-icon-picker-actions">
             <button className="toolbar-button" onClick={() => fileInputRef.current?.click()} type="button">
               <ImagePlus size={15} />

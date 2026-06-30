@@ -14,7 +14,7 @@ import {
   TextInput,
 } from "../../app/ui/dialog";
 import { lucideIconRefForName } from "../../lib/iconCatalog";
-import { ConnectionIconBackgroundPicker, ConnectionIconColorPicker } from "../workspace/connections/ConnectionIconBackgroundPicker";
+import { ConnectionIconBackgroundPicker } from "../workspace/connections/ConnectionIconBackgroundPicker";
 import { ConnectionIconPicker } from "../workspace/connections/ConnectionIconPicker";
 import { useWorkspaceStore } from "../../store";
 import type { Fleet, Rack, RackShell } from "../../types";
@@ -112,14 +112,10 @@ export function ServerRoomDialog({
             iconColor={iconColor}
             iconDataUrl={iconDataUrl}
             onChange={setIconDataUrl}
+            onIconColorChange={setIconColor}
             type="localFiles"
           />
           <div className="connection-icon-palettes">
-            <ConnectionIconColorPicker
-              color={iconColor}
-              kind="foreground"
-              onChange={setIconColor}
-            />
             <ConnectionIconBackgroundPicker
               color={iconBackgroundColor}
               onChange={setIconBackgroundColor}

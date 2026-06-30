@@ -1,5 +1,5 @@
 import { ConnectionGlyph, connectionSubtitle, connectionTypeSubtitle } from "./ConnectionGlyph";
-import { ConnectionIconBackgroundPicker, ConnectionIconColorPicker } from "./ConnectionIconBackgroundPicker";
+import { ConnectionIconBackgroundPicker } from "./ConnectionIconBackgroundPicker";
 import { ConnectionIconPicker } from "./ConnectionIconPicker";
 import { ConnectionIcon, connectionIconSrcForConnection } from "./ConnectionIcon";
 import { AddConnectionMenu, QuickConnectMenu } from "./ConnectionMenus";
@@ -3262,6 +3262,7 @@ function ChildConnectionPropertiesDialog({
             iconDataUrl={iconDataUrl}
             localShell={state.connection.localShell}
             onChange={setIconDataUrl}
+            onIconColorChange={setIconColor}
             type={state.connection.type}
           />
           <span>
@@ -3269,11 +3270,6 @@ function ChildConnectionPropertiesDialog({
             <small>{connectionSubtitle(state.connection)}</small>
           </span>
           <div className="connection-icon-palettes">
-            <ConnectionIconColorPicker
-              color={iconColor}
-              kind="foreground"
-              onChange={setIconColor}
-            />
             <ConnectionIconBackgroundPicker
               color={iconBackgroundColor}
               onChange={setIconBackgroundColor}
@@ -4757,6 +4753,7 @@ function ConnectionDialog({
                 iconDataUrl={iconDataUrl}
                 localShell={initialConnection?.localShell}
                 onChange={handleIconDataUrlChange}
+                onIconColorChange={setIconColor}
                 type={connectionType}
               />
             )}
@@ -4770,11 +4767,6 @@ function ConnectionDialog({
             </span>
             {mode !== "quick" ? (
               <div className="connection-icon-palettes">
-                <ConnectionIconColorPicker
-                  color={iconColor}
-                  kind="foreground"
-                  onChange={setIconColor}
-                />
                 <ConnectionIconBackgroundPicker
                   color={iconBackgroundColor}
                   onChange={setIconBackgroundColor}

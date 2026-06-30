@@ -56,6 +56,15 @@ export type WorkspaceIconName = (typeof WORKSPACE_ICON_NAMES)[number];
 
 type LucideIcon = React.ComponentType<{ size?: number; style?: CSSProperties }>;
 
+/**
+ * Whether a Workspace icon can be recolored by the foreground palette. Brand
+ * and Material artwork render as `<img>` and ignore `--workspace-icon-color`;
+ * Lucide glyphs and the letter-avatar fallback honor it.
+ */
+export function workspaceIconSupportsForegroundColor(icon?: string | null) {
+  return !brandIconRefToUrl(icon) && !materialIconRefToUrl(icon);
+}
+
 function resolveIcon(name?: string | null): LucideIcon | null {
   if (!name) {
     return null;

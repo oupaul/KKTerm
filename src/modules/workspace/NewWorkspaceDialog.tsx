@@ -19,7 +19,7 @@ import {
   nextWorkspaceImportSelection,
   type WorkspaceImportTypeFilter,
 } from "./newWorkspaceImportModel";
-import { WORKSPACE_ICON_NAMES, WorkspaceIcon } from "./workspaceIcons";
+import { WORKSPACE_ICON_NAMES, WorkspaceIcon, workspaceIconSupportsForegroundColor } from "./workspaceIcons";
 
 interface ImportGroup {
   workspaceId: string;
@@ -231,13 +231,9 @@ export function NewWorkspaceDialog({
               icon={icon}
               name={name || workspace?.name || t("workspace.newWorkspace")}
               onChange={setIcon}
+              onColorChange={setIconColor}
             />
             <div className="connection-icon-palettes">
-              <ConnectionIconColorPicker
-                color={iconColor}
-                kind="foreground"
-                onChange={setIconColor}
-              />
               <ConnectionIconBackgroundPicker
                 color={iconBackgroundColor}
                 onChange={setIconBackgroundColor}
@@ -395,16 +391,19 @@ function WorkspaceIconPicker({
   icon,
   name,
   onChange,
+  onColorChange,
 }: {
   backgroundColor: string | null;
   color: string | null;
   icon: string | null;
   name: string;
   onChange: (icon: string | null) => void;
+  onColorChange?: (color: string | null) => void;
 }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+  const supportsForeground = workspaceIconSupportsForegroundColor(icon);
 
   useEffect(() => {
     if (!open) {
@@ -475,11 +474,21 @@ function WorkspaceIconPicker({
               })}
               onSelect={(nextIcon) => {
                 onChange(nextIcon);
-                setOpen(false);
+                // Keep the popover open for foreground-capable icons so the
+                // user can recolor in one flow; close it for image icons.
+                if (!(onColorChange && workspaceIconSupportsForegroundColor(nextIcon))) {
+                  setOpen(false);
+                }
               }}
               searchPlaceholder={t("common.searchForMore")}
               value={icon}
             />
+            {onColorChange && supportsForeground ? (
+              <div className="connection-icon-picker-section connection-icon-foreground-section">
+                <p>{t("connections.iconForeground")}</p>
+                <ConnectionIconColorPicker color={color} kind="foreground" onChange={onColorChange} />
+              </div>
+            ) : null}
           </div>
         </div>
       ) : null}
