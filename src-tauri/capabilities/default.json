@@ -12,6 +12,8 @@
     "core:window:allow-close",
     "core:window:allow-is-maximized",
     "core:webview:allow-set-webview-focus",
+    "clipboard-manager:allow-write-text",
+    "clipboard-manager:allow-read-text",
     "dialog:allow-message",
     "dialog:allow-open",
     "dialog:allow-save",

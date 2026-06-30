@@ -74,7 +74,8 @@ If `tmux` is unavailable on the local shell, run this section in SSH or record `
 | Split panes | In tmux, create horizontal and vertical splits. | tmux panes render with correct borders and no stale text. | |
 | Switch panes | Move focus between tmux panes using the configured tmux prefix shortcuts. | Input goes to the selected tmux pane only. | |
 | Resize propagation | Resize the KKTerm window while tmux is open. | tmux recalculates layout correctly. | |
-| Mouse mode | Use an KKTerm-launched tmux SSH Pane or enable tmux mouse mode, then click panes and scroll. | tmux mouse focus and internal scrollback behavior work; a native xterm scrollbar is not expected while tmux owns the alternate buffer. | |
+| Local selection (default) | In a KKTerm-launched tmux SSH Pane (tmux mouse mode is **off by default**), drag to select text. | Selection highlights in xterm's own colour (not the OS highlight colour) and is copyable via Cmd+C / copy-on-select; wheel scrollback still works through KKTerm's local override. | |
+| Mouse mode (opt-in) | Enable tmux mouse mode from the session-bar mouse toggle, then click panes and scroll. | tmux mouse focus and internal scrollback behavior work; a native xterm scrollbar is not expected while tmux owns the alternate buffer. Hold Shift to make a local selection while mouse mode is on. | |
 
 ## SSH tmux Resume
 

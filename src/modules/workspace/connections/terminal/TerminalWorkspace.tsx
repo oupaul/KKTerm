@@ -895,8 +895,10 @@ function TmuxSessionTag({
   const [renaming, setRenaming] = useState(false);
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
   const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null);
+  // SSH sessions start with tmux mouse OFF (MobaXterm-style local selection so
+  // copy works); psmux/local start mouse on. Mirrors the backend tmux startup.
   const [mouseEnabledIds, setMouseEnabledIds] = useState<Set<string>>(
-    () => new Set(sessionId ? [sessionId] : []),
+    () => new Set(sessionId && connection.type !== "ssh" ? [sessionId] : []),
   );
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
@@ -926,7 +928,8 @@ function TmuxSessionTag({
   );
 
   useEffect(() => {
-    if (!sessionId) {
+    if (!sessionId || connection.type === "ssh") {
+      // SSH starts mouse-off (see mouseEnabledIds initializer); do not re-add it.
       return;
     }
     setMouseEnabledIds((prev) => {
@@ -937,7 +940,7 @@ function TmuxSessionTag({
       next.add(sessionId);
       return next;
     });
-  }, [sessionId]);
+  }, [sessionId, connection.type]);
 
   useEffect(() => {
     if (!editingSessionId) {
@@ -1611,12 +1614,35 @@ function TerminalPaneView({
     selectedTerminalTextRef.current = text;
     setSelectedTerminalText(text);
   }
+  // Read the current selection from every possible source. In local panes the
+  // selection lives in xterm (terminal.getSelection). In SSH panes the drag
+  // often produces a *native browser* DOM selection instead (visible as the
+  // macOS system highlight colour, not xterm's blue), which xterm does not know
+  // about — so we also read window.getSelection(). selectedTerminalTextRef is
+  // the last-saved fallback for when WKWebView clears the selection on release.
+  function readActiveTerminalSelection(): string {
+    const xtermSelection = terminalRendererRef.current?.getSelection();
+    if (xtermSelection) {
+      return xtermSelection;
+    }
+    const domSelection =
+      typeof window !== "undefined" ? window.getSelection()?.toString() ?? "" : "";
+    if (domSelection) {
+      return domSelection;
+    }
+    return selectedTerminalTextRef.current;
+  }
   const [contextMenu, setContextMenu] = useState<TerminalContextMenuState | null>(null);
   const [multilinePasteConfirmationOpen, setMultilinePasteConfirmationOpen] = useState(false);
   const [recordingInfo, setRecordingInfo] = useState<TerminalRecordingInfo | null>(null);
   const [recordingBusy, setRecordingBusy] = useState(false);
   const [recordingsOpen, setRecordingsOpen] = useState(false);
-  const [tmuxMouseEnabled, setTmuxMouseEnabled] = useState(true);
+  // SSH defaults to tmux mouse OFF so drags make a local (copyable) xterm
+  // selection; psmux/local keep mouse on. Kept in sync with the backend tmux
+  // startup (set-option mouse off for SSH) and the session-bar toggle.
+  const [tmuxMouseEnabled, setTmuxMouseEnabled] = useState(
+    pane.connection?.type !== "ssh",
+  );
   function focusTerminalRenderer() {
     const renderer = terminalRendererRef.current;
     if (renderer) {
@@ -1703,8 +1729,8 @@ function TerminalPaneView({
   }, []);
 
   useEffect(() => {
-    setTmuxMouseEnabled(true);
-  }, [pane.tmuxSessionId]);
+    setTmuxMouseEnabled(pane.connection?.type !== "ssh");
+  }, [pane.tmuxSessionId, pane.connection?.type]);
 
   useEffect(() => {
     function handleTmuxMouseModeEvent(event: Event) {
@@ -1842,7 +1868,7 @@ function TerminalPaneView({
       if (!termEl || !termEl.contains(document.activeElement)) {
         return;
       }
-      const text = terminalRendererRef.current?.getSelection() || selectedTerminalTextRef.current;
+      const text = readActiveTerminalSelection();
       if (!text) {
         return;
       }
@@ -1919,24 +1945,17 @@ function TerminalPaneView({
 
       const key = event.key.toLowerCase();
 
-      // On Mac, Cmd+C with a terminal selection: copy synchronously using a
-      // temporary textarea + execCommand so we stay within the keydown user-gesture
-      // context. navigator.clipboard.writeText is async and loses that context in
-      // Tauri WKWebView, causing it to fail silently. Return false to prevent xterm
-      // from treating this as a Meta+C PTY input sequence.
+      // On Mac, Cmd+C with a terminal selection copies via the native Tauri
+      // clipboard (writeToClipboard → tauri-plugin-clipboard-manager). The
+      // native write needs no user-gesture context, so it works reliably in
+      // every pane including SSH — unlike the browser clipboard APIs. We fall
+      // back to the last saved selection because the WKWebView clears xterm's
+      // selection on mouse release. Return false to stop xterm from sending a
+      // Meta+C sequence to the PTY.
       if (isMacPlatform() && event.metaKey && !event.ctrlKey && key === "c") {
-        const selection = terminal.getSelection() || selectedTerminalTextRef.current;
+        const selection = readActiveTerminalSelection();
         if (selection) {
-          const el = document.createElement("textarea");
-          el.value = selection;
-          el.style.cssText = "position:fixed;top:0;left:0;opacity:0;pointer-events:none;width:1px;height:1px";
-          document.body.appendChild(el);
-          const prevFocus = document.activeElement as HTMLElement | null;
-          el.focus();
-          el.select();
-          document.execCommand("copy");
-          document.body.removeChild(el);
-          prevFocus?.focus();
+          void writeToClipboard(selection);
           setContextMenu(null);
           return false;
         }
@@ -1948,7 +1967,7 @@ function TerminalPaneView({
       }
 
       if ((key === "c" && event.shiftKey) || key === "insert") {
-        const selection = terminal.getSelection();
+        const selection = readActiveTerminalSelection();
         if (selection) {
           void writeToClipboard(selection);
           setSelection(selection);
@@ -2036,7 +2055,9 @@ function TerminalPaneView({
         setSelection("");
       }
       if (selection && terminalSettings.copyOnSelect) {
-        void navigator.clipboard?.writeText(selection);
+        // Route through writeToClipboard so copy-on-select uses the native Tauri
+        // clipboard, which is reliable in WKWebView (navigator.clipboard is not).
+        void writeToClipboard(selection);
       }
     });
     const searchResultsDisposable = terminal.onSearchResultsChange((result) => {
@@ -2526,7 +2547,7 @@ function TerminalPaneView({
   }
 
   function handleCopyTerminalSelection() {
-    const text = terminalRendererRef.current?.getSelection() || selectedTerminalText;
+    const text = readActiveTerminalSelection() || selectedTerminalText;
     if (text) {
       void writeToClipboard(text);
     }
@@ -2552,7 +2573,9 @@ function TerminalPaneView({
     event.stopPropagation();
     onFocus();
 
-    const selection = terminalRendererRef.current?.getSelection() ?? "";
+    // Capture from xterm AND the native DOM selection (SSH panes produce a
+    // native browser selection that xterm does not track) before the menu opens.
+    const selection = readActiveTerminalSelection();
     setSelection(selection);
     setContextMenu({
       x: event.clientX,

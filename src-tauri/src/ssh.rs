@@ -1768,7 +1768,7 @@ pub(crate) fn remote_tmux_resume_command(
             else \
                 printf '\\r\\n[%s]\\r\\n' 'KKTerm: tmux session created'; \
             fi; \
-            {cd_command}exec tmux new-session -A -s {session} \\; set-option mouse on \\; set-option set-clipboard on \\; set-option history-limit {history_limit}; \
+            {cd_command}exec tmux new-session -A -s {session} \\; set-option mouse off \\; set-option set-clipboard on \\; set-option -ga terminal-overrides ',*:Ms=\\E]52;%p1%s;%p2%s\\007' \\; set-option -as terminal-features ',*:clipboard' \\; set-option history-limit {history_limit}; \
         else \
             {cd_command}printf '\\r\\n[%s]\\r\\n' 'KKTerm: tmux not found, using normal shell'; exec \"${{SHELL:-sh}}\" -i; \
         fi",
@@ -3392,20 +3392,26 @@ mod tests {
     }
 
     #[test]
-    fn tmux_resume_command_enables_mouse_mode_for_internal_scrollback() {
+    fn tmux_resume_command_disables_mouse_mode_for_local_selection() {
+        // MobaXterm-style copy: keep tmux mouse mode OFF by default so a mouse
+        // drag makes a *local* xterm selection (copyable via Cmd+C / copy-on-select
+        // using the native clipboard) instead of tmux capturing the drag into its
+        // own remote selection that the local clipboard cannot reach. Wheel
+        // scrollback is handled by KKTerm's wheel override while mouse mode is off,
+        // and the user can re-enable tmux mouse from the session-bar toggle.
         let cmd = remote_tmux_resume_command(None, "kkterm-test", 5_000);
         assert!(
-            cmd.contains("\\; set-option mouse on"),
-            "command must enable tmux mouse mode so tmux owns alternate-buffer scrolling: {cmd}"
+            cmd.contains("\\; set-option mouse off"),
+            "command must keep tmux mouse off so drags become local selections: {cmd}"
         );
     }
 
     #[test]
-    fn tmux_resume_command_enables_mouse_mode_with_initial_directory() {
+    fn tmux_resume_command_disables_mouse_mode_with_initial_directory() {
         let cmd = remote_tmux_resume_command(Some("/home/user"), "kkterm-test", 5_000);
         assert!(
-            cmd.contains("\\; set-option mouse on"),
-            "command must enable tmux mouse mode even with initial directory: {cmd}"
+            cmd.contains("\\; set-option mouse off"),
+            "command must keep tmux mouse off even with initial directory: {cmd}"
         );
     }
 
@@ -3424,6 +3430,23 @@ mod tests {
         assert!(
             cmd.contains("\\; set-option set-clipboard on"),
             "command must enable tmux OSC 52 clipboard sync for new sessions: {cmd}"
+        );
+    }
+
+    #[test]
+    fn tmux_resume_command_advertises_terminal_clipboard_capability() {
+        // `set-clipboard on` only makes tmux emit OSC 52 if it also believes the
+        // outer terminal supports the clipboard. Advertise it both ways so the
+        // OSC 52 → system clipboard path works across tmux versions: the modern
+        // `terminal-features clipboard` (tmux 3.2+) and the legacy `Ms` capability.
+        let cmd = remote_tmux_resume_command(None, "kkterm-test", 5_000);
+        assert!(
+            cmd.contains("terminal-features ',*:clipboard'"),
+            "command must advertise clipboard via terminal-features (tmux 3.2+): {cmd}"
+        );
+        assert!(
+            cmd.contains("Ms=\\E]52;"),
+            "command must advertise the legacy Ms clipboard capability for older tmux: {cmd}"
         );
     }
 

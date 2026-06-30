@@ -3380,6 +3380,7 @@ pub fn run() {
     // exists, so the native UI-thread liveness probe has a window to ping.
 
     configure_macos_updater(configure_single_instance(tauri::Builder::default()))
+        .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_opener::init())

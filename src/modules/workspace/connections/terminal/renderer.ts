@@ -602,14 +602,25 @@ function terminalOptionsFor(settings: TerminalSettings, backgroundOpacity: numbe
 
 async function handleOsc52ClipboardSequence(data: string) {
   const text = decodeOsc52ClipboardText(data);
+  // Diagnostic: confirms an OSC 52 sequence actually reached the terminal. If
+  // copy-on-select still fails after this, the log tells us whether the remote
+  // (tmux) emitted OSC 52 at all vs. the local clipboard write failing.
+  logUiDebug("terminal.osc52_received", {
+    rawLength: data.length,
+    decoded: text === null ? null : text.length,
+  });
   if (text === null) {
     return true;
   }
 
   try {
     await writeToClipboard(text);
+    logUiDebug("terminal.osc52_clipboard_written", { length: text.length });
   } catch (error) {
     console.warn("OSC 52 clipboard write failed.", error);
+    logUiDebug("terminal.osc52_clipboard_error", {
+      message: error instanceof Error ? error.message : String(error),
+    });
   }
   return true;
 }

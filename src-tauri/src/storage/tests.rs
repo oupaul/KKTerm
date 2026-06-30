@@ -3046,6 +3046,7 @@ fn remote_desktop_connection_options_are_optional_protocol_overrides() {
                 performance_profile: Some("quality".to_string()),
                 remote_resolution: None,
                 view_mode: Some("actualSize".to_string()),
+                ignore_tls_errors: None,
             }),
             vnc_options: Some(VncConnectionOptions {
                 inherit_defaults: false,
@@ -3101,6 +3102,7 @@ fn remote_desktop_connection_options_are_optional_protocol_overrides() {
                 performance_profile: Some("quality".to_string()),
                 remote_resolution: None,
                 view_mode: Some("actualSize".to_string()),
+                ignore_tls_errors: None,
             }),
             vnc_options: Some(VncConnectionOptions {
                 inherit_defaults: false,

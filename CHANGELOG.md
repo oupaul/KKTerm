@@ -2,6 +2,36 @@
 
 All notable changes to KKTerm are documented here.
 
+## Unreleased — Personal build (oupaul fork)
+
+### Fixed
+- **macOS: terminal text copy now works in SSH sessions.** SSH connections wrap the
+  remote shell in tmux, and tmux mouse mode was capturing the drag and rendering its
+  own remote selection (shown in the system highlight colour, not xterm's blue) that
+  the local clipboard could never reach. SSH now starts tmux with **mouse mode off**
+  (MobaXterm-style local selection), so a drag makes a normal, copyable xterm
+  selection. Wheel scrollback keeps working through KKTerm's local override, and tmux
+  mouse mode can be re-enabled per session from the session-bar mouse toggle.
+- **macOS: clipboard writes are now reliable.** Copy (Cmd+C, Ctrl+Shift+C,
+  right-click → Copy, copy-on-select) routes through the native Tauri clipboard
+  (`tauri-plugin-clipboard-manager`) instead of the browser clipboard APIs, which fail
+  silently in the WKWebView when the user-gesture context is lost.
+- **macOS: RDP connections to Windows hosts** that negotiate RSA key-exchange cipher
+  suites no longer fail the TLS handshake with `Connection reset by peer (os error 54)`.
+  The RDP TLS upgrade now uses macOS Secure Transport (native-tls), which is compatible
+  with Windows Schannel. A per-connection **"Ignore TLS certificate errors"** option
+  was added for RDP.
+
+### Security
+- Scoped the filesystem capability to user directories (`$APPDATA`, `$HOME`,
+  `$DOCUMENT`, `$DOWNLOAD`, `$DESKTOP`, `$PICTURE`) instead of allowing arbitrary paths.
+- Added a Content Security Policy to the Tauri webview configuration.
+- Upgraded the secret-store key derivation to OWASP Argon2id parameters (64 MB memory,
+  3 iterations) and clear the master-password environment variable after reading it.
+- The AI `shell_command` tool now always requires explicit approval, even in
+  "allow all" tool-permission mode.
+- Dashboard background SVG previews are sanitized with DOMPurify before rendering.
+
 ## Direct Downloads
 * 💻 [Download for Windows (64-bit)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.107/kkterm-0.1.107-windows-x64-setup.exe)
 * 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.107/kkterm-0.1.107-windows-arm64-setup.exe)
