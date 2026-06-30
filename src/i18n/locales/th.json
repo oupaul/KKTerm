@@ -1008,8 +1008,11 @@
       "create": "สร้าง",
       "delete": "ลบ",
       "edit": "แก้ไข",
+      "editDone": "Done",
+      "export": "Export",
       "run": "เรียกใช้",
-      "back": "ย้อนกลับ"
+      "back": "ย้อนกลับ",
+      "viewActions": "View actions"
     },
     "transport": {
       "auto": "อัตโนมัติ"
@@ -1057,6 +1060,10 @@
       "editTitle": "แก้ไขแร็ค",
       "deleteTitle": "ลบแร็ค?",
       "deleteBody": "“{{name}}” และอุปกรณ์ที่วางไว้จะถูกลบ การเชื่อมต่อที่อ้างอิงจะไม่ได้รับผลกระทบ",
+      "deleteServerRoomTitle": "Delete server room?",
+      "deleteServerRoomBody": "“{{name}}” and its {{count}} rack(s) will be removed. Referenced Connections are not affected.",
+      "deleteItemTitle": "Delete device?",
+      "deleteItemBody": "“{{name}}” will be removed from the rack. Referenced Connections are not affected.",
       "nameLabel": "ชื่อ",
       "namePlaceholder": "เช่น A12",
       "siteLabel": "ไซต์",
@@ -1100,6 +1107,7 @@
       "runRack": "เรียกใช้งานในแร็คนี้",
       "runScope": "เรียกใช้งานในขอบเขตนี้",
       "kindLabel": "ประเภท",
+      "kindPreviewLabel": "Rack device type previews",
       "connectionLabel": "การเชื่อมต่อ",
       "noMembers": "เพิ่มการเชื่อมต่อไปยังไซต์นี้ก่อนเพื่อวางโฮสต์",
       "labelLabel": "ป้ายกำกับ",
@@ -1234,6 +1242,19 @@
         "high": "สูง",
         "full": "เต็ม"
       }
+    },
+    "export": {
+      "pdf": "PDF",
+      "excel": "Excel",
+      "pdfFilter": "PDF",
+      "excelFilter": "Excel workbook",
+      "complete": "Exported {{name}}.",
+      "devices": "Devices",
+      "noRacks": "No racks",
+      "noDevices": "No devices",
+      "inventory": "Inventory",
+      "rack": "Rack",
+      "specs": "Specs"
     },
     "batchRuns": {
       "emptyTitle": "ยังไม่มีการทำงานเป็นชุด",

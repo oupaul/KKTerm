@@ -5,8 +5,17 @@
 // run-time resolver (itops_resolve_site) so dynamic-filter groups show the
 // Connections they currently match.
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from "react";
 import { useTranslation } from "react-i18next";
+import { ConfirmSheet } from "../../app/ui/dialog";
 import { invokeCommand } from "../../lib/tauri";
 import { useWorkspaceStore } from "../../store";
 import type { Site, Rack, RackItem, ResolvedHost } from "../../types";
@@ -36,16 +45,33 @@ import {
   SITE_TREE_MAX_WIDTH,
   SITE_TREE_MIN_WIDTH,
   loadCollapsedNodeIds,
+  loadFreePlacement,
   loadRoomFloorMetric,
   loadRoomViewMode,
   loadSiteTreeWidth,
+  saveFreePlacement,
   saveCollapsedNodeIds,
   saveRoomFloorMetric,
   saveRoomViewMode,
   saveSiteTreeWidth,
+  type FreePlacementMap,
   type RoomFloorMetric,
   type RoomViewMode,
 } from "./siteTreeState";
+import {
+  createItOpsPdfBytes,
+  excelFilename,
+  pdfFilename,
+  rackExcelBytes,
+  rackPdfDocument,
+  roomLayoutScope,
+  saveExportBytes,
+  serverRoomPdfDocument,
+  siteLayoutScope,
+  sitePdfDocument,
+  type ItOpsExportFormat,
+  type ItOpsExportLabels,
+} from "./itopsExport";
 
 const TILE_COLORS = [
   IT_ACCENTS.green,
@@ -61,6 +87,14 @@ type ItOpsCustomIcon = {
   iconDataUrl?: string | null;
   iconBackgroundColor?: string | null;
 };
+
+type PendingDelete =
+  | { kind: "serverRoom"; siteId: string; serverRoom: string; racks: Rack[] }
+  | { kind: "rack"; siteId: string; rack: Rack }
+  | { kind: "item"; siteId: string; rack: Rack; item: RackItem };
+
+const FREE_CARD_WIDTH = 240;
+const FREE_CARD_HEIGHT = 74;
 
 // A stable per-group tile colour (Sites don't store one); hashing the id
 // keeps a group's colour steady across reloads without a durable field.
@@ -121,6 +155,9 @@ export function SitesTab({
     startU?: number;
   } | null>(null);
   const moveRackItem = useItOpsStore((state) => state.moveRackItem);
+  const deleteRack = useItOpsStore((state) => state.deleteRack);
+  const removeRackItem = useItOpsStore((state) => state.removeRackItem);
+  const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
 
   // ── Tree navigator state (search, resizable width, collapsed nodes) ──
   const [query, setQuery] = useState("");
@@ -293,6 +330,30 @@ export function SitesTab({
     try {
       const connection = await invokeCommand("itops_get_connection", { id: item.connectionId });
       openConnection(connection);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      showStatusBarNotice(t("itops.errorNotice", { message }), { tone: "error" });
+    }
+  }
+
+  async function confirmDelete() {
+    const pending = pendingDelete;
+    if (!pending) return;
+    setPendingDelete(null);
+    try {
+      if (pending.kind === "serverRoom") {
+        for (const rack of pending.racks) {
+          await deleteRack(pending.siteId, rack.id);
+        }
+        setDrill(EMPTY_DRILL);
+        return;
+      }
+      if (pending.kind === "rack") {
+        await deleteRack(pending.siteId, pending.rack.id);
+        setDrill({ serverRoom: pending.rack.serverRoom, rackId: null });
+        return;
+      }
+      await removeRackItem(pending.siteId, pending.item.id);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       showStatusBarNotice(t("itops.errorNotice", { message }), { tone: "error" });
@@ -521,6 +582,7 @@ export function SitesTab({
           <RackDrill
             topology={topology}
             racks={racks}
+            site={activeGroup}
             drill={drill}
             setDrill={setDrill}
             viewBackground={viewBackground}
@@ -531,6 +593,29 @@ export function SitesTab({
             onOpenItem={(item) => void openRackItem(item)}
             onEditItem={(rack, item) => setItemDialog({ rack, item })}
             onMoveItem={(itemId, targetRackId, startU) => void moveItem(itemId, targetRackId, startU)}
+            onAddServerRoom={() => setServerRoomDialogOpen(true)}
+            onAddRack={(serverRoom) => {
+              setRackDialog({
+                siteId: activeGroup.id,
+                rack: null,
+                defaultServerRoom: serverRoom,
+              });
+            }}
+            onAddRackItem={(rack, startU) => setItemDialog({ rack, item: null, startU })}
+            onDeleteServerRoom={(serverRoom, roomRacks) =>
+              setPendingDelete({
+                kind: "serverRoom",
+                siteId: activeGroup.id,
+                serverRoom,
+                racks: roomRacks,
+              })
+            }
+            onDeleteRack={(rack) =>
+              setPendingDelete({ kind: "rack", siteId: activeGroup.id, rack })
+            }
+            onDeleteItem={(rack, item) =>
+              setPendingDelete({ kind: "item", siteId: activeGroup.id, rack, item })
+            }
           />
         </div>
       ) : null}
@@ -575,6 +660,34 @@ export function SitesTab({
           defaultStartU={itemDialog.startU}
           members={members}
           onClose={() => setItemDialog(null)}
+        />
+      ) : null}
+      {pendingDelete ? (
+        <ConfirmSheet
+          tone="danger"
+          title={
+            pendingDelete.kind === "serverRoom"
+              ? t("itops.racks.deleteServerRoomTitle")
+              : pendingDelete.kind === "rack"
+                ? t("itops.racks.deleteTitle")
+                : t("itops.racks.deleteItemTitle")
+          }
+          message={
+            pendingDelete.kind === "serverRoom"
+              ? t("itops.racks.deleteServerRoomBody", {
+                  name: pendingDelete.serverRoom || t("itops.racks.unassigned"),
+                  count: pendingDelete.racks.length,
+                })
+              : pendingDelete.kind === "rack"
+                ? t("itops.racks.deleteBody", { name: pendingDelete.rack.name })
+                : t("itops.racks.deleteItemBody", {
+                    name: pendingDelete.item.label || t(`itops.racks.kind.${pendingDelete.item.kind}`),
+                  })
+          }
+          confirmLabel={t("itops.actions.delete")}
+          confirmIcon="trash"
+          onConfirm={() => void confirmDelete()}
+          onCancel={() => setPendingDelete(null)}
         />
       ) : null}
     </div>
@@ -687,6 +800,7 @@ function TreeRow({
 function RackDrill({
   topology,
   racks,
+  site,
   drill,
   setDrill,
   viewBackground,
@@ -697,9 +811,16 @@ function RackDrill({
   onOpenItem,
   onEditItem,
   onMoveItem,
+  onAddServerRoom,
+  onAddRack,
+  onAddRackItem,
+  onDeleteServerRoom,
+  onDeleteRack,
+  onDeleteItem,
 }: {
   topology: ReturnType<typeof groupRackTopology>;
   racks: Rack[];
+  site: Site;
   drill: DrillPath;
   setDrill: (next: DrillPath) => void;
   viewBackground: DashboardBackground | null | undefined;
@@ -710,10 +831,19 @@ function RackDrill({
   onOpenItem: (item: RackItem) => void;
   onEditItem: (rack: Rack, item: RackItem) => void;
   onMoveItem: (itemId: string, targetRackId: string, startU: number) => void;
+  onAddServerRoom: () => void;
+  onAddRack: (serverRoom: string) => void;
+  onAddRackItem: (rack: Rack, startU?: number) => void;
+  onDeleteServerRoom: (serverRoom: string, racks: Rack[]) => void;
+  onDeleteRack: (rack: Rack) => void;
+  onDeleteItem: (rack: Rack, item: RackItem) => void;
 }) {
   const { t } = useTranslation();
+  const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
   const unassigned = t("itops.racks.unassigned");
   const ungrouped = t("itops.racks.ungrouped");
+  const [editMode, setEditMode] = useState(false);
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
 
   // Server Room View layout: rack elevations (default) or the top-down floor
   // plan, plus which dimension colours the floor-plan tiles. Both persist.
@@ -727,6 +857,32 @@ function RackDrill({
       ? topology.find((s) => topologyGroupKey(s.key) === topologyGroupKey(drill.serverRoom))
       : undefined;
   const rack = drill.rackId != null ? racks.find((r) => r.id === drill.rackId) : undefined;
+  const viewKey = rack
+    ? `rack:${rack.id}`
+    : serverRoom
+      ? `room:${site.id}:${topologyGroupKey(serverRoom.key)}`
+      : `site:${site.id}`;
+  useEffect(() => {
+    setEditMode(false);
+    setExportMenuOpen(false);
+  }, [viewKey]);
+
+  const sitePlacementScope = siteLayoutScope(site.id);
+  const [sitePlacements, setSitePlacements] = useState<FreePlacementMap>(() =>
+    loadFreePlacement(sitePlacementScope),
+  );
+  useEffect(() => {
+    setSitePlacements(loadFreePlacement(sitePlacementScope));
+  }, [sitePlacementScope]);
+
+  const roomPlacementScope = serverRoom ? roomLayoutScope(site.id, serverRoom.key) : "";
+  const [roomPlacements, setRoomPlacements] = useState<FreePlacementMap>(() =>
+    roomPlacementScope ? loadFreePlacement(roomPlacementScope) : {},
+  );
+  useEffect(() => {
+    setRoomPlacements(roomPlacementScope ? loadFreePlacement(roomPlacementScope) : {});
+  }, [roomPlacementScope]);
+
   const roomCallouts = serverRoom
     ? selectRandomRackCallouts(
         serverRoom.racks.flatMap((entry) => entry.items),
@@ -741,18 +897,203 @@ function RackDrill({
         key={r.id}
         rack={r}
         hostFor={hostForItem}
-        onSlotClick={(startU) => onSlotClick(r, startU)}
+        editMode={editMode}
+        onSlotClick={editMode ? (startU) => onSlotClick(r, startU) : undefined}
         onOpenItem={onOpenItem}
         onEditItem={(item) => onEditItem(r, item)}
-        onMoveItem={onMoveItem}
+        onMoveItem={editMode ? onMoveItem : undefined}
+        onDeleteRack={editMode ? onDeleteRack : undefined}
+        onDeleteItem={editMode ? (item) => onDeleteItem(r, item) : undefined}
         isGhost={isGhostItem}
       />
     );
   }
 
+  function firstAvailableStartU(targetRack: Rack) {
+    const occupied = new Set<number>();
+    for (const item of targetRack.items) {
+      for (let u = item.startU; u < item.startU + item.heightU; u += 1) {
+        occupied.add(u);
+      }
+    }
+    for (let u = 1; u <= targetRack.heightU; u += 1) {
+      if (!occupied.has(u)) return u;
+    }
+    return 1;
+  }
+
+  function handleAdd() {
+    if (rack) {
+      onAddRackItem(rack, firstAvailableStartU(rack));
+      return;
+    }
+    if (serverRoom) {
+      onAddRack(serverRoom.key);
+      return;
+    }
+    onAddServerRoom();
+  }
+
+  function kindLabel(kind: RackItem["kind"]) {
+    return t(`itops.racks.kind.${kind}`);
+  }
+
+  function exportLabels(): ItOpsExportLabels {
+    return {
+      devices: t("itops.export.devices"),
+      noRacks: t("itops.export.noRacks"),
+      noDevices: t("itops.export.noDevices"),
+      inventory: t("itops.export.inventory"),
+      rack: t("itops.export.rack"),
+      group: t("itops.racks.groupLabel"),
+      ungrouped: t("itops.racks.ungrouped"),
+      startU: t("itops.racks.startULabel"),
+      heightU: t("itops.racks.heightLabel"),
+      type: t("itops.racks.kindLabel"),
+      label: t("itops.racks.labelLabel"),
+      status: t("itops.racks.statusLabel"),
+      connection: t("itops.racks.connectionLabel"),
+      specs: t("itops.export.specs"),
+      tags: t("itops.racks.tagsLabel"),
+      deviceCount: (count) => t("itops.racks.deviceCount", { count }),
+      statusLabel: (status) => t(`itops.racks.status.${status}`, { defaultValue: status }),
+    };
+  }
+
+  async function handleExport(format: ItOpsExportFormat) {
+    setExportMenuOpen(false);
+    try {
+      const labels = exportLabels();
+      let name = site.name;
+      if (format === "excel" && rack) {
+        const roomName = rack.serverRoom;
+        name = `${site.name}-${rack.name}`;
+        const path = await saveExportBytes(
+          excelFilename(name),
+          rackExcelBytes({ site, rack, roomName, unassignedLabel: unassigned, labels, kindLabel }),
+          [{ name: t("itops.export.excelFilter"), extensions: ["xls"] }],
+          "application/vnd.ms-excel",
+        );
+        if (path) {
+          showStatusBarNotice(t("itops.export.complete", { name: path }), { tone: "success" });
+        }
+        return;
+      }
+
+      const doc = rack
+        ? rackPdfDocument({
+            site,
+            rack,
+            roomName: rack.serverRoom,
+            unassignedLabel: unassigned,
+            labels,
+            kindLabel,
+          })
+        : serverRoom
+          ? serverRoomPdfDocument({
+              site,
+              roomName: serverRoom.key,
+              racks: serverRoom.racks,
+              unassignedLabel: unassigned,
+              labels,
+              kindLabel,
+            })
+          : sitePdfDocument({ site, racks, unassignedLabel: unassigned, labels, kindLabel });
+      name = doc.title;
+      const path = await saveExportBytes(
+        pdfFilename(name),
+        createItOpsPdfBytes(doc),
+        [{ name: t("itops.export.pdfFilter"), extensions: ["pdf"] }],
+        "application/pdf",
+      );
+      if (path) {
+        showStatusBarNotice(t("itops.export.complete", { name: path }), { tone: "success" });
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      showStatusBarNotice(t("itops.errorNotice", { message }), { tone: "error" });
+    }
+  }
+
+  function saveSitePlacements(next: FreePlacementMap) {
+    setSitePlacements(next);
+    saveFreePlacement(sitePlacementScope, next);
+  }
+
+  function saveRoomPlacements(next: FreePlacementMap) {
+    setRoomPlacements(next);
+    if (roomPlacementScope) saveFreePlacement(roomPlacementScope, next);
+  }
+
   return (
     <div className="ft-drill">
       <ItOpsBackground background={viewBackground} className="ft-drill-bg">
+        <div className="it-drill-toolbar">
+          <div className="it-drill-spacer" />
+          <div className="it-drill-actions" aria-label={t("itops.actions.viewActions")}>
+            <button
+              type="button"
+              className={`it-drill-action${editMode ? " active" : ""}`}
+              title={editMode ? t("itops.actions.editDone") : t("itops.actions.edit")}
+              aria-label={editMode ? t("itops.actions.editDone") : t("itops.actions.edit")}
+              aria-pressed={editMode}
+              onClick={() => setEditMode((value) => !value)}
+            >
+              <ItIcon name={editMode ? "check" : "edit"} size={15} />
+            </button>
+            <button
+              type="button"
+              className="it-drill-action"
+              title={
+                rack
+                  ? t("itops.racks.addItemTitle")
+                  : serverRoom
+                    ? t("itops.racks.addRack")
+                    : t("itops.racks.addServerRoom")
+              }
+              aria-label={
+                rack
+                  ? t("itops.racks.addItemTitle")
+                  : serverRoom
+                    ? t("itops.racks.addRack")
+                    : t("itops.racks.addServerRoom")
+              }
+              onClick={handleAdd}
+            >
+              <ItIcon name="plus" size={15} />
+            </button>
+            <div className="it-drill-export">
+              <button
+                type="button"
+                className="it-drill-action"
+                title={t("itops.actions.export")}
+                aria-label={t("itops.actions.export")}
+                aria-haspopup="menu"
+                aria-expanded={exportMenuOpen}
+                onClick={() => setExportMenuOpen((open) => !open)}
+              >
+                <ItIcon name="download" size={15} />
+              </button>
+              {exportMenuOpen ? (
+                <>
+                  <div className="it-drill-menu-backdrop" onClick={() => setExportMenuOpen(false)} />
+                  <div className="it-drill-menu" role="menu">
+                    <button type="button" role="menuitem" onClick={() => void handleExport("pdf")}>
+                      <ItIcon name="book" size={14} />
+                      {t("itops.export.pdf")}
+                    </button>
+                    {rack ? (
+                      <button type="button" role="menuitem" onClick={() => void handleExport("excel")}>
+                        <ItIcon name="table" size={14} />
+                        {t("itops.export.excel")}
+                      </button>
+                    ) : null}
+                  </div>
+                </>
+              ) : null}
+            </div>
+          </div>
+        </div>
         {racks.length === 0 ? (
           <div className="card">
             <div className="hg-dlg-empty">{t("itops.racks.empty")}</div>
@@ -762,10 +1103,12 @@ function RackDrill({
             rack={rack}
             hostFor={hostForItem}
             isGhost={isGhostItem}
-            onSlotClick={(startU) => onSlotClick(rack, startU)}
+            editMode={editMode}
+            onSlotClick={editMode ? (startU) => onSlotClick(rack, startU) : undefined}
             onOpenItem={onOpenItem}
             onEditItem={(item) => onEditItem(rack, item)}
-            onMoveItem={onMoveItem}
+            onMoveItem={editMode ? onMoveItem : undefined}
+            onDeleteItem={editMode ? (item) => onDeleteItem(rack, item) : undefined}
           />
         ) : serverRoom ? (
           <>
@@ -840,6 +1183,10 @@ function RackDrill({
               <ServerRoomFloorPlan
                 racks={serverRoom.racks}
                 metric={floorMetric}
+                editMode={editMode}
+                placement={roomPlacements}
+                onPlacementChange={saveRoomPlacements}
+                onDeleteRack={editMode ? onDeleteRack : undefined}
                 onSelectRack={(rackId) => setDrill({ serverRoom: serverRoom.key, rackId })}
               />
             ) : (
@@ -854,20 +1201,170 @@ function RackDrill({
             )}
           </>
         ) : (
-          <div className="ft-cards">
-            {topology.map((room) => (
-              <DrillCard
-                key={room.key}
-                icon="room"
-                customIcon={roomIcons?.[room.key]}
-                title={room.key || unassigned}
-                meta={t("itops.racks.rackCount", { count: room.racks.length })}
-                onClick={() => setDrill({ serverRoom: room.key, rackId: null })}
-              />
-            ))}
-          </div>
+          <SiteRoomCards
+            rooms={topology}
+            roomIcons={roomIcons}
+            unassigned={unassigned}
+            editMode={editMode}
+            placement={sitePlacements}
+            onPlacementChange={saveSitePlacements}
+            onDeleteRoom={onDeleteServerRoom}
+            onSelectRoom={(room) => setDrill({ serverRoom: room.key, rackId: null })}
+          />
         )}
       </ItOpsBackground>
+    </div>
+  );
+}
+
+function defaultFreePlacement(index: number, width: number, height: number) {
+  const cols = 3;
+  const col = index % cols;
+  const row = Math.floor(index / cols);
+  return { x: 14 + col * (width + 14), y: 14 + row * (height + 14) };
+}
+
+function freeSurfaceHeight(count: number, width: number, height: number) {
+  if (count <= 0) return height + 28;
+  return defaultFreePlacement(count - 1, width, height).y + height + 16;
+}
+
+function useFreeDrag(
+  placement: FreePlacementMap,
+  onPlacementChange: (next: FreePlacementMap) => void,
+) {
+  const dragRef = useRef<{
+    id: string;
+    startX: number;
+    startY: number;
+    originX: number;
+    originY: number;
+    moved: boolean;
+  } | null>(null);
+
+  function startDrag(
+    event: ReactPointerEvent<HTMLElement>,
+    id: string,
+    fallback: { x: number; y: number },
+  ) {
+    const target = event.target as HTMLElement;
+    if (target.closest(".it-free-delete")) return;
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    const origin = placement[id] ?? fallback;
+    dragRef.current = {
+      id,
+      startX: event.clientX,
+      startY: event.clientY,
+      originX: origin.x,
+      originY: origin.y,
+      moved: false,
+    };
+  }
+
+  function moveDrag(event: ReactPointerEvent<HTMLElement>) {
+    const drag = dragRef.current;
+    if (!drag) return;
+    const dx = event.clientX - drag.startX;
+    const dy = event.clientY - drag.startY;
+    if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
+      drag.moved = true;
+    }
+    const x = Math.max(4, Math.round(drag.originX + dx));
+    const y = Math.max(4, Math.round(drag.originY + dy));
+    onPlacementChange({ ...placement, [drag.id]: { x, y } });
+  }
+
+  function endDrag(event: ReactPointerEvent<HTMLElement>) {
+    if (dragRef.current) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    dragRef.current = null;
+  }
+
+  return { startDrag, moveDrag, endDrag };
+}
+
+function SiteRoomCards({
+  rooms,
+  roomIcons,
+  unassigned,
+  editMode,
+  placement,
+  onPlacementChange,
+  onDeleteRoom,
+  onSelectRoom,
+}: {
+  rooms: ReturnType<typeof groupRackTopology>;
+  roomIcons?: Record<string, ItOpsCustomIcon>;
+  unassigned: string;
+  editMode: boolean;
+  placement: FreePlacementMap;
+  onPlacementChange: (next: FreePlacementMap) => void;
+  onDeleteRoom: (serverRoom: string, racks: Rack[]) => void;
+  onSelectRoom: (room: ReturnType<typeof groupRackTopology>[number]) => void;
+}) {
+  const { t } = useTranslation();
+  const drag = useFreeDrag(placement, onPlacementChange);
+
+  if (!editMode) {
+    return (
+      <div className="ft-cards">
+        {rooms.map((room) => (
+          <DrillCard
+            key={room.key}
+            icon="room"
+            customIcon={roomIcons?.[room.key]}
+            title={room.key || unassigned}
+            meta={t("itops.racks.rackCount", { count: room.racks.length })}
+            onClick={() => onSelectRoom(room)}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="it-free-surface site"
+      style={{ minHeight: freeSurfaceHeight(rooms.length, FREE_CARD_WIDTH, FREE_CARD_HEIGHT) }}
+    >
+      {rooms.map((room, index) => {
+        const id = topologyGroupKey(room.key);
+        const fallback = defaultFreePlacement(index, FREE_CARD_WIDTH, FREE_CARD_HEIGHT);
+        const point = placement[id] ?? fallback;
+        return (
+          <div
+            key={id}
+            className="it-free-card"
+            style={{ transform: `translate(${point.x}px, ${point.y}px)` }}
+            onPointerDown={(event) => drag.startDrag(event, id, fallback)}
+            onPointerMove={drag.moveDrag}
+            onPointerUp={drag.endDrag}
+            onPointerCancel={drag.endDrag}
+          >
+            <DrillCard
+              icon="room"
+              customIcon={roomIcons?.[room.key]}
+              title={room.key || unassigned}
+              meta={t("itops.racks.rackCount", { count: room.racks.length })}
+              onClick={() => onSelectRoom(room)}
+            />
+            <button
+              type="button"
+              className="it-free-delete"
+              title={t("itops.racks.deleteServerRoomTitle")}
+              aria-label={t("itops.racks.deleteServerRoomTitle")}
+              onClick={(event) => {
+                event.stopPropagation();
+                onDeleteRoom(room.key, room.racks);
+              }}
+            >
+              <ItIcon name="xmark" size={11} />
+            </button>
+          </div>
+        );
+      })}
     </div>
   );
 }

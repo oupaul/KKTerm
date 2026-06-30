@@ -1008,8 +1008,11 @@
       "create": "创建",
       "delete": "删除",
       "edit": "编辑",
+      "editDone": "Done",
+      "export": "Export",
       "run": "运行",
-      "back": "返回"
+      "back": "返回",
+      "viewActions": "View actions"
     },
     "transport": {
       "auto": "自动"
@@ -1057,6 +1060,10 @@
       "editTitle": "编辑机架",
       "deleteTitle": "删除机架？",
       "deleteBody": "“{{name}}” 及其已放置的设备将被移除。引用的连接不受影响。",
+      "deleteServerRoomTitle": "Delete server room?",
+      "deleteServerRoomBody": "“{{name}}” and its {{count}} rack(s) will be removed. Referenced Connections are not affected.",
+      "deleteItemTitle": "Delete device?",
+      "deleteItemBody": "“{{name}}” will be removed from the rack. Referenced Connections are not affected.",
       "nameLabel": "名称",
       "namePlaceholder": "例如，A12",
       "siteLabel": "站点",
@@ -1100,6 +1107,7 @@
       "runRack": "对此机架运行任务",
       "runScope": "对此范围运行任务",
       "kindLabel": "类型",
+      "kindPreviewLabel": "Rack device type previews",
       "connectionLabel": "连接",
       "noMembers": "请先向此站点添加连接才能放置主机。",
       "labelLabel": "标签",
@@ -1234,6 +1242,19 @@
         "high": "高",
         "full": "已满"
       }
+    },
+    "export": {
+      "pdf": "PDF",
+      "excel": "Excel",
+      "pdfFilter": "PDF",
+      "excelFilter": "Excel workbook",
+      "complete": "Exported {{name}}.",
+      "devices": "Devices",
+      "noRacks": "No racks",
+      "noDevices": "No devices",
+      "inventory": "Inventory",
+      "rack": "Rack",
+      "specs": "Specs"
     },
     "batchRuns": {
       "emptyTitle": "暂无批量运行",

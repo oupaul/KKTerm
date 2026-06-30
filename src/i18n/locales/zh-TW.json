@@ -1008,8 +1008,11 @@
       "create": "建立",
       "delete": "刪除",
       "edit": "編輯",
+      "editDone": "Done",
+      "export": "Export",
       "run": "執行",
-      "back": "返回"
+      "back": "返回",
+      "viewActions": "View actions"
     },
     "transport": {
       "auto": "自動"
@@ -1057,6 +1060,10 @@
       "editTitle": "編輯機架",
       "deleteTitle": "刪除機架？",
       "deleteBody": "「{{name}}」與其已放置的裝置將被移除。所參照的連線不受影響。",
+      "deleteServerRoomTitle": "Delete server room?",
+      "deleteServerRoomBody": "“{{name}}” and its {{count}} rack(s) will be removed. Referenced Connections are not affected.",
+      "deleteItemTitle": "Delete device?",
+      "deleteItemBody": "“{{name}}” will be removed from the rack. Referenced Connections are not affected.",
       "nameLabel": "名稱",
       "namePlaceholder": "例如，A12",
       "siteLabel": "站台",
@@ -1100,6 +1107,7 @@
       "runRack": "對此機架執行工作",
       "runScope": "對此範圍執行工作",
       "kindLabel": "類型",
+      "kindPreviewLabel": "Rack device type previews",
       "connectionLabel": "連線",
       "noMembers": "請先向此站台新增連線才能放置主機。",
       "labelLabel": "標籤",
@@ -1234,6 +1242,19 @@
         "high": "高",
         "full": "已滿"
       }
+    },
+    "export": {
+      "pdf": "PDF",
+      "excel": "Excel",
+      "pdfFilter": "PDF",
+      "excelFilter": "Excel workbook",
+      "complete": "Exported {{name}}.",
+      "devices": "Devices",
+      "noRacks": "No racks",
+      "noDevices": "No devices",
+      "inventory": "Inventory",
+      "rack": "Rack",
+      "specs": "Specs"
     },
     "batchRuns": {
       "emptyTitle": "尚無批次執行",

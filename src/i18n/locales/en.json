@@ -1008,8 +1008,11 @@
       "create": "Create",
       "delete": "Delete",
       "edit": "Edit",
+      "editDone": "Done",
+      "export": "Export",
       "run": "Run",
-      "back": "Back"
+      "back": "Back",
+      "viewActions": "View actions"
     },
     "transport": {
       "auto": "Auto"
@@ -1057,6 +1060,10 @@
       "editTitle": "Edit rack",
       "deleteTitle": "Delete rack?",
       "deleteBody": "“{{name}}” and its placed devices will be removed. The referenced Connections are not affected.",
+      "deleteServerRoomTitle": "Delete server room?",
+      "deleteServerRoomBody": "“{{name}}” and its {{count}} rack(s) will be removed. Referenced Connections are not affected.",
+      "deleteItemTitle": "Delete device?",
+      "deleteItemBody": "“{{name}}” will be removed from the rack. Referenced Connections are not affected.",
       "nameLabel": "Name",
       "namePlaceholder": "e.g. A12",
       "siteLabel": "Site",
@@ -1100,6 +1107,7 @@
       "runRack": "Run a task on this rack",
       "runScope": "Run a task on this scope",
       "kindLabel": "Type",
+      "kindPreviewLabel": "Rack device type previews",
       "connectionLabel": "Connection",
       "noMembers": "Add Connections to this Site first to place a host.",
       "labelLabel": "Label",
@@ -1234,6 +1242,19 @@
         "high": "High",
         "full": "Full"
       }
+    },
+    "export": {
+      "pdf": "PDF",
+      "excel": "Excel",
+      "pdfFilter": "PDF",
+      "excelFilter": "Excel workbook",
+      "complete": "Exported {{name}}.",
+      "devices": "Devices",
+      "noRacks": "No racks",
+      "noDevices": "No devices",
+      "inventory": "Inventory",
+      "rack": "Rack",
+      "specs": "Specs"
     },
     "batchRuns": {
       "emptyTitle": "No Batch Runs yet",

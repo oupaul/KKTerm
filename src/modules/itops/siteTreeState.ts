@@ -8,6 +8,7 @@ const PANEL_COLLAPSED_KEY = "kkterm.itopsSiteTreePanelCollapsed";
 const COLLAPSED_KEY = "kkterm.itopsSiteTreeCollapsed";
 const ROOM_VIEW_KEY = "kkterm.itopsRoomViewMode";
 const ROOM_METRIC_KEY = "kkterm.itopsRoomFloorMetric";
+const FREE_LAYOUT_KEY = "kkterm.itopsFreePlacement";
 
 export const SITE_TREE_MIN_WIDTH = 200;
 export const SITE_TREE_MAX_WIDTH = 460;
@@ -77,4 +78,47 @@ export function loadRoomFloorMetric(): RoomFloorMetric {
 export function saveRoomFloorMetric(metric: RoomFloorMetric): void {
   if (typeof localStorage === "undefined") return;
   localStorage.setItem(ROOM_METRIC_KEY, metric);
+}
+
+export interface FreePlacement {
+  x: number;
+  y: number;
+}
+
+export type FreePlacementMap = Record<string, FreePlacement>;
+
+function readFreePlacementStore(): Record<string, FreePlacementMap> {
+  if (typeof localStorage === "undefined") return {};
+  try {
+    const parsed = JSON.parse(localStorage.getItem(FREE_LAYOUT_KEY) ?? "{}");
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+    const store: Record<string, FreePlacementMap> = {};
+    for (const [scope, value] of Object.entries(parsed)) {
+      if (!value || typeof value !== "object" || Array.isArray(value)) continue;
+      const entries: FreePlacementMap = {};
+      for (const [id, point] of Object.entries(value)) {
+        if (!point || typeof point !== "object" || Array.isArray(point)) continue;
+        const x = Number((point as FreePlacement).x);
+        const y = Number((point as FreePlacement).y);
+        if (Number.isFinite(x) && Number.isFinite(y)) {
+          entries[id] = { x, y };
+        }
+      }
+      store[scope] = entries;
+    }
+    return store;
+  } catch {
+    return {};
+  }
+}
+
+export function loadFreePlacement(scope: string): FreePlacementMap {
+  return readFreePlacementStore()[scope] ?? {};
+}
+
+export function saveFreePlacement(scope: string, placement: FreePlacementMap): void {
+  if (typeof localStorage === "undefined") return;
+  const store = readFreePlacementStore();
+  store[scope] = placement;
+  localStorage.setItem(FREE_LAYOUT_KEY, JSON.stringify(store));
 }

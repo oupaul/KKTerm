@@ -1008,8 +1008,11 @@
       "create": "作成",
       "delete": "削除",
       "edit": "編集",
+      "editDone": "Done",
+      "export": "Export",
       "run": "実行",
-      "back": "戻る"
+      "back": "戻る",
+      "viewActions": "View actions"
     },
     "transport": {
       "auto": "自動"
@@ -1057,6 +1060,10 @@
       "editTitle": "ラックを編集",
       "deleteTitle": "ラックを削除しますか?",
       "deleteBody": "“{{name}}” とその配置済みデバイスは削除されます。参照されている接続には影響しません。",
+      "deleteServerRoomTitle": "Delete server room?",
+      "deleteServerRoomBody": "“{{name}}” and its {{count}} rack(s) will be removed. Referenced Connections are not affected.",
+      "deleteItemTitle": "Delete device?",
+      "deleteItemBody": "“{{name}}” will be removed from the rack. Referenced Connections are not affected.",
       "nameLabel": "名前",
       "namePlaceholder": "例: A12",
       "siteLabel": "サイト",
@@ -1100,6 +1107,7 @@
       "runRack": "このラックでタスクを実行",
       "runScope": "この範囲でタスクを実行",
       "kindLabel": "タイプ",
+      "kindPreviewLabel": "Rack device type previews",
       "connectionLabel": "接続",
       "noMembers": "ホストを配置するには、まずこのサイトに接続を追加してください。",
       "labelLabel": "ラベル",
@@ -1234,6 +1242,19 @@
         "high": "高",
         "full": "満杯"
       }
+    },
+    "export": {
+      "pdf": "PDF",
+      "excel": "Excel",
+      "pdfFilter": "PDF",
+      "excelFilter": "Excel workbook",
+      "complete": "Exported {{name}}.",
+      "devices": "Devices",
+      "noRacks": "No racks",
+      "noDevices": "No devices",
+      "inventory": "Inventory",
+      "rack": "Rack",
+      "specs": "Specs"
     },
     "batchRuns": {
       "emptyTitle": "バッチ実行はまだありません",

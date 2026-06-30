@@ -49,6 +49,8 @@ export type ItIconName =
   | "popup"
   | "code"
   | "book"
+  | "download"
+  | "table"
   | "link"
   | "pulse"
   | "arrow"
@@ -355,6 +357,21 @@ const GLYPHS: Record<ItIconName, (p: GlyphProps) => ReactNode> = {
     <Svg {...p} sw={1.6}>
       <path d="M5 4.5h11a2 2 0 0 1 2 2V20a2 2 0 0 0-2-2H5z" />
       <path d="M19 6.5V18" />
+    </Svg>
+  ),
+  download: (p) => (
+    <Svg {...p} sw={1.7}>
+      <path d="M12 4.5v9" />
+      <path d="M8 10l4 4 4-4" />
+      <path d="M5 19.5h14" />
+    </Svg>
+  ),
+  table: (p) => (
+    <Svg {...p} sw={1.5}>
+      <path d="M4.5 5.5h15v13h-15z" />
+      <path d="M4.5 10h15" />
+      <path d="M9.5 5.5v13" />
+      <path d="M14.5 5.5v13" />
     </Svg>
   ),
   link: (p) => (

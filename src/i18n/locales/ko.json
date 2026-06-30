@@ -1008,8 +1008,11 @@
       "create": "만들기",
       "delete": "삭제",
       "edit": "편집",
+      "editDone": "Done",
+      "export": "Export",
       "run": "실행",
-      "back": "뒤로"
+      "back": "뒤로",
+      "viewActions": "View actions"
     },
     "transport": {
       "auto": "자동"
@@ -1057,6 +1060,10 @@
       "editTitle": "랙 편집",
       "deleteTitle": "랙을 삭제하시겠습니까?",
       "deleteBody": "“{{name}}” 및 배치된 장치가 제거됩니다. 참조된 연결은 영향을 받지 않습니다.",
+      "deleteServerRoomTitle": "Delete server room?",
+      "deleteServerRoomBody": "“{{name}}” and its {{count}} rack(s) will be removed. Referenced Connections are not affected.",
+      "deleteItemTitle": "Delete device?",
+      "deleteItemBody": "“{{name}}” will be removed from the rack. Referenced Connections are not affected.",
       "nameLabel": "이름",
       "namePlaceholder": "예: A12",
       "siteLabel": "사이트",
@@ -1100,6 +1107,7 @@
       "runRack": "이 랙에서 작업 실행",
       "runScope": "이 범위에서 작업 실행",
       "kindLabel": "유형",
+      "kindPreviewLabel": "Rack device type previews",
       "connectionLabel": "연결",
       "noMembers": "호스트를 배치하려면 먼저 이 사이트에 연결을 추가하세요.",
       "labelLabel": "레이블",
@@ -1234,6 +1242,19 @@
         "high": "높음",
         "full": "가득 참"
       }
+    },
+    "export": {
+      "pdf": "PDF",
+      "excel": "Excel",
+      "pdfFilter": "PDF",
+      "excelFilter": "Excel workbook",
+      "complete": "Exported {{name}}.",
+      "devices": "Devices",
+      "noRacks": "No racks",
+      "noDevices": "No devices",
+      "inventory": "Inventory",
+      "rack": "Rack",
+      "specs": "Specs"
     },
     "batchRuns": {
       "emptyTitle": "아직 일괄 실행이 없습니다",

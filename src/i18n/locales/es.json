@@ -1008,8 +1008,11 @@
       "create": "Crear",
       "delete": "Eliminar",
       "edit": "Editar",
+      "editDone": "Done",
+      "export": "Export",
       "run": "Ejecutar",
-      "back": "Volver"
+      "back": "Volver",
+      "viewActions": "View actions"
     },
     "transport": {
       "auto": "Automático"
@@ -1057,6 +1060,10 @@
       "editTitle": "Editar rack",
       "deleteTitle": "¿Eliminar rack?",
       "deleteBody": "“{{name}}” y sus dispositivos colocados se eliminarán. Las conexiones referenciadas no se ven afectadas.",
+      "deleteServerRoomTitle": "Delete server room?",
+      "deleteServerRoomBody": "“{{name}}” and its {{count}} rack(s) will be removed. Referenced Connections are not affected.",
+      "deleteItemTitle": "Delete device?",
+      "deleteItemBody": "“{{name}}” will be removed from the rack. Referenced Connections are not affected.",
       "nameLabel": "Nombre",
       "namePlaceholder": "p. ej. A12",
       "siteLabel": "Sitio",
@@ -1100,6 +1107,7 @@
       "runRack": "Ejecutar una tarea en este rack",
       "runScope": "Ejecutar una tarea en este ámbito",
       "kindLabel": "Tipo",
+      "kindPreviewLabel": "Rack device type previews",
       "connectionLabel": "Conexión",
       "noMembers": "Añade conexiones a este sitio primero para colocar un host.",
       "labelLabel": "Etiqueta",
@@ -1234,6 +1242,19 @@
         "high": "Alto",
         "full": "Lleno"
       }
+    },
+    "export": {
+      "pdf": "PDF",
+      "excel": "Excel",
+      "pdfFilter": "PDF",
+      "excelFilter": "Excel workbook",
+      "complete": "Exported {{name}}.",
+      "devices": "Devices",
+      "noRacks": "No racks",
+      "noDevices": "No devices",
+      "inventory": "Inventory",
+      "rack": "Rack",
+      "specs": "Specs"
     },
     "batchRuns": {
       "emptyTitle": "Aún no hay ejecuciones por lotes",

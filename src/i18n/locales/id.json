@@ -1008,8 +1008,11 @@
       "create": "Buat",
       "delete": "Hapus",
       "edit": "Edit",
+      "editDone": "Done",
+      "export": "Export",
       "run": "Jalankan",
-      "back": "Kembali"
+      "back": "Kembali",
+      "viewActions": "View actions"
     },
     "transport": {
       "auto": "Otomatis"
@@ -1057,6 +1060,10 @@
       "editTitle": "Edit rak",
       "deleteTitle": "Hapus rak?",
       "deleteBody": "“{{name}}” dan perangkat yang dipasang akan dihapus. Koneksi yang dirujuk tidak terpengaruh.",
+      "deleteServerRoomTitle": "Delete server room?",
+      "deleteServerRoomBody": "“{{name}}” and its {{count}} rack(s) will be removed. Referenced Connections are not affected.",
+      "deleteItemTitle": "Delete device?",
+      "deleteItemBody": "“{{name}}” will be removed from the rack. Referenced Connections are not affected.",
       "nameLabel": "Nama",
       "namePlaceholder": "mis. A12",
       "siteLabel": "Situs",
@@ -1100,6 +1107,7 @@
       "runRack": "Jalankan tugas pada rak ini",
       "runScope": "Jalankan tugas pada cakupan ini",
       "kindLabel": "Tipe",
+      "kindPreviewLabel": "Rack device type previews",
       "connectionLabel": "Koneksi",
       "noMembers": "Tambah koneksi ke situs ini terlebih dahulu untuk menempatkan host.",
       "labelLabel": "Label",
@@ -1234,6 +1242,19 @@
         "high": "Tinggi",
         "full": "Penuh"
       }
+    },
+    "export": {
+      "pdf": "PDF",
+      "excel": "Excel",
+      "pdfFilter": "PDF",
+      "excelFilter": "Excel workbook",
+      "complete": "Exported {{name}}.",
+      "devices": "Devices",
+      "noRacks": "No racks",
+      "noDevices": "No devices",
+      "inventory": "Inventory",
+      "rack": "Rack",
+      "specs": "Specs"
     },
     "batchRuns": {
       "emptyTitle": "Belum ada eksekusi batch",

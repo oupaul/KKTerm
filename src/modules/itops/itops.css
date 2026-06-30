@@ -2350,6 +2350,12 @@
 .itops-page .it-icon-btn.sm:active {
   background: var(--press);
 }
+.itops-page .it-icon-btn.sm.danger {
+  color: var(--red);
+}
+.itops-page .it-icon-btn.sm.danger:hover {
+  background: color-mix(in srgb, var(--red) 13%, transparent);
+}
 .itops-page .it-btn.sm {
   height: 28px;
   padding: 0 10px;
@@ -3290,6 +3296,92 @@
   overflow: auto;
   padding: 2px;
 }
+.itops-page .it-drill-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 2px 2px 0;
+  pointer-events: none;
+}
+.itops-page .it-drill-spacer {
+  flex: 1 1 auto;
+}
+.itops-page .it-drill-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  border: 0.5px solid var(--border);
+  box-shadow: var(--shadow-control);
+  pointer-events: auto;
+}
+.itops-page .it-drill-action {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.14s, color 0.14s, transform 0.14s;
+}
+.itops-page .it-drill-action:hover,
+.itops-page .it-drill-action.active {
+  background: var(--hover);
+  color: var(--accent);
+}
+.itops-page .it-drill-action:active {
+  transform: translateY(1px);
+}
+.itops-page .it-drill-export {
+  position: relative;
+}
+.itops-page .it-drill-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 42;
+}
+.itops-page .it-drill-menu {
+  position: absolute;
+  top: calc(100% + 5px);
+  right: 0;
+  z-index: 43;
+  min-width: 150px;
+  padding: 4px;
+  border-radius: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.itops-page .it-drill-menu button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  border: 0;
+  border-radius: 7px;
+  padding: 7px 9px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 12.5px;
+  text-align: left;
+  cursor: pointer;
+}
+.itops-page .it-drill-menu button:hover {
+  background: var(--hover);
+}
 .itops-page .ft-bar {
   display: flex;
   align-items: center;
@@ -3334,6 +3426,59 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+}
+.itops-page .it-free-surface {
+  position: relative;
+  min-width: 0;
+  border-radius: 12px;
+  background:
+    radial-gradient(circle, color-mix(in srgb, var(--border) 58%, transparent) 1px, transparent 1.5px) 0 0 / 18px 18px,
+    color-mix(in srgb, var(--surface-muted) 70%, transparent);
+  border: 1px dashed var(--border);
+}
+.itops-page .it-free-card,
+.itops-page .rm-free-tile {
+  position: absolute;
+  top: 0;
+  left: 0;
+  touch-action: none;
+  cursor: grab;
+}
+.itops-page .it-free-card {
+  width: 240px;
+}
+.itops-page .it-free-card:active,
+.itops-page .rm-free-tile:active {
+  cursor: grabbing;
+}
+.itops-page .it-free-card .ft-card,
+.itops-page .rm-free-tile .rm-tile {
+  width: 100%;
+  height: 100%;
+}
+.itops-page .it-free-delete,
+.itops-page .rk-item-delete {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  z-index: 8;
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--red) 70%, var(--border));
+  background: color-mix(in srgb, var(--surface) 86%, var(--red));
+  color: var(--red);
+  cursor: pointer;
+  box-shadow: var(--shadow-control);
+}
+.itops-page .it-free-delete:hover,
+.itops-page .rk-item-delete:hover {
+  background: var(--red);
+  border-color: var(--red);
+  color: #fff;
 }
 .itops-page .ft-card {
   display: flex;
@@ -3699,6 +3844,23 @@
   gap: 18px;
   padding: 6px 4px 8px;
 }
+.itops-page .rm-floor.free {
+  gap: 12px;
+}
+.itops-page .rm-floor-canvas {
+  position: relative;
+  min-width: 0;
+  border-radius: 12px;
+  background:
+    linear-gradient(color-mix(in srgb, var(--border) 36%, transparent) 1px, transparent 1px) 0 0 / 28px 28px,
+    linear-gradient(90deg, color-mix(in srgb, var(--border) 36%, transparent) 1px, transparent 1px) 0 0 / 28px 28px,
+    color-mix(in srgb, var(--surface-muted) 78%, transparent);
+  border: 1px dashed var(--border);
+  overflow: hidden;
+}
+.itops-page .rm-free-tile {
+  width: 124px;
+}
 .itops-page .rm-floor-row {
   display: flex;
   flex-direction: column;
@@ -3910,6 +4072,48 @@
   background: var(--surface-muted);
   display: flex;
   align-items: center;
+}
+.itops-page .rack-kind-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 10px 0 12px;
+}
+.itops-page .rack-kind-preview {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  padding: 6px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.14s, background 0.14s, transform 0.14s;
+}
+.itops-page .rack-kind-preview:hover,
+.itops-page .rack-kind-preview.selected {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 9%, var(--surface));
+}
+.itops-page .rack-kind-preview:active {
+  transform: translateY(1px);
+}
+.itops-page .rack-kind-preview-face {
+  height: 30px;
+  display: flex;
+  align-items: center;
+}
+.itops-page .rack-kind-preview-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10.5px;
+  font-weight: 620;
+  color: var(--text-muted);
 }
 
 .itops-page .rack-form-grid {

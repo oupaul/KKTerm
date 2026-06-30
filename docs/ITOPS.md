@@ -207,7 +207,11 @@ UI/native thread (`docs/ARCHITECTURE.md` command-runtime boundaries).
 directly into the Site topology surface: a resizable/collapsible left Sites
 tree and a right Site View / Server Room View / Rack View drill-down. Batch
 Run and Automation editors/runtime remain in this source area, but their
-top-level tab chrome is hidden while the Site-only UI is active. The live
+top-level tab chrome is hidden while the Site-only UI is active. The drill-down
+views own an icon-only Edit / New / Export toolbar: edit mode gates free
+placement, Rack Device drag/drop, and destructive controls; normal mode remains
+an inspect/open surface. Site and Server Room exports save PDF, while Rack View
+also saves an Excel-readable inventory table. The live
 Batch Run view renders a per-host grid
 with status chips and **live streamed output** (each host auto-reveals its
 output as it arrives over the `itops://run` `HostOutput` frames; the SSH

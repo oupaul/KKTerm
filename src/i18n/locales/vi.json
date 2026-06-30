@@ -1008,8 +1008,11 @@
       "create": "Tạo",
       "delete": "Xóa",
       "edit": "Chỉnh sửa",
+      "editDone": "Done",
+      "export": "Export",
       "run": "Chạy",
-      "back": "Quay lại"
+      "back": "Quay lại",
+      "viewActions": "View actions"
     },
     "transport": {
       "auto": "Tự động"
@@ -1057,6 +1060,10 @@
       "editTitle": "Chỉnh sửa rack",
       "deleteTitle": "Xóa rack?",
       "deleteBody": "“{{name}}” và các thiết bị đã đặt sẽ bị xóa. Các kết nối được tham chiếu không bị ảnh hưởng.",
+      "deleteServerRoomTitle": "Delete server room?",
+      "deleteServerRoomBody": "“{{name}}” and its {{count}} rack(s) will be removed. Referenced Connections are not affected.",
+      "deleteItemTitle": "Delete device?",
+      "deleteItemBody": "“{{name}}” will be removed from the rack. Referenced Connections are not affected.",
       "nameLabel": "Tên",
       "namePlaceholder": "vd. A12",
       "siteLabel": "Site",
@@ -1100,6 +1107,7 @@
       "runRack": "Chạy tác vụ trên rack này",
       "runScope": "Chạy tác vụ trên phạm vi này",
       "kindLabel": "Loại",
+      "kindPreviewLabel": "Rack device type previews",
       "connectionLabel": "Kết nối",
       "noMembers": "Thêm kết nối vào site này trước để đặt một máy chủ.",
       "labelLabel": "Nhãn",
@@ -1234,6 +1242,19 @@
         "high": "Cao",
         "full": "Đầy"
       }
+    },
+    "export": {
+      "pdf": "PDF",
+      "excel": "Excel",
+      "pdfFilter": "PDF",
+      "excelFilter": "Excel workbook",
+      "complete": "Exported {{name}}.",
+      "devices": "Devices",
+      "noRacks": "No racks",
+      "noDevices": "No devices",
+      "inventory": "Inventory",
+      "rack": "Rack",
+      "specs": "Specs"
     },
     "batchRuns": {
       "emptyTitle": "Chưa có lần chạy hàng loạt nào",

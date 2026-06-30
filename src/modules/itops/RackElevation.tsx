@@ -37,8 +37,10 @@ export function RackElevation({
   onDeleteRack,
   onRunRack,
   onMoveItem,
+  onDeleteItem,
   isGhost,
   detailed,
+  editMode = false,
 }: {
   rack: Rack;
   /** Resolve a placed Connection's host/ip for the faceplate sub-line. */
@@ -51,12 +53,15 @@ export function RackElevation({
   onRunRack?: (rack: Rack) => void;
   /** Drag-drop a device onto a U slot (move/restack, possibly across racks). */
   onMoveItem?: (itemId: string, targetRackId: string, startU: number) => void;
+  onDeleteItem?: (item: RackItem) => void;
   isGhost?: (item: RackItem) => boolean;
   /** Single-rack detail view: wider cabinet + a placed-device summary list. */
   detailed?: boolean;
+  editMode?: boolean;
 }) {
   const { t } = useTranslation();
   const editable = !!onEditItem;
+  const canMove = editMode && !!onMoveItem;
   // Top-to-bottom U numbers: heightU … 1.
   const unitNumbers = Array.from({ length: rack.heightU }, (_, i) => rack.heightU - i);
 
@@ -139,11 +144,11 @@ export function RackElevation({
         {onDeleteRack ? (
           <button
             type="button"
-            className="it-icon-btn sm"
+            className="it-icon-btn sm danger"
             title={t("itops.racks.deleteTitle")}
             onClick={() => onDeleteRack(rack)}
           >
-            <ItIcon name="trash" size={13} />
+            <ItIcon name="xmark" size={12} />
           </button>
         ) : null}
       </div>
@@ -163,7 +168,7 @@ export function RackElevation({
             ))}
             {/* Empty slots — clickable to add a device when editing; drop targets. */}
             {unitNumbers.map((u) =>
-              onSlotClick ? (
+              editMode && onSlotClick ? (
                 <button
                   type="button"
                   className="rk-slot rk-slot-btn"
@@ -172,7 +177,7 @@ export function RackElevation({
                   title={t("itops.racks.addAtUnit", { unit: u })}
                   onClick={() => onSlotClick(u)}
                   onDragOver={
-                    onMoveItem
+                    canMove
                       ? (event) => {
                           event.preventDefault();
                           event.dataTransfer.dropEffect = "move";
@@ -180,11 +185,11 @@ export function RackElevation({
                       : undefined
                   }
                   onDrop={
-                    onMoveItem
+                    canMove
                       ? (event) => {
                           event.preventDefault();
                           const itemId = event.dataTransfer.getData("application/x-itops-rack-item");
-                          if (itemId) onMoveItem(itemId, rack.id, u);
+                          if (itemId) onMoveItem?.(itemId, rack.id, u);
                         }
                       : undefined
                   }
@@ -244,11 +249,11 @@ export function RackElevation({
               return (
                 <div
                   key={item.id}
-                  className={`${className} rk-item-row${onMoveItem ? " draggable" : ""}`}
+                  className={`${className} rk-item-row${canMove ? " draggable" : ""}${editMode ? " editing" : ""}`}
                   style={style}
-                  draggable={!!onMoveItem}
+                  draggable={canMove}
                   onDragStart={
-                    onMoveItem
+                    canMove
                       ? (event) => {
                           event.dataTransfer.setData("application/x-itops-rack-item", item.id);
                           event.dataTransfer.effectAllowed = "move";
@@ -275,6 +280,20 @@ export function RackElevation({
                       onClick={() => onEditItem?.(item)}
                     >
                       <ItIcon name="edit" size={11} />
+                    </button>
+                  ) : null}
+                  {editMode && onDeleteItem ? (
+                    <button
+                      type="button"
+                      className="rk-item-delete"
+                      title={t("itops.racks.deleteItemTitle")}
+                      aria-label={t("itops.racks.deleteItemTitle")}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onDeleteItem(item);
+                      }}
+                    >
+                      <ItIcon name="xmark" size={11} />
                     </button>
                   ) : null}
                 </div>

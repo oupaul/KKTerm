@@ -56,6 +56,8 @@ export function RackStage({
   onDeleteRack,
   onRunRack,
   onMoveItem,
+  onDeleteItem,
+  editMode = false,
 }: {
   rack: Rack;
   hostFor?: (item: RackItem) => string | null;
@@ -67,6 +69,8 @@ export function RackStage({
   onDeleteRack?: (rack: Rack) => void;
   onRunRack?: (rack: Rack) => void;
   onMoveItem?: (itemId: string, targetRackId: string, startU: number) => void;
+  onDeleteItem?: (item: RackItem) => void;
+  editMode?: boolean;
 }) {
   const { t } = useTranslation();
   const stageRef = useRef<HTMLDivElement | null>(null);
@@ -122,6 +126,7 @@ export function RackStage({
           rack={rack}
           hostFor={hostFor}
           isGhost={isGhost}
+          editMode={editMode}
           onSlotClick={onSlotClick}
           onOpenItem={onOpenItem}
           onEditItem={onEditItem}
@@ -129,6 +134,7 @@ export function RackStage({
           onDeleteRack={onDeleteRack}
           onRunRack={onRunRack}
           onMoveItem={onMoveItem}
+          onDeleteItem={onDeleteItem}
         />
       </div>
       {geom
