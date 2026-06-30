@@ -2,6 +2,7 @@ import { confirmTrustedSshHostKey, connectionPasswordOwnerId, connectionToolbarT
 import { resolveLocalShellForLaunch } from "./pwshPreflight";
 import { ConfirmDialog } from "../../../../app/ConfirmDialog";
 import { readFromClipboard, writeToClipboard } from "../../../../lib/clipboard";
+import { isMacPlatform } from "../../../../lib/platform";
 import { CUSTOM_FONTS_LOADED_EVENT } from "../../../../lib/customFonts";
 import { ScreenshotMenu } from "../../ScreenshotMenu";
 
@@ -1605,6 +1606,11 @@ function TerminalPaneView({
   const [actionsMenuOpen, setActionsMenuOpen] = useState(false);
   const [backgroundPopoverOpen, setBackgroundPopoverOpen] = useState(false);
   const [selectedTerminalText, setSelectedTerminalText] = useState("");
+  const selectedTerminalTextRef = useRef("");
+  function setSelection(text: string) {
+    selectedTerminalTextRef.current = text;
+    setSelectedTerminalText(text);
+  }
   const [contextMenu, setContextMenu] = useState<TerminalContextMenuState | null>(null);
   const [multilinePasteConfirmationOpen, setMultilinePasteConfirmationOpen] = useState(false);
   const [recordingInfo, setRecordingInfo] = useState<TerminalRecordingInfo | null>(null);
@@ -1629,6 +1635,7 @@ function TerminalPaneView({
     }
     focusTerminalRendererFromSurface();
   }
+
 
   const actionsMenuRef = useRef<HTMLDivElement | null>(null);
   const terminalSettings = useWorkspaceStore((state) => state.terminalSettings);
@@ -1800,6 +1807,41 @@ function TerminalPaneView({
     return () => document.removeEventListener("pointerdown", handleExternalPointerDown, true);
   }, []);
 
+  // On macOS WKWebView, xterm.js's accessibility manager listens to
+  // `selectionchange` and calls terminal.clearSelection() when the browser DOM
+  // selection collapses after a drag. Event order on mouseup:
+  //   pointerup → xterm canvas mouseup (finalizes selection) → document mouseup bubble → selectionchange
+  // We capture in the document mouseup bubble phase — after xterm has written the
+  // final selection but before selectionchange fires and xterm clears it.
+  // pointerdown (capture) resets the saved text at the start of each click/drag.
+  useEffect(() => {
+    if (!isMacPlatform()) {
+      return;
+    }
+    function handleMouseDown(event: MouseEvent) {
+      if (event.button !== 0) {
+        return;
+      }
+      setSelection("");
+    }
+    function handleMouseUp(event: MouseEvent) {
+      if (event.button !== 0) {
+        return;
+      }
+      const selection = terminalRendererRef.current?.getSelection();
+      if (selection) {
+        setSelection(selection);
+      }
+    }
+    // capture for mousedown (clear before new drag), bubble for mouseup (after xterm finalizes)
+    document.addEventListener("mousedown", handleMouseDown, true);
+    document.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      document.removeEventListener("mousedown", handleMouseDown, true);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, []);
+
   useEffect(() => {
     const element = terminalElementRef.current;
     const connection = pane.connection;
@@ -1858,16 +1900,38 @@ function TerminalPaneView({
         return false;
       }
 
-      if (event.type !== "keydown" || !event.ctrlKey) {
+      if (event.type !== "keydown") {
         return true;
       }
 
       const key = event.key.toLowerCase();
+
+      // On Mac, Cmd+C copies the terminal selection (xterm stores its own
+      // selection state separate from the browser DOM selection, so the
+      // native macOS copy command would copy nothing without this handler).
+      // Fall back to selectedTerminalText because WKWebView's accessibility
+      // manager can clear xterm's selection before Cmd+C fires; pointerup
+      // captures it there before the clear happens.
+      if (isMacPlatform() && event.metaKey && !event.ctrlKey && key === "c") {
+        const selection = terminal.getSelection() || selectedTerminalTextRef.current;
+        if (selection) {
+          void writeToClipboard(selection);
+          setSelection(selection);
+          setContextMenu(null);
+          return false;
+        }
+        return true;
+      }
+
+      if (!event.ctrlKey) {
+        return true;
+      }
+
       if ((key === "c" && event.shiftKey) || key === "insert") {
         const selection = terminal.getSelection();
         if (selection) {
           void writeToClipboard(selection);
-          setSelectedTerminalText(selection);
+          setSelection(selection);
           setContextMenu(null);
           return false;
         }
@@ -1940,7 +2004,17 @@ function TerminalPaneView({
     });
     const selectionDisposable = terminal.onSelectionChange(() => {
       const selection = terminal.getSelection();
-      setSelectedTerminalText(selection);
+      // On macOS, xterm's accessibility manager clears the terminal selection
+      // immediately after drag-release (DOM selectionchange collapses). We
+      // preserve the last non-empty selection in state so Cmd+C can still use
+      // it. A deliberate click-without-drag produces an empty selection here
+      // too, but the pointerup capture only saves when a selection exists, so
+      // a plain click correctly ends up with nothing to copy.
+      if (selection) {
+        setSelection(selection);
+      } else if (!isMacPlatform()) {
+        setSelection("");
+      }
       if (selection && terminalSettings.copyOnSelect) {
         void navigator.clipboard?.writeText(selection);
       }
@@ -2268,7 +2342,7 @@ function TerminalPaneView({
       lastResizeDimensionsRef.current = null;
       terminalRendererRef.current = null;
       fitAndResizeRef.current = () => undefined;
-      setSelectedTerminalText("");
+      setSelection("");
       setRecordingInfo(null);
       setRecordingBusy(false);
       setRecordingsOpen(false);
@@ -2459,7 +2533,7 @@ function TerminalPaneView({
     onFocus();
 
     const selection = terminalRendererRef.current?.getSelection() ?? "";
-    setSelectedTerminalText(selection);
+    setSelection(selection);
     setContextMenu({
       x: event.clientX,
       y: event.clientY,

@@ -1,7 +1,7 @@
 use super::{SecretReference, SecretStore};
 use aes_gcm::aead::{Aead, AeadCore, KeyInit, OsRng, Payload};
 use aes_gcm::{Aes256Gcm, Nonce};
-use argon2::Argon2;
+use argon2::{Argon2, Params, Version};
 use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 use rusqlite::{Connection, OptionalExtension, params};
 use serde::{Deserialize, Serialize};
@@ -49,6 +49,9 @@ impl SqliteSecretStore {
             .ok_or_else(|| {
                 format!("{PASSWORD_ENV} is required for encrypted SQLite secret storage")
             })?;
+        // Clear the env var immediately so child processes cannot inherit it.
+        // SAFETY: single-threaded startup path; no other thread reads this var.
+        unsafe { std::env::remove_var(PASSWORD_ENV) };
         let store = Self::new(db_path, password)?;
         store.initialize_or_verify(false)?;
         Ok(store)
@@ -324,7 +327,10 @@ fn decrypt_secret(
 
 fn derive_key(password: &str, salt: &[u8]) -> Result<[u8; 32], String> {
     let mut key = [0_u8; 32];
-    Argon2::default()
+    // OWASP ID2 parameters: 64 MB memory, 3 iterations, 1 lane.
+    let params = Params::new(65536, 3, 1, Some(32))
+        .map_err(|error| format!("Could not build Argon2 params: {error}"))?;
+    Argon2::new(argon2::Algorithm::Argon2id, Version::V0x13, params)
         .hash_password_into(password.as_bytes(), salt, &mut key)
         .map_err(|error| format!("Could not derive encrypted SQLite secret key: {error}"))?;
     Ok(key)

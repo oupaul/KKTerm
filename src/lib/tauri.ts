@@ -939,6 +939,7 @@ export interface StartRdpClientSessionRequest {
   password?: string;
   desktopWidth?: number;
   desktopHeight?: number;
+  ignoreTlsErrors?: boolean;
 }
 
 export interface RdpClientSessionStarted {

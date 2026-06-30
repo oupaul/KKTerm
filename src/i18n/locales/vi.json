@@ -1659,6 +1659,7 @@
     "qualityDefaults": "Quality defaults",
     "colorDepth": "Color depth",
     "bitmapCache": "Bitmap cache",
+    "ignoreTlsErrors": "Ignore TLS certificate errors",
     "performanceFlags": "Performance flags",
     "display": "Hiển thị",
     "remoteDesktopViewMode": "Chế độ xem",

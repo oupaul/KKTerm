@@ -148,6 +148,7 @@ export function RdpCanvasView({
         port: connection.port,
         username: connection.user ?? "",
         secretOwnerId: connectionPasswordOwnerId(connection),
+        ignoreTlsErrors: connection.rdpOptions?.ignoreTlsErrors ?? false,
       },
     }).catch((error) => {
       if (!disposed) {

@@ -17,6 +17,7 @@
 // and paste DYNAMIC_BG_PREVIEW_ART_CSS into dashboard.css (or inject once).
 // ─────────────────────────────────────────────────────────────────────────────
 
+import DOMPurify from "dompurify";
 import type { DynamicBackgroundId } from "./dynamicBackgrounds";
 
 function rng(seed) {
@@ -463,7 +464,7 @@ export function DynamicBackgroundPreviewArt({ id }: { id: DynamicBackgroundId })
     <span
       className="dw-bg-preview-art"
       aria-hidden="true"
-      dangerouslySetInnerHTML={{ __html: dynamicBackgroundPreviewSvg(id) }}
+      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(dynamicBackgroundPreviewSvg(id)) }}
     />
   );
 }

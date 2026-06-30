@@ -1659,6 +1659,7 @@
     "qualityDefaults": "ค่าเริ่มต้นคุณภาพ",
     "colorDepth": "ความลึกของสี",
     "bitmapCache": "แคชบิตแมป",
+    "ignoreTlsErrors": "Ignore TLS certificate errors",
     "performanceFlags": "แฟล็กประสิทธิภาพ",
     "display": "การแสดงผล",
     "remoteDesktopViewMode": "โหมดมุมมอง",

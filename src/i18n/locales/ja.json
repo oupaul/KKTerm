@@ -1659,6 +1659,7 @@
     "qualityDefaults": "品質のデフォルト",
     "colorDepth": "色深度",
     "bitmapCache": "ビットマップキャッシュ",
+    "ignoreTlsErrors": "TLS 証明書エラーを無視する",
     "performanceFlags": "パフォーマンスフラグ",
     "display": "ディスプレイ",
     "remoteDesktopViewMode": "表示モード",

@@ -1659,6 +1659,7 @@
     "qualityDefaults": "Valores predeterminados de calidad",
     "colorDepth": "Profundidad de color",
     "bitmapCache": "Caché de mapa de bits",
+    "ignoreTlsErrors": "Ignore TLS certificate errors",
     "performanceFlags": "Indicadores de rendimiento",
     "display": "Pantalla",
     "remoteDesktopViewMode": "Modo de vista",

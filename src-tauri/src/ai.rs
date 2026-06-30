@@ -3557,8 +3557,11 @@ async fn run_ai_tool(
     // skip the per-call approval modal; otherwise an unattended intervention
     // would block here forever.
     let pre_approved = crate::watchdog::check_allowed_tool(allowed_tools, &call.function.name);
+    // shell_command always requires explicit per-call user approval regardless of
+    // the global permission mode — blocklist-only enforcement is not sufficient.
+    let always_require_approval = call.function.name == "shell_command";
     if tool_requires_allow_all(&call.function.name)
-        && settings.tool_permission_mode() != "allowAll"
+        && (settings.tool_permission_mode() != "allowAll" || always_require_approval)
         && !pre_approved
     {
         let risk_notes = approval_risk_notes(&call.function.name, &args);

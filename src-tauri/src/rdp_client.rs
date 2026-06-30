@@ -63,7 +63,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::{
     collections::HashMap,
-    sync::{Arc, Mutex, MutexGuard},
+    sync::{Mutex, MutexGuard},
 };
 use tauri::{AppHandle, Emitter};
 use tokio::{
@@ -122,6 +122,8 @@ pub struct StartRdpClientSessionRequest {
     desktop_width: Option<u16>,
     #[serde(default)]
     desktop_height: Option<u16>,
+    #[serde(default)]
+    ignore_tls_errors: bool,
 }
 
 impl StartRdpClientSessionRequest {
@@ -273,6 +275,7 @@ impl RdpClientSessionManager {
         let username = request.username.clone();
         let password = request.password.clone().unwrap_or_default();
         let domain = request.domain.clone();
+        let ignore_tls_errors = request.ignore_tls_errors;
 
         rdp_debug(
             "ironrdp.start.request",
@@ -296,6 +299,7 @@ impl RdpClientSessionManager {
             domain,
             width,
             height,
+            ignore_tls_errors,
         )) {
             Ok(result) => result,
             Err(error) => {
@@ -468,55 +472,7 @@ impl ironrdp_tokio::NetworkClient for NoopNetworkClient {
     }
 }
 
-// ── TLS: NoCertificateVerification (RDP never verifies the cert chain) ────────
-
-#[derive(Debug)]
-struct NoCertificateVerification(Arc<rustls::crypto::CryptoProvider>);
-
-impl rustls::client::danger::ServerCertVerifier for NoCertificateVerification {
-    fn verify_server_cert(
-        &self,
-        _end_entity: &rustls::pki_types::CertificateDer<'_>,
-        _intermediates: &[rustls::pki_types::CertificateDer<'_>],
-        _server_name: &rustls::pki_types::ServerName<'_>,
-        _ocsp_response: &[u8],
-        _now: rustls::pki_types::UnixTime,
-    ) -> Result<rustls::client::danger::ServerCertVerified, rustls::Error> {
-        Ok(rustls::client::danger::ServerCertVerified::assertion())
-    }
-
-    fn verify_tls12_signature(
-        &self,
-        message: &[u8],
-        cert: &rustls::pki_types::CertificateDer<'_>,
-        dsa: &rustls::DigitallySignedStruct,
-    ) -> Result<rustls::client::danger::HandshakeSignatureValid, rustls::Error> {
-        rustls::crypto::verify_tls12_signature(
-            message,
-            cert,
-            dsa,
-            &self.0.signature_verification_algorithms,
-        )
-    }
-
-    fn verify_tls13_signature(
-        &self,
-        message: &[u8],
-        cert: &rustls::pki_types::CertificateDer<'_>,
-        dsa: &rustls::DigitallySignedStruct,
-    ) -> Result<rustls::client::danger::HandshakeSignatureValid, rustls::Error> {
-        rustls::crypto::verify_tls13_signature(
-            message,
-            cert,
-            dsa,
-            &self.0.signature_verification_algorithms,
-        )
-    }
-
-    fn supported_verify_schemes(&self) -> Vec<rustls::SignatureScheme> {
-        self.0.signature_verification_algorithms.supported_schemes()
-    }
-}
+// ── TLS: native-tls upgrade (uses macOS Secure Transport for Windows compatibility) ──
 
 async fn tls_upgrade(
     stream: TcpStream,
@@ -524,13 +480,8 @@ async fn tls_upgrade(
     host: &str,
     port: u16,
     server_name: &str,
-) -> Result<tokio_rustls::client::TlsStream<TcpStream>, String> {
-    let provider = Arc::new(rustls::crypto::ring::default_provider());
-    let cipher_suites: Vec<String> = provider
-        .cipher_suites
-        .iter()
-        .map(|suite| format!("{:?}", suite.suite()))
-        .collect();
+    _tls12_only: bool,
+) -> Result<async_native_tls::TlsStream<TcpStream>, String> {
     rdp_debug(
         "ironrdp.tls.start",
         &json!({
@@ -538,41 +489,24 @@ async fn tls_upgrade(
             "host": host,
             "port": port,
             "serverName": server_name,
-            "protocolVersions": ["TLS1.2", "TLS1.3"],
-            "cipherSuites": cipher_suites,
-            "sessionResumption": false,
+            "backend": "native-tls",
             "certificateVerification": "disabled_for_rdp",
         }),
     );
 
-    let tls_config = rustls::ClientConfig::builder_with_provider(Arc::clone(&provider))
-        .with_protocol_versions(&[&rustls::version::TLS12, &rustls::version::TLS13])
-        .map_err(|e| format!("TLS config error: {e}"))?
-        .dangerous()
-        .with_custom_certificate_verifier(Arc::new(NoCertificateVerification(provider)))
-        .with_no_client_auth();
+    let connector = async_native_tls::TlsConnector::new()
+        .danger_accept_invalid_certs(true)
+        .danger_accept_invalid_hostnames(true)
+        .use_sni(false);
 
-    // Disable TLS session resumption — CredSSP/MS-CSSP requires it.
-    let mut tls_config = tls_config;
-    tls_config.resumption = rustls::client::Resumption::disabled();
-
-    let connector = tokio_rustls::TlsConnector::from(Arc::new(tls_config));
-    let dns_name = rustls::pki_types::ServerName::try_from(server_name.to_string())
-        .map_err(|e| format!("invalid server name '{server_name}': {e}"))?;
-    match connector.connect(dns_name, stream).await {
+    match connector.connect(server_name, stream).await {
         Ok(tls_stream) => {
-            let (_, session) = tls_stream.get_ref();
             rdp_debug(
                 "ironrdp.tls.ok",
                 &json!({
                     "sessionId": session_id,
                     "host": host,
                     "port": port,
-                    "protocolVersion": session.protocol_version().map(|version| format!("{version:?}")),
-                    "cipherSuite": session
-                        .negotiated_cipher_suite()
-                        .map(|suite| format!("{:?}", suite.suite())),
-                    "peerCertificateCount": session.peer_certificates().map(|certs| certs.len()).unwrap_or(0),
                 }),
             );
             Ok(tls_stream)
@@ -585,7 +519,6 @@ async fn tls_upgrade(
                     "host": host,
                     "port": port,
                     "error": error.to_string(),
-                    "errorKind": tls_error_kind(&error),
                 }),
             );
             Err(format!("TLS handshake failed: {error}"))
@@ -595,17 +528,18 @@ async fn tls_upgrade(
 
 fn extract_server_public_key(
     session_id: &str,
-    tls_stream: &tokio_rustls::client::TlsStream<TcpStream>,
+    tls_stream: &async_native_tls::TlsStream<TcpStream>,
 ) -> Result<Vec<u8>, String> {
     use x509_cert::der::Decode as _;
 
-    let (_, session) = tls_stream.get_ref();
-    let cert_der = session
-        .peer_certificates()
-        .and_then(|certs| certs.first())
-        .ok_or_else(|| "RDP server sent no TLS certificate".to_string())?;
+    let cert_der = tls_stream
+        .peer_certificate()
+        .map_err(|e| format!("failed to retrieve server certificate: {e}"))?
+        .ok_or_else(|| "RDP server sent no TLS certificate".to_string())?
+        .to_der()
+        .map_err(|e| format!("failed to encode server certificate as DER: {e}"))?;
 
-    let cert = x509_cert::Certificate::from_der(cert_der.as_ref())
+    let cert = x509_cert::Certificate::from_der(&cert_der)
         .map_err(|e| format!("failed to parse server certificate: {e}"))?;
 
     let spki_bytes = cert
@@ -620,7 +554,6 @@ fn extract_server_public_key(
         "ironrdp.certificate.ok",
         &json!({
             "sessionId": session_id,
-            "peerCertificateCount": session.peer_certificates().map(|certs| certs.len()).unwrap_or(0),
             "subjectPublicKeyBytes": spki_bytes.len(),
         }),
     );
@@ -630,7 +563,7 @@ fn extract_server_public_key(
 
 // ── Connect helper ────────────────────────────────────────────────────────────
 
-type UpgradedFramed = ironrdp_tokio::TokioFramed<tokio_rustls::client::TlsStream<TcpStream>>;
+type UpgradedFramed = ironrdp_tokio::TokioFramed<async_native_tls::TlsStream<TcpStream>>;
 
 /// Flatten an error and its `source()` chain into one message, so a generic
 /// top-level label (e.g. "CredSSP") surfaces the underlying reason
@@ -662,6 +595,7 @@ async fn rdp_connect(
     domain: Option<String>,
     width: u16,
     height: u16,
+    ignore_tls_errors: bool,
 ) -> Result<(ironrdp::connector::ConnectionResult, UpgradedFramed), String> {
     use ironrdp::connector::{
         ClientConnector, Config, Credentials, DesktopSize, ServerName, credssp::KerberosConfig,
@@ -815,7 +749,7 @@ async fn rdp_connect(
     );
 
     // Step 5: TLS upgrade
-    let tls_stream = tls_upgrade(tcp_stream, &session_id, &host, port, &host).await?;
+    let tls_stream = tls_upgrade(tcp_stream, &session_id, &host, port, &host, ignore_tls_errors).await?;
 
     // Step 6: Extract server public key
     let server_public_key = extract_server_public_key(&session_id, &tls_stream)?;

@@ -1659,6 +1659,7 @@
     "qualityDefaults": "质量默认值",
     "colorDepth": "色彩深度",
     "bitmapCache": "位图缓存",
+    "ignoreTlsErrors": "忽略 TLS 证书错误",
     "performanceFlags": "性能标志",
     "display": "显示",
     "remoteDesktopViewMode": "视图模式",

@@ -990,6 +990,7 @@ export interface RdpConnectionOptions {
   performanceProfile?: RdpPerformanceProfile;
   remoteResolution?: RdpRemoteResolution;
   viewMode?: RemoteDesktopViewMode;
+  ignoreTlsErrors?: boolean;
 }
 
 export type VncColorLevel = "full" | "256" | "64" | "8";

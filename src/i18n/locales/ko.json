@@ -1659,6 +1659,7 @@
     "qualityDefaults": "품질 기본값",
     "colorDepth": "색상 깊이",
     "bitmapCache": "비트맵 캐시",
+    "ignoreTlsErrors": "TLS 인증서 오류 무시",
     "performanceFlags": "성능 플래그",
     "display": "디스플레이",
     "remoteDesktopViewMode": "보기 모드",

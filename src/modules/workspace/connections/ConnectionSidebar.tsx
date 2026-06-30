@@ -4371,6 +4371,7 @@ function ConnectionDialog({
               bitmapCache: inheritRdpDefaults
                 ? rdpSettings.bitmapCache
                 : form.get("rdpBitmapCache") === "on",
+              ignoreTlsErrors: form.get("rdpIgnoreTlsErrors") === "on",
               performanceProfile: String(
                 inheritRdpDefaults
                   ? rdpSettings.performanceProfile

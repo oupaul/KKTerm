@@ -1,4 +1,4 @@
-import { Clipboard, HardDrive, Layers, Monitor, Palette, Scaling, Settings2, Zap } from "lucide-react";
+import { Clipboard, HardDrive, Layers, Monitor, Palette, Scaling, Settings2, ShieldOff, Zap } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { technicalInputProps } from "../../../../lib/inputBehavior";
 import {
@@ -210,6 +210,15 @@ export function RdpConnectionOptions({
                 name="rdpBitmapCache"
                 type="checkbox"
                 defaultChecked={initialConnection?.rdpOptions?.bitmapCache ?? rdpSettings.bitmapCache}
+              />
+            </label>
+            <label className="connection-session-toggle">
+              <ShieldOff className="option-glyph" size={17} aria-hidden />
+              <span>{t("settings.ignoreTlsErrors")}</span>
+              <input
+                name="rdpIgnoreTlsErrors"
+                type="checkbox"
+                defaultChecked={initialConnection?.rdpOptions?.ignoreTlsErrors ?? false}
               />
             </label>
           </div>

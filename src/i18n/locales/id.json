@@ -1659,6 +1659,7 @@
     "qualityDefaults": "Default kualitas",
     "colorDepth": "Kedalaman warna",
     "bitmapCache": "Cache bitmap",
+    "ignoreTlsErrors": "Ignore TLS certificate errors",
     "performanceFlags": "Flag performa",
     "display": "Tampilan",
     "remoteDesktopViewMode": "Mode tampilan",

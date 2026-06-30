@@ -1368,6 +1368,8 @@ pub struct RdpConnectionOptions {
     remote_resolution: Option<String>,
     #[serde(default)]
     view_mode: Option<String>,
+    #[serde(default)]
+    ignore_tls_errors: Option<bool>,
 }
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -4256,6 +4258,7 @@ fn normalize_rdp_connection_options(
             performance_profile: None,
             remote_resolution: None,
             view_mode: None,
+            ignore_tls_errors: options.ignore_tls_errors,
         }));
     }
     if let Some(color_depth) = options.color_depth {
