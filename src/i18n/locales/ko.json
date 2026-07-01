@@ -1073,7 +1073,7 @@
       "serverRoomNameLabel": "서버실 이름",
       "serverRoomSelectLabel": "서버실",
       "serverRoomPlaceholder": "예: B실",
-      "serverRoomCreateHelp": "서버실은 사이트 내에서 랙을 그룹화합니다. 첫 번째 랙과 함께 룸을 만들고, 필요할 때 같은 룸에 랙을 추가하세요.",
+      "serverRoomCreateHelp": "서버실은 사이트에 속하며 랙이 추가될 때까지 비워 둘 수 있습니다.",
       "serverRoomRequiredOption": "서버 룸 선택",
       "firstRackLabel": "첫 번째 랙",
       "firstRackHint": "서버실은 해당 랙을 통해 저장되므로, 이 작업은 룸의 첫 번째 랙을 만듭니다.",

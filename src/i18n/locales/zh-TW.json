@@ -1073,7 +1073,7 @@
       "serverRoomNameLabel": "機房名稱",
       "serverRoomSelectLabel": "機房",
       "serverRoomPlaceholder": "例如 機房 B",
-      "serverRoomCreateHelp": "機房會在站台內將機架分組。請以第一個機架建立機房，之後再視需要將更多機架新增至同一機房。",
+      "serverRoomCreateHelp": "機房屬於某個站台，在新增機架之前可以保持為空。",
       "serverRoomRequiredOption": "選取伺服器機房",
       "firstRackLabel": "第一個機架",
       "firstRackHint": "機房是透過其機架儲存，因此此動作會在機房中建立第一個機架。",

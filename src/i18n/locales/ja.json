@@ -1073,7 +1073,7 @@
       "serverRoomNameLabel": "サーバールーム名",
       "serverRoomSelectLabel": "サーバールーム",
       "serverRoomPlaceholder": "例: ルームB",
-      "serverRoomCreateHelp": "サーバールームはサイト内のラックをグループ化します。最初のラックとともにルームを作成し、必要に応じて同じルームにラックを追加してください。",
+      "serverRoomCreateHelp": "サーバールームはサイトに属し、ラックが追加されるまで空のままにしておけます。",
       "serverRoomRequiredOption": "サーバールームを選択",
       "firstRackLabel": "最初のラック",
       "firstRackHint": "サーバールームはそのラックを通じて保存されるため、これによりルーム内の最初のラックが作成されます。",

@@ -1073,7 +1073,7 @@
       "serverRoomNameLabel": "Serverraumname",
       "serverRoomSelectLabel": "Serverraum",
       "serverRoomPlaceholder": "z. B. Raum B",
-      "serverRoomCreateHelp": "Serverräume gruppieren Racks innerhalb einer Site. Erstellen Sie den Raum mit seinem ersten Rack und fügen Sie bei Bedarf weitere Racks im selben Raum hinzu.",
+      "serverRoomCreateHelp": "Serverräume gehören zu einer Site und können leer bleiben, bis Racks hinzugefügt werden.",
       "serverRoomRequiredOption": "Serverraum auswählen",
       "firstRackLabel": "Erstes Rack",
       "firstRackHint": "Serverräume werden über ihre Racks gespeichert, daher wird hiermit das erste Rack im Raum erstellt.",

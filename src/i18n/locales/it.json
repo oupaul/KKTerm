@@ -1073,7 +1073,7 @@
       "serverRoomNameLabel": "Nome della sala server",
       "serverRoomSelectLabel": "Sala server",
       "serverRoomPlaceholder": "es. Sala B",
-      "serverRoomCreateHelp": "Le Sale server raggruppano rack all'interno di un sito. Crea la sala con il suo primo rack, poi aggiungi altri rack alla stessa sala all'occorrenza.",
+      "serverRoomCreateHelp": "Le Sale server appartengono a un sito e possono restare vuote finché non si aggiungono rack.",
       "serverRoomRequiredOption": "Seleziona una sala server",
       "firstRackLabel": "Primo rack",
       "firstRackHint": "Le Sale server sono memorizzate tramite i loro rack, quindi questo crea il primo rack della sala.",

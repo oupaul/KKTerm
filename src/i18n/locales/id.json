@@ -1073,7 +1073,7 @@
       "serverRoomNameLabel": "Nama ruang server",
       "serverRoomSelectLabel": "Ruang server",
       "serverRoomPlaceholder": "mis. Ruang B",
-      "serverRoomCreateHelp": "Ruang server mengelompokkan rak dalam sebuah situs. Buat ruangan dengan rak pertamanya, lalu tambah rak lain ke ruangan yang sama bila perlu.",
+      "serverRoomCreateHelp": "Ruang server milik sebuah situs dan dapat tetap kosong sampai rak ditambahkan.",
       "serverRoomRequiredOption": "Pilih ruang server",
       "firstRackLabel": "Rak pertama",
       "firstRackHint": "Ruang server disimpan melalui raknya, jadi ini membuat rak pertama di ruangan tersebut.",

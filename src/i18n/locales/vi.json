@@ -1073,7 +1073,7 @@
       "serverRoomNameLabel": "Tên phòng máy chủ",
       "serverRoomSelectLabel": "Phòng máy chủ",
       "serverRoomPlaceholder": "ví dụ: Phòng B",
-      "serverRoomCreateHelp": "Các Phòng máy chủ nhóm các rack bên trong một site. Tạo phòng với rack đầu tiên của nó, sau đó thêm rack khác vào cùng phòng khi cần.",
+      "serverRoomCreateHelp": "Các Phòng máy chủ thuộc về một site và có thể để trống cho đến khi thêm rack.",
       "serverRoomRequiredOption": "Chọn phòng máy chủ",
       "firstRackLabel": "Rack đầu tiên",
       "firstRackHint": "Các Phòng máy chủ được lưu qua các rack của chúng, do đó bước này tạo rack đầu tiên trong phòng.",

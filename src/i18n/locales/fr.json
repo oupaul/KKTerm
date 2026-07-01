@@ -1073,7 +1073,7 @@
       "serverRoomNameLabel": "Nom de la salle de serveurs",
       "serverRoomSelectLabel": "Salle de serveurs",
       "serverRoomPlaceholder": "p. ex. Salle B",
-      "serverRoomCreateHelp": "Les Salles de serveurs regroupent des racks au sein d'un site. Créez la salle avec son premier rack, puis ajoutez d'autres racks à la même salle au besoin.",
+      "serverRoomCreateHelp": "Les Salles de serveurs appartiennent à un site et peuvent rester vides jusqu'à l'ajout de racks.",
       "serverRoomRequiredOption": "Sélectionnez une salle de serveurs",
       "firstRackLabel": "Premier rack",
       "firstRackHint": "Les Salles de serveurs sont stockées via leurs racks, ceci crée donc le premier rack de la salle.",

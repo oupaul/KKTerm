@@ -1073,7 +1073,7 @@
       "serverRoomNameLabel": "Nome da sala de servidores",
       "serverRoomSelectLabel": "Sala de servidores",
       "serverRoomPlaceholder": "ex.: Sala B",
-      "serverRoomCreateHelp": "As Salas de servidores agrupam racks dentro de um site. Crie a sala com seu primeiro rack e, quando precisar, adicione mais racks à mesma sala.",
+      "serverRoomCreateHelp": "As Salas de servidores pertencem a um site e podem permanecer vazias até que racks sejam adicionados.",
       "serverRoomRequiredOption": "Selecione uma sala de servidores",
       "firstRackLabel": "Primeiro rack",
       "firstRackHint": "As Salas de servidores são armazenadas através de seus racks, então isto cria o primeiro rack da sala.",
