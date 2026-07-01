@@ -359,9 +359,15 @@ mod platform {
     const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 
     // One hidden PowerShell pass that returns every section as structured JSON.
-    // CIM property names are invariant English, so values like Caption/Model are
-    // stable regardless of the Windows display language.
-    const QUERY: &str = r#"$ErrorActionPreference='SilentlyContinue';
+    // CIM property *names* are invariant English, so the field layout is stable
+    // regardless of the Windows display language. The *values*, however, can be
+    // localized/non-ASCII (OS Caption, time-zone caption, user and device names).
+    // Windows PowerShell 5.1 encodes redirected stdout with the OEM code page by
+    // default, which `String::from_utf8_lossy` would mangle into  replacement
+    // characters — so force UTF-8 (no BOM; a BOM would survive `trim()` and break
+    // the JSON parse) before emitting anything.
+    const QUERY: &str = r#"[Console]::OutputEncoding=New-Object System.Text.UTF8Encoding $false;
+$ErrorActionPreference='SilentlyContinue';
 function E($d){ if($d){[int64]([math]::Floor((($d).ToUniversalTime() - [datetime]'1970-01-01').TotalSeconds))} else {$null} }
 function S($a){ if($a){ (($a | Where-Object {$_ -gt 0} | ForEach-Object {[char]$_}) -join '').Trim() } else {$null} }
 $os=Get-CimInstance Win32_OperatingSystem;
