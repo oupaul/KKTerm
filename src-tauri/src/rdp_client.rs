@@ -515,13 +515,14 @@ async fn tls_upgrade(
     builder
         .set_cipher_list("ALL:@SECLEVEL=0")
         .map_err(|e| format!("TLS cipher configuration failed: {e}"))?;
-    // Require TLS 1.2. RDP hosts support it (the official client uses it), and it
-    // lets us negotiate the legacy CBC/RSA ciphers the server offers WITHOUT the
-    // TLS 1.0 CBC "empty fragment" (BEAST mitigation) records that make Windows
-    // Schannel abort the CredSSP exchange with a "tlsv1 alert internal error"
-    // (alert 80). SECLEVEL 0 keeps those older TLS 1.2 ciphers available.
-    let _ = builder.set_min_proto_version(Some(SslVersion::TLS1_2));
-    // Belt-and-suspenders: never emit the empty-fragment records Schannel dislikes.
+    // Allow TLS 1.0: legacy Windows RDP listeners often ONLY offer TLS 1.0, so
+    // requiring a higher version fails with "unsupported protocol". The real cause
+    // of the earlier CredSSP "tlsv1 alert internal error" (alert 80) was OpenSSL's
+    // TLS 1.0 CBC "empty fragment" (BEAST mitigation) records, which Windows
+    // Schannel rejects mid-CredSSP. DONT_INSERT_EMPTY_FRAGMENTS stops those, making
+    // our TLS 1.0 records look like the ones Schannel (and the official client)
+    // expect. SECLEVEL 0 keeps the server's legacy ciphers available.
+    let _ = builder.set_min_proto_version(Some(SslVersion::TLS1));
     builder.set_options(SslOptions::DONT_INSERT_EMPTY_FRAGMENTS);
     let connector = builder.build();
 
