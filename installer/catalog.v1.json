@@ -2435,7 +2435,6 @@
       },
       "options": [
         "provider",
-        "scope",
         "version"
       ],
       "descriptionLocales": {
