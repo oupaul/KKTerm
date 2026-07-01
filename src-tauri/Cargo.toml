@@ -146,6 +146,13 @@ tokio-rustls = "0.26"
 # wraps its own CredSSP auth inside TLS, so chain verification is intentionally
 # skipped; `ring` matches the provider selected in rdp_client.rs::tls_upgrade.
 rustls = { version = "0.23", features = ["ring"] }
+# OpenSSL for the RDP TLS upgrade. Windows RDP servers frequently offer only
+# legacy cipher suites that rustls and macOS Secure Transport refuse ("Cipher
+# Suite negotiation failure"); OpenSSL at a low security level negotiates them,
+# matching the official RDP client. `vendored` builds OpenSSL from source so the
+# package does not depend on a system OpenSSL being present.
+openssl = { version = "0.10", features = ["vendored"] }
+tokio-openssl = "0.6"
 # Parse the server certificate's SubjectPublicKeyInfo for the CredSSP public-key binding.
 x509-cert = "0.2"
 # Cross-platform window pixel capture for the universal in-app screenshot MCP

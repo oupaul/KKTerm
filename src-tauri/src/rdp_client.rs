@@ -481,7 +481,10 @@ async fn tls_upgrade(
     port: u16,
     server_name: &str,
     ignore_tls_errors: bool,
-) -> Result<async_native_tls::TlsStream<TcpStream>, String> {
+) -> Result<tokio_openssl::SslStream<TcpStream>, String> {
+    use openssl::ssl::{SslConnector, SslMethod, SslVerifyMode, SslVersion};
+    use std::pin::Pin;
+
     rdp_debug(
         "ironrdp.tls.start",
         &json!({
@@ -489,37 +492,55 @@ async fn tls_upgrade(
             "host": host,
             "port": port,
             "serverName": server_name,
-            "backend": "native-tls",
+            "backend": "openssl",
             "ignoreTlsErrors": ignore_tls_errors,
             "certificateVerification": "credssp_public_key_binding",
         }),
     );
 
-    // RDP authenticates the server by binding its TLS public key into the CredSSP
-    // exchange (see extract_server_public_key), NOT by validating the TLS
-    // certificate chain. RDP hosts also overwhelmingly use self-signed certs and
-    // legacy Schannel cipher suites; turning on native-tls chain/hostname
-    // verification makes macOS Secure Transport reject them outright ("Cipher
-    // Suite negotiation failure" / certificate errors). So the TLS upgrade always
-    // runs in the lenient mode that the CredSSP binding makes safe, and
-    // `use_sni(false)` matches what Windows RDP servers expect. `ignore_tls_errors`
-    // is accepted and logged for forward-compatibility but intentionally does not
-    // tighten this handshake, since doing so breaks connectivity without adding
-    // real security beyond CredSSP.
+    // Use OpenSSL for the RDP TLS wrapper. RDP authenticates the server by binding
+    // its TLS public key into the CredSSP exchange (see extract_server_public_key),
+    // NOT by validating the TLS certificate chain — so verification is disabled and
+    // that is safe here. Crucially, Windows RDP servers frequently offer only legacy
+    // cipher suites (e.g. RSA key-exchange / CBC-SHA) that modern stacks like rustls
+    // and macOS Secure Transport refuse, producing "Cipher Suite negotiation
+    // failure". OpenSSL at security level 0 with a broad cipher list negotiates them,
+    // matching what the official Microsoft RDP client can do. SNI is left unset to
+    // match Windows RDP server expectations.
     let _ = ignore_tls_errors;
-    let connector = async_native_tls::TlsConnector::new()
-        .danger_accept_invalid_certs(true)
-        .danger_accept_invalid_hostnames(true)
-        .use_sni(false);
+    let mut builder = SslConnector::builder(SslMethod::tls_client())
+        .map_err(|e| format!("TLS setup failed: {e}"))?;
+    builder.set_verify(SslVerifyMode::NONE);
+    builder.set_security_level(0);
+    builder
+        .set_cipher_list("ALL:@SECLEVEL=0")
+        .map_err(|e| format!("TLS cipher configuration failed: {e}"))?;
+    // Allow legacy protocol versions some older Windows RDP hosts still require.
+    let _ = builder.set_min_proto_version(Some(SslVersion::TLS1));
+    let connector = builder.build();
 
-    match connector.connect(server_name, stream).await {
-        Ok(tls_stream) => {
+    let mut config = connector
+        .configure()
+        .map_err(|e| format!("TLS configuration failed: {e}"))?;
+    config.set_use_server_name_indication(false);
+    config.set_verify_hostname(false);
+    let ssl = config
+        .into_ssl(server_name)
+        .map_err(|e| format!("TLS session init failed: {e}"))?;
+
+    let mut tls_stream = tokio_openssl::SslStream::new(ssl, stream)
+        .map_err(|e| format!("TLS stream init failed: {e}"))?;
+
+    match Pin::new(&mut tls_stream).connect().await {
+        Ok(()) => {
             rdp_debug(
                 "ironrdp.tls.ok",
                 &json!({
                     "sessionId": session_id,
                     "host": host,
                     "port": port,
+                    "cipher": tls_stream.ssl().current_cipher().map(|c| c.name().to_string()),
+                    "protocolVersion": tls_stream.ssl().version_str(),
                 }),
             );
             Ok(tls_stream)
@@ -541,13 +562,13 @@ async fn tls_upgrade(
 
 fn extract_server_public_key(
     session_id: &str,
-    tls_stream: &async_native_tls::TlsStream<TcpStream>,
+    tls_stream: &tokio_openssl::SslStream<TcpStream>,
 ) -> Result<Vec<u8>, String> {
     use x509_cert::der::Decode as _;
 
     let cert_der = tls_stream
+        .ssl()
         .peer_certificate()
-        .map_err(|e| format!("failed to retrieve server certificate: {e}"))?
         .ok_or_else(|| "RDP server sent no TLS certificate".to_string())?
         .to_der()
         .map_err(|e| format!("failed to encode server certificate as DER: {e}"))?;
@@ -576,7 +597,7 @@ fn extract_server_public_key(
 
 // ── Connect helper ────────────────────────────────────────────────────────────
 
-type UpgradedFramed = ironrdp_tokio::TokioFramed<async_native_tls::TlsStream<TcpStream>>;
+type UpgradedFramed = ironrdp_tokio::TokioFramed<tokio_openssl::SslStream<TcpStream>>;
 
 /// Flatten an error and its `source()` chain into one message, so a generic
 /// top-level label (e.g. "CredSSP") surfaces the underlying reason
