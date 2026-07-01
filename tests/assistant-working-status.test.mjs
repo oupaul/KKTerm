@@ -104,17 +104,52 @@ test("stopping an assistant reply finalizes the in-flight streaming message", as
   );
   assert.ok(stopFunctionMatch, "handleStopAssistantPrompt should exist.");
   const stopFunctionSource = stopFunctionMatch[0];
+  const finalizerMatch = assistantSource.match(
+    /function finalizeActiveStreamingMessages\(completedAt: string\)[\s\S]*?\n  }\n/,
+  );
+  assert.ok(finalizerMatch, "finalizeActiveStreamingMessages should exist.");
+  const finalizerSource = finalizerMatch[0];
 
   assert.match(
     stopFunctionSource,
-    /setMessages\(/,
-    "Stop should update chat messages, not just the isSendingPrompt flag.",
+    /finalizeActiveStreamingMessages\(new Date\(\)\.toISOString\(\)\)/,
+    "Stop should finalize chat messages, not just the isSendingPrompt flag.",
   );
   assert.match(
-    stopFunctionSource,
+    finalizerSource,
     /isStreaming:\s*false/,
     "Stop must clear isStreaming on the active message so its work panel stops " +
       "showing a running 'thinking' indicator after the request id has been " +
       "bumped (which makes the stream channel ignore any later done/error event).",
+  );
+  assert.match(
+    finalizerSource,
+    /messagesRef\.current\s*=\s*finalizedMessages/,
+    "Stop must update the mutable message ref so the next assistant turn cannot reuse " +
+      "a stale streaming transcript.",
+  );
+  assert.match(
+    finalizerSource,
+    /saveChatMessages\(/,
+    "Stop must persist the finalized partial assistant message into chat history.",
+  );
+});
+
+test("stale assistant stream flushes cannot revive a stopped message", async () => {
+  const assistantSource = await readFile(
+    new URL("../src/ai/AssistantPanel.tsx", import.meta.url),
+    "utf8",
+  );
+
+  const flushFunctionMatch = assistantSource.match(
+    /const flushStreamingSnapshot = \(\) => \{[\s\S]*?\n      \};/,
+  );
+  assert.ok(flushFunctionMatch, "flushStreamingSnapshot should exist.");
+  const flushFunctionSource = flushFunctionMatch[0];
+
+  assert.match(
+    flushFunctionSource,
+    /activeAssistantRequestIdRef\.current !== requestId[\s\S]*return;/,
+    "A pending coalesced stream flush must no-op after Stop bumps the request id.",
   );
 });

@@ -662,27 +662,7 @@ export function AssistantPanel({
     activeAssistantRequestIdRef.current += 1;
     setIsSendingPrompt(false);
     setChatError("");
-    // Bumping the request id above makes the streaming channel's onmessage
-    // handler ignore any further events (including a final "done"/"error"),
-    // so the in-flight message would otherwise be stuck showing isStreaming:
-    // true forever — finalize it here instead.
-    const stoppedAt = new Date().toISOString();
-    setMessages((current) =>
-      current.map((message) =>
-        message.isStreaming
-          ? {
-              ...message,
-              isStreaming: false,
-              workCompletedAt: stoppedAt,
-              toolCalls: (message.toolCalls ?? []).map((toolCall) =>
-                toolCall.status === "running"
-                  ? { ...toolCall, status: "completed", endedAt: stoppedAt }
-                  : toolCall,
-              ),
-            }
-          : message,
-      ),
-    );
+    finalizeActiveStreamingMessages(new Date().toISOString());
     if (isTauriRuntime()) {
       // Detaching the UI is not enough: without this the backend agent loop
       // keeps running — and keeps executing tools — after Stop.
@@ -750,6 +730,41 @@ export function AssistantPanel({
         setChatError(error instanceof Error ? error.message : String(error));
       });
     }
+  }
+
+  function finalizeActiveStreamingMessages(completedAt: string) {
+    // Bumping the request id makes the streaming channel ignore further events
+    // (including final "done"/"error"), so finalize and persist the in-flight
+    // message here instead.
+    let didFinalize = false;
+    const finalizedMessages = messagesRef.current.map((message) => {
+      if (!message.isStreaming) {
+        return message;
+      }
+
+      didFinalize = true;
+      return {
+        ...message,
+        isStreaming: false,
+        workCompletedAt: completedAt,
+        toolCalls: (message.toolCalls ?? []).map((toolCall) =>
+          toolCall.status === "running"
+            ? { ...toolCall, status: "completed" as const, endedAt: completedAt }
+            : toolCall,
+        ),
+      };
+    });
+
+    if (!didFinalize) {
+      return;
+    }
+
+    messagesRef.current = finalizedMessages;
+    setMessages(finalizedMessages);
+    saveChatMessages(
+      finalizedMessages,
+      currentThreadTitle ?? assistantThreadTitle(finalizedMessages),
+    );
   }
 
   function appendLocalAssistantMessage(content: string, intent?: AssistantPromptIntent) {
@@ -1363,6 +1378,9 @@ export function AssistantPanel({
       // error paths force-flush / cancel so the final snapshot always wins.
       const flushStreamingSnapshot = () => {
         streamingFlushTimer = null;
+        if (activeAssistantRequestIdRef.current !== requestId) {
+          return;
+        }
         setMessages((current) =>
           current.map((message) =>
             message.id === streamingMessage.id ? streamingMessageSnapshot : message,
@@ -1512,23 +1530,7 @@ export function AssistantPanel({
     activeAssistantRequestIdRef.current += 1;
     setIsSendingPrompt(false);
     setChatError("");
-    const completedAt = new Date().toISOString();
-    setMessages((current) =>
-      current.map((message) =>
-        message.isStreaming
-          ? {
-              ...message,
-              isStreaming: false,
-              workCompletedAt: completedAt,
-              toolCalls: (message.toolCalls ?? []).map((toolCall) =>
-                toolCall.status === "running"
-                  ? { ...toolCall, status: "completed", endedAt: completedAt }
-                  : toolCall,
-              ),
-            }
-          : message,
-      ),
-    );
+    finalizeActiveStreamingMessages(new Date().toISOString());
     if (isTauriRuntime()) {
       await invokeCommand("cancel_assistant_streams").catch(() => {});
     }
