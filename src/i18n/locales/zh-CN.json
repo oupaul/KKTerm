@@ -1099,6 +1099,8 @@
       "addRack": "新建机架",
       "heightLabel": "高度 (U)",
       "depthLabel": "深度",
+      "depthNetworkOption": "600 毫米（网络）",
+      "depthServerOption": "1000 毫米（服务器）",
       "customOption": "自定义…",
       "heightDecrease": "减少机架单元",
       "heightIncrease": "增加机架单元",

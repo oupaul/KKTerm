@@ -1099,6 +1099,8 @@
       "addRack": "Rack mới",
       "heightLabel": "Chiều cao (U)",
       "depthLabel": "Chiều sâu",
+      "depthNetworkOption": "600 mm (Mạng)",
+      "depthServerOption": "1000 mm (Máy chủ)",
       "customOption": "Tùy chỉnh…",
       "heightDecrease": "Ít đơn vị rack hơn",
       "heightIncrease": "Nhiều đơn vị rack hơn",

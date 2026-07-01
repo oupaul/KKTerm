@@ -1099,6 +1099,8 @@
       "addRack": "新規ラック",
       "heightLabel": "高さ (U)",
       "depthLabel": "奥行き",
+      "depthNetworkOption": "600 mm（ネットワーク）",
+      "depthServerOption": "1000 mm（サーバー）",
       "customOption": "カスタム…",
       "heightDecrease": "ラックユニットを減らす",
       "heightIncrease": "ラックユニットを増やす",

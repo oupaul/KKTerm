@@ -1099,6 +1099,8 @@
       "addRack": "Rak baru",
       "heightLabel": "Tinggi (U)",
       "depthLabel": "Kedalaman",
+      "depthNetworkOption": "600 mm (Jaringan)",
+      "depthServerOption": "1000 mm (Server)",
       "customOption": "Kustom…",
       "heightDecrease": "Lebih sedikit unit rak",
       "heightIncrease": "Lebih banyak unit rak",

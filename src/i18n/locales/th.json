@@ -1099,6 +1099,8 @@
       "addRack": "แร็คใหม่",
       "heightLabel": "ความสูง (U)",
       "depthLabel": "ความลึก",
+      "depthNetworkOption": "600 มม. (เครือข่าย)",
+      "depthServerOption": "1000 มม. (เซิร์ฟเวอร์)",
       "customOption": "กำหนดเอง…",
       "heightDecrease": "ลดหน่วยแร็ค",
       "heightIncrease": "เพิ่มหน่วยแร็ค",

@@ -1099,6 +1099,8 @@
       "addRack": "새 랙",
       "heightLabel": "높이 (U)",
       "depthLabel": "깊이",
+      "depthNetworkOption": "600 mm(네트워크)",
+      "depthServerOption": "1000 mm(서버)",
       "customOption": "사용자 지정…",
       "heightDecrease": "랙 유닛 줄이기",
       "heightIncrease": "랙 유닛 늘리기",

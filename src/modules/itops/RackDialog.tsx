@@ -1,7 +1,7 @@
 // Create / edit a Rack in a Site's virtual datacenter (docs/SITE.md Phase C).
 // Built from the shared dialog primitives (docs/DESIGN_LANGUAGE.md).
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Actions,
@@ -70,6 +70,8 @@ export function RackDialog({
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
   const createRack = useItOpsStore((state) => state.createRack);
   const updateRack = useItOpsStore((state) => state.updateRack);
+  const racksBySite = useItOpsStore((state) => state.racksBySite);
+  const groupListId = useId();
 
   const [siteId, setSiteId] = useState(rack?.siteId ?? defaultSiteId);
   const [name, setName] = useState(rack?.name ?? "");
@@ -99,6 +101,16 @@ export function RackDialog({
       ...[...names].sort((a, b) => a.localeCompare(b)).map((value) => ({ value, label: value })),
     ];
   }, [siteId, serverRoomsBySite, serverRoom, t]);
+
+  const groupOptions = useMemo(() => {
+    const groups = new Set(
+      (racksBySite[siteId] ?? [])
+        .filter((entry) => entry.serverRoom === serverRoom)
+        .map((entry) => entry.rackGroup.trim())
+        .filter(Boolean),
+    );
+    return [...groups].sort((a, b) => a.localeCompare(b));
+  }, [racksBySite, serverRoom, siteId]);
 
   useEffect(() => {
     if (siteId && sites.some((site) => site.id === siteId)) {
@@ -219,8 +231,14 @@ export function RackDialog({
                 <TextInput
                   value={rackGroup}
                   placeholder={t("itops.racks.groupPlaceholder")}
+                  list={groupOptions.length > 0 ? groupListId : undefined}
                   onChange={(event) => setRackGroup(event.currentTarget.value)}
                 />
+                {groupOptions.length > 0 ? (
+                  <datalist id={groupListId}>
+                    {groupOptions.map((value) => <option key={value} value={value} />)}
+                  </datalist>
+                ) : null}
               </Field>
             </div>
 
@@ -284,7 +302,14 @@ export function RackDialog({
                     }
                   }}
                   options={[
-                    ...DEPTH_PRESETS.map((value) => ({ value: String(value), label: `${value} mm` })),
+                    ...DEPTH_PRESETS.map((value) => ({
+                      value: String(value),
+                      label: value === 600
+                        ? t("itops.racks.depthNetworkOption")
+                        : value === 1000
+                          ? t("itops.racks.depthServerOption")
+                          : `${value} mm`,
+                    })),
                     { value: "custom", label: t("itops.racks.customOption") },
                   ]}
                 />

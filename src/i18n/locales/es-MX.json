@@ -1099,6 +1099,8 @@
       "addRack": "Nuevo rack",
       "heightLabel": "Altura (U)",
       "depthLabel": "Profundidad",
+      "depthNetworkOption": "600 mm (Red)",
+      "depthServerOption": "1000 mm (Servidor)",
       "customOption": "Personalizado…",
       "heightDecrease": "Menos unidades de rack",
       "heightIncrease": "Más unidades de rack",

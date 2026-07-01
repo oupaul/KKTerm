@@ -92,7 +92,13 @@ test("Add Rack dialog uses the rack graphic preview and persists physical depth"
   assert.match(dialog, /<RackElevation rack=\{livePreview\}/);
   assert.match(dialog, /rack-dialog-shell-grid/);
   assert.match(dialog, /DEPTH_PRESETS = \[600, 800, 900, 1000, 1070, 1200\]/);
+  assert.match(dialog, /itops\.racks\.depthNetworkOption/);
+  assert.match(dialog, /itops\.racks\.depthServerOption/);
   assert.match(dialog, /depthMm/);
+  assert.match(dialog, /racksBySite\[siteId\]/);
+  assert.match(dialog, /entry\.serverRoom === serverRoom/);
+  assert.match(dialog, /<datalist id=\{groupListId\}>/);
+  assert.match(dialog, /list=\{groupOptions\.length > 0 \? groupListId : undefined\}/);
   assert.match(state, /interface RackInput[\s\S]*depthMm: number/);
   assert.match(tauri, /itops_create_rack:[\s\S]*depthMm: number/);
 });
