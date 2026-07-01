@@ -1,0 +1,43 @@
+name: Deploy Landing Site
+
+# Manually-triggered deploy of the kkterm-release-host Cloudflare Worker,
+# which serves both the marketing site in ./www (as static assets, at
+# kkterm.ryantsai.com/*) and the existing /releases/* R2-backed downloads
+# used by the in-app auto-updater. See cloudflare/release-worker/.
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Validate and bundle only; do not deploy"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-landing-site
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy kkterm.ryantsai.com
+    runs-on: ubuntu-24.04
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Deploy worker (static site + release downloads)
+        run: |
+          npx wrangler deploy --config cloudflare/release-worker/wrangler.jsonc \
+            ${{ inputs.dry_run && '--dry-run' || '' }}

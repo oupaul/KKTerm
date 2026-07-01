@@ -10,10 +10,10 @@ export default {
     const url = new URL(request.url);
     const key = parseReleaseObjectPath(url.pathname);
     if (!key) {
-      if (url.pathname === "/") {
-        return new Response("KKTerm\n", { headers: { "content-type": "text/plain; charset=utf-8" } });
-      }
-      return new Response("Not found", { status: 404 });
+      // Not a release download path (e.g. "/", "/css/style.css") — serve the
+      // static marketing site from ./www. Falls through to Cloudflare's
+      // built-in 404 handling for paths that match no asset file.
+      return env.ASSETS.fetch(request);
     }
     if (request.method !== "GET" && request.method !== "HEAD") {
       return new Response("Method not allowed", { status: 405, headers: { Allow: "GET, HEAD" } });

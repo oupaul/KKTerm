@@ -1,0 +1,450 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>KKTerm — One window for terminals, SSH, SFTP, RDP, VNC, and an AI that builds you tools</title>
+<meta name="description" content="KKTerm is a local-first desktop admin workspace: terminals, SSH, SFTP, RDP/VNC, and a dashboard in one native window — plus an AI assistant that acts on your sessions with human approval. Free, no telemetry, Windows/macOS/Linux." />
+<meta name="theme-color" content="#0b1220" />
+
+<meta property="og:type" content="website" />
+<meta property="og:title" content="KKTerm — One window for every connection you own" />
+<meta property="og:description" content="Terminal, SSH, SFTP, RDP/VNC, and a dashboard in one native desktop window. Local-first. No telemetry. An AI assistant that builds you tools on request." />
+<meta property="og:image" content="/assets/og-cover.png" />
+<meta name="twitter:card" content="summary_large_image" />
+
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Fira+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to main content</a>
+
+<!-- Icon sprite (hand-drawn, original geometry — not copies of any third-party icon set) -->
+<svg aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">
+<defs>
+<symbol id="i-terminal" viewBox="0 0 24 24"><rect x="2.5" y="4" width="19" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M6.5 9.5 10 12l-3.5 2.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="14.5" x2="16.5" y2="14.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></symbol>
+<symbol id="i-server" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="3.5" y="13.5" width="17" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="7" cy="7" r="1" fill="currentColor"/><circle cx="7" cy="17" r="1" fill="currentColor"/></symbol>
+<symbol id="i-folder" viewBox="0 0 24 24"><path d="M3.5 6.5c0-1.1.9-2 2-2h4l2 2h7c1.1 0 2 .9 2 2v8c0 1.1-.9 2-2 2h-13c-1.1 0-2-.9-2-2z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></symbol>
+<symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.5"/><ellipse cx="12" cy="12" rx="3.6" ry="8.5" fill="none" stroke="currentColor" stroke-width="1.5"/><line x1="3.5" y1="12" x2="20.5" y2="12" stroke="currentColor" stroke-width="1.5"/></symbol>
+<symbol id="i-monitor" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="12" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><line x1="8" y1="20" x2="16" y2="20" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="12" y1="16.5" x2="12" y2="20" stroke="currentColor" stroke-width="1.5"/></symbol>
+<symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><circle cx="12" cy="12" r="2.8" fill="none" stroke="currentColor" stroke-width="1.5"/></symbol>
+<symbol id="i-cable" viewBox="0 0 24 24"><path d="M6 3.5v6a3 3 0 0 0 3 3h6a3 3 0 0 1 3 3v5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="6" cy="3.5" r="1.6" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="18" cy="20.5" r="1.6" fill="none" stroke="currentColor" stroke-width="1.5"/></symbol>
+<symbol id="i-file" viewBox="0 0 24 24"><path d="M6 2.5h8l4 4v14.5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M14 2.5v4h4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><line x1="8" y1="13" x2="16" y2="13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="8" y1="17" x2="13" y2="17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></symbol>
+<symbol id="i-activity" viewBox="0 0 24 24"><polyline points="2.5,13 7,13 9,7 14,19 16.5,13 21.5,13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-github" viewBox="0 0 24 24"><path d="M12 2.2a9.8 9.8 0 0 0-3.1 19.1c.5.1.7-.2.7-.5v-1.8c-2.7.6-3.3-1.3-3.3-1.3-.4-1.1-1.1-1.4-1.1-1.4-.9-.6.1-.6.1-.6 1 .1 1.5 1 1.5 1 .9 1.5 2.4 1.1 3 .8.1-.7.4-1.1.6-1.4-2.2-.2-4.5-1.1-4.5-4.8 0-1.1.4-1.9 1-2.6-.1-.2-.4-1.2.1-2.6 0 0 .8-.3 2.7 1a9.4 9.4 0 0 1 4.9 0c1.9-1.3 2.7-1 2.7-1 .5 1.4.2 2.4.1 2.6.6.7 1 1.5 1 2.6 0 3.7-2.3 4.6-4.5 4.8.4.3.7.9.7 1.9v2.8c0 .3.2.6.7.5A9.8 9.8 0 0 0 12 2.2Z" fill="currentColor"/></symbol>
+<symbol id="i-menu" viewBox="0 0 24 24"><line x1="3.5" y1="6.5" x2="20.5" y2="6.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><line x1="3.5" y1="12" x2="20.5" y2="12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><line x1="3.5" y1="17.5" x2="20.5" y2="17.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+<symbol id="i-x" viewBox="0 0 24 24"><line x1="5" y1="5" x2="19" y2="19" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><line x1="19" y1="5" x2="5" y2="19" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+<symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="9" cy="10" r="1.6" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M4 17.5 9 13l3 3 4-4.5 4 5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><polyline points="4,13 9,18 20,6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-arrow-right" viewBox="0 0 24 24"><line x1="4" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><polyline points="13,6 19,12 13,18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-sparkles" viewBox="0 0 24 24"><path d="M12 3.5 13.6 9l5.4 1.6-5.4 1.6L12 17.7l-1.6-5.5L5 10.6 10.4 9Z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M19 15.5l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7Z" fill="currentColor"/></symbol>
+<symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7.5" height="7.5" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.5"/></symbol>
+<symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.6-4.6M4 13a8 8 0 0 0 14.6 4.6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><polyline points="4.6,3.4 5.4,7.4 9.4,6.8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><polyline points="19.4,20.6 18.6,16.6 14.6,17.2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 3 21 8l-9 5-9-5Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M3 12l9 5 9-5M3 16l9 5 9-5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></symbol>
+<symbol id="i-palette" viewBox="0 0 24 24"><path d="M12 3.5a8.5 8.5 0 1 0 0 17c1.2 0 1.9-.9 1.9-1.9 0-.5-.2-.9-.5-1.3-.3-.3-.5-.7-.5-1.2 0-.9.7-1.6 1.6-1.6h1.9a3.6 3.6 0 0 0 3.6-3.6c0-4.1-3.9-7.4-8-7.4Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><circle cx="7.3" cy="10.5" r="1.1" fill="currentColor"/><circle cx="9.8" cy="7" r="1.1" fill="currentColor"/><circle cx="14.5" cy="7.3" r="1.1" fill="currentColor"/><circle cx="17" cy="11" r="1.1" fill="currentColor"/></symbol>
+<symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3.5v11.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><polyline points="7,10.5 12,15.5 17,10.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M4.5 17.5v2a1.5 1.5 0 0 0 1.5 1.5h12a1.5 1.5 0 0 0 1.5-1.5v-2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+<symbol id="i-package" viewBox="0 0 24 24"><path d="M12 3 20.5 7.5v9L12 21 3.5 16.5v-9Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M3.5 7.5 12 12l8.5-4.5M12 12v9" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></symbol>
+<symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 19 5.8v5.4c0 4.5-2.9 7.8-7 9.3-4.1-1.5-7-4.8-7-9.3V5.8Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><polyline points="8.7,12.2 11,14.5 15.3,9.8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-desktop" viewBox="0 0 24 24"><rect x="2.5" y="4.5" width="19" height="12.5" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><line x1="8.5" y1="20.5" x2="15.5" y2="20.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="12" y1="17" x2="12" y2="20.5" stroke="currentColor" stroke-width="1.5"/></symbol>
+<symbol id="i-star" viewBox="0 0 24 24"><path d="m12 3.5 2.6 5.6 6.1.7-4.5 4.2 1.2 6-5.4-3-5.4 3 1.2-6-4.5-4.2 6.1-.7Z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></symbol>
+</defs>
+</svg>
+
+<header class="site-header" id="top">
+  <div class="container header-inner">
+    <a class="brand" href="#top">
+      <img src="/assets/logo.png" alt="" width="32" height="32" class="brand-mark" />
+      <span class="brand-name">KKTerm</span>
+    </a>
+
+    <nav class="nav-desktop" aria-label="Primary">
+      <a href="#connections">Features</a>
+      <a href="#ai">AI Assistant</a>
+      <a href="#dashboard">Dashboard</a>
+      <a href="#download">Download</a>
+      <a href="https://github.com/ryantsai/KKTerm" class="nav-icon-link" aria-label="KKTerm on GitHub" target="_blank" rel="noopener">
+        <svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>
+      </a>
+    </nav>
+
+    <a class="btn btn-primary btn-sm nav-cta" href="https://github.com/ryantsai/KKTerm/releases/latest" target="_blank" rel="noopener">
+      <svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>
+      Download
+    </a>
+
+    <button class="menu-toggle" id="menuToggle" aria-label="Open menu" aria-expanded="false" aria-controls="mobileNav">
+      <svg class="icon" aria-hidden="true"><use href="#i-menu"/></svg>
+    </button>
+  </div>
+
+  <nav id="mobileNav" class="nav-mobile" aria-label="Mobile" hidden>
+    <a href="#connections">Features</a>
+    <a href="#ai">AI Assistant</a>
+    <a href="#dashboard">Dashboard</a>
+    <a href="#not">Honest limits</a>
+    <a href="#download">Download</a>
+    <a href="https://github.com/ryantsai/KKTerm" target="_blank" rel="noopener">GitHub</a>
+  </nav>
+</header>
+
+<main id="main">
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="container hero-inner">
+      <div class="hero-copy">
+        <p class="eyebrow"><span class="dot" aria-hidden="true"></span>Local-first · No telemetry · Free</p>
+        <h1>One native window for every terminal, SSH, SFTP, RDP, and VNC connection you own.</h1>
+        <p class="hero-sub">
+          KKTerm replaces the pile of clients on your taskbar — terminal, SSH, SFTP, RDP, VNC,
+          an embedded browser, a file manager — with one workspace. Plus an AI assistant that acts
+          on your sessions, with a human in the approval loop.
+        </p>
+        <div class="hero-actions">
+          <a class="btn btn-primary btn-lg" href="https://github.com/ryantsai/KKTerm/releases/latest" target="_blank" rel="noopener">
+            <svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>
+            Download latest release
+          </a>
+          <a class="btn btn-ghost btn-lg" href="https://github.com/ryantsai/KKTerm" target="_blank" rel="noopener">
+            <svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>
+            View on GitHub
+          </a>
+        </div>
+        <ul class="hero-badges" aria-label="Platform and license">
+          <li><svg class="icon icon-sm" aria-hidden="true"><use href="#i-desktop"/></svg>Windows · macOS · Linux</li>
+          <li><svg class="icon icon-sm" aria-hidden="true"><use href="#i-shield"/></svg>MIT licensed</li>
+          <li><svg class="icon icon-sm" aria-hidden="true"><use href="#i-package"/></svg>Under 20&nbsp;MB install</li>
+        </ul>
+      </div>
+
+      <div class="hero-visual reveal">
+        <!-- PLACEHOLDER: hero product shot / short looping capture.
+             Recommended: docs/assets/demo.gif (already in the repo) resized to ~1600x1000,
+             or a fresh screen capture of a Tab with 3-4 mixed panes (SSH + SFTP + Dashboard). -->
+        <div class="placeholder placeholder-hero" role="img" aria-label="Placeholder for KKTerm product screenshot or demo animation">
+          <span class="placeholder-tag">// preview</span>
+          <svg class="icon icon-xl" aria-hidden="true"><use href="#i-image"/></svg>
+          <p><strong>Product demo goes here</strong></p>
+          <p class="placeholder-hint">Suggested: docs/assets/demo.gif &middot; 1600×1000</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROOF STRIP -->
+  <section class="proof" aria-label="Project stats">
+    <div class="container proof-inner">
+      <a href="https://github.com/ryantsai/KKTerm/stargazers" target="_blank" rel="noopener">
+        <img src="https://img.shields.io/github/stars/ryantsai/KKTerm?style=for-the-badge&logo=github&color=8bcf4c&labelColor=121a2c" alt="GitHub stars" />
+      </a>
+      <a href="https://github.com/ryantsai/KKTerm/network/members" target="_blank" rel="noopener">
+        <img src="https://img.shields.io/github/forks/ryantsai/KKTerm?style=for-the-badge&logo=github&color=8bcf4c&labelColor=121a2c" alt="GitHub forks" />
+      </a>
+      <a href="https://github.com/ryantsai/KKTerm/releases" target="_blank" rel="noopener">
+        <img src="https://img.shields.io/github/downloads/ryantsai/KKTerm/total?style=for-the-badge&logo=github&color=8bcf4c&labelColor=121a2c" alt="GitHub downloads" />
+      </a>
+      <a href="https://github.com/ryantsai/KKTerm/blob/main/LICENSE" target="_blank" rel="noopener">
+        <img src="https://img.shields.io/github/license/ryantsai/KKTerm?style=for-the-badge&color=8bcf4c&labelColor=121a2c" alt="MIT license" />
+      </a>
+    </div>
+  </section>
+
+  <!-- ONE WINDOW, EVERY CONNECTION -->
+  <section class="section" id="connections">
+    <div class="container">
+      <div class="section-head reveal">
+        <p class="eyebrow">Everything in one place</p>
+        <h2>One window, every connection</h2>
+        <p class="section-sub">Same app. Same window. Same hotkeys. No more alt-tabbing through a decade of separate tools.</p>
+      </div>
+
+      <div class="grid grid-4 reveal">
+        <div class="conn-card"><svg class="icon" aria-hidden="true"><use href="#i-terminal"/></svg><h3>Local terminal</h3><p>PowerShell, cmd, and WSL shells, side by side.</p></div>
+        <div class="conn-card"><svg class="icon" aria-hidden="true"><use href="#i-server"/></svg><h3>SSH</h3><p>Keys, agent, passwords, jump hosts, port forwarding.</p></div>
+        <div class="conn-card"><svg class="icon" aria-hidden="true"><use href="#i-folder"/></svg><h3>SFTP &amp; FTP/FTPS</h3><p>Dual-pane file browser, drag to transfer.</p></div>
+        <div class="conn-card"><svg class="icon" aria-hidden="true"><use href="#i-cable"/></svg><h3>Telnet &amp; Serial</h3><p>Ancient gear and COM-port devices, still welcome.</p></div>
+        <div class="conn-card"><svg class="icon" aria-hidden="true"><use href="#i-desktop"/></svg><h3>RDP</h3><p>The real Microsoft Remote Desktop, built right in.</p></div>
+        <div class="conn-card"><svg class="icon" aria-hidden="true"><use href="#i-eye"/></svg><h3>VNC</h3><p>Rendered straight into the workspace canvas.</p></div>
+        <div class="conn-card"><svg class="icon" aria-hidden="true"><use href="#i-globe"/></svg><h3>Embedded browser</h3><p>A router's admin UI, one tab away, saved logins.</p></div>
+        <div class="conn-card"><svg class="icon" aria-hidden="true"><use href="#i-file"/></svg><h3>File Explorer &amp; Document viewer</h3><p>Local disk browsing plus a log/CSV/image/PDF viewer with tail-follow.</p></div>
+      </div>
+
+      <figure class="feature-media reveal">
+        <!-- PLACEHOLDER: recommended docs/assets/screenshots/connections-grid.png (already exists) -->
+        <div class="placeholder placeholder-wide" role="img" aria-label="Placeholder for a screenshot of a Tab holding SSH, SFTP, and an embedded web UI side by side">
+          <span class="placeholder-tag">// screenshot</span>
+          <svg class="icon icon-xl" aria-hidden="true"><use href="#i-image"/></svg>
+          <p class="placeholder-hint">connections-grid.png &middot; 1400×900</p>
+        </div>
+      </figure>
+    </div>
+  </section>
+
+  <!-- AI ASSISTANT -->
+  <section class="section section-alt" id="ai">
+    <div class="container feature-row">
+      <div class="feature-copy reveal">
+        <p class="eyebrow"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-sparkles"/></svg>AI, in the loop</p>
+        <h2>An assistant that commands your terminals — with you watching</h2>
+        <p>
+          Most "AI in your terminal" demos stop at chat. KKTerm's assistant works inside your session:
+          hand it context from whatever is already on screen, and it acts on the boxes you're connected to.
+        </p>
+        <ul class="check-list">
+          <li><svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg>Pull live terminal scrollback straight into the conversation</li>
+          <li><svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg>Screenshot a Pane and ask "why does this look wrong?"</li>
+          <li><svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg>Every risky command is flagged and waits for an explicit yes</li>
+          <li><svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg>Bring your own model — OpenAI, Gemini, Grok, Ollama, Claude Code CLI, Codex CLI, and more</li>
+        </ul>
+      </div>
+      <figure class="feature-media reveal">
+        <!-- PLACEHOLDER: recommended docs/assets/screenshots/ai-assistant.png (already exists) -->
+        <div class="placeholder" role="img" aria-label="Placeholder for a screenshot of the AI Assistant panel with tool-access and approval-mode toggles">
+          <span class="placeholder-tag">// screenshot</span>
+          <svg class="icon icon-xl" aria-hidden="true"><use href="#i-image"/></svg>
+          <p class="placeholder-hint">ai-assistant.png &middot; 1000×760</p>
+        </div>
+      </figure>
+    </div>
+  </section>
+
+  <!-- DASHBOARD -->
+  <section class="section" id="dashboard">
+    <div class="container feature-row feature-row-reverse">
+      <div class="feature-copy reveal">
+        <p class="eyebrow"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-grid"/></svg>Your dashboard, your rules</p>
+        <h2>A dashboard that doesn't pretend to be Grafana</h2>
+        <p>
+          Describe a widget in plain English and the AI assistant builds it, live, on your grid —
+          in its own sandbox, with your approval. No marketplace, no JavaScript required.
+        </p>
+        <blockquote class="quote">"Add a widget showing the last 5 commits on my main repo as a list."</blockquote>
+        <blockquote class="quote">"Build a widget that pings my home router every 30 seconds and shows green/red."</blockquote>
+        <p>Drag, resize, re-color. Delete one with a right-click when the magic wears off.</p>
+      </div>
+      <figure class="feature-media reveal">
+        <!-- PLACEHOLDER: recommended docs/assets/screenshots/ai-widgets.png (already exists) -->
+        <div class="placeholder" role="img" aria-label="Placeholder for a screenshot of a dashboard grid of AI-created widgets">
+          <span class="placeholder-tag">// screenshot</span>
+          <svg class="icon icon-xl" aria-hidden="true"><use href="#i-image"/></svg>
+          <p class="placeholder-hint">ai-widgets.png &middot; 1000×760</p>
+        </div>
+      </figure>
+    </div>
+  </section>
+
+  <!-- TMUX REATTACH -->
+  <section class="section section-alt" id="tmux">
+    <div class="container feature-row">
+      <div class="feature-copy reveal">
+        <p class="eyebrow"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-refresh"/></svg>Never lose the plot</p>
+        <h2>Keep your AI agents alive across a dropped Wi-Fi</h2>
+        <p>
+          Open an SSH connection with tmux enabled, start <code>claude</code> or <code>codex</code>,
+          close the laptop, open it again — the pane silently re-attaches. Still running.
+          Still has its scrollback. Still in the middle of whatever it was doing.
+        </p>
+        <p>Local PowerShell panes get the same trick on Windows through <strong>psmux</strong>, the native tmux clone.</p>
+      </div>
+      <figure class="feature-media reveal">
+        <!-- PLACEHOLDER: recommended docs/assets/screenshots/tmux-reattach.png (already exists);
+             a short screen-recording of a disconnect/reconnect would communicate this feature even better. -->
+        <div class="placeholder" role="img" aria-label="Placeholder for a screenshot or clip of an SSH pane re-attaching to a named tmux session after a reconnect">
+          <span class="placeholder-tag">// screenshot / clip</span>
+          <svg class="icon icon-xl" aria-hidden="true"><use href="#i-image"/></svg>
+          <p class="placeholder-hint">tmux-reattach.png or short screen capture &middot; 1000×760</p>
+        </div>
+      </figure>
+    </div>
+  </section>
+
+  <!-- WORKSPACES + MULTI-PANE -->
+  <section class="section" id="workspaces">
+    <div class="container feature-row feature-row-reverse">
+      <div class="feature-copy reveal">
+        <p class="eyebrow"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-layers"/></svg>Keep your worlds apart</p>
+        <h2>Workspaces for the home lab, the day job, and that one client</h2>
+        <p>
+          Workspaces are named, isolated containers of Connections you switch between from the
+          Activity Rail. Switching re-scopes the Connection Tree only — your open Sessions, Dashboard,
+          and Settings stay put. Changing context costs one click, not a relaunch.
+        </p>
+        <p>Inside a Workspace, a Tab can hold a grid of mixed Panes: SSH next to SFTP, a local shell below an RDP session, VNC beside a file browser.</p>
+      </div>
+      <figure class="feature-media reveal">
+        <!-- PLACEHOLDER: recommended docs/assets/screenshots/workspaces.png and/or multi-pane.png (both already exist) -->
+        <div class="placeholder" role="img" aria-label="Placeholder for a screenshot of the workspace switcher and a multi-pane grid">
+          <span class="placeholder-tag">// screenshot</span>
+          <svg class="icon icon-xl" aria-hidden="true"><use href="#i-image"/></svg>
+          <p class="placeholder-hint">workspaces.png / multi-pane.png &middot; 1000×760</p>
+        </div>
+      </figure>
+    </div>
+  </section>
+
+  <!-- CUSTOMIZE: themes + backgrounds -->
+  <section class="section section-alt" id="customize">
+    <div class="container">
+      <div class="section-head reveal">
+        <p class="eyebrow"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-palette"/></svg>Dress it up</p>
+        <h2>26 color themes, 26 animated backgrounds</h2>
+        <p class="section-sub">
+          Color themes restyle the whole app chrome; animated backgrounds run behind any dashboard view
+          <em>or terminal pane</em> — yes, including <code>matrix</code>. Both pause when you're elsewhere, so they cost roughly nothing.
+        </p>
+      </div>
+      <div class="grid grid-2 reveal">
+        <figure class="feature-media">
+          <!-- PLACEHOLDER: recommended docs/assets/screenshots/color-themes.png (already exists) -->
+          <div class="placeholder" role="img" aria-label="Placeholder for a screenshot of the color-scheme grid in Settings">
+            <span class="placeholder-tag">// screenshot</span>
+            <svg class="icon icon-xl" aria-hidden="true"><use href="#i-image"/></svg>
+            <p class="placeholder-hint">color-themes.png &middot; 760×560</p>
+          </div>
+        </figure>
+        <figure class="feature-media">
+          <!-- PLACEHOLDER: recommended docs/assets/screenshots/backgrounds.png (already exists) -->
+          <div class="placeholder" role="img" aria-label="Placeholder for a screenshot of several animated dashboard backgrounds side by side">
+            <span class="placeholder-tag">// screenshot</span>
+            <svg class="icon icon-xl" aria-hidden="true"><use href="#i-image"/></svg>
+            <p class="placeholder-hint">backgrounds.png &middot; 760×560</p>
+          </div>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- INSTALL HELPER -->
+  <section class="section" id="install-helper">
+    <div class="container feature-row">
+      <div class="feature-copy reveal">
+        <p class="eyebrow"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-package"/></svg>Windows only</p>
+        <h2>Install Helper: a fresh box, set up without ten browser tabs</h2>
+        <p>
+          A built-in catalog that finds, installs, updates, and uninstalls the tools you'd otherwise
+          chase by hand — Node, Python, Git, Claude Code, Codex, WSL, PowerToys, and more.
+          UAC prompts stay explicit; nothing installs silently.
+        </p>
+        <p class="muted-note">macOS and Linux already have package managers you love, so this one stays a Windows-only convenience.</p>
+      </div>
+      <figure class="feature-media reveal">
+        <!-- PLACEHOLDER: recommended docs/assets/screenshots/install-helper.png (already exists) -->
+        <div class="placeholder" role="img" aria-label="Placeholder for a screenshot of the Install Helper catalog with installed and available tools">
+          <span class="placeholder-tag">// screenshot</span>
+          <svg class="icon icon-xl" aria-hidden="true"><use href="#i-image"/></svg>
+          <p class="placeholder-hint">install-helper.png &middot; 1000×760</p>
+        </div>
+      </figure>
+    </div>
+  </section>
+
+  <!-- WHAT IT'S NOT -->
+  <section class="section section-alt" id="not">
+    <div class="container">
+      <div class="section-head reveal">
+        <p class="eyebrow">Honesty earns trust</p>
+        <h2>What KKTerm is not</h2>
+      </div>
+      <div class="grid grid-2 not-grid reveal">
+        <div class="not-card"><h3>Not a cloud product</h3><p>No sync, no team accounts, no SaaS tier. A "sign in to KKTerm" dialog would mean something went catastrophically wrong.</p></div>
+        <div class="not-card"><h3>Not an autonomous agent</h3><p>The assistant proposes; the human disposes. "Allow All" is a choice you make, not a default.</p></div>
+        <div class="not-card"><h3>Not a Grafana replacement</h3><p>The Dashboard is for personal control surfaces, not 10k-host observability.</p></div>
+        <div class="not-card"><h3>Not pretending every OS is identical</h3><p>Windows, macOS, and Linux builds ship, but platform-specific features stay honest about what's native and what isn't.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STORY: Kuai Kuai -->
+  <section class="section story" id="story">
+    <div class="container story-inner reveal">
+      <p class="eyebrow">Why "KKTerm"?</p>
+      <h2>Named after a snack that keeps servers well-behaved</h2>
+      <p>
+        Walk into a data center in Taiwan and look at the top of the racks — you'll spot a small
+        green bag of <strong>乖乖 (Kuāi Kuāi)</strong>, a coconut-flavored corn snack from the 1960s.
+        The name means <em>&ldquo;be good, behave.&rdquo;</em> Engineers place it on equipment as a good-luck
+        charm: it must be green (coconut, never spicy red or curry yellow), it must be unexpired,
+        and it must never be eaten. That bag is on duty.
+      </p>
+      <p>
+        <strong>KKTerm</strong> — Kuai Kuai Term — aims for the same job: sit quietly next to your
+        important machines and help them behave. Local-first. No telemetry. Approval-gated AI.
+        The boring, dependable kind of software.
+      </p>
+    </div>
+  </section>
+
+  <!-- DOWNLOAD -->
+  <section class="section download" id="download">
+    <div class="container reveal">
+      <div class="section-head">
+        <p class="eyebrow">Get KKTerm</p>
+        <h2>Free. Open source. No account required.</h2>
+        <p class="section-sub">Windows installers are currently unsigned while release signing is on the roadmap — your antivirus may give you a stern look. That's normal.</p>
+      </div>
+      <div class="grid grid-3 download-grid">
+        <div class="download-card">
+          <svg class="icon icon-lg" aria-hidden="true"><use href="#i-desktop"/></svg>
+          <h3>Windows</h3>
+          <p>Installer + Install Helper catalog for dev tooling.</p>
+          <a class="btn btn-primary" href="https://github.com/ryantsai/KKTerm/releases/latest" target="_blank" rel="noopener">Download</a>
+        </div>
+        <div class="download-card">
+          <svg class="icon icon-lg" aria-hidden="true"><use href="#i-desktop"/></svg>
+          <h3>macOS</h3>
+          <p>Native build for Apple Silicon and Intel.</p>
+          <a class="btn btn-primary" href="https://github.com/ryantsai/KKTerm/releases/latest" target="_blank" rel="noopener">Download</a>
+        </div>
+        <div class="download-card">
+          <svg class="icon icon-lg" aria-hidden="true"><use href="#i-desktop"/></svg>
+          <h3>Linux</h3>
+          <p>AppImage / distro packages from the releases page.</p>
+          <a class="btn btn-primary" href="https://github.com/ryantsai/KKTerm/releases/latest" target="_blank" rel="noopener">Download</a>
+        </div>
+      </div>
+      <p class="download-footnote">
+        Prefer to build from source? Everything you need is in
+        <a href="https://github.com/ryantsai/KKTerm/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">CONTRIBUTING.md</a>.
+      </p>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="container footer-inner">
+    <div class="footer-brand">
+      <img src="/assets/logo.png" alt="" width="28" height="28" />
+      <span>KKTerm</span>
+      <p>A local-first admin workspace. No telemetry, ever.</p>
+    </div>
+    <div class="footer-links">
+      <h4>Project</h4>
+      <a href="https://github.com/ryantsai/KKTerm" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://github.com/ryantsai/KKTerm/releases/latest" target="_blank" rel="noopener">Releases</a>
+      <a href="https://github.com/ryantsai/KKTerm/issues" target="_blank" rel="noopener">Issues</a>
+      <a href="https://github.com/ryantsai/KKTerm/discussions/141" target="_blank" rel="noopener">Discussions</a>
+    </div>
+    <div class="footer-links">
+      <h4>Docs</h4>
+      <a href="https://github.com/ryantsai/KKTerm/blob/main/docs/manual/INDEX.md" target="_blank" rel="noopener">User manual</a>
+      <a href="https://github.com/ryantsai/KKTerm/blob/main/docs/ROADMAP.md" target="_blank" rel="noopener">Roadmap</a>
+      <a href="https://github.com/ryantsai/KKTerm/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">Contributing</a>
+      <a href="https://github.com/ryantsai/KKTerm/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a>
+    </div>
+    <div class="footer-links">
+      <h4>Available in 14 languages</h4>
+      <p class="lang-list">English · 繁體中文 · 简体中文 · 日本語 · 한국어 · Français · Deutsch · Español · Italiano · Português (BR) · ไทย · Bahasa Indonesia · Tiếng Việt</p>
+    </div>
+  </div>
+  <div class="container footer-bottom">
+    <p>&copy; <span id="year"></span> KKTerm. MIT licensed.</p>
+  </div>
+</footer>
+
+<script src="/js/main.js"></script>
+</body>
+</html>
