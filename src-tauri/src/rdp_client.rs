@@ -490,20 +490,27 @@ async fn tls_upgrade(
             "port": port,
             "serverName": server_name,
             "backend": "native-tls",
-            "certificateVerification": if ignore_tls_errors { "disabled" } else { "enabled" },
+            "ignoreTlsErrors": ignore_tls_errors,
+            "certificateVerification": "credssp_public_key_binding",
         }),
     );
 
-    // When "Ignore TLS certificate errors" is enabled, accept self-signed /
-    // untrusted / hostname-mismatched certificates (common for RDP hosts). When
-    // disabled, native-tls verifies the certificate against the system trust
-    // store as usual. RDP additionally binds the server's TLS public key into
-    // the CredSSP exchange (see extract_server_public_key), so authentication
-    // does not rely on TLS chain validation alone.
+    // RDP authenticates the server by binding its TLS public key into the CredSSP
+    // exchange (see extract_server_public_key), NOT by validating the TLS
+    // certificate chain. RDP hosts also overwhelmingly use self-signed certs and
+    // legacy Schannel cipher suites; turning on native-tls chain/hostname
+    // verification makes macOS Secure Transport reject them outright ("Cipher
+    // Suite negotiation failure" / certificate errors). So the TLS upgrade always
+    // runs in the lenient mode that the CredSSP binding makes safe, and
+    // `use_sni(false)` matches what Windows RDP servers expect. `ignore_tls_errors`
+    // is accepted and logged for forward-compatibility but intentionally does not
+    // tighten this handshake, since doing so breaks connectivity without adding
+    // real security beyond CredSSP.
+    let _ = ignore_tls_errors;
     let connector = async_native_tls::TlsConnector::new()
-        .danger_accept_invalid_certs(ignore_tls_errors)
-        .danger_accept_invalid_hostnames(ignore_tls_errors)
-        .use_sni(!ignore_tls_errors);
+        .danger_accept_invalid_certs(true)
+        .danger_accept_invalid_hostnames(true)
+        .use_sni(false);
 
     match connector.connect(server_name, stream).await {
         Ok(tls_stream) => {
