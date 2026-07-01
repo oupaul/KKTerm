@@ -24,8 +24,7 @@ function trimOrNull(value: string | null | undefined): string | null {
 }
 
 function normalizeVendor(value: string | null | undefined): string | null {
-  const trimmed = trimOrNull(value);
-  return trimmed ? trimmed.toLowerCase() : null;
+  return trimOrNull(value);
 }
 
 export function normalizeConnectionIds(value: RackItemMetadata["connectionIds"]): string[] | null {

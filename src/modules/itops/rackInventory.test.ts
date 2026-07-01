@@ -27,7 +27,7 @@ test("normalizeRackItemMetadata preserves legacy PR metadata while producing typ
     ["2", "10g"],
   ]);
   assert.equal(normalized.snmp?.target, "192.0.2.10");
-  assert.equal(normalized.vendor, "dell");
+  assert.equal(normalized.vendor, "Dell");
 });
 
 test("summarizeRackDeviceMetadata returns compact visible inventory facts", () => {

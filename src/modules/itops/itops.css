@@ -2785,26 +2785,31 @@
   gap: 9px;
 }
 .itops-page .rkd-disks-row {
-  flex: 1 1 auto;
+  --rkd-disk-bay-h: clamp(9px, calc((100% - 5px) / 2), 18px);
+  flex: 0 1 min(112px, 46%);
+  height: calc(100% - 4px);
   display: flex;
   flex-wrap: wrap;
   align-content: center;
   gap: 2px;
-  min-width: 0;
-  max-height: 100%;
+  min-width: 70px;
+  max-height: calc(100% - 4px);
   overflow: hidden;
+  padding: 1px 0;
+  box-sizing: border-box;
 }
 .itops-page .rkd-disk-bay {
   position: relative;
-  width: 6px;
-  height: 20px;
+  width: clamp(4px, calc((100% - 22px) / 12), 6px);
+  height: var(--rkd-disk-bay-h);
   border-radius: 1.5px;
   background: var(--rkd-well);
   border: 0.5px solid var(--rkd-line);
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding-top: 2px;
+  padding-top: min(2px, 12%);
+  box-sizing: border-box;
 }
 .itops-page .rkd-disk-led {
   width: 3px;

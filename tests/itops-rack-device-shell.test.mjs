@@ -54,3 +54,30 @@ test("rack network ports fit inside compact one-unit faceplates", async () => {
   assert.match(portRule.groups.body, /height:\s*8px;/, "two network port rows should fit inside a 1U faceplate");
   assert.match(routerRule.groups.body, /gap:\s*5px;/, "router WAN and LAN sections should not crowd the port rows");
 });
+
+test("placed rack servers render model text and compact drive bays", async () => {
+  const [elevationSource, cssSource] = await Promise.all([
+    readFile(new URL("../src/modules/itops/RackElevation.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/modules/itops/itops.css", import.meta.url), "utf8"),
+  ]);
+  const diskRowRule = cssSource.match(/\.itops-page \.rkd-disks-row\s*\{(?<body>[\s\S]*?)\n\}/);
+  const diskBayRule = cssSource.match(/\.itops-page \.rkd-disk-bay\s*\{(?<body>[\s\S]*?)\n\}/);
+
+  assert.match(
+    elevationSource,
+    /const model = item\.metadata\?\.vendor\?\.trim\(\) \|\| null;[\s\S]*subLabel=\{model \?\? hostFor\?\.\(item\) \?\? null\}/,
+    "placed Rack View faceplates should show the saved model before falling back to host text",
+  );
+  assert.ok(diskRowRule?.groups?.body, "server disk row rule should exist");
+  assert.ok(diskBayRule?.groups?.body, "server disk bay rule should exist");
+  assert.match(
+    diskRowRule.groups.body,
+    /--rkd-disk-bay-h:\s*clamp\(9px,\s*calc\(\(100% - 5px\) \/ 2\),\s*18px\);/,
+    "drive bays should shrink to two unclipped rows inside the available faceplate height",
+  );
+  assert.match(
+    diskBayRule.groups.body,
+    /height:\s*var\(--rkd-disk-bay-h\);/,
+    "individual drive bays should use the row-aware compact height",
+  );
+});

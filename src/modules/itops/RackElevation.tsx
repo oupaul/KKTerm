@@ -208,6 +208,7 @@ export function RackElevation({
             {rack.items.map((item) => {
               const ghost = item.kind === "connection" && !!isGhost?.(item);
               const text = item.label || t(`itops.racks.kind.${item.kind}`);
+              const model = item.metadata?.vendor?.trim() || null;
               // A live host opens on click; everything else (passive, ghost) edits.
               const opens = item.kind === "connection" && !ghost && !!onOpenItem;
               const primary = opens ? () => onOpenItem!(item) : () => onEditItem?.(item);
@@ -221,7 +222,7 @@ export function RackElevation({
                 <RackDevice
                   kind={item.kind}
                   label={text}
-                  subLabel={hostFor?.(item) ?? null}
+                  subLabel={model ?? hostFor?.(item) ?? null}
                   status={ghost ? "offline" : itemStatus(item)}
                   ports={item.metadata?.ports ?? null}
                   disks={item.metadata?.disks ?? null}
