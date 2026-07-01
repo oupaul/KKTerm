@@ -480,7 +480,7 @@ async fn tls_upgrade(
     host: &str,
     port: u16,
     server_name: &str,
-    _tls12_only: bool,
+    ignore_tls_errors: bool,
 ) -> Result<async_native_tls::TlsStream<TcpStream>, String> {
     rdp_debug(
         "ironrdp.tls.start",
@@ -490,14 +490,20 @@ async fn tls_upgrade(
             "port": port,
             "serverName": server_name,
             "backend": "native-tls",
-            "certificateVerification": "disabled_for_rdp",
+            "certificateVerification": if ignore_tls_errors { "disabled" } else { "enabled" },
         }),
     );
 
+    // When "Ignore TLS certificate errors" is enabled, accept self-signed /
+    // untrusted / hostname-mismatched certificates (common for RDP hosts). When
+    // disabled, native-tls verifies the certificate against the system trust
+    // store as usual. RDP additionally binds the server's TLS public key into
+    // the CredSSP exchange (see extract_server_public_key), so authentication
+    // does not rely on TLS chain validation alone.
     let connector = async_native_tls::TlsConnector::new()
-        .danger_accept_invalid_certs(true)
-        .danger_accept_invalid_hostnames(true)
-        .use_sni(false);
+        .danger_accept_invalid_certs(ignore_tls_errors)
+        .danger_accept_invalid_hostnames(ignore_tls_errors)
+        .use_sni(!ignore_tls_errors);
 
     match connector.connect(server_name, stream).await {
         Ok(tls_stream) => {
