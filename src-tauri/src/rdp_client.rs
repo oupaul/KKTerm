@@ -482,7 +482,7 @@ async fn tls_upgrade(
     server_name: &str,
     ignore_tls_errors: bool,
 ) -> Result<tokio_openssl::SslStream<TcpStream>, String> {
-    use openssl::ssl::{SslConnector, SslMethod, SslVerifyMode, SslVersion};
+    use openssl::ssl::{SslConnector, SslMethod, SslOptions, SslVerifyMode, SslVersion};
     use std::pin::Pin;
 
     rdp_debug(
@@ -515,8 +515,14 @@ async fn tls_upgrade(
     builder
         .set_cipher_list("ALL:@SECLEVEL=0")
         .map_err(|e| format!("TLS cipher configuration failed: {e}"))?;
-    // Allow legacy protocol versions some older Windows RDP hosts still require.
-    let _ = builder.set_min_proto_version(Some(SslVersion::TLS1));
+    // Require TLS 1.2. RDP hosts support it (the official client uses it), and it
+    // lets us negotiate the legacy CBC/RSA ciphers the server offers WITHOUT the
+    // TLS 1.0 CBC "empty fragment" (BEAST mitigation) records that make Windows
+    // Schannel abort the CredSSP exchange with a "tlsv1 alert internal error"
+    // (alert 80). SECLEVEL 0 keeps those older TLS 1.2 ciphers available.
+    let _ = builder.set_min_proto_version(Some(SslVersion::TLS1_2));
+    // Belt-and-suspenders: never emit the empty-fragment records Schannel dislikes.
+    builder.set_options(SslOptions::DONT_INSERT_EMPTY_FRAGMENTS);
     let connector = builder.build();
 
     let mut config = connector
