@@ -37,9 +37,29 @@ test("File Explorer can open local files in the inline Document", async () => {
     "the store should expose a runtime-only path opener for inline Document tabs",
   );
   assert.match(
+    typesSource,
+    /export interface WorkspaceChildConnection[\s\S]*fileViewPath\?: string;/,
+    "Document children opened from File Explorer should remember the local file path",
+  );
+  assert.match(
     storeSource,
     /openFileViewerPath: \(path, options\) => \{[\s\S]*type: "fileView"[\s\S]*kind: "fileViewer"/,
     "opening by path should create an inline Document tab without requiring a saved fileView Connection",
+  );
+  assert.match(
+    storeSource,
+    /sourceConnection\?\.type === "localFiles" && get\(\)\.generalSettings\.hideTopTabButtons[\s\S]*fileViewPath: filePath[\s\S]*childConnectionGroupParentId: sourceConnection\.id[\s\S]*maximizedPaneId: filePane\.id/,
+    "when Child Connection Tabs are enabled, File Explorer inline Documents should be parented under the File Explorer child layout",
+  );
+  assert.match(
+    storeSource,
+    /openChildConnectionInNewTab: \(connection, child\) => \{[\s\S]*connection\.type === "localFiles"[\s\S]*openChildConnectionLayout\([\s\S]*maximizeChildConnectionPane/,
+    "reopening a File Explorer child row should rebuild the parent child layout instead of spawning a standalone Document rail item",
+  );
+  assert.match(
+    storeSource,
+    /function connectionForChild\(connection: Connection, child: WorkspaceChildConnection\)[\s\S]*child\.fileViewPath\?\.trim\(\)[\s\S]*type: "fileView"/,
+    "stored File Explorer Document children should reconstruct fileViewer panes from their saved file path",
   );
   assert.match(
     workspaceSource,

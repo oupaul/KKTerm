@@ -13,12 +13,11 @@ test("Rack Device dialog has live graphical preview and 乖乖 size control", as
   assert.match(device, /data-kuaiguai-size/);
 });
 
-test("Rack Device property dialog uses structured audit controls", async () => {
+test("Rack Device property dialog omits removed relationship metadata", async () => {
   const dialog = await readFile(new URL("../src/modules/itops/RackItemDialog.tsx", import.meta.url), "utf8");
   const stage = await readFile(new URL("../src/modules/itops/RackStage.tsx", import.meta.url), "utf8");
 
-  assert.match(dialog, /auditRecordRows/);
-  assert.match(dialog, /addAuditRecord/);
+  assert.doesNotMatch(dialog, /auditRecordRows|addAuditRecord|relationshipLabel|ipamLabel/);
   assert.doesNotMatch(dialog, /connection-binding-list/);
   assert.match(stage, /connectionIds/);
 });
@@ -35,11 +34,11 @@ test("Rack Device SNMP refresh path replaces the backend stub", async () => {
   assert.match(tauri, /itops_refresh_rack_item_snmp/);
 });
 
-test("IT Ops manual documents real SNMP/IPAM scope without promising background polling", async () => {
+test("IT Ops manual documents real SNMP scope without promising background polling", async () => {
   const manual = await readFile(new URL("../docs/manual/12-it-ops.md", import.meta.url), "utf8");
 
-  assert.match(manual, /IPAM/);
   assert.match(manual, /SNMP/);
+  assert.doesNotMatch(manual, /IPAM|rack-audit|relationship details/);
   assert.match(manual, /user-triggered|manual refresh/i);
   assert.doesNotMatch(manual, /background SNMP polling/i);
 });

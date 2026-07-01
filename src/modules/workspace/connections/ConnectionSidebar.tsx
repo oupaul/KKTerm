@@ -20,6 +20,7 @@ import { ImportDialog } from "./ImportDialog";
 import {
   isChildConnectionRowActive,
   convertOpenTabsToChildConnections,
+  CHILD_CONNECTIONS_UPDATED_EVENT,
   loadStoredChildConnections,
   persistStoredChildConnections,
   syncChildConnectionsFromTabs,
@@ -385,6 +386,10 @@ export function ConnectionSidebar({
   }, [childConnections]);
 
   useEffect(() => {
+    function handleChildConnectionsUpdated() {
+      setChildConnections(loadStoredChildConnections());
+    }
+
     function handleChildConnectionClosed(event: Event) {
       const detail = (event as CustomEvent<{ childConnectionId?: string }>).detail;
       if (!detail?.childConnectionId) {
@@ -395,9 +400,12 @@ export function ConnectionSidebar({
       );
     }
 
+    window.addEventListener(CHILD_CONNECTIONS_UPDATED_EVENT, handleChildConnectionsUpdated);
     window.addEventListener(CHILD_CONNECTION_CLOSED_EVENT, handleChildConnectionClosed);
-    return () =>
+    return () => {
+      window.removeEventListener(CHILD_CONNECTIONS_UPDATED_EVENT, handleChildConnectionsUpdated);
       window.removeEventListener(CHILD_CONNECTION_CLOSED_EVENT, handleChildConnectionClosed);
+    };
   }, []);
 
   useEffect(() => {

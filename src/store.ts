@@ -62,6 +62,9 @@ import { markPanesForRuntimeMove } from "./modules/workspace/paneRegistry";
 import {
   collectPreservedParentPanes,
   focusedPaneIdForChildLayout,
+  loadStoredChildConnections,
+  notifyStoredChildConnectionsUpdated,
+  persistStoredChildConnections,
 } from "./modules/workspace/connections/childConnections";
 
 const LAYOUT_STORAGE_PREFIX = "kkterm.layout.";
@@ -906,6 +909,21 @@ function buildPaneForStandaloneTab(tab: WorkspaceTab): WorkspacePane | null {
 }
 
 function connectionForChild(connection: Connection, child: WorkspaceChildConnection): Connection {
+  const fileViewPath = child.fileViewPath?.trim();
+  if (fileViewPath) {
+    return {
+      id: `inline-file-view-${stableIdFromPath(fileViewPath)}`,
+      name: child.name,
+      host: "localhost",
+      user: "",
+      localStartupDirectory: fileViewPath,
+      iconColor: child.iconColor ?? connection.iconColor,
+      iconBackgroundColor: child.iconBackgroundColor ?? connection.iconBackgroundColor,
+      iconDataUrl: child.iconDataUrl ?? connection.iconDataUrl,
+      type: "fileView",
+      status: "idle",
+    };
+  }
   return {
     ...connection,
     iconColor: child.iconColor ?? connection.iconColor,
@@ -972,6 +990,44 @@ function createConnectionTabId(connectionId: string) {
       ? crypto.randomUUID()
       : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   return `tab-${connectionId}-${suffix}`;
+}
+
+function localFilesBrowserChildId(connectionId: string) {
+  return `child-${connectionId}-localFiles-browser`;
+}
+
+function fileViewerChildId(connectionId: string, filePath: string) {
+  return `child-${connectionId}-fileView-${stableIdFromPath(filePath)}`;
+}
+
+function upsertStoredChildConnections(children: WorkspaceChildConnection[]) {
+  const stored = loadStoredChildConnections();
+  const next = [...stored];
+  const upserted: WorkspaceChildConnection[] = [];
+
+  for (const child of children) {
+    const index = next.findIndex((entry) => entry.id === child.id);
+    const merged =
+      index >= 0
+        ? {
+            ...child,
+            ...next[index],
+            parentConnectionId: child.parentConnectionId,
+            workspaceId: next[index]?.workspaceId ?? child.workspaceId,
+            fileViewPath: child.fileViewPath ?? next[index]?.fileViewPath,
+          }
+        : child;
+    if (index >= 0) {
+      next[index] = merged;
+    } else {
+      next.push(merged);
+    }
+    upserted.push(merged);
+  }
+
+  persistStoredChildConnections(next);
+  notifyStoredChildConnectionsUpdated();
+  return upserted;
 }
 
 function defaultTerminalCwdForConnection(connection: Connection) {
@@ -1850,7 +1906,30 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     }));
   },
   openChildConnectionInNewTab: (connection, child) => {
-    get().openConnectionInNewTab(connection, {
+    if (connection.type === "localFiles") {
+      const activeWorkspaceId = get().activeWorkspaceId;
+      const children = loadStoredChildConnections().filter(
+        (entry) =>
+          entry.parentConnectionId === connection.id &&
+          (entry.workspaceId ?? DEFAULT_WORKSPACE_ID) === activeWorkspaceId,
+      );
+      get().openChildConnectionLayout(
+        connection,
+        children.some((entry) => entry.id === child.id) ? children : [child],
+      );
+      const groupTab = get().tabs.find(
+        (tab) =>
+          tab.childConnectionGroupParentId === connection.id &&
+          (tab.workspaceId ?? DEFAULT_WORKSPACE_ID) === activeWorkspaceId,
+      );
+      const pane = groupTab?.panes.find((entry) => entry.childConnectionId === child.id);
+      if (groupTab && pane) {
+        get().maximizeChildConnectionPane(groupTab.id, pane.id);
+      }
+      return;
+    }
+    const childConnection = connectionForChild(connection, child);
+    get().openConnectionInNewTab(childConnection, {
       childConnectionId: child.id,
       cwd: child.cwd,
       iconColor: child.iconColor,
@@ -1859,7 +1938,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       fontSize: child.fontSize,
       terminalOpacity: child.terminalOpacity,
       terminalBackground: child.terminalBackground,
-      title: child.name,
+      title: child.tmuxSessionId ?? child.name,
       toolbarTitle: child.name,
       tmuxSessionId: child.tmuxSessionId,
     });
@@ -2437,6 +2516,183 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       type: "fileView",
       status: "idle",
     };
+
+    if (sourceConnection?.type === "localFiles" && get().generalSettings.hideTopTabButtons) {
+      const state = get();
+      const activeWorkspaceId = state.activeWorkspaceId;
+      const parentChild = upsertStoredChildConnections([
+        {
+          id: localFilesBrowserChildId(sourceConnection.id),
+          workspaceId: activeWorkspaceId,
+          parentConnectionId: sourceConnection.id,
+          name: sourceConnection.name,
+          iconColor: sourceConnection.iconColor,
+          iconDataUrl: sourceConnection.iconDataUrl,
+          iconBackgroundColor: sourceConnection.iconBackgroundColor,
+        },
+        {
+          id: fileViewerChildId(sourceConnection.id, filePath),
+          workspaceId: activeWorkspaceId,
+          parentConnectionId: sourceConnection.id,
+          name,
+          fileViewPath: filePath,
+          iconColor: sourceConnection.iconColor,
+          iconDataUrl: sourceConnection.iconDataUrl,
+          iconBackgroundColor: sourceConnection.iconBackgroundColor,
+        },
+      ]);
+      const browserChild = parentChild[0];
+      const fileChild = parentChild[1];
+      if (!browserChild || !fileChild) {
+        return;
+      }
+
+      const existingGroupTab = state.tabs.find(
+        (tab) =>
+          tab.childConnectionGroupParentId === sourceConnection.id &&
+          (tab.workspaceId ?? DEFAULT_WORKSPACE_ID) === activeWorkspaceId,
+      );
+      const existingBrowserTab = state.tabs.find(
+        (tab) =>
+          tab.kind === "localFiles" &&
+          tab.connection?.id === sourceConnection.id &&
+          (tab.workspaceId ?? DEFAULT_WORKSPACE_ID) === activeWorkspaceId,
+      );
+      const existingFileViewerTab = state.tabs.find(
+        (tab) =>
+          tab.kind === "fileViewer" &&
+          tab.connection?.id === connection.id &&
+          (tab.workspaceId ?? DEFAULT_WORKSPACE_ID) === activeWorkspaceId,
+      );
+
+      const paneByChildId = new Map<string, WorkspacePane>();
+      for (const tab of state.tabs) {
+        if ((tab.workspaceId ?? DEFAULT_WORKSPACE_ID) !== activeWorkspaceId) {
+          continue;
+        }
+        for (const pane of tab.panes) {
+          if (pane.childConnectionId) {
+            paneByChildId.set(pane.childConnectionId, pane);
+          }
+        }
+      }
+
+      const browserConnection = connectionForChild(sourceConnection, browserChild);
+      const fileConnection = connectionForChild(sourceConnection, fileChild);
+      const existingBrowserPane = paneByChildId.get(browserChild.id);
+      const browserPane =
+        existingBrowserPane
+          ? {
+              ...existingBrowserPane,
+              childConnectionId: browserChild.id,
+              connection: browserConnection,
+              title: browserChild.name,
+              toolbarTitle: browserChild.name,
+            }
+          : existingBrowserTab
+            ? (() => {
+                const pane = buildPaneForStandaloneTab(existingBrowserTab);
+                return pane
+                  ? {
+                      ...pane,
+                      childConnectionId: browserChild.id,
+                      connection: browserConnection,
+                      title: browserChild.name,
+                      toolbarTitle: browserChild.name,
+                    }
+                  : null;
+              })()
+            : buildPaneForConnection(browserConnection, undefined, {
+                childConnectionId: browserChild.id,
+                title: browserChild.name,
+                toolbarTitle: browserChild.name,
+              });
+      const existingFilePane = paneByChildId.get(fileChild.id);
+      const filePane =
+        existingFilePane
+          ? {
+              ...existingFilePane,
+              childConnectionId: fileChild.id,
+              connection: fileConnection,
+              title: fileChild.name,
+              toolbarTitle: fileChild.name,
+            }
+          : existingFileViewerTab
+            ? (() => {
+                const pane = buildPaneForStandaloneTab(existingFileViewerTab);
+                return pane
+                  ? {
+                      ...pane,
+                      childConnectionId: fileChild.id,
+                      connection: fileConnection,
+                      title: fileChild.name,
+                      toolbarTitle: fileChild.name,
+                    }
+                  : null;
+              })()
+            : buildPaneForConnection(fileConnection, undefined, {
+                childConnectionId: fileChild.id,
+                title: fileChild.name,
+                toolbarTitle: fileChild.name,
+              });
+      if (!browserPane || !filePane) {
+        return;
+      }
+
+      const carriedPanes = existingGroupTab
+        ? existingGroupTab.panes.filter(
+            (pane) =>
+              pane.childConnectionId !== browserChild.id &&
+              pane.childConnectionId !== fileChild.id,
+          )
+        : [];
+      const panes = [browserPane, ...carriedPanes, filePane];
+      const tabId = existingGroupTab?.id ?? existingBrowserTab?.id ?? createConnectionTabId(`${sourceConnection.id}-children`);
+      const tab: WorkspaceTab = {
+        ...existingGroupTab,
+        id: tabId,
+        workspaceId: activeWorkspaceId,
+        childConnectionGroupParentId: sourceConnection.id,
+        title: sourceConnection.name,
+        toolbarTitle: toolbarTitleForConnection(sourceConnection),
+        subtitle: sourceConnection.localStartupDirectory || sourceConnection.host || "",
+        kind: "terminal",
+        panes,
+        layout: layoutForChildPanes(panes),
+        focusedPaneId: filePane.id,
+        maximizedPaneId: filePane.id,
+        quickCommandBarVisible: false,
+        connection: sourceConnection,
+      };
+      const removeTabIds = new Set(
+        [existingBrowserTab?.id, existingFileViewerTab?.id].filter(
+          (id): id is string => Boolean(id) && id !== tabId,
+        ),
+      );
+
+      set((current) => {
+        let replaced = false;
+        const tabs = current.tabs.flatMap((entry) => {
+          if (entry.id === tab.id) {
+            replaced = true;
+            return [tab];
+          }
+          if (removeTabIds.has(entry.id)) {
+            return [];
+          }
+          return [entry];
+        });
+        if (!replaced) {
+          tabs.push(tab);
+        }
+        return {
+          tabs,
+          activeTabId: tab.id,
+        };
+      });
+      return;
+    }
+
     const tabId = `tab-${connection.id}-fileView`;
     const existingTab = get().tabs.find((tab) => tab.id === tabId);
     if (existingTab) {

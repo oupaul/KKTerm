@@ -1144,8 +1144,6 @@
       "notesHint": "Persistent notes can appear as random callouts in rack or server room views.",
       "tagsLabel": "Tags",
       "listHint": "Use commas or one value per line.",
-      "auditLabel": "Rack audit",
-      "auditHint": "Record events such as 上架, 下架, cabling, or maintenance.",
       "bindingsLabel": "Additional Connections",
       "bindingsHint": "Optional Connection ids for devices that map to multiple Connections.",
       "bindingsAction": "Bind Connections",
@@ -1153,10 +1151,8 @@
       "portSpeedsHint": "Use values such as gigabit or 10g; SNMP polling can refresh these later.",
       "snmpLabel": "SNMP polling",
       "snmpHint": "Store an SNMP target or OID hint for data retrieval.",
-      "vendorLabel": "Shell preview",
-      "vendorHint": "Use Dell, HP, or another chassis family for the graphical preview.",
-      "relationshipLabel": "Relationship",
-      "relationshipHint": "Examples: Host/VM, storage/AP, VSAN, SAN, NAS, or hyper-converged.",
+      "vendorLabel": "Model",
+      "vendorHint": "Use Dell 740XD, HP DL380, or another chassis model for the graphical preview.",
       "expiryLabel": "Expiry",
       "rotationLabel": "Rotation",
       "rotationDecrease": "Rotate left",
@@ -1187,15 +1183,6 @@
         "regular": "Regular",
         "large": "Large"
       },
-      "auditAction": {
-        "installed": "Installed",
-        "removed": "Removed",
-        "maintenance": "Maintenance",
-        "cabling": "Cabling",
-        "note": "Note"
-      },
-      "auditLabelPlaceholder": "Event label",
-      "addAuditRecord": "Add audit record",
       "portState": {
         "unknown": "Unknown",
         "up": "Up",
@@ -1205,20 +1192,6 @@
       "snmpOidLabel": "OID",
       "refreshSnmp": "Refresh SNMP",
       "snmpRefreshComplete": "SNMP refresh completed.",
-      "relationshipKind": {
-        "hostVm": "Host/VM",
-        "storageAp": "Storage/AP",
-        "vsan": "VSAN",
-        "san": "SAN",
-        "nas": "NAS",
-        "hyperConverged": "Hyper-converged",
-        "custom": "Custom"
-      },
-      "ipamLabel": "IPAM addresses",
-      "ipamHint": "Store inventory IP addresses for this Rack Device; this does not manage DHCP or DNS.",
-      "vlanPlaceholder": "VLAN",
-      "macPlaceholder": "MAC",
-      "addIpamAddress": "Add IP address",
       "boundConnectionCount_one": "{{count}} bound Connection",
       "boundConnectionCount_other": "{{count}} bound Connections"
     },

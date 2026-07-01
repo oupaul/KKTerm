@@ -14,6 +14,8 @@ test("Rack Device editor uses type, appearance, and metadata columns", async () 
   assert.match(dialog, /kindLabel"\)} req/);
   assert.match(dialog, /startULabel"\)} req/);
   assert.match(dialog, /itemHeightLabel"\)} req/);
+  assert.match(dialog, /labelLabel[\s\S]*vendorLabel[\s\S]*statusLabel/);
+  assert.doesNotMatch(dialog, /relationshipLabel|ipamLabel|auditLabel/);
   assert.doesNotMatch(dialog, /connection-binding-list/);
 });
 

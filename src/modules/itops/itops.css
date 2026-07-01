@@ -4150,37 +4150,19 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
-.itops-page .rack-audit-list,
-.itops-page .rack-port-list,
-.itops-page .rack-ipam-list {
+.itops-page .rack-port-list {
   display: grid;
   gap: 8px;
 }
 
-.itops-page .rack-audit-row,
-.itops-page .rack-port-row,
-.itops-page .rack-ipam-row {
+.itops-page .rack-port-row {
   display: grid;
   gap: 8px;
   align-items: center;
 }
 
-.itops-page .rack-audit-row {
-  grid-template-columns: 132px minmax(0, 1fr) 118px;
-}
-
 .itops-page .rack-port-row {
   grid-template-columns: minmax(0, 1fr) 108px 108px;
-}
-
-.itops-page .rack-ipam-row {
-  grid-template-columns: minmax(0, 1fr) 92px 86px minmax(0, 1fr);
-}
-
-.itops-page .rack-relationship-edit {
-  display: grid;
-  grid-template-columns: 132px minmax(0, 1fr);
-  gap: 8px;
 }
 
 .itops-page .connection-binding-list {
@@ -4289,7 +4271,6 @@
   font-size: 10px;
 }
 
-.itops-page .rack-relationship-badge,
 .itops-page .rk-detail-meta {
   border: 1px solid var(--border);
   border-radius: 999px;
@@ -4299,21 +4280,13 @@
   background: var(--surface);
 }
 
-.itops-page .rack-relationship-badge.vsan,
-.itops-page .rack-relationship-badge.hyperConverged {
-  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
-}
-
 @media (max-width: 760px) {
   .rack-item-dialog-grid { grid-template-columns: 1fr; height: auto; }
   .rack-item-dialog-column { overflow: visible; border-right: 0; border-bottom: 1px solid var(--border); }
   .itops-page .rack-form-grid.two,
   .itops-page .rack-form-grid.four,
   .itops-page .connection-binding-list,
-  .itops-page .rack-audit-row,
-  .itops-page .rack-port-row,
-  .itops-page .rack-ipam-row,
-  .itops-page .rack-relationship-edit {
+  .itops-page .rack-port-row {
     grid-template-columns: 1fr;
   }
 }

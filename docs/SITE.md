@@ -97,14 +97,11 @@ Replaces the **Host Group** entry in `CONTEXT.md`; adds the rest. Follows the
   panel, equipment, general, 乖乖, blank, or label. It controls faceplate
   rendering and editing fields; it is not a Connection type.
 - **Rack Device Properties** — non-secret presentation metadata for a Rack
-  Device: label, status, accent, notes, tags, structured rack-audit records,
-  additional Connection bindings, typed port rows, SNMP target/OID hints for
-  user-triggered refresh, per-device IPAM address inventory, relationship
-  badges, shell/vendor preview data, 乖乖 package expiry/size/rotation/yaw,
-  ports, disks, battery, load, icon, and placement. Never store credentials,
-  secrets, or live Session state here. IPAM is inventory metadata, not an
-  authoritative DHCP/DNS integration, and SNMP refresh is manual rather than a
-  background polling service.
+  Device: label, status, accent, notes, tags, additional Connection bindings,
+  typed port rows, SNMP target/OID hints for user-triggered refresh, shell/model
+  preview data, 乖乖 package expiry/size/rotation/yaw, ports, disks, battery,
+  load, icon, and placement. Never store credentials, secrets, or live Session
+  state here. SNMP refresh is manual rather than a background polling service.
 
 `Watchdog`, `Automation`, `Batch Run`, `Playbook`, `Transport` are unchanged.
 
