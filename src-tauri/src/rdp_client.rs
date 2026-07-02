@@ -1393,6 +1393,18 @@ fn extract_rgba_rect(full_rgba: &[u8], full_width: u16, x: u16, y: u16, w: u16, 
             out.extend_from_slice(&full_rgba[start..end]);
         }
     }
+    // A slow-path bitmap update PDU can bundle several scattered tile
+    // rectangles; ironrdp-session reports the union of their bounds as one
+    // "changed" rectangle without filling the gaps between tiles. Right after a
+    // Deactivation-Reactivation Sequence recreates the framebuffer (all zero
+    // bytes), those gaps carry alpha=0 straight through, and since the canvas
+    // is painted with putImageData (a direct pixel replacement, not a blend),
+    // those transparent pixels punch see-through holes over whatever was drawn
+    // before, appearing as scribble-like corruption. An RDP framebuffer has no
+    // legitimate use for translucency, so force every extracted pixel opaque.
+    for pixel in out.chunks_exact_mut(4) {
+        pixel[3] = 0xff;
+    }
     out
 }
 
