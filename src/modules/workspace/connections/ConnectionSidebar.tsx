@@ -349,6 +349,7 @@ export function ConnectionSidebar({
   }, [childConnections, tree]);
   const addConnectionRef = useRef<HTMLDivElement | null>(null);
   const quickConnectRef = useRef<HTMLDivElement | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
   const treeListRef = useRef<HTMLDivElement | null>(null);
   const draggedItemRef = useRef<DraggedTreeItem | null>(null);
   const pointerDragTargetRef = useRef<TreeDropTarget | null>(null);
@@ -2862,14 +2863,30 @@ export function ConnectionSidebar({
       </div>
 
       <div className="connection-search-row">
-        <label className="search-box" data-tutorial-id="connections.search">
+        <div className="search-box" data-tutorial-id="connections.search">
           <Search size={15} />
           <input
+            ref={searchInputRef}
+            aria-label={t("connections.searchPlaceholder")}
             value={query}
             onChange={(event) => setQuery(event.currentTarget.value)}
             placeholder={t("connections.searchPlaceholder")}
           />
-        </label>
+          {query.trim().length > 0 ? (
+            <button
+              aria-label={t("common.clear")}
+              className="connection-search-clear"
+              onClick={() => {
+                setQuery("");
+                searchInputRef.current?.focus();
+              }}
+              title={t("common.clear")}
+              type="button"
+            >
+              <X size={12} />
+            </button>
+          ) : null}
+        </div>
 
         <div className="quick-connect-anchor" ref={quickConnectRef}>
           <button
