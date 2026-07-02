@@ -1148,6 +1148,14 @@
   border-top: 1px solid var(--border);
 }
 
+/* The custom foreground color picker sits near the bottom of the scrollable icon
+   selector. Open its palette upward so the picker remains usable instead of
+   being clipped by the popover's lower edge. */
+.connection-icon-foreground-section .color-palette-popover {
+  top: auto;
+  bottom: calc(100% + 8px);
+}
+
 .connection-icon-current {
   position: relative;
   width: 30px;
