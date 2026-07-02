@@ -1212,31 +1212,39 @@
       "viewElevation": "Elevations",
       "viewFloor": "Floor plan",
       "view25d": "2.5D",
-      "metricLabel": "Color racks by",
-      "metricHealth": "Health",
-      "metricUtilization": "Utilization",
-      "metricPower": "Power",
+      "viewAngleLabel": "View angle",
+      "rotateViewLeft": "Rotate view left",
+      "rotateViewRight": "Rotate view right",
       "utilizationValue": "{{percent}}% full",
       "powerValue": "{{used}} W / {{capacity}} W",
       "powerDrawOnly": "{{watts}} W",
       "tileTitle": "{{name}} — {{detail}}",
-      "isoEditHint": "Drag cabinets onto floor tiles to arrange the room. Click an empty tile to add a rack.",
+      "isoEditHint": "Drag cabinets and objects onto floor tiles. Click an empty tile to add a rack, or pick a palette object and click a tile to place it.",
+      "blueprintEditHint": "Drag racks and objects between floor cells. Place room objects with the palette; the rotate control turns a rack's front.",
       "isoAddHere": "Add a rack on this tile",
+      "paletteLabel": "Room objects",
+      "rotateTitle": "Rotate",
+      "raiseTitle": "Raise",
+      "lowerTitle": "Lower",
+      "deleteObjectTitle": "Remove object",
+      "objectLevel": "Bottom at {{z}}U",
+      "objectNoSpace": "No free vertical space in that spot.",
       "health": {
         "empty": "Empty",
         "ok": "Healthy",
         "warning": "Warning",
         "critical": "Critical"
       },
-      "util": {
-        "empty": "Empty",
-        "low": "Low",
-        "med": "Moderate",
-        "high": "High",
-        "full": "Full"
-      },
-      "power": {
-        "unknown": "No capacity"
+      "object": {
+        "camera": "Security camera",
+        "aircon": "Air conditioner",
+        "fireExtinguisher": "Fire extinguisher",
+        "cableTray": "Cable tray",
+        "ups": "UPS",
+        "sensor": "Environment sensor",
+        "smokeDetector": "Smoke detector",
+        "crashCart": "Crash cart",
+        "kuaikuai": "Kuai Kuai"
       }
     },
     "export": {

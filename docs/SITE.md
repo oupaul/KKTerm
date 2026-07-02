@@ -74,11 +74,23 @@ Replaces the **Host Group** entry in `CONTEXT.md`; adds the rest. Follows the
 - **Server Room** — a durable Site-owned row in `itops_server_rooms`. It nests
   the Sites tree and scopes a Batch Run. A Server Room can be empty; each new
   Rack must belong to a room owned by the same Site. _Avoid_: zone, site object.
-- **Server Room View** — the drill-down view for one Server Room. It has two
-  layouts: rack elevations (default, optionally grouped by each Rack's
-  `rack_group` tag) and a top-down 2D floor plan that paints each Rack as a
-  footprint tile coloured by health or utilisation (DCIM floor-plan pattern).
-  _Avoid_: area view, region view.
+- **Server Room View** — the drill-down view for one Server Room. It has
+  three layouts: rack elevations (default, optionally grouped by each Rack's
+  `rack_group` tag), a blueprint-style top-down floor plan, and a 2.5D
+  axonometric room. The floor plan and 2.5D room share one grid placement
+  (cell + facing per Rack), tint Racks by health with compact
+  utilisation/power tags, and hold **Room Objects**. _Avoid_: area view,
+  region view.
+- **Room Object** — a non-rack fixture standing on the Server Room floor grid
+  (security camera, air conditioner, fire extinguisher, cable tray, UPS,
+  environment sensor, smoke detector, crash cart, 乖乖). A Room Object has a
+  facing and a vertical position in rack units, so occupants can share a
+  floor cell while their vertical spans don't intersect (a 乖乖 pack sits on
+  a cabinet top). Durable in `itops_room_objects`, scoped by Site + Server
+  Room name like racks (the pure model lives in `roomObjects.ts`; the
+  pre-durable localStorage scope remains a legacy fallback). Rack facing is a
+  durable `facing` column on `itops_site_racks`. _Avoid_: fixture entity,
+  prop.
 - **Rack** — a durable, fixed-height (default 42U) cabinet that belongs to one
   Site, grouped by **Server Room** (topology Site → Server Room → Rack), with
   an optional **shell** finish (black/white/grey). Holds Rack Devices at U
@@ -298,11 +310,14 @@ The visible IT Ops Module opens directly into the Site topology surface:
   resizable, and the IT Ops title-bar Sites button hides or shows it. Width
   and hidden state persist.
 - **Site View** — selecting a Site shows Server Room cards.
-- **Server Room View** — selecting a Server Room shows its Racks, optionally
-  grouped by each Rack's `rack_group` tag, in one of two layouts: rack
-  elevations (default) or a top-down 2D floor plan coloured by health or
-  utilisation (`ServerRoomFloorPlan.tsx` + the pure `roomFloorPlan.ts`
-  metrics).
+- **Server Room View** — selecting a Server Room shows its Racks in one of
+  three layouts: rack elevations (default, optionally grouped by each Rack's
+  `rack_group` tag), a blueprint-style top-down floor plan
+  (`ServerRoomFloorPlan.tsx`), or a 2.5D axonometric room
+  (`ServerRoomIsoView.tsx`). The two spatial layouts share one floor grid
+  (cell placement + facing, `roomIsoLayout.ts`), tint Racks by health with
+  always-on utilisation/power tags (`roomFloorPlan.ts` metrics), and hold
+  non-rack room objects with vertical stacking (`roomObjects.ts`).
 - **Rack View** — selecting a Rack centers its front elevation and Rack Device
   properties/placement interactions.
 

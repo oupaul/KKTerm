@@ -131,3 +131,73 @@ export function screenDeltaToPlane(dx: number, dy: number): { u: number; v: numb
     v: -dx * Math.sin(ROT_RAD) + dyPlane * Math.cos(ROT_RAD),
   };
 }
+
+// ── Facing and fixed view angles ──
+//
+// Both room layouts share one grid; a Rack (or room object) also stores which
+// way its front faces, and the 2.5D view can look at the room from four fixed
+// corners. Directions and view angles are quarter turns with one numbering:
+// 0 = +y ("south", toward the iso camera's front-left), 1 = −x, 2 = −y,
+// 3 = +x. Rotating the room one view step maps direction d to (d + 1) % 4,
+// so everything composes with modular arithmetic.
+
+/** Quarter-turn direction a rack/object front points (see numbering above). */
+export type Facing = 0 | 1 | 2 | 3;
+
+/** Fixed 2.5D camera corner, as quarter turns of the room under the camera. */
+export type IsoViewAngle = 0 | 1 | 2 | 3;
+
+export function sanitizeFacing(value: unknown): Facing {
+  return value === 1 || value === 2 || value === 3 ? value : 0;
+}
+
+/** Grid size after rotating the room by `angle` quarter turns. */
+export function viewGridSize(
+  cols: number,
+  rows: number,
+  angle: IsoViewAngle,
+): { cols: number; rows: number } {
+  return angle % 2 === 0 ? { cols, rows } : { cols: rows, rows: cols };
+}
+
+/** Map a grid cell into display coordinates for the given view angle. */
+export function rotateCellForView(
+  cell: IsoCell,
+  angle: IsoViewAngle,
+  cols: number,
+  rows: number,
+): IsoCell {
+  switch (angle) {
+    case 1:
+      return { x: rows - 1 - cell.y, y: cell.x };
+    case 2:
+      return { x: cols - 1 - cell.x, y: rows - 1 - cell.y };
+    case 3:
+      return { x: cell.y, y: cols - 1 - cell.x };
+    default:
+      return cell;
+  }
+}
+
+/** A facing as seen from the given view angle. */
+export function rotateFacingForView(facing: Facing, angle: IsoViewAngle): Facing {
+  return ((facing + angle) % 4) as Facing;
+}
+
+/** Invert `rotateCellForView` for a displacement (drag delta) in cells/px. */
+export function viewDeltaToGrid(
+  du: number,
+  dv: number,
+  angle: IsoViewAngle,
+): { dx: number; dy: number } {
+  switch (angle) {
+    case 1:
+      return { dx: dv, dy: -du };
+    case 2:
+      return { dx: -du, dy: -dv };
+    case 3:
+      return { dx: -dv, dy: du };
+    default:
+      return { dx: du, dy: dv };
+  }
+}

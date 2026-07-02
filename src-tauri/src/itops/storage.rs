@@ -491,6 +491,7 @@ mod tests {
             floor_y: None,
             grid_x: None,
             grid_y: None,
+            facing: None,
             sort_order: 0,
             items: Vec::new(),
         }

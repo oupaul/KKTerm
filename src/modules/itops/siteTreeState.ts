@@ -3,12 +3,17 @@
 // Connection tree's `connectionSidebarState`. Node ids are stable path strings
 // ("site:<id>", "region:<id>/<region>", …) so collapse survives reloads.
 
+import { sanitizeRoomObjects, type RoomObject } from "./roomObjects";
+import { sanitizeFacing, type Facing, type IsoViewAngle } from "./roomIsoLayout";
+
 const WIDTH_KEY = "kkterm.itopsSiteTreeWidth";
 const PANEL_COLLAPSED_KEY = "kkterm.itopsSiteTreePanelCollapsed";
 const COLLAPSED_KEY = "kkterm.itopsSiteTreeCollapsed";
 const ROOM_VIEW_KEY = "kkterm.itopsRoomViewMode";
-const ROOM_METRIC_KEY = "kkterm.itopsRoomFloorMetric";
 const FREE_LAYOUT_KEY = "kkterm.itopsFreePlacement";
+const RACK_FACING_KEY = "kkterm.itopsRackFacing";
+const ROOM_OBJECTS_KEY = "kkterm.itopsRoomObjects";
+const ISO_ANGLE_KEY = "kkterm.itopsIsoViewAngle";
 
 export const SITE_TREE_MIN_WIDTH = 200;
 export const SITE_TREE_MAX_WIDTH = 460;
@@ -69,20 +74,6 @@ export function saveRoomViewMode(mode: RoomViewMode): void {
   localStorage.setItem(ROOM_VIEW_KEY, mode);
 }
 
-// Which dimension colours the floor-plan tiles / 2.5D cabinets.
-export type RoomFloorMetric = "health" | "utilization" | "power";
-
-export function loadRoomFloorMetric(): RoomFloorMetric {
-  if (typeof localStorage === "undefined") return "health";
-  const raw = localStorage.getItem(ROOM_METRIC_KEY);
-  return raw === "utilization" || raw === "power" ? raw : "health";
-}
-
-export function saveRoomFloorMetric(metric: RoomFloorMetric): void {
-  if (typeof localStorage === "undefined") return;
-  localStorage.setItem(ROOM_METRIC_KEY, metric);
-}
-
 export interface FreePlacement {
   x: number;
   y: number;
@@ -124,4 +115,63 @@ export function saveFreePlacement(scope: string, placement: FreePlacementMap): v
   const store = readFreePlacementStore();
   store[scope] = placement;
   localStorage.setItem(FREE_LAYOUT_KEY, JSON.stringify(store));
+}
+
+// ── Rack facing (per-room quarter-turn orientation of each rack) ──
+
+export type RackFacingMap = Record<string, Facing>;
+
+function readScopedStore(key: string): Record<string, unknown> {
+  if (typeof localStorage === "undefined") return {};
+  try {
+    const parsed = JSON.parse(localStorage.getItem(key) ?? "{}");
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+    return parsed as Record<string, unknown>;
+  } catch {
+    return {};
+  }
+}
+
+function writeScopedStore(key: string, scope: string, value: unknown): void {
+  if (typeof localStorage === "undefined") return;
+  const store = readScopedStore(key);
+  store[scope] = value;
+  localStorage.setItem(key, JSON.stringify(store));
+}
+
+export function loadRackFacing(scope: string): RackFacingMap {
+  const raw = readScopedStore(RACK_FACING_KEY)[scope];
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  const map: RackFacingMap = {};
+  for (const [id, value] of Object.entries(raw)) {
+    map[id] = sanitizeFacing(value);
+  }
+  return map;
+}
+
+export function saveRackFacing(scope: string, facing: RackFacingMap): void {
+  writeScopedStore(RACK_FACING_KEY, scope, facing);
+}
+
+// ── Room objects (per-room non-rack fixtures, see roomObjects.ts) ──
+
+export function loadRoomObjects(scope: string): RoomObject[] {
+  return sanitizeRoomObjects(readScopedStore(ROOM_OBJECTS_KEY)[scope]);
+}
+
+export function saveRoomObjects(scope: string, objects: RoomObject[]): void {
+  writeScopedStore(ROOM_OBJECTS_KEY, scope, objects);
+}
+
+// ── 2.5D fixed view angle (app-wide, like the room view mode) ──
+
+export function loadIsoViewAngle(): IsoViewAngle {
+  if (typeof localStorage === "undefined") return 0;
+  const raw = Number(localStorage.getItem(ISO_ANGLE_KEY));
+  return raw === 1 || raw === 2 || raw === 3 ? raw : 0;
+}
+
+export function saveIsoViewAngle(angle: IsoViewAngle): void {
+  if (typeof localStorage === "undefined") return;
+  localStorage.setItem(ISO_ANGLE_KEY, String(angle));
 }

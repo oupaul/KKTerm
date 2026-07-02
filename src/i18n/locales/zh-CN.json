@@ -1212,31 +1212,39 @@
       "viewElevation": "正视图",
       "viewFloor": "平面图",
       "view25d": "2.5D",
-      "metricLabel": "机架着色依据",
-      "metricHealth": "健康状态",
-      "metricUtilization": "使用率",
-      "metricPower": "功率",
+      "viewAngleLabel": "视角",
+      "rotateViewLeft": "向左旋转视角",
+      "rotateViewRight": "向右旋转视角",
       "utilizationValue": "已用 {{percent}}%",
       "powerValue": "{{used}} W / {{capacity}} W",
       "powerDrawOnly": "{{watts}} W",
       "tileTitle": "{{name}} — {{detail}}",
-      "isoEditHint": "将机架拖动到地面网格以布置机房。点击空白网格可添加机架。",
+      "isoEditHint": "将机柜和对象拖到地板格上。点击空格添加机柜，或先选择调色板中的对象再点击格子放置。",
+      "blueprintEditHint": "在地板格之间拖动机柜和对象。使用对象栏放置机房对象；点击旋转按钮可改变机柜朝向。",
       "isoAddHere": "在此网格添加机架",
+      "paletteLabel": "机房对象",
+      "rotateTitle": "旋转",
+      "raiseTitle": "上移",
+      "lowerTitle": "下移",
+      "deleteObjectTitle": "移除对象",
+      "objectLevel": "底部位于 {{z}}U",
+      "objectNoSpace": "该位置没有可用的垂直空间。",
       "health": {
         "empty": "空闲",
         "ok": "正常",
         "warning": "警告",
         "critical": "严重"
       },
-      "util": {
-        "empty": "空闲",
-        "low": "低",
-        "med": "中",
-        "high": "高",
-        "full": "已满"
-      },
-      "power": {
-        "unknown": "未设置容量"
+      "object": {
+        "camera": "监控摄像头",
+        "aircon": "空调机组",
+        "fireExtinguisher": "灭火器",
+        "cableTray": "线槽",
+        "ups": "UPS 电源",
+        "sensor": "环境传感器",
+        "smokeDetector": "烟雾探测器",
+        "crashCart": "维修推车",
+        "kuaikuai": "乖乖"
       }
     },
     "export": {

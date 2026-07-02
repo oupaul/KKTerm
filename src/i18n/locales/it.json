@@ -1212,31 +1212,39 @@
       "viewElevation": "Prospetti",
       "viewFloor": "Pianta",
       "view25d": "2,5D",
-      "metricLabel": "Colora i rack per",
-      "metricHealth": "Stato",
-      "metricUtilization": "Utilizzo",
-      "metricPower": "Potenza",
+      "viewAngleLabel": "Angolo di visuale",
+      "rotateViewLeft": "Ruota la visuale a sinistra",
+      "rotateViewRight": "Ruota la visuale a destra",
       "utilizationValue": "{{percent}} % occupato",
       "powerValue": "{{used}} W / {{capacity}} W",
       "powerDrawOnly": "{{watts}} W",
       "tileTitle": "{{name}} — {{detail}}",
-      "isoEditHint": "Trascina i rack sui riquadri del pavimento per organizzare la sala. Fai clic su un riquadro vuoto per aggiungere un rack.",
+      "isoEditHint": "Trascina armadi e oggetti sulle piastrelle del pavimento. Fai clic su una piastrella vuota per aggiungere un rack, oppure scegli un oggetto dalla palette e fai clic su una piastrella per posizionarlo.",
+      "blueprintEditHint": "Trascina rack e oggetti tra le celle del pavimento. Posiziona gli oggetti della sala con la palette; il controllo di rotazione cambia l'orientamento del rack.",
       "isoAddHere": "Aggiungi un rack in questo riquadro",
+      "paletteLabel": "Oggetti della sala",
+      "rotateTitle": "Ruota",
+      "raiseTitle": "Alza",
+      "lowerTitle": "Abbassa",
+      "deleteObjectTitle": "Rimuovi oggetto",
+      "objectLevel": "Base a {{z}}U",
+      "objectNoSpace": "Nessuno spazio verticale libero in quel punto.",
       "health": {
         "empty": "Vuoto",
         "ok": "Integro",
         "warning": "Avviso",
         "critical": "Critico"
       },
-      "util": {
-        "empty": "Vuoto",
-        "low": "Basso",
-        "med": "Moderato",
-        "high": "Alto",
-        "full": "Pieno"
-      },
-      "power": {
-        "unknown": "Nessuna capacità"
+      "object": {
+        "camera": "Telecamera di sorveglianza",
+        "aircon": "Condizionatore",
+        "fireExtinguisher": "Estintore",
+        "cableTray": "Canalina portacavi",
+        "ups": "UPS",
+        "sensor": "Sensore ambientale",
+        "smokeDetector": "Rilevatore di fumo",
+        "crashCart": "Carrello di manutenzione",
+        "kuaikuai": "Kuai Kuai"
       }
     },
     "export": {

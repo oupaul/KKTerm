@@ -19,9 +19,9 @@ use super::runner::{self, DEFAULT_CONCURRENCY, DEFAULT_TIMEOUT_SECONDS, SshTrans
 use super::site_storage as topo;
 use super::storage as ito;
 use super::types::{
-    BatchTask, Rack, RackItem, RackItemKind, RackItemMetadata, RackNetworkPort,
-    RackPlacementEntry, ResolvedHost, RoomIcon, RunEvent, RunEventHost, RunHistoryEntry, RunScope,
-    ServerRoom, Site, SiteFilter, Transport,
+    BatchTask, Rack, RackFacingEntry, RackItem, RackItemKind, RackItemMetadata, RackNetworkPort,
+    RackPlacementEntry, ResolvedHost, RoomIcon, RoomObject, RunEvent, RunEventHost,
+    RunHistoryEntry, RunScope, ServerRoom, Site, SiteFilter, Transport,
 };
 
 fn storage(app: &AppHandle) -> State<'_, crate::storage::Storage> {
@@ -419,6 +419,45 @@ pub fn itops_set_rack_placements(
     let kind = topo::RackPlacementKind::from_str(&kind).map_err(|error| error.to_string())?;
     storage(&app).with_connection_infallible(|conn| {
         topo::set_rack_placements(conn, kind, &entries).map_err(|error| error.to_string())
+    })
+}
+
+/// Persist quarter-turn facings for a batch of racks (Server Room View rotate
+/// controls).
+#[tauri::command]
+pub fn itops_set_rack_facings(
+    app: AppHandle,
+    entries: Vec<RackFacingEntry>,
+) -> Result<(), String> {
+    storage(&app).with_connection_infallible(|conn| {
+        topo::set_rack_facings(conn, &entries).map_err(|error| error.to_string())
+    })
+}
+
+/// All Room Objects of one Server Room (docs/SITE.md Room Object).
+#[tauri::command]
+pub fn itops_list_room_objects(
+    app: AppHandle,
+    site_id: String,
+    server_room: String,
+) -> Result<Vec<RoomObject>, String> {
+    storage(&app).with_connection_infallible(|conn| {
+        topo::list_room_objects(conn, &site_id, &server_room).map_err(|error| error.to_string())
+    })
+}
+
+/// Replace one Server Room's Room Objects (the spatial views edit the set as
+/// a whole: place, drag, rotate, re-level, delete).
+#[tauri::command]
+pub fn itops_set_room_objects(
+    app: AppHandle,
+    site_id: String,
+    server_room: String,
+    objects: Vec<RoomObject>,
+) -> Result<(), String> {
+    storage(&app).with_connection_infallible(|conn| {
+        topo::set_room_objects(conn, &site_id, &server_room, &objects)
+            .map_err(|error| error.to_string())
     })
 }
 

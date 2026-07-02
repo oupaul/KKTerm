@@ -8,7 +8,8 @@ use rusqlite::{Connection as SqliteConnection, OptionalExtension, params};
 use super::inventory::normalize_metadata;
 use super::storage::ItopsStorageError;
 use super::types::{
-    Rack, RackItem, RackItemKind, RackItemMetadata, RackPlacementEntry, ServerRoom,
+    Rack, RackFacingEntry, RackItem, RackItemKind, RackItemMetadata, RackPlacementEntry,
+    RoomObject, ServerRoom,
 };
 use crate::dashboard_storage::DashboardBackground;
 
@@ -165,9 +166,23 @@ pub fn create_server_room(
 }
 
 pub fn delete_server_room(conn: &SqliteConnection, id: &str) -> Result<()> {
-    if conn.execute("DELETE FROM itops_server_rooms WHERE id = ?", params![id])? == 0 {
+    // Room Objects are scoped by site + room name (like racks), so drop the
+    // room's objects with it rather than leaving orphans behind the name.
+    let room: Option<(String, String)> = conn
+        .query_row(
+            "SELECT site_id, name FROM itops_server_rooms WHERE id = ?",
+            params![id],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .optional()?;
+    let Some((site_id, name)) = room else {
         return Err(ItopsStorageError::NotFound);
-    }
+    };
+    conn.execute(
+        "DELETE FROM itops_room_objects WHERE site_id = ? AND server_room = ?",
+        params![site_id, name],
+    )?;
+    conn.execute("DELETE FROM itops_server_rooms WHERE id = ?", params![id])?;
     Ok(())
 }
 
@@ -277,13 +292,14 @@ fn row_to_rack(row: &rusqlite::Row<'_>) -> rusqlite::Result<Rack> {
         floor_y: row.get(12)?,
         grid_x: row.get(13)?,
         grid_y: row.get(14)?,
+        facing: row.get(15)?,
         items: Vec::new(),
     })
 }
 
 const SELECT_RACK_COLUMNS: &str = "id, site_id, name, server_room, rack_group, shell, \
      background_json, height_u, depth_mm, sort_order, power_capacity_w, \
-     floor_x, floor_y, grid_x, grid_y FROM itops_site_racks";
+     floor_x, floor_y, grid_x, grid_y, facing FROM itops_site_racks";
 
 /// Normalize a shell choice to a stored value: blank/"black"/None → NULL (the
 /// default), otherwise the trimmed colour name.
@@ -380,6 +396,7 @@ pub fn create_rack(
         floor_y: None,
         grid_x: None,
         grid_y: None,
+        facing: None,
         sort_order: next_sort,
         items: Vec::new(),
     })
@@ -553,6 +570,149 @@ pub fn set_rack_placements(
     Ok(())
 }
 
+/// Persist quarter-turn facings for a batch of racks. Like placements, ids
+/// that no longer exist are skipped so a rack deleted mid-edit doesn't fail
+/// the rest of the batch.
+pub fn set_rack_facings(conn: &SqliteConnection, entries: &[RackFacingEntry]) -> Result<()> {
+    for entry in entries {
+        if !(0..=3).contains(&entry.facing) {
+            return Err(ItopsStorageError::Validation(format!(
+                "rack facing must be 0..=3, got {}",
+                entry.facing
+            )));
+        }
+        conn.execute(
+            "UPDATE itops_site_racks
+             SET facing = ?, updated_at = CURRENT_TIMESTAMP
+             WHERE id = ?",
+            params![entry.facing, entry.id],
+        )?;
+    }
+    Ok(())
+}
+
+// ── Room objects (docs/SITE.md Room Object) ─────────────────────────────────
+
+/// The finite set of Room Object kinds the frontend can place. Kept in sync
+/// with `ROOM_OBJECT_KINDS` in `src/modules/itops/roomObjects.ts`.
+const ROOM_OBJECT_KINDS: &[&str] = &[
+    "camera",
+    "aircon",
+    "fireExtinguisher",
+    "cableTray",
+    "ups",
+    "sensor",
+    "smokeDetector",
+    "crashCart",
+    "kuaikuai",
+];
+
+/// Sanity bound matching ROOM_CEILING_U in roomObjects.ts (an object's bottom
+/// can never start at or above the ceiling).
+const MAX_ROOM_OBJECT_Z: i64 = 58;
+/// Bound on a room's object count so a replace-all write stays sane.
+const MAX_ROOM_OBJECTS: usize = 512;
+
+fn validate_room_object(object: &RoomObject) -> Result<()> {
+    if object.id.trim().is_empty() {
+        return Err(ItopsStorageError::Validation(
+            "room object id must not be empty".to_string(),
+        ));
+    }
+    if !ROOM_OBJECT_KINDS.contains(&object.kind.as_str()) {
+        return Err(ItopsStorageError::Validation(format!(
+            "unknown room object kind: {}",
+            object.kind
+        )));
+    }
+    if object.x < 0 || object.y < 0 {
+        return Err(ItopsStorageError::Validation(
+            "room object cell must not be negative".to_string(),
+        ));
+    }
+    if !(0..MAX_ROOM_OBJECT_Z).contains(&object.z) {
+        return Err(ItopsStorageError::Validation(format!(
+            "room object level must be 0..{MAX_ROOM_OBJECT_Z}, got {}",
+            object.z
+        )));
+    }
+    if !(0..=3).contains(&object.rot) {
+        return Err(ItopsStorageError::Validation(format!(
+            "room object rotation must be 0..=3, got {}",
+            object.rot
+        )));
+    }
+    Ok(())
+}
+
+/// All Room Objects of one Server Room (matched by name, like racks).
+pub fn list_room_objects(
+    conn: &SqliteConnection,
+    site_id: &str,
+    server_room: &str,
+) -> Result<Vec<RoomObject>> {
+    let mut stmt = conn.prepare(
+        "SELECT id, kind, x, y, z, rot FROM itops_room_objects
+         WHERE site_id = ? AND server_room = ? ORDER BY created_at, id",
+    )?;
+    Ok(stmt
+        .query_map(params![site_id, server_room.trim()], |row| {
+            Ok(RoomObject {
+                id: row.get(0)?,
+                kind: row.get(1)?,
+                x: row.get(2)?,
+                y: row.get(3)?,
+                z: row.get(4)?,
+                rot: row.get(5)?,
+            })
+        })?
+        .collect::<rusqlite::Result<Vec<_>>>()?)
+}
+
+/// Replace one Server Room's Room Objects in a single transaction. The layout
+/// is small and edited as a whole (place/drag/rotate/level/delete all rewrite
+/// the set), so replace-all keeps the storage as simple as the placement
+/// writes above.
+pub fn set_room_objects(
+    conn: &SqliteConnection,
+    site_id: &str,
+    server_room: &str,
+    objects: &[RoomObject],
+) -> Result<()> {
+    if objects.len() > MAX_ROOM_OBJECTS {
+        return Err(ItopsStorageError::Validation(format!(
+            "too many room objects (max {MAX_ROOM_OBJECTS})"
+        )));
+    }
+    for object in objects {
+        validate_room_object(object)?;
+    }
+    let server_room = server_room.trim();
+    let tx = conn.unchecked_transaction()?;
+    tx.execute(
+        "DELETE FROM itops_room_objects WHERE site_id = ? AND server_room = ?",
+        params![site_id, server_room],
+    )?;
+    for object in objects {
+        tx.execute(
+            "INSERT INTO itops_room_objects (id, site_id, server_room, kind, x, y, z, rot)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            params![
+                object.id,
+                site_id,
+                server_room,
+                object.kind,
+                object.x,
+                object.y,
+                object.z,
+                object.rot
+            ],
+        )?;
+    }
+    tx.commit()?;
+    Ok(())
+}
+
 // ── Rack Device CRUD ────────────────────────────────────────────────────────
 
 /// Validate that a Connection-backed item carries a connection id, and passive
@@ -712,7 +872,20 @@ mod tests {
                 floor_y REAL,
                 grid_x INTEGER,
                 grid_y INTEGER,
+                facing INTEGER,
                 sort_order INTEGER NOT NULL,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+            CREATE TABLE itops_room_objects (
+                id TEXT PRIMARY KEY,
+                site_id TEXT NOT NULL,
+                server_room TEXT NOT NULL DEFAULT '',
+                kind TEXT NOT NULL,
+                x INTEGER NOT NULL,
+                y INTEGER NOT NULL,
+                z INTEGER NOT NULL DEFAULT 0,
+                rot INTEGER NOT NULL DEFAULT 0,
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
@@ -880,6 +1053,84 @@ mod tests {
             ),
             Err(ItopsStorageError::Validation(_))
         ));
+    }
+
+    #[test]
+    fn rack_facings_persist_and_reject_out_of_range_turns() {
+        let conn = open_test_db();
+        create_rack(&conn, "a", "f1", "A", "Room B", "", None, 42, 1000, None).unwrap();
+
+        set_rack_facings(
+            &conn,
+            &[
+                RackFacingEntry { id: "a".into(), facing: 3 },
+                // Missing ids are skipped like placement writes.
+                RackFacingEntry { id: "gone".into(), facing: 1 },
+            ],
+        )
+        .unwrap();
+        let racks = list_racks(&conn, "f1").unwrap();
+        assert_eq!(racks[0].facing, Some(3));
+
+        assert!(matches!(
+            set_rack_facings(&conn, &[RackFacingEntry { id: "a".into(), facing: 4 }]),
+            Err(ItopsStorageError::Validation(_))
+        ));
+    }
+
+    #[test]
+    fn room_objects_replace_per_room_and_validate() {
+        let conn = open_test_db();
+        let object = |id: &str, kind: &str, z: i64| RoomObject {
+            id: id.into(),
+            kind: kind.into(),
+            x: 1,
+            y: 2,
+            z,
+            rot: 1,
+        };
+
+        set_room_objects(
+            &conn,
+            "f1",
+            "Room B",
+            &[object("o1", "camera", 52), object("o2", "kuaikuai", 42)],
+        )
+        .unwrap();
+        set_room_objects(&conn, "f1", "Room C", &[object("o3", "ups", 0)]).unwrap();
+
+        // Replace-all rewrites only the addressed room.
+        set_room_objects(&conn, "f1", "Room B", &[object("o4", "aircon", 0)]).unwrap();
+        let room_b = list_room_objects(&conn, "f1", "Room B").unwrap();
+        assert_eq!(
+            room_b,
+            vec![RoomObject { id: "o4".into(), kind: "aircon".into(), x: 1, y: 2, z: 0, rot: 1 }]
+        );
+        assert_eq!(list_room_objects(&conn, "f1", "Room C").unwrap().len(), 1);
+
+        // Unknown kinds, negative cells, and out-of-range z/rot are rejected.
+        assert!(matches!(
+            set_room_objects(&conn, "f1", "Room B", &[object("bad", "sofa", 0)]),
+            Err(ItopsStorageError::Validation(_))
+        ));
+        assert!(matches!(
+            set_room_objects(&conn, "f1", "Room B", &[object("bad", "camera", 58)]),
+            Err(ItopsStorageError::Validation(_))
+        ));
+        let mut negative = object("bad", "camera", 0);
+        negative.x = -1;
+        assert!(matches!(
+            set_room_objects(&conn, "f1", "Room B", &[negative]),
+            Err(ItopsStorageError::Validation(_))
+        ));
+        let mut spun = object("bad", "camera", 0);
+        spun.rot = 9;
+        assert!(matches!(
+            set_room_objects(&conn, "f1", "Room B", &[spun]),
+            Err(ItopsStorageError::Validation(_))
+        ));
+        // A failed write leaves the previous layout intact.
+        assert_eq!(list_room_objects(&conn, "f1", "Room B").unwrap().len(), 1);
     }
 
     #[test]

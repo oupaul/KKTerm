@@ -1212,31 +1212,39 @@
       "viewElevation": "Alzados",
       "viewFloor": "Plano de planta",
       "view25d": "2,5D",
-      "metricLabel": "Colorear racks por",
-      "metricHealth": "Estado",
-      "metricUtilization": "Utilización",
-      "metricPower": "Potencia",
+      "viewAngleLabel": "Ángulo de vista",
+      "rotateViewLeft": "Girar la vista a la izquierda",
+      "rotateViewRight": "Girar la vista a la derecha",
       "utilizationValue": "{{percent}} % ocupado",
       "powerValue": "{{used}} W / {{capacity}} W",
       "powerDrawOnly": "{{watts}} W",
       "tileTitle": "{{name}} — {{detail}}",
-      "isoEditHint": "Arrastra los racks a las casillas del suelo para organizar la sala. Haz clic en una casilla vacía para añadir un rack.",
+      "isoEditHint": "Arrastra armarios y objetos a las baldosas del suelo. Haz clic en una baldosa vacía para añadir un rack, o elige un objeto de la paleta y haz clic en una baldosa para colocarlo.",
+      "blueprintEditHint": "Arrastra racks y objetos entre celdas del suelo. Coloca objetos de sala con la paleta; el control de girar cambia la orientación del rack.",
       "isoAddHere": "Añadir un rack en esta casilla",
+      "paletteLabel": "Objetos de sala",
+      "rotateTitle": "Girar",
+      "raiseTitle": "Subir",
+      "lowerTitle": "Bajar",
+      "deleteObjectTitle": "Quitar objeto",
+      "objectLevel": "Base en {{z}}U",
+      "objectNoSpace": "No hay espacio vertical libre en ese punto.",
       "health": {
         "empty": "Vacío",
         "ok": "Correcto",
         "warning": "Advertencia",
         "critical": "Crítico"
       },
-      "util": {
-        "empty": "Vacío",
-        "low": "Bajo",
-        "med": "Moderado",
-        "high": "Alto",
-        "full": "Lleno"
-      },
-      "power": {
-        "unknown": "Sin capacidad"
+      "object": {
+        "camera": "Cámara de vigilancia",
+        "aircon": "Aire acondicionado",
+        "fireExtinguisher": "Extintor",
+        "cableTray": "Bandeja de cables",
+        "ups": "SAI",
+        "sensor": "Sensor ambiental",
+        "smokeDetector": "Detector de humo",
+        "crashCart": "Carro de mantenimiento",
+        "kuaikuai": "Kuai Kuai"
       }
     },
     "export": {

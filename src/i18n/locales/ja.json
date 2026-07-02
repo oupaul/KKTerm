@@ -1212,31 +1212,39 @@
       "viewElevation": "正面図",
       "viewFloor": "フロアプラン",
       "view25d": "2.5D",
-      "metricLabel": "ラックの色分け基準",
-      "metricHealth": "稼働状態",
-      "metricUtilization": "使用率",
-      "metricPower": "電力",
+      "viewAngleLabel": "視点角度",
+      "rotateViewLeft": "視点を左に回転",
+      "rotateViewRight": "視点を右に回転",
       "utilizationValue": "{{percent}}% 使用",
       "powerValue": "{{used}} W / {{capacity}} W",
       "powerDrawOnly": "{{watts}} W",
       "tileTitle": "{{name}} — {{detail}}",
-      "isoEditHint": "ラックを床のタイルにドラッグして部屋を配置します。空のタイルをクリックするとラックを追加できます。",
+      "isoEditHint": "キャビネットやオブジェクトを床タイルにドラッグします。空きタイルをクリックするとラックを追加し、パレットのオブジェクトを選んでタイルをクリックすると配置します。",
+      "blueprintEditHint": "ラックやオブジェクトを床セル間でドラッグします。パレットでルームオブジェクトを配置し、回転ボタンでラックの向きを変えられます。",
       "isoAddHere": "このタイルにラックを追加",
+      "paletteLabel": "ルームオブジェクト",
+      "rotateTitle": "回転",
+      "raiseTitle": "上げる",
+      "lowerTitle": "下げる",
+      "deleteObjectTitle": "オブジェクトを削除",
+      "objectLevel": "底面 {{z}}U",
+      "objectNoSpace": "この場所には空いている垂直スペースがありません。",
       "health": {
         "empty": "空き",
         "ok": "正常",
         "warning": "警告",
         "critical": "重大"
       },
-      "util": {
-        "empty": "空き",
-        "low": "低",
-        "med": "中",
-        "high": "高",
-        "full": "満杯"
-      },
-      "power": {
-        "unknown": "容量未設定"
+      "object": {
+        "camera": "防犯カメラ",
+        "aircon": "空調ユニット",
+        "fireExtinguisher": "消火器",
+        "cableTray": "ケーブルトレイ",
+        "ups": "UPS",
+        "sensor": "環境センサー",
+        "smokeDetector": "煙感知器",
+        "crashCart": "作業カート",
+        "kuaikuai": "乖乖（クァイクァイ）"
       }
     },
     "export": {

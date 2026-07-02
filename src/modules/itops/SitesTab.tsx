@@ -36,6 +36,7 @@ import {
   topologyGroupKey,
   type DrillPath,
 } from "./rackTopology";
+import { sanitizeFacing } from "./roomIsoLayout";
 import { ItOpsBackground } from "./ItOpsBackground";
 import { RackStage } from "./RackStage";
 import { ServerRoomFloorPlan } from "./ServerRoomFloorPlan";
@@ -48,18 +49,21 @@ import {
   SITE_TREE_MIN_WIDTH,
   loadCollapsedNodeIds,
   loadFreePlacement,
-  loadRoomFloorMetric,
+  loadRackFacing,
+  loadRoomObjects,
   loadRoomViewMode,
   loadSiteTreeWidth,
   saveFreePlacement,
   saveCollapsedNodeIds,
-  saveRoomFloorMetric,
+  saveRackFacing,
+  saveRoomObjects,
   saveRoomViewMode,
   saveSiteTreeWidth,
   type FreePlacementMap,
-  type RoomFloorMetric,
+  type RackFacingMap,
   type RoomViewMode,
 } from "./siteTreeState";
+import type { RoomObject } from "./roomObjects";
 import {
   createItOpsPdfBytes,
   excelFilename,
@@ -67,7 +71,6 @@ import {
   rackExcelBytes,
   rackPdfDocument,
   roomIsoLayoutScope,
-  roomLayoutScope,
   saveExportBytes,
   serverRoomPdfDocument,
   siteLayoutScope,
@@ -876,12 +879,10 @@ function RackDrill({
   const [editMode, setEditMode] = useState(false);
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
 
-  // Server Room View layout: rack elevations (default) or the top-down floor
-  // plan, plus which dimension colours the floor-plan tiles. Both persist.
+  // Server Room View layout: rack elevations (default), the blueprint floor
+  // plan, or the 2.5D room. Persists app-wide.
   const [roomView, setRoomView] = useState<RoomViewMode>(loadRoomViewMode);
-  const [floorMetric, setFloorMetric] = useState<RoomFloorMetric>(loadRoomFloorMetric);
   useEffect(() => saveRoomViewMode(roomView), [roomView]);
-  useEffect(() => saveRoomFloorMetric(floorMetric), [floorMetric]);
 
   const serverRoom =
     drill.serverRoom != null
@@ -909,24 +910,9 @@ function RackDrill({
   // Rack placements are durable rack fields (SQLite); the localStorage scopes
   // remain as a legacy fallback for layouts saved before the durable columns
   // existed. Merge order: legacy < durable < this session's live edits.
+  // The floor plan and the 2.5D view share this one grid-cell placement, so
+  // arranging the room in either view rearranges both.
   const roomRacks = serverRoom?.racks;
-  const roomPlacementScope = serverRoom ? roomLayoutScope(site.id, serverRoom.key) : "";
-  const legacyRoomPlacements = useMemo(
-    () => (roomPlacementScope ? loadFreePlacement(roomPlacementScope) : {}),
-    [roomPlacementScope],
-  );
-  const [roomEdits, setRoomEdits] = useState<FreePlacementMap>({});
-  useEffect(() => setRoomEdits({}), [roomPlacementScope]);
-  const roomPlacements = useMemo(
-    () => ({
-      ...legacyRoomPlacements,
-      ...durablePlacement(roomRacks, "floor"),
-      ...roomEdits,
-    }),
-    [legacyRoomPlacements, roomRacks, roomEdits],
-  );
-
-  // 2.5D iso view placement (grid cells, not pixels) — its own scope.
   const isoPlacementScope = serverRoom ? roomIsoLayoutScope(site.id, serverRoom.key) : "";
   const legacyIsoPlacements = useMemo(
     () => (isoPlacementScope ? loadFreePlacement(isoPlacementScope) : {}),
@@ -942,6 +928,84 @@ function RackDrill({
     }),
     [legacyIsoPlacements, roomRacks, isoEdits],
   );
+
+  // Per-room rack facing, shared by the floor plan and the 2.5D view. Facing
+  // is a durable rack field; the localStorage scope remains as the legacy /
+  // non-Tauri fallback. Merge order: legacy < durable < this session's edits
+  // (the same merge as placements).
+  const legacyFacing = useMemo(
+    () => (isoPlacementScope ? loadRackFacing(isoPlacementScope) : {}),
+    [isoPlacementScope],
+  );
+  const [facingEdits, setFacingEdits] = useState<RackFacingMap>({});
+  useEffect(() => setFacingEdits({}), [isoPlacementScope]);
+  const roomFacing = useMemo(() => {
+    const durable: RackFacingMap = {};
+    for (const entry of roomRacks ?? []) {
+      if (entry.facing != null) durable[entry.id] = sanitizeFacing(entry.facing);
+    }
+    return { ...legacyFacing, ...durable, ...facingEdits };
+  }, [legacyFacing, roomRacks, facingEdits]);
+
+  const setRackFacings = useItOpsStore((state) => state.setRackFacings);
+  const loadDurableRoomObjects = useItOpsStore((state) => state.loadRoomObjects);
+  const saveDurableRoomObjects = useItOpsStore((state) => state.saveRoomObjects);
+
+  function saveRoomFacingState(next: RackFacingMap) {
+    setFacingEdits(next);
+    if (isoPlacementScope) saveRackFacing(isoPlacementScope, next);
+    const entries = Object.entries(next)
+      .filter(([id]) => rackIds.has(id))
+      .map(([id, facing]) => ({ id, facing }));
+    setRackFacings(site.id, entries).catch((error: unknown) => {
+      const message = error instanceof Error ? error.message : String(error);
+      showStatusBarNotice(t("itops.errorNotice", { message }), { tone: "error" });
+    });
+  }
+
+  // Non-rack room objects: durable per room (itops_room_objects), with the
+  // localStorage scope as the legacy / non-Tauri fallback until the first
+  // durable write.
+  const [roomObjects, setRoomObjects] = useState<RoomObject[]>([]);
+  const roomObjectsSaveTimer = useRef<number | undefined>(undefined);
+  const roomName = serverRoom ? serverRoom.key : null;
+  useEffect(() => {
+    let cancelled = false;
+    setRoomObjects(isoPlacementScope ? loadRoomObjects(isoPlacementScope) : []);
+    if (roomName == null) return;
+    loadDurableRoomObjects(site.id, roomName)
+      .then((durable) => {
+        if (!cancelled && durable.length > 0) setRoomObjects(durable);
+      })
+      .catch((error: unknown) => {
+        const message = error instanceof Error ? error.message : String(error);
+        showStatusBarNotice(t("itops.errorNotice", { message }), { tone: "error" });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isoPlacementScope, roomName, site.id, loadDurableRoomObjects, showStatusBarNotice, t]);
+
+  function saveRoomObjectsState(next: RoomObject[]) {
+    setRoomObjects(next);
+    if (isoPlacementScope) saveRoomObjects(isoPlacementScope, next);
+    if (roomName == null) return;
+    if (roomObjectsSaveTimer.current != null) {
+      window.clearTimeout(roomObjectsSaveTimer.current);
+    }
+    // Debounced like placement saves: dragging an object streams positions.
+    roomObjectsSaveTimer.current = window.setTimeout(() => {
+      roomObjectsSaveTimer.current = undefined;
+      saveDurableRoomObjects(site.id, roomName, next).catch((error: unknown) => {
+        const message = error instanceof Error ? error.message : String(error);
+        showStatusBarNotice(t("itops.errorNotice", { message }), { tone: "error" });
+      });
+    }, 500);
+  }
+
+  function notifyObjectBlocked() {
+    showStatusBarNotice(t("itops.floorPlan.objectNoSpace"), { tone: "warning" });
+  }
 
   // Persist placements durably, debounced: the floor plan streams a position
   // per pointermove, and even the iso view's one-per-drop saves batch cleanly.
@@ -1101,12 +1165,6 @@ function RackDrill({
     saveFreePlacement(sitePlacementScope, next);
   }
 
-  function saveRoomPlacements(next: FreePlacementMap) {
-    setRoomEdits(next);
-    if (roomPlacementScope) saveFreePlacement(roomPlacementScope, next);
-    scheduleDurableSave("floor", next);
-  }
-
   function saveIsoPlacements(next: FreePlacementMap) {
     setIsoEdits(next);
     if (isoPlacementScope) saveFreePlacement(isoPlacementScope, next);
@@ -1229,35 +1287,6 @@ function RackDrill({
                   {t("itops.floorPlan.view25d")}
                 </button>
               </div>
-              {roomView !== "elevation" ? (
-                <div
-                  className="rm-segmented"
-                  role="group"
-                  aria-label={t("itops.floorPlan.metricLabel")}
-                >
-                  <button
-                    type="button"
-                    data-active={floorMetric === "health"}
-                    onClick={() => setFloorMetric("health")}
-                  >
-                    {t("itops.floorPlan.metricHealth")}
-                  </button>
-                  <button
-                    type="button"
-                    data-active={floorMetric === "utilization"}
-                    onClick={() => setFloorMetric("utilization")}
-                  >
-                    {t("itops.floorPlan.metricUtilization")}
-                  </button>
-                  <button
-                    type="button"
-                    data-active={floorMetric === "power"}
-                    onClick={() => setFloorMetric("power")}
-                  >
-                    {t("itops.floorPlan.metricPower")}
-                  </button>
-                </div>
-              ) : null}
             </div>
             {roomCallouts.length > 0 ? (
               <div className="rack-random-callouts room">
@@ -1285,23 +1314,31 @@ function RackDrill({
             {roomView === "iso" ? (
               <ServerRoomIsoView
                 racks={serverRoom.racks}
-                metric={floorMetric}
                 editMode={editMode}
                 placement={isoPlacements}
                 onPlacementChange={saveIsoPlacements}
+                facing={roomFacing}
+                onFacingChange={editMode ? saveRoomFacingState : undefined}
+                objects={roomObjects}
+                onObjectsChange={editMode ? saveRoomObjectsState : undefined}
                 onDeleteRack={editMode ? onDeleteRack : undefined}
                 onSelectRack={(rackId) => setDrill({ serverRoom: serverRoom.key, rackId })}
                 onAddRack={editMode ? () => onAddRack(serverRoom.key) : undefined}
+                onObjectBlocked={notifyObjectBlocked}
               />
             ) : roomView === "floor" ? (
               <ServerRoomFloorPlan
                 racks={serverRoom.racks}
-                metric={floorMetric}
                 editMode={editMode}
-                placement={roomPlacements}
-                onPlacementChange={saveRoomPlacements}
+                placement={isoPlacements}
+                onPlacementChange={saveIsoPlacements}
+                facing={roomFacing}
+                onFacingChange={editMode ? saveRoomFacingState : undefined}
+                objects={roomObjects}
+                onObjectsChange={editMode ? saveRoomObjectsState : undefined}
                 onDeleteRack={editMode ? onDeleteRack : undefined}
                 onSelectRack={(rackId) => setDrill({ serverRoom: serverRoom.key, rackId })}
+                onObjectBlocked={notifyObjectBlocked}
               />
             ) : (
               groupRacksByGroup(serverRoom.racks).map((g) => (

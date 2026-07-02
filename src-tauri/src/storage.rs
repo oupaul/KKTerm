@@ -12,7 +12,7 @@ use std::{
 use time::{OffsetDateTime, format_description::well_known::Rfc3339};
 use zip::{ZipArchive, ZipWriter, write::SimpleFileOptions};
 
-const SCHEMA_USER_VERSION: i32 = 40;
+const SCHEMA_USER_VERSION: i32 = 41;
 
 const DEFAULT_TERMINAL_OPACITY: u8 = 50;
 
@@ -376,6 +376,8 @@ CREATE TABLE IF NOT EXISTS itops_site_racks (
     floor_y     REAL,
     grid_x      INTEGER,
     grid_y      INTEGER,
+    -- Quarter-turn facing on the room floor grid (0..=3). NULL = unset. v41.
+    facing      INTEGER,
     sort_order  INTEGER NOT NULL,
     created_at  TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at  TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -383,6 +385,27 @@ CREATE TABLE IF NOT EXISTS itops_site_racks (
 
 CREATE INDEX IF NOT EXISTS idx_itops_site_racks_site
     ON itops_site_racks(site_id, sort_order);
+
+-- Non-rack Server Room fixtures on the room floor grid (docs/SITE.md Room
+-- Object): cameras, CRAC units, fire extinguishers, cable trays, UPS
+-- cabinets, sensors, smoke detectors, crash carts, 乖乖. Scoped by Site +
+-- Server Room name like racks; z is the object's bottom in rack units so
+-- occupants can stack in one floor cell. v41.
+CREATE TABLE IF NOT EXISTS itops_room_objects (
+    id          TEXT PRIMARY KEY,
+    site_id     TEXT NOT NULL REFERENCES itops_sites(id) ON DELETE CASCADE,
+    server_room TEXT NOT NULL DEFAULT '',
+    kind        TEXT NOT NULL,
+    x           INTEGER NOT NULL,
+    y           INTEGER NOT NULL,
+    z           INTEGER NOT NULL DEFAULT 0,
+    rot         INTEGER NOT NULL DEFAULT 0,
+    created_at  TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at  TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_itops_room_objects_room
+    ON itops_room_objects(site_id, server_room);
 
 -- One device occupying a contiguous U span in a Rack. Connection-backed when
 -- connection_id is set; passive otherwise. connection_id is a SOFT reference
@@ -2034,6 +2057,9 @@ impl Storage {
         ensure_column(&connection, "itops_site_racks", "floor_y", "REAL")?;
         ensure_column(&connection, "itops_site_racks", "grid_x", "INTEGER")?;
         ensure_column(&connection, "itops_site_racks", "grid_y", "INTEGER")?;
+        // v41: durable rack facing (the itops_room_objects table itself comes
+        // from CURRENT_SCHEMA's CREATE TABLE IF NOT EXISTS).
+        ensure_column(&connection, "itops_site_racks", "facing", "INTEGER")?;
         ensure_column(&connection, "itops_sites", "background_json", "TEXT")?;
         ensure_column(&connection, "itops_sites", "room_backgrounds_json", "TEXT")?;
         ensure_column(&connection, "itops_sites", "icon_color", "TEXT")?;

@@ -1212,31 +1212,39 @@
       "viewElevation": "ภาพด้านหน้า",
       "viewFloor": "ผังพื้น",
       "view25d": "2.5D",
-      "metricLabel": "ระบายสีแร็คตาม",
-      "metricHealth": "สถานะ",
-      "metricUtilization": "การใช้งาน",
-      "metricPower": "กำลังไฟ",
+      "viewAngleLabel": "มุมมอง",
+      "rotateViewLeft": "หมุนมุมมองไปทางซ้าย",
+      "rotateViewRight": "หมุนมุมมองไปทางขวา",
       "utilizationValue": "ใช้ {{percent}}%",
       "powerValue": "{{used}} W / {{capacity}} W",
       "powerDrawOnly": "{{watts}} W",
       "tileTitle": "{{name}} — {{detail}}",
-      "isoEditHint": "ลากแร็คไปยังช่องพื้นเพื่อจัดวางห้อง คลิกช่องว่างเพื่อเพิ่มแร็ค",
+      "isoEditHint": "ลากตู้แร็คและวัตถุไปยังช่องพื้น คลิกช่องว่างเพื่อเพิ่มแร็ค หรือเลือกวัตถุจากพาเลตต์แล้วคลิกช่องเพื่อวาง",
+      "blueprintEditHint": "ลากแร็คและวัตถุระหว่างช่องพื้น วางวัตถุในห้องด้วยพาเลตต์ ปุ่มหมุนใช้เปลี่ยนทิศด้านหน้าของแร็ค",
       "isoAddHere": "เพิ่มแร็คในช่องนี้",
+      "paletteLabel": "วัตถุในห้อง",
+      "rotateTitle": "หมุน",
+      "raiseTitle": "ยกขึ้น",
+      "lowerTitle": "ลดลง",
+      "deleteObjectTitle": "นำวัตถุออก",
+      "objectLevel": "ฐานอยู่ที่ {{z}}U",
+      "objectNoSpace": "ไม่มีพื้นที่แนวตั้งว่างในจุดนั้น",
       "health": {
         "empty": "ว่าง",
         "ok": "ปกติ",
         "warning": "คำเตือน",
         "critical": "วิกฤต"
       },
-      "util": {
-        "empty": "ว่าง",
-        "low": "ต่ำ",
-        "med": "ปานกลาง",
-        "high": "สูง",
-        "full": "เต็ม"
-      },
-      "power": {
-        "unknown": "ไม่ได้กำหนดกำลังไฟ"
+      "object": {
+        "camera": "กล้องวงจรปิด",
+        "aircon": "เครื่องปรับอากาศ",
+        "fireExtinguisher": "ถังดับเพลิง",
+        "cableTray": "รางเคเบิล",
+        "ups": "UPS",
+        "sensor": "เซนเซอร์สภาพแวดล้อม",
+        "smokeDetector": "เครื่องตรวจจับควัน",
+        "crashCart": "รถเข็นซ่อมบำรุง",
+        "kuaikuai": "Kuai Kuai"
       }
     },
     "export": {

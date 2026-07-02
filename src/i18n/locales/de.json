@@ -1212,31 +1212,39 @@
       "viewElevation": "Frontansichten",
       "viewFloor": "Grundriss",
       "view25d": "2,5D",
-      "metricLabel": "Racks einfärben nach",
-      "metricHealth": "Zustand",
-      "metricUtilization": "Auslastung",
-      "metricPower": "Leistung",
+      "viewAngleLabel": "Blickwinkel",
+      "rotateViewLeft": "Ansicht nach links drehen",
+      "rotateViewRight": "Ansicht nach rechts drehen",
       "utilizationValue": "{{percent}} % belegt",
       "powerValue": "{{used}} W / {{capacity}} W",
       "powerDrawOnly": "{{watts}} W",
       "tileTitle": "{{name}} — {{detail}}",
-      "isoEditHint": "Ziehen Sie Racks auf Bodenfelder, um den Raum anzuordnen. Klicken Sie auf ein leeres Feld, um ein Rack hinzuzufügen.",
+      "isoEditHint": "Schränke und Objekte auf Bodenfelder ziehen. Ein leeres Feld anklicken, um ein Rack hinzuzufügen, oder ein Palettenobjekt wählen und ein Feld anklicken.",
+      "blueprintEditHint": "Racks und Objekte zwischen Bodenzellen ziehen. Raumobjekte über die Palette platzieren; die Drehen-Schaltfläche ändert die Front eines Racks.",
       "isoAddHere": "Rack auf diesem Feld hinzufügen",
+      "paletteLabel": "Raumobjekte",
+      "rotateTitle": "Drehen",
+      "raiseTitle": "Anheben",
+      "lowerTitle": "Absenken",
+      "deleteObjectTitle": "Objekt entfernen",
+      "objectLevel": "Unterkante bei {{z}}U",
+      "objectNoSpace": "An dieser Stelle ist kein vertikaler Platz frei.",
       "health": {
         "empty": "Leer",
         "ok": "Intakt",
         "warning": "Warnung",
         "critical": "Kritisch"
       },
-      "util": {
-        "empty": "Leer",
-        "low": "Niedrig",
-        "med": "Mittel",
-        "high": "Hoch",
-        "full": "Voll"
-      },
-      "power": {
-        "unknown": "Keine Kapazität"
+      "object": {
+        "camera": "Überwachungskamera",
+        "aircon": "Klimagerät",
+        "fireExtinguisher": "Feuerlöscher",
+        "cableTray": "Kabeltrasse",
+        "ups": "USV",
+        "sensor": "Umgebungssensor",
+        "smokeDetector": "Rauchmelder",
+        "crashCart": "Wartungswagen",
+        "kuaikuai": "Kuai Kuai"
       }
     },
     "export": {

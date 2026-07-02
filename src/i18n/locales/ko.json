@@ -1212,31 +1212,39 @@
       "viewElevation": "정면도",
       "viewFloor": "평면도",
       "view25d": "2.5D",
-      "metricLabel": "랙 색상 기준",
-      "metricHealth": "상태",
-      "metricUtilization": "사용률",
-      "metricPower": "전력",
+      "viewAngleLabel": "보기 각도",
+      "rotateViewLeft": "시점을 왼쪽으로 회전",
+      "rotateViewRight": "시점을 오른쪽으로 회전",
       "utilizationValue": "{{percent}}% 사용",
       "powerValue": "{{used}} W / {{capacity}} W",
       "powerDrawOnly": "{{watts}} W",
       "tileTitle": "{{name}} — {{detail}}",
-      "isoEditHint": "랙을 바닥 타일로 드래그하여 배치를 조정하세요. 빈 타일을 클릭하면 랙을 추가할 수 있습니다.",
+      "isoEditHint": "캐비닛과 오브젝트를 바닥 타일로 드래그하세요. 빈 타일을 클릭하면 랙을 추가하고, 팔레트에서 오브젝트를 선택한 뒤 타일을 클릭하면 배치합니다.",
+      "blueprintEditHint": "랙과 오브젝트를 바닥 셀 사이로 드래그하세요. 팔레트로 룸 오브젝트를 배치하고, 회전 버튼으로 랙의 정면 방향을 바꿉니다.",
       "isoAddHere": "이 타일에 랙 추가",
+      "paletteLabel": "룸 오브젝트",
+      "rotateTitle": "회전",
+      "raiseTitle": "위로",
+      "lowerTitle": "아래로",
+      "deleteObjectTitle": "오브젝트 제거",
+      "objectLevel": "바닥에서 {{z}}U",
+      "objectNoSpace": "해당 위치에 사용 가능한 수직 공간이 없습니다.",
       "health": {
         "empty": "비어 있음",
         "ok": "정상",
         "warning": "경고",
         "critical": "심각"
       },
-      "util": {
-        "empty": "비어 있음",
-        "low": "낮음",
-        "med": "보통",
-        "high": "높음",
-        "full": "가득 참"
-      },
-      "power": {
-        "unknown": "용량 미설정"
+      "object": {
+        "camera": "보안 카메라",
+        "aircon": "항온항습기",
+        "fireExtinguisher": "소화기",
+        "cableTray": "케이블 트레이",
+        "ups": "UPS",
+        "sensor": "환경 센서",
+        "smokeDetector": "연기 감지기",
+        "crashCart": "작업 카트",
+        "kuaikuai": "콰이콰이"
       }
     },
     "export": {

@@ -1206,6 +1206,22 @@ type CommandMap = {
     args: { kind: "floor" | "grid"; entries: { id: string; x: number; y: number }[] };
     result: void;
   };
+  itops_set_rack_facings: {
+    args: { entries: { id: string; facing: number }[] };
+    result: void;
+  };
+  itops_list_room_objects: {
+    args: { siteId: string; serverRoom: string };
+    result: { id: string; kind: string; x: number; y: number; z: number; rot: number }[];
+  };
+  itops_set_room_objects: {
+    args: {
+      siteId: string;
+      serverRoom: string;
+      objects: { id: string; kind: string; x: number; y: number; z: number; rot: number }[];
+    };
+    result: void;
+  };
   itops_set_site_background: {
     args: { siteId: string; background: DashboardBackground | null };
     result: Site;

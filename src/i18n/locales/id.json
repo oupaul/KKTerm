@@ -1212,31 +1212,39 @@
       "viewElevation": "Tampak depan",
       "viewFloor": "Denah lantai",
       "view25d": "2,5D",
-      "metricLabel": "Warnai rak menurut",
-      "metricHealth": "Kesehatan",
-      "metricUtilization": "Pemanfaatan",
-      "metricPower": "Daya",
+      "viewAngleLabel": "Sudut pandang",
+      "rotateViewLeft": "Putar tampilan ke kiri",
+      "rotateViewRight": "Putar tampilan ke kanan",
       "utilizationValue": "{{percent}}% terisi",
       "powerValue": "{{used}} W / {{capacity}} W",
       "powerDrawOnly": "{{watts}} W",
       "tileTitle": "{{name}} — {{detail}}",
-      "isoEditHint": "Seret rak ke petak lantai untuk menata ruangan. Klik petak kosong untuk menambahkan rak.",
+      "isoEditHint": "Seret kabinet dan objek ke ubin lantai. Klik ubin kosong untuk menambah rak, atau pilih objek dari palet lalu klik ubin untuk menempatkannya.",
+      "blueprintEditHint": "Seret rak dan objek antar sel lantai. Tempatkan objek ruangan dengan palet; tombol putar mengubah arah depan rak.",
       "isoAddHere": "Tambahkan rak di petak ini",
+      "paletteLabel": "Objek ruangan",
+      "rotateTitle": "Putar",
+      "raiseTitle": "Naikkan",
+      "lowerTitle": "Turunkan",
+      "deleteObjectTitle": "Hapus objek",
+      "objectLevel": "Dasar di {{z}}U",
+      "objectNoSpace": "Tidak ada ruang vertikal kosong di titik itu.",
       "health": {
         "empty": "Kosong",
         "ok": "Sehat",
         "warning": "Peringatan",
         "critical": "Kritis"
       },
-      "util": {
-        "empty": "Kosong",
-        "low": "Rendah",
-        "med": "Sedang",
-        "high": "Tinggi",
-        "full": "Penuh"
-      },
-      "power": {
-        "unknown": "Tanpa kapasitas"
+      "object": {
+        "camera": "Kamera keamanan",
+        "aircon": "Pendingin udara",
+        "fireExtinguisher": "Alat pemadam api",
+        "cableTray": "Talang kabel",
+        "ups": "UPS",
+        "sensor": "Sensor lingkungan",
+        "smokeDetector": "Detektor asap",
+        "crashCart": "Kereta perawatan",
+        "kuaikuai": "Kuai Kuai"
       }
     },
     "export": {

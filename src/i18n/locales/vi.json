@@ -1212,31 +1212,39 @@
       "viewElevation": "Mặt đứng",
       "viewFloor": "Sơ đồ mặt bằng",
       "view25d": "2,5D",
-      "metricLabel": "Tô màu tủ rack theo",
-      "metricHealth": "Tình trạng",
-      "metricUtilization": "Mức sử dụng",
-      "metricPower": "Công suất",
+      "viewAngleLabel": "Góc nhìn",
+      "rotateViewLeft": "Xoay góc nhìn sang trái",
+      "rotateViewRight": "Xoay góc nhìn sang phải",
       "utilizationValue": "Đã dùng {{percent}}%",
       "powerValue": "{{used}} W / {{capacity}} W",
       "powerDrawOnly": "{{watts}} W",
       "tileTitle": "{{name}} — {{detail}}",
-      "isoEditHint": "Kéo rack vào các ô sàn để sắp xếp phòng. Nhấp vào ô trống để thêm rack.",
+      "isoEditHint": "Kéo tủ rack và vật thể vào các ô sàn. Nhấp vào ô trống để thêm rack, hoặc chọn vật thể trong bảng chọn rồi nhấp vào một ô để đặt.",
+      "blueprintEditHint": "Kéo rack và vật thể giữa các ô sàn. Đặt vật thể phòng máy bằng bảng chọn; nút xoay đổi hướng mặt trước của rack.",
       "isoAddHere": "Thêm rack vào ô này",
+      "paletteLabel": "Vật thể phòng máy",
+      "rotateTitle": "Xoay",
+      "raiseTitle": "Nâng lên",
+      "lowerTitle": "Hạ xuống",
+      "deleteObjectTitle": "Gỡ vật thể",
+      "objectLevel": "Đáy ở {{z}}U",
+      "objectNoSpace": "Không còn khoảng trống theo chiều dọc tại vị trí đó.",
       "health": {
         "empty": "Trống",
         "ok": "Tốt",
         "warning": "Cảnh báo",
         "critical": "Nghiêm trọng"
       },
-      "util": {
-        "empty": "Trống",
-        "low": "Thấp",
-        "med": "Trung bình",
-        "high": "Cao",
-        "full": "Đầy"
-      },
-      "power": {
-        "unknown": "Chưa đặt công suất"
+      "object": {
+        "camera": "Camera an ninh",
+        "aircon": "Điều hòa không khí",
+        "fireExtinguisher": "Bình chữa cháy",
+        "cableTray": "Máng cáp",
+        "ups": "Bộ lưu điện (UPS)",
+        "sensor": "Cảm biến môi trường",
+        "smokeDetector": "Đầu báo khói",
+        "crashCart": "Xe đẩy bảo trì",
+        "kuaikuai": "Kuai Kuai"
       }
     },
     "export": {

@@ -308,6 +308,9 @@ export interface Rack {
   floorY?: number | null;
   gridX?: number | null;
   gridY?: number | null;
+  // Durable quarter-turn facing on the room floor grid (0-3, 0 = front toward
+  // +y). null/undefined = unset (legacy local store, then the default).
+  facing?: number | null;
   sortOrder: number;
   items: RackItem[];
 }

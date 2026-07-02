@@ -330,12 +330,8 @@ export function rackExcelBytes({
   return encoder.encode(html);
 }
 
-export function roomLayoutScope(siteId: string, serverRoom: string): string {
-  return `room:${siteId}:${topologyGroupKey(serverRoom)}`;
-}
-
-// The 2.5D iso view stores grid cells (col/row), not pixels, so it scopes
-// separately from the free-placement floor plan.
+// Both spatial room layouts (floor plan + 2.5D) store grid cells (col/row)
+// under this one scope; facing and room objects reuse the same scope string.
 export function roomIsoLayoutScope(siteId: string, serverRoom: string): string {
   return `roomIso:${siteId}:${topologyGroupKey(serverRoom)}`;
 }

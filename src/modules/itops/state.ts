@@ -25,6 +25,7 @@ import type {
 } from "../../types";
 import type { DashboardBackground } from "../dashboard/types";
 import type { WatchdogConfig } from "../../watchdog/types";
+import { sanitizeRoomObjects, type RoomObject } from "./roomObjects";
 
 export interface SiteInput {
   name: string;
@@ -53,6 +54,12 @@ export interface RackPlacementUpdate {
   id: string;
   x: number;
   y: number;
+}
+
+export interface RackFacingUpdate {
+  id: string;
+  /** Quarter turns, 0-3. */
+  facing: number;
 }
 
 export interface PlaceItemInput {
@@ -221,6 +228,12 @@ interface ItOpsState {
     kind: RackPlacementKind,
     entries: RackPlacementUpdate[],
   ) => Promise<void>;
+  /** Persist quarter-turn rack facings durably; updates the cache in place. */
+  setRackFacings: (siteId: string, entries: RackFacingUpdate[]) => Promise<void>;
+  /** One Server Room's durable Room Objects (empty outside the Tauri runtime). */
+  loadRoomObjects: (siteId: string, serverRoom: string) => Promise<RoomObject[]>;
+  /** Replace one Server Room's durable Room Objects. */
+  saveRoomObjects: (siteId: string, serverRoom: string, objects: RoomObject[]) => Promise<void>;
   setSiteBackground: (siteId: string, background: DashboardBackground | null) => Promise<void>;
   setServerRoomBackground: (
     siteId: string,
@@ -423,6 +436,38 @@ export const useItOpsStore = create<ItOpsState>((set, get) => ({
         }),
       },
     });
+  },
+
+  async setRackFacings(siteId, entries) {
+    if (entries.length === 0) return;
+    if (isTauriRuntime()) {
+      await invokeCommand("itops_set_rack_facings", { entries });
+    }
+    // Patch the cached racks in place like setRackPlacements: a facing save
+    // fires right after a rotate click and a reload would restart animations.
+    const byId = new Map(entries.map((entry) => [entry.id, entry.facing]));
+    const racks = get().racksBySite[siteId];
+    if (!racks) return;
+    set({
+      racksBySite: {
+        ...get().racksBySite,
+        [siteId]: racks.map((rack) => {
+          const facing = byId.get(rack.id);
+          return facing == null ? rack : { ...rack, facing };
+        }),
+      },
+    });
+  },
+
+  async loadRoomObjects(siteId, serverRoom) {
+    if (!isTauriRuntime()) return [];
+    const objects = await invokeCommand("itops_list_room_objects", { siteId, serverRoom });
+    return sanitizeRoomObjects(objects);
+  },
+
+  async saveRoomObjects(siteId, serverRoom, objects) {
+    if (!isTauriRuntime()) return;
+    await invokeCommand("itops_set_room_objects", { siteId, serverRoom, objects });
   },
 
   async placeRackItem(siteId, input) {

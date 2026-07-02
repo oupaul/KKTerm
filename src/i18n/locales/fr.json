@@ -1212,31 +1212,39 @@
       "viewElevation": "Élévations",
       "viewFloor": "Plan au sol",
       "view25d": "2,5D",
-      "metricLabel": "Colorer les racks par",
-      "metricHealth": "État",
-      "metricUtilization": "Utilisation",
-      "metricPower": "Puissance",
+      "viewAngleLabel": "Angle de vue",
+      "rotateViewLeft": "Pivoter la vue à gauche",
+      "rotateViewRight": "Pivoter la vue à droite",
       "utilizationValue": "{{percent}} % occupé",
       "powerValue": "{{used}} W / {{capacity}} W",
       "powerDrawOnly": "{{watts}} W",
       "tileTitle": "{{name}} — {{detail}}",
-      "isoEditHint": "Faites glisser les racks sur les cases du sol pour organiser la salle. Cliquez sur une case vide pour ajouter un rack.",
+      "isoEditHint": "Faites glisser les baies et les objets sur les dalles du sol. Cliquez sur une dalle vide pour ajouter une baie, ou choisissez un objet de la palette puis cliquez sur une dalle pour le placer.",
+      "blueprintEditHint": "Faites glisser les baies et les objets entre les cellules du sol. Placez des objets de salle avec la palette ; le bouton de rotation change l'orientation d'une baie.",
       "isoAddHere": "Ajouter un rack sur cette case",
+      "paletteLabel": "Objets de salle",
+      "rotateTitle": "Pivoter",
+      "raiseTitle": "Monter",
+      "lowerTitle": "Descendre",
+      "deleteObjectTitle": "Retirer l'objet",
+      "objectLevel": "Base à {{z}}U",
+      "objectNoSpace": "Aucun espace vertical libre à cet endroit.",
       "health": {
         "empty": "Vide",
         "ok": "Sain",
         "warning": "Avertissement",
         "critical": "Critique"
       },
-      "util": {
-        "empty": "Vide",
-        "low": "Faible",
-        "med": "Modéré",
-        "high": "Élevé",
-        "full": "Plein"
-      },
-      "power": {
-        "unknown": "Aucune capacité"
+      "object": {
+        "camera": "Caméra de surveillance",
+        "aircon": "Climatiseur",
+        "fireExtinguisher": "Extincteur",
+        "cableTray": "Chemin de câbles",
+        "ups": "Onduleur",
+        "sensor": "Capteur d'environnement",
+        "smokeDetector": "Détecteur de fumée",
+        "crashCart": "Chariot d'intervention",
+        "kuaikuai": "Kuai Kuai"
       }
     },
     "export": {

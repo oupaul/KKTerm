@@ -7,9 +7,6 @@
 
 import type { Rack, RackItem, RackItemStatus } from "../../types";
 
-// Which dimension colours a rack footprint.
-export type FloorMetric = "health" | "utilization" | "power";
-
 // Worst-case rack health, derived from placed-device statuses. "empty" is its
 // own band so an unpopulated rack reads as neutral rather than healthy.
 export type RackHealth = "empty" | "ok" | "warning" | "critical";

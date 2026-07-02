@@ -1212,31 +1212,39 @@
       "viewElevation": "正視圖",
       "viewFloor": "平面圖",
       "view25d": "2.5D",
-      "metricLabel": "機架著色依據",
-      "metricHealth": "健康狀態",
-      "metricUtilization": "使用率",
-      "metricPower": "功率",
+      "viewAngleLabel": "視角",
+      "rotateViewLeft": "向左旋轉視角",
+      "rotateViewRight": "向右旋轉視角",
       "utilizationValue": "已用 {{percent}}%",
       "powerValue": "{{used}} W / {{capacity}} W",
       "powerDrawOnly": "{{watts}} W",
       "tileTitle": "{{name}} — {{detail}}",
-      "isoEditHint": "將機架拖曳至地板方格以配置機房。點選空白方格即可新增機架。",
+      "isoEditHint": "將機櫃與物件拖曳到地板格上。點擊空格即可新增機櫃，或先選取物件列中的物件再點擊格子放置。",
+      "blueprintEditHint": "在地板格之間拖曳機櫃與物件。使用物件列放置機房物件；點擊旋轉按鈕可改變機櫃朝向。",
       "isoAddHere": "在此方格新增機架",
+      "paletteLabel": "機房物件",
+      "rotateTitle": "旋轉",
+      "raiseTitle": "上移",
+      "lowerTitle": "下移",
+      "deleteObjectTitle": "移除物件",
+      "objectLevel": "底部位於 {{z}}U",
+      "objectNoSpace": "該位置沒有可用的垂直空間。",
       "health": {
         "empty": "空閒",
         "ok": "正常",
         "warning": "警告",
         "critical": "嚴重"
       },
-      "util": {
-        "empty": "空閒",
-        "low": "低",
-        "med": "中",
-        "high": "高",
-        "full": "已滿"
-      },
-      "power": {
-        "unknown": "未設定容量"
+      "object": {
+        "camera": "監視攝影機",
+        "aircon": "空調主機",
+        "fireExtinguisher": "滅火器",
+        "cableTray": "線槽",
+        "ups": "不斷電系統",
+        "sensor": "環境感測器",
+        "smokeDetector": "煙霧偵測器",
+        "crashCart": "維修推車",
+        "kuaikuai": "乖乖"
       }
     },
     "export": {
