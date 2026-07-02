@@ -577,11 +577,38 @@ struct ServerCertificateData {
     channel_binding_token: Vec<u8>,
 }
 
+/// RFC 5929 §4.1: hash the certificate with the hash function used in the
+/// certificate's own `signatureAlgorithm`, EXCEPT when that function is MD5 or
+/// SHA-1 (or unrecognized), in which case SHA-256 must be used instead. Returns
+/// (hash_bytes, algorithm_name_for_logging).
+fn tls_server_end_point_hash(cert_der: &[u8], signature_algorithm_oid: &str) -> (Vec<u8>, &'static str) {
+    use sha2::{Digest, Sha256, Sha384, Sha512};
+
+    // RSA and ECDSA signature OIDs that use SHA-384/SHA-512, per RFC 3279/4055/5758.
+    const SHA384_OIDS: &[&str] = &[
+        "1.2.840.113549.1.1.12", // sha384WithRSAEncryption
+        "1.2.840.10045.4.3.3",   // ecdsa-with-SHA384
+    ];
+    const SHA512_OIDS: &[&str] = &[
+        "1.2.840.113549.1.1.13", // sha512WithRSAEncryption
+        "1.2.840.10045.4.3.4",   // ecdsa-with-SHA512
+    ];
+
+    if SHA384_OIDS.contains(&signature_algorithm_oid) {
+        (Sha384::digest(cert_der).to_vec(), "SHA-384")
+    } else if SHA512_OIDS.contains(&signature_algorithm_oid) {
+        (Sha512::digest(cert_der).to_vec(), "SHA-512")
+    } else {
+        // Covers sha256WithRSAEncryption / ecdsa-with-SHA256 (the common case) as well
+        // as the RFC 5929 fallback for MD5/SHA-1/unrecognized algorithms.
+        (Sha256::digest(cert_der).to_vec(), "SHA-256")
+    }
+}
+
 fn extract_server_public_key(
     session_id: &str,
     tls_stream: &tokio_openssl::SslStream<TcpStream>,
 ) -> Result<ServerCertificateData, String> {
-    use sha2::{Digest, Sha256};
     use x509_cert::der::Decode as _;
 
     let cert_der = tls_stream
@@ -602,13 +629,8 @@ fn extract_server_public_key(
         .ok_or_else(|| "server certificate subject public key is not a bitstring".to_string())?
         .to_vec();
 
-    // RFC 5929 "tls-server-end-point": hash the whole DER certificate with the
-    // certificate's own signature hash algorithm, falling back to SHA-256 when
-    // that algorithm is MD5/SHA-1 (or unrecognized). Windows RDP hosts issue
-    // SHA-256-signed certificates in the overwhelming majority of cases, so a
-    // fixed SHA-256 hash — the RFC's own prescribed fallback — is used directly
-    // rather than parsing the signature algorithm OID.
-    let cert_hash = Sha256::digest(&cert_der);
+    let signature_algorithm_oid = cert.signature_algorithm.oid.to_string();
+    let (cert_hash, hash_algorithm) = tls_server_end_point_hash(&cert_der, &signature_algorithm_oid);
     let mut channel_binding_token = b"tls-server-end-point:".to_vec();
     channel_binding_token.extend_from_slice(&cert_hash);
 
@@ -617,6 +639,8 @@ fn extract_server_public_key(
         &json!({
             "sessionId": session_id,
             "subjectPublicKeyBytes": spki_bytes.len(),
+            "signatureAlgorithmOid": signature_algorithm_oid,
+            "channelBindingHashAlgorithm": hash_algorithm,
         }),
     );
 
