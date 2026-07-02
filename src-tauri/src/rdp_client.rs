@@ -567,10 +567,21 @@ async fn tls_upgrade(
     }
 }
 
+/// Server certificate data needed for CredSSP: the SubjectPublicKeyInfo bytes
+/// (bound into CredSSP's own pubKeyAuth anti-MITM step) and the RFC 5929
+/// `tls-server-end-point` channel binding token (bound into the inner NTLM
+/// AUTHENTICATE message so servers enforcing Extended Protection for
+/// Authentication accept the logon).
+struct ServerCertificateData {
+    subject_public_key: Vec<u8>,
+    channel_binding_token: Vec<u8>,
+}
+
 fn extract_server_public_key(
     session_id: &str,
     tls_stream: &tokio_openssl::SslStream<TcpStream>,
-) -> Result<Vec<u8>, String> {
+) -> Result<ServerCertificateData, String> {
+    use sha2::{Digest, Sha256};
     use x509_cert::der::Decode as _;
 
     let cert_der = tls_stream
@@ -591,6 +602,16 @@ fn extract_server_public_key(
         .ok_or_else(|| "server certificate subject public key is not a bitstring".to_string())?
         .to_vec();
 
+    // RFC 5929 "tls-server-end-point": hash the whole DER certificate with the
+    // certificate's own signature hash algorithm, falling back to SHA-256 when
+    // that algorithm is MD5/SHA-1 (or unrecognized). Windows RDP hosts issue
+    // SHA-256-signed certificates in the overwhelming majority of cases, so a
+    // fixed SHA-256 hash — the RFC's own prescribed fallback — is used directly
+    // rather than parsing the signature algorithm OID.
+    let cert_hash = Sha256::digest(&cert_der);
+    let mut channel_binding_token = b"tls-server-end-point:".to_vec();
+    channel_binding_token.extend_from_slice(&cert_hash);
+
     rdp_debug(
         "ironrdp.certificate.ok",
         &json!({
@@ -599,7 +620,10 @@ fn extract_server_public_key(
         }),
     );
 
-    Ok(spki_bytes)
+    Ok(ServerCertificateData {
+        subject_public_key: spki_bytes,
+        channel_binding_token,
+    })
 }
 
 // ── Connect helper ────────────────────────────────────────────────────────────
@@ -643,7 +667,7 @@ async fn rdp_connect(
     };
     use ironrdp::pdu::gcc::KeyboardType;
     use ironrdp::pdu::rdp::capability_sets::MajorPlatformType;
-    use ironrdp_tokio::{TokioFramed, connect_begin, connect_finalize, mark_as_upgraded};
+    use ironrdp_tokio::{TokioFramed, connect_begin, mark_as_upgraded};
 
     // CredSSP/NTLM needs the domain separated from the username. Split a
     // `DOMAIN\user` login into (domain, user); otherwise keep the requested
@@ -796,7 +820,7 @@ async fn rdp_connect(
     let tls_stream = tls_upgrade(tcp_stream, &session_id, &host, port, &host, ignore_tls_errors).await?;
 
     // Step 6: Extract server public key
-    let server_public_key = extract_server_public_key(&session_id, &tls_stream)?;
+    let server_cert_data = extract_server_public_key(&session_id, &tls_stream)?;
 
     // Step 7: Mark as upgraded
     let upgraded = mark_as_upgraded(should_upgrade, &mut connector);
@@ -813,14 +837,15 @@ async fn rdp_connect(
             "port": port,
         }),
     );
-    let connection_result = match connect_finalize::<_, NoopNetworkClient>(
+    let connection_result = match ironrdp_tokio::connect_finalize_with_channel_bindings::<_, NoopNetworkClient>(
         upgraded,
         connector,
         &mut upgraded_framed,
         &mut NoopNetworkClient,
         ServerName::new(host.clone()),
-        server_public_key,
+        server_cert_data.subject_public_key,
         None::<KerberosConfig>,
+        Some(server_cert_data.channel_binding_token),
     )
     .await
     {

@@ -91,6 +91,12 @@ impl CredsspSequence {
     }
 
     /// `server_name` must be the actual target server hostname (as opposed to the proxy)
+    ///
+    /// `channel_bindings`, when set, is the RFC 5929 `tls-server-end-point` token
+    /// (`b"tls-server-end-point:"` followed by the TLS server certificate hash)
+    /// applied to the inner NTLM context, so servers enforcing Extended Protection
+    /// for Authentication (EPA) accept the logon. Ignored when Kerberos is used
+    /// instead of NTLM (`kerberos_config` is `Some`).
     pub fn init(
         credentials: Credentials,
         domain: Option<&str>,
@@ -98,6 +104,7 @@ impl CredsspSequence {
         server_name: ServerName,
         server_public_key: Vec<u8>,
         kerberos_config: Option<KerberosConfig>,
+        channel_bindings: Option<Vec<u8>>,
     ) -> ConnectorResult<(Self, credssp::TsRequest)> {
         let credentials: sspi::Credentials = match &credentials {
             Credentials::UsernamePassword { username, password } => {
@@ -162,7 +169,8 @@ impl CredsspSequence {
             client_mode,
             service_principal_name,
         )
-        .map_err(|e| ConnectorError::new("CredSSP", ConnectorErrorKind::Credssp(e)))?;
+        .map_err(|e| ConnectorError::new("CredSSP", ConnectorErrorKind::Credssp(e)))?
+        .with_channel_bindings(channel_bindings);
 
         let sequence = Self {
             client,

@@ -208,6 +208,11 @@ picky-asn1-x509 = { path = "vendor/picky-rs-russh-061/picky-asn1-x509" }
 picky-krb = { path = "vendor/picky-rs-russh-061/picky-krb" }
 sspi = { path = "vendor/sspi-rs-russh-061" }
 ironrdp-connector = { path = "vendor/ironrdp-russh-061/crates/ironrdp-connector" }
+# Vendored alongside ironrdp-connector (not itself patched upstream, but needs to be
+# vendored so it depends on our patched ironrdp-connector and so rdp_client.rs can
+# thread the NTLM channel-binding token through connect_finalize/perform_credssp_step,
+# which the crates.io release has no parameter for).
+ironrdp-async = { path = "vendor/ironrdp-russh-061/crates/ironrdp-async" }
 
 [dev-dependencies]
 tempfile = "3.27.0"

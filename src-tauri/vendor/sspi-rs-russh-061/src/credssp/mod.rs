@@ -212,6 +212,12 @@ pub struct CredSspClient {
     ts_request_version: u32,
     client_mode: Option<ClientMode>,
     service_principal_name: String,
+    /// RFC 5929 `tls-server-end-point` channel binding token (the literal
+    /// `b"tls-server-end-point:"` prefix followed by the TLS server certificate
+    /// hash), applied to the inner NTLM context so servers enforcing Extended
+    /// Protection for Authentication (EPA) accept the logon. `None` preserves the
+    /// previous behavior of never sending a channel binding.
+    channel_bindings: Option<Vec<u8>>,
 }
 
 impl CredSspClient {
@@ -236,6 +242,7 @@ impl CredSspClient {
             ts_request_version: TS_REQUEST_VERSION,
             client_mode: Some(client_mode),
             service_principal_name,
+            channel_bindings: None,
         })
     }
 
@@ -261,7 +268,18 @@ impl CredSspClient {
             ts_request_version,
             client_mode: Some(client_mode),
             service_principal_name,
+            channel_bindings: None,
         })
+    }
+
+    /// Sets the RFC 5929 `tls-server-end-point` channel binding token to apply to
+    /// the inner NTLM context, so servers enforcing Extended Protection for
+    /// Authentication (EPA) accept the logon. Must be called before the first
+    /// [`Self::process`] call, since the inner authentication context (and its
+    /// channel bindings) is created lazily on first use.
+    pub fn with_channel_bindings(mut self, channel_bindings: Option<Vec<u8>>) -> Self {
+        self.channel_bindings = channel_bindings;
+        self
     }
 
     #[instrument(fields(state = ?self.state), skip_all)]
@@ -294,7 +312,13 @@ impl CredSspClient {
                 ClientMode::Pku2u(pku2u) => Some(CredSspContext::new(SspiContext::Pku2u(
                     Pku2u::new_client_from_config(*pku2u)?,
                 ))),
-                ClientMode::Ntlm(ntlm) => Some(CredSspContext::new(SspiContext::Ntlm(Ntlm::with_config(ntlm)))),
+                ClientMode::Ntlm(ntlm) => {
+                    let mut ntlm_context = Ntlm::with_config(ntlm);
+                    if let Some(channel_bindings) = self.channel_bindings.as_deref() {
+                        ntlm_context.set_channel_bindings(channel_bindings);
+                    }
+                    Some(CredSspContext::new(SspiContext::Ntlm(ntlm_context)))
+                }
             };
 
             let sspi_context = &mut self
