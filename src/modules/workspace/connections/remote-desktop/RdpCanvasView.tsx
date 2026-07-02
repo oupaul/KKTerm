@@ -11,8 +11,9 @@
 
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useRef, useState } from "react";
-import type { RefObject } from "react";
+import type { FormEvent, RefObject } from "react";
 import { useTranslation } from "react-i18next";
+import { Actions, Btn, DialogShell, Field, Sheet, TextInput } from "../../../../app/ui/dialog";
 import { invokeCommand, isTauriRuntime } from "../../../../lib/tauri";
 import type { Connection } from "../../../../types";
 import { connectionPasswordOwnerId } from "../utils";
@@ -72,6 +73,22 @@ export function RdpCanvasView({
   const composingRef = useRef(false);
   const [status, setStatus] = useState<"connecting" | "connected" | "disconnected">("connecting");
   const [errorMessage, setErrorMessage] = useState("");
+  const [passwordPrompt, setPasswordPrompt] = useState(false);
+  const passwordPromptResolverRef = useRef<((password: string | null) => void) | null>(null);
+
+  function requestTransientPassword() {
+    setPasswordPrompt(true);
+    return new Promise<string | null>((resolve) => {
+      passwordPromptResolverRef.current = resolve;
+    });
+  }
+
+  function completePasswordPrompt(password: string | null) {
+    const resolve = passwordPromptResolverRef.current;
+    passwordPromptResolverRef.current = null;
+    setPasswordPrompt(false);
+    resolve?.(password);
+  }
 
   // Session lifecycle + framebuffer rendering.
   useEffect(() => {
@@ -141,16 +158,36 @@ export function RdpCanvasView({
       unlisten = dispose;
     });
 
-    void invokeCommand("start_rdp_client_session", {
-      request: {
-        sessionId,
-        host: connection.host,
-        port: connection.port,
-        username: connection.user ?? "",
-        secretOwnerId: connectionPasswordOwnerId(connection),
-        ignoreTlsErrors: connection.rdpOptions?.ignoreTlsErrors ?? false,
-      },
-    }).catch((error) => {
+    (async () => {
+      // Windows App / mstsc prompt for a password when the saved connection has
+      // none, rather than attempting the logon with an empty password. Mirror
+      // that here: the entered password is used only for this connection
+      // attempt and is never persisted to the connection's stored credentials.
+      let password: string | undefined;
+      if (!connection.hasPassword && !connection.passwordCredentialId) {
+        const entered = await requestTransientPassword();
+        if (disposed) {
+          return;
+        }
+        if (!entered) {
+          setErrorMessage(t("remoteDesktop.passwordPromptCanceled"));
+          setStatus("disconnected");
+          return;
+        }
+        password = entered;
+      }
+      await invokeCommand("start_rdp_client_session", {
+        request: {
+          sessionId,
+          host: connection.host,
+          port: connection.port,
+          username: connection.user ?? "",
+          secretOwnerId: connectionPasswordOwnerId(connection),
+          password,
+          ignoreTlsErrors: connection.rdpOptions?.ignoreTlsErrors ?? false,
+        },
+      });
+    })().catch((error) => {
       if (!disposed) {
         setErrorMessage(error instanceof Error ? error.message : String(error));
         setStatus("disconnected");
@@ -353,6 +390,83 @@ export function RdpCanvasView({
       {(statusText || errorMessage) && (
         <div className="rdp-canvas-status">{errorMessage || statusText}</div>
       )}
+      {passwordPrompt ? (
+        <RdpPasswordPromptDialog
+          connection={connection}
+          onCancel={() => completePasswordPrompt(null)}
+          onSubmit={(password) => completePasswordPrompt(password)}
+        />
+      ) : null}
     </div>
+  );
+}
+
+function RdpPasswordPromptDialog({
+  connection,
+  onCancel,
+  onSubmit,
+}: {
+  connection: Connection;
+  onCancel: () => void;
+  onSubmit: (password: string) => void;
+}) {
+  const { t } = useTranslation();
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const trimmedPassword = password.trim();
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!trimmedPassword) {
+      setError(t("remoteDesktop.passwordRequired"));
+      return;
+    }
+    onSubmit(password);
+  }
+
+  return (
+    <DialogShell onBackdrop={onCancel}>
+      <Sheet
+        width={420}
+        title={t("remoteDesktop.passwordDialogTitle")}
+        ariaLabel={t("remoteDesktop.passwordDialogTitle")}
+        footer={
+          <Actions
+            cancel={<Btn onClick={onCancel}>{t("common.cancel")}</Btn>}
+            primary={
+              <Btn kind="primary" onClick={() => onSubmit(password)} disabled={!trimmedPassword}>
+                {t("remoteDesktop.passwordDialogSubmit")}
+              </Btn>
+            }
+          />
+        }
+      >
+        <form className="rdp-password-dialog" onSubmit={handleSubmit}>
+          <p>
+            {t("remoteDesktop.passwordDialogBody", {
+              user: connection.user || "administrator",
+              host: connection.host,
+            })}
+          </p>
+          {error ? <p className="rdp-password-dialog-error">{error}</p> : null}
+          <Field label={t("connections.password")}>
+            <TextInput
+              autoFocus
+              autoComplete="current-password"
+              type="password"
+              value={password}
+              placeholder={t("remoteDesktop.passwordDialogPlaceholder")}
+              onChange={(event) => {
+                setPassword(event.target.value);
+                setError("");
+              }}
+            />
+          </Field>
+          <button className="sr-only" type="submit">
+            {t("remoteDesktop.passwordDialogSubmit")}
+          </button>
+        </form>
+      </Sheet>
+    </DialogShell>
   );
 }
