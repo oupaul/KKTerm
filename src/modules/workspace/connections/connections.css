@@ -47,6 +47,27 @@
   margin: 0;
 }
 
+.connection-search-clear {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  color: var(--text-muted);
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.connection-search-clear:hover,
+.connection-search-clear:focus-visible {
+  color: var(--text);
+  background: var(--surface-muted);
+}
+
 .connection-search-row .quick-connect-anchor {
   flex: 0 0 auto;
   margin: 0;
