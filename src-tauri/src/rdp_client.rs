@@ -870,8 +870,8 @@ fn spawn_rdp_event_loop(
             }),
         );
 
-        let width = connection_result.desktop_size.width;
-        let height = connection_result.desktop_size.height;
+        let mut width = connection_result.desktop_size.width;
+        let mut height = connection_result.desktop_size.height;
 
         emit_rdp_event(
             &app,
@@ -1006,6 +1006,89 @@ fn spawn_rdp_event_loop(
                                         );
                                         should_break = true;
                                         break;
+                                    }
+                                    ActiveStageOutput::DeactivateAll(mut connection_activation) => {
+                                        // Deactivation-Reactivation Sequence. Legacy Windows RDP
+                                        // hosts send a Server Deactivate All right after the initial
+                                        // capability exchange and then re-run the Demand/Confirm
+                                        // Active handshake. Drive that sub-sequence to completion here
+                                        // (mirrors the official ironrdp-client); without it the next
+                                        // PDU is decoded against stale share state and fails with
+                                        // "ShareControlHeader: not enough bytes".
+                                        rdp_debug(
+                                            "ironrdp.reactivation.start",
+                                            &json!({ "sessionId": session_id }),
+                                        );
+                                        let mut buf = ironrdp::core::WriteBuf::new();
+                                        let reactivated = loop {
+                                            if let Err(e) = ironrdp_tokio::single_sequence_step(
+                                                &mut framed,
+                                                &mut *connection_activation,
+                                                &mut buf,
+                                            )
+                                            .await
+                                            {
+                                                let detail = error_chain(&e);
+                                                eprintln!("[rdp {session_id}] reactivation error: {detail}");
+                                                rdp_debug(
+                                                    "ironrdp.reactivation.error",
+                                                    &json!({ "sessionId": session_id, "error": detail }),
+                                                );
+                                                emit_rdp_event(&app, RdpCanvasEvent::Error {
+                                                    session_id: session_id.clone(),
+                                                    message: detail,
+                                                });
+                                                break false;
+                                            }
+                                            if let ironrdp::connector::connection_activation::ConnectionActivationState::Finalized {
+                                                io_channel_id,
+                                                user_channel_id,
+                                                desktop_size,
+                                                share_id,
+                                                enable_server_pointer,
+                                                pointer_software_rendering,
+                                            } = connection_activation.connection_activation_state()
+                                            {
+                                                width = desktop_size.width;
+                                                height = desktop_size.height;
+                                                image = ironrdp::session::image::DecodedImage::new(
+                                                    ironrdp::graphics::image_processing::PixelFormat::RgbA32,
+                                                    width,
+                                                    height,
+                                                );
+                                                active_stage.set_fastpath_processor(
+                                                    ironrdp::session::fast_path::ProcessorBuilder {
+                                                        io_channel_id,
+                                                        user_channel_id,
+                                                        share_id,
+                                                        enable_server_pointer,
+                                                        pointer_software_rendering,
+                                                        bulk_decompressor: None,
+                                                    }
+                                                    .build(),
+                                                );
+                                                active_stage.set_share_id(share_id);
+                                                active_stage.set_enable_server_pointer(enable_server_pointer);
+                                                rdp_debug(
+                                                    "ironrdp.reactivation.ok",
+                                                    &json!({
+                                                        "sessionId": session_id,
+                                                        "width": width,
+                                                        "height": height,
+                                                    }),
+                                                );
+                                                emit_rdp_event(&app, RdpCanvasEvent::Resolution {
+                                                    session_id: session_id.clone(),
+                                                    width,
+                                                    height,
+                                                });
+                                                break true;
+                                            }
+                                        };
+                                        if !reactivated {
+                                            should_break = true;
+                                            break;
+                                        }
                                     }
                                     _ => {}
                                 }
