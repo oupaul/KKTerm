@@ -360,36 +360,44 @@ export function RdpCanvasView({
         : "";
 
   return (
-    <div className="rdp-canvas-view" onPointerDown={() => inputRef.current?.focus()}>
-      <canvas
-        ref={setCanvasRef}
-        className="rdp-canvas-surface"
-        onPointerMove={onPointerMove}
-        onPointerDown={onPointerDown}
-        onPointerUp={onPointerUp}
-        onWheel={onWheel}
-        onContextMenu={(e) => e.preventDefault()}
-      />
-      {/* Visually-hidden focus target that captures IME composition + text input. */}
-      <input
-        ref={inputRef}
-        className="rdp-canvas-ime-input"
-        aria-label={t("remoteDesktop.displayAria")}
-        title={t("remoteDesktop.displayAria")}
-        autoComplete="off"
-        autoCapitalize="off"
-        autoCorrect="off"
-        spellCheck={false}
-        onKeyDown={onKeyDown}
-        onKeyUp={onKeyUp}
-        onInput={onInput}
-        onCompositionStart={onCompositionStart}
-        onCompositionUpdate={onCompositionStart}
-        onCompositionEnd={onCompositionEnd}
-      />
-      {(statusText || errorMessage) && (
-        <div className="rdp-canvas-status">{errorMessage || statusText}</div>
-      )}
+    <>
+      <div className="rdp-canvas-view" onPointerDown={() => inputRef.current?.focus()}>
+        <canvas
+          ref={setCanvasRef}
+          className="rdp-canvas-surface"
+          onPointerMove={onPointerMove}
+          onPointerDown={onPointerDown}
+          onPointerUp={onPointerUp}
+          onWheel={onWheel}
+          onContextMenu={(e) => e.preventDefault()}
+        />
+        {/* Visually-hidden focus target that captures IME composition + text input. */}
+        <input
+          ref={inputRef}
+          className="rdp-canvas-ime-input"
+          aria-label={t("remoteDesktop.displayAria")}
+          title={t("remoteDesktop.displayAria")}
+          autoComplete="off"
+          autoCapitalize="off"
+          autoCorrect="off"
+          spellCheck={false}
+          onKeyDown={onKeyDown}
+          onKeyUp={onKeyUp}
+          onInput={onInput}
+          onCompositionStart={onCompositionStart}
+          onCompositionUpdate={onCompositionStart}
+          onCompositionEnd={onCompositionEnd}
+        />
+        {(statusText || errorMessage) && (
+          <div className="rdp-canvas-status">{errorMessage || statusText}</div>
+        )}
+      </div>
+      {/* Rendered as a sibling, not a descendant, of the pointer-capturing canvas
+          view above: DialogShell portals into document.body, but React still
+          bubbles its synthetic pointer events through the component tree, so
+          nesting this dialog inside that div would let clicks on the password
+          field re-trigger the canvas's onPointerDown and steal focus back to
+          the hidden IME input mid-keystroke. */}
       {passwordPrompt ? (
         <RdpPasswordPromptDialog
           connection={connection}
@@ -397,7 +405,7 @@ export function RdpCanvasView({
           onSubmit={(password) => completePasswordPrompt(password)}
         />
       ) : null}
-    </div>
+    </>
   );
 }
 
