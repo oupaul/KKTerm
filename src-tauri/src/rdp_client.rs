@@ -1178,6 +1178,40 @@ fn spawn_rdp_event_loop(
                                                     width,
                                                     height,
                                                 });
+                                                // Slow-path bitmap update PDUs can bundle several
+                                                // scattered tiles; the server only proactively resends
+                                                // the tiles it considers dirty, which after this fresh
+                                                // (all-zero) framebuffer can leave real screen content
+                                                // never repainted. Ask the server to redraw the entire
+                                                // desktop now, the same way a real client recovers from
+                                                // a resize/reactivation before the user notices gaps.
+                                                buf.clear();
+                                                let refresh_pdu = ironrdp::pdu::rdp::headers::ShareDataPdu::RefreshRectangle(
+                                                    ironrdp::pdu::rdp::refresh_rectangle::RefreshRectanglePdu {
+                                                        areas_to_refresh: vec![ironrdp::pdu::geometry::InclusiveRectangle {
+                                                            left: 0,
+                                                            top: 0,
+                                                            right: width.saturating_sub(1),
+                                                            bottom: height.saturating_sub(1),
+                                                        }],
+                                                    },
+                                                );
+                                                match active_stage.encode_static(&mut buf, refresh_pdu) {
+                                                    Ok(_) => {
+                                                        if let Err(e) = framed.write_all(buf.filled()).await {
+                                                            rdp_debug(
+                                                                "ironrdp.refresh_rect.error",
+                                                                &json!({ "sessionId": session_id, "error": e.to_string() }),
+                                                            );
+                                                        }
+                                                    }
+                                                    Err(e) => {
+                                                        rdp_debug(
+                                                            "ironrdp.refresh_rect.error",
+                                                            &json!({ "sessionId": session_id, "error": e.to_string() }),
+                                                        );
+                                                    }
+                                                }
                                                 break true;
                                             }
                                         };
