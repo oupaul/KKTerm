@@ -639,10 +639,10 @@ async fn rdp_connect(
     ignore_tls_errors: bool,
 ) -> Result<(ironrdp::connector::ConnectionResult, UpgradedFramed), String> {
     use ironrdp::connector::{
-        BitmapConfig, ClientConnector, Config, Credentials, DesktopSize, ServerName, credssp::KerberosConfig,
+        ClientConnector, Config, Credentials, DesktopSize, ServerName, credssp::KerberosConfig,
     };
     use ironrdp::pdu::gcc::KeyboardType;
-    use ironrdp::pdu::rdp::capability_sets::{BitmapCodecs, MajorPlatformType};
+    use ironrdp::pdu::rdp::capability_sets::MajorPlatformType;
     use ironrdp_tokio::{TokioFramed, connect_begin, connect_finalize, mark_as_upgraded};
 
     // CredSSP/NTLM needs the domain separated from the username. Split a
@@ -714,18 +714,10 @@ async fn rdp_connect(
         client_dir: String::new(),
         platform: MajorPlatformType::UNIX,
         hardware_id: None,
-        // Request 16bpp instead of the default 32bpp. This server negotiates TLS 1.0
-        // with legacy cipher suites (Windows Server 2003/2008-era); such hosts almost
-        // always compress screen updates with the legacy "Interleaved RLE" bitmap
-        // codec, whose 16bpp path is the historically dominant, best-tested one across
-        // RDP client implementations. 32bpp RLE is comparatively rare and more likely
-        // to hit an under-exercised decode path — screens rendered from this host were
-        // otherwise coming back with sheared/corrupted content in the painted regions.
-        bitmap: Some(BitmapConfig {
-            lossy_compression: false,
-            color_depth: 16,
-            codecs: BitmapCodecs(Vec::new()),
-        }),
+        // Reverted: requesting 16bpp made rendering strictly worse against the
+        // legacy test host (solid black instead of the previous partially-visible,
+        // sheared content at 32bpp), so it was not the fix. Back to the default.
+        bitmap: None,
         compression_type: None,
         performance_flags: ironrdp::pdu::rdp::client_info::PerformanceFlags::default(),
         autologon: false,
@@ -1007,8 +999,21 @@ fn spawn_rdp_event_loop(
                                         let rh = u16::try_from(
                                             region.bottom.saturating_sub(region.top).saturating_add(1)
                                         ).unwrap_or(0);
+                                        let image_data = image.data();
                                         if graphics_updates_logged < MAX_GRAPHICS_UPDATE_LOGS {
                                             graphics_updates_logged += 1;
+                                            // Sample a few pixels (corners + center) of the decoded
+                                            // buffer for this rectangle so a "black screen" report can
+                                            // be root-caused precisely: genuinely-decoded black pixels
+                                            // (e.g. an empty 8bpp palette) vs. correctly-decoded color
+                                            // data that never makes it to the display.
+                                            let sample_at = |sx: u16, sy: u16| -> Option<[u8; 4]> {
+                                                let stride = usize::from(width) * 4;
+                                                let idx = usize::from(sy) * stride + usize::from(sx) * 4;
+                                                image_data.get(idx..idx + 4).map(|s| [s[0], s[1], s[2], s[3]])
+                                            };
+                                            let mid_x = rx.saturating_add(rw / 2);
+                                            let mid_y = ry.saturating_add(rh / 2);
                                             rdp_debug(
                                                 "ironrdp.graphics_update",
                                                 &json!({
@@ -1019,10 +1024,11 @@ fn spawn_rdp_event_loop(
                                                     "height": rh,
                                                     "imageWidth": width,
                                                     "imageHeight": height,
+                                                    "samplePixelTopLeftRgba": sample_at(rx, ry),
+                                                    "samplePixelCenterRgba": sample_at(mid_x, mid_y),
                                                 }),
                                             );
                                         }
-                                        let image_data = image.data();
                                         let rect_rgba = extract_rgba_rect(image_data, width, rx, ry, rw, rh);
                                         emit_rdp_event(&app, RdpCanvasEvent::RawImage {
                                             session_id: session_id.clone(),
