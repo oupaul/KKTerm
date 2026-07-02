@@ -639,10 +639,10 @@ async fn rdp_connect(
     ignore_tls_errors: bool,
 ) -> Result<(ironrdp::connector::ConnectionResult, UpgradedFramed), String> {
     use ironrdp::connector::{
-        ClientConnector, Config, Credentials, DesktopSize, ServerName, credssp::KerberosConfig,
+        BitmapConfig, ClientConnector, Config, Credentials, DesktopSize, ServerName, credssp::KerberosConfig,
     };
     use ironrdp::pdu::gcc::KeyboardType;
-    use ironrdp::pdu::rdp::capability_sets::MajorPlatformType;
+    use ironrdp::pdu::rdp::capability_sets::{BitmapCodecs, MajorPlatformType};
     use ironrdp_tokio::{TokioFramed, connect_begin, connect_finalize, mark_as_upgraded};
 
     // CredSSP/NTLM needs the domain separated from the username. Split a
@@ -714,7 +714,18 @@ async fn rdp_connect(
         client_dir: String::new(),
         platform: MajorPlatformType::UNIX,
         hardware_id: None,
-        bitmap: None,
+        // Request 16bpp instead of the default 32bpp. This server negotiates TLS 1.0
+        // with legacy cipher suites (Windows Server 2003/2008-era); such hosts almost
+        // always compress screen updates with the legacy "Interleaved RLE" bitmap
+        // codec, whose 16bpp path is the historically dominant, best-tested one across
+        // RDP client implementations. 32bpp RLE is comparatively rare and more likely
+        // to hit an under-exercised decode path — screens rendered from this host were
+        // otherwise coming back with sheared/corrupted content in the painted regions.
+        bitmap: Some(BitmapConfig {
+            lossy_compression: false,
+            color_depth: 16,
+            codecs: BitmapCodecs(Vec::new()),
+        }),
         compression_type: None,
         performance_flags: ironrdp::pdu::rdp::client_info::PerformanceFlags::default(),
         autologon: false,
@@ -893,6 +904,12 @@ fn spawn_rdp_event_loop(
         let mut active_stage = ironrdp::session::ActiveStage::new(connection_result);
         let mut input_db = ironrdp::input::Database::new();
         let mut last_button_mask: u8 = 0;
+        // Bounded diagnostic: log the first few GraphicsUpdate rectangles so a
+        // rendering-artifact report can be cross-checked against exactly what
+        // regions/sizes the server painted, without flooding the log for the
+        // rest of a long session.
+        let mut graphics_updates_logged: u32 = 0;
+        const MAX_GRAPHICS_UPDATE_LOGS: u32 = 24;
 
         use ironrdp_tokio::FramedWrite as _;
 
@@ -990,6 +1007,21 @@ fn spawn_rdp_event_loop(
                                         let rh = u16::try_from(
                                             region.bottom.saturating_sub(region.top).saturating_add(1)
                                         ).unwrap_or(0);
+                                        if graphics_updates_logged < MAX_GRAPHICS_UPDATE_LOGS {
+                                            graphics_updates_logged += 1;
+                                            rdp_debug(
+                                                "ironrdp.graphics_update",
+                                                &json!({
+                                                    "sessionId": session_id,
+                                                    "x": rx,
+                                                    "y": ry,
+                                                    "width": rw,
+                                                    "height": rh,
+                                                    "imageWidth": width,
+                                                    "imageHeight": height,
+                                                }),
+                                            );
+                                        }
                                         let image_data = image.data();
                                         let rect_rgba = extract_rgba_rect(image_data, width, rx, ry, rw, rh);
                                         emit_rdp_event(&app, RdpCanvasEvent::RawImage {
