@@ -105,6 +105,7 @@ sysinfo = "0.39"
 # IOKit itself links as a system framework via #[link] in power.rs.
 core-foundation-sys = "0.8"
 objc2 = "0.6"
+block2 = "0.6"
 objc2-app-kit = { version = "0.3", default-features = false, features = [
     "std",
     "NSWindow",

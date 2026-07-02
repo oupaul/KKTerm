@@ -3992,6 +3992,7 @@ dependencies = [
  "argon2 0.5.3",
  "async-native-tls",
  "base64 0.22.1",
+ "block2",
  "chardetng",
  "core-foundation-sys",
  "encoding_rs",

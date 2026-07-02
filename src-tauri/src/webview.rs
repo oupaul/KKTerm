@@ -1556,8 +1556,133 @@ fn configure_platform_certificate_error_bypass(webview: &WebviewWindow) -> Resul
     Ok(())
 }
 
-#[cfg(not(windows))]
+#[cfg(target_os = "macos")]
+fn configure_platform_certificate_error_bypass(webview: &WebviewWindow) -> Result<(), String> {
+    // WKWebView does not expose Safari's manual certificate-warning page to
+    // embedded apps. The app-owned equivalent of WebView2's certificate-error
+    // callback is the navigation delegate authentication challenge below.
+    configure_wkwebview_certificate_error_bypass(webview)
+}
+
+#[cfg(all(not(windows), not(target_os = "macos")))]
 fn configure_platform_certificate_error_bypass(_webview: &WebviewWindow) -> Result<(), String> {
+    Ok(())
+}
+
+#[cfg(target_os = "macos")]
+fn configure_wkwebview_certificate_error_bypass(webview: &WebviewWindow) -> Result<(), String> {
+    use std::ffi::{c_char, c_void};
+    use std::sync::OnceLock;
+
+    use objc2::runtime::{AnyClass, AnyObject, Bool, Sel};
+    use objc2::{msg_send, sel};
+    type ChallengeCompletionHandler = block2::Block<dyn Fn(isize, *mut AnyObject)>;
+
+    const ASSOCIATION_ASSIGN: usize = 0;
+    static ASSOCIATED_KEY: u8 = 0;
+    static INSTALL_RESULT: OnceLock<Result<(), String>> = OnceLock::new();
+
+    unsafe extern "C-unwind" fn certificate_challenge_handler(
+        _delegate: *mut AnyObject,
+        _selector: Sel,
+        webview: *mut AnyObject,
+        _challenge: *mut AnyObject,
+        completion_handler: *mut AnyObject,
+    ) {
+        unsafe {
+            let enabled: *mut c_void =
+                objc_getAssociatedObject(webview.cast(), (&ASSOCIATED_KEY as *const u8).cast());
+            let disposition = 1isize; // NSURLSessionAuthChallengePerformDefaultHandling
+            if enabled.is_null() {
+                let block = &*(completion_handler.cast::<ChallengeCompletionHandler>());
+                block.call((disposition, std::ptr::null_mut::<AnyObject>()));
+                return;
+            }
+
+            let protection_space: *mut AnyObject = msg_send![_challenge, protectionSpace];
+            let server_trust: *mut c_void = msg_send![protection_space, serverTrust];
+            if server_trust.is_null() {
+                let block = &*(completion_handler.cast::<ChallengeCompletionHandler>());
+                block.call((disposition, std::ptr::null_mut::<AnyObject>()));
+                return;
+            }
+
+            let credential_class =
+                AnyClass::get(c"NSURLCredential").expect("NSURLCredential class");
+            let credential: *mut AnyObject =
+                msg_send![credential_class, credentialForTrust: server_trust];
+            let use_credential = 0isize; // NSURLSessionAuthChallengeUseCredential
+            let block = &*(completion_handler.cast::<ChallengeCompletionHandler>());
+            block.call((use_credential, credential));
+        }
+    }
+
+    unsafe extern "C" {
+        fn class_addMethod(
+            cls: *const AnyClass,
+            name: Sel,
+            imp: unsafe extern "C-unwind" fn(
+                *mut AnyObject,
+                Sel,
+                *mut AnyObject,
+                *mut AnyObject,
+                *mut AnyObject,
+            ),
+            types: *const c_char,
+        ) -> Bool;
+        fn objc_setAssociatedObject(
+            object: *const c_void,
+            key: *const c_void,
+            value: *const c_void,
+            policy: usize,
+        );
+        fn objc_getAssociatedObject(object: *const c_void, key: *const c_void) -> *mut c_void;
+    }
+
+    let install_result = INSTALL_RESULT.get_or_init(|| {
+        let delegate_class = AnyClass::get(c"WryNavigationDelegate")
+            .ok_or_else(|| "WryNavigationDelegate class is not registered".to_string())?;
+        unsafe {
+            let _ = class_addMethod(
+                delegate_class,
+                sel!(webView:didReceiveAuthenticationChallenge:completionHandler:),
+                certificate_challenge_handler,
+                c"v@:@@@".as_ptr(),
+            );
+        }
+        Ok(())
+    });
+    install_result.clone()?;
+
+    let setup_error = Arc::new(Mutex::new(None::<String>));
+    let setup_error_for_callback = Arc::clone(&setup_error);
+    webview
+        .with_webview(move |platform_webview| {
+            let webview = platform_webview.inner();
+            if webview.is_null() {
+                if let Ok(mut setup_error) = setup_error_for_callback.lock() {
+                    *setup_error = Some("WKWebView handle is not available".to_string());
+                }
+                return;
+            }
+            unsafe {
+                objc_setAssociatedObject(
+                    webview.cast(),
+                    (&ASSOCIATED_KEY as *const u8).cast(),
+                    (&ASSOCIATED_KEY as *const u8).cast(),
+                    ASSOCIATION_ASSIGN,
+                );
+            }
+        })
+        .map_err(|error| format!("failed to access WKWebView for certificate settings: {error}"))?;
+
+    if let Ok(mut setup_error) = setup_error.lock() {
+        if let Some(error) = setup_error.take() {
+            return Err(format!(
+                "failed to enable URL certificate bypass for WKWebView: {error}"
+            ));
+        }
+    }
     Ok(())
 }
 
