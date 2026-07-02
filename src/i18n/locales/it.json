@@ -3079,6 +3079,7 @@
     "downloadStarted": "Download avviato",
     "downloadComplete": "Download completato",
     "downloadFailed": "Download non riuscito",
+    "invalidCertificateWarning": "Impossibile aprire questo sito perché il certificato HTTPS non è valido. Disattiva la convalida dei certificati in Impostazioni → URL per continuare.",
     "noUrlConfigured": "Questa connessione URL non ha un URL configurato.",
     "openExternally": "Apri esternamente",
     "savePassword": "Salva dati modulo",

@@ -411,6 +411,13 @@ struct WebviewPageLoadPayload {
     status: &'static str,
 }
 
+#[cfg(target_os = "macos")]
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct WebviewCertificateErrorPayload {
+    session_id: String,
+}
+
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct WebviewTitleChangedPayload {
@@ -563,7 +570,9 @@ impl WebviewSessionManager {
         let download_session_id = session_id.clone();
         let new_window_app = app.clone();
         let new_window_session_id = session_id.clone();
-        let initial_url = if ignore_certificate_errors && cfg!(windows) {
+        let defer_initial_navigation =
+            (ignore_certificate_errors && cfg!(windows)) || cfg!(target_os = "macos");
+        let initial_url = if defer_initial_navigation {
             parse_webview_blank_url()?
         } else {
             parsed_url.clone()
@@ -733,8 +742,8 @@ impl WebviewSessionManager {
             .build()
             .map_err(|error| format!("failed to create URL webview window: {error}"))?;
         configure_clipboard_read_permission(&window, Arc::clone(&self.clipboard_read_allowed))?;
-        configure_certificate_error_bypass(&window, ignore_certificate_errors)?;
-        if ignore_certificate_errors && cfg!(windows) {
+        configure_certificate_error_handling(&window, ignore_certificate_errors, app, &session_id)?;
+        if defer_initial_navigation {
             window
                 .navigate(parsed_url)
                 .map_err(|error| format!("failed to navigate webview: {error}"))?;
@@ -1396,14 +1405,13 @@ fn webview_debug_log(message: String) {
     }
 }
 
-fn configure_certificate_error_bypass(
+fn configure_certificate_error_handling(
     webview: &WebviewWindow,
     enabled: bool,
+    app: &AppHandle,
+    session_id: &str,
 ) -> Result<(), String> {
-    if !enabled {
-        return Ok(());
-    }
-    configure_platform_certificate_error_bypass(webview)
+    configure_platform_certificate_error_handling(webview, enabled, app, session_id)
 }
 
 pub(crate) fn configure_shell_clipboard_read_permission(
@@ -1498,7 +1506,15 @@ fn configure_webview2_clipboard_permission(
 }
 
 #[cfg(windows)]
-fn configure_platform_certificate_error_bypass(webview: &WebviewWindow) -> Result<(), String> {
+fn configure_platform_certificate_error_handling(
+    webview: &WebviewWindow,
+    enabled: bool,
+    _app: &AppHandle,
+    _session_id: &str,
+) -> Result<(), String> {
+    if !enabled {
+        return Ok(());
+    }
     use webview2_com::{
         Microsoft::Web::WebView2::Win32::{
             COREWEBVIEW2_SERVER_CERTIFICATE_ERROR_ACTION_ALWAYS_ALLOW, ICoreWebView2_14,
@@ -1557,29 +1573,50 @@ fn configure_platform_certificate_error_bypass(webview: &WebviewWindow) -> Resul
 }
 
 #[cfg(target_os = "macos")]
-fn configure_platform_certificate_error_bypass(webview: &WebviewWindow) -> Result<(), String> {
+fn configure_platform_certificate_error_handling(
+    webview: &WebviewWindow,
+    enabled: bool,
+    app: &AppHandle,
+    session_id: &str,
+) -> Result<(), String> {
     // WKWebView does not expose Safari's manual certificate-warning page to
     // embedded apps. The app-owned equivalent of WebView2's certificate-error
     // callback is the navigation delegate authentication challenge below.
-    configure_wkwebview_certificate_error_bypass(webview)
+    configure_wkwebview_certificate_error_handling(webview, enabled, app, session_id)
 }
 
 #[cfg(all(not(windows), not(target_os = "macos")))]
-fn configure_platform_certificate_error_bypass(_webview: &WebviewWindow) -> Result<(), String> {
+fn configure_platform_certificate_error_handling(
+    _webview: &WebviewWindow,
+    _enabled: bool,
+    _app: &AppHandle,
+    _session_id: &str,
+) -> Result<(), String> {
     Ok(())
 }
 
 #[cfg(target_os = "macos")]
-fn configure_wkwebview_certificate_error_bypass(webview: &WebviewWindow) -> Result<(), String> {
+fn configure_wkwebview_certificate_error_handling(
+    webview: &WebviewWindow,
+    enabled: bool,
+    app: &AppHandle,
+    session_id: &str,
+) -> Result<(), String> {
     use std::ffi::{c_char, c_void};
     use std::sync::OnceLock;
 
     use objc2::runtime::{AnyClass, AnyObject, Bool, Sel};
     use objc2::{msg_send, sel};
+    use objc2_foundation::NSString;
     type ChallengeCompletionHandler = block2::Block<dyn Fn(isize, *mut AnyObject)>;
 
     const ASSOCIATION_ASSIGN: usize = 0;
-    static ASSOCIATED_KEY: u8 = 0;
+    const ASSOCIATION_RETAIN_NONATOMIC: usize = 1;
+    const SEC_TRUST_RESULT_PROCEED: u32 = 1;
+    const SEC_TRUST_RESULT_UNSPECIFIED: u32 = 4;
+    static BYPASS_ASSOCIATED_KEY: u8 = 0;
+    static SESSION_ASSOCIATED_KEY: u8 = 0;
+    static APP_HANDLE: OnceLock<AppHandle> = OnceLock::new();
     static INSTALL_RESULT: OnceLock<Result<(), String>> = OnceLock::new();
 
     unsafe extern "C-unwind" fn certificate_challenge_handler(
@@ -1590,18 +1627,44 @@ fn configure_wkwebview_certificate_error_bypass(webview: &WebviewWindow) -> Resu
         completion_handler: *mut AnyObject,
     ) {
         unsafe {
-            let enabled: *mut c_void =
-                objc_getAssociatedObject(webview.cast(), (&ASSOCIATED_KEY as *const u8).cast());
+            let bypass_enabled: *mut c_void = objc_getAssociatedObject(
+                webview.cast(),
+                (&BYPASS_ASSOCIATED_KEY as *const u8).cast(),
+            );
             let disposition = 1isize; // NSURLSessionAuthChallengePerformDefaultHandling
-            if enabled.is_null() {
+            let protection_space: *mut AnyObject = msg_send![_challenge, protectionSpace];
+            let server_trust: *mut c_void = msg_send![protection_space, serverTrust];
+            if server_trust.is_null() {
                 let block = &*(completion_handler.cast::<ChallengeCompletionHandler>());
                 block.call((disposition, std::ptr::null_mut::<AnyObject>()));
                 return;
             }
 
-            let protection_space: *mut AnyObject = msg_send![_challenge, protectionSpace];
-            let server_trust: *mut c_void = msg_send![protection_space, serverTrust];
-            if server_trust.is_null() {
+            if bypass_enabled.is_null() {
+                let mut trust_result = 0u32;
+                let trust_status = sec_trust_evaluate(server_trust, &mut trust_result);
+                let trusted = trust_status == 0
+                    && matches!(
+                        trust_result,
+                        SEC_TRUST_RESULT_PROCEED | SEC_TRUST_RESULT_UNSPECIFIED
+                    );
+                if !trusted {
+                    let session_id = objc_getAssociatedObject(
+                        webview.cast(),
+                        (&SESSION_ASSOCIATED_KEY as *const u8).cast(),
+                    );
+                    if !session_id.is_null()
+                        && let Some(app) = APP_HANDLE.get()
+                    {
+                        let session_id = &*session_id.cast::<NSString>();
+                        let _ = app.emit(
+                            "webview-certificate-error",
+                            WebviewCertificateErrorPayload {
+                                session_id: session_id.to_string(),
+                            },
+                        );
+                    }
+                }
                 let block = &*(completion_handler.cast::<ChallengeCompletionHandler>());
                 block.call((disposition, std::ptr::null_mut::<AnyObject>()));
                 return;
@@ -1637,6 +1700,8 @@ fn configure_wkwebview_certificate_error_bypass(webview: &WebviewWindow) -> Resu
             policy: usize,
         );
         fn objc_getAssociatedObject(object: *const c_void, key: *const c_void) -> *mut c_void;
+        #[link_name = "SecTrustEvaluate"]
+        fn sec_trust_evaluate(trust: *const c_void, result: *mut u32) -> i32;
     }
 
     let install_result = INSTALL_RESULT.get_or_init(|| {
@@ -1653,9 +1718,11 @@ fn configure_wkwebview_certificate_error_bypass(webview: &WebviewWindow) -> Resu
         Ok(())
     });
     install_result.clone()?;
+    let _ = APP_HANDLE.set(app.clone());
 
     let setup_error = Arc::new(Mutex::new(None::<String>));
     let setup_error_for_callback = Arc::clone(&setup_error);
+    let session_id = session_id.to_string();
     webview
         .with_webview(move |platform_webview| {
             let webview = platform_webview.inner();
@@ -1666,10 +1733,21 @@ fn configure_wkwebview_certificate_error_bypass(webview: &WebviewWindow) -> Resu
                 return;
             }
             unsafe {
+                let session_id = NSString::from_str(&session_id);
                 objc_setAssociatedObject(
                     webview.cast(),
-                    (&ASSOCIATED_KEY as *const u8).cast(),
-                    (&ASSOCIATED_KEY as *const u8).cast(),
+                    (&SESSION_ASSOCIATED_KEY as *const u8).cast(),
+                    (&*session_id as *const NSString).cast(),
+                    ASSOCIATION_RETAIN_NONATOMIC,
+                );
+                objc_setAssociatedObject(
+                    webview.cast(),
+                    (&BYPASS_ASSOCIATED_KEY as *const u8).cast(),
+                    if enabled {
+                        (&BYPASS_ASSOCIATED_KEY as *const u8).cast()
+                    } else {
+                        std::ptr::null()
+                    },
                     ASSOCIATION_ASSIGN,
                 );
             }
@@ -1679,7 +1757,7 @@ fn configure_wkwebview_certificate_error_bypass(webview: &WebviewWindow) -> Resu
     if let Ok(mut setup_error) = setup_error.lock() {
         if let Some(error) = setup_error.take() {
             return Err(format!(
-                "failed to enable URL certificate bypass for WKWebView: {error}"
+                "failed to configure URL certificate handling for WKWebView: {error}"
             ));
         }
     }

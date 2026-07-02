@@ -3079,6 +3079,7 @@
     "downloadStarted": "下載已開始",
     "downloadComplete": "下載完成",
     "downloadFailed": "下載失敗",
+    "invalidCertificateWarning": "此網站的 HTTPS 憑證無效，因此無法開啟。若要繼續，請在「設定」→「URL」中停用憑證驗證。",
     "noUrlConfigured": "此 URL 連線未設定 URL。",
     "openExternally": "從外部開啟",
     "savePassword": "儲存表單資料",

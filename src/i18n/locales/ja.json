@@ -3079,6 +3079,7 @@
     "downloadStarted": "ダウンロードを開始しました",
     "downloadComplete": "ダウンロードが完了しました",
     "downloadFailed": "ダウンロードに失敗しました",
+    "invalidCertificateWarning": "このサイトは HTTPS 証明書が無効なため開けません。続行するには、［設定］→［URL］で証明書の検証を無効にしてください。",
     "noUrlConfigured": "この URL コネクションには URL が設定されていません。",
     "openExternally": "外部で開く",
     "savePassword": "フォームデータを保存",

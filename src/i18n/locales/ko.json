@@ -3079,6 +3079,7 @@
     "downloadStarted": "다운로드 시작됨",
     "downloadComplete": "다운로드 완료",
     "downloadFailed": "다운로드 실패",
+    "invalidCertificateWarning": "이 사이트는 HTTPS 인증서가 유효하지 않아 열 수 없습니다. 계속하려면 설정 → URL에서 인증서 유효성 검사를 사용 중지하세요.",
     "noUrlConfigured": "이 URL 연결에는 URL이 구성되어 있지 않습니다.",
     "openExternally": "외부에서 열기",
     "savePassword": "양식 데이터 저장",

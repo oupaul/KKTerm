@@ -3079,6 +3079,7 @@
     "downloadStarted": "Download started",
     "downloadComplete": "Download complete",
     "downloadFailed": "Download failed",
+    "invalidCertificateWarning": "This site cannot be opened because its HTTPS certificate is invalid. Disable certificate validation in Settings → URL to continue.",
     "noUrlConfigured": "This URL Connection has no URL configured.",
     "openExternally": "Open externally",
     "savePassword": "Save form data",

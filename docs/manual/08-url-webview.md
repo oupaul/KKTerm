@@ -16,6 +16,8 @@ Each URL Connection can use `connections.inheritSettingsDefaults` (follow the gl
 
 When Settings -> URL enables `settings.ignoreCertificateErrors`, newly opened URL Sessions accept invalid HTTPS server certificates, including self-signed certificates. Windows handles this through WebView2's certificate error callback; macOS marks the WKWebView and answers its server-trust authentication challenge with a trust credential. WKWebView does not expose Safari's manual "continue to this website" certificate-warning page to embedded apps, so this delegate challenge path is the macOS equivalent. Keep this scoped to URL Sessions that opt into the setting; do not make the main app WebView trust invalid certificates globally.
 
+On macOS, when certificate validation remains enabled and WKWebView rejects an invalid HTTPS certificate, the URL Session emits a `webview.invalidCertificateWarning` warning through the Status Bar popup. The warning directs the user to Settings -> URL if they choose to disable certificate validation for newly opened URL Sessions.
+
 ## Surface
 
 In the desktop runtime, a URL Pane hosts a real WebView2 browser in a stable, borderless, owned `WebviewWindow`. The frontend computes the Pane's DOM rectangle, the Rust backend converts that to screen coordinates, and the overlay window is moved/sized so the WebView client area covers the Pane. On Windows, KKTerm strips residual non-client frame styles from the owned overlay window before positioning it. The overlay is hidden when the Tab, Dashboard View, Dashboard Module, or URL Pane is inactive, and when a registered app-owned blocking overlay intersects it.

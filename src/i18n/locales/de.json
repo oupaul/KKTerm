@@ -3079,6 +3079,7 @@
     "downloadStarted": "Download gestartet",
     "downloadComplete": "Download abgeschlossen",
     "downloadFailed": "Download fehlgeschlagen",
+    "invalidCertificateWarning": "Diese Website kann nicht geöffnet werden, da ihr HTTPS-Zertifikat ungültig ist. Deaktivieren Sie unter Einstellungen → URL die Zertifikatsprüfung, um fortzufahren.",
     "noUrlConfigured": "Für diese URL-Verbindung ist keine URL konfiguriert.",
     "openExternally": "Extern öffnen",
     "savePassword": "Formulardaten speichern",

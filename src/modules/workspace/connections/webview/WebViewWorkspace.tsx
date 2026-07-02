@@ -26,6 +26,10 @@ type WebviewPageLoadEvent = {
   status: "started" | "finished" | "unknown";
 };
 
+type WebviewCertificateErrorEvent = {
+  sessionId: string;
+};
+
 type WebviewTitleChangedEvent = {
   sessionId: string;
   title: string;
@@ -305,6 +309,7 @@ export function WebViewWorkspace({
   const [fillStatus, setFillStatus] = useState("");
   const [addressInput, setAddressInput] = useState(tab.url ?? "");
   const [webviewReady, setWebviewReady] = useState(false);
+  const [webviewEventsReady, setWebviewEventsReady] = useState(!isTauriRuntime());
   const [autoRefreshSeconds, setAutoRefreshSeconds] = useState<AutoRefreshIntervalSeconds>(0);
 
   const initialUrl = tab.url ?? "";
@@ -541,7 +546,13 @@ export function WebViewWorkspace({
   };
 
   useEffect(() => {
-    if (!isTauriRuntime() || sessionStartedRef.current || sessionStartingRef.current || !initialUrl) {
+    if (
+      !isTauriRuntime() ||
+      !webviewEventsReady ||
+      sessionStartedRef.current ||
+      sessionStartingRef.current ||
+      !initialUrl
+    ) {
       return;
     }
     const bounds = computeBounds();
@@ -624,7 +635,7 @@ export function WebViewWorkspace({
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [webviewEventsReady]);
 
   useEffect(() => {
     if (!isTauriRuntime() || !webviewReady || autoRefreshSeconds === 0) {
@@ -779,6 +790,12 @@ export function WebViewWorkspace({
           void fillCredential({ automatic: true, showStatus: false });
         }
       }),
+      listen<WebviewCertificateErrorEvent>("webview-certificate-error", (event) => {
+        if (event.payload.sessionId !== sessionIdRef.current) {
+          return;
+        }
+        showStatusBarNotice(t("webview.invalidCertificateWarning"), { tone: "warning" });
+      }),
       listen<WebviewNewWindowEvent>("webview-new-window", (event) => {
         if (event.payload.sessionId !== sessionIdRef.current) {
           return;
@@ -836,6 +853,7 @@ export function WebViewWorkspace({
         return;
       }
       disposers.push(...unlistenFns);
+      setWebviewEventsReady(true);
     });
 
     return () => {
@@ -844,7 +862,7 @@ export function WebViewWorkspace({
     };
     // Re-subscribe only on the listed inputs; the credential/icon handlers are recreated each render and read at event time.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [openUrlInNewTab, refreshOpenConnectionMetadata, tab.connection, tab.id, t, updateWebviewTabMetadata]);
+  }, [openUrlInNewTab, refreshOpenConnectionMetadata, showStatusBarNotice, tab.connection, tab.id, t, updateWebviewTabMetadata]);
 
   function handleNavigate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

@@ -3079,6 +3079,7 @@
     "downloadStarted": "เริ่มดาวน์โหลดแล้ว",
     "downloadComplete": "ดาวน์โหลดเสร็จสมบูรณ์",
     "downloadFailed": "ดาวน์โหลดล้มเหลว",
+    "invalidCertificateWarning": "ไม่สามารถเปิดไซต์นี้ได้เนื่องจากใบรับรอง HTTPS ไม่ถูกต้อง หากต้องการดำเนินการต่อ ให้ปิดการตรวจสอบใบรับรองใน การตั้งค่า → URL",
     "noUrlConfigured": "คอนเนคชัน URL นี้ยังไม่ได้กำหนด URL",
     "openExternally": "เปิดภายนอก",
     "savePassword": "บันทึกข้อมูลแบบฟอร์ม",

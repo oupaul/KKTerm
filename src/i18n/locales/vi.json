@@ -3079,6 +3079,7 @@
     "downloadStarted": "Download started",
     "downloadComplete": "Download complete",
     "downloadFailed": "Download failed",
+    "invalidCertificateWarning": "Không thể mở trang web này vì chứng chỉ HTTPS không hợp lệ. Hãy tắt xác thực chứng chỉ trong Cài đặt → URL để tiếp tục.",
     "noUrlConfigured": "This URL Connection has no URL configured.",
     "openExternally": "Open externally",
     "savePassword": "Lưu dữ liệu biểu mẫu",

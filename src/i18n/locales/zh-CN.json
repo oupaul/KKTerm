@@ -3079,6 +3079,7 @@
     "downloadStarted": "下载已开始",
     "downloadComplete": "下载完成",
     "downloadFailed": "下载失败",
+    "invalidCertificateWarning": "此网站的 HTTPS 证书无效，因此无法打开。若要继续，请在“设置”→“URL”中关闭证书验证。",
     "noUrlConfigured": "此 URL 连接未配置 URL。",
     "openExternally": "从外部打开",
     "savePassword": "保存表单数据",
