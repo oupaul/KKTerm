@@ -930,17 +930,21 @@ fn spawn_rdp_event_loop(
                             let outputs = match active_stage.process(&mut image, action, &payload) {
                                 Ok(outputs) => outputs,
                                 Err(e) => {
-                                    eprintln!("[rdp {session_id}] active_stage.process error: {e}");
+                                    // Flatten the source chain: SessionErrorKind::Custom hides the
+                                    // real cause (codec/PDU/decode error) in e.source().
+                                    let detail = error_chain(&e);
+                                    eprintln!("[rdp {session_id}] active_stage.process error: {detail}");
                                     rdp_debug(
                                         "ironrdp.active_stage.error",
                                         &json!({
                                             "sessionId": session_id,
-                                            "error": e.to_string(),
+                                            "error": detail,
+                                            "action": format!("{action:?}"),
                                         }),
                                     );
                                     emit_rdp_event(&app, RdpCanvasEvent::Error {
                                         session_id: session_id.clone(),
-                                        message: e.to_string(),
+                                        message: detail,
                                     });
                                     break;
                                 }
