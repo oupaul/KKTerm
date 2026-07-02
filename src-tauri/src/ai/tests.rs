@@ -230,12 +230,193 @@ fn acp_command_specs_use_registry_adapters() {
 
 #[test]
 fn assistant_cancellation_never_falls_back_to_one_shot_cli() {
-    assert!(!should_fallback_from_acp_error(
-        ASSISTANT_STREAM_CANCELED_ERROR
+    assert!(!should_fallback_from_acp_error(&AcpRunFailure {
+        error: ASSISTANT_STREAM_CANCELED_ERROR.to_string(),
+        prompt_started: false,
+    }));
+    assert!(should_fallback_from_acp_error(&AcpRunFailure {
+        error: "ACP backend returned an error during initialize".to_string(),
+        prompt_started: false,
+    }));
+}
+
+#[test]
+fn started_acp_prompt_never_falls_back_to_one_shot_cli() {
+    // Once session/prompt is dispatched the agent may already have streamed
+    // text or executed kkterm MCP tools; a one-shot re-run would duplicate both.
+    assert!(!should_fallback_from_acp_error(&AcpRunFailure {
+        error: "timed out waiting for ACP response id 3".to_string(),
+        prompt_started: true,
+    }));
+}
+
+#[test]
+fn acp_agent_requests_with_colliding_ids_are_not_responses() {
+    // The agent's own request id namespace can collide numerically with
+    // KKTerm's request ids; `method` marks it as a request, not our response.
+    let agent_request = json!({
+        "jsonrpc": "2.0",
+        "id": 3,
+        "method": "session/request_permission",
+        "params": {}
+    });
+    assert!(!acp_message_is_response_for(&agent_request, 3));
+
+    let response = json!({
+        "jsonrpc": "2.0",
+        "id": 3,
+        "result": { "stopReason": "end_turn" }
+    });
+    assert!(acp_message_is_response_for(&response, 3));
+    assert!(!acp_message_is_response_for(&response, 2));
+}
+
+#[test]
+fn acp_thought_chunks_stream_as_reasoning_deltas() {
+    let message = json!({
+        "jsonrpc": "2.0",
+        "method": "session/update",
+        "params": {
+            "sessionId": "sess_1",
+            "update": {
+                "sessionUpdate": "agent_thought_chunk",
+                "content": { "type": "text", "text": "Considering options" }
+            }
+        }
+    });
+
+    let event = acp_session_update_stream_event(&message).expect("event");
+    assert_eq!(
+        serde_json::to_value(&event).expect("serialize"),
+        json!({ "type": "reasoningDelta", "delta": "Considering options" })
+    );
+}
+
+#[test]
+fn acp_tool_call_updates_stream_as_tool_chips() {
+    let start = json!({
+        "jsonrpc": "2.0",
+        "method": "session/update",
+        "params": {
+            "update": {
+                "sessionUpdate": "tool_call",
+                "toolCallId": "call_1",
+                "title": "Read config file",
+                "status": "in_progress"
+            }
+        }
+    });
+    let event = acp_session_update_stream_event(&start).expect("start event");
+    assert_eq!(
+        serde_json::to_value(&event).expect("serialize"),
+        json!({ "type": "toolCallStart", "toolId": "call_1", "toolName": "Read config file" })
+    );
+
+    let done = json!({
+        "jsonrpc": "2.0",
+        "method": "session/update",
+        "params": {
+            "update": {
+                "sessionUpdate": "tool_call_update",
+                "toolCallId": "call_1",
+                "status": "completed"
+            }
+        }
+    });
+    let event = acp_session_update_stream_event(&done).expect("end event");
+    assert_eq!(
+        serde_json::to_value(&event).expect("serialize"),
+        json!({ "type": "toolCallEnd", "toolId": "call_1", "toolName": "", "error": null })
+    );
+
+    let failed = json!({
+        "jsonrpc": "2.0",
+        "method": "session/update",
+        "params": {
+            "update": {
+                "sessionUpdate": "tool_call_update",
+                "toolCallId": "call_1",
+                "status": "failed"
+            }
+        }
+    });
+    let event = acp_session_update_stream_event(&failed).expect("failed event");
+    assert_eq!(
+        serde_json::to_value(&event).expect("serialize"),
+        json!({ "type": "toolCallEnd", "toolId": "call_1", "toolName": "", "error": "failed" })
+    );
+
+    // A status-less update changes nothing chip-worthy.
+    let noop = json!({
+        "jsonrpc": "2.0",
+        "method": "session/update",
+        "params": {
+            "update": {
+                "sessionUpdate": "tool_call_update",
+                "toolCallId": "call_1"
+            }
+        }
+    });
+    assert!(acp_session_update_stream_event(&noop).is_none());
+}
+
+#[test]
+fn acp_plan_updates_stream_as_work_plan_steps() {
+    let message = json!({
+        "jsonrpc": "2.0",
+        "method": "session/update",
+        "params": {
+            "update": {
+                "sessionUpdate": "plan",
+                "entries": [
+                    { "content": "Inspect the host", "priority": "high", "status": "completed" },
+                    { "content": "Apply the fix", "priority": "high", "status": "in_progress" },
+                    { "content": "Verify", "priority": "medium", "status": "pending" }
+                ]
+            }
+        }
+    });
+
+    let event = acp_session_update_stream_event(&message).expect("plan event");
+    assert_eq!(
+        serde_json::to_value(&event).expect("serialize"),
+        json!({
+            "type": "planUpdate",
+            "steps": [
+                { "id": "acp-plan-0", "label": "Inspect the host", "status": "completed" },
+                { "id": "acp-plan-1", "label": "Apply the fix", "status": "running" },
+                { "id": "acp-plan-2", "label": "Verify", "status": "pending" }
+            ]
+        })
+    );
+}
+
+#[test]
+fn acp_agent_message_chunks_are_not_duplicated_as_stream_events() {
+    let message = json!({
+        "jsonrpc": "2.0",
+        "method": "session/update",
+        "params": {
+            "update": {
+                "sessionUpdate": "agent_message_chunk",
+                "content": { "type": "text", "text": "Hello" }
+            }
+        }
+    });
+    assert!(acp_session_update_stream_event(&message).is_none());
+}
+
+#[test]
+fn claude_auth_status_requires_logged_in_json() {
+    assert!(claude_auth_status_logged_in(
+        "{\n  \"loggedIn\": true,\n  \"authMethod\": \"claude.ai\"\n}"
     ));
-    assert!(should_fallback_from_acp_error(
-        "ACP backend returned an error during initialize"
+    assert!(!claude_auth_status_logged_in(
+        "{\n  \"loggedIn\": false\n}"
     ));
+    // Unknown output shapes degrade to the old exit-code-only behavior.
+    assert!(claude_auth_status_logged_in("Logged in as user@example.com"));
+    assert!(claude_auth_status_logged_in("{\"status\":\"ok\"}"));
 }
 
 #[test]
