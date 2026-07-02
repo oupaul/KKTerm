@@ -106,7 +106,38 @@ pub struct ShareControlCtx {
 }
 
 pub fn decode_share_control(ctx: SendDataIndicationCtx<'_>) -> ConnectorResult<ShareControlCtx> {
-    let user_msg = ctx.decode_user_data::<rdp::headers::ShareControlHeader>()?;
+    // Some legacy Windows RDP hosts pack multiple Share Control PDUs into a single
+    // MCS Send Data Indication. `ShareControlHeader::decode` does not bound itself
+    // to the header's own `totalLength` field before decoding the inner PDU, and
+    // several `ShareDataPdu` variants (Update, Pointer, PlaySound, ...) greedily
+    // consume every remaining byte of whatever cursor they are given
+    // (`src.remaining()`). Handing it the *entire* user_data buffer therefore makes
+    // the first (often small) PDU swallow the bytes belonging to the next one,
+    // which then fails ironrdp-pdu's post-hoc consistency check with
+    // "not enough bytes: received <totalLength>, expected <actual decoded size>".
+    //
+    // Peek totalLength (first 2 bytes, LE u16, per [MS-RDPBCGR] 2.2.8.1.1.1.1) and
+    // slice the buffer down to just this PDU before decoding, so it only ever
+    // consumes its own bytes. Any additional PDU(s) packed after it in the same
+    // frame are intentionally left unprocessed: the outer active-stage loop (in
+    // ironrdp-session, not vendored here) reads and decodes one Share Control PDU
+    // per call, so there is no loop point available here to recurse into the
+    // remainder. Those secondary PDUs are historically minor bookkeeping traffic on
+    // these legacy hosts, not required for the connection or screen updates to work.
+    let user_data = ctx.user_data;
+    let sliced = match user_data.get(0..2) {
+        Some(len_bytes) => {
+            let declared_len = usize::from(u16::from_le_bytes([len_bytes[0], len_bytes[1]]));
+            if declared_len >= 10 && declared_len <= user_data.len() {
+                &user_data[..declared_len]
+            } else {
+                user_data
+            }
+        }
+        None => user_data,
+    };
+
+    let user_msg = decode::<rdp::headers::ShareControlHeader>(sliced).map_err(ConnectorError::decode)?;
 
     Ok(ShareControlCtx {
         initiator_id: ctx.initiator_id,
