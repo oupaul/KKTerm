@@ -439,6 +439,7 @@ function App() {
           active={visibleBasePage === "itops"}
           siteTreeCollapsed={itOpsSiteTreeCollapsed}
           onAssistantContextChange={setItOpsAssistantContext}
+          onShowWorkspace={() => navigateToPage("workspace")}
         />
       ) : null}
       <TutorialOverlay

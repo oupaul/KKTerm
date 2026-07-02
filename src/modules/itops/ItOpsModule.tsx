@@ -22,7 +22,13 @@ type AutomationActionEvent = {
   body?: string;
 };
 
-export function ItOpsModule({ siteTreeCollapsed }: { siteTreeCollapsed: boolean }) {
+export function ItOpsModule({
+  siteTreeCollapsed,
+  onShowWorkspace,
+}: {
+  siteTreeCollapsed: boolean;
+  onShowWorkspace: () => void;
+}) {
   const { t } = useTranslation();
   const [batchDialogGroupId, setBatchDialogGroupId] = useState<string | null | undefined>(
     undefined,
@@ -101,6 +107,7 @@ export function ItOpsModule({ siteTreeCollapsed }: { siteTreeCollapsed: boolean 
       <div className="it-content">
         <SitesTab
           treeCollapsed={siteTreeCollapsed}
+          onShowWorkspace={onShowWorkspace}
           renderSidebarHeader={({ collapsed }) => (
             <ModuleHeader className="it-head it-side-head">
               <ModuleIconTile className="it-head-tile" module="itops">

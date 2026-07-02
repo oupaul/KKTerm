@@ -1202,7 +1202,10 @@
       "refreshSnmp": "重新整理 SNMP",
       "snmpRefreshComplete": "SNMP 重新整理已完成。",
       "boundConnectionCount_one": "{{count}} 個已繫結連線",
-      "boundConnectionCount_other": "{{count}} 個已繫結連線"
+      "boundConnectionCount_other": "{{count}} 個已繫結連線",
+      "connectAction": "連線",
+      "goToSessionAction": "前往工作階段",
+      "connectOpenedNotice": "已在工作區中開啟 {{name}}。"
     },
     "floorPlan": {
       "viewLabel": "機房檢視模式",

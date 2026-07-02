@@ -1202,7 +1202,10 @@
       "refreshSnmp": "刷新 SNMP",
       "snmpRefreshComplete": "SNMP 刷新已完成。",
       "boundConnectionCount_one": "{{count}} 个已绑定连接",
-      "boundConnectionCount_other": "{{count}} 个已绑定连接"
+      "boundConnectionCount_other": "{{count}} 个已绑定连接",
+      "connectAction": "连接",
+      "goToSessionAction": "转到会话",
+      "connectOpenedNotice": "已在工作区中打开 {{name}}。"
     },
     "floorPlan": {
       "viewLabel": "机房视图模式",

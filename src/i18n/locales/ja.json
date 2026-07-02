@@ -1202,7 +1202,10 @@
       "refreshSnmp": "SNMP を更新",
       "snmpRefreshComplete": "SNMP の更新が完了しました。",
       "boundConnectionCount_one": "バインドされた接続 {{count}} 件",
-      "boundConnectionCount_other": "バインドされた接続 {{count}} 件"
+      "boundConnectionCount_other": "バインドされた接続 {{count}} 件",
+      "connectAction": "接続",
+      "goToSessionAction": "セッションへ移動",
+      "connectOpenedNotice": "{{name}} をワークスペースで開きました。"
     },
     "floorPlan": {
       "viewLabel": "ルーム表示モード",

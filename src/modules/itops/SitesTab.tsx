@@ -16,7 +16,6 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import { ConfirmSheet } from "../../app/ui/dialog";
-import { invokeCommand } from "../../lib/tauri";
 import { useWorkspaceStore } from "../../store";
 import type { Site, Rack, RackItem, ResolvedHost, ServerRoom } from "../../types";
 import { ConnectionIcon } from "../workspace/connections/ConnectionIcon";
@@ -27,6 +26,7 @@ import { RackDialog } from "./RackDialog";
 import { ServerRoomDialog } from "./ServerRoomDialog";
 import { RackItemDialog } from "./RackItemDialog";
 import { RackItemBindingsDialog } from "./RackItemBindingsDialog";
+import { RackItemConnectPopover, type ConnectPopoverAnchor } from "./RackItemConnectPopover";
 import { useItOpsStore, type RackPlacementKind } from "./state";
 import {
   EMPTY_DRILL,
@@ -40,7 +40,7 @@ import { ItOpsBackground } from "./ItOpsBackground";
 import { RackStage } from "./RackStage";
 import { ServerRoomFloorPlan } from "./ServerRoomFloorPlan";
 import { ServerRoomIsoView } from "./ServerRoomIsoView";
-import { selectRandomRackCallouts } from "./rackInventory";
+import { collectBoundConnectionIds, selectRandomRackCallouts } from "./rackInventory";
 import type { DashboardBackground } from "../dashboard/types";
 import {
   SITE_TREE_COLLAPSED_WIDTH,
@@ -127,13 +127,15 @@ function iconForegroundForBackground(color?: string | null) {
 export function SitesTab({
   renderSidebarHeader,
   treeCollapsed,
+  onShowWorkspace,
 }: {
   renderSidebarHeader?: (props: { collapsed: boolean }) => ReactNode;
   treeCollapsed: boolean;
+  /** Navigate the app shell to the Workspace Module (connect popover jumps). */
+  onShowWorkspace: () => void;
 }) {
   const { t } = useTranslation();
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
-  const openConnection = useWorkspaceStore((state) => state.openConnection);
   const sites = useItOpsStore((state) => state.sites);
   const loaded = useItOpsStore((state) => state.loaded);
   const resolveSite = useItOpsStore((state) => state.resolveSite);
@@ -161,6 +163,10 @@ export function SitesTab({
     startU?: number;
   } | null>(null);
   const [bindingsDialog, setBindingsDialog] = useState<RackItem | null>(null);
+  const [connectPopover, setConnectPopover] = useState<{
+    item: RackItem;
+    anchor: ConnectPopoverAnchor;
+  } | null>(null);
   const moveRackItem = useItOpsStore((state) => state.moveRackItem);
   const deleteRack = useItOpsStore((state) => state.deleteRack);
   const removeRackItem = useItOpsStore((state) => state.removeRackItem);
@@ -334,15 +340,20 @@ export function SitesTab({
     }
   }
 
-  async function openRackItem(item: RackItem) {
-    if (!item.connectionId) return;
-    try {
-      const connection = await invokeCommand("itops_get_connection", { id: item.connectionId });
-      openConnection(connection);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      showStatusBarNotice(t("itops.errorNotice", { message }), { tone: "error" });
-    }
+  // Click on a bound device: anchor the connect popover to its faceplate.
+  function openRackItem(item: RackItem, anchorEl: HTMLElement) {
+    if (collectBoundConnectionIds(item).length === 0) return;
+    const rect = anchorEl.getBoundingClientRect();
+    setConnectPopover({
+      item,
+      anchor: {
+        top: rect.top,
+        left: rect.left,
+        right: rect.right,
+        width: rect.width,
+        height: rect.height,
+      },
+    });
   }
 
   async function confirmDelete() {
@@ -600,7 +611,7 @@ export function SitesTab({
             hostForItem={hostForItem}
             isGhostItem={isGhostItem}
             onSlotClick={(rack, startU) => setItemDialog({ rack, item: null, startU })}
-            onOpenItem={(item) => void openRackItem(item)}
+            onOpenItem={openRackItem}
             onEditItem={(rack, item) => setItemDialog({ rack, item })}
             onBindItem={setBindingsDialog}
             onMoveItem={(itemId, targetRackId, startU) => void moveItem(itemId, targetRackId, startU)}
@@ -671,6 +682,14 @@ export function SitesTab({
       ) : null}
       {bindingsDialog && activeGroup ? (
         <RackItemBindingsDialog siteId={activeGroup.id} item={bindingsDialog} onClose={() => setBindingsDialog(null)} />
+      ) : null}
+      {connectPopover ? (
+        <RackItemConnectPopover
+          item={connectPopover.item}
+          anchor={connectPopover.anchor}
+          onClose={() => setConnectPopover(null)}
+          onShowWorkspace={onShowWorkspace}
+        />
       ) : null}
       {pendingDelete ? (
         <ConfirmSheet
@@ -839,7 +858,7 @@ function RackDrill({
   hostForItem: (item: RackItem) => string | null;
   isGhostItem: (item: RackItem) => boolean;
   onSlotClick: (rack: Rack, startU: number) => void;
-  onOpenItem: (item: RackItem) => void;
+  onOpenItem: (item: RackItem, anchor: HTMLElement) => void;
   onEditItem: (rack: Rack, item: RackItem) => void;
   onBindItem: (item: RackItem) => void;
   onMoveItem: (itemId: string, targetRackId: string, startU: number) => void;

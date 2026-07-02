@@ -1202,7 +1202,10 @@
       "refreshSnmp": "Làm mới SNMP",
       "snmpRefreshComplete": "Đã hoàn tất làm mới SNMP.",
       "boundConnectionCount_one": "{{count}} kết nối đã liên kết",
-      "boundConnectionCount_other": "{{count}} kết nối đã liên kết"
+      "boundConnectionCount_other": "{{count}} kết nối đã liên kết",
+      "connectAction": "Kết nối",
+      "goToSessionAction": "Chuyển đến phiên",
+      "connectOpenedNotice": "Đã mở {{name}} trong Không gian làm việc."
     },
     "floorPlan": {
       "viewLabel": "Chế độ xem phòng",

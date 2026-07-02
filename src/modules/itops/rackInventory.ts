@@ -32,6 +32,16 @@ export function normalizeConnectionIds(value: RackItemMetadata["connectionIds"])
   return deduped.length > 0 ? deduped : null;
 }
 
+// Every Connection id bound to a rack device: the primary placed Connection
+// (when set) first, then the additional bindings, deduped in stored order.
+export function collectBoundConnectionIds(item: RackItem): string[] {
+  return [
+    ...new Set(
+      compact([item.connectionId, ...(normalizeConnectionIds(item.metadata?.connectionIds) ?? [])]),
+    ),
+  ];
+}
+
 function normalizePortSpeed(value: string | null | undefined): RackPortSpeed {
   const speed = value?.trim().toLowerCase();
   if (speed === "10g") return "10g";

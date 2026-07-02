@@ -322,13 +322,19 @@ management tab chrome is hidden while the Site-only UI is active.
   invalid drops show the standard `showStatusBarNotice` warning tone (no inline
   toast — High-Risk Invariant). Persist via `itops_move_rack_item` /
   `itops_update_rack_item`.
-- **Click a Connection-backed item → open its Session** by reusing
-  `useWorkspaceStore().openConnection(connection)` (`src/store.ts:1651`) — the
-  exact path the Connection Tree uses. This requires the Rack View to have the
-  full `Connection` objects for placed items; load them from the existing
-  connections store/selector by id (the Site store currently only holds
-  `ResolvedHost` summaries — add a placed-connection hydration selector).
-  Passive items are not clickable to connect; they open an edit popover.
+- **Click a device with bound Connections → connect popover**
+  (`RackItemConnectPopover.tsx`): a faceplate-anchored popover lists every
+  bound Connection (the primary placed `connection_id` first, then the
+  `metadata.connectionIds` bindings) with its icon, name, and host. A row
+  without an open Session connects via
+  `useWorkspaceStore().openConnection(connection)` — the exact path the
+  Connection Tree uses; DOM-rendered kinds (terminals, FTP, File Explorer,
+  Document) open in the background with a `showStatusBarNotice` confirmation
+  so the user keeps working the rack, while native-surface kinds (URL / RDP /
+  VNC) navigate to the Workspace Module because those Sessions must come up
+  while the Workspace is visible. A row whose Session is already open shows
+  "Go to session" and jumps to its Workspace tab. Devices with no bound
+  Connections open the edit dialog on click.
 - **Ghost items**: a Connection-backed item whose `connection_id` no longer
   resolves renders dimmed with a "missing Connection" badge and an unplace
   action — never a crash or a silent disappearance.

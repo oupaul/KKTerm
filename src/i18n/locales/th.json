@@ -1202,7 +1202,10 @@
       "refreshSnmp": "รีเฟรช SNMP",
       "snmpRefreshComplete": "รีเฟรช SNMP เสร็จสมบูรณ์",
       "boundConnectionCount_one": "การเชื่อมต่อที่ผูกไว้ {{count}} รายการ",
-      "boundConnectionCount_other": "การเชื่อมต่อที่ผูกไว้ {{count}} รายการ"
+      "boundConnectionCount_other": "การเชื่อมต่อที่ผูกไว้ {{count}} รายการ",
+      "connectAction": "เชื่อมต่อ",
+      "goToSessionAction": "ไปที่เซสชัน",
+      "connectOpenedNotice": "เปิด {{name}} ในพื้นที่ทำงานแล้ว"
     },
     "floorPlan": {
       "viewLabel": "โหมดมุมมองห้อง",

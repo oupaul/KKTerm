@@ -2,15 +2,16 @@
 // skeuomorphic metal frame — rail caps, a U-number gutter, and a slatted device
 // column — with each Rack Device drawn as an animated <RackDevice> faceplate at
 // its U position (ported from the "IT Ops Racks" design comp). With callbacks
-// wired it is the editor: click an empty U to add a device; a placed host opens
-// its Session on click with a pencil to edit; passive items open the edit
-// dialog. A Connection-backed item whose Connection is gone renders as a dimmed
+// wired it is the editor: click an empty U to add a device; a device with bound
+// Connections opens the connect popover on click with a pencil to edit; items
+// without bindings open the edit dialog on click.
+// A Connection-backed item whose Connection is gone renders as a dimmed
 // "ghost". Items are drag-to-restacked onto any U slot (possibly across racks).
 
 import { useTranslation } from "react-i18next";
 import type { Rack, RackItem, RackItemStatus } from "../../types";
 import { ItIcon } from "./icons";
-import { summarizeRackDeviceMetadata } from "./rackInventory";
+import { collectBoundConnectionIds, summarizeRackDeviceMetadata } from "./rackInventory";
 import { RackDevice } from "./RackDevice";
 
 // Pixel height of one rack unit (U) row. Kept in sync with `--rk-u` in CSS.
@@ -47,7 +48,9 @@ export function RackElevation({
   /** Resolve a placed Connection's host/ip for the faceplate sub-line. */
   hostFor?: (item: RackItem) => string | null;
   onSlotClick?: (startU: number) => void;
-  onOpenItem?: (item: RackItem) => void;
+  /** Open the connect popover for a device with bound Connections; the anchor
+   *  is the clicked faceplate element. */
+  onOpenItem?: (item: RackItem, anchor: HTMLElement) => void;
   onEditItem?: (item: RackItem) => void;
   onBindItem?: (item: RackItem) => void;
   onEditRack?: (rack: Rack) => void;
@@ -209,9 +212,12 @@ export function RackElevation({
               const ghost = item.kind === "connection" && !!isGhost?.(item);
               const text = item.label || t(`itops.racks.kind.${item.kind}`);
               const model = item.metadata?.vendor?.trim() || null;
-              // A live host opens on click; everything else (passive, ghost) edits.
-              const opens = item.kind === "connection" && !ghost && !!onOpenItem;
-              const primary = opens ? () => onOpenItem!(item) : () => onEditItem?.(item);
+              // Any device with bound Connections opens the connect popover on
+              // click; everything else (unbound, ghost) edits.
+              const opens = !ghost && !!onOpenItem && collectBoundConnectionIds(item).length > 0;
+              const primary = opens
+                ? (anchor: HTMLElement) => onOpenItem!(item, anchor)
+                : () => onEditItem?.(item);
               const delay = `${(order.get(item.id) ?? 0) * 0.045}s`;
               const style = {
                 gridColumn: 2,
@@ -268,7 +274,7 @@ export function RackElevation({
                     type="button"
                     className="rk-item-main"
                     title={opens ? t("itops.racks.openTitle", { name: text }) : text}
-                    onClick={primary}
+                    onClick={(event) => primary(event.currentTarget)}
                   >
                     {face}
                   </button>

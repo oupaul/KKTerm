@@ -1202,7 +1202,10 @@
       "refreshSnmp": "SNMP 새로 고침",
       "snmpRefreshComplete": "SNMP 새로 고침이 완료되었습니다.",
       "boundConnectionCount_one": "바인딩된 연결 {{count}}개",
-      "boundConnectionCount_other": "바인딩된 연결 {{count}}개"
+      "boundConnectionCount_other": "바인딩된 연결 {{count}}개",
+      "connectAction": "연결",
+      "goToSessionAction": "세션으로 이동",
+      "connectOpenedNotice": "작업 공간에서 {{name}}을(를) 열었습니다."
     },
     "floorPlan": {
       "viewLabel": "룸 보기 모드",

@@ -1202,7 +1202,10 @@
       "refreshSnmp": "Refresh SNMP",
       "snmpRefreshComplete": "SNMP refresh completed.",
       "boundConnectionCount_one": "{{count}} bound Connection",
-      "boundConnectionCount_other": "{{count}} bound Connections"
+      "boundConnectionCount_other": "{{count}} bound Connections",
+      "connectAction": "Connect",
+      "goToSessionAction": "Go to session",
+      "connectOpenedNotice": "Opened {{name}} in the Workspace."
     },
     "floorPlan": {
       "viewLabel": "Room view mode",

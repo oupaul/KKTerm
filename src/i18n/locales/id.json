@@ -1202,7 +1202,10 @@
       "refreshSnmp": "Segarkan SNMP",
       "snmpRefreshComplete": "Penyegaran SNMP selesai.",
       "boundConnectionCount_one": "{{count}} koneksi terikat",
-      "boundConnectionCount_other": "{{count}} koneksi terikat"
+      "boundConnectionCount_other": "{{count}} koneksi terikat",
+      "connectAction": "Hubungkan",
+      "goToSessionAction": "Lihat sesi",
+      "connectOpenedNotice": "{{name}} dibuka di Ruang Kerja."
     },
     "floorPlan": {
       "viewLabel": "Mode tampilan ruangan",

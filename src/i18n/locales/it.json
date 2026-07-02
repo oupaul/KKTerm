@@ -1202,7 +1202,10 @@
       "refreshSnmp": "Aggiorna SNMP",
       "snmpRefreshComplete": "Aggiornamento SNMP completato.",
       "boundConnectionCount_one": "{{count}} connessione associata",
-      "boundConnectionCount_other": "{{count}} connessioni associate"
+      "boundConnectionCount_other": "{{count}} connessioni associate",
+      "connectAction": "Connetti",
+      "goToSessionAction": "Vai alla sessione",
+      "connectOpenedNotice": "{{name}} è stato aperto nell'Area di lavoro."
     },
     "floorPlan": {
       "viewLabel": "Modalità di visualizzazione della sala",
