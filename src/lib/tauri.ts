@@ -1185,6 +1185,7 @@ type CommandMap = {
       shell?: string | null;
       heightU: number;
       depthMm: number;
+      powerCapacityW?: number | null;
     };
     result: Rack;
   };
@@ -1197,8 +1198,13 @@ type CommandMap = {
       shell?: string | null;
       heightU: number;
       depthMm: number;
+      powerCapacityW?: number | null;
     };
     result: Rack;
+  };
+  itops_set_rack_placements: {
+    args: { kind: "floor" | "grid"; entries: { id: string; x: number; y: number }[] };
+    result: void;
   };
   itops_set_site_background: {
     args: { siteId: string; background: DashboardBackground | null };

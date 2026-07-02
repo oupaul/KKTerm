@@ -69,12 +69,13 @@ export function saveRoomViewMode(mode: RoomViewMode): void {
   localStorage.setItem(ROOM_VIEW_KEY, mode);
 }
 
-// Which dimension colours the floor-plan tiles.
-export type RoomFloorMetric = "health" | "utilization";
+// Which dimension colours the floor-plan tiles / 2.5D cabinets.
+export type RoomFloorMetric = "health" | "utilization" | "power";
 
 export function loadRoomFloorMetric(): RoomFloorMetric {
   if (typeof localStorage === "undefined") return "health";
-  return localStorage.getItem(ROOM_METRIC_KEY) === "utilization" ? "utilization" : "health";
+  const raw = localStorage.getItem(ROOM_METRIC_KEY);
+  return raw === "utilization" || raw === "power" ? raw : "health";
 }
 
 export function saveRoomFloorMetric(metric: RoomFloorMetric): void {

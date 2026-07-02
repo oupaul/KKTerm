@@ -208,9 +208,34 @@ pub struct Rack {
     pub height_u: u32,
     /// Physical cabinet depth in millimetres.
     pub depth_mm: u32,
+    /// Optional power capacity of the rack's feed/PDUs, in watts. None = unset
+    /// (the power heatmap shows the rack as "no capacity").
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub power_capacity_w: Option<u32>,
+    /// Durable Server Room View placements. `floor_*` is the top-down floor
+    /// plan's free position in px; `grid_*` is the 2.5D view's floor grid cell.
+    /// None = automatic layout.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub floor_x: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub floor_y: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub grid_x: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub grid_y: Option<i64>,
     pub sort_order: i64,
     #[serde(default)]
     pub items: Vec<RackItem>,
+}
+
+/// One rack's new placement, sent by the Server Room View when cabinets are
+/// rearranged. `kind` (a command argument) selects floor vs. grid columns.
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct RackPlacementEntry {
+    pub id: String,
+    pub x: f64,
+    pub y: f64,
 }
 
 /// What a Rack Device represents. `Connection` items are openable (carry a
@@ -419,6 +444,10 @@ pub struct RackItemMetadata {
     pub battery: Option<u32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub load: Option<u32>,
+    /// Nameplate/typical power draw in watts; summed per rack for the Server
+    /// Room power heatmap. 0 is normalized to None.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub power_w: Option<u32>,
     /// Device shell colour: "black" (default) | "white" | "grey".
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub shell: Option<String>,

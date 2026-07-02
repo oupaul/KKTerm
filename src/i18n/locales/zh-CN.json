@@ -1099,6 +1099,10 @@
       "addRack": "新建机架",
       "heightLabel": "高度 (U)",
       "depthLabel": "深度",
+      "powerCapacityLabel": "功率容量 (W)",
+      "powerCapacityPlaceholder": "可选",
+      "powerDrawLabel": "功耗 (W)",
+      "powerDrawHint": "铭牌功率或典型功率，将累加到机房功率热力图。",
       "depthNetworkOption": "600 毫米（网络）",
       "depthServerOption": "1000 毫米（服务器）",
       "customOption": "自定义…",
@@ -1208,7 +1212,10 @@
       "metricLabel": "机架着色依据",
       "metricHealth": "健康状态",
       "metricUtilization": "使用率",
+      "metricPower": "功率",
       "utilizationValue": "已用 {{percent}}%",
+      "powerValue": "{{used}} W / {{capacity}} W",
+      "powerDrawOnly": "{{watts}} W",
       "tileTitle": "{{name}} — {{detail}}",
       "isoEditHint": "将机架拖动到地面网格以布置机房。点击空白网格可添加机架。",
       "isoAddHere": "在此网格添加机架",
@@ -1224,6 +1231,9 @@
         "med": "中",
         "high": "高",
         "full": "已满"
+      },
+      "power": {
+        "unknown": "未设置容量"
       }
     },
     "export": {

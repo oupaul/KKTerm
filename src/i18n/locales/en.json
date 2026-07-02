@@ -1099,6 +1099,10 @@
       "addRack": "New rack",
       "heightLabel": "Height (U)",
       "depthLabel": "Depth",
+      "powerCapacityLabel": "Power capacity (W)",
+      "powerCapacityPlaceholder": "Optional",
+      "powerDrawLabel": "Power draw (W)",
+      "powerDrawHint": "Nameplate or typical wattage; sums into the room's power heatmap.",
       "depthNetworkOption": "600 mm (Network)",
       "depthServerOption": "1000 mm (Server)",
       "customOption": "Custom…",
@@ -1208,7 +1212,10 @@
       "metricLabel": "Color racks by",
       "metricHealth": "Health",
       "metricUtilization": "Utilization",
+      "metricPower": "Power",
       "utilizationValue": "{{percent}}% full",
+      "powerValue": "{{used}} W / {{capacity}} W",
+      "powerDrawOnly": "{{watts}} W",
       "tileTitle": "{{name}} — {{detail}}",
       "isoEditHint": "Drag cabinets onto floor tiles to arrange the room. Click an empty tile to add a rack.",
       "isoAddHere": "Add a rack on this tile",
@@ -1224,6 +1231,9 @@
         "med": "Moderate",
         "high": "High",
         "full": "Full"
+      },
+      "power": {
+        "unknown": "No capacity"
       }
     },
     "export": {

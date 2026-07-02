@@ -43,6 +43,16 @@ export interface RackInput {
   shell?: string | null;
   heightU: number;
   depthMm: number;
+  powerCapacityW?: number | null;
+}
+
+/** Which Server Room View layout a placement update targets. */
+export type RackPlacementKind = "floor" | "grid";
+
+export interface RackPlacementUpdate {
+  id: string;
+  x: number;
+  y: number;
 }
 
 export interface PlaceItemInput {
@@ -205,6 +215,12 @@ interface ItOpsState {
   createRack: (siteId: string, input: RackInput) => Promise<Rack>;
   updateRack: (siteId: string, id: string, input: RackInput) => Promise<void>;
   deleteRack: (siteId: string, id: string) => Promise<void>;
+  /** Persist Server Room View placements durably; updates the cache in place. */
+  setRackPlacements: (
+    siteId: string,
+    kind: RackPlacementKind,
+    entries: RackPlacementUpdate[],
+  ) => Promise<void>;
   setSiteBackground: (siteId: string, background: DashboardBackground | null) => Promise<void>;
   setServerRoomBackground: (
     siteId: string,
@@ -382,6 +398,31 @@ export const useItOpsStore = create<ItOpsState>((set, get) => ({
   async deleteRack(siteId, id) {
     await invokeCommand("itops_delete_rack", { id });
     await get().loadRacks(siteId);
+  },
+
+  async setRackPlacements(siteId, kind, entries) {
+    if (entries.length === 0) return;
+    if (isTauriRuntime()) {
+      await invokeCommand("itops_set_rack_placements", { kind, entries });
+    }
+    // Patch the cached racks in place instead of reloading: placement saves
+    // fire right after a drag and a full reload would restart the elevations'
+    // entry animations mid-interaction.
+    const byId = new Map(entries.map((entry) => [entry.id, entry]));
+    const racks = get().racksBySite[siteId];
+    if (!racks) return;
+    set({
+      racksBySite: {
+        ...get().racksBySite,
+        [siteId]: racks.map((rack) => {
+          const entry = byId.get(rack.id);
+          if (!entry) return rack;
+          return kind === "floor"
+            ? { ...rack, floorX: entry.x, floorY: entry.y }
+            : { ...rack, gridX: Math.round(entry.x), gridY: Math.round(entry.y) };
+        }),
+      },
+    });
   },
 
   async placeRackItem(siteId, input) {

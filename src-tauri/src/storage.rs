@@ -12,7 +12,7 @@ use std::{
 use time::{OffsetDateTime, format_description::well_known::Rfc3339};
 use zip::{ZipArchive, ZipWriter, write::SimpleFileOptions};
 
-const SCHEMA_USER_VERSION: i32 = 39;
+const SCHEMA_USER_VERSION: i32 = 40;
 
 const DEFAULT_TERMINAL_OPACITY: u8 = 50;
 
@@ -367,6 +367,15 @@ CREATE TABLE IF NOT EXISTS itops_site_racks (
     background_json TEXT,
     height_u    INTEGER NOT NULL DEFAULT 42,
     depth_mm    INTEGER NOT NULL DEFAULT 1000,
+    -- Optional feed/PDU capacity in watts (NULL = unset), the power heatmap
+    -- denominator. v40.
+    power_capacity_w INTEGER,
+    -- Durable Server Room View placements: floor plan free position (px) and
+    -- 2.5D floor grid cell. NULL = automatic layout. v40.
+    floor_x     REAL,
+    floor_y     REAL,
+    grid_x      INTEGER,
+    grid_y      INTEGER,
     sort_order  INTEGER NOT NULL,
     created_at  TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at  TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -2018,6 +2027,13 @@ impl Storage {
             "TEXT NOT NULL DEFAULT ''",
         )?;
         ensure_column(&connection, "itops_site_racks", "background_json", "TEXT")?;
+        // v40: per-rack power capacity + durable Server Room View placements
+        // (floor-plan free position and 2.5D grid cell).
+        ensure_column(&connection, "itops_site_racks", "power_capacity_w", "INTEGER")?;
+        ensure_column(&connection, "itops_site_racks", "floor_x", "REAL")?;
+        ensure_column(&connection, "itops_site_racks", "floor_y", "REAL")?;
+        ensure_column(&connection, "itops_site_racks", "grid_x", "INTEGER")?;
+        ensure_column(&connection, "itops_site_racks", "grid_y", "INTEGER")?;
         ensure_column(&connection, "itops_sites", "background_json", "TEXT")?;
         ensure_column(&connection, "itops_sites", "room_backgrounds_json", "TEXT")?;
         ensure_column(&connection, "itops_sites", "icon_color", "TEXT")?;

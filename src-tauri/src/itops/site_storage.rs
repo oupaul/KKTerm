@@ -7,7 +7,9 @@ use rusqlite::{Connection as SqliteConnection, OptionalExtension, params};
 
 use super::inventory::normalize_metadata;
 use super::storage::ItopsStorageError;
-use super::types::{Rack, RackItem, RackItemKind, RackItemMetadata, ServerRoom};
+use super::types::{
+    Rack, RackItem, RackItemKind, RackItemMetadata, RackPlacementEntry, ServerRoom,
+};
 use crate::dashboard_storage::DashboardBackground;
 
 type Result<T> = std::result::Result<T, ItopsStorageError>;
@@ -15,6 +17,9 @@ type Result<T> = std::result::Result<T, ItopsStorageError>;
 /// Hard ceiling on rack height so a single rack can't claim an absurd U count.
 const MAX_RACK_HEIGHT_U: u32 = 100;
 const MAX_RACK_DEPTH_MM: u32 = 5000;
+/// Generous ceiling on a rack's power capacity (1 MW) — a sanity bound, not a
+/// physical model.
+const MAX_RACK_POWER_W: u32 = 1_000_000;
 
 // ── Pure placement validation ───────────────────────────────────────────────
 
@@ -101,6 +106,17 @@ fn validate_depth(depth_mm: u32) -> Result<u32> {
         )));
     }
     Ok(depth_mm)
+}
+
+/// 0/None mean "capacity unset"; anything else must be a sane wattage.
+fn validate_power_capacity(power_capacity_w: Option<u32>) -> Result<Option<u32>> {
+    match power_capacity_w {
+        None | Some(0) => Ok(None),
+        Some(watts) if watts <= MAX_RACK_POWER_W => Ok(Some(watts)),
+        Some(_) => Err(ItopsStorageError::Validation(format!(
+            "rack power capacity must be at most {MAX_RACK_POWER_W} W"
+        ))),
+    }
 }
 
 pub fn list_server_rooms(conn: &SqliteConnection, site_id: &str) -> Result<Vec<ServerRoom>> {
@@ -256,12 +272,18 @@ fn row_to_rack(row: &rusqlite::Row<'_>) -> rusqlite::Result<Rack> {
         height_u: row.get(7)?,
         depth_mm: row.get(8)?,
         sort_order: row.get(9)?,
+        power_capacity_w: row.get(10)?,
+        floor_x: row.get(11)?,
+        floor_y: row.get(12)?,
+        grid_x: row.get(13)?,
+        grid_y: row.get(14)?,
         items: Vec::new(),
     })
 }
 
 const SELECT_RACK_COLUMNS: &str = "id, site_id, name, server_room, rack_group, shell, \
-     background_json, height_u, depth_mm, sort_order FROM itops_site_racks";
+     background_json, height_u, depth_mm, sort_order, power_capacity_w, \
+     floor_x, floor_y, grid_x, grid_y FROM itops_site_racks";
 
 /// Normalize a shell choice to a stored value: blank/"black"/None → NULL (the
 /// default), otherwise the trimmed colour name.
@@ -312,11 +334,13 @@ pub fn create_rack(
     shell: Option<&str>,
     height_u: u32,
     depth_mm: u32,
+    power_capacity_w: Option<u32>,
 ) -> Result<Rack> {
     let name = validate_name(name)?;
     let server_room = validate_server_room(conn, site_id, server_room)?;
     let height_u = validate_height(height_u)?;
     let depth_mm = validate_depth(depth_mm)?;
+    let power_capacity_w = validate_power_capacity(power_capacity_w)?;
     let shell = normalize_shell(shell);
     let next_sort: i64 = conn.query_row(
         "SELECT COALESCE(MAX(sort_order), -1) + 1 FROM itops_site_racks WHERE site_id = ?",
@@ -325,8 +349,9 @@ pub fn create_rack(
     )?;
     conn.execute(
         "INSERT INTO itops_site_racks
-            (id, site_id, name, server_room, rack_group, shell, height_u, depth_mm, sort_order)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (id, site_id, name, server_room, rack_group, shell, height_u, depth_mm,
+             power_capacity_w, sort_order)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         params![
             id,
             site_id,
@@ -336,6 +361,7 @@ pub fn create_rack(
             shell,
             height_u,
             depth_mm,
+            power_capacity_w,
             next_sort
         ],
     )?;
@@ -349,6 +375,11 @@ pub fn create_rack(
         background: None,
         height_u,
         depth_mm,
+        power_capacity_w,
+        floor_x: None,
+        floor_y: None,
+        grid_x: None,
+        grid_y: None,
         sort_order: next_sort,
         items: Vec::new(),
     })
@@ -366,10 +397,12 @@ pub fn update_rack(
     shell: Option<&str>,
     height_u: u32,
     depth_mm: u32,
+    power_capacity_w: Option<u32>,
 ) -> Result<Rack> {
     let name = validate_name(name)?;
     let height_u = validate_height(height_u)?;
     let depth_mm = validate_depth(depth_mm)?;
+    let power_capacity_w = validate_power_capacity(power_capacity_w)?;
     let shell = normalize_shell(shell);
     // Existence check (returns NotFound early before the height-shrink scan).
     let (site_id, _sort_order): (String, i64) = conn
@@ -392,7 +425,7 @@ pub fn update_rack(
     conn.execute(
         "UPDATE itops_site_racks
          SET name = ?, server_room = ?, rack_group = ?, shell = ?, height_u = ?, depth_mm = ?,
-             updated_at = CURRENT_TIMESTAMP
+             power_capacity_w = ?, updated_at = CURRENT_TIMESTAMP
          WHERE id = ?",
         params![
             name,
@@ -401,6 +434,7 @@ pub fn update_rack(
             shell,
             height_u,
             depth_mm,
+            power_capacity_w,
             id
         ],
     )?;
@@ -454,6 +488,67 @@ pub fn reorder_racks(conn: &SqliteConnection, site_id: &str, ordered_ids: &[Stri
             "UPDATE itops_site_racks SET sort_order = ? WHERE id = ? AND site_id = ?",
             params![index as i64, id, site_id],
         )?;
+    }
+    Ok(())
+}
+
+/// Which Server Room View layout a placement update targets.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RackPlacementKind {
+    /// Top-down floor plan free position, px.
+    Floor,
+    /// 2.5D view floor grid cell (col/row), rounded and clamped to >= 0.
+    Grid,
+}
+
+impl RackPlacementKind {
+    pub fn from_str(value: &str) -> Result<Self> {
+        match value {
+            "floor" => Ok(RackPlacementKind::Floor),
+            "grid" => Ok(RackPlacementKind::Grid),
+            other => Err(ItopsStorageError::Validation(format!(
+                "unknown rack placement kind: {other}"
+            ))),
+        }
+    }
+}
+
+/// Persist Server Room View placements for a batch of racks (a drag can move
+/// two cabinets at once when they swap tiles). Ids that no longer exist are
+/// skipped: a rack deleted mid-drag must not fail the rest of the batch.
+pub fn set_rack_placements(
+    conn: &SqliteConnection,
+    kind: RackPlacementKind,
+    entries: &[RackPlacementEntry],
+) -> Result<()> {
+    for entry in entries {
+        if !entry.x.is_finite() || !entry.y.is_finite() {
+            return Err(ItopsStorageError::Validation(
+                "rack placement coordinates must be finite".to_string(),
+            ));
+        }
+        match kind {
+            RackPlacementKind::Floor => {
+                conn.execute(
+                    "UPDATE itops_site_racks
+                     SET floor_x = ?, floor_y = ?, updated_at = CURRENT_TIMESTAMP
+                     WHERE id = ?",
+                    params![entry.x.max(0.0), entry.y.max(0.0), entry.id],
+                )?;
+            }
+            RackPlacementKind::Grid => {
+                conn.execute(
+                    "UPDATE itops_site_racks
+                     SET grid_x = ?, grid_y = ?, updated_at = CURRENT_TIMESTAMP
+                     WHERE id = ?",
+                    params![
+                        entry.x.round().max(0.0) as i64,
+                        entry.y.round().max(0.0) as i64,
+                        entry.id
+                    ],
+                )?;
+            }
+        }
     }
     Ok(())
 }
@@ -612,6 +707,11 @@ mod tests {
                 background_json TEXT,
                 height_u INTEGER NOT NULL DEFAULT 42,
                 depth_mm INTEGER NOT NULL DEFAULT 1000,
+                power_capacity_w INTEGER,
+                floor_x REAL,
+                floor_y REAL,
+                grid_x INTEGER,
+                grid_y INTEGER,
                 sort_order INTEGER NOT NULL,
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -687,6 +787,7 @@ mod tests {
             Some("white"),
             42,
             1000,
+            None,
         )
         .unwrap();
         assert_eq!(rack.name, "A12");
@@ -702,11 +803,12 @@ mod tests {
         assert_eq!(listed[0].server_room, "Room B");
         assert_eq!(listed[0].rack_group, "G1");
 
-        let updated = update_rack(&conn, "r1", "A13", "Room C", "G2", None, 24, 1200).unwrap();
+        let updated = update_rack(&conn, "r1", "A13", "Room C", "G2", None, 24, 1200, Some(8000)).unwrap();
         assert_eq!(updated.rack_group, "G2");
         assert_eq!(updated.name, "A13");
         assert_eq!(updated.height_u, 24);
         assert_eq!(updated.depth_mm, 1200);
+        assert_eq!(updated.power_capacity_w, Some(8000));
         assert_eq!(updated.sort_order, 0); // preserved
 
         delete_rack(&conn, "r1").unwrap();
@@ -718,14 +820,77 @@ mod tests {
     }
 
     #[test]
+    fn rack_power_capacity_normalizes_and_validates() {
+        let conn = open_test_db();
+        // 0 means "unset" and stores as NULL.
+        let rack =
+            create_rack(&conn, "r1", "f1", "A12", "Room B", "", None, 42, 1000, Some(0)).unwrap();
+        assert_eq!(rack.power_capacity_w, None);
+        let updated =
+            update_rack(&conn, "r1", "A12", "Room B", "", None, 42, 1000, Some(12_000)).unwrap();
+        assert_eq!(updated.power_capacity_w, Some(12_000));
+        assert_eq!(
+            list_racks(&conn, "f1").unwrap()[0].power_capacity_w,
+            Some(12_000)
+        );
+        // Beyond the sanity ceiling is rejected.
+        assert!(matches!(
+            update_rack(&conn, "r1", "A12", "Room B", "", None, 42, 1000, Some(1_000_001)),
+            Err(ItopsStorageError::Validation(_))
+        ));
+    }
+
+    #[test]
+    fn rack_placements_persist_per_layout_and_skip_missing_ids() {
+        let conn = open_test_db();
+        create_rack(&conn, "a", "f1", "A", "Room B", "", None, 42, 1000, None).unwrap();
+        create_rack(&conn, "b", "f1", "B", "Room B", "", None, 42, 1000, None).unwrap();
+
+        // Grid cells round to whole non-negative cells; floor keeps px floats.
+        set_rack_placements(
+            &conn,
+            RackPlacementKind::Grid,
+            &[
+                RackPlacementEntry { id: "a".into(), x: 2.4, y: -1.0 },
+                RackPlacementEntry { id: "gone".into(), x: 1.0, y: 1.0 },
+            ],
+        )
+        .unwrap();
+        set_rack_placements(
+            &conn,
+            RackPlacementKind::Floor,
+            &[RackPlacementEntry { id: "b".into(), x: 118.5, y: 42.0 }],
+        )
+        .unwrap();
+
+        let racks = list_racks(&conn, "f1").unwrap();
+        let a = racks.iter().find(|rack| rack.id == "a").unwrap();
+        let b = racks.iter().find(|rack| rack.id == "b").unwrap();
+        assert_eq!((a.grid_x, a.grid_y), (Some(2), Some(0)));
+        assert_eq!((a.floor_x, a.floor_y), (None, None));
+        assert_eq!((b.floor_x, b.floor_y), (Some(118.5), Some(42.0)));
+        assert_eq!((b.grid_x, b.grid_y), (None, None));
+
+        // Non-finite coordinates are rejected outright.
+        assert!(matches!(
+            set_rack_placements(
+                &conn,
+                RackPlacementKind::Floor,
+                &[RackPlacementEntry { id: "a".into(), x: f64::NAN, y: 0.0 }],
+            ),
+            Err(ItopsStorageError::Validation(_))
+        ));
+    }
+
+    #[test]
     fn rack_depth_rejects_out_of_range_values() {
         let conn = open_test_db();
         assert!(matches!(
-            create_rack(&conn, "r1", "f1", "A12", "Room B", "", None, 42, 0),
+            create_rack(&conn, "r1", "f1", "A12", "Room B", "", None, 42, 0, None),
             Err(ItopsStorageError::Validation(_))
         ));
         assert!(matches!(
-            create_rack(&conn, "r2", "f1", "A13", "Room B", "", None, 42, 5001),
+            create_rack(&conn, "r2", "f1", "A13", "Room B", "", None, 42, 5001, None),
             Err(ItopsStorageError::Validation(_))
         ));
     }
@@ -733,7 +898,7 @@ mod tests {
     #[test]
     fn place_move_and_remove_items() {
         let conn = open_test_db();
-        create_rack(&conn, "r1", "f1", "A12", "Room B", "", None, 42, 1000).unwrap();
+        create_rack(&conn, "r1", "f1", "A12", "Room B", "", None, 42, 1000, None).unwrap();
 
         let item = place_rack_item(
             &conn,
@@ -823,7 +988,7 @@ mod tests {
     #[test]
     fn updating_to_passive_item_clears_connection_id() {
         let conn = open_test_db();
-        create_rack(&conn, "r1", "f1", "A12", "Room B", "", None, 42, 1000).unwrap();
+        create_rack(&conn, "r1", "f1", "A12", "Room B", "", None, 42, 1000, None).unwrap();
         place_rack_item(
             &conn,
             "i1",
@@ -858,7 +1023,7 @@ mod tests {
     #[test]
     fn shrinking_rack_below_an_item_is_rejected() {
         let conn = open_test_db();
-        create_rack(&conn, "r1", "f1", "A12", "Room B", "", None, 42, 1000).unwrap();
+        create_rack(&conn, "r1", "f1", "A12", "Room B", "", None, 42, 1000, None).unwrap();
         place_rack_item(
             &conn,
             "i1",
@@ -873,7 +1038,7 @@ mod tests {
         .unwrap();
         // Item occupies U40-U41; shrinking to 24U must fail.
         assert!(matches!(
-            update_rack(&conn, "r1", "A12", "Room B", "", None, 24, 1000),
+            update_rack(&conn, "r1", "A12", "Room B", "", None, 24, 1000, None),
             Err(ItopsStorageError::Validation(_))
         ));
     }
@@ -881,8 +1046,8 @@ mod tests {
     #[test]
     fn reorder_scopes_to_site() {
         let conn = open_test_db();
-        create_rack(&conn, "a", "f1", "A", "Room B", "", None, 42, 1000).unwrap();
-        create_rack(&conn, "b", "f1", "B", "Room B", "", None, 42, 1000).unwrap();
+        create_rack(&conn, "a", "f1", "A", "Room B", "", None, 42, 1000, None).unwrap();
+        create_rack(&conn, "b", "f1", "B", "Room B", "", None, 42, 1000, None).unwrap();
         reorder_racks(&conn, "f1", &["b".to_string(), "a".to_string()]).unwrap();
         let order: Vec<String> = list_racks(&conn, "f1")
             .unwrap()
@@ -910,13 +1075,13 @@ mod tests {
     fn rack_requires_a_server_room_owned_by_its_site() {
         let conn = open_test_db();
         assert!(matches!(
-            create_rack(&conn, "r-empty", "f1", "A", "", "", None, 42, 1000),
+            create_rack(&conn, "r-empty", "f1", "A", "", "", None, 42, 1000, None),
             Err(ItopsStorageError::Validation(_))
         ));
         assert!(matches!(
-            create_rack(&conn, "r-missing", "f1", "A", "Unknown", "", None, 42, 1000),
+            create_rack(&conn, "r-missing", "f1", "A", "Unknown", "", None, 42, 1000, None),
             Err(ItopsStorageError::Validation(_))
         ));
-        assert!(create_rack(&conn, "r-valid", "f1", "A", "Room B", "", None, 42, 1000).is_ok());
+        assert!(create_rack(&conn, "r-valid", "f1", "A", "Room B", "", None, 42, 1000, None).is_ok());
     }
 }

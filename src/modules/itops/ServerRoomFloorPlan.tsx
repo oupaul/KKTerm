@@ -8,8 +8,9 @@
 import { useRef, type PointerEvent as ReactPointerEvent } from "react";
 import { useTranslation } from "react-i18next";
 import type { Rack } from "../../types";
+import type { TFunction } from "i18next";
 import { groupRacksByGroup } from "./rackTopology";
-import { rackFloorMetrics, type FloorMetric } from "./roomFloorPlan";
+import { rackFloorMetrics, type FloorMetric, type RackFloorMetrics } from "./roomFloorPlan";
 import type { FreePlacementMap } from "./siteTreeState";
 import { ItIcon } from "./icons";
 
@@ -167,11 +168,8 @@ function FloorTile({
 }) {
   const { t } = useTranslation();
   const m = rackFloorMetrics(rack);
-  const percent = Math.round(m.utilization * 100);
-  const detail =
-    metric === "utilization"
-      ? t("itops.floorPlan.utilizationValue", { percent })
-      : t(`itops.floorPlan.health.${m.health}`);
+  const percent = Math.round(metricFillRatio(m, metric) * 100);
+  const detail = metricDetail(t, m, metric);
 
   return (
     <button
@@ -179,12 +177,13 @@ function FloorTile({
       className="rm-tile"
       data-health={m.health}
       data-util={m.utilBand}
+      data-power={m.powerBand}
       title={t("itops.floorPlan.tileTitle", { name: rack.name, detail })}
       onClick={() => onSelect(rack.id)}
     >
       <span className="rm-tile-name">{rack.name}</span>
       <span className="rm-tile-fill">
-        {metric === "utilization" ? (
+        {metric !== "health" ? (
           <span className="rm-tile-bar">
             <span style={{ width: `${percent}%` }} />
           </span>
@@ -219,6 +218,28 @@ function FloorTile({
   );
 }
 
+// Shared with the 2.5D iso view, which colours by the same metric.
+// The active metric's value line for one rack (band label, % full, or watts).
+export function metricDetail(t: TFunction, m: RackFloorMetrics, metric: FloorMetric): string {
+  if (metric === "utilization") {
+    return t("itops.floorPlan.utilizationValue", { percent: Math.round(m.utilization * 100) });
+  }
+  if (metric === "power") {
+    return m.powerCapacityW != null
+      ? t("itops.floorPlan.powerValue", { used: m.powerW, capacity: m.powerCapacityW })
+      : t("itops.floorPlan.powerDrawOnly", { watts: m.powerW });
+  }
+  return t(`itops.floorPlan.health.${m.health}`);
+}
+
+// How full the metric's bar/liquid indicator draws, 0–1.
+export function metricFillRatio(m: RackFloorMetrics, metric: FloorMetric): number {
+  if (metric === "power") {
+    return m.powerRatio != null ? Math.min(1, m.powerRatio) : 0;
+  }
+  return m.utilization;
+}
+
 // Shared with the 2.5D iso view, which uses the same band colouring.
 export function FloorLegend({ metric }: { metric: FloorMetric }) {
   const { t } = useTranslation();
@@ -231,12 +252,21 @@ export function FloorLegend({ metric }: { metric: FloorMetric }) {
           ["full", t("itops.floorPlan.util.full")],
           ["empty", t("itops.floorPlan.util.empty")],
         ] as const)
-      : ([
-          ["ok", t("itops.floorPlan.health.ok")],
-          ["warning", t("itops.floorPlan.health.warning")],
-          ["critical", t("itops.floorPlan.health.critical")],
-          ["empty", t("itops.floorPlan.health.empty")],
-        ] as const);
+      : metric === "power"
+        ? ([
+            ["low", t("itops.floorPlan.util.low")],
+            ["med", t("itops.floorPlan.util.med")],
+            ["high", t("itops.floorPlan.util.high")],
+            ["full", t("itops.floorPlan.util.full")],
+            ["unknown", t("itops.floorPlan.power.unknown")],
+            ["empty", t("itops.floorPlan.util.empty")],
+          ] as const)
+        : ([
+            ["ok", t("itops.floorPlan.health.ok")],
+            ["warning", t("itops.floorPlan.health.warning")],
+            ["critical", t("itops.floorPlan.health.critical")],
+            ["empty", t("itops.floorPlan.health.empty")],
+          ] as const);
 
   return (
     <div className="rm-legend">

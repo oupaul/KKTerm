@@ -3999,6 +3999,7 @@ pub fn run() {
             itops::commands::itops_set_rack_background,
             itops::commands::itops_delete_rack,
             itops::commands::itops_reorder_racks,
+            itops::commands::itops_set_rack_placements,
             itops::commands::itops_place_rack_item,
             itops::commands::itops_update_rack_item,
             itops::commands::itops_move_rack_item,

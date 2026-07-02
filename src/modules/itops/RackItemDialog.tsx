@@ -134,10 +134,16 @@ export function RackItemDialog({
   const [snmpTarget, setSnmpTarget] = useState(initialMetadata.snmp?.target ?? "");
   const [snmpOid, setSnmpOid] = useState(initialMetadata.snmp?.oid ?? "");
   const [vendor, setVendor] = useState(item?.metadata?.vendor ?? "");
+  // Kept as text so the field can be blank (= draw unknown).
+  const [powerDraw, setPowerDraw] = useState(
+    item?.metadata?.powerW ? String(item.metadata.powerW) : "",
+  );
   const [busy, setBusy] = useState(false);
   const maxDisks = Math.max(1, heightU) * DISKS_PER_U;
   const placedStartU = clampStartUForHeight(startU, heightU, rack.heightU);
   const previewLabel = label.trim() || t(`itops.racks.kind.${kind}`);
+  const parsedDraw = Number.parseInt(powerDraw, 10);
+  const parsedPowerDraw = Number.isFinite(parsedDraw) && parsedDraw > 0 ? parsedDraw : null;
 
   const metadata: RackItemMetadata = {
     accent: accent === "none" ? null : accent,
@@ -158,6 +164,7 @@ export function RackItemDialog({
       ? { target: snmpTarget.trim(), oid: snmpOid.trim() || null }
       : null,
     vendor: vendor.trim() || null,
+    powerW: parsedPowerDraw,
     ...(kind === "kuaiguai" ? { expiry: expiry.trim() || null, rotation, yaw, kuaiguaiSize } : {}),
     ...(showsPorts(kind) ? { ports } : {}),
     ...(showsDisks(kind) ? { disks } : {}),
@@ -413,6 +420,16 @@ export function RackItemDialog({
 
         <Field label={t("itops.racks.accentLabel")}>
           <Swatches value={accent} onChange={setAccent} allowNone noneLabel={t("itops.racks.accentNone")} />
+        </Field>
+
+        <Field label={t("itops.racks.powerDrawLabel")} hint={t("itops.racks.powerDrawHint")}>
+          <TextInput
+            type="number"
+            mono
+            min={0}
+            value={powerDraw}
+            onChange={(event) => setPowerDraw(event.currentTarget.value)}
+          />
         </Field>
 
         <div className="rack-form-grid two">

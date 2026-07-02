@@ -1099,6 +1099,10 @@
       "addRack": "새 랙",
       "heightLabel": "높이 (U)",
       "depthLabel": "깊이",
+      "powerCapacityLabel": "전력 용량 (W)",
+      "powerCapacityPlaceholder": "선택 사항",
+      "powerDrawLabel": "소비 전력 (W)",
+      "powerDrawHint": "정격 또는 일반 소비 전력이며 서버룸 전력 히트맵에 합산됩니다.",
       "depthNetworkOption": "600 mm(네트워크)",
       "depthServerOption": "1000 mm(서버)",
       "customOption": "사용자 지정…",
@@ -1208,7 +1212,10 @@
       "metricLabel": "랙 색상 기준",
       "metricHealth": "상태",
       "metricUtilization": "사용률",
+      "metricPower": "전력",
       "utilizationValue": "{{percent}}% 사용",
+      "powerValue": "{{used}} W / {{capacity}} W",
+      "powerDrawOnly": "{{watts}} W",
       "tileTitle": "{{name}} — {{detail}}",
       "isoEditHint": "랙을 바닥 타일로 드래그하여 배치를 조정하세요. 빈 타일을 클릭하면 랙을 추가할 수 있습니다.",
       "isoAddHere": "이 타일에 랙 추가",
@@ -1224,6 +1231,9 @@
         "med": "보통",
         "high": "높음",
         "full": "가득 참"
+      },
+      "power": {
+        "unknown": "용량 미설정"
       }
     },
     "export": {

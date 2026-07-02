@@ -1099,6 +1099,10 @@
       "addRack": "Rack mới",
       "heightLabel": "Chiều cao (U)",
       "depthLabel": "Chiều sâu",
+      "powerCapacityLabel": "Công suất tối đa (W)",
+      "powerCapacityPlaceholder": "Tùy chọn",
+      "powerDrawLabel": "Công suất tiêu thụ (W)",
+      "powerDrawHint": "Công suất định mức hoặc điển hình; được cộng vào bản đồ nhiệt công suất của phòng.",
       "depthNetworkOption": "600 mm (Mạng)",
       "depthServerOption": "1000 mm (Máy chủ)",
       "customOption": "Tùy chỉnh…",
@@ -1208,7 +1212,10 @@
       "metricLabel": "Tô màu tủ rack theo",
       "metricHealth": "Tình trạng",
       "metricUtilization": "Mức sử dụng",
+      "metricPower": "Công suất",
       "utilizationValue": "Đã dùng {{percent}}%",
+      "powerValue": "{{used}} W / {{capacity}} W",
+      "powerDrawOnly": "{{watts}} W",
       "tileTitle": "{{name}} — {{detail}}",
       "isoEditHint": "Kéo rack vào các ô sàn để sắp xếp phòng. Nhấp vào ô trống để thêm rack.",
       "isoAddHere": "Thêm rack vào ô này",
@@ -1224,6 +1231,9 @@
         "med": "Trung bình",
         "high": "Cao",
         "full": "Đầy"
+      },
+      "power": {
+        "unknown": "Chưa đặt công suất"
       }
     },
     "export": {

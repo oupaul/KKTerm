@@ -1099,6 +1099,10 @@
       "addRack": "Rak baru",
       "heightLabel": "Tinggi (U)",
       "depthLabel": "Kedalaman",
+      "powerCapacityLabel": "Kapasitas daya (W)",
+      "powerCapacityPlaceholder": "Opsional",
+      "powerDrawLabel": "Konsumsi daya (W)",
+      "powerDrawHint": "Daya pengenal atau tipikal; dijumlahkan ke peta panas daya ruangan.",
       "depthNetworkOption": "600 mm (Jaringan)",
       "depthServerOption": "1000 mm (Server)",
       "customOption": "Kustom…",
@@ -1208,7 +1212,10 @@
       "metricLabel": "Warnai rak menurut",
       "metricHealth": "Kesehatan",
       "metricUtilization": "Pemanfaatan",
+      "metricPower": "Daya",
       "utilizationValue": "{{percent}}% terisi",
+      "powerValue": "{{used}} W / {{capacity}} W",
+      "powerDrawOnly": "{{watts}} W",
       "tileTitle": "{{name}} — {{detail}}",
       "isoEditHint": "Seret rak ke petak lantai untuk menata ruangan. Klik petak kosong untuk menambahkan rak.",
       "isoAddHere": "Tambahkan rak di petak ini",
@@ -1224,6 +1231,9 @@
         "med": "Sedang",
         "high": "Tinggi",
         "full": "Penuh"
+      },
+      "power": {
+        "unknown": "Tanpa kapasitas"
       }
     },
     "export": {

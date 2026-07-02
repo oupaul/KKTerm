@@ -4031,6 +4031,20 @@
 .itops-page .rm-floor[data-metric="utilization"] .rm-tile[data-util="full"] {
   --tile: var(--red);
 }
+/* Power load bands: draw vs. rack feed capacity. "unknown" (populated rack,
+   no capacity set) stays neutral like "empty". */
+.itops-page .rm-floor[data-metric="power"] .rm-tile[data-power="low"] {
+  --tile: var(--green);
+}
+.itops-page .rm-floor[data-metric="power"] .rm-tile[data-power="med"] {
+  --tile: color-mix(in srgb, var(--green) 45%, var(--amber));
+}
+.itops-page .rm-floor[data-metric="power"] .rm-tile[data-power="high"] {
+  --tile: var(--amber);
+}
+.itops-page .rm-floor[data-metric="power"] .rm-tile[data-power="full"] {
+  --tile: var(--red);
+}
 
 /* Legend. */
 .itops-page .rm-legend {
@@ -4067,6 +4081,13 @@
 .itops-page .rm-legend-sw.critical,
 .itops-page .rm-legend-sw.full {
   background: var(--red);
+}
+.itops-page .rm-legend-sw.unknown {
+  background: repeating-linear-gradient(
+    45deg,
+    var(--text-faint) 0 2px,
+    color-mix(in srgb, var(--text-faint) 30%, transparent) 2px 4px
+  );
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
@@ -4353,6 +4374,18 @@
   --tile: var(--amber);
 }
 .itops-page .rm-iso[data-metric="utilization"] .rm-iso-cab[data-util="full"] {
+  --tile: var(--red);
+}
+.itops-page .rm-iso[data-metric="power"] .rm-iso-cab[data-power="low"] {
+  --tile: var(--green);
+}
+.itops-page .rm-iso[data-metric="power"] .rm-iso-cab[data-power="med"] {
+  --tile: color-mix(in srgb, var(--green) 45%, var(--amber));
+}
+.itops-page .rm-iso[data-metric="power"] .rm-iso-cab[data-power="high"] {
+  --tile: var(--amber);
+}
+.itops-page .rm-iso[data-metric="power"] .rm-iso-cab[data-power="full"] {
   --tile: var(--red);
 }
 

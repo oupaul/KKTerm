@@ -1099,6 +1099,10 @@
       "addRack": "แร็คใหม่",
       "heightLabel": "ความสูง (U)",
       "depthLabel": "ความลึก",
+      "powerCapacityLabel": "กำลังไฟสูงสุด (W)",
+      "powerCapacityPlaceholder": "ไม่บังคับ",
+      "powerDrawLabel": "กำลังไฟที่ใช้ (W)",
+      "powerDrawHint": "กำลังไฟตามป้ายกำกับหรือค่าทั่วไป จะถูกรวมในแผนที่ความร้อนกำลังไฟของห้อง",
       "depthNetworkOption": "600 มม. (เครือข่าย)",
       "depthServerOption": "1000 มม. (เซิร์ฟเวอร์)",
       "customOption": "กำหนดเอง…",
@@ -1208,7 +1212,10 @@
       "metricLabel": "ระบายสีแร็คตาม",
       "metricHealth": "สถานะ",
       "metricUtilization": "การใช้งาน",
+      "metricPower": "กำลังไฟ",
       "utilizationValue": "ใช้ {{percent}}%",
+      "powerValue": "{{used}} W / {{capacity}} W",
+      "powerDrawOnly": "{{watts}} W",
       "tileTitle": "{{name}} — {{detail}}",
       "isoEditHint": "ลากแร็คไปยังช่องพื้นเพื่อจัดวางห้อง คลิกช่องว่างเพื่อเพิ่มแร็ค",
       "isoAddHere": "เพิ่มแร็คในช่องนี้",
@@ -1224,6 +1231,9 @@
         "med": "ปานกลาง",
         "high": "สูง",
         "full": "เต็ม"
+      },
+      "power": {
+        "unknown": "ไม่ได้กำหนดกำลังไฟ"
       }
     },
     "export": {

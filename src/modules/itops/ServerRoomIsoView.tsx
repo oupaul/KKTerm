@@ -23,7 +23,7 @@ import {
   type IsoLayout,
 } from "./roomIsoLayout";
 import type { FreePlacementMap } from "./siteTreeState";
-import { FloorLegend } from "./ServerRoomFloorPlan";
+import { FloorLegend, metricDetail, metricFillRatio } from "./ServerRoomFloorPlan";
 import { ItIcon } from "./icons";
 
 // Floor tile size and cabinet footprint, in plane px. The cabinet is inset in
@@ -258,17 +258,15 @@ function IsoCabinet({
   const cell = layout.cells[rack.id];
   const m = rackFloorMetrics(rack);
   const h = cabHeight(rack.heightU);
-  const percent = Math.round(m.utilization * 100);
-  const detail =
-    metric === "utilization"
-      ? t("itops.floorPlan.utilizationValue", { percent })
-      : t(`itops.floorPlan.health.${m.health}`);
+  const percent = Math.round(metricFillRatio(m, metric) * 100);
+  const detail = metricDetail(t, m, metric);
 
   return (
     <div
       className={`rm-iso-cab${drag ? " dragging" : ""}${editMode ? " editing" : ""}`}
       data-health={m.health}
       data-util={m.utilBand}
+      data-power={m.powerBand}
       style={{
         left: cell.x * CELL + CAB_INSET,
         top: cell.y * CELL + CAB_INSET,

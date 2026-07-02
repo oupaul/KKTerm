@@ -1099,6 +1099,10 @@
       "addRack": "Nuovo rack",
       "heightLabel": "Altezza (U)",
       "depthLabel": "Profondità",
+      "powerCapacityLabel": "Capacità di potenza (W)",
+      "powerCapacityPlaceholder": "Facoltativo",
+      "powerDrawLabel": "Consumo di potenza (W)",
+      "powerDrawHint": "Potenza nominale o tipica; sommata nella mappa termica di potenza della sala.",
       "depthNetworkOption": "600 mm (Rete)",
       "depthServerOption": "1000 mm (Server)",
       "customOption": "Personalizzato…",
@@ -1208,7 +1212,10 @@
       "metricLabel": "Colora i rack per",
       "metricHealth": "Stato",
       "metricUtilization": "Utilizzo",
+      "metricPower": "Potenza",
       "utilizationValue": "{{percent}} % occupato",
+      "powerValue": "{{used}} W / {{capacity}} W",
+      "powerDrawOnly": "{{watts}} W",
       "tileTitle": "{{name}} — {{detail}}",
       "isoEditHint": "Trascina i rack sui riquadri del pavimento per organizzare la sala. Fai clic su un riquadro vuoto per aggiungere un rack.",
       "isoAddHere": "Aggiungi un rack in questo riquadro",
@@ -1224,6 +1231,9 @@
         "med": "Moderato",
         "high": "Alto",
         "full": "Pieno"
+      },
+      "power": {
+        "unknown": "Nessuna capacità"
       }
     },
     "export": {
