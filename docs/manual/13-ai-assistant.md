@@ -22,7 +22,7 @@ Chat history is stored in SQLite table `assistant_chat_threads`, indexed for rec
 
 ## Composer
 
-Default placeholder `ai.composerPlaceholder`. Send `ai.sendMessage` / `ai.send`. Stop in-flight `ai.stopMessage`; Stop also cancels the backend agent run, so no further provider calls or tool executions happen after it. Cancelling an ACP-backed CLI turn does not start the one-shot fallback, and one-shot fallback processes honor the same cancellation and response timeout. Copy `ai.copy` / `ai.copyMessage`. Highlighted Assistant Panel text can also be copied from the right-click native context menu item `common.copy`. Code label `ai.code`. Show-less / more `ai.showLess` / `ai.more`.
+Default placeholder `ai.composerPlaceholder`. Send `ai.sendMessage` / `ai.send`. Stop in-flight `ai.stopMessage`; Stop also cancels the backend agent run, so no further provider calls or tool executions happen after it. Cancelling an ACP-backed CLI turn does not start the one-shot fallback, and one-shot fallback processes honor the same cancellation and response timeout. The one-shot fallback only runs when ACP fails before the prompt turn starts; once an ACP turn is underway, an error surfaces in the chat instead of silently re-running the request. Copy `ai.copy` / `ai.copyMessage`. Highlighted Assistant Panel text can also be copied from the right-click native context menu item `common.copy`. Code label `ai.code`. Show-less / more `ai.showLess` / `ai.more`.
 
 Assistant responses wrap to the available panel width. Wide code blocks remain contained within the response and scroll horizontally inside the code block instead of clipping the surrounding response text.
 
@@ -83,7 +83,7 @@ The assistant memory tools (`settings.aiTools.memory.label`, default on) let the
 
 The assistant can also call the read-only `mcp_list_tools` tool to list the remote MCP servers configured in Settings together with their cached tool schemas. It serves the cached `tools/list` results from local storage without contacting the servers and is used to ground widget code that calls `KK.callMcpTool` in real tool names and argument shapes.
 
-When `settings.useCodexCli` or `settings.useClaudeCli` routes a provider through a local CLI backend, ACP-backed sessions attach KKTerm's built-in `kkterm` MCP server so published safe tools, including Connection creation, can run through the same local bridge as external MCP clients. If ACP is unavailable and KKTerm falls back to a one-shot CLI command, the assistant can only suggest actions or Connection details instead of calling KKTerm tools.
+When `settings.useCodexCli` or `settings.useClaudeCli` routes a provider through a local CLI backend, ACP-backed sessions attach KKTerm's built-in `kkterm` MCP server so published safe tools, including Connection creation, can run through the same local bridge as external MCP clients. If ACP is unavailable and KKTerm falls back to a one-shot CLI command, the assistant can only suggest actions or Connection details instead of calling KKTerm tools. ACP-backed turns also stream the CLI agent's thinking, tool-call progress chips, and work plan into the assistant work panel using the same progress treatment as native providers; the tool names shown are the CLI agent's own tool titles.
 
 Names shown during a tool call (`ai.toolCallRunning` → `ai.toolCallComplete`):
 
