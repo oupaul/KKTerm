@@ -18,6 +18,17 @@ export interface PcInfoOs {
   uptimeSeconds?: number | null;
 }
 
+export interface PcInfoSystem {
+  manufacturer?: string | null;
+  model?: string | null;
+  family?: string | null;
+  sku?: string | null;
+  serialNumber?: string | null;
+  uuid?: string | null;
+  systemType?: string | null;
+  chassisType?: string | null;
+}
+
 export interface PcInfoCpu {
   name?: string | null;
   vendor?: string | null;
@@ -141,6 +152,7 @@ export interface PcInfoSnapshot {
   generatedAtUnixSeconds: number;
   source: string;
   warnings: string[];
+  system: PcInfoSystem;
   os: PcInfoOs;
   cpu: PcInfoCpu;
   memory: PcInfoMemory;

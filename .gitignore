@@ -43,6 +43,8 @@ dist-ssr
 docs/superpowers/specs
 docs/superpowers/plans
 /brag-output
+.wrangler/
+
 # design-sync (generated/staged — durable inputs under .design-sync/ are committed)
 /.ds-sync/
 /ds-bundle/

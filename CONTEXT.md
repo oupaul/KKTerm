@@ -74,7 +74,7 @@ A built-in Activity Rail Module that provides a dynamic widget playground. Users
 _Avoid_: landing page, overview
 
 **Install Helper Module**:
-A built-in Activity Rail Module that manages a curated catalog of Windows developer tools (e.g. nvm, Node, uv, Python, VS Code, Docker, WSL, n8n, Claude Code CLI, Codex CLI, Antigravity CLI, OpenCode CLI, Notepad++, NSSM, OpenClaw, Hermes agent). For each catalog entry the Module detects local install state, fetches the latest available version, presents a per-tool install panel with tool-specific options, and supports check-for-update and apply-update actions. Lives above Settings on the Activity Rail. Not a Connection, not a Session, not a Dashboard Widget.
+A built-in Activity Rail Module that manages a curated catalog of Windows developer tools (e.g. nvm, Node, uv, Python, VS Code, Docker, WSL, n8n, Claude Code CLI, Codex CLI, Antigravity CLI, OpenCode CLI, Notepad++, NSSM, OpenClaw, Hermes agent, Hermes Desktop, Draw.IO, Krita, Inkscape). For each catalog entry the Module detects local install state, fetches the latest available version, presents a per-tool install panel with tool-specific options, and supports check-for-update and apply-update actions. Lives above Settings on the Activity Rail. Not a Connection, not a Session, not a Dashboard Widget.
 _Avoid_: AI Installer, App Installer, package manager, store
 
 **Dashboard View**:
@@ -122,34 +122,35 @@ The live runtime that executes an armed **Automation** (or an ad-hoc live monito
 _Avoid_: monitor profile, durable watcher (the Automation is the durable part)
 
 **IT Ops Module**:
-A built-in Activity Rail Module for fleet operations: **Fleets**, **Batch Runs**, and **Automations**. Its current primary UI is the Fleet topology surface: a left **Fleets** tree and a right drill-down through **Fleet View**, **Server Room View**, and **Rack View**. Batch Run and Automation functionality remains part of the Module even when those management surfaces are hidden. Lives with Dashboard and Install Helper above Settings. Not a Connection, Session, or Dashboard widget. See `docs/ITOPS.md` and `docs/ADR/0011-it-ops-module.md`.
-_Avoid_: operations center, fleet manager, orchestrator
+A built-in Activity Rail Module for site operations: **Sites**, **Batch Runs**, and **Automations**. Its current primary UI is the Site topology surface: a left **Sites** tree and a right drill-down through **Site View**, **Server Room View**, and **Rack View**. Batch Run and Automation functionality remains part of the Module even when those management surfaces are hidden. Lives with Dashboard and Install Helper above Settings. Not a Connection, Session, or Dashboard widget. See `docs/ITOPS.md` and `docs/ADR/0011-it-ops-module.md`.
+_Avoid_: operations center, site manager, orchestrator
 
-**Fleets**:
-The IT Ops collection and navigator for Fleet records. In the current UI it is the left-column tree that contains Fleets and their topology children. A row in Fleets selects a **Fleet**; the plural term names the view/collection, not a durable data type.
-_Avoid_: host groups tab, inventory browser
+**Sites**:
+The IT Ops collection and navigator for Site records. In the current UI it is the left-column tree that contains Sites and their topology children. A row in Sites selects a **Site**; the plural term names the view/collection, not a durable data type.
+_Avoid_: fleets, host groups tab, inventory browser
 
-**Fleet**:
-A durable, named selection of existing Connections (plus an optional dynamic filter by type/folder) used as the target for Batch Runs and Automation `runBatch` actions. Stored in `itops_fleets`; it references Connection ids and owns no Session and no secret. It is not a Connection type. A Fleet may own a topology of Server Rooms, Racks, and Rack Devices.
-_Avoid_: host group, inventory, host list, connection group (as a Connection type)
+**Site**:
+A durable, named selection of existing Connections (plus an optional dynamic filter by type/folder) used as the target for Batch Runs and Automation `runBatch` actions. Stored in `itops_sites`; it references Connection ids and owns no Session and no secret. It is not a Connection type. A Site may own a topology of Server Rooms, Racks, and Rack Devices.
+_Avoid_: fleet, host group, inventory, host list, connection group (as a Connection type)
 
-**Default Fleet**:
-The undeletable fallback Fleet (`default-fleet`) that exists when IT Ops has no other Fleet rows. It is a safe top-level parent for Server Rooms, Racks, and Rack Devices, not a Connection or Session.
+**Default Site**:
+The undeletable fallback Site (stored id `default-fleet`, a legacy literal kept across the
+Fleet→Site rename) that exists when IT Ops has no other Site rows. It is a safe top-level parent for Server Rooms, Racks, and Rack Devices, not a Connection or Session.
 
-**Fleet View**:
-The top-level right-side view for one selected Fleet. It shows that Fleet's Server Rooms as cards and is the entry point into the topology drill-down. It is not the same thing as the plural **Fleets** navigator.
+**Site View**:
+The top-level right-side view for one selected Site. It shows that Site's Server Rooms as cards and is the entry point into the topology drill-down. It is not the same thing as the plural **Sites** navigator.
 _Avoid_: overview, dashboard, host group details
 
 **Server Room**:
-A plain-text grouping tag on a Rack inside a Fleet. The topology path is **Fleet → Server Room → Rack**; blank values group under Unassigned. A Server Room is not a first-class database entity and owns no Connections or Sessions.
+A durable, Site-owned topology entity stored in `itops_server_rooms`. The topology path is **Site → Server Room → Rack**: a Server Room may remain empty, while every new Rack must belong to a Server Room in the same Site. It owns no Connections or Sessions and may gain additional relationships later.
 _Avoid_: region, datacenter, site object, zone
 
 **Server Room View**:
-The drill-down view for one Server Room. It shows the room's Racks, optionally grouped by each Rack's `rack_group` tag, as rack elevations.
-_Avoid_: floor plan, area view, datacenter map
+The drill-down view for one Server Room. It offers two layouts: rack elevations (the default, racks drawn as front elevations, optionally grouped by each Rack's `rack_group` tag) and a top-down 2D floor plan that lays each Rack out as a footprint tile colored by health (worst placed-device status) or utilization (occupied U vs. capacity), the DCIM floor-plan pattern. The chosen layout and metric persist.
+_Avoid_: area view, datacenter map
 
 **Rack**:
-A durable fixed-height cabinet, usually 42U, that belongs to one Fleet and one Server Room. Stored in `itops_fleet_racks`; it holds Rack Devices at U positions and may carry a cabinet shell finish.
+A durable fixed-height cabinet, usually 42U and 1000 mm deep, that belongs to one Site and one Server Room. Stored in `itops_site_racks`; it holds Rack Devices at U positions and carries physical depth plus an optional cabinet shell finish.
 _Avoid_: shelf, cabinet group, host group
 
 **Rack View**:
@@ -157,19 +158,19 @@ The single-Rack drill-down stage. It centers one Rack elevation and can show per
 _Avoid_: terminal rack, device session view
 
 **Rack Device**:
-One visual device occupying a contiguous U span in a Rack. It may be Connection-backed (opens the referenced Connection's Session on click) or passive (switch, PDU, patch panel, blank, label, or other visual/inventory item). Stored in `itops_fleet_rack_items`; older code and schema names may still say `RackItem`.
+One visual device occupying a contiguous U span in a Rack. It may be Connection-backed (opens the referenced Connection's Session on click) or passive (switch, PDU, patch panel, blank, label, or other visual/inventory item). Stored in `itops_site_rack_items`; older code and schema names may still say `RackItem`.
 _Avoid_: slot, node, host card
 
 **Rack Device Type**:
-The device kind used to render behavior and faceplate visuals, such as connection, server, storage, switch, router, firewall, PDU, UPS, KVM, patch panel, equipment, general, blank, or label. Type is presentation/inventory metadata, not a Connection type.
+The device kind used to render behavior and faceplate visuals, such as server, storage, switch, router, firewall, PDU, UPS, KVM, patch panel, equipment, general, blank, or label. Type is presentation/inventory metadata, not a Connection type. Connections are associated separately through Rack Device bindings.
 _Avoid_: connection type, transport, session kind
 
 **Rack Device Properties**:
-Non-secret presentation metadata for a Rack Device: label, U position, height, status, accent, icon, notes, shell/faceplate fields, and kind-specific values such as ports, disks, battery, or load. These properties do not store live Session state or credentials.
+Non-secret presentation metadata for a Rack Device: label, U position, height, status, accent, icon, notes, shell/faceplate fields, kind-specific values such as ports, disks, battery, or load, and optional Connection bindings. These properties do not store live Session state or credentials. The editor groups them into type, appearance, and metadata columns; bindings use a separate dialog.
 _Avoid_: secrets, runtime status, connection settings
 
 **Batch Run**:
-One execution of a Batch Task (a one-shot script or an interactive, expect-style playbook) across a resolved Fleet, fanned out with bounded concurrency over a per-host transport (SSH, WinRM, or PsExec). Live per-host progress streams to the run grid as it happens; on completion a consolidated report — including each host's captured output — is written to `itops_run_history`, where it can be reopened as a read-only Run Report. The run is live runtime, not a durable definition.
+One execution of a Batch Task (a one-shot script or an interactive, expect-style playbook) across a resolved Site, fanned out with bounded concurrency over a per-host transport (SSH, WinRM, or PsExec). Live per-host progress streams to the run grid as it happens; on completion a consolidated report — including each host's captured output — is written to `itops_run_history`, where it can be reopened as a read-only Run Report. The run is live runtime, not a durable definition.
 _Avoid_: broadcast, job, deployment
 
 **Playbook**:

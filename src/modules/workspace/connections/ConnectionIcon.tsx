@@ -76,6 +76,25 @@ export function connectionIconSrcForConnection({
   return CONNECTION_ICON_SRC[type];
 }
 
+/**
+ * Whether a Connection-style icon can have its foreground color recolored. Only
+ * inline Lucide SVG glyphs honor `--connection-icon-fg`; every other icon (the
+ * default protocol PNGs, brand/OS/Material artwork, and saved/chosen raster or
+ * SVG images) renders as an `<img>` and ignores the foreground color.
+ */
+export function iconSupportsForegroundColor({
+  iconDataUrl,
+  localShell,
+  type,
+}: {
+  iconDataUrl?: string | null;
+  localShell?: string;
+  type: ConnectionType;
+}) {
+  const src = connectionIconSrcForConnection({ iconDataUrl, localShell, type });
+  return lucideIconNameFromRef(src) !== null;
+}
+
 export function ConnectionIcon({
   className,
   iconBackgroundColor,

@@ -12,7 +12,7 @@ use std::{
 use time::{OffsetDateTime, format_description::well_known::Rfc3339};
 use zip::{ZipArchive, ZipWriter, write::SimpleFileOptions};
 
-const SCHEMA_USER_VERSION: i32 = 36;
+const SCHEMA_USER_VERSION: i32 = 39;
 
 const DEFAULT_TERMINAL_OPACITY: u8 = 50;
 
@@ -279,11 +279,11 @@ CREATE TABLE IF NOT EXISTS installer_tool_state (
     last_check_at INTEGER
 );
 
--- IT Ops Module (docs/ITOPS.md). A Fleet is a durable, named selection of
--- existing Connections used as a fleet target for Batch Runs and Automations.
+-- IT Ops Module (docs/ITOPS.md). A Site is a durable, named selection of
+-- existing Connections used as a site target for Batch Runs and Automations.
 -- It references Connection ids and owns no Session and no secret. Additive in
 -- schema v29.
-CREATE TABLE IF NOT EXISTS itops_fleets (
+CREATE TABLE IF NOT EXISTS itops_sites (
     id              TEXT PRIMARY KEY,
     name            TEXT NOT NULL,
     sort_order      INTEGER NOT NULL,
@@ -294,7 +294,7 @@ CREATE TABLE IF NOT EXISTS itops_fleets (
     -- Per-host-group transport default.
     transport       TEXT NOT NULL DEFAULT 'auto'
         CHECK (transport IN ('ssh', 'winrm', 'psexec', 'auto')),
-    -- Rack View customization: Fleet-view background + per-server-room map.
+    -- Rack View customization: Site-view background + per-server-room map.
     background_json       TEXT,
     room_backgrounds_json TEXT,
     -- Custom icon (data URL or icon ref), foreground colour, and background colour.
@@ -307,14 +307,27 @@ CREATE TABLE IF NOT EXISTS itops_fleets (
     updated_at      TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS itops_server_rooms (
+    id         TEXT PRIMARY KEY,
+    site_id    TEXT NOT NULL REFERENCES itops_sites(id) ON DELETE CASCADE,
+    name       TEXT NOT NULL,
+    sort_order INTEGER NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(site_id, name)
+);
+
+CREATE INDEX IF NOT EXISTS idx_itops_server_rooms_site
+    ON itops_server_rooms(site_id, sort_order);
+
 -- One completed Batch Run (docs/ITOPS.md Phase 2). Append-only audit log; the
--- fleet_id is a soft reference (no FK) so a run survives its group being
+-- site_id is a soft reference (no FK) so a run survives its group being
 -- deleted. Live run progress is in-memory only and never lands here. v30.
 CREATE TABLE IF NOT EXISTS itops_run_history (
     id             TEXT PRIMARY KEY,
     -- 'manual' or 'automation:<automation_id>'.
     source         TEXT NOT NULL,
-    fleet_id  TEXT,
+    site_id  TEXT,
     -- Redacted one-line task label, never a secret-bearing script body.
     task_summary   TEXT NOT NULL,
     started_at     TEXT NOT NULL,
@@ -342,32 +355,33 @@ CREATE TABLE IF NOT EXISTS itops_automations (
     updated_at   TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- Fleet topology (docs/FLEET.md Phase B). A Rack is a fixed-height cabinet that
--- belongs to one Fleet, grouped visually by region + area. v35.
-CREATE TABLE IF NOT EXISTS itops_fleet_racks (
+-- Site topology (docs/SITE.md Phase B). A Rack is a fixed-height cabinet that
+-- belongs to one Site, grouped visually by region + area. v35.
+CREATE TABLE IF NOT EXISTS itops_site_racks (
     id          TEXT PRIMARY KEY,
-    fleet_id    TEXT NOT NULL REFERENCES itops_fleets(id) ON DELETE CASCADE,
+    site_id    TEXT NOT NULL REFERENCES itops_sites(id) ON DELETE CASCADE,
     name        TEXT NOT NULL,
     server_room TEXT NOT NULL DEFAULT '',
     rack_group  TEXT NOT NULL DEFAULT '',
     shell       TEXT,
     background_json TEXT,
     height_u    INTEGER NOT NULL DEFAULT 42,
+    depth_mm    INTEGER NOT NULL DEFAULT 1000,
     sort_order  INTEGER NOT NULL,
     created_at  TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at  TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX IF NOT EXISTS idx_itops_fleet_racks_fleet
-    ON itops_fleet_racks(fleet_id, sort_order);
+CREATE INDEX IF NOT EXISTS idx_itops_site_racks_site
+    ON itops_site_racks(site_id, sort_order);
 
 -- One device occupying a contiguous U span in a Rack. Connection-backed when
 -- connection_id is set; passive otherwise. connection_id is a SOFT reference
 -- (no FK): a placed host whose Connection is later deleted becomes a flagged
 -- "ghost" item the UI surfaces, rather than vanishing the rack layout. v35.
-CREATE TABLE IF NOT EXISTS itops_fleet_rack_items (
+CREATE TABLE IF NOT EXISTS itops_site_rack_items (
     id            TEXT PRIMARY KEY,
-    rack_id       TEXT NOT NULL REFERENCES itops_fleet_racks(id) ON DELETE CASCADE,
+    rack_id       TEXT NOT NULL REFERENCES itops_site_racks(id) ON DELETE CASCADE,
     connection_id TEXT,
     -- 'connection' | 'switch' | 'pdu' | 'patchPanel' | 'blank' | 'label' | 'server'
     kind          TEXT NOT NULL,
@@ -379,8 +393,8 @@ CREATE TABLE IF NOT EXISTS itops_fleet_rack_items (
     updated_at    TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX IF NOT EXISTS idx_itops_fleet_rack_items_rack
-    ON itops_fleet_rack_items(rack_id, start_u);
+CREATE INDEX IF NOT EXISTS idx_itops_site_rack_items_rack
+    ON itops_site_rack_items(rack_id, start_u);
 "#;
 
 pub struct Storage {
@@ -1785,8 +1799,8 @@ impl Storage {
     }
 
     /// Fetch a single Connection by id, across all Workspaces. Used by the IT
-    /// Ops Fleet Rack View to open a placed Connection's Session (docs/FLEET.md
-    /// Phase D); a Fleet may reference Connections in any Workspace, so this is
+    /// Ops Site Rack View to open a placed Connection's Session (docs/SITE.md
+    /// Phase D); a Site may reference Connections in any Workspace, so this is
     /// not Workspace-scoped.
     pub fn get_connection(&self, connection_id: &str) -> Result<SavedConnection, String> {
         let connection = self.lock()?;
@@ -1879,11 +1893,71 @@ impl Storage {
                 )
                 .map_err(to_storage_error)?;
         }
+        // v37: IT Ops "Fleet" -> "Site" rename. Rename the durable tables and the
+        // soft-reference column in place *before* CURRENT_SCHEMA runs, so its
+        // `CREATE TABLE IF NOT EXISTS itops_site*` statements see them already
+        // present (a no-op) and the existing rows/columns are preserved. SQLite
+        // rewrites the child FK references when a parent table is renamed, so the
+        // rack/item foreign keys follow automatically. Each step is guarded by an
+        // existence check: it runs once on upgrade and no-ops on fresh installs.
+        if table_exists(&connection, "itops_fleets")?
+            && !table_exists(&connection, "itops_sites")?
+        {
+            connection
+                .execute_batch("ALTER TABLE itops_fleets RENAME TO itops_sites;")
+                .map_err(to_storage_error)?;
+        }
+        if table_exists(&connection, "itops_fleet_racks")?
+            && !table_exists(&connection, "itops_site_racks")?
+        {
+            if column_exists(&connection, "itops_fleet_racks", "fleet_id")?
+                && !column_exists(&connection, "itops_fleet_racks", "site_id")?
+            {
+                connection
+                    .execute(
+                        "ALTER TABLE itops_fleet_racks RENAME COLUMN fleet_id TO site_id",
+                        [],
+                    )
+                    .map_err(to_storage_error)?;
+            }
+            connection
+                .execute_batch("ALTER TABLE itops_fleet_racks RENAME TO itops_site_racks;")
+                .map_err(to_storage_error)?;
+        }
+        if table_exists(&connection, "itops_fleet_rack_items")?
+            && !table_exists(&connection, "itops_site_rack_items")?
+        {
+            connection
+                .execute_batch(
+                    "ALTER TABLE itops_fleet_rack_items RENAME TO itops_site_rack_items;",
+                )
+                .map_err(to_storage_error)?;
+        }
+        if column_exists(&connection, "itops_run_history", "fleet_id")?
+            && !column_exists(&connection, "itops_run_history", "site_id")?
+        {
+            connection
+                .execute(
+                    "ALTER TABLE itops_run_history RENAME COLUMN fleet_id TO site_id",
+                    [],
+                )
+                .map_err(to_storage_error)?;
+        }
         connection
             .execute_batch(CURRENT_SCHEMA)
             .map_err(to_storage_error)?;
-        // v34: IT Ops "Host Group" -> "Fleet" rename (docs/FLEET.md Phase A).
-        // CURRENT_SCHEMA now defines `itops_fleets`; copy any legacy
+        // The default Site row keeps its legacy "default-fleet" id (an opaque key)
+        // but its display name is migrated to "Default Site" for upgraded installs;
+        // INSERT OR IGNORE in ensure_default_site never updates an existing row.
+        connection
+            .execute(
+                "UPDATE itops_sites SET name = 'Default Site' \
+                 WHERE id = 'default-fleet' AND name = 'Default Fleet'",
+                [],
+            )
+            .map_err(to_storage_error)?;
+        // v34: IT Ops "Host Group" -> "Site" rename (docs/SITE.md Phase A).
+        // CURRENT_SCHEMA now defines `itops_sites`; copy any legacy
         // `itops_host_groups` rows into it and drop the old table. Guarded by an
         // existence check so it runs once on upgrade and is a no-op on fresh
         // installs (which never create the legacy table).
@@ -1891,7 +1965,7 @@ impl Storage {
             connection
                 .execute_batch(
                     r#"
-                    INSERT INTO itops_fleets
+                    INSERT INTO itops_sites
                         (id, name, sort_order, member_ids_json, filter_json, transport, created_at, updated_at)
                     SELECT id, name, sort_order, member_ids_json, filter_json, transport, created_at, updated_at
                     FROM itops_host_groups;
@@ -1904,11 +1978,11 @@ impl Storage {
         // is a soft ref (no FK), so a plain RENAME COLUMN is safe; guard on the
         // legacy column still being present.
         if column_exists(&connection, "itops_run_history", "host_group_id")?
-            && !column_exists(&connection, "itops_run_history", "fleet_id")?
+            && !column_exists(&connection, "itops_run_history", "site_id")?
         {
             connection
                 .execute(
-                    "ALTER TABLE itops_run_history RENAME COLUMN host_group_id TO fleet_id",
+                    "ALTER TABLE itops_run_history RENAME COLUMN host_group_id TO site_id",
                     [],
                 )
                 .map_err(to_storage_error)?;
@@ -1922,30 +1996,43 @@ impl Storage {
             "actions_json",
             "TEXT NOT NULL DEFAULT '[]'",
         )?;
-        // Rack View topology is Fleet → Server Room → Rack, plus a cabinet shell
+        // Rack View topology is Site → Server Room → Rack, plus a cabinet shell
         // colour. Legacy region/datacenter/area columns are retired in place.
         ensure_column(
             &connection,
-            "itops_fleet_racks",
+            "itops_site_racks",
             "server_room",
             "TEXT NOT NULL DEFAULT ''",
         )?;
-        ensure_column(&connection, "itops_fleet_racks", "shell", "TEXT")?;
-        // Rack View customization: per-rack group tag + per-view Dashboard
-        // backgrounds (fleet card grid, per server room, single rack stage).
+        ensure_column(&connection, "itops_site_racks", "shell", "TEXT")?;
         ensure_column(
             &connection,
-            "itops_fleet_racks",
+            "itops_site_racks",
+            "depth_mm",
+            "INTEGER NOT NULL DEFAULT 1000",
+        )?;
+        // Rack View customization: per-rack group tag + per-view Dashboard
+        // backgrounds (site card grid, per server room, single rack stage).
+        ensure_column(
+            &connection,
+            "itops_site_racks",
             "rack_group",
             "TEXT NOT NULL DEFAULT ''",
         )?;
-        ensure_column(&connection, "itops_fleet_racks", "background_json", "TEXT")?;
-        ensure_column(&connection, "itops_fleets", "background_json", "TEXT")?;
-        ensure_column(&connection, "itops_fleets", "room_backgrounds_json", "TEXT")?;
-        ensure_column(&connection, "itops_fleets", "icon_color", "TEXT")?;
-        ensure_column(&connection, "itops_fleets", "icon_data_url", "TEXT")?;
-        ensure_column(&connection, "itops_fleets", "icon_background_color", "TEXT")?;
-        ensure_column(&connection, "itops_fleets", "room_icons_json", "TEXT")?;
+        ensure_column(&connection, "itops_site_racks", "background_json", "TEXT")?;
+        ensure_column(&connection, "itops_sites", "background_json", "TEXT")?;
+        ensure_column(&connection, "itops_sites", "room_backgrounds_json", "TEXT")?;
+        ensure_column(&connection, "itops_sites", "icon_color", "TEXT")?;
+        ensure_column(&connection, "itops_sites", "icon_data_url", "TEXT")?;
+        ensure_column(&connection, "itops_sites", "icon_background_color", "TEXT")?;
+        ensure_column(&connection, "itops_sites", "room_icons_json", "TEXT")?;
+        connection.execute_batch(
+            "INSERT OR IGNORE INTO itops_server_rooms (id, site_id, name, sort_order)
+             SELECT 'room-legacy-' || lower(hex(randomblob(12))), site_id, server_room, 0
+             FROM itops_site_racks
+             WHERE trim(server_room) <> ''
+             GROUP BY site_id, server_room;",
+        ).map_err(to_storage_error)?;
         ensure_column(&connection, "connections", "rdp_options", "TEXT")?;
         ensure_column(&connection, "connections", "vnc_options", "TEXT")?;
         ensure_column(&connection, "connections", "ftp_options", "TEXT")?;
@@ -3981,6 +4068,20 @@ fn normalize_ssh_optional_field(value: Option<String>, connection_type: &str) ->
         .filter(|value| !value.is_empty())
 }
 
+fn normalize_ssh_auth_key_path(
+    value: Option<String>,
+    connection_type: &str,
+    ftp_options: &Option<crate::ftp::FtpOptions>,
+) -> Option<String> {
+    if connection_type != "ssh" && !is_sftp_protocol_ftp_connection(connection_type, ftp_options) {
+        return None;
+    }
+
+    value
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+}
+
 /// Normalize a per-connection SSH compression override. Only SSH connections
 /// carry it; `None` (or any non-SSH type) means "inherit the global default".
 /// The only meaningful explicit values are `off` and `fast` (russh's zlib level
@@ -4195,12 +4296,16 @@ fn normalize_auth_method(
     value: Option<String>,
     connection_type: &str,
     key_path: &Option<String>,
+    ftp_options: &Option<crate::ftp::FtpOptions>,
 ) -> Result<String, String> {
-    if connection_type == "telnet" {
+    if connection_type == "telnet"
+        || (connection_type == "ftp"
+            && !is_sftp_protocol_ftp_connection(connection_type, ftp_options))
+    {
         return Ok("password".to_string());
     }
 
-    if connection_type != "ssh" {
+    if connection_type != "ssh" && !is_sftp_protocol_ftp_connection(connection_type, ftp_options) {
         return Ok("keyFile".to_string());
     }
 
@@ -4216,6 +4321,16 @@ fn normalize_auth_method(
         None if key_path.is_some() => Ok("keyFile".to_string()),
         None => Ok("agent".to_string()),
     }
+}
+
+fn is_sftp_protocol_ftp_connection(
+    connection_type: &str,
+    ftp_options: &Option<crate::ftp::FtpOptions>,
+) -> bool {
+    connection_type == "ftp"
+        && ftp_options
+            .as_ref()
+            .is_some_and(|options| options.protocol == crate::ftp::FtpProtocol::Sftp)
 }
 
 fn folder_name_for(folder_id: &str) -> &str {

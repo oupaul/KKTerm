@@ -1,4 +1,4 @@
-// IT Ops durable types (docs/ITOPS.md). Phase 1 covers Fleets, Phase 2 the
+// IT Ops durable types (docs/ITOPS.md). Phase 1 covers Sites, Phase 2 the
 // Batch Run report shapes, and Phase 3 the durable Automation.
 
 use std::collections::HashMap;
@@ -67,9 +67,9 @@ pub enum AutomationAction {
     },
     RunBatch {
         // `hostGroupId` alias keeps Automation actions persisted before the
-        // Fleet rename (docs/FLEET.md Phase A) deserializable from actions_json.
+        // Site rename (docs/SITE.md Phase A) deserializable from actions_json.
         #[serde(alias = "hostGroupId")]
-        fleet_id: String,
+        site_id: String,
         task: BatchTask,
     },
 }
@@ -78,7 +78,7 @@ fn default_webhook_method() -> String {
     "POST".to_string()
 }
 
-/// How a Batch Run reaches one host. Stored per Fleet as the default;
+/// How a Batch Run reaches one host. Stored per Site as the default;
 /// `Auto` means "derive from the Connection at run time" (resolved in Phase 2+).
 #[derive(Clone, Copy, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -111,12 +111,12 @@ impl Transport {
     }
 }
 
-/// Optional dynamic membership filter resolved at run time: a Fleet picks up
+/// Optional dynamic membership filter resolved at run time: a Site picks up
 /// later-added Connections that match these criteria. An empty filter is treated
 /// as "no filter" and stored as NULL.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-pub struct FleetFilter {
+pub struct SiteFilter {
     /// Connection `connection_type` values to include (e.g. `["ssh"]`).
     #[serde(default)]
     pub types: Vec<String>,
@@ -125,13 +125,13 @@ pub struct FleetFilter {
     pub folder_id: Option<String>,
 }
 
-impl FleetFilter {
+impl SiteFilter {
     pub fn is_empty(&self) -> bool {
         self.types.is_empty() && self.folder_id.is_none()
     }
 }
 
-/// Icon + background colour for a server room, stored on the owning Fleet.
+/// Icon + background colour for a server room, stored on the owning Site.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RoomIcon {
@@ -143,24 +143,33 @@ pub struct RoomIcon {
     pub icon_background_color: Option<String>,
 }
 
-/// A durable, named selection of existing Connections used as a fleet target.
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct ServerRoom {
+    pub id: String,
+    pub site_id: String,
+    pub name: String,
+    pub sort_order: i64,
+}
+
+/// A durable, named selection of existing Connections used as a site target.
 /// References Connection ids; owns no Session and no secret.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Fleet {
+pub struct Site {
     pub id: String,
     pub name: String,
     pub sort_order: i64,
     pub member_ids: Vec<String>,
     #[serde(default)]
-    pub filter: Option<FleetFilter>,
+    pub filter: Option<SiteFilter>,
     pub transport: Transport,
-    /// Custom background for the Fleet (server-room cards) view; reuses the
+    /// Custom background for the Site (server-room cards) view; reuses the
     /// Dashboard background machinery. None = theme default.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub background: Option<DashboardBackground>,
     /// Per-server-room backgrounds, keyed by the room's string tag. Rooms are
-    /// not entities, so their backgrounds live as a map on the owning Fleet.
+    /// not entities, so their backgrounds live as a map on the owning Site.
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub room_backgrounds: HashMap<String, DashboardBackground>,
     /// Custom icon (data URL or lucide/material ref), foreground colour, and background colour.
@@ -175,15 +184,15 @@ pub struct Fleet {
     pub room_icons: HashMap<String, RoomIcon>,
 }
 
-/// A Rack in a Fleet's virtual datacenter (docs/FLEET.md): a fixed-height cabinet
+/// A Rack in a Site's virtual datacenter (docs/SITE.md): a fixed-height cabinet
 /// grouped by `server_room`, holding Rack Devices at U positions. `items` is
 /// hydrated on read (storage joins the items in U order). The topology is
-/// Fleet → Server Room → Rack; older region/datacenter/area fields are retired.
+/// Site → Server Room → Rack; older region/datacenter/area fields are retired.
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Rack {
     pub id: String,
-    pub fleet_id: String,
+    pub site_id: String,
     pub name: String,
     #[serde(default)]
     pub server_room: String,
@@ -197,6 +206,8 @@ pub struct Rack {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub background: Option<DashboardBackground>,
     pub height_u: u32,
+    /// Physical cabinet depth in millimetres.
+    pub depth_mm: u32,
     pub sort_order: i64,
     #[serde(default)]
     pub items: Vec<RackItem>,
@@ -269,16 +280,6 @@ impl RackItemKind {
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-pub struct RackAuditRecord {
-    pub id: String,
-    pub action: String,
-    pub label: String,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub occurred_at: Option<String>,
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
 pub struct RackNetworkPort {
     pub name: String,
     pub speed: String,
@@ -288,37 +289,6 @@ pub struct RackNetworkPort {
     pub oid: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub note: Option<String>,
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-pub struct RackRelationship {
-    pub kind: String,
-    pub label: String,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub related_item_ids: Option<Vec<String>>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub related_connection_ids: Option<Vec<String>>,
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-pub struct RackIpamAddress {
-    pub address: String,
-    pub family: String,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub role: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub vlan: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub mac: Option<String>,
-}
-
-#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-pub struct RackIpamMetadata {
-    #[serde(default)]
-    pub addresses: Vec<RackIpamAddress>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
@@ -337,22 +307,8 @@ pub struct RackSnmpHint {
 
 #[derive(Deserialize)]
 #[serde(untagged)]
-enum AuditRecordCompat {
-    Typed(RackAuditRecord),
-    Legacy(String),
-}
-
-#[derive(Deserialize)]
-#[serde(untagged)]
 enum NetworkPortCompat {
     Typed(RackNetworkPort),
-    Legacy(String),
-}
-
-#[derive(Deserialize)]
-#[serde(untagged)]
-enum RelationshipCompat {
-    Typed(RackRelationship),
     Legacy(String),
 }
 
@@ -361,70 +317,6 @@ enum RelationshipCompat {
 enum SnmpCompat {
     Typed(RackSnmpHint),
     Legacy(String),
-}
-
-fn audit_action_from_text(value: &str) -> &'static str {
-    let lower = value.to_ascii_lowercase();
-    if value.contains("上架") || lower.contains("install") {
-        "installed"
-    } else if value.contains("下架") || lower.contains("remove") {
-        "removed"
-    } else if lower.contains("cabl") || value.contains('線') || value.contains('线') {
-        "cabling"
-    } else if lower.contains("maint") || value.contains("維護") || value.contains("维护") {
-        "maintenance"
-    } else {
-        "note"
-    }
-}
-
-fn relationship_kind_from_text(value: &str) -> &'static str {
-    let lower = value.to_ascii_lowercase();
-    if lower.contains("host/vm") || lower.contains("host vm") {
-        "hostVm"
-    } else if lower.contains("storage/ap") || lower.contains("storage ap") {
-        "storageAp"
-    } else if lower.contains("vsan") {
-        "vsan"
-    } else if lower == "san" {
-        "san"
-    } else if lower.contains("nas") {
-        "nas"
-    } else if lower.contains("hyper") {
-        "hyperConverged"
-    } else {
-        "custom"
-    }
-}
-
-fn deserialize_audit_records<'de, D>(
-    deserializer: D,
-) -> Result<Option<Vec<RackAuditRecord>>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let values = Option::<Vec<AuditRecordCompat>>::deserialize(deserializer)?;
-    Ok(values.map(|entries| {
-        entries
-            .into_iter()
-            .enumerate()
-            .filter_map(|(index, entry)| match entry {
-                AuditRecordCompat::Typed(mut record) => {
-                    record.label = record.label.trim().to_string();
-                    (!record.label.is_empty()).then_some(record)
-                }
-                AuditRecordCompat::Legacy(label) => {
-                    let label = label.trim().to_string();
-                    (!label.is_empty()).then(|| RackAuditRecord {
-                        id: format!("audit-{index}"),
-                        action: audit_action_from_text(&label).to_string(),
-                        label,
-                        occurred_at: None,
-                    })
-                }
-            })
-            .collect()
-    }))
 }
 
 fn deserialize_network_ports<'de, D>(
@@ -467,28 +359,6 @@ where
                 }
             })
             .collect()
-    }))
-}
-
-fn deserialize_relationship<'de, D>(deserializer: D) -> Result<Option<RackRelationship>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let value = Option::<RelationshipCompat>::deserialize(deserializer)?;
-    Ok(value.and_then(|entry| match entry {
-        RelationshipCompat::Typed(mut relationship) => {
-            relationship.label = relationship.label.trim().to_string();
-            (!relationship.label.is_empty()).then_some(relationship)
-        }
-        RelationshipCompat::Legacy(label) => {
-            let label = label.trim().to_string();
-            (!label.is_empty()).then(|| RackRelationship {
-                kind: relationship_kind_from_text(&label).to_string(),
-                label,
-                related_item_ids: None,
-                related_connection_ids: None,
-            })
-        }
     }))
 }
 
@@ -560,12 +430,6 @@ pub struct RackItemMetadata {
     pub yaw: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tags: Option<Vec<String>>,
-    #[serde(
-        default,
-        deserialize_with = "deserialize_audit_records",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub audit_records: Option<Vec<RackAuditRecord>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub connection_ids: Option<Vec<String>>,
     #[serde(
@@ -580,14 +444,6 @@ pub struct RackItemMetadata {
         skip_serializing_if = "Option::is_none"
     )]
     pub snmp: Option<RackSnmpHint>,
-    #[serde(
-        default,
-        deserialize_with = "deserialize_relationship",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub relationship: Option<RackRelationship>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub ipam: Option<RackIpamMetadata>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub kuaiguai_size: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -612,8 +468,8 @@ pub struct RackItem {
     pub metadata: RackItemMetadata,
 }
 
-/// Optional narrowing of a Batch Run to part of a Fleet's rack topology
-/// (docs/FLEET.md Phase D). When set, only the placed Connection items in the
+/// Optional narrowing of a Batch Run to part of a Site's rack topology
+/// (docs/SITE.md Phase D). When set, only the placed Connection items in the
 /// matching racks are targeted. All provided (non-empty) fields must match.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -631,7 +487,7 @@ impl RunScope {
     }
 }
 
-/// One concrete fleet target produced by resolving a Fleet at run time.
+/// One concrete site target produced by resolving a Site at run time.
 /// Lightweight and secret-free — the seam the Phase 2 Batch Run executor builds
 /// on. Passwords/keys are never carried here; they stay in the keychain.
 #[derive(Clone, Debug, Serialize, PartialEq, Eq)]
@@ -795,7 +651,7 @@ pub struct RunReport {
 pub struct RunHistoryEntry {
     pub id: String,
     pub source: String,
-    pub fleet_id: Option<String>,
+    pub site_id: Option<String>,
     pub task_summary: String,
     pub started_at: String,
     pub finished_at: Option<String>,
@@ -819,7 +675,7 @@ pub struct RunEventHost {
 pub enum RunEvent {
     Started {
         run_id: String,
-        fleet_id: Option<String>,
+        site_id: Option<String>,
         task_summary: String,
         hosts: Vec<RunEventHost>,
     },

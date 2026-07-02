@@ -51,6 +51,9 @@ for (const { id, asset } of [
   { id: "bentopdf", asset: "bentopdf.svg" },
   { id: "bun", asset: "bun.svg" },
   { id: "openflowkit", asset: "openflowkit.svg" },
+  { id: "drawio", asset: "drawio.svg" },
+  { id: "krita", asset: "krita.svg" },
+  { id: "inkscape", asset: "inkscape.svg" },
   { id: "scrcpy", asset: "scrcpy.svg" },
 ]) {
   test(`${id} uses a bundled Install Helper icon`, async () => {

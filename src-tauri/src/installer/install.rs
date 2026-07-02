@@ -900,11 +900,14 @@ fn parse_first_semver(text: &str) -> Option<String> {
 
 fn effective_install_options(recipe: &Recipe, options: &InstallOptions) -> InstallOptions {
     let mut next = options.clone();
-    if matches!(recipe.provider, Provider::Winget { .. })
-        && recipe.options.contains(&RecipeOption::Scope)
-        && next.scope.as_deref().unwrap_or_default().trim().is_empty()
-    {
-        next.scope = Some("user".into());
+    if matches!(recipe.provider, Provider::Winget { .. }) {
+        if recipe.options.contains(&RecipeOption::Scope) {
+            if next.scope.as_deref().unwrap_or_default().trim().is_empty() {
+                next.scope = Some("user".into());
+            }
+        } else {
+            next.scope = None;
+        }
     }
     next
 }
@@ -2749,6 +2752,20 @@ mod tests {
     fn winget_recipe_without_scope_option_does_not_gain_scope() {
         let recipe = winget_recipe_with_options(vec![super::super::schema::RecipeOption::Version]);
         let effective = effective_install_options(&recipe, &InstallOptions::default());
+
+        assert_eq!(effective.scope, None);
+    }
+
+    #[test]
+    fn winget_recipe_without_scope_option_ignores_incoming_scope() {
+        let recipe = winget_recipe_with_options(vec![super::super::schema::RecipeOption::Version]);
+        let effective = effective_install_options(
+            &recipe,
+            &InstallOptions {
+                scope: Some("user".into()),
+                ..InstallOptions::default()
+            },
+        );
 
         assert_eq!(effective.scope, None);
     }

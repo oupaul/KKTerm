@@ -34,7 +34,7 @@ pub fn insert_run_report(
     conn: &SqliteConnection,
     id: &str,
     source: &str,
-    fleet_id: Option<&str>,
+    site_id: Option<&str>,
     task_summary: &str,
     started_at: &str,
     finished_at: Option<&str>,
@@ -44,14 +44,14 @@ pub fn insert_run_report(
         serde_json::to_string(report).map_err(|error| RunStorageError::Serialize(error.to_string()))?;
     conn.execute(
         "INSERT INTO itops_run_history
-            (id, source, fleet_id, task_summary, started_at, finished_at, report_json)
+            (id, source, site_id, task_summary, started_at, finished_at, report_json)
          VALUES (?, ?, ?, ?, ?, ?, ?)",
-        params![id, source, fleet_id, task_summary, started_at, finished_at, report_json],
+        params![id, source, site_id, task_summary, started_at, finished_at, report_json],
     )?;
     Ok(RunHistoryEntry {
         id: id.to_string(),
         source: source.to_string(),
-        fleet_id: fleet_id.map(str::to_string),
+        site_id: site_id.map(str::to_string),
         task_summary: task_summary.to_string(),
         started_at: started_at.to_string(),
         finished_at: finished_at.map(str::to_string),
@@ -61,7 +61,7 @@ pub fn insert_run_report(
 
 pub fn list_run_history(conn: &SqliteConnection, limit: i64) -> Result<Vec<RunHistoryEntry>> {
     let mut stmt = conn.prepare(
-        "SELECT id, source, fleet_id, task_summary, started_at, finished_at, report_json
+        "SELECT id, source, site_id, task_summary, started_at, finished_at, report_json
          FROM itops_run_history
          ORDER BY started_at DESC, id DESC
          LIMIT ?",
@@ -82,11 +82,11 @@ pub fn list_run_history(conn: &SqliteConnection, limit: i64) -> Result<Vec<RunHi
     Ok(rows
         .into_iter()
         .map(
-            |(id, source, fleet_id, task_summary, started_at, finished_at, report_json)| {
+            |(id, source, site_id, task_summary, started_at, finished_at, report_json)| {
                 RunHistoryEntry {
                     id,
                     source,
-                    fleet_id,
+                    site_id,
                     task_summary,
                     started_at,
                     finished_at,
@@ -109,7 +109,7 @@ mod tests {
             CREATE TABLE itops_run_history (
                 id TEXT PRIMARY KEY,
                 source TEXT NOT NULL,
-                fleet_id TEXT,
+                site_id TEXT,
                 task_summary TEXT NOT NULL,
                 started_at TEXT NOT NULL,
                 finished_at TEXT,
@@ -174,7 +174,7 @@ mod tests {
         let history = list_run_history(&conn, 50).unwrap();
         assert_eq!(history.len(), 1);
         assert_eq!(history[0].id, "run-1");
-        assert_eq!(history[0].fleet_id.as_deref(), Some("hg-1"));
+        assert_eq!(history[0].site_id.as_deref(), Some("hg-1"));
         assert_eq!(history[0].report, report);
     }
 

@@ -8,7 +8,7 @@ import { Building2, Server, ShelvingUnit } from "lucide-react";
 
 export type ItIconName =
   | "ops"
-  | "fleet"
+  | "site"
   | "group"
   | "network"
   | "room"
@@ -49,6 +49,8 @@ export type ItIconName =
   | "popup"
   | "code"
   | "book"
+  | "download"
+  | "table"
   | "link"
   | "pulse"
   | "arrow"
@@ -88,7 +90,7 @@ function Svg({
 }
 
 const GLYPHS: Record<ItIconName, (p: GlyphProps) => ReactNode> = {
-  fleet: (p) => LucideGlyph(Building2, p),
+  site: (p) => LucideGlyph(Building2, p),
   ops: (p) => (
     <Svg {...p}>
       <path d="M4 5.5h16a1 1 0 0 1 1 1V9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6.5a1 1 0 0 1 1-1Z" />
@@ -357,6 +359,21 @@ const GLYPHS: Record<ItIconName, (p: GlyphProps) => ReactNode> = {
       <path d="M19 6.5V18" />
     </Svg>
   ),
+  download: (p) => (
+    <Svg {...p} sw={1.7}>
+      <path d="M12 4.5v9" />
+      <path d="M8 10l4 4 4-4" />
+      <path d="M5 19.5h14" />
+    </Svg>
+  ),
+  table: (p) => (
+    <Svg {...p} sw={1.5}>
+      <path d="M4.5 5.5h15v13h-15z" />
+      <path d="M4.5 10h15" />
+      <path d="M9.5 5.5v13" />
+      <path d="M14.5 5.5v13" />
+    </Svg>
+  ),
   link: (p) => (
     <Svg {...p} sw={1.6}>
       <path d="M10 13.5a3.5 3.5 0 0 0 5 0l2.5-2.5a3.5 3.5 0 0 0-5-5L11 7.5" />
@@ -409,8 +426,8 @@ export function ItIcon({
   return glyph({ size, sw: sw ?? 1.7 });
 }
 
-// Fleet-status accent palette for tiles and action chips. These are content
-// accents (a fleet's chosen colour, an action's category hue), not theme
+// Site-status accent palette for tiles and action chips. These are content
+// accents (a site's chosen colour, an action's category hue), not theme
 // chrome, so they live here as fixed values rather than scheme tokens.
 export const IT_ACCENTS = {
   blue: "#0a84ff",

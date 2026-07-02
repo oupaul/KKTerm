@@ -11,27 +11,27 @@ import "./itops.css";
 
 export function ItOpsPage({
   active,
-  fleetTreeCollapsed,
+  siteTreeCollapsed,
   onAssistantContextChange,
 }: {
   active: boolean;
-  fleetTreeCollapsed: boolean;
+  siteTreeCollapsed: boolean;
   onAssistantContextChange: (context: AssistantPageContext) => void;
 }) {
   const { t } = useTranslation();
-  const fleets = useItOpsStore((state) => state.fleets);
+  const sites = useItOpsStore((state) => state.sites);
   const runHistory = useItOpsStore((state) => state.runHistory);
   const automations = useItOpsStore((state) => state.automations);
   const activeRun = useItOpsStore((state) => state.activeRun);
-  const racksByFleet = useItOpsStore((state) => state.racksByFleet);
+  const racksBySite = useItOpsStore((state) => state.racksBySite);
 
   useEffect(() => {
-    // Compact rack-topology summary for whichever Fleets have had their Rack
+    // Compact rack-topology summary for whichever Sites have had their Rack
     // View opened (racks load on demand); never device-level detail or secrets.
-    const rackSummary = Object.entries(racksByFleet)
+    const rackSummary = Object.entries(racksBySite)
       .filter(([, racks]) => racks.length > 0)
-      .map(([fleetId, racks]) => {
-        const name = fleets.find((fleet) => fleet.id === fleetId)?.name ?? fleetId;
+      .map(([siteId, racks]) => {
+        const name = sites.find((site) => site.id === siteId)?.name ?? siteId;
         const devices = racks.reduce((sum, rack) => sum + rack.items.length, 0);
         return `${name} [${racks.length} racks, ${devices} placed devices]`;
       })
@@ -44,9 +44,9 @@ export function ItOpsPage({
       sourceLabel: `${t("itops.title")} context`,
       text: [
         "Active Module: IT Ops.",
-        "Tutorial targets: itops.fleetsTree for the left Fleets navigator and itops.fleetView for the right Fleet topology drill-down.",
-        `Fleets (${fleets.length}): ${fleets.map((group) => `${group.name} [${group.memberIds.length} saved members, ${group.transport}]`).join(", ") || "none"}.`,
-        `Rack topology (loaded Fleets only): ${rackSummary || "none loaded"}.`,
+        "Tutorial targets: itops.sitesTree for the left Sites navigator and itops.siteView for the right Site topology drill-down.",
+        `Sites (${sites.length}): ${sites.map((group) => `${group.name} [${group.memberIds.length} saved members, ${group.transport}]`).join(", ") || "none"}.`,
+        `Rack topology (loaded Sites only): ${rackSummary || "none loaded"}.`,
         `Automations (${automations.length}): ${automations.map((automation) => `${automation.name} [${automation.enabled ? "armed" : "disabled"}]`).join(", ") || "none"}.`,
         `Recent completed Batch Runs: ${runHistory.length}.`,
         activeRun
@@ -55,7 +55,7 @@ export function ItOpsPage({
         "For operational instructions, search and read the IT Ops chapter in the KKTerm Operation Manual before answering. Do not infer host output, scripts, secrets, or trigger details from this compact metadata.",
       ].join("\n"),
     });
-  }, [activeRun, automations, fleets, onAssistantContextChange, racksByFleet, runHistory, t]);
+  }, [activeRun, automations, sites, onAssistantContextChange, racksBySite, runHistory, t]);
 
   return (
     <section
@@ -63,7 +63,7 @@ export function ItOpsPage({
       aria-label={t("itops.title")}
       data-active={active ? "true" : "false"}
     >
-      <ItOpsModule fleetTreeCollapsed={fleetTreeCollapsed} />
+      <ItOpsModule siteTreeCollapsed={siteTreeCollapsed} />
     </section>
   );
 }

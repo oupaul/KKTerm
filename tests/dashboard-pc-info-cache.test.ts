@@ -32,6 +32,7 @@ test("PC Info normalizes snapshots cached before the detail schema expansion", (
   const normalized = parsePcInfoSnapshotCache(JSON.stringify(legacySnapshot));
 
   assert.ok(normalized);
+  assert.deepEqual(normalized.system, {});
   assert.deepEqual(normalized.battery, []);
   assert.deepEqual(normalized.network[0]?.subnetMasks, []);
   assert.deepEqual(normalized.network[0]?.ipAddresses, ["192.0.2.10"]);

@@ -11,6 +11,7 @@ import type {
   PcInfoNetworkAdapter,
   PcInfoOs,
   PcInfoSnapshot,
+  PcInfoSystem,
   PcInfoVolume,
 } from "./types";
 
@@ -55,6 +56,7 @@ export function normalizePcInfoSnapshot(value: unknown): PcInfoSnapshot | null {
     generatedAtUnixSeconds: value.generatedAtUnixSeconds as number,
     source: typeof value.source === "string" ? value.source : "",
     warnings: stringArray(value.warnings),
+    system: (isRecord(value.system) ? value.system : {}) as PcInfoSystem,
     os: value.os as PcInfoOs,
     cpu: value.cpu as PcInfoCpu,
     memory: {

@@ -5,13 +5,16 @@ import anthropicIcon from "../assets/installer-icons/anthropic.svg?url";
 import antigravityIcon from "../assets/installer-icons/antigravity.svg?url";
 import astralIcon from "../assets/installer-icons/astral.svg?url";
 import bentoPdfIcon from "../assets/installer-icons/bentopdf.svg?url";
+import blenderIcon from "../assets/installer-icons/blender.svg?url";
 import brunoIcon from "../assets/installer-icons/bruno.svg?url";
 import bunIcon from "../assets/installer-icons/bun.svg?url";
 import claudeCodeIcon from "../assets/installer-icons/claude-code.svg?url";
 import codexIcon from "../assets/installer-icons/codex.svg?url";
+import comfyuiIcon from "../assets/installer-icons/comfyui.svg?url";
 import cursorIcon from "../assets/installer-icons/cursor.svg?url";
 import dittoIcon from "../assets/installer-icons/ditto.png?url";
 import dockerIcon from "../assets/installer-icons/docker.svg?url";
+import drawioIcon from "../assets/installer-icons/drawio.svg?url";
 import everythingIcon from "../assets/installer-icons/everything.png?url";
 import excalidrawIcon from "../assets/installer-icons/excalidraw.svg?url";
 import ffmpegIcon from "../assets/installer-icons/ffmpeg.svg?url";
@@ -20,8 +23,11 @@ import geminiIcon from "../assets/installer-icons/gemini.svg?url";
 import gitIcon from "../assets/installer-icons/git.svg?url";
 import githubIcon from "../assets/installer-icons/github.svg?url";
 import hermesAgentIcon from "../assets/installer-icons/hermes-agent.svg?url";
+import inkscapeIcon from "../assets/installer-icons/inkscape.svg?url";
+import kritaIcon from "../assets/installer-icons/krita.svg?url";
 import langflowIcon from "../assets/installer-icons/langflow.svg?url";
 import linuxIcon from "../assets/installer-icons/linux.svg?url";
+import lmstudioIcon from "../assets/installer-icons/lmstudio.svg?url";
 import n8nIcon from "../assets/installer-icons/n8n.svg?url";
 import nodejsIcon from "../assets/installer-icons/nodedotjs.svg?url";
 import notepadppIcon from "../assets/installer-icons/notepadpp.svg?url";
@@ -63,14 +69,17 @@ const brandIconUrlById: Record<string, string> = {
   "claude-code": anthropicIcon,
   "claude-code-installer": claudeCodeIcon,
   codex: codexIcon,
+  comfyui: comfyuiIcon,
   opencode: opencodeIcon,
   cursor: cursorIcon,
   astral: astralIcon,
   bentopdf: bentoPdfIcon,
+  blender: blenderIcon,
   bruno: brunoIcon,
   bun: bunIcon,
   ditto: dittoIcon,
   docker: dockerIcon,
+  drawio: drawioIcon,
   everything: everythingIcon,
   excalidraw: excalidrawIcon,
   ffmpeg: ffmpegIcon,
@@ -78,7 +87,11 @@ const brandIconUrlById: Record<string, string> = {
   git: gitIcon,
   "github-cli": githubIcon,
   "hermes-agent": hermesAgentIcon,
+  "hermes-desktop": hermesAgentIcon,
+  inkscape: inkscapeIcon,
+  krita: kritaIcon,
   langflow: langflowIcon,
+  lmstudio: lmstudioIcon,
   n8n: n8nIcon,
   nodejs: nodejsIcon,
   notepadpp: notepadppIcon,

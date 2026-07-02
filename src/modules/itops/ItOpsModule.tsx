@@ -1,4 +1,4 @@
-// IT Ops Module shell. The visible module is Fleet-first; Batch Run and
+// IT Ops Module shell. The visible module is Site-first; Batch Run and
 // Automation runtime plumbing stays mounted so existing backend events and
 // programmatic run requests keep working while the tab UI is hidden.
 
@@ -11,7 +11,7 @@ import { isTauriRuntime } from "../../lib/tauri";
 import { useWorkspaceStore } from "../../store";
 import type { RunEvent, RunScope } from "../../types";
 import { ItIcon } from "./icons";
-import { FleetsTab } from "./FleetsTab";
+import { SitesTab } from "./SitesTab";
 import { BatchRunDialog } from "./BatchRunDialog";
 import { useItOpsStore } from "./state";
 
@@ -22,7 +22,7 @@ type AutomationActionEvent = {
   body?: string;
 };
 
-export function ItOpsModule({ fleetTreeCollapsed }: { fleetTreeCollapsed: boolean }) {
+export function ItOpsModule({ siteTreeCollapsed }: { siteTreeCollapsed: boolean }) {
   const { t } = useTranslation();
   const [batchDialogGroupId, setBatchDialogGroupId] = useState<string | null | undefined>(
     undefined,
@@ -34,7 +34,7 @@ export function ItOpsModule({ fleetTreeCollapsed }: { fleetTreeCollapsed: boolea
   );
 
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
-  const loadFleets = useItOpsStore((state) => state.loadFleets);
+  const loadSites = useItOpsStore((state) => state.loadSites);
   const loadRunHistory = useItOpsStore((state) => state.loadRunHistory);
   const loadAutomations = useItOpsStore((state) => state.loadAutomations);
   const applyRunEvent = useItOpsStore((state) => state.applyRunEvent);
@@ -43,10 +43,10 @@ export function ItOpsModule({ fleetTreeCollapsed }: { fleetTreeCollapsed: boolea
   const pendingRunScope = useItOpsStore((state) => state.pendingRunScope);
 
   useEffect(() => {
-    void loadFleets();
+    void loadSites();
     void loadRunHistory();
     void loadAutomations();
-  }, [loadFleets, loadRunHistory, loadAutomations]);
+  }, [loadSites, loadRunHistory, loadAutomations]);
 
   // Stream live Batch Run progress into the store.
   useEffect(() => {
@@ -99,8 +99,8 @@ export function ItOpsModule({ fleetTreeCollapsed }: { fleetTreeCollapsed: boolea
   return (
     <div className="it">
       <div className="it-content">
-        <FleetsTab
-          treeCollapsed={fleetTreeCollapsed}
+        <SitesTab
+          treeCollapsed={siteTreeCollapsed}
           renderSidebarHeader={({ collapsed }) => (
             <ModuleHeader className="it-head it-side-head">
               <ModuleIconTile className="it-head-tile" module="itops">

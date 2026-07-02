@@ -1,4 +1,4 @@
-// Rack front elevation (docs/FLEET.md Rack View). Renders one Rack as a
+// Rack front elevation (docs/SITE.md Rack View). Renders one Rack as a
 // skeuomorphic metal frame — rail caps, a U-number gutter, and a slatted device
 // column — with each Rack Device drawn as an animated <RackDevice> faceplate at
 // its U position (ported from the "IT Ops Racks" design comp). With callbacks
@@ -10,7 +10,7 @@
 import { useTranslation } from "react-i18next";
 import type { Rack, RackItem, RackItemStatus } from "../../types";
 import { ItIcon } from "./icons";
-import { normalizeRackItemMetadata, summarizeRackDeviceMetadata } from "./rackInventory";
+import { summarizeRackDeviceMetadata } from "./rackInventory";
 import { RackDevice } from "./RackDevice";
 
 // Pixel height of one rack unit (U) row. Kept in sync with `--rk-u` in CSS.
@@ -33,12 +33,15 @@ export function RackElevation({
   onSlotClick,
   onOpenItem,
   onEditItem,
+  onBindItem,
   onEditRack,
   onDeleteRack,
   onRunRack,
   onMoveItem,
+  onDeleteItem,
   isGhost,
   detailed,
+  editMode = false,
 }: {
   rack: Rack;
   /** Resolve a placed Connection's host/ip for the faceplate sub-line. */
@@ -46,17 +49,21 @@ export function RackElevation({
   onSlotClick?: (startU: number) => void;
   onOpenItem?: (item: RackItem) => void;
   onEditItem?: (item: RackItem) => void;
+  onBindItem?: (item: RackItem) => void;
   onEditRack?: (rack: Rack) => void;
   onDeleteRack?: (rack: Rack) => void;
   onRunRack?: (rack: Rack) => void;
   /** Drag-drop a device onto a U slot (move/restack, possibly across racks). */
   onMoveItem?: (itemId: string, targetRackId: string, startU: number) => void;
+  onDeleteItem?: (item: RackItem) => void;
   isGhost?: (item: RackItem) => boolean;
   /** Single-rack detail view: wider cabinet + a placed-device summary list. */
   detailed?: boolean;
+  editMode?: boolean;
 }) {
   const { t } = useTranslation();
   const editable = !!onEditItem;
+  const canMove = editMode && !!onMoveItem;
   // Top-to-bottom U numbers: heightU … 1.
   const unitNumbers = Array.from({ length: rack.heightU }, (_, i) => rack.heightU - i);
 
@@ -139,11 +146,11 @@ export function RackElevation({
         {onDeleteRack ? (
           <button
             type="button"
-            className="it-icon-btn sm"
+            className="it-icon-btn sm danger"
             title={t("itops.racks.deleteTitle")}
             onClick={() => onDeleteRack(rack)}
           >
-            <ItIcon name="trash" size={13} />
+            <ItIcon name="xmark" size={12} />
           </button>
         ) : null}
       </div>
@@ -163,7 +170,7 @@ export function RackElevation({
             ))}
             {/* Empty slots — clickable to add a device when editing; drop targets. */}
             {unitNumbers.map((u) =>
-              onSlotClick ? (
+              editMode && onSlotClick ? (
                 <button
                   type="button"
                   className="rk-slot rk-slot-btn"
@@ -172,7 +179,7 @@ export function RackElevation({
                   title={t("itops.racks.addAtUnit", { unit: u })}
                   onClick={() => onSlotClick(u)}
                   onDragOver={
-                    onMoveItem
+                    canMove
                       ? (event) => {
                           event.preventDefault();
                           event.dataTransfer.dropEffect = "move";
@@ -180,11 +187,11 @@ export function RackElevation({
                       : undefined
                   }
                   onDrop={
-                    onMoveItem
+                    canMove
                       ? (event) => {
                           event.preventDefault();
                           const itemId = event.dataTransfer.getData("application/x-itops-rack-item");
-                          if (itemId) onMoveItem(itemId, rack.id, u);
+                          if (itemId) onMoveItem?.(itemId, rack.id, u);
                         }
                       : undefined
                   }
@@ -201,6 +208,7 @@ export function RackElevation({
             {rack.items.map((item) => {
               const ghost = item.kind === "connection" && !!isGhost?.(item);
               const text = item.label || t(`itops.racks.kind.${item.kind}`);
+              const model = item.metadata?.vendor?.trim() || null;
               // A live host opens on click; everything else (passive, ghost) edits.
               const opens = item.kind === "connection" && !ghost && !!onOpenItem;
               const primary = opens ? () => onOpenItem!(item) : () => onEditItem?.(item);
@@ -214,7 +222,7 @@ export function RackElevation({
                 <RackDevice
                   kind={item.kind}
                   label={text}
-                  subLabel={hostFor?.(item) ?? null}
+                  subLabel={model ?? hostFor?.(item) ?? null}
                   status={ghost ? "offline" : itemStatus(item)}
                   ports={item.metadata?.ports ?? null}
                   disks={item.metadata?.disks ?? null}
@@ -244,11 +252,11 @@ export function RackElevation({
               return (
                 <div
                   key={item.id}
-                  className={`${className} rk-item-row${onMoveItem ? " draggable" : ""}`}
+                  className={`${className} rk-item-row${canMove ? " draggable" : ""}${editMode ? " editing" : ""}`}
                   style={style}
-                  draggable={!!onMoveItem}
+                  draggable={canMove}
                   onDragStart={
-                    onMoveItem
+                    canMove
                       ? (event) => {
                           event.dataTransfer.setData("application/x-itops-rack-item", item.id);
                           event.dataTransfer.effectAllowed = "move";
@@ -277,6 +285,29 @@ export function RackElevation({
                       <ItIcon name="edit" size={11} />
                     </button>
                   ) : null}
+                  <button
+                    type="button"
+                    className="rk-item-bind"
+                    title={t("itops.racks.bindingsAction")}
+                    aria-label={t("itops.racks.bindingsAction")}
+                    onClick={(event) => { event.stopPropagation(); onBindItem?.(item); }}
+                  >
+                    <ItIcon name="link" size={11} />
+                  </button>
+                  {editMode && onDeleteItem ? (
+                    <button
+                      type="button"
+                      className="rk-item-delete"
+                      title={t("itops.racks.deleteItemTitle")}
+                      aria-label={t("itops.racks.deleteItemTitle")}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onDeleteItem(item);
+                      }}
+                    >
+                      <ItIcon name="xmark" size={11} />
+                    </button>
+                  ) : null}
                 </div>
               );
             })}
@@ -292,8 +323,6 @@ export function RackElevation({
           ) : (
             placed.map((item) => {
               const status = itemStatus(item);
-              const metadata = normalizeRackItemMetadata(item.metadata ?? {});
-              const relationship = metadata.relationship;
               const summary = summarizeRackDeviceMetadata(item.metadata ?? {});
               return (
                 <button
@@ -310,11 +339,7 @@ export function RackElevation({
                     {`U${item.startU}`}
                     {item.heightU > 1 ? `–${item.startU + item.heightU - 1}` : ""}
                   </span>
-                  {relationship ? (
-                    <span className={`rack-relationship-badge ${relationship.kind}`}>
-                      {relationship.label}
-                    </span>
-                  ) : summary[0] ? (
+                  {summary[0] ? (
                     <span className="rk-detail-meta">{summary[0]}</span>
                   ) : null}
                 </button>

@@ -134,6 +134,11 @@ export const BRAND_ICON_ENTRIES: BrandIconEntry[] = [
     keywords: ["bentopdf", "bento pdf", "pdf", "document", "file"],
   },
   {
+    id: "blender",
+    label: "Blender",
+    keywords: ["blender", "3d", "modeling", "animation", "render", "vfx", "design"],
+  },
+  {
     id: "bruno",
     label: "Bruno",
     keywords: ["bruno", "api", "network", "developer"],
@@ -154,6 +159,11 @@ export const BRAND_ICON_ENTRIES: BrandIconEntry[] = [
     keywords: ["openai", "codex", "ai", "assistant", "code", "developer", "cli"],
   },
   {
+    id: "comfyui",
+    label: "ComfyUI",
+    keywords: ["comfyui", "comfy", "stable diffusion", "diffusion", "ai", "image", "workflow"],
+  },
+  {
     id: "ditto",
     label: "Ditto",
     keywords: ["ditto", "clipboard", "copy", "document", "edit", "utility"],
@@ -162,6 +172,11 @@ export const BRAND_ICON_ENTRIES: BrandIconEntry[] = [
     id: "docker",
     label: "Docker",
     keywords: ["docker", "container", "package", "developer"],
+  },
+  {
+    id: "drawio",
+    label: "Draw.IO",
+    keywords: ["drawio", "draw.io", "diagrams.net", "diagram", "flowchart", "design"],
   },
   {
     id: "everything",
@@ -199,9 +214,29 @@ export const BRAND_ICON_ENTRIES: BrandIconEntry[] = [
     keywords: ["hermes", "agent", "ai", "assistant", "bot"],
   },
   {
+    id: "hermes-desktop",
+    label: "Hermes Desktop",
+    keywords: ["hermes", "desktop", "agent", "ai", "assistant", "bot"],
+  },
+  {
+    id: "inkscape",
+    label: "Inkscape",
+    keywords: ["inkscape", "svg", "vector", "design", "drawing"],
+  },
+  {
+    id: "krita",
+    label: "Krita",
+    keywords: ["krita", "painting", "drawing", "illustration", "design"],
+  },
+  {
     id: "langflow",
     label: "Langflow",
     keywords: ["langflow", "ai", "assistant", "workflow", "developer"],
+  },
+  {
+    id: "lmstudio",
+    label: "LM Studio",
+    keywords: ["lmstudio", "lm studio", "ai", "llm", "local", "model", "assistant"],
   },
   {
     id: "n8n",

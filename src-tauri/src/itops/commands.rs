@@ -1,4 +1,4 @@
-// IT Ops Tauri commands (docs/ITOPS.md). Phase 1: Fleet CRUD + the
+// IT Ops Tauri commands (docs/ITOPS.md). Phase 1: Site CRUD + the
 // run-time resolver. Errors surface as plain strings the frontend store shows in
 // the Status Bar; the storage layer carries the typed variants.
 
@@ -13,14 +13,15 @@ use crate::dashboard_storage::DashboardBackground;
 use crate::secrets;
 use crate::ssh;
 
-use super::fleet_storage as topo;
 use super::ids::new_itops_id;
-use super::runner::{self, SshTransport, DEFAULT_CONCURRENCY, DEFAULT_TIMEOUT_SECONDS};
 use super::run_storage;
+use super::runner::{self, DEFAULT_CONCURRENCY, DEFAULT_TIMEOUT_SECONDS, SshTransport};
+use super::site_storage as topo;
 use super::storage as ito;
 use super::types::{
-    BatchTask, Fleet, FleetFilter, Rack, RackItem, RackItemKind, RackItemMetadata, RackNetworkPort,
-    ResolvedHost, RoomIcon, RunEvent, RunEventHost, RunHistoryEntry, RunScope, Transport,
+    BatchTask, Rack, RackItem, RackItemKind, RackItemMetadata, RackNetworkPort, ResolvedHost,
+    RoomIcon, RunEvent, RunEventHost, RunHistoryEntry, RunScope, ServerRoom, Site, SiteFilter,
+    Transport,
 };
 
 fn storage(app: &AppHandle) -> State<'_, crate::storage::Storage> {
@@ -28,70 +29,90 @@ fn storage(app: &AppHandle) -> State<'_, crate::storage::Storage> {
 }
 
 #[tauri::command]
-pub fn itops_list_fleets(app: AppHandle) -> Result<Vec<Fleet>, String> {
+pub fn itops_list_sites(app: AppHandle) -> Result<Vec<Site>, String> {
     storage(&app)
-        .with_connection_infallible(|conn| ito::list_fleets(conn).map_err(|error| error.to_string()))
+        .with_connection_infallible(|conn| ito::list_sites(conn).map_err(|error| error.to_string()))
 }
 
 #[tauri::command]
-pub fn itops_create_fleet(
+pub fn itops_create_site(
     app: AppHandle,
     name: String,
     member_ids: Vec<String>,
-    filter: Option<FleetFilter>,
+    filter: Option<SiteFilter>,
     transport: Transport,
     icon_color: Option<String>,
     icon_data_url: Option<String>,
     icon_background_color: Option<String>,
-) -> Result<Fleet, String> {
+) -> Result<Site, String> {
     let id = new_itops_id("hg");
     storage(&app).with_connection_infallible(|conn| {
-        ito::create_fleet(conn, &id, &name, member_ids, filter, transport, icon_color.as_deref(), icon_data_url.as_deref(), icon_background_color.as_deref())
-            .map_err(|error| error.to_string())
+        ito::create_site(
+            conn,
+            &id,
+            &name,
+            member_ids,
+            filter,
+            transport,
+            icon_color.as_deref(),
+            icon_data_url.as_deref(),
+            icon_background_color.as_deref(),
+        )
+        .map_err(|error| error.to_string())
     })
 }
 
 #[tauri::command]
-pub fn itops_update_fleet(
+pub fn itops_update_site(
     app: AppHandle,
     id: String,
     name: String,
     member_ids: Vec<String>,
-    filter: Option<FleetFilter>,
+    filter: Option<SiteFilter>,
     transport: Transport,
     icon_color: Option<String>,
     icon_data_url: Option<String>,
     icon_background_color: Option<String>,
-) -> Result<Fleet, String> {
+) -> Result<Site, String> {
     storage(&app).with_connection_infallible(|conn| {
-        ito::update_fleet(conn, &id, &name, member_ids, filter, transport, icon_color.as_deref(), icon_data_url.as_deref(), icon_background_color.as_deref())
-            .map_err(|error| error.to_string())
+        ito::update_site(
+            conn,
+            &id,
+            &name,
+            member_ids,
+            filter,
+            transport,
+            icon_color.as_deref(),
+            icon_data_url.as_deref(),
+            icon_background_color.as_deref(),
+        )
+        .map_err(|error| error.to_string())
     })
 }
 
 #[tauri::command]
-pub fn itops_remove_fleet(app: AppHandle, id: String) -> Result<(), String> {
+pub fn itops_remove_site(app: AppHandle, id: String) -> Result<(), String> {
     storage(&app).with_connection_infallible(|conn| {
-        ito::remove_fleet(conn, &id).map_err(|error| error.to_string())
+        ito::remove_site(conn, &id).map_err(|error| error.to_string())
     })
 }
 
 #[tauri::command]
-pub fn itops_reorder_fleets(app: AppHandle, ordered_ids: Vec<String>) -> Result<(), String> {
+pub fn itops_reorder_sites(app: AppHandle, ordered_ids: Vec<String>) -> Result<(), String> {
     storage(&app).with_connection_infallible(|conn| {
-        ito::reorder_fleets(conn, &ordered_ids).map_err(|error| error.to_string())
+        ito::reorder_sites(conn, &ordered_ids).map_err(|error| error.to_string())
     })
 }
 
 #[tauri::command]
-pub fn itops_resolve_fleet(app: AppHandle, id: String) -> Result<Vec<ResolvedHost>, String> {
+pub fn itops_resolve_site(app: AppHandle, id: String) -> Result<Vec<ResolvedHost>, String> {
     storage(&app).with_connection_infallible(|conn| {
-        let group = ito::list_fleets(conn)
+        let group = ito::list_sites(conn)
             .map_err(|error| error.to_string())?
             .into_iter()
             .find(|group| group.id == id)
-            .ok_or_else(|| "fleet not found".to_string())?;
-        ito::resolve_fleet(conn, &group).map_err(|error| error.to_string())
+            .ok_or_else(|| "site not found".to_string())?;
+        ito::resolve_site(conn, &group).map_err(|error| error.to_string())
     })
 }
 
@@ -136,18 +157,18 @@ fn now_millis() -> String {
         .to_string()
 }
 
-/// Start a Batch Run of `task` against a Fleet. Resolves the group and each
+/// Start a Batch Run of `task` against a Site. Resolves the group and each
 /// SSH host's auth up front (DB + keychain), then fans out on a background
 /// thread, streaming `itops://run` events and writing the consolidated report to
 /// itops_run_history on completion. Returns the run id immediately.
 #[tauri::command]
 pub fn itops_start_batch_run(
     app: AppHandle,
-    fleet_id: String,
+    site_id: String,
     task: BatchTask,
     scope: Option<RunScope>,
 ) -> Result<String, String> {
-    start_run(&app, fleet_id, task, scope)
+    start_run(&app, site_id, task, scope)
 }
 
 /// Start a Batch Run; reusable by the command above and the Automation
@@ -156,7 +177,7 @@ pub fn itops_start_batch_run(
 /// A non-empty `scope` narrows the run to the placed hosts in matching racks.
 pub fn start_run(
     app: &AppHandle,
-    fleet_id: String,
+    site_id: String,
     task: BatchTask,
     scope: Option<RunScope>,
 ) -> Result<String, String> {
@@ -164,15 +185,16 @@ pub fn start_run(
     let known_hosts = ssh::app_known_hosts_path(app)?;
     let scoped = scope.filter(|scope| !scope.is_empty());
     let (hosts, specs) = storage(app).with_connection_infallible(|conn| {
-        let group = ito::list_fleets(conn)
+        let group = ito::list_sites(conn)
             .map_err(|error| error.to_string())?
             .into_iter()
-            .find(|group| group.id == fleet_id)
-            .ok_or_else(|| "fleet not found".to_string())?;
+            .find(|group| group.id == site_id)
+            .ok_or_else(|| "site not found".to_string())?;
         let hosts = match &scoped {
-            Some(scope) => ito::resolve_fleet_scoped(conn, &group, scope)
-                .map_err(|error| error.to_string())?,
-            None => ito::resolve_fleet(conn, &group).map_err(|error| error.to_string())?,
+            Some(scope) => {
+                ito::resolve_site_scoped(conn, &group, scope).map_err(|error| error.to_string())?
+            }
+            None => ito::resolve_site(conn, &group).map_err(|error| error.to_string())?,
         };
         let specs = runner::resolve_ssh_specs(
             conn,
@@ -185,7 +207,7 @@ pub fn start_run(
     })?;
 
     if hosts.is_empty() {
-        return Err("fleet resolves to no hosts".to_string());
+        return Err("site resolves to no hosts".to_string());
     }
 
     let run_id = new_itops_id("run");
@@ -219,7 +241,7 @@ pub fn start_run(
         // the tally reading 0 until a relaunch reloaded the persisted report.
         emit(RunEvent::Started {
             run_id: run_id_thread.clone(),
-            fleet_id: Some(fleet_id.clone()),
+            site_id: Some(site_id.clone()),
             task_summary: task_summary.clone(),
             hosts: event_hosts,
         });
@@ -242,7 +264,7 @@ pub fn start_run(
                     conn,
                     &run_id_thread,
                     "manual",
-                    Some(&fleet_id),
+                    Some(&site_id),
                     &task_summary,
                     &started_at,
                     Some(&finished_at),
@@ -266,7 +288,9 @@ pub fn start_run(
                 },
             );
         }
-        app_thread.state::<ItopsRunRegistry>().remove(&run_id_thread);
+        app_thread
+            .state::<ItopsRunRegistry>()
+            .remove(&run_id_thread);
     });
 
     Ok(run_id)
@@ -289,36 +313,64 @@ pub fn itops_list_run_history(
     })
 }
 
-// ── Fleet topology: Racks + Rack Devices (docs/FLEET.md Phase B) ─────────────
+// ── Site topology: Racks + Rack Devices (docs/SITE.md Phase B) ─────────────
 
 #[tauri::command]
-pub fn itops_list_racks(app: AppHandle, fleet_id: String) -> Result<Vec<Rack>, String> {
+pub fn itops_list_racks(app: AppHandle, site_id: String) -> Result<Vec<Rack>, String> {
     storage(&app).with_connection_infallible(|conn| {
-        topo::list_racks(conn, &fleet_id).map_err(|error| error.to_string())
+        topo::list_racks(conn, &site_id).map_err(|error| error.to_string())
+    })
+}
+
+#[tauri::command]
+pub fn itops_list_server_rooms(app: AppHandle, site_id: String) -> Result<Vec<ServerRoom>, String> {
+    storage(&app).with_connection_infallible(|conn| {
+        topo::list_server_rooms(conn, &site_id).map_err(|e| e.to_string())
+    })
+}
+
+#[tauri::command]
+pub fn itops_create_server_room(
+    app: AppHandle,
+    site_id: String,
+    name: String,
+) -> Result<ServerRoom, String> {
+    let id = new_itops_id("room");
+    storage(&app).with_connection_infallible(|conn| {
+        topo::create_server_room(conn, &id, &site_id, &name).map_err(|e| e.to_string())
+    })
+}
+
+#[tauri::command]
+pub fn itops_delete_server_room(app: AppHandle, id: String) -> Result<(), String> {
+    storage(&app).with_connection_infallible(|conn| {
+        topo::delete_server_room(conn, &id).map_err(|e| e.to_string())
     })
 }
 
 #[tauri::command]
 pub fn itops_create_rack(
     app: AppHandle,
-    fleet_id: String,
+    site_id: String,
     name: String,
     server_room: String,
     rack_group: String,
     shell: Option<String>,
     height_u: u32,
+    depth_mm: u32,
 ) -> Result<Rack, String> {
     let id = new_itops_id("rack");
     storage(&app).with_connection_infallible(|conn| {
         topo::create_rack(
             conn,
             &id,
-            &fleet_id,
+            &site_id,
             &name,
             &server_room,
             &rack_group,
             shell.as_deref(),
             height_u,
+            depth_mm,
         )
         .map_err(|error| error.to_string())
     })
@@ -333,6 +385,7 @@ pub fn itops_update_rack(
     rack_group: String,
     shell: Option<String>,
     height_u: u32,
+    depth_mm: u32,
 ) -> Result<Rack, String> {
     storage(&app).with_connection_infallible(|conn| {
         topo::update_rack(
@@ -343,48 +396,48 @@ pub fn itops_update_rack(
             &rack_group,
             shell.as_deref(),
             height_u,
+            depth_mm,
         )
         .map_err(|error| error.to_string())
     })
 }
 
-/// Set (or clear) the Fleet-view background.
+/// Set (or clear) the Site-view background.
 #[tauri::command]
-pub fn itops_set_fleet_background(
+pub fn itops_set_site_background(
     app: AppHandle,
-    fleet_id: String,
+    site_id: String,
     background: Option<DashboardBackground>,
-) -> Result<Fleet, String> {
+) -> Result<Site, String> {
     storage(&app).with_connection_infallible(|conn| {
-        ito::set_fleet_background(conn, &fleet_id, background).map_err(|error| error.to_string())
+        ito::set_site_background(conn, &site_id, background).map_err(|error| error.to_string())
     })
 }
 
-/// Set (or clear) a server room's background within a Fleet.
+/// Set (or clear) a server room's background within a Site.
 #[tauri::command]
 pub fn itops_set_server_room_background(
     app: AppHandle,
-    fleet_id: String,
+    site_id: String,
     server_room: String,
     background: Option<DashboardBackground>,
-) -> Result<Fleet, String> {
+) -> Result<Site, String> {
     storage(&app).with_connection_infallible(|conn| {
-        ito::set_server_room_background(conn, &fleet_id, &server_room, background)
+        ito::set_server_room_background(conn, &site_id, &server_room, background)
             .map_err(|error| error.to_string())
     })
 }
 
-/// Set (or clear) a server room's icon within a Fleet.
+/// Set (or clear) a server room's icon within a Site.
 #[tauri::command]
 pub fn itops_set_room_icon(
     app: AppHandle,
-    fleet_id: String,
+    site_id: String,
     server_room: String,
     icon: Option<RoomIcon>,
-) -> Result<Fleet, String> {
+) -> Result<Site, String> {
     storage(&app).with_connection_infallible(|conn| {
-        ito::set_room_icon(conn, &fleet_id, &server_room, icon)
-            .map_err(|error| error.to_string())
+        ito::set_room_icon(conn, &site_id, &server_room, icon).map_err(|error| error.to_string())
     })
 }
 
@@ -410,11 +463,11 @@ pub fn itops_delete_rack(app: AppHandle, id: String) -> Result<(), String> {
 #[tauri::command]
 pub fn itops_reorder_racks(
     app: AppHandle,
-    fleet_id: String,
+    site_id: String,
     ordered_ids: Vec<String>,
 ) -> Result<(), String> {
     storage(&app).with_connection_infallible(|conn| {
-        topo::reorder_racks(conn, &fleet_id, &ordered_ids).map_err(|error| error.to_string())
+        topo::reorder_racks(conn, &site_id, &ordered_ids).map_err(|error| error.to_string())
     })
 }
 
@@ -457,8 +510,15 @@ pub fn itops_update_rack_item(
     metadata: Option<RackItemMetadata>,
 ) -> Result<RackItem, String> {
     storage(&app).with_connection_infallible(|conn| {
-        topo::update_rack_item(conn, &id, kind, connection_id, &label, metadata.unwrap_or_default())
-            .map_err(|error| error.to_string())
+        topo::update_rack_item(
+            conn,
+            &id,
+            kind,
+            connection_id,
+            &label,
+            metadata.unwrap_or_default(),
+        )
+        .map_err(|error| error.to_string())
     })
 }
 
@@ -523,7 +583,7 @@ pub async fn itops_refresh_rack_item_snmp(app: AppHandle, id: String) -> Result<
 }
 
 /// Fetch a single Connection by id so the Rack View can open a placed host's
-/// Session (docs/FLEET.md Phase D). Returns the full Connection across any
+/// Session (docs/SITE.md Phase D). Returns the full Connection across any
 /// Workspace; the frontend hands it to the existing open path.
 #[tauri::command]
 pub fn itops_get_connection(

@@ -463,7 +463,7 @@
   padding: var(--pad);
   background: var(--bg-2);
 }
-/* Unified compact detail toolbar (fleet identity + breadcrumb + actions). */
+/* Unified compact detail toolbar (site identity + breadcrumb + actions). */
 .itops-page .hg-bar {
   display: flex;
   align-items: center;
@@ -2065,7 +2065,7 @@
   color: var(--text-faint);
 }
 
-/* ── Fleet Rack View (docs/FLEET.md Phase C) ──────────────────────────────── */
+/* ── Site Rack View (docs/SITE.md Phase C) ──────────────────────────────── */
 .itops-page .rk-canvas {
   display: flex;
   flex-direction: column;
@@ -2336,7 +2336,7 @@
   z-index: 1;
 }
 
-/* ── Rack View editing affordances (docs/FLEET.md Phase C, dialogs-first) ──── */
+/* ── Rack View editing affordances (docs/SITE.md Phase C, dialogs-first) ──── */
 /* Small icon buttons read as flat Finder toolbar buttons (no border/elevation). */
 .itops-page .it-icon-btn.sm {
   width: 26px;
@@ -2349,6 +2349,12 @@
 }
 .itops-page .it-icon-btn.sm:active {
   background: var(--press);
+}
+.itops-page .it-icon-btn.sm.danger {
+  color: var(--red);
+}
+.itops-page .it-icon-btn.sm.danger:hover {
+  background: color-mix(in srgb, var(--red) 13%, transparent);
 }
 .itops-page .it-btn.sm {
   height: 28px;
@@ -2779,26 +2785,31 @@
   gap: 9px;
 }
 .itops-page .rkd-disks-row {
-  flex: 1 1 auto;
+  --rkd-disk-bay-h: clamp(9px, calc((100% - 5px) / 2), 18px);
+  flex: 0 1 min(112px, 46%);
+  height: calc(100% - 4px);
   display: flex;
   flex-wrap: wrap;
   align-content: center;
   gap: 2px;
-  min-width: 0;
-  max-height: 100%;
+  min-width: 70px;
+  max-height: calc(100% - 4px);
   overflow: hidden;
+  padding: 1px 0;
+  box-sizing: border-box;
 }
 .itops-page .rkd-disk-bay {
   position: relative;
-  width: 6px;
-  height: 20px;
+  width: clamp(4px, calc((100% - 22px) / 12), 6px);
+  height: var(--rkd-disk-bay-h);
   border-radius: 1.5px;
   background: var(--rkd-well);
   border: 0.5px solid var(--rkd-line);
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding-top: 2px;
+  padding-top: min(2px, 12%);
+  box-sizing: border-box;
 }
 .itops-page .rkd-disk-led {
   width: 3px;
@@ -3057,7 +3068,7 @@
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
-   Fleets tree navigator + rack drill-down (docs/FLEET.md Rack View).
+   Sites tree navigator + rack drill-down (docs/SITE.md Rack View).
    ────────────────────────────────────────────────────────────────────────── */
 .itops-page .hg.ft {
   display: flex;
@@ -3290,6 +3301,92 @@
   overflow: auto;
   padding: 2px;
 }
+.itops-page .it-drill-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 2px 2px 0;
+  pointer-events: none;
+}
+.itops-page .it-drill-spacer {
+  flex: 1 1 auto;
+}
+.itops-page .it-drill-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  border: 0.5px solid var(--border);
+  box-shadow: var(--shadow-control);
+  pointer-events: auto;
+}
+.itops-page .it-drill-action {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.14s, color 0.14s, transform 0.14s;
+}
+.itops-page .it-drill-action:hover,
+.itops-page .it-drill-action.active {
+  background: var(--hover);
+  color: var(--accent);
+}
+.itops-page .it-drill-action:active {
+  transform: translateY(1px);
+}
+.itops-page .it-drill-export {
+  position: relative;
+}
+.itops-page .it-drill-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 42;
+}
+.itops-page .it-drill-menu {
+  position: absolute;
+  top: calc(100% + 5px);
+  right: 0;
+  z-index: 43;
+  min-width: 150px;
+  padding: 4px;
+  border-radius: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.itops-page .it-drill-menu button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  border: 0;
+  border-radius: 7px;
+  padding: 7px 9px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 12.5px;
+  text-align: left;
+  cursor: pointer;
+}
+.itops-page .it-drill-menu button:hover {
+  background: var(--hover);
+}
 .itops-page .ft-bar {
   display: flex;
   align-items: center;
@@ -3334,6 +3431,59 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+}
+.itops-page .it-free-surface {
+  position: relative;
+  min-width: 0;
+  border-radius: 12px;
+  background:
+    radial-gradient(circle, color-mix(in srgb, var(--border) 58%, transparent) 1px, transparent 1.5px) 0 0 / 18px 18px,
+    color-mix(in srgb, var(--surface-muted) 70%, transparent);
+  border: 1px dashed var(--border);
+}
+.itops-page .it-free-card,
+.itops-page .rm-free-tile {
+  position: absolute;
+  top: 0;
+  left: 0;
+  touch-action: none;
+  cursor: grab;
+}
+.itops-page .it-free-card {
+  width: 240px;
+}
+.itops-page .it-free-card:active,
+.itops-page .rm-free-tile:active {
+  cursor: grabbing;
+}
+.itops-page .it-free-card .ft-card,
+.itops-page .rm-free-tile .rm-tile {
+  width: 100%;
+  height: 100%;
+}
+.itops-page .it-free-delete,
+.itops-page .rk-item-delete {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  z-index: 8;
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--red) 70%, var(--border));
+  background: color-mix(in srgb, var(--surface) 86%, var(--red));
+  color: var(--red);
+  cursor: pointer;
+  box-shadow: var(--shadow-control);
+}
+.itops-page .it-free-delete:hover,
+.itops-page .rk-item-delete:hover {
+  background: var(--red);
+  border-color: var(--red);
+  color: #fff;
 }
 .itops-page .ft-card {
   display: flex;
@@ -3650,7 +3800,276 @@
   background: var(--hairline);
 }
 
-.itops-page .rack-item-preview {
+/* ──────────────────────────────────────────────────────────────────────────
+   Top-down Server Room View — a 2D room footprint where each Rack is a tile
+   coloured by health or utilisation (DCIM floor-plan pattern). Status/heat
+   colours read the shared theme tokens; `--tile` is the per-band accent set
+   by `data-metric` + `data-health`/`data-util`.
+   ────────────────────────────────────────────────────────────────────────── */
+.itops-page .rm-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 0 2px 2px;
+}
+.itops-page .rm-segmented {
+  display: inline-flex;
+  border: 0.5px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--surface);
+}
+.itops-page .rm-segmented button {
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 560;
+  padding: 5px 12px;
+  cursor: pointer;
+  transition: background 0.14s, color 0.14s;
+}
+.itops-page .rm-segmented button + button {
+  border-left: 0.5px solid var(--border);
+}
+.itops-page .rm-segmented button:hover:not([data-active="true"]) {
+  background: var(--hover);
+  color: var(--text);
+}
+.itops-page .rm-segmented button[data-active="true"] {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.itops-page .rm-floor {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 6px 4px 8px;
+}
+.itops-page .rm-floor.free {
+  gap: 12px;
+}
+.itops-page .rm-floor-canvas {
+  position: relative;
+  min-width: 0;
+  border-radius: 12px;
+  background:
+    linear-gradient(color-mix(in srgb, var(--border) 36%, transparent) 1px, transparent 1px) 0 0 / 28px 28px,
+    linear-gradient(90deg, color-mix(in srgb, var(--border) 36%, transparent) 1px, transparent 1px) 0 0 / 28px 28px,
+    color-mix(in srgb, var(--surface-muted) 78%, transparent);
+  border: 1px dashed var(--border);
+  overflow: hidden;
+}
+.itops-page .rm-free-tile {
+  width: 124px;
+}
+.itops-page .rm-floor-row {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.itops-page .rm-floor-row-h {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 2px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.itops-page .rm-floor-row-h::after {
+  content: "";
+  flex: 1 1 auto;
+  height: 1px;
+  background: var(--hairline);
+}
+.itops-page .rm-floor-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* One rack footprint. `--tile` defaults to a neutral hue; the band rules
+   below override it for the active metric. */
+.itops-page .rm-tile {
+  --tile: var(--text-faint);
+  position: relative;
+  width: 120px;
+  min-height: 94px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 9px 11px 9px 13px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--tile) 40%, var(--border));
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--tile) 13%, var(--surface)),
+    color-mix(in srgb, var(--tile) 5%, var(--surface))
+  );
+  box-shadow: var(--card-shadow);
+  cursor: pointer;
+  text-align: left;
+  color: var(--text);
+  overflow: hidden;
+  transition: transform 0.16s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.16s, box-shadow 0.16s;
+}
+.itops-page .rm-tile::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: var(--tile);
+}
+.itops-page .rm-tile:hover {
+  transform: translateY(-1px);
+  border-color: var(--tile);
+  box-shadow: var(--shadow-control);
+}
+.itops-page .rm-tile-name {
+  font-size: 12.5px;
+  font-weight: 640;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.itops-page .rm-tile-fill {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+}
+.itops-page .rm-tile-bar {
+  width: 100%;
+  height: 8px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--tile) 16%, var(--surface-muted));
+  overflow: hidden;
+}
+.itops-page .rm-tile-bar > span {
+  display: block;
+  height: 100%;
+  min-width: 2px;
+  border-radius: 4px;
+  background: var(--tile);
+}
+.itops-page .rm-tile-dots {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+.itops-page .rm-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+}
+.itops-page .rm-dot i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.itops-page .rm-dot.on i {
+  background: var(--green);
+}
+.itops-page .rm-dot.warn i {
+  background: var(--amber);
+}
+.itops-page .rm-dot.off i {
+  background: var(--red);
+}
+.itops-page .rm-tile-meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+}
+.itops-page .rm-tile-val {
+  font-size: 11px;
+  font-weight: 660;
+  color: color-mix(in srgb, var(--tile) 78%, var(--text));
+  white-space: nowrap;
+}
+.itops-page .rm-tile-cap {
+  font-size: 10px;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Band → colour mapping. Health: worst placed-device status. Utilisation:
+   cool (low) → hot (full). Empty racks stay neutral in both metrics. */
+.itops-page .rm-floor[data-metric="health"] .rm-tile[data-health="ok"] {
+  --tile: var(--green);
+}
+.itops-page .rm-floor[data-metric="health"] .rm-tile[data-health="warning"] {
+  --tile: var(--amber);
+}
+.itops-page .rm-floor[data-metric="health"] .rm-tile[data-health="critical"] {
+  --tile: var(--red);
+}
+.itops-page .rm-floor[data-metric="utilization"] .rm-tile[data-util="low"] {
+  --tile: var(--green);
+}
+.itops-page .rm-floor[data-metric="utilization"] .rm-tile[data-util="med"] {
+  --tile: color-mix(in srgb, var(--green) 45%, var(--amber));
+}
+.itops-page .rm-floor[data-metric="utilization"] .rm-tile[data-util="high"] {
+  --tile: var(--amber);
+}
+.itops-page .rm-floor[data-metric="utilization"] .rm-tile[data-util="full"] {
+  --tile: var(--red);
+}
+
+/* Legend. */
+.itops-page .rm-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 13px;
+  padding: 6px 2px 12px;
+}
+.itops-page .rm-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.itops-page .rm-legend-sw {
+  width: 11px;
+  height: 11px;
+  border-radius: 3px;
+  background: var(--text-faint);
+  border: 0.5px solid color-mix(in srgb, var(--border) 60%, transparent);
+}
+.itops-page .rm-legend-sw.ok,
+.itops-page .rm-legend-sw.low {
+  background: var(--green);
+}
+.itops-page .rm-legend-sw.med {
+  background: color-mix(in srgb, var(--green) 45%, var(--amber));
+}
+.itops-page .rm-legend-sw.warning,
+.itops-page .rm-legend-sw.high {
+  background: var(--amber);
+}
+.itops-page .rm-legend-sw.critical,
+.itops-page .rm-legend-sw.full {
+  background: var(--red);
+}
+
+.rack-item-preview {
   height: 48px;
   padding: 7px;
   border: 1px solid var(--border);
@@ -3658,6 +4077,247 @@
   background: var(--surface-muted);
   display: flex;
   align-items: center;
+}
+.rack-item-dialog .kk-dlg-body {
+  padding: 0;
+  overflow: hidden;
+}
+
+/* Add/Edit Rack follows the split preview/form reference while the preview
+   itself reuses the shipped RackElevation hardware graphic. */
+.rack-dialog {
+  max-width: 100%;
+}
+.rack-dialog .kk-dlg-body {
+  padding: 18px 22px;
+}
+.rack-dialog-layout {
+  display: grid;
+  grid-template-columns: 224px minmax(0, 1fr);
+  gap: 22px;
+  align-items: stretch;
+}
+.rack-dialog-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+.rack-dialog-preview-stage {
+  display: flex;
+  flex: 1 1 auto;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 252px;
+  max-height: 330px;
+  padding: 16px 14px;
+  overflow: hidden;
+  border: 0.5px solid var(--border);
+  border-radius: 12px;
+  background-color: var(--surface-muted);
+  background-image: radial-gradient(circle, var(--hairline) 0.8px, transparent 0.8px);
+  background-size: 14px 14px;
+}
+.rack-dialog-preview-stage .rk-head,
+.rack-dialog-shell-preview .rk-head {
+  display: none;
+}
+.rack-dialog-preview-stage .rk {
+  --rk-u: 4.5px;
+  width: 156px;
+  -webkit-mask-image: linear-gradient(to bottom, black 82%, transparent 100%);
+  mask-image: linear-gradient(to bottom, black 82%, transparent 100%);
+}
+.rack-dialog-preview-stage .rk-frame {
+  border-radius: 10px;
+}
+.rack-dialog-preview-stage .rk-u {
+  overflow: hidden;
+  font-size: 5px;
+  line-height: 1;
+}
+.rack-dialog-preview-caption {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  padding: 0 4px;
+  text-align: center;
+}
+.rack-dialog-preview-caption strong {
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rack-dialog-preview-caption span {
+  color: var(--text-muted);
+  font-family: var(--app-mono-font-family, monospace);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.rack-dialog-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+.rack-dialog-field-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.rack-dialog-shell-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 2px;
+}
+.rack-dialog-shell-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 8px 4px 7px;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.2;
+  text-align: center;
+  cursor: pointer;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: var(--control-shadow);
+  transition: background 0.14s, border-color 0.14s, box-shadow 0.14s, transform 0.06s;
+}
+.rack-dialog-shell-tile:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+.rack-dialog-shell-tile:active {
+  transform: translateY(0.5px);
+}
+.rack-dialog-shell-tile:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+.rack-dialog-shell-tile.selected {
+  color: var(--text);
+  font-weight: 600;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.rack-dialog-shell-preview {
+  display: block;
+  width: 40px;
+  height: 34px;
+  overflow: hidden;
+}
+.rack-dialog-shell-preview .rk {
+  --rk-u: 2px;
+  width: 30px;
+  margin: 0 auto;
+}
+.rack-dialog-shell-preview .rk-frame {
+  padding: 2px;
+  border-radius: 4px;
+}
+.rack-dialog-shell-preview .rk-rail {
+  height: 2px;
+}
+.rack-dialog-shell-preview .rk-bay {
+  gap: 1px;
+  margin: 2px 0;
+}
+.rack-dialog-shell-preview .rk-grid {
+  grid-template-columns: 2px minmax(0, 1fr) 2px;
+  column-gap: 1px;
+}
+.rack-dialog-shell-preview .rk-u {
+  display: none;
+}
+.rack-dialog-dimensions .kk-field > .kk-inp {
+  margin-top: 2px;
+}
+
+@media (max-width: 760px) {
+  .rack-dialog-layout {
+    grid-template-columns: 1fr;
+  }
+  .rack-dialog-preview-stage {
+    min-height: 150px;
+    max-height: 190px;
+  }
+  .rack-dialog-preview-stage .rk {
+    --rk-u: 3px;
+  }
+}
+.rack-item-dialog-grid {
+  display: grid;
+  grid-template-columns: minmax(300px, 1.05fr) minmax(260px, .85fr) minmax(340px, 1.2fr);
+  min-height: 0;
+  height: min(680px, calc(100vh - 190px));
+}
+.rack-item-dialog-column {
+  min-width: 0;
+  overflow-y: auto;
+  padding: 18px;
+  border-right: 1px solid var(--border);
+}
+.rack-item-dialog-column:last-child { border-right: 0; }
+.rack-item-dialog-column .kk-field:first-child { margin-top: 0; }
+.rack-item-dialog .rack-kind-preview-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.itops-page .rack-kind-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 10px 0 12px;
+}
+.itops-page .rack-kind-preview {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  padding: 6px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.14s, background 0.14s, transform 0.14s;
+}
+.itops-page .rack-kind-preview:hover,
+.itops-page .rack-kind-preview.selected {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 9%, var(--surface));
+}
+.itops-page .rack-kind-preview:active {
+  transform: translateY(1px);
+}
+.itops-page .rack-kind-preview-face {
+  height: 30px;
+  display: flex;
+  align-items: center;
+}
+.itops-page .rack-kind-preview-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10.5px;
+  font-weight: 620;
+  color: var(--text-muted);
 }
 
 .itops-page .rack-form-grid {
@@ -3673,37 +4333,19 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
-.itops-page .rack-audit-list,
-.itops-page .rack-port-list,
-.itops-page .rack-ipam-list {
+.itops-page .rack-port-list {
   display: grid;
   gap: 8px;
 }
 
-.itops-page .rack-audit-row,
-.itops-page .rack-port-row,
-.itops-page .rack-ipam-row {
+.itops-page .rack-port-row {
   display: grid;
   gap: 8px;
   align-items: center;
 }
 
-.itops-page .rack-audit-row {
-  grid-template-columns: 132px minmax(0, 1fr) 118px;
-}
-
 .itops-page .rack-port-row {
   grid-template-columns: minmax(0, 1fr) 108px 108px;
-}
-
-.itops-page .rack-ipam-row {
-  grid-template-columns: minmax(0, 1fr) 92px 86px minmax(0, 1fr);
-}
-
-.itops-page .rack-relationship-edit {
-  display: grid;
-  grid-template-columns: 132px minmax(0, 1fr);
-  gap: 8px;
 }
 
 .itops-page .connection-binding-list {
@@ -3713,6 +4355,28 @@
   max-height: 118px;
   overflow: auto;
 }
+.itops-page .connection-binding-list.standalone {
+  grid-template-columns: 1fr;
+  max-height: 430px;
+}
+
+.itops-page .rk-item-bind {
+  position: absolute;
+  left: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--text);
+  z-index: 7;
+}
+.itops-page .rk-item-row:hover .rk-item-bind { display: inline-flex; }
 
 .itops-page .connection-binding-row {
   min-width: 0;
@@ -3790,7 +4454,6 @@
   font-size: 10px;
 }
 
-.itops-page .rack-relationship-badge,
 .itops-page .rk-detail-meta {
   border: 1px solid var(--border);
   border-radius: 999px;
@@ -3800,19 +4463,13 @@
   background: var(--surface);
 }
 
-.itops-page .rack-relationship-badge.vsan,
-.itops-page .rack-relationship-badge.hyperConverged {
-  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
-}
-
 @media (max-width: 760px) {
+  .rack-item-dialog-grid { grid-template-columns: 1fr; height: auto; }
+  .rack-item-dialog-column { overflow: visible; border-right: 0; border-bottom: 1px solid var(--border); }
   .itops-page .rack-form-grid.two,
   .itops-page .rack-form-grid.four,
   .itops-page .connection-binding-list,
-  .itops-page .rack-audit-row,
-  .itops-page .rack-port-row,
-  .itops-page .rack-ipam-row,
-  .itops-page .rack-relationship-edit {
+  .itops-page .rack-port-row {
     grid-template-columns: 1fr;
   }
 }

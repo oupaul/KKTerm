@@ -32,6 +32,7 @@ pub struct PcInfoSnapshot {
     pub source: String,
     /// Non-fatal collection notes (e.g. a fallback was used).
     pub warnings: Vec<String>,
+    pub system: SystemInfo,
     pub os: OsInfo,
     pub cpu: CpuInfo,
     pub memory: MemoryInfo,
@@ -43,6 +44,19 @@ pub struct PcInfoSnapshot {
     pub network: Vec<NetworkAdapterInfo>,
     pub audio: Vec<AudioDeviceInfo>,
     pub battery: Vec<BatteryInfo>,
+}
+
+#[derive(Clone, Serialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct SystemInfo {
+    pub manufacturer: Option<String>,
+    pub model: Option<String>,
+    pub family: Option<String>,
+    pub sku: Option<String>,
+    pub serial_number: Option<String>,
+    pub uuid: Option<String>,
+    pub system_type: Option<String>,
+    pub chassis_type: Option<String>,
 }
 
 #[derive(Clone, Serialize, Default)]
@@ -278,6 +292,63 @@ fn clean(value: Option<String>) -> Option<String> {
     Some(trimmed.to_string())
 }
 
+// Cross-platform battery snapshot for the macOS/Linux paths (Windows reads
+// batteries via CIM). Backed by the `starship-battery` crate, which wraps IOKit
+// on macOS and sysfs on Linux. Any failure yields an empty list — a missing or
+// unreadable battery is a normal, non-error outcome (e.g. desktops).
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+fn collect_batteries() -> Vec<BatteryInfo> {
+    use battery::units::energy::watt_hour;
+    use battery::units::ratio::percent;
+
+    let Ok(manager) = battery::Manager::new() else {
+        return Vec::new();
+    };
+    let Ok(batteries) = manager.batteries() else {
+        return Vec::new();
+    };
+
+    let mut out = Vec::new();
+    for entry in batteries {
+        let Ok(battery) = entry else {
+            continue;
+        };
+        let charge = battery.state_of_charge().get::<percent>();
+        let full_wh = battery.energy_full().get::<watt_hour>() as f64;
+        let design_wh = battery.energy_full_design().get::<watt_hour>() as f64;
+        // Wear = how far the full-charge capacity has dropped below the factory
+        // design capacity. Only report when both capacities are known and sane.
+        let wear = if design_wh > 0.0 && full_wh > 0.0 && full_wh <= design_wh {
+            Some(((1.0 - full_wh / design_wh) * 100.0 * 10.0).round() / 10.0)
+        } else {
+            None
+        };
+        out.push(BatteryInfo {
+            name: clean(battery.model().map(|s| s.to_string()))
+                .or_else(|| clean(battery.vendor().map(|s| s.to_string()))),
+            charge_percent: Some(charge.round().clamp(0.0, 100.0) as u32),
+            status: Some(battery_state_label(battery.state())),
+            design_capacity_mwh: (design_wh > 0.0).then(|| (design_wh * 1000.0).round() as u64),
+            full_charge_capacity_mwh: (full_wh > 0.0).then(|| (full_wh * 1000.0).round() as u64),
+            wear_percent: wear,
+        });
+    }
+    out
+}
+
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+fn battery_state_label(state: battery::State) -> String {
+    use battery::State;
+    match state {
+        State::Charging => "Charging",
+        State::Discharging => "Discharging",
+        State::Empty => "Empty",
+        State::Full => "Fully charged",
+        _ => "Unknown",
+    }
+    .to_string()
+}
+
 #[cfg(target_os = "windows")]
 mod platform {
     use super::*;
@@ -288,9 +359,15 @@ mod platform {
     const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 
     // One hidden PowerShell pass that returns every section as structured JSON.
-    // CIM property names are invariant English, so values like Caption/Model are
-    // stable regardless of the Windows display language.
-    const QUERY: &str = r#"$ErrorActionPreference='SilentlyContinue';
+    // CIM property *names* are invariant English, so the field layout is stable
+    // regardless of the Windows display language. The *values*, however, can be
+    // localized/non-ASCII (OS Caption, time-zone caption, user and device names).
+    // Windows PowerShell 5.1 encodes redirected stdout with the OEM code page by
+    // default, which `String::from_utf8_lossy` would mangle into  replacement
+    // characters — so force UTF-8 (no BOM; a BOM would survive `trim()` and break
+    // the JSON parse) before emitting anything.
+    const QUERY: &str = r#"[Console]::OutputEncoding=New-Object System.Text.UTF8Encoding $false;
+$ErrorActionPreference='SilentlyContinue';
 function E($d){ if($d){[int64]([math]::Floor((($d).ToUniversalTime() - [datetime]'1970-01-01').TotalSeconds))} else {$null} }
 function S($a){ if($a){ (($a | Where-Object {$_ -gt 0} | ForEach-Object {[char]$_}) -join '').Trim() } else {$null} }
 $os=Get-CimInstance Win32_OperatingSystem;
@@ -298,8 +375,8 @@ $cs=Get-CimInstance Win32_ComputerSystem;
 $out=[ordered]@{
  os=$os | Select-Object Caption,Version,BuildNumber,OSArchitecture,CSName,RegisteredUser,Locale,SerialNumber,SystemDrive,@{n='InstallDateEpoch';e={E $_.InstallDate}},@{n='LastBootEpoch';e={E $_.LastBootUpTime}};
  tz=(Get-CimInstance Win32_TimeZone | Select-Object -First 1).Caption;
- cs=$cs | Select-Object Manufacturer,Model,SystemType,TotalPhysicalMemory,UserName,NumberOfLogicalProcessors,PCSystemType,SystemSKUNumber;
- csp=Get-CimInstance Win32_ComputerSystemProduct | Select-Object UUID,IdentifyingNumber;
+ cs=$cs | Select-Object Manufacturer,Model,SystemFamily,SystemType,TotalPhysicalMemory,UserName,NumberOfLogicalProcessors,PCSystemType,SystemSKUNumber;
+ csp=Get-CimInstance Win32_ComputerSystemProduct | Select-Object Name,UUID,IdentifyingNumber;
  chassis=@(Get-CimInstance Win32_SystemEnclosure | Select-Object -ExpandProperty ChassisTypes);
  cpu=@(Get-CimInstance Win32_Processor | Select-Object Name,Manufacturer,Description,NumberOfCores,NumberOfEnabledCore,NumberOfLogicalProcessors,MaxClockSpeed,CurrentClockSpeed,L2CacheSize,L3CacheSize,AddressWidth,SocketDesignation,VirtualizationFirmwareEnabled);
  l1=@(Get-CimInstance Win32_CacheMemory -Filter 'Level=3' | Select-Object InstalledSize);
@@ -359,7 +436,18 @@ $out | ConvertTo-Json -Depth 5 -Compress"#;
         let os = root.get("os").cloned().unwrap_or(Value::Null);
         let cs = root.get("cs").cloned().unwrap_or(Value::Null);
         let csp = root.get("csp").cloned().unwrap_or(Value::Null);
+        let chassis = j_array(&root, "chassis").first().and_then(Value::as_u64);
         let last_boot = j_u64(&os, "LastBootEpoch");
+        snapshot.system = SystemInfo {
+            manufacturer: clean(j_str(&cs, "Manufacturer")),
+            model: clean(j_str(&cs, "Model")).or_else(|| clean(j_str(&csp, "Name"))),
+            family: clean(j_str(&cs, "SystemFamily")),
+            sku: clean(j_str(&cs, "SystemSKUNumber")),
+            serial_number: clean(j_str(&csp, "IdentifyingNumber")),
+            uuid: clean(j_str(&csp, "UUID")),
+            system_type: pc_system_type(j_u64(&cs, "PCSystemType")),
+            chassis_type: chassis_type(chassis),
+        };
         snapshot.os = OsInfo {
             name: clean(j_str(&os, "Caption")),
             version: clean(j_str(&os, "Version")),
@@ -381,7 +469,10 @@ $out | ConvertTo-Json -Depth 5 -Compress"#;
         // package and logical/physical counts are summed across sockets.
         let cpus = j_array(&root, "cpu");
         if let Some(first) = cpus.first() {
-            let physical: u32 = cpus.iter().filter_map(|c| j_u64(c, "NumberOfCores")).sum::<u64>() as u32;
+            let physical: u32 = cpus
+                .iter()
+                .filter_map(|c| j_u64(c, "NumberOfCores"))
+                .sum::<u64>() as u32;
             let enabled: u32 = cpus
                 .iter()
                 .filter_map(|c| j_u64(c, "NumberOfEnabledCore"))
@@ -411,7 +502,9 @@ $out | ConvertTo-Json -Depth 5 -Compress"#;
                 l2_cache_bytes: j_u64(first, "L2CacheSize").map(|kb| kb * 1024),
                 l3_cache_bytes: j_u64(first, "L3CacheSize").map(|kb| kb * 1024),
                 address_width_bits: j_u64(first, "AddressWidth").map(|v| v as u32),
-                virtualization_enabled: first.get("VirtualizationFirmwareEnabled").and_then(Value::as_bool),
+                virtualization_enabled: first
+                    .get("VirtualizationFirmwareEnabled")
+                    .and_then(Value::as_bool),
                 socket: clean(j_str(first, "SocketDesignation")),
             };
         }
@@ -461,7 +554,7 @@ $out | ConvertTo-Json -Depth 5 -Compress"#;
             bios_version: clean(j_str(&bios, "SMBIOSBIOSVersion")),
             bios_date: j_u64(&bios, "ReleaseEpoch").map(format_epoch_date),
             system_type: pc_system_type(j_u64(&cs, "PCSystemType")),
-            chassis_type: chassis_type(j_array(&root, "chassis").first().and_then(Value::as_u64)),
+            chassis_type: chassis_type(chassis),
             system_sku: clean(j_str(&cs, "SystemSKUNumber")),
             system_uuid: clean(j_str(&csp, "UUID")),
         };
@@ -617,8 +710,12 @@ $out | ConvertTo-Json -Depth 5 -Compress"#;
             .iter()
             .enumerate()
             .map(|(index, b)| {
-                let design = designs.get(index).and_then(|d| j_u64(d, "DesignedCapacity"));
-                let full = fulls.get(index).and_then(|f| j_u64(f, "FullChargedCapacity"));
+                let design = designs
+                    .get(index)
+                    .and_then(|d| j_u64(d, "DesignedCapacity"));
+                let full = fulls
+                    .get(index)
+                    .and_then(|f| j_u64(f, "FullChargedCapacity"));
                 // Wear = how much the full-charge capacity has dropped below the
                 // factory design capacity.
                 let wear = match (design, full) {
@@ -661,7 +758,9 @@ $out | ConvertTo-Json -Depth 5 -Compress"#;
                     adapter_type: adapter.and_then(|a| clean(j_str(a, "AdapterType"))),
                     speed_bits_per_second: adapter.and_then(|a| j_u64(a, "Speed")),
                     // NetConnectionStatus == 2 means "Connected".
-                    connected: adapter.and_then(|a| j_u64(a, "NetConnectionStatus")).map(|s| s == 2),
+                    connected: adapter
+                        .and_then(|a| j_u64(a, "NetConnectionStatus"))
+                        .map(|s| s == 2),
                     dhcp_enabled: cfg.get("DHCPEnabled").and_then(Value::as_bool),
                     dhcp_server: clean(j_str(cfg, "DHCPServer")),
                     dns_suffix: clean(j_str(cfg, "DNSDomain")),
@@ -689,7 +788,11 @@ $out | ConvertTo-Json -Depth 5 -Compress"#;
             Value::Number(n) => n
                 .as_u64()
                 .or_else(|| n.as_i64().filter(|&i| i >= 0).map(|i| i as u64))
-                .or_else(|| n.as_f64().filter(|f| f.is_finite() && *f >= 0.0).map(|f| f as u64)),
+                .or_else(|| {
+                    n.as_f64()
+                        .filter(|f| f.is_finite() && *f >= 0.0)
+                        .map(|f| f as u64)
+                }),
             Value::String(s) => s.trim().parse::<u64>().ok(),
             _ => None,
         })
@@ -901,6 +1004,30 @@ $out | ConvertTo-Json -Depth 5 -Compress"#;
             ..Default::default()
         };
 
+        snapshot.system = SystemInfo {
+            manufacturer: clean(reg_string(
+                "HARDWARE\\DESCRIPTION\\System\\BIOS",
+                "SystemManufacturer",
+            )),
+            model: clean(reg_string(
+                "HARDWARE\\DESCRIPTION\\System\\BIOS",
+                "SystemProductName",
+            )),
+            family: clean(reg_string(
+                "HARDWARE\\DESCRIPTION\\System\\BIOS",
+                "SystemFamily",
+            )),
+            sku: clean(reg_string(
+                "HARDWARE\\DESCRIPTION\\System\\BIOS",
+                "SystemSKU",
+            )),
+            serial_number: clean(reg_string(
+                "HARDWARE\\DESCRIPTION\\System\\BIOS",
+                "SystemSerialNumber",
+            )),
+            ..Default::default()
+        };
+
         snapshot.cpu = CpuInfo {
             name: clean(reg_string(
                 "HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0",
@@ -913,7 +1040,11 @@ $out | ConvertTo-Json -Depth 5 -Compress"#;
             logical_processors: std::thread::available_parallelism()
                 .ok()
                 .map(|c| c.get() as u32),
-            address_width_bits: Some(if cfg!(target_pointer_width = "64") { 64 } else { 32 }),
+            address_width_bits: Some(if cfg!(target_pointer_width = "64") {
+                64
+            } else {
+                32
+            }),
             ..Default::default()
         };
 
@@ -936,7 +1067,11 @@ $out | ConvertTo-Json -Depth 5 -Compress"#;
             let mut status: MEMORYSTATUSEX = zeroed();
             status.dwLength = size_of::<MEMORYSTATUSEX>() as u32;
             if GlobalMemoryStatusEx(&mut status) != 0 {
-                Some((status.ullTotalPhys, status.ullAvailPhys, status.dwMemoryLoad as f64))
+                Some((
+                    status.ullTotalPhys,
+                    status.ullAvailPhys,
+                    status.dwMemoryLoad as f64,
+                ))
             } else {
                 None
             }
@@ -951,7 +1086,7 @@ $out | ConvertTo-Json -Depth 5 -Compress"#;
     fn reg_string(subkey: &str, value_name: &str) -> Option<String> {
         use std::os::windows::ffi::OsStrExt;
         use windows_sys::Win32::System::Registry::{
-            RegGetValueW, HKEY_LOCAL_MACHINE, RRF_RT_REG_SZ,
+            HKEY_LOCAL_MACHINE, RRF_RT_REG_SZ, RegGetValueW,
         };
 
         fn wide(text: &str) -> Vec<u16> {
@@ -1055,11 +1190,18 @@ mod platform {
     }
 
     fn first<'a>(root: &'a Value, key: &str) -> Option<&'a Value> {
-        root.get(key).and_then(|v| v.as_array()).and_then(|a| a.first())
+        root.get(key)
+            .and_then(|v| v.as_array())
+            .and_then(|a| a.first())
     }
 
     fn s(value: &Value, key: &str) -> Option<String> {
-        clean(value.get(key).and_then(|v| v.as_str()).map(|s| s.to_string()))
+        clean(
+            value
+                .get(key)
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+        )
     }
 
     fn from_system_profiler(root: Value) -> PcInfoSnapshot {
@@ -1076,6 +1218,15 @@ mod platform {
         }
         if let Some(hw) = first(&root, "SPHardwareDataType") {
             snapshot.cpu.name = s(hw, "chip_type").or_else(|| s(hw, "cpu_type"));
+            snapshot.system = SystemInfo {
+                manufacturer: Some("Apple".to_string()),
+                model: s(hw, "machine_model").or_else(|| s(hw, "machine_name")),
+                family: s(hw, "machine_name"),
+                serial_number: s(hw, "serial_number"),
+                uuid: s(hw, "platform_UUID"),
+                chassis_type: Some("Mac".to_string()),
+                ..Default::default()
+            };
             snapshot.motherboard.product = s(hw, "machine_model").or_else(|| s(hw, "machine_name"));
             snapshot.motherboard.serial_number = s(hw, "serial_number");
             snapshot.motherboard.bios_version = s(hw, "boot_rom_version");
@@ -1192,16 +1343,38 @@ mod platform {
         snapshot
     }
 
+    // `system_profiler` gives stable English keys but is sparse on CPU detail and
+    // omits live memory; `sysinfo` (already used for Status Bar monitoring) fills
+    // the gaps without a second OS-command parse. Only fields left empty by
+    // system_profiler are touched, so the richer JSON source always wins.
     fn fill_from_sysinfo(snapshot: &mut PcInfoSnapshot) {
         use sysinfo::System;
         let mut system = System::new();
         system.refresh_memory();
+        system.refresh_cpu_all();
         let total = system.total_memory();
         if total > 0 {
             snapshot.memory.total_bytes = Some(total);
             snapshot.memory.available_bytes = Some(system.available_memory());
-            snapshot.memory.used_percent =
-                Some(system.used_memory() as f64 / total as f64 * 100.0);
+            snapshot.memory.used_percent = Some(system.used_memory() as f64 / total as f64 * 100.0);
+        }
+        if let Some(cpu) = system.cpus().first() {
+            if snapshot.cpu.name.is_none() {
+                snapshot.cpu.name = clean(Some(cpu.brand().to_string()))
+                    .or_else(|| clean(Some(cpu.name().to_string())));
+            }
+            if snapshot.cpu.vendor.is_none() {
+                snapshot.cpu.vendor = clean(Some(cpu.vendor_id().to_string()));
+            }
+            let mhz = cpu.frequency();
+            if mhz > 0 && snapshot.cpu.max_clock_mhz.is_none() {
+                snapshot.cpu.max_clock_mhz = Some(mhz);
+            }
+        }
+        if snapshot.cpu.physical_cores.is_none() {
+            snapshot.cpu.physical_cores = System::physical_core_count()
+                .and_then(|count| u32::try_from(count).ok())
+                .filter(|&count| count > 0);
         }
         if snapshot.cpu.logical_processors.is_none() {
             snapshot.cpu.logical_processors = std::thread::available_parallelism()
@@ -1211,6 +1384,9 @@ mod platform {
         snapshot.os.uptime_seconds = Some(System::uptime());
         if snapshot.os.name.is_none() {
             snapshot.os.name = System::long_os_version();
+        }
+        if snapshot.battery.is_empty() {
+            snapshot.battery = collect_batteries();
         }
     }
 }
@@ -1240,9 +1416,222 @@ mod platform {
             ..Default::default()
         };
 
+        snapshot.system = system_from_dmi();
         snapshot.cpu = cpu_from_proc();
         snapshot.memory = memory_from_proc();
+        snapshot.storage = storage_from_sysfs();
+        snapshot.graphics = gpus_from_lspci();
+        enrich_from_sysinfo(&mut snapshot);
         snapshot
+    }
+
+    fn system_from_dmi() -> SystemInfo {
+        let dmi = "/sys/devices/virtual/dmi/id";
+        SystemInfo {
+            manufacturer: read_trimmed(&format!("{dmi}/sys_vendor")),
+            model: read_trimmed(&format!("{dmi}/product_name")),
+            family: read_trimmed(&format!("{dmi}/product_family")),
+            sku: read_trimmed(&format!("{dmi}/product_sku")),
+            serial_number: read_trimmed(&format!("{dmi}/product_serial")),
+            uuid: read_trimmed(&format!("{dmi}/product_uuid")),
+            chassis_type: read_trimmed(&format!("{dmi}/chassis_type"))
+                .and_then(|raw| raw.parse::<u64>().ok())
+                .and_then(chassis_type_from_dmi),
+            ..Default::default()
+        }
+    }
+
+    fn chassis_type_from_dmi(code: u64) -> Option<String> {
+        Some(
+            match code {
+                3 | 4 | 6 | 7 => "Desktop",
+                5 => "Pizza Box",
+                8 | 9 | 10 | 14 => "Laptop",
+                11 => "Handheld",
+                12 | 13 => "Docking Station",
+                15 | 16 => "Desktop",
+                17 | 23 => "Rack Server",
+                18 | 19 => "Sub Chassis",
+                30 | 31 | 32 => "Tablet",
+                _ => return None,
+            }
+            .to_string(),
+        )
+    }
+
+    // sysinfo fills cross-platform fields the /proc + lscpu parse misses: mounted
+    // volumes, network adapters (MAC + IPs), CPU brand/frequency, and battery.
+    // Linux-only because this build path also covers other Unix targets where the
+    // sysinfo dependency is not declared.
+    #[cfg(target_os = "linux")]
+    fn enrich_from_sysinfo(snapshot: &mut PcInfoSnapshot) {
+        use sysinfo::{Disks, Networks, System};
+
+        let mut system = System::new();
+        system.refresh_cpu_all();
+        if let Some(cpu) = system.cpus().first() {
+            if snapshot.cpu.name.is_none() {
+                snapshot.cpu.name = clean(Some(cpu.brand().to_string()));
+            }
+            if snapshot.cpu.vendor.is_none() {
+                snapshot.cpu.vendor = clean(Some(cpu.vendor_id().to_string()));
+            }
+            let mhz = cpu.frequency();
+            if mhz > 0 && snapshot.cpu.max_clock_mhz.is_none() {
+                snapshot.cpu.max_clock_mhz = Some(mhz);
+            }
+        }
+        if snapshot.cpu.physical_cores.is_none() {
+            snapshot.cpu.physical_cores = System::physical_core_count()
+                .and_then(|count| u32::try_from(count).ok())
+                .filter(|&count| count > 0);
+        }
+
+        let disks = Disks::new_with_refreshed_list();
+        for disk in disks.list() {
+            let total = disk.total_space();
+            if total == 0 {
+                continue;
+            }
+            snapshot.volumes.push(VolumeInfo {
+                mount: clean(Some(disk.mount_point().to_string_lossy().into_owned())),
+                label: clean(Some(disk.name().to_string_lossy().into_owned())),
+                file_system: clean(Some(disk.file_system().to_string_lossy().into_owned())),
+                total_bytes: Some(total),
+                free_bytes: Some(disk.available_space()),
+            });
+        }
+
+        let networks = Networks::new_with_refreshed_list();
+        for (name, data) in &networks {
+            let mac = data.mac_address().to_string();
+            let ips: Vec<String> = data
+                .ip_networks()
+                .iter()
+                .map(|ip| ip.addr.to_string())
+                .collect();
+            snapshot.network.push(NetworkAdapterInfo {
+                name: clean(Some(name.clone())),
+                mac_address: clean(Some(mac)).filter(|m| m != "00:00:00:00:00:00"),
+                ip_addresses: ips,
+                ..Default::default()
+            });
+        }
+
+        if snapshot.battery.is_empty() {
+            snapshot.battery = collect_batteries();
+        }
+    }
+
+    #[cfg(not(target_os = "linux"))]
+    fn enrich_from_sysinfo(_snapshot: &mut PcInfoSnapshot) {}
+
+    // Physical drives from sysfs: model, capacity, and rotational flag → HDD/SSD.
+    // Skips virtual/removable nodes (loop, ram, zram, device-mapper, optical).
+    fn storage_from_sysfs() -> Vec<DiskInfo> {
+        let Ok(entries) = fs::read_dir("/sys/block") else {
+            return Vec::new();
+        };
+        let mut disks = Vec::new();
+        for entry in entries.flatten() {
+            let name = entry.file_name().to_string_lossy().into_owned();
+            if name.starts_with("loop")
+                || name.starts_with("ram")
+                || name.starts_with("zram")
+                || name.starts_with("dm-")
+                || name.starts_with("sr")
+                || name.starts_with("md")
+            {
+                continue;
+            }
+            let base = entry.path();
+            let size_sectors = fs::read_to_string(base.join("size"))
+                .ok()
+                .and_then(|raw| raw.trim().parse::<u64>().ok());
+            let Some(sectors) = size_sectors.filter(|&s| s > 0) else {
+                continue;
+            };
+            let model_path = base.join("device/model");
+            let model = read_trimmed(model_path.to_string_lossy().as_ref());
+            let media_type = match fs::read_to_string(base.join("queue/rotational")) {
+                Ok(raw) if raw.trim() == "0" => Some("SSD".to_string()),
+                Ok(raw) if raw.trim() == "1" => Some("HDD".to_string()),
+                _ => None,
+            };
+            disks.push(DiskInfo {
+                // Linux block size is 512 bytes per sector for the `size` attribute.
+                model: model.or_else(|| clean(Some(name.clone()))),
+                size_bytes: Some(sectors * 512),
+                media_type,
+                ..Default::default()
+            });
+        }
+        disks
+    }
+
+    // Best-effort GPU list from `lspci -mm` (machine-readable, quoted fields).
+    // Force the C locale so the device-class label stays English. Absent lspci is
+    // a normal, non-error outcome.
+    fn gpus_from_lspci() -> Vec<GpuInfo> {
+        let Ok(output) = std::process::Command::new("lspci")
+            .args(["-mm"])
+            .env("LC_ALL", "C")
+            .output()
+        else {
+            return Vec::new();
+        };
+        if !output.status.success() {
+            return Vec::new();
+        }
+        let text = String::from_utf8_lossy(&output.stdout);
+        let mut gpus = Vec::new();
+        for line in text.lines() {
+            let fields = parse_lspci_fields(line);
+            // fields[0] = slot, [1] = class, [2] = vendor, [3] = device.
+            let Some(class) = fields.get(1) else {
+                continue;
+            };
+            if !(class.contains("VGA")
+                || class.contains("3D controller")
+                || class.contains("Display controller"))
+            {
+                continue;
+            }
+            gpus.push(GpuInfo {
+                name: clean(fields.get(3).cloned()),
+                vendor: clean(fields.get(2).cloned()),
+                ..Default::default()
+            });
+        }
+        gpus
+    }
+
+    // Split an `lspci -mm` line into its quoted fields, dropping trailing
+    // -rNN / -pNN revision tokens and the unquoted slot prefix's quoting.
+    fn parse_lspci_fields(line: &str) -> Vec<String> {
+        let mut fields = Vec::new();
+        let mut rest = line.trim();
+        // Leading slot id is unquoted (e.g. "01:00.0"); capture it as field 0.
+        if let Some(space) = rest.find(' ') {
+            fields.push(rest[..space].to_string());
+            rest = rest[space..].trim_start();
+        }
+        let bytes = rest.as_bytes();
+        let mut i = 0;
+        while i < bytes.len() {
+            if bytes[i] == b'"' {
+                let start = i + 1;
+                let mut j = start;
+                while j < bytes.len() && bytes[j] != b'"' {
+                    j += 1;
+                }
+                fields.push(rest[start..j.min(bytes.len())].to_string());
+                i = j + 1;
+            } else {
+                i += 1;
+            }
+        }
+        fields
     }
 
     fn read_trimmed(path: &str) -> Option<String> {
@@ -1272,7 +1661,11 @@ mod platform {
             logical_processors: std::thread::available_parallelism()
                 .ok()
                 .map(|c| c.get() as u32),
-            address_width_bits: Some(if cfg!(target_pointer_width = "64") { 64 } else { 32 }),
+            address_width_bits: Some(if cfg!(target_pointer_width = "64") {
+                64
+            } else {
+                32
+            }),
             ..Default::default()
         };
         if let Ok(text) = fs::read_to_string("/proc/cpuinfo") {
@@ -1303,7 +1696,10 @@ mod platform {
     // /proc/cpuinfo does not expose cleanly. Force the C locale so the field
     // labels stay English regardless of the system language.
     fn enrich_from_lscpu(info: &mut CpuInfo) {
-        let Ok(output) = std::process::Command::new("lscpu").env("LC_ALL", "C").output() else {
+        let Ok(output) = std::process::Command::new("lscpu")
+            .env("LC_ALL", "C")
+            .output()
+        else {
             return;
         };
         if !output.status.success() {
@@ -1412,7 +1808,10 @@ mod tests {
         assert!(!first.source.is_empty());
         let second = cache.get_or_gather();
         // Cached value is returned unchanged (same gather timestamp).
-        assert_eq!(first.generated_at_unix_seconds, second.generated_at_unix_seconds);
+        assert_eq!(
+            first.generated_at_unix_seconds,
+            second.generated_at_unix_seconds
+        );
     }
 
     #[test]

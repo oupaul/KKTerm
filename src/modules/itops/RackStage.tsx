@@ -1,4 +1,4 @@
-// Single-rack stage (docs/FLEET.md Rack View). Centers a <RackElevation> and
+// Single-rack stage (docs/SITE.md Rack View). Centers a <RackElevation> and
 // overlays per-device "balloon" callouts that point to each device's U slot,
 // alternating left and right with a leader line to the rack edge. Balloon Y is
 // measured from the live device grid so it tracks the rack's variable header
@@ -52,10 +52,13 @@ export function RackStage({
   onSlotClick,
   onOpenItem,
   onEditItem,
+  onBindItem,
   onEditRack,
   onDeleteRack,
   onRunRack,
   onMoveItem,
+  onDeleteItem,
+  editMode = false,
 }: {
   rack: Rack;
   hostFor?: (item: RackItem) => string | null;
@@ -63,10 +66,13 @@ export function RackStage({
   onSlotClick?: (startU: number) => void;
   onOpenItem?: (item: RackItem) => void;
   onEditItem?: (item: RackItem) => void;
+  onBindItem?: (item: RackItem) => void;
   onEditRack?: (rack: Rack) => void;
   onDeleteRack?: (rack: Rack) => void;
   onRunRack?: (rack: Rack) => void;
   onMoveItem?: (itemId: string, targetRackId: string, startU: number) => void;
+  onDeleteItem?: (item: RackItem) => void;
+  editMode?: boolean;
 }) {
   const { t } = useTranslation();
   const stageRef = useRef<HTMLDivElement | null>(null);
@@ -122,13 +128,16 @@ export function RackStage({
           rack={rack}
           hostFor={hostFor}
           isGhost={isGhost}
+          editMode={editMode}
           onSlotClick={onSlotClick}
           onOpenItem={onOpenItem}
           onEditItem={onEditItem}
+          onBindItem={onBindItem}
           onEditRack={onEditRack}
           onDeleteRack={onDeleteRack}
           onRunRack={onRunRack}
           onMoveItem={onMoveItem}
+          onDeleteItem={onDeleteItem}
         />
       </div>
       {geom

@@ -1,4 +1,4 @@
-// Create a Server Room in the current Fleet topology. Server Rooms are stored
+// Create a Server Room in the current Site topology. Server Rooms are stored
 // as the rack's `server_room` grouping tag, so creating one also creates its
 // first Rack.
 
@@ -14,49 +14,46 @@ import {
   TextInput,
 } from "../../app/ui/dialog";
 import { lucideIconRefForName } from "../../lib/iconCatalog";
-import { ConnectionIconBackgroundPicker, ConnectionIconColorPicker } from "../workspace/connections/ConnectionIconBackgroundPicker";
+import { ConnectionIconBackgroundPicker } from "../workspace/connections/ConnectionIconBackgroundPicker";
 import { ConnectionIconPicker } from "../workspace/connections/ConnectionIconPicker";
 import { useWorkspaceStore } from "../../store";
-import type { Fleet, Rack, RackShell } from "../../types";
+import type { Site, ServerRoom } from "../../types";
 import { useItOpsStore } from "./state";
 
-const DEFAULT_SHELL: RackShell = "black";
 const DEFAULT_SERVER_ROOM_ICON_REF = lucideIconRefForName("Server");
 
 export function ServerRoomDialog({
-  fleets,
-  defaultFleetId,
+  sites,
+  defaultSiteId,
   onClose,
   onCreated,
 }: {
-  fleets: Fleet[];
-  defaultFleetId: string;
+  sites: Site[];
+  defaultSiteId: string;
   onClose: () => void;
-  onCreated: (rack: Rack) => void;
+  onCreated: (room: ServerRoom) => void;
 }) {
   const { t } = useTranslation();
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
-  const createRack = useItOpsStore((state) => state.createRack);
+  const createServerRoom = useItOpsStore((state) => state.createServerRoom);
   const setRoomIcon = useItOpsStore((state) => state.setRoomIcon);
 
-  const [fleetId, setFleetId] = useState(defaultFleetId || fleets[0]?.id || "");
+  const [siteId, setSiteId] = useState(defaultSiteId || sites[0]?.id || "");
   const [serverRoom, setServerRoom] = useState("");
-  const [rackName, setRackName] = useState("");
   const [iconColor, setIconColor] = useState<string | null>(null);
   const [iconDataUrl, setIconDataUrl] = useState<string | null>(null);
   const [iconBackgroundColor, setIconBackgroundColor] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (fleetId && fleets.some((fleet) => fleet.id === fleetId)) {
+    if (siteId && sites.some((site) => site.id === siteId)) {
       return;
     }
-    setFleetId(defaultFleetId || fleets[0]?.id || "");
-  }, [defaultFleetId, fleetId, fleets]);
+    setSiteId(defaultSiteId || sites[0]?.id || "");
+  }, [defaultSiteId, siteId, sites]);
 
   const trimmedServerRoom = serverRoom.trim();
-  const trimmedRackName = rackName.trim();
-  const canSave = Boolean(fleetId && trimmedServerRoom && trimmedRackName && !busy);
+  const canSave = Boolean(siteId && trimmedServerRoom && !busy);
 
   async function handleSave() {
     if (!canSave) {
@@ -64,18 +61,12 @@ export function ServerRoomDialog({
     }
     setBusy(true);
     try {
-      const rack = await createRack(fleetId, {
-        name: trimmedRackName,
-        serverRoom: trimmedServerRoom,
-        rackGroup: "",
-        shell: DEFAULT_SHELL,
-        heightU: 42,
-      });
-      // Persist the server room icon on the owning Fleet.
+      const room = await createServerRoom(siteId, trimmedServerRoom);
+      // Persist the server room icon on the owning Site.
       if (iconColor || iconDataUrl || iconBackgroundColor) {
-        await setRoomIcon(fleetId, trimmedServerRoom, { iconColor, iconDataUrl, iconBackgroundColor });
+        await setRoomIcon(siteId, trimmedServerRoom, { iconColor, iconDataUrl, iconBackgroundColor });
       }
-      onCreated(rack);
+      onCreated(room);
       onClose();
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -112,25 +103,21 @@ export function ServerRoomDialog({
             iconColor={iconColor}
             iconDataUrl={iconDataUrl}
             onChange={setIconDataUrl}
+            onIconColorChange={setIconColor}
             type="localFiles"
           />
           <div className="connection-icon-palettes">
-            <ConnectionIconColorPicker
-              color={iconColor}
-              kind="foreground"
-              onChange={setIconColor}
-            />
             <ConnectionIconBackgroundPicker
               color={iconBackgroundColor}
               onChange={setIconBackgroundColor}
             />
           </div>
         </div>
-        <Field label={t("itops.racks.serverRoomFleetLabel")} req>
+        <Field label={t("itops.racks.serverRoomSiteLabel")} req>
           <Select
-            value={fleetId}
-            onChange={(event) => setFleetId(event.currentTarget.value)}
-            options={fleets.map((fleet) => ({ value: fleet.id, label: fleet.name }))}
+            value={siteId}
+            onChange={(event) => setSiteId(event.currentTarget.value)}
+            options={sites.map((site) => ({ value: site.id, label: site.name }))}
           />
         </Field>
         <Field label={t("itops.racks.serverRoomNameLabel")} req>
@@ -139,17 +126,6 @@ export function ServerRoomDialog({
             placeholder={t("itops.racks.serverRoomPlaceholder")}
             onChange={(event) => setServerRoom(event.currentTarget.value)}
             autoFocus
-          />
-        </Field>
-        <Field
-          label={t("itops.racks.firstRackLabel")}
-          hint={t("itops.racks.firstRackHint")}
-          req
-        >
-          <TextInput
-            value={rackName}
-            placeholder={t("itops.racks.namePlaceholder")}
-            onChange={(event) => setRackName(event.currentTarget.value)}
           />
         </Field>
       </Sheet>

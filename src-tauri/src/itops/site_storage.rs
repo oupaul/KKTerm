@@ -1,4 +1,4 @@
-// Fleet topology storage (docs/FLEET.md Phase B): CRUD for Racks and Rack Devices
+// Site topology storage (docs/SITE.md Phase B): CRUD for Racks and Rack Devices
 // plus the pure U-span overlap/fit validator. Mirrors the conventions in
 // `itops/storage.rs` (free functions over `&SqliteConnection`, JSON `TEXT` for
 // non-relational fields, integer `sort_order`). Reuses `ItopsStorageError`.
@@ -7,13 +7,14 @@ use rusqlite::{Connection as SqliteConnection, OptionalExtension, params};
 
 use super::inventory::normalize_metadata;
 use super::storage::ItopsStorageError;
-use super::types::{Rack, RackItem, RackItemKind, RackItemMetadata};
+use super::types::{Rack, RackItem, RackItemKind, RackItemMetadata, ServerRoom};
 use crate::dashboard_storage::DashboardBackground;
 
 type Result<T> = std::result::Result<T, ItopsStorageError>;
 
 /// Hard ceiling on rack height so a single rack can't claim an absurd U count.
 const MAX_RACK_HEIGHT_U: u32 = 100;
+const MAX_RACK_DEPTH_MM: u32 = 5000;
 
 // ── Pure placement validation ───────────────────────────────────────────────
 
@@ -93,6 +94,86 @@ fn validate_height(height_u: u32) -> Result<u32> {
     Ok(height_u)
 }
 
+fn validate_depth(depth_mm: u32) -> Result<u32> {
+    if !(1..=MAX_RACK_DEPTH_MM).contains(&depth_mm) {
+        return Err(ItopsStorageError::Validation(format!(
+            "rack depth must be between 1 and {MAX_RACK_DEPTH_MM} mm"
+        )));
+    }
+    Ok(depth_mm)
+}
+
+pub fn list_server_rooms(conn: &SqliteConnection, site_id: &str) -> Result<Vec<ServerRoom>> {
+    let mut statement = conn.prepare(
+        "SELECT id, site_id, name, sort_order FROM itops_server_rooms WHERE site_id = ? ORDER BY sort_order",
+    )?;
+    Ok(statement
+        .query_map(params![site_id], |row| {
+            Ok(ServerRoom {
+                id: row.get(0)?,
+                site_id: row.get(1)?,
+                name: row.get(2)?,
+                sort_order: row.get(3)?,
+            })
+        })?
+        .collect::<rusqlite::Result<Vec<_>>>()?)
+}
+
+pub fn create_server_room(
+    conn: &SqliteConnection,
+    id: &str,
+    site_id: &str,
+    name: &str,
+) -> Result<ServerRoom> {
+    let name = name.trim();
+    if name.is_empty() {
+        return Err(ItopsStorageError::Validation(
+            "server room name must not be empty".to_string(),
+        ));
+    }
+    let next_sort: i64 = conn.query_row(
+        "SELECT COALESCE(MAX(sort_order), -1) + 1 FROM itops_server_rooms WHERE site_id = ?",
+        params![site_id],
+        |row| row.get(0),
+    )?;
+    conn.execute(
+        "INSERT INTO itops_server_rooms (id, site_id, name, sort_order) VALUES (?, ?, ?, ?)",
+        params![id, site_id, name, next_sort],
+    )?;
+    Ok(ServerRoom {
+        id: id.to_string(),
+        site_id: site_id.to_string(),
+        name: name.to_string(),
+        sort_order: next_sort,
+    })
+}
+
+pub fn delete_server_room(conn: &SqliteConnection, id: &str) -> Result<()> {
+    if conn.execute("DELETE FROM itops_server_rooms WHERE id = ?", params![id])? == 0 {
+        return Err(ItopsStorageError::NotFound);
+    }
+    Ok(())
+}
+
+fn validate_server_room(conn: &SqliteConnection, site_id: &str, name: &str) -> Result<String> {
+    let name = name.trim();
+    if name.is_empty() {
+        return Err(ItopsStorageError::Validation(
+            "rack must belong to a server room".to_string(),
+        ));
+    }
+    let exists: bool = conn.query_row(
+        "SELECT EXISTS(SELECT 1 FROM itops_server_rooms WHERE site_id = ? AND name = ? COLLATE NOCASE)",
+        params![site_id, name], |row| row.get(0),
+    )?;
+    if !exists {
+        return Err(ItopsStorageError::Validation(
+            "server room does not belong to this site".to_string(),
+        ));
+    }
+    Ok(name.to_string())
+}
+
 fn metadata_to_json(metadata: &RackItemMetadata) -> Result<String> {
     serde_json::to_string(&normalize_metadata(metadata.clone()))
         .map_err(|error| ItopsStorageError::Validation(error.to_string()))
@@ -122,7 +203,7 @@ fn row_to_item(row: &rusqlite::Row<'_>) -> rusqlite::Result<RackItem> {
 }
 
 const SELECT_ITEM_COLUMNS: &str = "id, rack_id, connection_id, kind, label, start_u, height_u, metadata_json \
-     FROM itops_fleet_rack_items";
+     FROM itops_site_rack_items";
 
 fn list_items_for_rack(conn: &SqliteConnection, rack_id: &str) -> Result<Vec<RackItem>> {
     let mut stmt = conn.prepare(&format!(
@@ -152,7 +233,7 @@ fn existing_spans(conn: &SqliteConnection, rack_id: &str) -> Result<Vec<(String,
 
 fn fetch_rack_height(conn: &SqliteConnection, rack_id: &str) -> Result<u32> {
     conn.query_row(
-        "SELECT height_u FROM itops_fleet_racks WHERE id = ?",
+        "SELECT height_u FROM itops_site_racks WHERE id = ?",
         params![rack_id],
         |row| row.get(0),
     )
@@ -166,20 +247,21 @@ fn row_to_rack(row: &rusqlite::Row<'_>) -> rusqlite::Result<Rack> {
     let background: Option<String> = row.get(6)?;
     Ok(Rack {
         id: row.get(0)?,
-        fleet_id: row.get(1)?,
+        site_id: row.get(1)?,
         name: row.get(2)?,
         server_room: row.get(3)?,
         rack_group: row.get(4)?,
         shell: row.get(5)?,
         background: background.and_then(|json| serde_json::from_str(&json).ok()),
         height_u: row.get(7)?,
-        sort_order: row.get(8)?,
+        depth_mm: row.get(8)?,
+        sort_order: row.get(9)?,
         items: Vec::new(),
     })
 }
 
-const SELECT_RACK_COLUMNS: &str = "id, fleet_id, name, server_room, rack_group, shell, \
-     background_json, height_u, sort_order FROM itops_fleet_racks";
+const SELECT_RACK_COLUMNS: &str = "id, site_id, name, server_room, rack_group, shell, \
+     background_json, height_u, depth_mm, sort_order FROM itops_site_racks";
 
 /// Normalize a shell choice to a stored value: blank/"black"/None → NULL (the
 /// default), otherwise the trimmed colour name.
@@ -204,13 +286,13 @@ fn rack_background_to_json(background: &Option<DashboardBackground>) -> Result<O
     }
 }
 
-/// All Racks in a Fleet, ordered by `sort_order`, each with its items hydrated.
-pub fn list_racks(conn: &SqliteConnection, fleet_id: &str) -> Result<Vec<Rack>> {
+/// All Racks in a Site, ordered by `sort_order`, each with its items hydrated.
+pub fn list_racks(conn: &SqliteConnection, site_id: &str) -> Result<Vec<Rack>> {
     let mut stmt = conn.prepare(&format!(
-        "SELECT {SELECT_RACK_COLUMNS} WHERE fleet_id = ? ORDER BY sort_order"
+        "SELECT {SELECT_RACK_COLUMNS} WHERE site_id = ? ORDER BY sort_order"
     ))?;
     let mut racks = stmt
-        .query_map(params![fleet_id], row_to_rack)?
+        .query_map(params![site_id], row_to_rack)?
         .collect::<rusqlite::Result<Vec<_>>>()?;
     for rack in &mut racks {
         rack.items = list_items_for_rack(conn, &rack.id)?;
@@ -223,45 +305,50 @@ pub fn list_racks(conn: &SqliteConnection, fleet_id: &str) -> Result<Vec<Rack>> 
 pub fn create_rack(
     conn: &SqliteConnection,
     id: &str,
-    fleet_id: &str,
+    site_id: &str,
     name: &str,
     server_room: &str,
     rack_group: &str,
     shell: Option<&str>,
     height_u: u32,
+    depth_mm: u32,
 ) -> Result<Rack> {
     let name = validate_name(name)?;
+    let server_room = validate_server_room(conn, site_id, server_room)?;
     let height_u = validate_height(height_u)?;
+    let depth_mm = validate_depth(depth_mm)?;
     let shell = normalize_shell(shell);
     let next_sort: i64 = conn.query_row(
-        "SELECT COALESCE(MAX(sort_order), -1) + 1 FROM itops_fleet_racks WHERE fleet_id = ?",
-        params![fleet_id],
+        "SELECT COALESCE(MAX(sort_order), -1) + 1 FROM itops_site_racks WHERE site_id = ?",
+        params![site_id],
         |row| row.get(0),
     )?;
     conn.execute(
-        "INSERT INTO itops_fleet_racks
-            (id, fleet_id, name, server_room, rack_group, shell, height_u, sort_order)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO itops_site_racks
+            (id, site_id, name, server_room, rack_group, shell, height_u, depth_mm, sort_order)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
         params![
             id,
-            fleet_id,
+            site_id,
             name,
-            server_room.trim(),
+            server_room,
             rack_group.trim(),
             shell,
             height_u,
+            depth_mm,
             next_sort
         ],
     )?;
     Ok(Rack {
         id: id.to_string(),
-        fleet_id: fleet_id.to_string(),
+        site_id: site_id.to_string(),
         name,
-        server_room: server_room.trim().to_string(),
+        server_room,
         rack_group: rack_group.trim().to_string(),
         shell,
         background: None,
         height_u,
+        depth_mm,
         sort_order: next_sort,
         items: Vec::new(),
     })
@@ -278,19 +365,22 @@ pub fn update_rack(
     rack_group: &str,
     shell: Option<&str>,
     height_u: u32,
+    depth_mm: u32,
 ) -> Result<Rack> {
     let name = validate_name(name)?;
     let height_u = validate_height(height_u)?;
+    let depth_mm = validate_depth(depth_mm)?;
     let shell = normalize_shell(shell);
     // Existence check (returns NotFound early before the height-shrink scan).
-    let _sort_order: i64 = conn
+    let (site_id, _sort_order): (String, i64) = conn
         .query_row(
-            "SELECT sort_order FROM itops_fleet_racks WHERE id = ?",
+            "SELECT site_id, sort_order FROM itops_site_racks WHERE id = ?",
             params![id],
-            |row| row.get(0),
+            |row| Ok((row.get(0)?, row.get(1)?)),
         )
         .optional()?
         .ok_or(ItopsStorageError::NotFound)?;
+    let server_room = validate_server_room(conn, &site_id, server_room)?;
     for item in list_items_for_rack(conn, id)? {
         if item.start_u + item.height_u - 1 > height_u {
             return Err(ItopsStorageError::Validation(format!(
@@ -300,16 +390,17 @@ pub fn update_rack(
         }
     }
     conn.execute(
-        "UPDATE itops_fleet_racks
-         SET name = ?, server_room = ?, rack_group = ?, shell = ?, height_u = ?,
+        "UPDATE itops_site_racks
+         SET name = ?, server_room = ?, rack_group = ?, shell = ?, height_u = ?, depth_mm = ?,
              updated_at = CURRENT_TIMESTAMP
          WHERE id = ?",
         params![
             name,
-            server_room.trim(),
+            server_room,
             rack_group.trim(),
             shell,
             height_u,
+            depth_mm,
             id
         ],
     )?;
@@ -339,7 +430,7 @@ pub fn set_rack_background(
 ) -> Result<Rack> {
     let json = rack_background_to_json(&background)?;
     let affected = conn.execute(
-        "UPDATE itops_fleet_racks SET background_json = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+        "UPDATE itops_site_racks SET background_json = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
         params![json, id],
     )?;
     if affected == 0 {
@@ -350,22 +441,18 @@ pub fn set_rack_background(
 
 pub fn delete_rack(conn: &SqliteConnection, id: &str) -> Result<()> {
     // Items cascade via the FK ON DELETE CASCADE.
-    let affected = conn.execute("DELETE FROM itops_fleet_racks WHERE id = ?", params![id])?;
+    let affected = conn.execute("DELETE FROM itops_site_racks WHERE id = ?", params![id])?;
     if affected == 0 {
         return Err(ItopsStorageError::NotFound);
     }
     Ok(())
 }
 
-pub fn reorder_racks(
-    conn: &SqliteConnection,
-    fleet_id: &str,
-    ordered_ids: &[String],
-) -> Result<()> {
+pub fn reorder_racks(conn: &SqliteConnection, site_id: &str, ordered_ids: &[String]) -> Result<()> {
     for (index, id) in ordered_ids.iter().enumerate() {
         conn.execute(
-            "UPDATE itops_fleet_racks SET sort_order = ? WHERE id = ? AND fleet_id = ?",
-            params![index as i64, id, fleet_id],
+            "UPDATE itops_site_racks SET sort_order = ? WHERE id = ? AND site_id = ?",
+            params![index as i64, id, site_id],
         )?;
     }
     Ok(())
@@ -408,7 +495,7 @@ pub fn place_rack_item(
     validate_placement(rack_height, &existing, None, Span { start_u, height_u })?;
     let metadata_json = metadata_to_json(&metadata)?;
     conn.execute(
-        "INSERT INTO itops_fleet_rack_items
+        "INSERT INTO itops_site_rack_items
             (id, rack_id, connection_id, kind, label, start_u, height_u, metadata_json)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
         params![
@@ -447,7 +534,7 @@ pub fn update_rack_item(
     let connection_id = normalize_item_connection(kind, connection_id)?;
     let metadata_json = metadata_to_json(&metadata)?;
     let affected = conn.execute(
-        "UPDATE itops_fleet_rack_items
+        "UPDATE itops_site_rack_items
          SET kind = ?, connection_id = ?, label = ?, metadata_json = ?, updated_at = CURRENT_TIMESTAMP
          WHERE id = ?",
         params![kind.as_db_str(), connection_id, label.trim(), metadata_json, id],
@@ -471,7 +558,7 @@ pub fn move_rack_item(
     let existing = existing_spans(conn, rack_id)?;
     validate_placement(rack_height, &existing, Some(id), Span { start_u, height_u })?;
     let affected = conn.execute(
-        "UPDATE itops_fleet_rack_items
+        "UPDATE itops_site_rack_items
          SET rack_id = ?, start_u = ?, height_u = ?, updated_at = CURRENT_TIMESTAMP
          WHERE id = ?",
         params![rack_id, start_u, height_u, id],
@@ -484,7 +571,7 @@ pub fn move_rack_item(
 
 pub fn remove_rack_item(conn: &SqliteConnection, id: &str) -> Result<()> {
     let affected = conn.execute(
-        "DELETE FROM itops_fleet_rack_items WHERE id = ?",
+        "DELETE FROM itops_site_rack_items WHERE id = ?",
         params![id],
     )?;
     if affected == 0 {
@@ -515,20 +602,32 @@ mod tests {
         let conn = SqliteConnection::open_in_memory().unwrap();
         conn.execute_batch(
             r#"
-            CREATE TABLE itops_fleet_racks (
+            CREATE TABLE itops_site_racks (
                 id TEXT PRIMARY KEY,
-                fleet_id TEXT NOT NULL,
+                site_id TEXT NOT NULL,
                 name TEXT NOT NULL,
                 server_room TEXT NOT NULL DEFAULT '',
                 rack_group TEXT NOT NULL DEFAULT '',
                 shell TEXT,
                 background_json TEXT,
                 height_u INTEGER NOT NULL DEFAULT 42,
+                depth_mm INTEGER NOT NULL DEFAULT 1000,
                 sort_order INTEGER NOT NULL,
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
-            CREATE TABLE itops_fleet_rack_items (
+            CREATE TABLE itops_server_rooms (
+                id TEXT PRIMARY KEY,
+                site_id TEXT NOT NULL,
+                name TEXT NOT NULL,
+                sort_order INTEGER NOT NULL,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(site_id, name)
+            );
+            INSERT INTO itops_server_rooms (id, site_id, name, sort_order)
+            VALUES ('room-b', 'f1', 'Room B', 0), ('room-c', 'f1', 'Room C', 1);
+            CREATE TABLE itops_site_rack_items (
                 id TEXT PRIMARY KEY,
                 rack_id TEXT NOT NULL,
                 connection_id TEXT,
@@ -587,12 +686,14 @@ mod tests {
             " G1 ",
             Some("white"),
             42,
+            1000,
         )
         .unwrap();
         assert_eq!(rack.name, "A12");
         assert_eq!(rack.server_room, "Room B");
         assert_eq!(rack.rack_group, "G1");
         assert_eq!(rack.shell.as_deref(), Some("white"));
+        assert_eq!(rack.depth_mm, 1000);
         assert_eq!(rack.sort_order, 0);
 
         let listed = list_racks(&conn, "f1").unwrap();
@@ -601,10 +702,11 @@ mod tests {
         assert_eq!(listed[0].server_room, "Room B");
         assert_eq!(listed[0].rack_group, "G1");
 
-        let updated = update_rack(&conn, "r1", "A13", "Room C", "G2", None, 24).unwrap();
+        let updated = update_rack(&conn, "r1", "A13", "Room C", "G2", None, 24, 1200).unwrap();
         assert_eq!(updated.rack_group, "G2");
         assert_eq!(updated.name, "A13");
         assert_eq!(updated.height_u, 24);
+        assert_eq!(updated.depth_mm, 1200);
         assert_eq!(updated.sort_order, 0); // preserved
 
         delete_rack(&conn, "r1").unwrap();
@@ -616,9 +718,22 @@ mod tests {
     }
 
     #[test]
+    fn rack_depth_rejects_out_of_range_values() {
+        let conn = open_test_db();
+        assert!(matches!(
+            create_rack(&conn, "r1", "f1", "A12", "Room B", "", None, 42, 0),
+            Err(ItopsStorageError::Validation(_))
+        ));
+        assert!(matches!(
+            create_rack(&conn, "r2", "f1", "A13", "Room B", "", None, 42, 5001),
+            Err(ItopsStorageError::Validation(_))
+        ));
+    }
+
+    #[test]
     fn place_move_and_remove_items() {
         let conn = open_test_db();
-        create_rack(&conn, "r1", "f1", "A12", "", "", None, 42).unwrap();
+        create_rack(&conn, "r1", "f1", "A12", "Room B", "", None, 42, 1000).unwrap();
 
         let item = place_rack_item(
             &conn,
@@ -708,7 +823,7 @@ mod tests {
     #[test]
     fn updating_to_passive_item_clears_connection_id() {
         let conn = open_test_db();
-        create_rack(&conn, "r1", "f1", "A12", "", "", None, 42).unwrap();
+        create_rack(&conn, "r1", "f1", "A12", "Room B", "", None, 42, 1000).unwrap();
         place_rack_item(
             &conn,
             "i1",
@@ -743,7 +858,7 @@ mod tests {
     #[test]
     fn shrinking_rack_below_an_item_is_rejected() {
         let conn = open_test_db();
-        create_rack(&conn, "r1", "f1", "A12", "", "", None, 42).unwrap();
+        create_rack(&conn, "r1", "f1", "A12", "Room B", "", None, 42, 1000).unwrap();
         place_rack_item(
             &conn,
             "i1",
@@ -758,16 +873,16 @@ mod tests {
         .unwrap();
         // Item occupies U40-U41; shrinking to 24U must fail.
         assert!(matches!(
-            update_rack(&conn, "r1", "A12", "", "", None, 24),
+            update_rack(&conn, "r1", "A12", "Room B", "", None, 24, 1000),
             Err(ItopsStorageError::Validation(_))
         ));
     }
 
     #[test]
-    fn reorder_scopes_to_fleet() {
+    fn reorder_scopes_to_site() {
         let conn = open_test_db();
-        create_rack(&conn, "a", "f1", "A", "", "", None, 42).unwrap();
-        create_rack(&conn, "b", "f1", "B", "", "", None, 42).unwrap();
+        create_rack(&conn, "a", "f1", "A", "Room B", "", None, 42, 1000).unwrap();
+        create_rack(&conn, "b", "f1", "B", "Room B", "", None, 42, 1000).unwrap();
         reorder_racks(&conn, "f1", &["b".to_string(), "a".to_string()]).unwrap();
         let order: Vec<String> = list_racks(&conn, "f1")
             .unwrap()
@@ -775,5 +890,33 @@ mod tests {
             .map(|rack| rack.id)
             .collect();
         assert_eq!(order, vec!["b", "a"]);
+    }
+
+    #[test]
+    fn server_room_persists_without_a_rack() {
+        let conn = open_test_db();
+        let created = create_server_room(&conn, "room-empty", "f1", " Empty Room ").unwrap();
+        assert_eq!(created.name, "Empty Room");
+        assert!(
+            list_server_rooms(&conn, "f1")
+                .unwrap()
+                .iter()
+                .any(|room| room.id == "room-empty")
+        );
+        assert!(list_racks(&conn, "f1").unwrap().is_empty());
+    }
+
+    #[test]
+    fn rack_requires_a_server_room_owned_by_its_site() {
+        let conn = open_test_db();
+        assert!(matches!(
+            create_rack(&conn, "r-empty", "f1", "A", "", "", None, 42, 1000),
+            Err(ItopsStorageError::Validation(_))
+        ));
+        assert!(matches!(
+            create_rack(&conn, "r-missing", "f1", "A", "Unknown", "", None, 42, 1000),
+            Err(ItopsStorageError::Validation(_))
+        ));
+        assert!(create_rack(&conn, "r-valid", "f1", "A", "Room B", "", None, 42, 1000).is_ok());
     }
 }

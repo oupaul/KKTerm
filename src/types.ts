@@ -139,24 +139,24 @@ export interface ConnectionTree {
   folders: ConnectionFolder[];
 }
 
-// IT Ops Module (docs/ITOPS.md). A Fleet is a durable, named selection of
-// existing Connections used as a fleet target; ResolvedHost is one concrete
+// IT Ops Module (docs/ITOPS.md). A Site is a durable, named selection of
+// existing Connections used as a site target; ResolvedHost is one concrete
 // target produced by resolving a group at run time.
 export type ItopsTransport = "ssh" | "winrm" | "psexec" | "auto";
 
-export interface FleetFilter {
+export interface SiteFilter {
   types: string[];
   folderId?: string | null;
 }
 
-export interface Fleet {
+export interface Site {
   id: string;
   name: string;
   sortOrder: number;
   memberIds: string[];
-  filter?: FleetFilter | null;
+  filter?: SiteFilter | null;
   transport: ItopsTransport;
-  // Custom Fleet-view (server-room cards) background; reuses the Dashboard
+  // Custom Site-view (server-room cards) background; reuses the Dashboard
   // background machinery. null/undefined = theme default.
   background?: DashboardBackground | null;
   // Per-server-room backgrounds, keyed by the room's string tag.
@@ -175,6 +175,13 @@ export interface RoomIconEntry {
   iconBackgroundColor?: string | null;
 }
 
+export interface ServerRoom {
+  id: string;
+  siteId: string;
+  name: string;
+  sortOrder: number;
+}
+
 export interface ResolvedHost {
   connectionId: string;
   name: string;
@@ -185,7 +192,7 @@ export interface ResolvedHost {
   transport: ItopsTransport;
 }
 
-// Fleet topology (docs/FLEET.md Phase B). A Rack belongs to one Fleet, grouped
+// Site topology (docs/SITE.md Phase B). A Rack belongs to one Site, grouped
 // grouped by server room, and holds Rack Devices at U positions.
 export type RackItemKind =
   | "connection"
@@ -206,15 +213,6 @@ export type RackItemKind =
 
 export type RackItemStatus = "online" | "warning" | "offline";
 
-export type RackAuditAction = "installed" | "removed" | "maintenance" | "cabling" | "note";
-
-export interface RackAuditRecord {
-  id: string;
-  action: RackAuditAction;
-  label: string;
-  occurredAt?: string | null;
-}
-
 export type RackPortSpeed = "gigabit" | "10g" | "25g" | "40g" | "100g" | "custom";
 
 export interface RackNetworkPort {
@@ -223,34 +221,6 @@ export interface RackNetworkPort {
   state?: "up" | "down" | "unknown" | null;
   oid?: string | null;
   note?: string | null;
-}
-
-export type RackRelationshipKind =
-  | "hostVm"
-  | "storageAp"
-  | "vsan"
-  | "san"
-  | "nas"
-  | "hyperConverged"
-  | "custom";
-
-export interface RackRelationship {
-  kind: RackRelationshipKind;
-  label: string;
-  relatedItemIds?: string[] | null;
-  relatedConnectionIds?: string[] | null;
-}
-
-export interface RackIpamAddress {
-  address: string;
-  family: "ipv4" | "ipv6";
-  role?: "management" | "storage" | "vm" | "service" | "custom" | null;
-  vlan?: string | null;
-  mac?: string | null;
-}
-
-export interface RackIpamMetadata {
-  addresses: RackIpamAddress[];
 }
 
 export interface RackSnmpHint {
@@ -283,21 +253,15 @@ export interface RackItemMetadata {
   yaw?: number | null;
   /** Freeform comma-separated tag labels for the rack device. */
   tags?: string[] | null;
-  /** Rack audit trail such as 上架/下架/maintenance notes. */
-  auditRecords?: RackAuditRecord[] | string[] | null;
   /** Additional Connection ids bound to this rack device. */
   connectionIds?: string[] | null;
   /** Switch/router port speeds, e.g. gigabit/10g, optionally filled from SNMP polling. */
   networkPorts?: RackNetworkPort[] | string[] | null;
   /** SNMP target or OID hint for polling this device. */
   snmp?: RackSnmpHint | string | null;
-  /** Relationship model: host/vm, storage/ap, VSAN, SAN, NAS, hyper-converged, etc. */
-  relationship?: RackRelationship | string | null;
-  /** Minimal per-device IPAM inventory. */
-  ipam?: RackIpamMetadata | null;
   /** 乖乖 package size variant. */
   kuaiguaiSize?: "small" | "regular" | "large" | null;
-  /** Hardware shell preview vendor, e.g. Dell or HP. */
+  /** Hardware model used for the graphical device preview, e.g. Dell 740XD. */
   vendor?: string | null;
 }
 
@@ -320,9 +284,9 @@ export interface RackItem {
 
 export interface Rack {
   id: string;
-  fleetId: string;
+  siteId: string;
   name: string;
-  // Topology is Fleet → Server Room → Rack; blank groups under "Unassigned".
+  // Topology is Site → Server Room → Rack; blank groups under "Unassigned".
   serverRoom: string;
   // Optional group tag within the server room (blank → "Ungrouped").
   rackGroup: string;
@@ -331,11 +295,13 @@ export interface Rack {
   // Custom single-rack stage background; null/undefined = theme default.
   background?: DashboardBackground | null;
   heightU: number;
+  // Physical cabinet depth in millimetres (1000 mm is the default server rack).
+  depthMm: number;
   sortOrder: number;
   items: RackItem[];
 }
 
-// Narrows a Batch Run to part of a Fleet's rack topology (docs/FLEET.md Phase D).
+// Narrows a Batch Run to part of a Site's rack topology (docs/SITE.md Phase D).
 export interface RunScope {
   rackId?: string | null;
   serverRoom?: string | null;
@@ -381,7 +347,7 @@ export interface RunReport {
 export interface RunHistoryEntry {
   id: string;
   source: string;
-  fleetId?: string | null;
+  siteId?: string | null;
   taskSummary: string;
   startedAt: string;
   finishedAt?: string | null;
@@ -400,7 +366,7 @@ export type RunEvent =
   | {
       kind: "started";
       runId: string;
-      fleetId?: string | null;
+      siteId?: string | null;
       taskSummary: string;
       hosts: RunEventHost[];
     }
@@ -428,7 +394,7 @@ export type AutomationAction =
   | { kind: "popup"; title: string; body: string }
   | { kind: "email"; to: string[]; subject: string; body: string }
   | { kind: "webhook"; url: string; method: string; body?: string | null }
-  | { kind: "runBatch"; fleetId: string; task: BatchTask };
+  | { kind: "runBatch"; siteId: string; task: BatchTask };
 
 export interface Automation {
   id: string;
@@ -1139,6 +1105,7 @@ export interface WorkspaceChildConnection {
   workspaceId?: string;
   parentConnectionId: string;
   name: string;
+  fileViewPath?: string;
   tmuxSessionId?: string;
   cwd?: string;
   fontSize?: number;

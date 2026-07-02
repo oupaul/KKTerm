@@ -2,6 +2,7 @@ import type { DashboardBackground } from "../../dashboard/types";
 import type { Connection, TerminalPane, WorkspaceChildConnection, WorkspacePane, WorkspaceTab } from "../../../types";
 
 export const CHILD_CONNECTIONS_STORAGE_KEY = "kkterm.workspace.childConnections.v1";
+export const CHILD_CONNECTIONS_UPDATED_EVENT = "kkterm:workspace-child-connections-updated";
 
 export function loadStoredChildConnections(): WorkspaceChildConnection[] {
   if (typeof window === "undefined") {
@@ -24,6 +25,13 @@ export function persistStoredChildConnections(children: WorkspaceChildConnection
   } catch {
     // Storage can be unavailable or full; keep runtime state working.
   }
+}
+
+export function notifyStoredChildConnectionsUpdated() {
+  if (typeof window === "undefined") {
+    return;
+  }
+  window.dispatchEvent(new CustomEvent(CHILD_CONNECTIONS_UPDATED_EVENT));
 }
 
 function isStoredChildConnection(value: unknown): value is WorkspaceChildConnection {

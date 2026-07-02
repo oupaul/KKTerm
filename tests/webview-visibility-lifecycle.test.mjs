@@ -265,7 +265,7 @@ test("store creates top-level WebView Tabs for URL new-tab launches", async () =
   assert.doesNotMatch(openUrlConnection, /kind: "terminal"/);
 });
 
-test("Dashboard background picker directly suppresses embedded URL Connection widgets", async () => {
+test("Dashboard overlays directly suppress embedded URL Connection widgets", async () => {
   const page = await readFile(new URL("../src/modules/dashboard/DashboardPage.tsx", import.meta.url), "utf8");
   const canvas = await readFile(new URL("../src/modules/dashboard/view/DashboardCanvas.tsx", import.meta.url), "utf8");
   const frame = await readFile(new URL("../src/modules/dashboard/view/WidgetFrame.tsx", import.meta.url), "utf8");
@@ -276,7 +276,18 @@ test("Dashboard background picker directly suppresses embedded URL Connection wi
     "utf8",
   );
 
-  assert.match(page, /suppressNativeWebviews=\{backgroundOpen\}/);
+  assert.match(page, /const suppressNativeWebviews = Boolean\(/);
+  for (const overlayState of [
+    "catalogOpen",
+    "customize",
+    "deleteViewTarget",
+    "deleteWidgetTarget",
+    "tabGradientPicker",
+    "backgroundOpen",
+  ]) {
+    assert.match(page, new RegExp(overlayState));
+  }
+  assert.match(page, /suppressNativeWebviews=\{suppressNativeWebviews\}/);
   assert.match(canvas, /suppressNativeWebviews: boolean;/);
   assert.match(frame, /suppressNativeWebviews: boolean;/);
   assert.match(body, /suppressNativeWebviews: boolean;/);

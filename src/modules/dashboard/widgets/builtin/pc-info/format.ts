@@ -82,3 +82,63 @@ export function orDash(value: string | null | undefined): string {
   const trimmed = value?.trim();
   return trimmed ? trimmed : EM_DASH;
 }
+
+// ── Visual helpers for the animated widget ─────────────────────────────────────
+
+/** Whole/decimal gigabytes as a bare number (for "GB total" / "GB free" stats). */
+export function gigabytes(bytes: number | null | undefined): number | null {
+  if (bytes === null || bytes === undefined || !Number.isFinite(bytes) || bytes <= 0) {
+    return null;
+  }
+  const gb = bytes / 1024 ** 3;
+  return gb >= 100 ? Math.round(gb) : Math.round(gb * 10) / 10;
+}
+
+/** SVG circle circumference and the stroke-dashoffset for a 0–1 fill fraction. */
+export function ringGeometry(
+  radius: number,
+  fraction: number,
+): { circumference: number; offset: number } {
+  const circumference = 2 * Math.PI * radius;
+  const clamped = Math.max(0, Math.min(1, Number.isFinite(fraction) ? fraction : 0));
+  return {
+    circumference: Math.round(circumference * 100) / 100,
+    offset: Math.round(circumference * (1 - clamped) * 100) / 100,
+  };
+}
+
+/**
+ * Build an SVG polyline `points` string from a series, oldest first, mapped into
+ * a `width`×`height` box. `max` scales the vertical axis (peak of the data, or a
+ * fixed ceiling like 100 for percentages).
+ */
+export function sparklinePoints(
+  values: number[],
+  width: number,
+  height: number,
+  max: number,
+): string {
+  const n = values.length;
+  if (n === 0) {
+    return "";
+  }
+  const ceiling = max > 0 ? max : 1;
+  if (n === 1) {
+    const y = height - clampUnit(values[0] / ceiling) * (height - 2) - 1;
+    return `0,${y.toFixed(1)} ${width},${y.toFixed(1)}`;
+  }
+  return values
+    .map((value, index) => {
+      const x = (index / (n - 1)) * width;
+      const y = height - clampUnit(value / ceiling) * (height - 2) - 1;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(" ");
+}
+
+function clampUnit(value: number): number {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+  return Math.max(0, Math.min(1, value));
+}

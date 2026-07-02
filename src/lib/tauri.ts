@@ -39,10 +39,11 @@ import type {
   FileBrowserViewOptions,
   FtpConnectionOptions,
   GeneralSettings,
-  Fleet,
-  FleetFilter,
+  Site,
+  SiteFilter,
   ItopsTransport,
   Rack,
+  ServerRoom,
   RackItem,
   RackItemKind,
   RackItemMetadata,
@@ -1118,60 +1119,73 @@ type CommandMap = {
     args: { workspaceId?: string } | undefined;
     result: ConnectionTree;
   };
-  itops_list_fleets: {
+  itops_list_sites: {
     args: undefined;
-    result: Fleet[];
+    result: Site[];
   };
-  itops_create_fleet: {
+  itops_create_site: {
     args: {
       name: string;
       memberIds: string[];
-      filter: FleetFilter | null;
+      filter: SiteFilter | null;
       transport: ItopsTransport;
       iconColor: string | null;
       iconDataUrl: string | null;
       iconBackgroundColor: string | null;
     };
-    result: Fleet;
+    result: Site;
   };
-  itops_update_fleet: {
+  itops_update_site: {
     args: {
       id: string;
       name: string;
       memberIds: string[];
-      filter: FleetFilter | null;
+      filter: SiteFilter | null;
       transport: ItopsTransport;
       iconColor: string | null;
       iconDataUrl: string | null;
       iconBackgroundColor: string | null;
     };
-    result: Fleet;
+    result: Site;
   };
-  itops_remove_fleet: {
+  itops_remove_site: {
     args: { id: string };
     result: void;
   };
-  itops_reorder_fleets: {
+  itops_reorder_sites: {
     args: { orderedIds: string[] };
     result: void;
   };
-  itops_resolve_fleet: {
+  itops_resolve_site: {
     args: { id: string };
     result: ResolvedHost[];
   };
-  // Fleet topology: Racks + Rack Devices (docs/FLEET.md Phase B).
+  // Site topology: Racks + Rack Devices (docs/SITE.md Phase B).
   itops_list_racks: {
-    args: { fleetId: string };
+    args: { siteId: string };
     result: Rack[];
+  };
+  itops_list_server_rooms: {
+    args: { siteId: string };
+    result: ServerRoom[];
+  };
+  itops_create_server_room: {
+    args: { siteId: string; name: string };
+    result: ServerRoom;
+  };
+  itops_delete_server_room: {
+    args: { id: string };
+    result: void;
   };
   itops_create_rack: {
     args: {
-      fleetId: string;
+      siteId: string;
       name: string;
       serverRoom: string;
       rackGroup: string;
       shell?: string | null;
       heightU: number;
+      depthMm: number;
     };
     result: Rack;
   };
@@ -1183,20 +1197,21 @@ type CommandMap = {
       rackGroup: string;
       shell?: string | null;
       heightU: number;
+      depthMm: number;
     };
     result: Rack;
   };
-  itops_set_fleet_background: {
-    args: { fleetId: string; background: DashboardBackground | null };
-    result: Fleet;
+  itops_set_site_background: {
+    args: { siteId: string; background: DashboardBackground | null };
+    result: Site;
   };
   itops_set_server_room_background: {
-    args: { fleetId: string; serverRoom: string; background: DashboardBackground | null };
-    result: Fleet;
+    args: { siteId: string; serverRoom: string; background: DashboardBackground | null };
+    result: Site;
   };
   itops_set_room_icon: {
-    args: { fleetId: string; serverRoom: string; icon: RoomIconEntry | null };
-    result: Fleet;
+    args: { siteId: string; serverRoom: string; icon: RoomIconEntry | null };
+    result: Site;
   };
   itops_set_rack_background: {
     args: { id: string; background: DashboardBackground | null };
@@ -1207,7 +1222,7 @@ type CommandMap = {
     result: void;
   };
   itops_reorder_racks: {
-    args: { fleetId: string; orderedIds: string[] };
+    args: { siteId: string; orderedIds: string[] };
     result: void;
   };
   itops_place_rack_item: {
@@ -1249,7 +1264,7 @@ type CommandMap = {
     result: Connection;
   };
   itops_start_batch_run: {
-    args: { fleetId: string; task: BatchTask; scope?: RunScope | null };
+    args: { siteId: string; task: BatchTask; scope?: RunScope | null };
     result: string;
   };
   itops_cancel_batch_run: {

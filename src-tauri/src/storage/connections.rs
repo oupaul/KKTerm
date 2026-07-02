@@ -32,7 +32,9 @@ impl Storage {
         };
         let user = normalize_connection_user(request.user, &connection_type)?;
         let folder_id = normalize_optional_id(request.folder_id);
-        let key_path = normalize_ssh_optional_field(request.key_path, &connection_type);
+        let ftp_options = normalize_ftp_connection_options(request.ftp_options, &connection_type)?;
+        let key_path =
+            normalize_ssh_auth_key_path(request.key_path, &connection_type, &ftp_options);
         let proxy_jump = normalize_ssh_optional_field(request.proxy_jump, &connection_type);
         let ssh_socks_proxy =
             match normalize_ssh_optional_field(request.ssh_socks_proxy, &connection_type) {
@@ -45,7 +47,12 @@ impl Storage {
             connection_type == "ssh" && request.ssh_socks_proxy_inherit_defaults.unwrap_or(true);
         let ssh_compression =
             normalize_ssh_compression(request.ssh_compression, &connection_type)?;
-        let auth_method = normalize_auth_method(request.auth_method, &connection_type, &key_path)?;
+        let auth_method = normalize_auth_method(
+            request.auth_method,
+            &connection_type,
+            &key_path,
+            &ftp_options,
+        )?;
         let local_shell = normalize_local_shell(request.local_shell, &connection_type)?;
         let local_startup_directory =
             normalize_local_startup_directory(request.local_startup_directory, &connection_type)?;
@@ -57,7 +64,6 @@ impl Storage {
             connection_type == "url" && request.url_proxy_inherit_defaults.unwrap_or(true);
         let rdp_options = normalize_rdp_connection_options(request.rdp_options, &connection_type)?;
         let vnc_options = normalize_vnc_connection_options(request.vnc_options, &connection_type)?;
-        let ftp_options = normalize_ftp_connection_options(request.ftp_options, &connection_type)?;
         let ssh_port_forwardings =
             normalize_ssh_port_forwardings(request.ssh_port_forwardings, &connection_type)?;
         let file_view_open_external =
@@ -227,7 +233,9 @@ impl Storage {
         };
         let user = normalize_connection_user(request.user, &connection_type)?;
         let target_folder_id = normalize_optional_id(request.folder_id);
-        let key_path = normalize_ssh_optional_field(request.key_path, &connection_type);
+        let ftp_options = normalize_ftp_connection_options(request.ftp_options, &connection_type)?;
+        let key_path =
+            normalize_ssh_auth_key_path(request.key_path, &connection_type, &ftp_options);
         let proxy_jump = normalize_ssh_optional_field(request.proxy_jump, &connection_type);
         let ssh_socks_proxy =
             match normalize_ssh_optional_field(request.ssh_socks_proxy, &connection_type) {
@@ -240,7 +248,12 @@ impl Storage {
             connection_type == "ssh" && request.ssh_socks_proxy_inherit_defaults.unwrap_or(true);
         let ssh_compression =
             normalize_ssh_compression(request.ssh_compression, &connection_type)?;
-        let auth_method = normalize_auth_method(request.auth_method, &connection_type, &key_path)?;
+        let auth_method = normalize_auth_method(
+            request.auth_method,
+            &connection_type,
+            &key_path,
+            &ftp_options,
+        )?;
         let local_shell = normalize_local_shell(request.local_shell, &connection_type)?;
         let local_startup_directory =
             normalize_local_startup_directory(request.local_startup_directory, &connection_type)?;
@@ -252,7 +265,6 @@ impl Storage {
             connection_type == "url" && request.url_proxy_inherit_defaults.unwrap_or(true);
         let rdp_options = normalize_rdp_connection_options(request.rdp_options, &connection_type)?;
         let vnc_options = normalize_vnc_connection_options(request.vnc_options, &connection_type)?;
-        let ftp_options = normalize_ftp_connection_options(request.ftp_options, &connection_type)?;
         let ssh_port_forwardings =
             normalize_ssh_port_forwardings(request.ssh_port_forwardings, &connection_type)?;
         let file_view_open_external =

@@ -597,6 +597,7 @@ mod tests {
             "codex-desktop",
             "claude-desktop",
             "hermes-agent",
+            "hermes-desktop",
             "flowise",
             "powertoys",
             "psmux",
@@ -610,6 +611,9 @@ mod tests {
             "sharex",
             "ffmpeg",
             "excalidraw",
+            "drawio",
+            "krita",
+            "inkscape",
             "bentopdf",
             "openflowkit",
         ] {
@@ -691,6 +695,17 @@ mod tests {
         assert!(matches!(
             &claude.provider,
             Provider::Winget { id } if id == "Anthropic.Claude"
+        ));
+
+        let hermes = catalog
+            .recipes
+            .iter()
+            .find(|recipe| recipe.id == "hermes-desktop")
+            .expect("catalog should include Hermes Desktop");
+        assert!(matches!(
+            &hermes.provider,
+            Provider::DownloadInstaller { url, .. }
+                if url == "https://hermes-assets.nousresearch.com/Hermes-Setup.exe?build=c9269fbfb689"
         ));
     }
 

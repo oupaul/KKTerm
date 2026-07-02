@@ -1,5 +1,5 @@
 import { ConnectionGlyph, connectionSubtitle, connectionTypeSubtitle } from "./ConnectionGlyph";
-import { ConnectionIconBackgroundPicker, ConnectionIconColorPicker } from "./ConnectionIconBackgroundPicker";
+import { ConnectionIconBackgroundPicker } from "./ConnectionIconBackgroundPicker";
 import { ConnectionIconPicker } from "./ConnectionIconPicker";
 import { ConnectionIcon, connectionIconSrcForConnection } from "./ConnectionIcon";
 import { AddConnectionMenu, QuickConnectMenu } from "./ConnectionMenus";
@@ -20,6 +20,7 @@ import { ImportDialog } from "./ImportDialog";
 import {
   isChildConnectionRowActive,
   convertOpenTabsToChildConnections,
+  CHILD_CONNECTIONS_UPDATED_EVENT,
   loadStoredChildConnections,
   persistStoredChildConnections,
   syncChildConnectionsFromTabs,
@@ -385,6 +386,10 @@ export function ConnectionSidebar({
   }, [childConnections]);
 
   useEffect(() => {
+    function handleChildConnectionsUpdated() {
+      setChildConnections(loadStoredChildConnections());
+    }
+
     function handleChildConnectionClosed(event: Event) {
       const detail = (event as CustomEvent<{ childConnectionId?: string }>).detail;
       if (!detail?.childConnectionId) {
@@ -395,9 +400,12 @@ export function ConnectionSidebar({
       );
     }
 
+    window.addEventListener(CHILD_CONNECTIONS_UPDATED_EVENT, handleChildConnectionsUpdated);
     window.addEventListener(CHILD_CONNECTION_CLOSED_EVENT, handleChildConnectionClosed);
-    return () =>
+    return () => {
+      window.removeEventListener(CHILD_CONNECTIONS_UPDATED_EVENT, handleChildConnectionsUpdated);
       window.removeEventListener(CHILD_CONNECTION_CLOSED_EVENT, handleChildConnectionClosed);
+    };
   }, []);
 
   useEffect(() => {
@@ -1259,7 +1267,11 @@ export function ConnectionSidebar({
   }
 
   async function saveConnectionPassphrase(connection: Connection, keyPassphrase?: string) {
-    if (!isTauriRuntime() || connection.type !== "ssh" || !keyPassphrase) {
+    if (
+      !isTauriRuntime() ||
+      (connection.type !== "ssh" && connection.ftpOptions?.protocol !== "sftp") ||
+      !keyPassphrase
+    ) {
       return;
     }
     await invokeCommand("store_secret", {
@@ -1669,10 +1681,15 @@ export function ConnectionSidebar({
   }, [deferredQuery, treeWithLiveStatuses]);
   // The tree actually rendered: the search-filtered tree, optionally narrowed to
   // connected-only by the "Show Connected" filter. Both the folder view and the
-  // "Hide Folders" flat view read from this so the two filters compose.
+  // "Hide Folders" flat view read from this so the two filters compose. An active
+  // search query takes precedence over "Show Connected" so a search still surfaces
+  // matching connections that aren't currently connected — better UX than hiding
+  // them behind the toggle.
+  const hasSearchQuery = deferredQuery.trim().length > 0;
   const displayTree = useMemo(
-    () => (showConnectedOnly ? filterConnectedConnections(filteredTree) : filteredTree),
-    [filteredTree, showConnectedOnly],
+    () =>
+      showConnectedOnly && !hasSearchQuery ? filterConnectedConnections(filteredTree) : filteredTree,
+    [filteredTree, showConnectedOnly, hasSearchQuery],
   );
   const quickConnectShellOptions = useMemo(
     () => localShellOptionsForPlatform(terminalSettings.customShells),
@@ -3262,6 +3279,7 @@ function ChildConnectionPropertiesDialog({
             iconDataUrl={iconDataUrl}
             localShell={state.connection.localShell}
             onChange={setIconDataUrl}
+            onIconColorChange={setIconColor}
             type={state.connection.type}
           />
           <span>
@@ -3269,11 +3287,6 @@ function ChildConnectionPropertiesDialog({
             <small>{connectionSubtitle(state.connection)}</small>
           </span>
           <div className="connection-icon-palettes">
-            <ConnectionIconColorPicker
-              color={iconColor}
-              kind="foreground"
-              onChange={setIconColor}
-            />
             <ConnectionIconBackgroundPicker
               color={iconBackgroundColor}
               onChange={setIconBackgroundColor}
@@ -4011,7 +4024,9 @@ function ConnectionDialog({
   const urlSettings = useWorkspaceStore((state) => state.urlSettings);
   const connectionType = initialConnection?.type ?? initialConnectionType ?? "";
   const [authMethod, setAuthMethod] = useState<"keyFile" | "password" | "agent">(
-    initialConnection?.authMethod ?? "keyFile",
+    initialConnection?.type === "ftp" && initialConnection.ftpOptions?.protocol !== "sftp"
+      ? "password"
+      : initialConnection?.authMethod ?? "keyFile",
   );
   const [ftpProtocol, setFtpProtocol] = useState<"ftp" | "ftps" | "sftp">(
     initialConnection?.ftpOptions?.protocol ?? "sftp",
@@ -4071,9 +4086,11 @@ function ConnectionDialog({
   const [vncInheritsSettingsDefaults, setVncInheritsSettingsDefaults] = useState(
     initialConnection?.vncOptions?.inheritDefaults ?? true,
   );
-  const usesSshDefaults = connectionType === "ssh";
   const isTelnetConnection = connectionType === "telnet";
   const isFtpConnection = connectionType === "ftp";
+  const ftpUsesSshAuth = isFtpConnection && ftpProtocol === "sftp";
+  const usesSshDefaults = connectionType === "ssh";
+  const usesSshAuthFields = usesSshDefaults || ftpUsesSshAuth;
   const usesRemoteDesktopFields = connectionType
     ? isRemoteDesktopConnectionType(connectionType)
     : false;
@@ -4141,7 +4158,7 @@ function ConnectionDialog({
       })
       .catch(() => undefined);
 
-    if (initialConnection.type === "ssh") {
+    if (initialConnection.type === "ssh" || initialConnection.ftpOptions?.protocol === "sftp") {
       void invokeCommand("secret_exists", {
         request: { kind: "connectionPassphrase", ownerId: initialConnection.id },
       })
@@ -4256,6 +4273,7 @@ function ConnectionDialog({
     const keyPassphrase = String(form.get("keyPassphrase") ?? "");
     const passwordCredentialId = password ? "" : String(form.get("passwordCredentialId") ?? "").trim();
     const keyPath = String(form.get("keyPath") ?? "").trim();
+    const effectiveAuthMethod = connectionType === "ftp" && ftpProtocolSelection !== "sftp" ? "password" : authMethod;
     const formProxyJump = String(form.get("proxyJump") ?? "").trim();
     const formSshSocksProxy = String(form.get("sshSocksProxy") ?? "").trim();
     const formSshSocksProxyUsername = String(form.get("sshSocksProxyUsername") ?? "").trim();
@@ -4319,15 +4337,15 @@ function ConnectionDialog({
       type: connectionType,
       folderId: String(form.get("folderId") ?? "").trim() || undefined,
       port: portValue ? Number(portValue) : undefined,
-      keyPath: usesSshDefaults && authMethod === "keyFile" ? keyPath || undefined : undefined,
+      keyPath: usesSshAuthFields && effectiveAuthMethod === "keyFile" ? keyPath || undefined : undefined,
       proxyJump: usesSshDefaults ? proxyJump || undefined : undefined,
       sshSocksProxy: usesSshDefaults ? sshSocksProxy || undefined : undefined,
       sshSocksProxyUsername: usesSshDefaults ? sshSocksProxyUsername || undefined : undefined,
       sshSocksProxyInheritDefaults: usesSshDefaults ? sshUsesDefaultOptions : undefined,
       sshCompression: usesSshDefaults ? sshCompression : undefined,
       sshSocksProxyPassword: usesSshDefaults && !sshUsesDefaultOptions ? sshSocksProxyPassword || undefined : undefined,
-      authMethod: usesSshDefaults ? authMethod : undefined,
-      keyPassphrase: usesSshDefaults && authMethod === "keyFile" ? keyPassphrase || undefined : undefined,
+      authMethod: usesSshAuthFields ? effectiveAuthMethod : undefined,
+      keyPassphrase: usesSshAuthFields && effectiveAuthMethod === "keyFile" ? keyPassphrase || undefined : undefined,
       useTmuxSessions: usesSshDefaults ? useTmuxSessions : undefined,
       usePsmuxSessions: connectionType === "local" ? usePsmuxSessions : undefined,
       localShell: connectionType === "local" ? selectedLocalShell || undefined : undefined,
@@ -4436,7 +4454,7 @@ function ConnectionDialog({
       password:
         isTelnetConnection
           ? password
-          : usesSshDefaults && authMethod === "password"
+          : usesSshAuthFields && effectiveAuthMethod === "password"
           ? password
           : usesRemoteDesktopFields
             ? password || undefined
@@ -4495,8 +4513,11 @@ function ConnectionDialog({
   }
 
   function handleFtpProtocolChange(protocol: "ftp" | "ftps" | "sftp") {
-    setFtpProtocol(protocol);
-    if (protocol === "sftp") {
+    const nextProtocol = protocol;
+    const nextAuthMethod = nextProtocol === "sftp" ? authMethod : "password";
+    setFtpProtocol(nextProtocol);
+    setAuthMethod(nextAuthMethod);
+    if (nextProtocol === "sftp") {
       setPortDraft("22");
     }
   }
@@ -4658,10 +4679,19 @@ function ConnectionDialog({
       case "ftp":
         return (
           <FtpConnectionFields
+            authMethod={authMethod}
+            ftpProtocol={ftpProtocol}
             hasStoredConnectionPassword={hasStoredConnectionPassword}
+            hasStoredConnectionPassphrase={hasStoredConnectionPassphrase}
             initialConnection={initialConnection}
             isEditMode={isEditMode}
+            keyPath={keyPath}
+            keyPassphraseDraft={keyPassphraseDraft}
             matchingPasswordCredentials={matchingPasswordCredentials}
+            onAuthMethodChange={setAuthMethod}
+            onBrowseKeyFile={() => void handleBrowseKeyFile()}
+            onKeyPathChange={setKeyPath}
+            onOpenKeyEmailDialog={handleOpenKeyEmailDialog}
             onPortDraftChange={setPortDraft}
             onSelectedPasswordCredentialIdChange={setSelectedPasswordCredentialId}
             portDraft={portDraft}
@@ -4758,6 +4788,7 @@ function ConnectionDialog({
                 iconDataUrl={iconDataUrl}
                 localShell={initialConnection?.localShell}
                 onChange={handleIconDataUrlChange}
+                onIconColorChange={setIconColor}
                 type={connectionType}
               />
             )}
@@ -4771,11 +4802,6 @@ function ConnectionDialog({
             </span>
             {mode !== "quick" ? (
               <div className="connection-icon-palettes">
-                <ConnectionIconColorPicker
-                  color={iconColor}
-                  kind="foreground"
-                  onChange={setIconColor}
-                />
                 <ConnectionIconBackgroundPicker
                   color={iconBackgroundColor}
                   onChange={setIconBackgroundColor}

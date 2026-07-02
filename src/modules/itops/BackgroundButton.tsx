@@ -1,5 +1,5 @@
 // A toolbar icon-button that opens the shared Dashboard background picker for an
-// IT Ops drill view (fleet cards, server room, single rack). Reuses
+// IT Ops drill view (site cards, server room, single rack). Reuses
 // SharedBackgroundPopover end-to-end; the chosen background is persisted by the
 // caller via `onChange` and rendered by <ItOpsBackground>.
 

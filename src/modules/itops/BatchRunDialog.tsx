@@ -1,4 +1,4 @@
-// Launch a Batch Run: pick a Fleet, then either a one-shot script body or
+// Launch a Batch Run: pick a Site, then either a one-shot script body or
 // an interactive Playbook (an ordered expect-style step sequence run over a
 // single shell — docs/ITOPS.md). Built from the shared dialog primitives.
 
@@ -42,19 +42,19 @@ export function BatchRunDialog({
   onStarted: () => void;
 }) {
   const { t } = useTranslation();
-  const fleets = useItOpsStore((state) => state.fleets);
-  const racksByFleet = useItOpsStore((state) => state.racksByFleet);
+  const sites = useItOpsStore((state) => state.sites);
+  const racksBySite = useItOpsStore((state) => state.racksBySite);
   const startBatchRun = useItOpsStore((state) => state.startBatchRun);
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
 
-  const [groupId, setGroupId] = useState(defaultGroupId ?? fleets[0]?.id ?? "");
+  const [groupId, setGroupId] = useState(defaultGroupId ?? sites[0]?.id ?? "");
   // A scoped run targets only the placed hosts in the matching racks; the scope
   // is fixed for the launch (it came from a rack/region/area "Run" affordance).
   const scope = scopeIsSet(defaultScope) ? defaultScope : null;
   const scopeLabel = (() => {
     if (!scope) return "";
     if (scope.rackId) {
-      const rack = (racksByFleet[groupId] ?? []).find((entry) => entry.id === scope.rackId);
+      const rack = (racksBySite[groupId] ?? []).find((entry) => entry.id === scope.rackId);
       return t("itops.batchRuns.scopeRack", { name: rack?.name ?? scope.rackId });
     }
     return t("itops.batchRuns.scopeServerRoom", { name: scope.serverRoom ?? "" });
@@ -65,7 +65,7 @@ export function BatchRunDialog({
   const [steps, setSteps] = useState<PlaybookStep[]>([emptyStep()]);
   const [busy, setBusy] = useState(false);
 
-  const hasGroups = fleets.length > 0;
+  const hasGroups = sites.length > 0;
   // Drop only fully-blank steps. A step with an empty `send` but a set `expect`
   // is valid (e.g. wait for the initial prompt before the first command).
   const filledSteps = steps.filter(
@@ -135,12 +135,12 @@ export function BatchRunDialog({
       >
         {hasGroups ? (
           <>
-            <Field label={t("itops.batchRuns.fleetLabel")} req>
+            <Field label={t("itops.batchRuns.siteLabel")} req>
               <Select
                 value={groupId}
                 disabled={!!scope}
                 onChange={(event) => setGroupId(event.currentTarget.value)}
-                options={fleets.map((group) => ({ value: group.id, label: group.name }))}
+                options={sites.map((group) => ({ value: group.id, label: group.name }))}
               />
             </Field>
             {scope ? <div className="it-scope-note">{scopeLabel}</div> : null}

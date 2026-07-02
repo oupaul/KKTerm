@@ -170,6 +170,14 @@ export function DashboardPage({
   }, [editMode, toggleEditMode]);
 
   const activeView = views.find((v) => v.id === activeViewId) ?? views[0];
+  const suppressNativeWebviews = Boolean(
+    catalogOpen ||
+      customize ||
+      deleteViewTarget ||
+      deleteWidgetTarget ||
+      tabGradientPicker ||
+      backgroundOpen,
+  );
 
   useEffect(() => {
     if (!activeView) return;
@@ -550,7 +558,7 @@ export function DashboardPage({
                 onOpenBackground={() => setBackgroundOpen(true)}
                 onToggleEditMode={toggleEditMode}
                 onRequestWidgetDelete={setDeleteWidgetTarget}
-                suppressNativeWebviews={backgroundOpen}
+                suppressNativeWebviews={suppressNativeWebviews}
               />
             </div>
           );

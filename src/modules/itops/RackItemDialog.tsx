@@ -1,7 +1,5 @@
-// Add / edit a Rack Device (docs/FLEET.md Phase C). A device is either a placed
-// Fleet Connection (openable later) or a passive kind (switch, PDU, patch panel,
-// blank, label). Position is chosen here for the dialogs-first baseline; drag
-// placement lands in a later slice. Built from the shared dialog primitives.
+// Add / edit Rack Device type, appearance, placement, and metadata. Durable
+// Connection associations are managed by RackItemBindingsDialog instead.
 
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -20,16 +18,12 @@ import {
 import { useWorkspaceStore } from "../../store";
 import type {
   Rack,
-  RackAuditAction,
-  RackAuditRecord,
-  RackIpamAddress,
   RackItem,
   RackItemKind,
   RackItemMetadata,
   RackItemStatus,
   RackNetworkPort,
   RackPortSpeed,
-  RackRelationshipKind,
   RackShell,
   ResolvedHost,
 } from "../../types";
@@ -38,17 +32,7 @@ import { RackDevice } from "./RackDevice";
 import { useItOpsStore } from "./state";
 
 const SHELL_OPTIONS: RackShell[] = ["black", "white", "grey"];
-const AUDIT_ACTIONS: RackAuditAction[] = ["installed", "removed", "maintenance", "cabling", "note"];
 const PORT_SPEEDS: RackPortSpeed[] = ["gigabit", "10g", "25g", "40g", "100g", "custom"];
-const RELATIONSHIP_KINDS: RackRelationshipKind[] = [
-  "hostVm",
-  "storageAp",
-  "vsan",
-  "san",
-  "nas",
-  "hyperConverged",
-  "custom",
-];
 
 const PASSIVE_KINDS: RackItemKind[] = [
   "server",
@@ -66,7 +50,7 @@ const PASSIVE_KINDS: RackItemKind[] = [
   "blank",
   "label",
 ];
-const ALL_KINDS: RackItemKind[] = ["connection", ...PASSIVE_KINDS];
+const ALL_KINDS: RackItemKind[] = PASSIVE_KINDS;
 const STATUS_OPTIONS: RackItemStatus[] = ["online", "warning", "offline"];
 
 function showsPorts(kind: RackItemKind): boolean {
@@ -86,16 +70,8 @@ function joinValues(value: string[] | null | undefined): string {
   return (value ?? []).join("\n");
 }
 
-function newAuditRecord(index: number): RackAuditRecord {
-  return { id: `audit-${Date.now()}-${index}`, action: "note", label: "", occurredAt: null };
-}
-
 function newNetworkPort(index: number): RackNetworkPort {
   return { name: `${index + 1}`, speed: "gigabit", state: "unknown" };
-}
-
-function newIpamAddress(): RackIpamAddress {
-  return { address: "", family: "ipv4", role: "management", vlan: null, mac: null };
 }
 
 function clampStartUForHeight(startU: number, heightU: number, rackHeightU: number) {
@@ -106,14 +82,14 @@ function clampStartUForHeight(startU: number, heightU: number, rackHeightU: numb
 const DISKS_PER_U = 24;
 
 export function RackItemDialog({
-  fleetId,
+  siteId,
   rack,
   item,
   defaultStartU,
   members,
   onClose,
 }: {
-  fleetId: string;
+  siteId: string;
   rack: Rack;
   item?: RackItem | null;
   defaultStartU?: number;
@@ -130,7 +106,7 @@ export function RackItemDialog({
   const removeRackItem = useItOpsStore((state) => state.removeRackItem);
   const refreshRackItemSnmp = useItOpsStore((state) => state.refreshRackItemSnmp);
 
-  const [kind, setKind] = useState<RackItemKind>(item?.kind ?? "connection");
+  const [kind, setKind] = useState<RackItemKind>(item?.kind ?? "server");
   const [connectionId, setConnectionId] = useState<string>(
     item?.connectionId ?? members[0]?.connectionId ?? "",
   );
@@ -152,24 +128,11 @@ export function RackItemDialog({
   );
   const [notes, setNotes] = useState(item?.metadata?.notes ?? "");
   const [tags, setTags] = useState(joinValues(item?.metadata?.tags));
-  const [auditRecordRows, setAuditRecordRows] = useState<RackAuditRecord[]>(
-    initialMetadata.auditRecords ?? [],
-  );
-  const [boundConnectionIds, setBoundConnectionIds] = useState<string[]>(
-    initialMetadata.connectionIds ?? [],
-  );
   const [networkPortRows, setNetworkPortRows] = useState<RackNetworkPort[]>(
     initialMetadata.networkPorts ?? [],
   );
   const [snmpTarget, setSnmpTarget] = useState(initialMetadata.snmp?.target ?? "");
   const [snmpOid, setSnmpOid] = useState(initialMetadata.snmp?.oid ?? "");
-  const [relationshipKind, setRelationshipKind] = useState<RackRelationshipKind>(
-    initialMetadata.relationship?.kind ?? "custom",
-  );
-  const [relationshipLabel, setRelationshipLabel] = useState(initialMetadata.relationship?.label ?? "");
-  const [ipamAddresses, setIpamAddresses] = useState<RackIpamAddress[]>(
-    initialMetadata.ipam?.addresses ?? [],
-  );
   const [vendor, setVendor] = useState(item?.metadata?.vendor ?? "");
   const [busy, setBusy] = useState(false);
   const maxDisks = Math.max(1, heightU) * DISKS_PER_U;
@@ -182,15 +145,7 @@ export function RackItemDialog({
     shell: shell === "black" ? null : shell,
     notes: notes.trim() || null,
     tags: splitLines(tags),
-    auditRecords: auditRecordRows
-      .map((record, index) => ({
-        ...record,
-        id: record.id || `audit-${index}`,
-        label: record.label.trim(),
-        occurredAt: record.occurredAt?.trim() || null,
-      }))
-      .filter((record) => record.label),
-    connectionIds: boundConnectionIds.length > 0 ? boundConnectionIds : null,
+    connectionIds: initialMetadata.connectionIds,
     networkPorts: networkPortRows
       .map((port) => ({
         ...port,
@@ -202,19 +157,6 @@ export function RackItemDialog({
     snmp: snmpTarget.trim()
       ? { target: snmpTarget.trim(), oid: snmpOid.trim() || null }
       : null,
-    relationship: relationshipLabel.trim()
-      ? { kind: relationshipKind, label: relationshipLabel.trim() }
-      : null,
-    ipam: {
-      addresses: ipamAddresses
-        .map((address) => ({
-          ...address,
-          address: address.address.trim(),
-          vlan: address.vlan?.trim() || null,
-          mac: address.mac?.trim() || null,
-        }))
-        .filter((address) => address.address),
-    },
     vendor: vendor.trim() || null,
     ...(kind === "kuaiguai" ? { expiry: expiry.trim() || null, rotation, yaw, kuaiguaiSize } : {}),
     ...(showsPorts(kind) ? { ports } : {}),
@@ -227,14 +169,6 @@ export function RackItemDialog({
   const hasConnection = !needsConnection || connectionId.length > 0;
   const canSave = hasConnection && !busy && heightU >= 1 && startU >= 1;
 
-  function updateAuditRecord(index: number, patch: Partial<RackAuditRecord>) {
-    setAuditRecordRows((rows) => rows.map((row, i) => (i === index ? { ...row, ...patch } : row)));
-  }
-
-  function addAuditRecord() {
-    setAuditRecordRows((rows) => [...rows, newAuditRecord(rows.length)]);
-  }
-
   function updateNetworkPort(index: number, patch: Partial<RackNetworkPort>) {
     setNetworkPortRows((rows) => rows.map((row, i) => (i === index ? { ...row, ...patch } : row)));
   }
@@ -243,24 +177,13 @@ export function RackItemDialog({
     setNetworkPortRows((rows) => [...rows, newNetworkPort(rows.length)]);
   }
 
-  function updateIpamAddress(index: number, patch: Partial<RackIpamAddress>) {
-    setIpamAddresses((rows) => rows.map((row, i) => (i === index ? { ...row, ...patch } : row)));
-  }
-
-  function toggleBoundConnection(id: string, checked: boolean) {
-    setBoundConnectionIds((ids) => {
-      if (checked) return ids.includes(id) ? ids : [...ids, id];
-      return ids.filter((value) => value !== id);
-    });
-  }
-
   async function handleSave() {
     if (!canSave) return;
     setBusy(true);
     const resolvedConnectionId = needsConnection ? connectionId : null;
     try {
       if (isEdit) {
-        await updateRackItem(fleetId, {
+        await updateRackItem(siteId, {
           id: item!.id,
           kind,
           connectionId: resolvedConnectionId,
@@ -268,10 +191,10 @@ export function RackItemDialog({
           metadata,
         });
         if (placedStartU !== item!.startU || heightU !== item!.heightU) {
-          await moveRackItem(fleetId, { id: item!.id, rackId: rack.id, startU: placedStartU, heightU });
+          await moveRackItem(siteId, { id: item!.id, rackId: rack.id, startU: placedStartU, heightU });
         }
       } else {
-        await placeRackItem(fleetId, {
+        await placeRackItem(siteId, {
           rackId: rack.id,
           connectionId: resolvedConnectionId,
           kind,
@@ -293,7 +216,7 @@ export function RackItemDialog({
     if (!item) return;
     setBusy(true);
     try {
-      await refreshRackItemSnmp(fleetId, item.id);
+      await refreshRackItemSnmp(siteId, item.id);
       showStatusBarNotice(t("itops.racks.snmpRefreshComplete"), { tone: "success" });
       onClose();
     } catch (error) {
@@ -307,7 +230,7 @@ export function RackItemDialog({
     if (!item) return;
     setBusy(true);
     try {
-      await removeRackItem(fleetId, item.id);
+      await removeRackItem(siteId, item.id);
       onClose();
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -317,9 +240,10 @@ export function RackItemDialog({
   }
 
   return (
-    <DialogShell onBackdrop={onClose}>
+    <DialogShell onBackdrop={onClose} zClassName="itops-page">
       <Sheet
-        width={560}
+        width={1180}
+        className="rack-item-dialog"
         title={isEdit ? t("itops.racks.editItemTitle") : t("itops.racks.addItemTitle")}
         ariaLabel={isEdit ? t("itops.racks.editItemTitle") : t("itops.racks.addItemTitle")}
         footer={
@@ -340,6 +264,8 @@ export function RackItemDialog({
           />
         }
       >
+        <div className="rack-item-dialog-grid">
+        <section className="rack-item-dialog-column type-column">
         <div className="rack-item-preview">
           <RackDevice
             kind={kind}
@@ -361,7 +287,41 @@ export function RackItemDialog({
           />
         </div>
 
-        <Field label={t("itops.racks.kindLabel")}>
+        <div className="rack-kind-preview-grid" aria-label={t("itops.racks.kindPreviewLabel")}>
+          {ALL_KINDS.map((value) => (
+            <button
+              key={value}
+              type="button"
+              className={`rack-kind-preview${kind === value ? " selected" : ""}`}
+              aria-pressed={kind === value}
+              onClick={() => setKind(value)}
+            >
+              <span className="rack-kind-preview-face">
+                <RackDevice
+                  kind={value}
+                  label={t(`itops.racks.kind.${value}`)}
+                  subLabel={null}
+                  status={status}
+                  ports={showsPorts(value) ? ports : null}
+                  disks={showsDisks(value) ? disks : null}
+                  battery={value === "ups" ? battery : null}
+                  load={value === "pdu" ? load : null}
+                  expiry={value === "kuaiguai" ? expiry : null}
+                  rotation={value === "kuaiguai" ? rotation : null}
+                  yaw={value === "kuaiguai" ? yaw : null}
+                  kuaiguaiSize={value === "kuaiguai" ? kuaiguaiSize : null}
+                  heightU={1}
+                  accent={accent === "none" ? null : accent}
+                  shell={shell}
+                  seed={`preview-${value}`}
+                />
+              </span>
+              <span className="rack-kind-preview-label">{t(`itops.racks.kind.${value}`)}</span>
+            </button>
+          ))}
+        </div>
+
+        <Field label={t("itops.racks.kindLabel")} req>
           <Select
             value={kind}
             onChange={(event) => setKind(event.currentTarget.value as RackItemKind)}
@@ -385,6 +345,9 @@ export function RackItemDialog({
             )}
           </Field>
         ) : null}
+        </section>
+
+        <section className="rack-item-dialog-column appearance-column">
 
         <Field label={t("itops.racks.labelLabel")} hint={t("itops.racks.labelHint")}>
           <TextInput
@@ -393,6 +356,12 @@ export function RackItemDialog({
             onChange={(event) => setLabel(event.currentTarget.value)}
           />
         </Field>
+
+        {kind === "server" || kind === "storage" || kind === "connection" ? (
+          <Field label={t("itops.racks.vendorLabel")} hint={t("itops.racks.vendorHint")}>
+            <TextInput value={vendor} onChange={(event) => setVendor(event.currentTarget.value)} />
+          </Field>
+        ) : null}
 
         <div className="rack-form-grid two">
           <Field label={t("itops.racks.statusLabel")}>
@@ -442,58 +411,28 @@ export function RackItemDialog({
           </div>
         ) : null}
 
+        <Field label={t("itops.racks.accentLabel")}>
+          <Swatches value={accent} onChange={setAccent} allowNone noneLabel={t("itops.racks.accentNone")} />
+        </Field>
+
+        <div className="rack-form-grid two">
+          <Field label={t("itops.racks.startULabel")} req>
+            <Stepper value={startU} min={1} onChange={(next) => setStartU(clampStartUForHeight(next, heightU, rack.heightU))} ariaDecrease={t("itops.racks.startUDecrease")} ariaIncrease={t("itops.racks.startUIncrease")} />
+          </Field>
+          <Field label={t("itops.racks.itemHeightLabel")} req>
+            <Stepper value={heightU} min={1} onChange={(next) => { const clampedHeight = Math.max(1, Math.min(rack.heightU, next)); setHeightU(clampedHeight); setStartU((current) => clampStartUForHeight(current, clampedHeight, rack.heightU)); setDisks((current) => Math.min(current, clampedHeight * DISKS_PER_U)); }} ariaDecrease={t("itops.racks.itemHeightDecrease")} ariaIncrease={t("itops.racks.itemHeightIncrease")} />
+          </Field>
+        </div>
+        </section>
+
+        <section className="rack-item-dialog-column metadata-column">
+
         <Field label={t("itops.racks.notesLabel")} hint={t("itops.racks.notesHint")}>
           <TextArea rows={3} value={notes} onChange={(event) => setNotes(event.currentTarget.value)} />
         </Field>
 
         <Field label={t("itops.racks.tagsLabel")} hint={t("itops.racks.listHint")}>
           <TextArea rows={2} value={tags} onChange={(event) => setTags(event.currentTarget.value)} />
-        </Field>
-
-        <Field label={t("itops.racks.auditLabel")} hint={t("itops.racks.auditHint")}>
-          <div className="rack-audit-list">
-            {auditRecordRows.map((record, index) => (
-              <div className="rack-audit-row" key={record.id || index}>
-                <Select
-                  value={record.action}
-                  onChange={(event) => updateAuditRecord(index, { action: event.currentTarget.value as RackAuditAction })}
-                  options={AUDIT_ACTIONS.map((action) => ({
-                    value: action,
-                    label: t(`itops.racks.auditAction.${action}`),
-                  }))}
-                />
-                <TextInput
-                  value={record.label}
-                  placeholder={t("itops.racks.auditLabelPlaceholder")}
-                  onChange={(event) => updateAuditRecord(index, { label: event.currentTarget.value })}
-                />
-                <TextInput
-                  value={record.occurredAt ?? ""}
-                  placeholder="2026-06-29"
-                  onChange={(event) => updateAuditRecord(index, { occurredAt: event.currentTarget.value })}
-                />
-              </div>
-            ))}
-            <Btn kind="ghost" onClick={addAuditRecord}>
-              {t("itops.racks.addAuditRecord")}
-            </Btn>
-          </div>
-        </Field>
-
-        <Field label={t("itops.racks.bindingsLabel")} hint={t("itops.racks.bindingsHint")}>
-          <div className="connection-binding-list">
-            {members.map((member) => (
-              <label className="connection-binding-row" key={member.connectionId}>
-                <input
-                  type="checkbox"
-                  checked={boundConnectionIds.includes(member.connectionId)}
-                  onChange={(event) => toggleBoundConnection(member.connectionId, event.currentTarget.checked)}
-                />
-                <span>{member.name}</span>
-                <small>{member.host}</small>
-              </label>
-            ))}
-          </div>
         </Field>
 
         {kind === "switch" || kind === "router" ? (
@@ -528,43 +467,6 @@ export function RackItemDialog({
           </>
         ) : null}
 
-        {kind === "server" || kind === "storage" || kind === "connection" ? (
-          <div className="rack-form-grid two">
-            <Field label={t("itops.racks.vendorLabel")} hint={t("itops.racks.vendorHint")}>
-              <TextInput value={vendor} onChange={(event) => setVendor(event.currentTarget.value)} />
-            </Field>
-            <Field label={t("itops.racks.relationshipLabel")} hint={t("itops.racks.relationshipHint")}>
-              <div className="rack-relationship-edit">
-                <Select
-                  value={relationshipKind}
-                  onChange={(event) => setRelationshipKind(event.currentTarget.value as RackRelationshipKind)}
-                  options={RELATIONSHIP_KINDS.map((value) => ({
-                    value,
-                    label: t(`itops.racks.relationshipKind.${value}`),
-                  }))}
-                />
-                <TextInput value={relationshipLabel} onChange={(event) => setRelationshipLabel(event.currentTarget.value)} />
-              </div>
-            </Field>
-          </div>
-        ) : null}
-
-        <Field label={t("itops.racks.ipamLabel")} hint={t("itops.racks.ipamHint")}>
-          <div className="rack-ipam-list">
-            {ipamAddresses.map((address, index) => (
-              <div className="rack-ipam-row" key={index}>
-                <TextInput value={address.address} onChange={(event) => updateIpamAddress(index, { address: event.currentTarget.value })} />
-                <Select value={address.family} onChange={(event) => updateIpamAddress(index, { family: event.currentTarget.value as "ipv4" | "ipv6" })} options={[{ value: "ipv4", label: "IPv4" }, { value: "ipv6", label: "IPv6" }]} />
-                <TextInput value={address.vlan ?? ""} placeholder={t("itops.racks.vlanPlaceholder")} onChange={(event) => updateIpamAddress(index, { vlan: event.currentTarget.value })} />
-                <TextInput value={address.mac ?? ""} placeholder={t("itops.racks.macPlaceholder")} onChange={(event) => updateIpamAddress(index, { mac: event.currentTarget.value })} />
-              </div>
-            ))}
-            <Btn kind="ghost" onClick={() => setIpamAddresses((rows) => [...rows, newIpamAddress()])}>
-              {t("itops.racks.addIpamAddress")}
-            </Btn>
-          </div>
-        </Field>
-
         {kind === "kuaiguai" ? (
           <div className="rack-form-grid four">
             <Field label={t("itops.racks.expiryLabel")}>
@@ -589,28 +491,7 @@ export function RackItemDialog({
           </div>
         ) : null}
 
-        <Field label={t("itops.racks.accentLabel")}>
-          <Swatches value={accent} onChange={setAccent} allowNone noneLabel={t("itops.racks.accentNone")} />
-        </Field>
-
-        <div className="rack-form-grid two">
-          <Field label={t("itops.racks.startULabel")}>
-            <Stepper value={startU} min={1} onChange={(next) => setStartU(clampStartUForHeight(next, heightU, rack.heightU))} ariaDecrease={t("itops.racks.startUDecrease")} ariaIncrease={t("itops.racks.startUIncrease")} />
-          </Field>
-          <Field label={t("itops.racks.itemHeightLabel")}>
-            <Stepper
-              value={heightU}
-              min={1}
-              onChange={(next) => {
-                const clampedHeight = Math.max(1, Math.min(rack.heightU, next));
-                setHeightU(clampedHeight);
-                setStartU((current) => clampStartUForHeight(current, clampedHeight, rack.heightU));
-                setDisks((current) => Math.min(current, clampedHeight * DISKS_PER_U));
-              }}
-              ariaDecrease={t("itops.racks.itemHeightDecrease")}
-              ariaIncrease={t("itops.racks.itemHeightIncrease")}
-            />
-          </Field>
+        </section>
         </div>
       </Sheet>
     </DialogShell>

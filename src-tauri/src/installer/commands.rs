@@ -783,7 +783,7 @@ fn web_ui_affordance(tool_id: &str) -> Option<WebUiAffordance> {
                 "flowise".into(),
                 "start".into(),
             ],
-            env: vec![],
+            env: flowise_managed_env(),
             working_dir: managed_app_install_dir("flowise")
                 .to_string_lossy()
                 .into_owned(),
@@ -1154,7 +1154,7 @@ fn service_affordance(tool_id: &str) -> Option<ManagedServiceAffordance> {
                 "flowise".into(),
                 "start".into(),
             ],
-            env: vec![],
+            env: flowise_managed_env(),
             working_dir: managed_app_install_dir("flowise")
                 .to_string_lossy()
                 .into_owned(),
@@ -1269,6 +1269,29 @@ fn service_affordance(tool_id: &str) -> Option<ManagedServiceAffordance> {
         }),
         _ => None,
     }
+}
+
+fn flowise_managed_env() -> Vec<(&'static str, String)> {
+    let data_dir = managed_app_data_dir("flowise");
+    vec![
+        (
+            "DATABASE_PATH",
+            data_dir.join("database.sqlite").to_string_lossy().into_owned(),
+        ),
+        (
+            "SECRETKEY_PATH",
+            data_dir.join("secret.key").to_string_lossy().into_owned(),
+        ),
+        (
+            "LOG_PATH",
+            data_dir.join("logs").to_string_lossy().into_owned(),
+        ),
+        (
+            "BLOB_STORAGE_PATH",
+            data_dir.join("storage").to_string_lossy().into_owned(),
+        ),
+        ("STORAGE_TYPE", "local".into()),
+    ]
 }
 
 fn ensure_nssm_installed(catalog: &Catalog, tool_id: &str, emit: &EventSink) -> Result<(), String> {
@@ -2291,6 +2314,38 @@ mod tests {
         assert!(service.env.iter().any(|(key, value)| {
             *key == "N8N_USER_FOLDER" && value.ends_with(r"installer\apps\n8n\data")
         }));
+    }
+
+    #[test]
+    #[cfg(target_os = "windows")]
+    fn flowise_affordances_use_managed_app_data_paths() {
+        for env in [
+            web_ui_affordance("flowise")
+                .expect("Flowise should expose a web UI helper")
+                .env,
+            service_affordance("flowise")
+                .expect("Flowise should expose a Windows service helper")
+                .env,
+        ] {
+            assert!(env.iter().any(|(key, value)| {
+                *key == "DATABASE_PATH"
+                    && value.ends_with(r"installer\apps\flowise\data\database.sqlite")
+            }));
+            assert!(env.iter().any(|(key, value)| {
+                *key == "SECRETKEY_PATH"
+                    && value.ends_with(r"installer\apps\flowise\data\secret.key")
+            }));
+            assert!(env.iter().any(|(key, value)| {
+                *key == "LOG_PATH" && value.ends_with(r"installer\apps\flowise\data\logs")
+            }));
+            assert!(env.iter().any(|(key, value)| {
+                *key == "BLOB_STORAGE_PATH"
+                    && value.ends_with(r"installer\apps\flowise\data\storage")
+            }));
+            assert!(env
+                .iter()
+                .any(|(key, value)| *key == "STORAGE_TYPE" && value == "local"));
+        }
     }
 
     #[test]
