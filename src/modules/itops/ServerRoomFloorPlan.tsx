@@ -219,7 +219,8 @@ function FloorTile({
   );
 }
 
-function FloorLegend({ metric }: { metric: FloorMetric }) {
+// Shared with the 2.5D iso view, which uses the same band colouring.
+export function FloorLegend({ metric }: { metric: FloorMetric }) {
   const { t } = useTranslation();
   const items =
     metric === "utilization"

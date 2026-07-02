@@ -54,12 +54,14 @@ export function saveCollapsedNodeIds(ids: Set<string>): void {
   localStorage.setItem(COLLAPSED_KEY, JSON.stringify([...ids]));
 }
 
-// Server Room View layout: rack elevations (default) or the top-down floor plan.
-export type RoomViewMode = "elevation" | "floor";
+// Server Room View layout: rack elevations (default), the top-down floor
+// plan, or the 2.5D axonometric room.
+export type RoomViewMode = "elevation" | "floor" | "iso";
 
 export function loadRoomViewMode(): RoomViewMode {
   if (typeof localStorage === "undefined") return "elevation";
-  return localStorage.getItem(ROOM_VIEW_KEY) === "floor" ? "floor" : "elevation";
+  const raw = localStorage.getItem(ROOM_VIEW_KEY);
+  return raw === "floor" || raw === "iso" ? raw : "elevation";
 }
 
 export function saveRoomViewMode(mode: RoomViewMode): void {

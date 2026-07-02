@@ -4069,6 +4069,293 @@
   background: var(--red);
 }
 
+/* ──────────────────────────────────────────────────────────────────────────
+   2.5D Server Room View. An axonometric floor plane (rotateX(55°) rotateZ(45°),
+   no perspective — angles must match ISO_TILT_DEG/ISO_ROT_DEG in
+   roomIsoLayout.ts) with each Rack extruded into a cabinet cuboid. The band
+   colour mapping mirrors the 2D floor plan's `--tile` pattern; faces mix
+   `--tile` into surface tokens so the room follows the theme. Name badges,
+   tooltips, and delete bubbles are billboarded back to screen alignment by
+   inline transforms in ServerRoomIsoView.tsx.
+   ────────────────────────────────────────────────────────────────────────── */
+.itops-page .rm-iso {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 6px 4px 8px;
+}
+.itops-page .rm-iso-scroll {
+  overflow: auto;
+}
+.itops-page .rm-iso-viewport {
+  position: relative;
+  margin: 0 auto;
+}
+.itops-page .rm-iso-plane {
+  position: absolute;
+  left: 50%;
+  transform: translate(-50%, -50%) rotateX(55deg) rotateZ(45deg);
+  transform-style: preserve-3d;
+  background:
+    linear-gradient(color-mix(in srgb, var(--border) 52%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--border) 52%, transparent) 1px, transparent 1px),
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--surface-muted) 94%, transparent),
+      color-mix(in srgb, var(--surface-muted) 66%, transparent)
+    );
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  box-shadow: 0 0 0 10px color-mix(in srgb, var(--surface-muted) 38%, transparent);
+}
+
+/* Empty floor tile — edit-mode click target for adding a rack in place. */
+.itops-page .rm-iso-tile {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px dashed transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: transparent;
+  cursor: pointer;
+}
+.itops-page .rm-iso-tile:hover {
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--border));
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  color: var(--accent);
+}
+/* Snap-target highlight while dragging a cabinet. */
+.itops-page .rm-iso-drop {
+  position: absolute;
+  border: 1.5px solid var(--accent);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  pointer-events: none;
+}
+
+/* Cabinet cuboid. `--tile` defaults neutral; band rules below colour it. */
+.itops-page .rm-iso-cab {
+  --tile: var(--text-faint);
+  position: absolute;
+  transform-style: preserve-3d;
+}
+.itops-page .rm-iso-cab.editing {
+  cursor: grab;
+  touch-action: none;
+}
+.itops-page .rm-iso-cab.dragging {
+  cursor: grabbing;
+}
+/* Soft floor shadow, lifted 1px above the plane to avoid z-fighting. */
+.itops-page .rm-iso-cab::before {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--text) 16%, transparent);
+  filter: blur(4px);
+  transform: translateZ(1px);
+}
+.itops-page .rm-iso-body {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  transform-style: preserve-3d;
+  cursor: pointer;
+  transition: transform 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.itops-page .rm-iso-cab:not(.dragging) .rm-iso-body:hover {
+  transform: translateZ(8px);
+}
+.itops-page .rm-iso-face {
+  position: absolute;
+  display: block;
+}
+.itops-page .rm-iso-top {
+  inset: 0;
+  border: 1px solid color-mix(in srgb, var(--tile) 55%, var(--border));
+  border-radius: 2px;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--tile) 34%, var(--surface)),
+    color-mix(in srgb, var(--tile) 16%, var(--surface))
+  );
+}
+/* Front face rises from its bottom edge on the floor line (top offset set
+   inline to footprint − height). Slats read as stacked device faceplates. */
+.itops-page .rm-iso-front {
+  left: 0;
+  width: 100%;
+  transform-origin: 50% 100%;
+  transform: rotateX(-90deg);
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--tile) 45%, var(--border));
+  background:
+    repeating-linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--text) 13%, transparent) 0 1px,
+      transparent 1px 6px
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--tile) 30%, var(--surface-muted)),
+      color-mix(in srgb, var(--tile) 12%, var(--surface-muted))
+    );
+}
+/* Side face swings up around its right edge (left offset set inline). */
+.itops-page .rm-iso-side {
+  top: 0;
+  height: 100%;
+  transform-origin: 100% 50%;
+  transform: rotateY(90deg);
+  border: 1px solid color-mix(in srgb, var(--tile) 40%, var(--border));
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--tile) 10%, var(--surface-muted)),
+    color-mix(in srgb, var(--tile) 22%, var(--surface-muted))
+  );
+  filter: brightness(0.82);
+}
+/* Utilisation "liquid" fill from the floor up; subtle when health colours. */
+.itops-page .rm-iso-fill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--tile);
+  opacity: 0.5;
+}
+.itops-page .rm-iso[data-metric="health"] .rm-iso-fill {
+  opacity: 0.2;
+}
+.itops-page .rm-iso-led {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--tile);
+  box-shadow: 0 0 5px var(--tile);
+}
+
+/* Billboarded name badge; hides while the detail card shows. */
+.itops-page .rm-iso-badge {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  padding: 1px 6px;
+  border: 0.5px solid var(--border);
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--surface) 84%, transparent);
+  font-size: 10.5px;
+  font-weight: 640;
+  color: var(--text);
+  white-space: nowrap;
+  pointer-events: none;
+  transition: opacity 0.14s;
+}
+.itops-page .rm-iso-cab:hover .rm-iso-badge {
+  opacity: 0;
+}
+/* Billboarded hover detail card. */
+.itops-page .rm-iso-tip {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 136px;
+  padding: 8px 10px;
+  border: 0.5px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+  box-shadow: var(--shadow-control);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.14s;
+}
+.itops-page .rm-iso-cab:hover .rm-iso-tip {
+  opacity: 1;
+}
+.itops-page .rm-iso-tip-name {
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--text);
+  white-space: nowrap;
+}
+.itops-page .rm-iso-tip-detail {
+  font-size: 11px;
+  font-weight: 640;
+  color: color-mix(in srgb, var(--tile) 78%, var(--text));
+  white-space: nowrap;
+}
+.itops-page .rm-iso-tip-cap {
+  font-size: 10px;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+/* Billboarded delete bubble (same recipe as .it-free-delete, static inside
+   its billboard wrapper). */
+.itops-page .rm-iso-del-wrap {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+}
+.itops-page .rm-iso-delete {
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--red) 70%, var(--border));
+  background: color-mix(in srgb, var(--surface) 86%, var(--red));
+  color: var(--red);
+  cursor: pointer;
+  box-shadow: var(--shadow-control);
+}
+.itops-page .rm-iso-delete:hover {
+  background: var(--red);
+  border-color: var(--red);
+  color: #fff;
+}
+.itops-page .rm-iso-hint {
+  padding: 0 2px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* Band → colour mapping, mirroring the 2D floor plan. */
+.itops-page .rm-iso[data-metric="health"] .rm-iso-cab[data-health="ok"] {
+  --tile: var(--green);
+}
+.itops-page .rm-iso[data-metric="health"] .rm-iso-cab[data-health="warning"] {
+  --tile: var(--amber);
+}
+.itops-page .rm-iso[data-metric="health"] .rm-iso-cab[data-health="critical"] {
+  --tile: var(--red);
+}
+.itops-page .rm-iso[data-metric="utilization"] .rm-iso-cab[data-util="low"] {
+  --tile: var(--green);
+}
+.itops-page .rm-iso[data-metric="utilization"] .rm-iso-cab[data-util="med"] {
+  --tile: color-mix(in srgb, var(--green) 45%, var(--amber));
+}
+.itops-page .rm-iso[data-metric="utilization"] .rm-iso-cab[data-util="high"] {
+  --tile: var(--amber);
+}
+.itops-page .rm-iso[data-metric="utilization"] .rm-iso-cab[data-util="full"] {
+  --tile: var(--red);
+}
+
 .rack-item-preview {
   height: 48px;
   padding: 7px;

@@ -334,6 +334,12 @@ export function roomLayoutScope(siteId: string, serverRoom: string): string {
   return `room:${siteId}:${topologyGroupKey(serverRoom)}`;
 }
 
+// The 2.5D iso view stores grid cells (col/row), not pixels, so it scopes
+// separately from the free-placement floor plan.
+export function roomIsoLayoutScope(siteId: string, serverRoom: string): string {
+  return `roomIso:${siteId}:${topologyGroupKey(serverRoom)}`;
+}
+
 export function siteLayoutScope(siteId: string): string {
   return `site:${siteId}`;
 }

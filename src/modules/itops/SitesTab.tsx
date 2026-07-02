@@ -39,6 +39,7 @@ import {
 import { ItOpsBackground } from "./ItOpsBackground";
 import { RackStage } from "./RackStage";
 import { ServerRoomFloorPlan } from "./ServerRoomFloorPlan";
+import { ServerRoomIsoView } from "./ServerRoomIsoView";
 import { selectRandomRackCallouts } from "./rackInventory";
 import type { DashboardBackground } from "../dashboard/types";
 import {
@@ -65,6 +66,7 @@ import {
   pdfFilename,
   rackExcelBytes,
   rackPdfDocument,
+  roomIsoLayoutScope,
   roomLayoutScope,
   saveExportBytes,
   serverRoomPdfDocument,
@@ -893,6 +895,15 @@ function RackDrill({
     setRoomPlacements(roomPlacementScope ? loadFreePlacement(roomPlacementScope) : {});
   }, [roomPlacementScope]);
 
+  // 2.5D iso view placement (grid cells, not pixels) — its own scope.
+  const isoPlacementScope = serverRoom ? roomIsoLayoutScope(site.id, serverRoom.key) : "";
+  const [isoPlacements, setIsoPlacements] = useState<FreePlacementMap>(() =>
+    isoPlacementScope ? loadFreePlacement(isoPlacementScope) : {},
+  );
+  useEffect(() => {
+    setIsoPlacements(isoPlacementScope ? loadFreePlacement(isoPlacementScope) : {});
+  }, [isoPlacementScope]);
+
   const roomCallouts = serverRoom
     ? selectRandomRackCallouts(
         serverRoom.racks.flatMap((entry) => entry.items),
@@ -1036,6 +1047,11 @@ function RackDrill({
     if (roomPlacementScope) saveFreePlacement(roomPlacementScope, next);
   }
 
+  function saveIsoPlacements(next: FreePlacementMap) {
+    setIsoPlacements(next);
+    if (isoPlacementScope) saveFreePlacement(isoPlacementScope, next);
+  }
+
   return (
     <div className="ft-drill">
       <ItOpsBackground background={viewBackground} className="ft-drill-bg">
@@ -1144,8 +1160,15 @@ function RackDrill({
                 >
                   {t("itops.floorPlan.viewFloor")}
                 </button>
+                <button
+                  type="button"
+                  data-active={roomView === "iso"}
+                  onClick={() => setRoomView("iso")}
+                >
+                  {t("itops.floorPlan.view25d")}
+                </button>
               </div>
-              {roomView === "floor" ? (
+              {roomView !== "elevation" ? (
                 <div
                   className="rm-segmented"
                   role="group"
@@ -1191,7 +1214,18 @@ function RackDrill({
                 })}
               </div>
             ) : null}
-            {roomView === "floor" ? (
+            {roomView === "iso" ? (
+              <ServerRoomIsoView
+                racks={serverRoom.racks}
+                metric={floorMetric}
+                editMode={editMode}
+                placement={isoPlacements}
+                onPlacementChange={saveIsoPlacements}
+                onDeleteRack={editMode ? onDeleteRack : undefined}
+                onSelectRack={(rackId) => setDrill({ serverRoom: serverRoom.key, rackId })}
+                onAddRack={editMode ? () => onAddRack(serverRoom.key) : undefined}
+              />
+            ) : roomView === "floor" ? (
               <ServerRoomFloorPlan
                 racks={serverRoom.racks}
                 metric={floorMetric}
