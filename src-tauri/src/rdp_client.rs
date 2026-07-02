@@ -933,6 +933,13 @@ fn spawn_rdp_event_loop(
                                     // Flatten the source chain: SessionErrorKind::Custom hides the
                                     // real cause (codec/PDU/decode error) in e.source().
                                     let detail = error_chain(&e);
+                                    // Dump the raw PDU bytes so the exact server PDU can be decoded
+                                    // by hand (TPKT/X224/MCS/ShareControlHeader) to see what it is.
+                                    let payload_hex: String = payload
+                                        .iter()
+                                        .take(80)
+                                        .map(|b| format!("{b:02x}"))
+                                        .collect();
                                     eprintln!("[rdp {session_id}] active_stage.process error: {detail}");
                                     rdp_debug(
                                         "ironrdp.active_stage.error",
@@ -940,6 +947,8 @@ fn spawn_rdp_event_loop(
                                             "sessionId": session_id,
                                             "error": detail,
                                             "action": format!("{action:?}"),
+                                            "payloadLen": payload.len(),
+                                            "payloadHex": payload_hex,
                                         }),
                                     );
                                     emit_rdp_event(&app, RdpCanvasEvent::Error {
