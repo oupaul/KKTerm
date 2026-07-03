@@ -3292,10 +3292,13 @@
   background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 40%, transparent));
 }
 
-/* Drill-down detail. */
+/* Drill-down detail. Grows to fill the .hg-detail pane so the spatial room
+   views can take its full height; taller content keeps its natural height
+   (flex basis stays content-sized) and scrolls the pane as before. */
 .itops-page .ft-drill {
   display: flex;
   flex-direction: column;
+  flex: 1 0 auto;
   gap: 14px;
   min-height: 0;
   overflow: auto;
