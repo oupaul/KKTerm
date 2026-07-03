@@ -34,9 +34,9 @@ import {
 } from "./siteTreeState";
 import { rackFloorMetrics } from "./roomFloorPlan";
 import { ItIcon } from "./icons";
+import { RoomObjectPlanArtwork } from "./RoomObjectArtwork";
 import {
   OBJECT_ACCENTS,
-  ObjectGlyph,
   RackTagChips,
   RoomObjectPalette,
   RoomZoomControl,
@@ -511,7 +511,7 @@ function BlueprintObject({
       onPointerCancel={editMode ? onPointerCancel : undefined}
     >
       <span className="rm-bp-obj-glyph" style={{ transform: `rotate(${object.rot * 90}deg)` }}>
-        <ObjectGlyph kind={object.kind} size={Math.min(16, Math.min(w, h) - 4)} />
+        <RoomObjectPlanArtwork kind={object.kind} />
       </span>
       {object.z > 0 ? <span className="rm-bp-obj-z">{object.z}U</span> : null}
       {editMode ? (

@@ -4040,11 +4040,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid color-mix(in srgb, var(--obj) 55%, var(--border));
-  border-radius: 5px;
-  background: color-mix(in srgb, var(--obj) 16%, var(--surface));
+  border: 0;
+  background: transparent;
   color: var(--obj);
-  box-shadow: var(--card-shadow);
+  filter: drop-shadow(0 2px 2px color-mix(in srgb, var(--text) 18%, transparent));
 }
 .itops-page .rm-bp-obj.editing {
   cursor: grab;
@@ -4055,8 +4054,225 @@
   z-index: 5;
 }
 .itops-page .rm-bp-obj-glyph {
-  display: inline-flex;
+  display: block;
+  width: 100%;
+  height: 100%;
   transition: transform 0.14s;
+}
+
+/* Reference-driven fixture artwork shared by the floor plan and 2.5D room.
+   Object identity stays on --obj; neutral hardware surfaces derive from app
+   tokens so every KKTerm colour scheme remains legible. */
+.itops-page .rm-object-art {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  fill: none;
+  stroke: var(--obj);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.itops-page .rm-object-art * {
+  vector-effect: non-scaling-stroke;
+}
+.itops-page .rm-art-soft {
+  fill: color-mix(in srgb, var(--obj) 14%, var(--surface));
+  stroke: var(--obj);
+}
+.itops-page .rm-art-fill {
+  fill: var(--obj);
+  stroke: var(--obj);
+}
+.itops-page .rm-art-line,
+.itops-page .rm-art-detail {
+  fill: none;
+  stroke: var(--obj);
+}
+.itops-page .rm-art-detail {
+  opacity: 0.58;
+  stroke-width: 1.5;
+}
+.itops-page .rm-art-dark,
+.itops-page .rm-art-dark-fill {
+  fill: color-mix(in srgb, var(--text) 88%, var(--surface));
+  stroke: color-mix(in srgb, var(--text) 72%, var(--border));
+}
+.itops-page .rm-art-alert,
+.itops-page .rm-art-bag-label {
+  fill: var(--red);
+  stroke: var(--red);
+}
+.itops-page .rm-art-ok {
+  fill: var(--green);
+  stroke: var(--green);
+  filter: drop-shadow(0 0 3px color-mix(in srgb, var(--green) 72%, transparent));
+  animation: rm-object-blink 2.6s steps(1) infinite;
+}
+.itops-page .rm-art-fov,
+.itops-page .rm-art-beam {
+  fill: color-mix(in srgb, var(--obj) 22%, transparent);
+  stroke: none;
+  transform-box: fill-box;
+  transform-origin: center bottom;
+  animation: rm-object-sweep 5s ease-in-out infinite;
+}
+.itops-page .rm-art-ring,
+.itops-page .rm-art-aura {
+  fill: none;
+  stroke: var(--obj);
+  opacity: 0.5;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: rm-object-ring 2.6s ease-out infinite;
+}
+.itops-page .rm-art-ring.delayed {
+  animation-delay: 1.3s;
+}
+.itops-page .rm-art-aura {
+  fill: color-mix(in srgb, var(--green) 20%, transparent);
+  stroke: var(--green);
+  animation: rm-object-aura 3s ease-in-out infinite;
+}
+.itops-page .rm-art-fan {
+  fill: none;
+  stroke: var(--obj);
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: rm-object-fan 3.4s linear infinite;
+}
+.itops-page .rm-art-fan.reverse {
+  animation-direction: reverse;
+  animation-duration: 4s;
+}
+.itops-page .rm-art-airflow {
+  fill: none;
+  stroke: var(--obj);
+  animation: rm-object-breathe 1.6s ease-in-out infinite;
+}
+.itops-page .rm-art-breathe {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: rm-object-breathe 2s ease-in-out infinite;
+}
+.itops-page .rm-art-cable {
+  fill: none;
+  stroke-width: 3;
+}
+.itops-page .rm-art-cable.blue { stroke: var(--accent); }
+.itops-page .rm-art-cable.green { stroke: var(--green); }
+.itops-page .rm-art-cable.amber { stroke: var(--amber); }
+.itops-page .rm-art-signal {
+  fill: var(--surface);
+  stroke: var(--accent);
+  animation: rm-object-signal 2.2s linear infinite;
+}
+.itops-page .rm-art-bag {
+  fill: var(--green);
+  stroke: color-mix(in srgb, var(--green) 72%, var(--text));
+}
+.itops-page .rm-art-bag-text,
+.itops-page .rm-art-terminal-text {
+  fill: var(--surface);
+  stroke: none;
+  font-family: var(--app-ui-font-family);
+  font-size: 8px;
+  font-weight: 800;
+  text-anchor: middle;
+}
+.itops-page .rm-art-terminal-text {
+  fill: color-mix(in srgb, var(--green) 82%, var(--surface));
+  font-family: var(--app-mono-font-family, monospace);
+  font-size: 9px;
+}
+.itops-page .rm-art-float {
+  animation: rm-object-float 3s ease-in-out infinite;
+}
+
+/* Screen-aligned 2.5D object illustrations. The plane still owns the floor
+   coordinates and z-level; this layer replaces the old one-size-fits-all box. */
+.itops-page .rm-iso-obj-model {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: block;
+  width: 48px;
+  height: 48px;
+  pointer-events: none;
+  transform-origin: 0 0;
+  filter: drop-shadow(0 5px 5px color-mix(in srgb, var(--text) 24%, transparent));
+}
+.itops-page .rm-iso-obj-model[data-kind="aircon"] { width: 62px; height: 96px; }
+.itops-page .rm-iso-obj-model[data-kind="ups"] { width: 48px; height: 58px; }
+.itops-page .rm-iso-obj-model[data-kind="crashCart"] { width: 58px; height: 66px; }
+.itops-page .rm-iso-obj-model[data-kind="camera"] { width: 62px; height: 48px; }
+.itops-page .rm-iso-obj-model[data-kind="sensor"] { width: 48px; height: 38px; }
+.itops-page .rm-iso-obj-model[data-kind="smokeDetector"] { width: 45px; height: 22px; }
+.itops-page .rm-iso-obj-model[data-kind="fireExtinguisher"] { width: 38px; height: 54px; }
+.itops-page .rm-iso-obj-model[data-kind="cableTray"] { width: 78px; height: 42px; }
+.itops-page .rm-iso-obj-model[data-kind="kuaikuai"] { width: 42px; height: 56px; }
+.itops-page .rm-art-iso-top,
+.itops-page .rm-art-smoke-top {
+  fill: color-mix(in srgb, var(--surface) 84%, var(--obj));
+  stroke: color-mix(in srgb, var(--border-strong) 72%, var(--obj));
+}
+.itops-page .rm-art-iso-front {
+  fill: color-mix(in srgb, var(--surface-muted) 90%, var(--obj));
+  stroke: color-mix(in srgb, var(--border-strong) 74%, var(--obj));
+}
+.itops-page .rm-art-iso-side,
+.itops-page .rm-art-smoke-side {
+  fill: color-mix(in srgb, var(--border) 70%, var(--obj));
+  stroke: color-mix(in srgb, var(--border-strong) 78%, var(--obj));
+}
+.itops-page .rm-art-vent,
+.itops-page .rm-art-led-bars,
+.itops-page .rm-art-terminal,
+.itops-page .rm-art-tray-rungs {
+  fill: none;
+  stroke: var(--obj);
+  stroke-width: 1.4;
+}
+.itops-page .rm-art-ups-top { fill: color-mix(in srgb, var(--obj) 30%, var(--text)); stroke: var(--obj); }
+.itops-page .rm-art-ups-front { fill: color-mix(in srgb, var(--obj) 18%, var(--text)); stroke: var(--obj); }
+.itops-page .rm-art-ups-side { fill: color-mix(in srgb, var(--obj) 28%, var(--text)); stroke: var(--obj); }
+.itops-page .rm-art-charge { fill: var(--obj); stroke: none; }
+.itops-page .rm-art-led-bars { stroke: var(--green); stroke-width: 2.5; }
+.itops-page .rm-art-shadow { fill: color-mix(in srgb, var(--text) 20%, transparent); stroke: none; }
+.itops-page .rm-art-cart { fill: color-mix(in srgb, var(--surface-muted) 80%, var(--obj)); stroke: var(--obj); }
+.itops-page .rm-art-cart-leg,
+.itops-page .rm-art-stand,
+.itops-page .rm-art-mast,
+.itops-page .rm-art-support { fill: none; stroke: color-mix(in srgb, var(--text-muted) 78%, var(--obj)); stroke-width: 3; }
+.itops-page .rm-art-wheel { fill: var(--text); stroke: var(--border-strong); }
+.itops-page .rm-art-screen { fill: color-mix(in srgb, var(--text) 92%, var(--surface)); stroke: var(--border-strong); }
+.itops-page .rm-art-terminal { stroke: var(--green); }
+.itops-page .rm-art-camera-cap { fill: color-mix(in srgb, var(--text-muted) 55%, var(--surface)); stroke: var(--border-strong); }
+.itops-page .rm-art-camera-dome { fill: color-mix(in srgb, var(--text) 88%, var(--obj)); stroke: var(--obj); }
+.itops-page .rm-art-camera-lens { fill: color-mix(in srgb, var(--obj) 52%, var(--text)); stroke: var(--obj); }
+.itops-page .rm-art-sensor { fill: color-mix(in srgb, var(--surface) 88%, var(--obj)); stroke: color-mix(in srgb, var(--border-strong) 72%, var(--obj)); }
+.itops-page .rm-art-reading { fill: var(--text-muted); stroke: none; font-family: var(--app-mono-font-family, monospace); font-size: 10px; }
+.itops-page .rm-art-extinguisher { fill: var(--red); stroke: color-mix(in srgb, var(--red) 68%, var(--text)); }
+.itops-page .rm-art-ext-top { fill: color-mix(in srgb, var(--red) 76%, var(--surface)); stroke: color-mix(in srgb, var(--red) 68%, var(--text)); }
+.itops-page .rm-art-ext-label { fill: var(--surface); stroke: color-mix(in srgb, var(--red) 55%, var(--border)); }
+.itops-page .rm-art-hose { fill: none; stroke: var(--text); stroke-width: 3; }
+.itops-page .rm-art-tray { fill: color-mix(in srgb, var(--surface-muted) 70%, var(--text-muted)); stroke: var(--text-muted); }
+.itops-page .rm-art-rack-top { fill: color-mix(in srgb, var(--text) 88%, var(--surface)); stroke: var(--border-strong); }
+
+@keyframes rm-object-fan { to { transform: rotate(360deg); } }
+@keyframes rm-object-breathe { 50% { opacity: 0.45; transform: scale(0.88); } }
+@keyframes rm-object-blink { 48% { opacity: 1; } 50%, 58% { opacity: 0.25; } 60% { opacity: 1; } }
+@keyframes rm-object-sweep { 50% { transform: rotate(28deg); } }
+@keyframes rm-object-ring { from { opacity: 0.55; transform: scale(0.4); } to { opacity: 0; transform: scale(1.35); } }
+@keyframes rm-object-aura { 50% { opacity: 0.85; transform: scale(1.12); } }
+@keyframes rm-object-signal { from { transform: translateX(0); } to { transform: translateX(62px); } }
+@keyframes rm-object-float { 50% { transform: translateY(-3px); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .itops-page .rm-object-art * {
+    animation: none !important;
+  }
 }
 .itops-page .rm-bp-obj-z {
   position: absolute;
@@ -4632,8 +4848,8 @@
   color: var(--text-muted);
 }
 
-/* A room object: an extruded box lifted to its vertical position. Faces
-   reuse the cabinet face rules; `--tile` carries the kind accent. */
+/* A room object anchored to its floor cell and vertical position; the
+   reference-driven model above supplies each kind's distinct silhouette. */
 .itops-page .rm-iso-obj {
   --tile: var(--text-faint);
   position: absolute;
@@ -4655,12 +4871,6 @@
   background: color-mix(in srgb, var(--text) 14%, transparent);
   filter: blur(3px);
   transform: translateZ(1px);
-}
-.itops-page .rm-iso-obj-lift {
-  position: absolute;
-  inset: 0;
-  display: block;
-  transform-style: preserve-3d;
 }
 /* Billboarded kind chip above the box (icon + optional level). */
 .itops-page .rm-iso-obj-badge {

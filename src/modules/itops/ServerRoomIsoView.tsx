@@ -17,6 +17,7 @@ import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } f
 import { useTranslation } from "react-i18next";
 import type { Rack, RackItem, RackItemStatus } from "../../types";
 import { rackFloorMetrics } from "./roomFloorPlan";
+import { RoomObjectIsoArtwork } from "./RoomObjectArtwork";
 import {
   ISO_ROT_DEG,
   ISO_TILT_COS,
@@ -714,10 +715,12 @@ function IsoObject({
       onPointerUp={editMode ? onPointerUp : undefined}
       onPointerCancel={editMode ? onPointerCancel : undefined}
     >
-      <span className="rm-iso-obj-lift" style={{ transform: `translateZ(${bottom}px)` }}>
-        <span className="rm-iso-face rm-iso-top" style={{ transform: `translateZ(${h}px)` }} />
-        <span className="rm-iso-face rm-iso-front" style={{ width: w, height: h, top: d - h }} />
-        <span className="rm-iso-face rm-iso-side" style={{ width: h, height: d, left: w - h }} />
+      <span
+        className="rm-iso-obj-model"
+        data-kind={object.kind}
+        style={{ transform: billboard(bottom, "-50%, -100%") }}
+      >
+        <RoomObjectIsoArtwork kind={object.kind} />
       </span>
       <span
         className="rm-iso-obj-badge"
