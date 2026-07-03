@@ -1617,7 +1617,6 @@ fn configure_wkwebview_certificate_error_handling(
     static BYPASS_ASSOCIATED_KEY: u8 = 0;
     static SESSION_ASSOCIATED_KEY: u8 = 0;
     static APP_HANDLE: OnceLock<AppHandle> = OnceLock::new();
-    static INSTALL_RESULT: OnceLock<Result<(), String>> = OnceLock::new();
 
     unsafe extern "C-unwind" fn certificate_challenge_handler(
         _delegate: *mut AnyObject,
@@ -1700,39 +1699,51 @@ fn configure_wkwebview_certificate_error_handling(
             policy: usize,
         );
         fn objc_getAssociatedObject(object: *const c_void, key: *const c_void) -> *mut c_void;
+        fn object_getClass(object: *const c_void) -> *const AnyClass;
         #[link_name = "SecTrustEvaluate"]
         fn sec_trust_evaluate(trust: *const c_void, result: *mut u32) -> i32;
     }
 
-    let install_result = INSTALL_RESULT.get_or_init(|| {
-        let delegate_class = AnyClass::get(c"WryNavigationDelegate")
-            .ok_or_else(|| "WryNavigationDelegate class is not registered".to_string())?;
-        unsafe {
-            let _ = class_addMethod(
-                delegate_class,
-                sel!(webView:didReceiveAuthenticationChallenge:completionHandler:),
-                certificate_challenge_handler,
-                c"v@:@@@".as_ptr(),
-            );
-        }
-        Ok(())
-    });
-    install_result.clone()?;
     let _ = APP_HANDLE.set(app.clone());
 
-    let setup_error = Arc::new(Mutex::new(None::<String>));
-    let setup_error_for_callback = Arc::clone(&setup_error);
     let session_id = session_id.to_string();
     webview
         .with_webview(move |platform_webview| {
             let webview = platform_webview.inner();
             if webview.is_null() {
-                if let Ok(mut setup_error) = setup_error_for_callback.lock() {
-                    *setup_error = Some("WKWebView handle is not available".to_string());
-                }
+                webview_debug_log(
+                    "cannot configure URL certificate handling: WKWebView handle is unavailable"
+                        .to_string(),
+                );
                 return;
             }
             unsafe {
+                // objc2 gives Wry-defined classes an auto-generated runtime name
+                // (module path + type + crate version). Discover the delegate that
+                // Wry attached to this WKWebView instead of depending on that private
+                // name, which changes independently of KKTerm.
+                let navigation_delegate: *mut AnyObject = msg_send![webview, navigationDelegate];
+                if navigation_delegate.is_null() {
+                    webview_debug_log(
+                        "cannot configure URL certificate handling: WKWebView navigation delegate is unavailable"
+                            .to_string(),
+                    );
+                    return;
+                }
+                let delegate_class = object_getClass(navigation_delegate.cast());
+                if delegate_class.is_null() {
+                    webview_debug_log(
+                        "cannot configure URL certificate handling: WKWebView navigation delegate class is unavailable"
+                            .to_string(),
+                    );
+                    return;
+                }
+                let _ = class_addMethod(
+                    delegate_class,
+                    sel!(webView:didReceiveAuthenticationChallenge:completionHandler:),
+                    certificate_challenge_handler,
+                    c"v@:@@@".as_ptr(),
+                );
                 let session_id = NSString::from_str(&session_id);
                 objc_setAssociatedObject(
                     webview.cast(),
@@ -1753,14 +1764,6 @@ fn configure_wkwebview_certificate_error_handling(
             }
         })
         .map_err(|error| format!("failed to access WKWebView for certificate settings: {error}"))?;
-
-    if let Ok(mut setup_error) = setup_error.lock() {
-        if let Some(error) = setup_error.take() {
-            return Err(format!(
-                "failed to configure URL certificate handling for WKWebView: {error}"
-            ));
-        }
-    }
     Ok(())
 }
 
