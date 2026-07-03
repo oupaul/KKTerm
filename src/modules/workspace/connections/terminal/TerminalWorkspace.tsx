@@ -1728,6 +1728,12 @@ function TerminalPaneView({
     multilinePasteConfirmationResolverRef.current?.(confirmed);
     multilinePasteConfirmationResolverRef.current = null;
     setMultilinePasteConfirmationOpen(false);
+    // The confirm sheet's button holds DOM focus when it is clicked, so once
+    // the dialog unmounts focus falls to <body>. Return it to the terminal
+    // after the unmount commits, on both confirm and cancel.
+    const focus = () => terminalRendererRef.current?.focus();
+    queueMicrotask(focus);
+    window.requestAnimationFrame(focus);
   }
 
   async function writeWithPasteConfirmation(data: string, writeInput: (input: string) => void) {

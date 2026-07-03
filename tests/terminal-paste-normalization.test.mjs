@@ -44,6 +44,22 @@ test("terminal copy-on-select reads the live setting so toggling applies to open
   assert.match(selectionHandler, /useWorkspaceStore\.getState\(\)\.terminalSettings\.copyOnSelect/);
 });
 
+test("multiline paste confirmation returns focus to the terminal after the dialog closes", async () => {
+  const workspaceSource = await readFile(
+    new URL("../src/modules/workspace/connections/terminal/TerminalWorkspace.tsx", import.meta.url),
+    "utf8",
+  );
+
+  const resolver =
+    workspaceSource.match(
+      /function resolveMultilinePasteConfirmation\(confirmed: boolean\) \{([\s\S]*?)\n  \}/,
+    )?.[1] ?? "";
+  assert.match(resolver, /setMultilinePasteConfirmationOpen\(false\)/);
+  assert.match(resolver, /terminalRendererRef\.current\?\.focus\(\)/);
+  assert.match(resolver, /queueMicrotask\(focus\)/);
+  assert.match(resolver, /window\.requestAnimationFrame\(focus\)/);
+});
+
 test("clipboard execCommand fallback restores focus after copying", async () => {
   const clipboardSource = await readFile(new URL("../src/lib/clipboard.ts", import.meta.url), "utf8");
 
