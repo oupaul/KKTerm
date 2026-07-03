@@ -317,7 +317,10 @@ The visible IT Ops Module opens directly into the Site topology surface:
   (`ServerRoomIsoView.tsx`). The two spatial layouts share one floor grid
   (cell placement + facing, `roomIsoLayout.ts`), tint Racks by health with
   always-on utilisation/power tags (`roomFloorPlan.ts` metrics), and hold
-  non-rack room objects with vertical stacking (`roomObjects.ts`).
+  non-rack room objects with vertical stacking (`roomObjects.ts`). Both grow
+  their floor grid to cover the whole view, carry a zoom stepper (50%–200%,
+  also Ctrl+scroll; the level persists locally per layout), and pan with a
+  middle-mouse drag or the arrow keys.
 - **Rack View** — selecting a Rack centers its front elevation and Rack Device
   properties/placement interactions.
 

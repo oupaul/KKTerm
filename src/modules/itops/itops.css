@@ -3301,6 +3301,21 @@
   overflow: auto;
   padding: 2px;
 }
+/* The drill background host and its content stretch to the drill viewport so
+   the spatial room views can fill the window; tall content (rack elevations)
+   still scrolls the drill as before, since the flex basis stays
+   content-sized. */
+.itops-page .ft-drill > .ft-drill-bg {
+  display: flex;
+  flex-direction: column;
+  flex: 1 0 auto;
+}
+.itops-page .ft-drill > .ft-drill-bg > .itops-bg-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1 0 auto;
+  min-height: 0;
+}
 .itops-page .it-drill-toolbar {
   position: sticky;
   top: 0;
@@ -3841,18 +3856,29 @@
 .itops-page .rm-bp-wrap {
   display: flex;
   flex-direction: column;
+  flex: 1 0 auto;
   gap: 8px;
   padding: 6px 4px 8px;
 }
+/* The scroll area takes the drill's leftover height and its content-box size
+   drives how many floor cells the grid needs to cover the window. */
 .itops-page .rm-bp-scroll {
+  display: flex;
+  flex: 1 1 0;
+  min-height: 280px;
   overflow: auto;
-  padding: 10px 2px;
+}
+/* Sizer around the zoomed plan: sized to the scaled footprint so scrolling
+   and centering track the zoom level. */
+.itops-page .rm-bp-zoom {
+  flex: 0 0 auto;
+  margin: auto;
 }
 /* The room outline reads as a blueprint: heavy wall stroke, major grid per
    floor cell, minor quarter-cell grid, cool tint. Cell size is set inline. */
 .itops-page .rm-bp {
   position: relative;
-  margin: 0 auto;
+  transform-origin: 0 0;
   border: 2.5px solid color-mix(in srgb, var(--text) 52%, var(--surface));
   border-radius: 3px;
   background:
@@ -4216,6 +4242,7 @@
 .itops-page .rm-iso {
   display: flex;
   flex-direction: column;
+  flex: 1 0 auto;
   gap: 8px;
   padding: 6px 4px 8px;
 }
@@ -4225,14 +4252,24 @@
   justify-content: space-between;
   gap: 10px;
 }
-/* Fixed view-angle stepper: the camera stays put, the room turns in quarter
-   steps (roomIsoLayout.ts rotates the grid under it). */
-.itops-page .rm-iso-angles {
+/* Right-aligned view controls: zoom stepper (both spatial views) plus the
+   fixed view-angle stepper (2.5D only). */
+.itops-page .rm-iso-topctls {
   display: inline-flex;
-  gap: 4px;
+  align-items: center;
+  gap: 10px;
   margin-left: auto;
 }
-.itops-page .rm-iso-angles button {
+/* Fixed view-angle stepper: the camera stays put, the room turns in quarter
+   steps (roomIsoLayout.ts rotates the grid under it). */
+.itops-page .rm-iso-angles,
+.itops-page .rm-zoom {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.itops-page .rm-iso-angles button,
+.itops-page .rm-zoom button {
   width: 24px;
   height: 24px;
   display: inline-flex;
@@ -4245,16 +4282,43 @@
   cursor: pointer;
   transition: background 0.14s, color 0.14s;
 }
-.itops-page .rm-iso-angles button:hover {
+.itops-page .rm-iso-angles button:hover,
+.itops-page .rm-zoom button:hover {
   background: var(--hover);
   color: var(--text);
 }
+.itops-page .rm-zoom button:disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+/* Current level readout; clicking resets to 100%. */
+.itops-page .rm-zoom .rm-zoom-val {
+  width: auto;
+  min-width: 40px;
+  padding: 0 6px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+/* The scroll area takes the drill's leftover height; its content-box size is
+   the canvas the room's floor plane must cover. */
 .itops-page .rm-iso-scroll {
+  display: flex;
+  flex: 1 1 0;
+  min-height: 280px;
   overflow: auto;
 }
+/* Sizer around the zoomed canvas: sized to the scaled footprint so scrolling
+   and centering track the zoom level. */
+.itops-page .rm-iso-zoom {
+  flex: 0 0 auto;
+  margin: auto;
+}
+/* Clip the decorative floor overhang: the plane's projection is sized to
+   cover the whole canvas, so its corners stick out past the viewport. */
 .itops-page .rm-iso-viewport {
   position: relative;
-  margin: 0 auto;
+  transform-origin: 0 0;
+  overflow: hidden;
 }
 .itops-page .rm-iso-plane {
   position: absolute;

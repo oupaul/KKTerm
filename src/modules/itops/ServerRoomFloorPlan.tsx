@@ -8,7 +8,7 @@
 // facings, and places/stacks/deletes room objects; the object palette arms a
 // kind and a cell click drops it at the first free vertical span.
 
-import { useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { useTranslation } from "react-i18next";
 import type { Rack } from "../../types";
 import {
@@ -25,7 +25,13 @@ import {
   resolveDropZ,
   type RoomObject,
 } from "./roomObjects";
-import type { FreePlacementMap, RackFacingMap } from "./siteTreeState";
+import {
+  loadRoomZoom,
+  saveRoomZoom,
+  stepRoomZoom,
+  type FreePlacementMap,
+  type RackFacingMap,
+} from "./siteTreeState";
 import { rackFloorMetrics } from "./roomFloorPlan";
 import { ItIcon } from "./icons";
 import {
@@ -33,14 +39,24 @@ import {
   ObjectGlyph,
   RackTagChips,
   RoomObjectPalette,
+  RoomZoomControl,
+  useCtrlWheelZoom,
+  useRoomPan,
+  useRoomViewportSize,
   type RoomTool,
 } from "./roomViewParts";
 
-// Floor cell size in px; rack footprints span the full cell along their
-// side-to-side axis so adjacent cabinets in a row touch like real racks.
+// Base floor cell size in px; rack footprints span the full cell along their
+// side-to-side axis so adjacent cabinets in a row touch like real racks. The
+// grid always covers the scroll viewport: cells are appended (and every cell
+// stretches a few px) until the room fills the window, and when a large room
+// cannot fit, cells shrink no further than BP_MIN_CELL and the plan scrolls.
 const BP_CELL = 76;
+const BP_MIN_CELL = 56;
+// Px eaten by the room's wall border (2.5px per side, content-box sizing).
+const BP_WALL = 5;
 // Rack depth as a fraction of a cell (front/back aisles read between rows).
-const RACK_DEPTH = Math.round(BP_CELL * 0.72);
+const RACK_DEPTH_FRAC = 0.72;
 
 interface DragState {
   kind: "rack" | "object";
@@ -79,6 +95,30 @@ export function ServerRoomFloorPlan({
 }) {
   const { t } = useTranslation();
   const layout = resolveIsoLayout(racks, placement);
+  const [scrollRef, viewport] = useRoomViewportSize();
+  // Zoom scales the rendered plan; the fill math below works in unzoomed
+  // (logical) px, so zooming out shows more floor cells in the same window.
+  const [zoom, setZoom] = useState(() => loadRoomZoom("floor"));
+  useEffect(() => saveRoomZoom("floor", zoom), [zoom]);
+  useCtrlWheelZoom(scrollRef, (dir) => setZoom((current) => stepRoomZoom(current, dir)));
+  useRoomPan(scrollRef);
+  // Grid dimensions cover the racks, every placed object, and the visible
+  // viewport; cell sizes stretch so the walls land on the viewport edge.
+  const floorW = viewport ? Math.max(0, viewport.w / zoom - BP_WALL) : 0;
+  const floorH = viewport ? Math.max(0, viewport.h / zoom - BP_WALL) : 0;
+  const cols = Math.max(
+    layout.cols,
+    Math.floor(floorW / BP_CELL),
+    ...objects.map((object) => object.x + 1),
+  );
+  const rows = Math.max(
+    layout.rows,
+    Math.floor(floorH / BP_CELL),
+    ...objects.map((object) => object.y + 1),
+  );
+  const cellW = floorW > 0 ? Math.max(BP_MIN_CELL, floorW / cols) : BP_CELL;
+  const cellH = floorH > 0 ? Math.max(BP_MIN_CELL, floorH / rows) : BP_CELL;
+  const grid = { cols, rows, cells: layout.cells };
   const [tool, setTool] = useState<RoomTool>(null);
   const [drag, setDrag] = useState<DragState | null>(null);
   const dragRef = useRef<{
@@ -93,8 +133,8 @@ export function ServerRoomFloorPlan({
   const suppressClickRef = useRef(false);
 
   const clampCell = (cell: IsoCell): IsoCell => ({
-    x: Math.min(layout.cols - 1, Math.max(0, Math.round(cell.x))),
-    y: Math.min(layout.rows - 1, Math.max(0, Math.round(cell.y))),
+    x: Math.min(cols - 1, Math.max(0, Math.round(cell.x))),
+    y: Math.min(rows - 1, Math.max(0, Math.round(cell.y))),
   });
 
   function startDrag(
@@ -104,6 +144,8 @@ export function ServerRoomFloorPlan({
     origin: IsoCell,
   ) {
     if (!editMode || tool != null) return;
+    // Left button only — the middle button pans the viewport (useRoomPan).
+    if (event.button !== 0) return;
     const target = event.target as HTMLElement;
     if (target.closest(".rm-bp-ctl")) return;
     event.preventDefault();
@@ -114,13 +156,15 @@ export function ServerRoomFloorPlan({
   function moveDrag(event: ReactPointerEvent<HTMLDivElement>) {
     const state = dragRef.current;
     if (!state) return;
-    const dx = event.clientX - state.startX;
-    const dy = event.clientY - state.startY;
+    // Logical (unzoomed) px: the dragged element renders inside the scaled
+    // plan, so the translate offset scales back up to match the pointer.
+    const dx = (event.clientX - state.startX) / zoom;
+    const dy = (event.clientY - state.startY) / zoom;
     if (Math.abs(dx) > 3 || Math.abs(dy) > 3) state.moved = true;
     if (!state.moved) return;
     state.target = clampCell({
-      x: state.origin.x + dx / BP_CELL,
-      y: state.origin.y + dy / BP_CELL,
+      x: state.origin.x + dx / cellW,
+      y: state.origin.y + dy / cellH,
     });
     setDrag({ kind: state.kind, id: state.id, dx, dy, target: state.target });
   }
@@ -135,7 +179,7 @@ export function ServerRoomFloorPlan({
           suppressClickRef.current = false;
         }, 0);
         if (state.kind === "rack") {
-          onPlacementChange?.(moveIsoRack(layout, state.id, state.target));
+          onPlacementChange?.(moveIsoRack(grid, state.id, state.target));
         } else {
           dropObject(state.id, state.target);
         }
@@ -166,11 +210,12 @@ export function ServerRoomFloorPlan({
   function placeAt(event: React.MouseEvent<HTMLDivElement>) {
     if (!editMode || tool == null || !onObjectsChange) return;
     const surface = event.currentTarget;
+    // The rect is the zoomed border box; clientLeft/Top are unzoomed CSS px.
     const rect = surface.getBoundingClientRect();
     // Children (and the grid background) sit inside the wall border.
     const cell = clampCell({
-      x: Math.floor((event.clientX - rect.left - surface.clientLeft) / BP_CELL),
-      y: Math.floor((event.clientY - rect.top - surface.clientTop) / BP_CELL),
+      x: Math.floor(((event.clientX - rect.left) / zoom - surface.clientLeft) / cellW),
+      y: Math.floor(((event.clientY - rect.top) / zoom - surface.clientTop) / cellH),
     });
     const spans = cellSpans(cell, racks, layout.cells, objects);
     const z = resolveDropZ(spans, tool);
@@ -215,67 +260,86 @@ export function ServerRoomFloorPlan({
 
   return (
     <div className="rm-bp-wrap">
-      {editMode ? <RoomObjectPalette tool={tool} onToolChange={setTool} /> : null}
-      <div className="rm-bp-scroll">
+      <div className="rm-iso-topbar">
+        {editMode ? <RoomObjectPalette tool={tool} onToolChange={setTool} /> : <span />}
+        <div className="rm-iso-topctls">
+          <RoomZoomControl zoom={zoom} onZoomChange={setZoom} />
+        </div>
+      </div>
+      {/* tabIndex: clicking the room focuses the viewport so arrow keys pan. */}
+      <div className="rm-bp-scroll" ref={scrollRef} tabIndex={0}>
         <div
-          className={`rm-bp${tool != null && editMode ? " placing" : ""}`}
+          className="rm-bp-zoom"
           style={{
-            width: layout.cols * BP_CELL,
-            height: layout.rows * BP_CELL,
-            backgroundSize: `${BP_CELL}px ${BP_CELL}px, ${BP_CELL}px ${BP_CELL}px, ${BP_CELL / 4}px ${BP_CELL / 4}px, ${BP_CELL / 4}px ${BP_CELL / 4}px, auto`,
+            width: (cols * cellW + BP_WALL) * zoom,
+            height: (rows * cellH + BP_WALL) * zoom,
           }}
-          onClick={placeAt}
         >
-          {drag ? (
-            <div
-              className="rm-bp-drop"
-              style={{
-                left: drag.target.x * BP_CELL,
-                top: drag.target.y * BP_CELL,
-                width: BP_CELL,
-                height: BP_CELL,
-              }}
-            />
-          ) : null}
-          {racks.map((rack) => (
-            <BlueprintRack
-              key={rack.id}
-              rack={rack}
-              cell={layout.cells[rack.id]}
-              facing={sanitizeFacing(facing[rack.id])}
-              editMode={!!editMode}
-              drag={drag?.kind === "rack" && drag.id === rack.id ? drag : null}
-              onPointerDown={(event) => startDrag(event, "rack", rack.id, layout.cells[rack.id])}
-              onPointerMove={moveDrag}
-              onPointerUp={endDrag}
-              onPointerCancel={endDrag}
-              onSelect={() => selectRack(rack.id)}
-              onRotate={editMode && onFacingChange ? () => rotateRack(rack) : undefined}
-              onDelete={editMode && onDeleteRack ? () => onDeleteRack(rack) : undefined}
-            />
-          ))}
-          {objects.map((object) => (
-            <BlueprintObject
-              key={object.id}
-              object={object}
-              editMode={!!editMode}
-              drag={drag?.kind === "object" && drag.id === object.id ? drag : null}
-              onPointerDown={(event) =>
-                startDrag(event, "object", object.id, { x: object.x, y: object.y })
-              }
-              onPointerMove={moveDrag}
-              onPointerUp={endDrag}
-              onPointerCancel={endDrag}
-              onRotate={() => rotateObject(object)}
-              onRaise={() => nudgeObject(object, 1)}
-              onLower={() => nudgeObject(object, -1)}
-              onDelete={
-                onObjectsChange
-                  ? () => onObjectsChange(objects.filter((entry) => entry.id !== object.id))
-                  : undefined
-              }
-            />
-          ))}
+          <div
+            className={`rm-bp${tool != null && editMode ? " placing" : ""}`}
+            style={{
+              width: cols * cellW,
+              height: rows * cellH,
+              transform: zoom !== 1 ? `scale(${zoom})` : undefined,
+              backgroundSize: `${cellW}px ${cellH}px, ${cellW}px ${cellH}px, ${cellW / 4}px ${cellH / 4}px, ${cellW / 4}px ${cellH / 4}px, auto`,
+            }}
+            onClick={placeAt}
+          >
+            {drag ? (
+              <div
+                className="rm-bp-drop"
+                style={{
+                  left: drag.target.x * cellW,
+                  top: drag.target.y * cellH,
+                  width: cellW,
+                  height: cellH,
+                }}
+              />
+            ) : null}
+            {racks.map((rack) => (
+              <BlueprintRack
+                key={rack.id}
+                rack={rack}
+                cell={layout.cells[rack.id]}
+                cellW={cellW}
+                cellH={cellH}
+                facing={sanitizeFacing(facing[rack.id])}
+                editMode={!!editMode}
+                drag={drag?.kind === "rack" && drag.id === rack.id ? drag : null}
+                onPointerDown={(event) => startDrag(event, "rack", rack.id, layout.cells[rack.id])}
+                onPointerMove={moveDrag}
+                onPointerUp={endDrag}
+                onPointerCancel={endDrag}
+                onSelect={() => selectRack(rack.id)}
+                onRotate={editMode && onFacingChange ? () => rotateRack(rack) : undefined}
+                onDelete={editMode && onDeleteRack ? () => onDeleteRack(rack) : undefined}
+              />
+            ))}
+            {objects.map((object) => (
+              <BlueprintObject
+                key={object.id}
+                object={object}
+                cellW={cellW}
+                cellH={cellH}
+                editMode={!!editMode}
+                drag={drag?.kind === "object" && drag.id === object.id ? drag : null}
+                onPointerDown={(event) =>
+                  startDrag(event, "object", object.id, { x: object.x, y: object.y })
+                }
+                onPointerMove={moveDrag}
+                onPointerUp={endDrag}
+                onPointerCancel={endDrag}
+                onRotate={() => rotateObject(object)}
+                onRaise={() => nudgeObject(object, 1)}
+                onLower={() => nudgeObject(object, -1)}
+                onDelete={
+                  onObjectsChange
+                    ? () => onObjectsChange(objects.filter((entry) => entry.id !== object.id))
+                    : undefined
+                }
+              />
+            ))}
+          </div>
         </div>
       </div>
       {editMode ? <div className="rm-iso-hint">{t("itops.floorPlan.blueprintEditHint")}</div> : null}
@@ -287,6 +351,8 @@ export function ServerRoomFloorPlan({
 function BlueprintRack({
   rack,
   cell,
+  cellW,
+  cellH,
   facing,
   editMode,
   drag,
@@ -300,6 +366,8 @@ function BlueprintRack({
 }: {
   rack: Rack;
   cell: IsoCell;
+  cellW: number;
+  cellH: number;
   facing: Facing;
   editMode: boolean;
   drag: DragState | null;
@@ -315,10 +383,10 @@ function BlueprintRack({
   const m = rackFloorMetrics(rack);
   // Side axis spans the full cell; the front/back axis is inset for aisles.
   const horizontal = facing === 0 || facing === 2;
-  const w = horizontal ? BP_CELL : RACK_DEPTH;
-  const h = horizontal ? RACK_DEPTH : BP_CELL;
-  const left = cell.x * BP_CELL + (BP_CELL - w) / 2;
-  const top = cell.y * BP_CELL + (BP_CELL - h) / 2;
+  const w = horizontal ? cellW : Math.round(cellW * RACK_DEPTH_FRAC);
+  const h = horizontal ? Math.round(cellH * RACK_DEPTH_FRAC) : cellH;
+  const left = cell.x * cellW + (cellW - w) / 2;
+  const top = cell.y * cellH + (cellH - h) / 2;
   const front = (["s", "w", "n", "e"] as const)[facing];
 
   return (
@@ -387,6 +455,8 @@ function BlueprintRack({
 
 function BlueprintObject({
   object,
+  cellW,
+  cellH,
   editMode,
   drag,
   onPointerDown,
@@ -399,6 +469,8 @@ function BlueprintObject({
   onDelete,
 }: {
   object: RoomObject;
+  cellW: number;
+  cellH: number;
   editMode: boolean;
   drag: DragState | null;
   onPointerDown: (event: ReactPointerEvent<HTMLDivElement>) => void;
@@ -413,10 +485,10 @@ function BlueprintObject({
   const { t } = useTranslation();
   const spec = objectSpec(object.kind);
   const across = object.rot % 2 === 1;
-  const w = Math.round((across ? spec.deep : spec.wide) * BP_CELL);
-  const h = Math.round((across ? spec.wide : spec.deep) * BP_CELL);
-  const left = object.x * BP_CELL + (BP_CELL - w) / 2;
-  const top = object.y * BP_CELL + (BP_CELL - h) / 2;
+  const w = Math.round((across ? spec.deep : spec.wide) * cellW);
+  const h = Math.round((across ? spec.wide : spec.deep) * cellH);
+  const left = object.x * cellW + (cellW - w) / 2;
+  const top = object.y * cellH + (cellH - h) / 2;
   const name = t(`itops.floorPlan.object.${object.kind}`);
 
   return (

@@ -3,12 +3,20 @@
 // metric toggle, the room-object glyph set, and the edit-mode object palette
 // used to arm placement of a non-rack fixture (see roomObjects.ts).
 
-import type { ReactNode } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+  type RefObject,
+} from "react";
 import { useTranslation } from "react-i18next";
 import type { Rack } from "../../types";
 import { rackFloorMetrics } from "./roomFloorPlan";
 import { ROOM_OBJECT_KINDS, type RoomObjectKind } from "./roomObjects";
-import { IT_ACCENTS } from "./icons";
+import { ROOM_ZOOM_LEVELS, sanitizeRoomZoom, stepRoomZoom } from "./siteTreeState";
+import { IT_ACCENTS, ItIcon } from "./icons";
 
 /** Accent colour per object kind (乖乖 is green — it has a job to do). Fed to
  *  CSS as the `--obj`/`--tile` custom properties, mirroring TILE_COLORS. */
@@ -23,6 +31,169 @@ export const OBJECT_ACCENTS: Record<RoomObjectKind, string> = {
   crashCart: IT_ACCENTS.pink,
   kuaikuai: IT_ACCENTS.green,
 };
+
+// ── Viewport-filling grids ──
+
+/** Content-box size of the scroll viewport hosting a room view, so the floor
+ *  grid can grow to cover the whole visible area. Null until the first
+ *  measure (and in DOM-less tests), which renders the layout's natural
+ *  minimum. */
+export function useRoomViewportSize(): [
+  RefObject<HTMLDivElement | null>,
+  { w: number; h: number } | null,
+] {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [size, setSize] = useState<{ w: number; h: number } | null>(null);
+  useLayoutEffect(() => {
+    const node = ref.current;
+    if (!node || typeof ResizeObserver === "undefined") return;
+    const measure = () => {
+      // Slightly conservative: grids size themselves to exactly this box, and
+      // exact-fit content can pin a transient scrollbar forever (each bar
+      // justifies the other). A 2px allowance lets scrollbars always retract.
+      const w = Math.max(0, node.clientWidth - 2);
+      const h = Math.max(0, node.clientHeight - 2);
+      setSize((prev) => (prev && prev.w === w && prev.h === h ? prev : { w, h }));
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+  return [ref, size];
+}
+
+/** Step the zoom on Ctrl+wheel over the room's scroll viewport (the browser
+ *  page-zoom gesture, repurposed for the room). A native non-passive listener
+ *  because React registers `onWheel` passively, which cannot preventDefault. */
+export function useCtrlWheelZoom(
+  ref: RefObject<HTMLDivElement | null>,
+  onStep: (dir: 1 | -1) => void,
+): void {
+  const stepRef = useRef(onStep);
+  stepRef.current = onStep;
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+    const onWheel = (event: WheelEvent) => {
+      if (!event.ctrlKey || event.deltaY === 0) return;
+      event.preventDefault();
+      stepRef.current(event.deltaY < 0 ? 1 : -1);
+    };
+    node.addEventListener("wheel", onWheel, { passive: false });
+    return () => node.removeEventListener("wheel", onWheel);
+  }, [ref]);
+}
+
+/** Pan the room by scrolling its viewport: middle-mouse drag (preventDefault
+ *  suppresses the browser's autoscroll gadget) and arrow keys. The scroll
+ *  element carries tabIndex 0, so clicking anywhere in the room — floor or a
+ *  rack button inside it — puts focus where the keydown listener hears it. */
+export function useRoomPan(ref: RefObject<HTMLDivElement | null>): void {
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+    let pointerId: number | null = null;
+    let lastX = 0;
+    let lastY = 0;
+    const onPointerDown = (event: PointerEvent) => {
+      if (event.button !== 1) return;
+      event.preventDefault();
+      pointerId = event.pointerId;
+      lastX = event.clientX;
+      lastY = event.clientY;
+      node.style.cursor = "grabbing";
+      node.focus({ preventScroll: true });
+      try {
+        node.setPointerCapture(event.pointerId);
+      } catch {
+        // Keep panning uncaptured if the pointer is already gone.
+      }
+    };
+    const onPointerMove = (event: PointerEvent) => {
+      if (pointerId !== event.pointerId) return;
+      node.scrollLeft -= event.clientX - lastX;
+      node.scrollTop -= event.clientY - lastY;
+      lastX = event.clientX;
+      lastY = event.clientY;
+    };
+    const endPan = (event: PointerEvent) => {
+      if (pointerId !== event.pointerId) return;
+      pointerId = null;
+      node.style.cursor = "";
+    };
+    const PAN_STEP = 64;
+    const KEY_DELTAS: Record<string, [number, number]> = {
+      ArrowLeft: [-PAN_STEP, 0],
+      ArrowRight: [PAN_STEP, 0],
+      ArrowUp: [0, -PAN_STEP],
+      ArrowDown: [0, PAN_STEP],
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      const delta = KEY_DELTAS[event.key];
+      if (!delta || event.ctrlKey || event.altKey || event.metaKey) return;
+      event.preventDefault();
+      node.scrollBy({ left: delta[0], top: delta[1] });
+    };
+    node.addEventListener("pointerdown", onPointerDown);
+    node.addEventListener("pointermove", onPointerMove);
+    node.addEventListener("pointerup", endPan);
+    node.addEventListener("pointercancel", endPan);
+    node.addEventListener("keydown", onKeyDown);
+    return () => {
+      node.removeEventListener("pointerdown", onPointerDown);
+      node.removeEventListener("pointermove", onPointerMove);
+      node.removeEventListener("pointerup", endPan);
+      node.removeEventListener("pointercancel", endPan);
+      node.removeEventListener("keydown", onKeyDown);
+    };
+  }, [ref]);
+}
+
+// ── Zoom stepper ──
+
+/** Fixed zoom levels shared by both spatial views; the middle button resets
+ *  to 100%. Persisted per view via siteTreeState.loadRoomZoom/saveRoomZoom. */
+export function RoomZoomControl({
+  zoom,
+  onZoomChange,
+}: {
+  zoom: number;
+  onZoomChange: (zoom: number) => void;
+}) {
+  const { t } = useTranslation();
+  const level = sanitizeRoomZoom(zoom);
+  return (
+    <div className="rm-zoom" role="group" aria-label={t("itops.floorPlan.zoomLabel")}>
+      <button
+        type="button"
+        title={t("itops.floorPlan.zoomOut")}
+        aria-label={t("itops.floorPlan.zoomOut")}
+        disabled={level <= ROOM_ZOOM_LEVELS[0]}
+        onClick={() => onZoomChange(stepRoomZoom(level, -1))}
+      >
+        <ItIcon name="minus" size={13} />
+      </button>
+      <button
+        type="button"
+        className="rm-zoom-val"
+        title={t("itops.floorPlan.zoomReset")}
+        onClick={() => onZoomChange(1)}
+      >
+        {Math.round(level * 100)}%
+      </button>
+      <button
+        type="button"
+        title={t("itops.floorPlan.zoomIn")}
+        aria-label={t("itops.floorPlan.zoomIn")}
+        disabled={level >= ROOM_ZOOM_LEVELS[ROOM_ZOOM_LEVELS.length - 1]}
+        onClick={() => onZoomChange(stepRoomZoom(level, 1))}
+      >
+        <ItIcon name="plus" size={13} />
+      </button>
+    </div>
+  );
+}
 
 // ── Rack status tags ──
 

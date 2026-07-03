@@ -14,6 +14,7 @@ const FREE_LAYOUT_KEY = "kkterm.itopsFreePlacement";
 const RACK_FACING_KEY = "kkterm.itopsRackFacing";
 const ROOM_OBJECTS_KEY = "kkterm.itopsRoomObjects";
 const ISO_ANGLE_KEY = "kkterm.itopsIsoViewAngle";
+const ROOM_ZOOM_KEY = "kkterm.itopsRoomZoom";
 
 export const SITE_TREE_MIN_WIDTH = 200;
 export const SITE_TREE_MAX_WIDTH = 460;
@@ -174,4 +175,31 @@ export function loadIsoViewAngle(): IsoViewAngle {
 export function saveIsoViewAngle(angle: IsoViewAngle): void {
   if (typeof localStorage === "undefined") return;
   localStorage.setItem(ISO_ANGLE_KEY, String(angle));
+}
+
+// ── Room view zoom (app-wide like the view mode, one level per spatial view) ──
+
+export const ROOM_ZOOM_LEVELS = [0.5, 0.75, 1, 1.25, 1.5, 2] as const;
+
+export type RoomZoomView = "floor" | "iso";
+
+export function sanitizeRoomZoom(value: unknown): number {
+  const zoom = Number(value);
+  return (ROOM_ZOOM_LEVELS as readonly number[]).includes(zoom) ? zoom : 1;
+}
+
+/** The next zoom level in `dir`, clamped to the ends of ROOM_ZOOM_LEVELS. */
+export function stepRoomZoom(zoom: number, dir: 1 | -1): number {
+  const index = (ROOM_ZOOM_LEVELS as readonly number[]).indexOf(sanitizeRoomZoom(zoom));
+  return ROOM_ZOOM_LEVELS[Math.min(ROOM_ZOOM_LEVELS.length - 1, Math.max(0, index + dir))];
+}
+
+export function loadRoomZoom(view: RoomZoomView): number {
+  if (typeof localStorage === "undefined") return 1;
+  return sanitizeRoomZoom(localStorage.getItem(`${ROOM_ZOOM_KEY}.${view}`));
+}
+
+export function saveRoomZoom(view: RoomZoomView, zoom: number): void {
+  if (typeof localStorage === "undefined") return;
+  localStorage.setItem(`${ROOM_ZOOM_KEY}.${view}`, String(zoom));
 }
