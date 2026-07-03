@@ -7,6 +7,11 @@ export async function writeToClipboard(text: string) {
       // Fall through to execCommand fallback
     }
   }
+  // execCommand("copy") copies the focused selection, so the temporary
+  // textarea must take focus; hand focus back afterwards or the previously
+  // focused element (e.g. xterm's hidden textarea during copy-on-select)
+  // stops receiving keystrokes until the user clicks it again.
+  const previouslyFocused = document.activeElement;
   const textarea = document.createElement("textarea");
   textarea.value = text;
   textarea.style.cssText = "position:fixed;opacity:0;pointer-events:none";
@@ -15,6 +20,9 @@ export async function writeToClipboard(text: string) {
   textarea.select();
   document.execCommand("copy");
   document.body.removeChild(textarea);
+  if (previouslyFocused instanceof HTMLElement) {
+    previouslyFocused.focus();
+  }
 }
 
 export async function readFromClipboard() {

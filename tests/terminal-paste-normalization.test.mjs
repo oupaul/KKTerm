@@ -32,3 +32,23 @@ test("terminal copy-on-select uses the shared clipboard fallback", async () => {
   assert.match(selectionHandler, /void writeToClipboard\(selection\)/);
   assert.doesNotMatch(selectionHandler, /navigator\.clipboard/);
 });
+
+test("terminal copy-on-select reads the live setting so toggling applies to open terminals", async () => {
+  const workspaceSource = await readFile(
+    new URL("../src/modules/workspace/connections/terminal/TerminalWorkspace.tsx", import.meta.url),
+    "utf8",
+  );
+
+  const selectionHandler =
+    workspaceSource.match(/terminal\.onSelectionChange\(\(\) => \{([\s\S]*?)\n    \}\)/)?.[1] ?? "";
+  assert.match(selectionHandler, /useWorkspaceStore\.getState\(\)\.terminalSettings\.copyOnSelect/);
+});
+
+test("clipboard execCommand fallback restores focus after copying", async () => {
+  const clipboardSource = await readFile(new URL("../src/lib/clipboard.ts", import.meta.url), "utf8");
+
+  const fallback = clipboardSource.match(/const previouslyFocused([\s\S]*?)\n\}/)?.[0] ?? "";
+  assert.match(fallback, /document\.activeElement/);
+  assert.match(fallback, /previouslyFocused instanceof HTMLElement/);
+  assert.match(fallback, /previouslyFocused\.focus\(\)/);
+});
