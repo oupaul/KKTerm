@@ -192,6 +192,22 @@ impl Processor {
             trace!("{update:?}");
             buf.clear();
 
+            // Some legacy servers (observed with Windows Server 2008 R2) send a
+            // TS_BITMAP_DATA whose destination rectangle span (right - left + 1)
+            // does not match the declared `width`/`height` fields. The bitmap
+            // payload is always decoded/de-padded using `width`/`height` (see the
+            // decompress/row-stride calls below), so blitting it back using the
+            // wire rectangle's own span as the row stride reads the buffer at the
+            // wrong stride and produces a diagonally-shifted "ghosting" artifact.
+            // Rebuild the rectangle actually used for decoding/blitting from
+            // `left`/`top` + `width`/`height` so both stages agree on the stride.
+            let bitmap_rectangle = InclusiveRectangle {
+                left: update.rectangle.left,
+                top: update.rectangle.top,
+                right: update.rectangle.left.saturating_add(update.width.saturating_sub(1)),
+                bottom: update.rectangle.top.saturating_add(update.height.saturating_sub(1)),
+            };
+
             // Bitmap data is either compressed or uncompressed, depending
             // on whether the BITMAP_COMPRESSION flag is present in the
             // flags field.
@@ -211,10 +227,10 @@ impl Processor {
                         usize::from(update.width),
                         usize::from(update.height),
                     ) {
-                        Ok(()) => image.apply_rgb24(&buf, &update.rectangle, true)?,
+                        Ok(()) => image.apply_rgb24(&buf, &bitmap_rectangle, true)?,
                         Err(err) => {
                             warn!("Invalid RDP6_BITMAP_STREAM: {err}");
-                            update.rectangle.clone()
+                            bitmap_rectangle.clone()
                         }
                     }
                 } else {
@@ -230,16 +246,16 @@ impl Processor {
                         usize::from(update.height),
                         usize::from(update.bits_per_pixel),
                     ) {
-                        Ok(RlePixelFormat::Rgb16) => image.apply_rgb16_bitmap(&buf, &update.rectangle)?,
-                        Ok(RlePixelFormat::Rgb15) => image.apply_rgb15_bitmap(&buf, &update.rectangle)?,
-                        Ok(RlePixelFormat::Rgb24) => image.apply_bgr24_bitmap(&buf, &update.rectangle)?,
+                        Ok(RlePixelFormat::Rgb16) => image.apply_rgb16_bitmap(&buf, &bitmap_rectangle)?,
+                        Ok(RlePixelFormat::Rgb15) => image.apply_rgb15_bitmap(&buf, &bitmap_rectangle)?,
+                        Ok(RlePixelFormat::Rgb24) => image.apply_bgr24_bitmap(&buf, &bitmap_rectangle)?,
                         Ok(RlePixelFormat::Rgb8) => {
-                            image.apply_rgb8_with_palette(&buf, &update.rectangle, self.palette.colors())?
+                            image.apply_rgb8_with_palette(&buf, &bitmap_rectangle, self.palette.colors())?
                         }
 
                         Err(e) => {
                             warn!("Invalid RLE-compressed bitmap: {e}");
-                            update.rectangle.clone()
+                            bitmap_rectangle.clone()
                         }
                     }
                 }
@@ -266,30 +282,30 @@ impl Processor {
                     }
 
                     match update.bits_per_pixel {
-                        8 => image.apply_rgb8_with_palette(&buf, &update.rectangle, self.palette.colors())?,
-                        15 => image.apply_rgb15_bitmap(&buf, &update.rectangle)?,
-                        16 => image.apply_rgb16_bitmap(&buf, &update.rectangle)?,
-                        24 => image.apply_bgr24_bitmap(&buf, &update.rectangle)?,
-                        32 => image.apply_rgb32_bitmap(&buf, PixelFormat::BgrX32, &update.rectangle)?,
+                        8 => image.apply_rgb8_with_palette(&buf, &bitmap_rectangle, self.palette.colors())?,
+                        15 => image.apply_rgb15_bitmap(&buf, &bitmap_rectangle)?,
+                        16 => image.apply_rgb16_bitmap(&buf, &bitmap_rectangle)?,
+                        24 => image.apply_bgr24_bitmap(&buf, &bitmap_rectangle)?,
+                        32 => image.apply_rgb32_bitmap(&buf, PixelFormat::BgrX32, &bitmap_rectangle)?,
                         _ => {
                             warn!("Unsupported uncompressed bitmap depth: {bpp} bpp");
-                            update.rectangle.clone()
+                            bitmap_rectangle.clone()
                         }
                     }
                 } else {
                     match update.bits_per_pixel {
                         8 => image.apply_rgb8_with_palette(
                             update.bitmap_data,
-                            &update.rectangle,
+                            &bitmap_rectangle,
                             self.palette.colors(),
                         )?,
-                        15 => image.apply_rgb15_bitmap(update.bitmap_data, &update.rectangle)?,
-                        16 => image.apply_rgb16_bitmap(update.bitmap_data, &update.rectangle)?,
-                        24 => image.apply_bgr24_bitmap(update.bitmap_data, &update.rectangle)?,
-                        32 => image.apply_rgb32_bitmap(update.bitmap_data, PixelFormat::BgrX32, &update.rectangle)?,
+                        15 => image.apply_rgb15_bitmap(update.bitmap_data, &bitmap_rectangle)?,
+                        16 => image.apply_rgb16_bitmap(update.bitmap_data, &bitmap_rectangle)?,
+                        24 => image.apply_bgr24_bitmap(update.bitmap_data, &bitmap_rectangle)?,
+                        32 => image.apply_rgb32_bitmap(update.bitmap_data, PixelFormat::BgrX32, &bitmap_rectangle)?,
                         _ => {
                             warn!("Unsupported uncompressed bitmap depth: {bpp} bpp");
-                            update.rectangle.clone()
+                            bitmap_rectangle.clone()
                         }
                     }
                 }
