@@ -50,7 +50,6 @@ import {
   saveRoomZoom,
   stepRoomZoom,
 } from "./siteTreeState";
-import { FloorLegend } from "./ServerRoomFloorPlan";
 import { ItIcon } from "./icons";
 import {
   OBJECT_ACCENTS,
@@ -453,7 +452,6 @@ export function ServerRoomIsoView({
         </div>
       </div>
       {editMode ? <div className="rm-iso-hint">{t("itops.floorPlan.isoEditHint")}</div> : null}
-      <FloorLegend />
     </div>
   );
 }
@@ -542,7 +540,7 @@ function IsoCabinet({
   return (
     <div
       className={`rm-iso-cab${drag ? " dragging" : ""}${editMode ? " editing" : ""}`}
-      data-health={m.health}
+      data-shell={rack.shell && rack.shell !== "black" ? rack.shell : undefined}
       style={{
         left,
         top,
@@ -567,7 +565,6 @@ function IsoCabinet({
           style={{ width: w, height: h, top: d - h }}
         >
           {southRole === "front" ? <IsoRackSkin rack={rack} axis="y" /> : null}
-          <i className="rm-iso-led" />
         </span>
         <span
           className={`rm-iso-face rm-iso-side ${eastRole}`}
@@ -577,12 +574,11 @@ function IsoCabinet({
         </span>
       </button>
       <span className="rm-iso-badge" style={{ transform: billboard(h + 6, "-50%, -100%") }}>
-        <i className="rm-iso-badge-dot" data-health={m.health} />
         {rack.name}
       </span>
       <span className="rm-iso-tip" style={{ transform: billboard(h + 10, "-50%, -112%") }}>
         <span className="rm-iso-tip-name">{rack.name}</span>
-        <span className="rm-iso-tip-detail" data-health={m.health}>
+        <span className="rm-iso-tip-detail">
           {health} · {t("itops.floorPlan.utilizationValue", { percent: Math.round(m.utilization * 100) })}
           {m.powerW > 0
             ? ` · ${

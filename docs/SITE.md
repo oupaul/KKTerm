@@ -78,9 +78,9 @@ Replaces the **Host Group** entry in `CONTEXT.md`; adds the rest. Follows the
   three layouts: rack elevations (default, optionally grouped by each Rack's
   `rack_group` tag), a blueprint-style top-down floor plan, and a 2.5D
   axonometric room. The floor plan and 2.5D room share one grid placement
-  (cell + facing per Rack), tint Racks by health with compact
-  utilisation/power tags, and hold **Room Objects**. _Avoid_: area view,
-  region view.
+  (cell + facing per Rack), paint Racks in their cabinet shell finish (no
+  status colouring) with compact utilisation/power tags, and hold
+  **Room Objects**. _Avoid_: area view, region view.
 - **Room Object** — a non-rack fixture standing on the Server Room floor grid
   (security camera, air conditioner, fire extinguisher, cable tray, UPS,
   environment sensor, smoke detector, crash cart, 乖乖). A Room Object has a
@@ -315,8 +315,9 @@ The visible IT Ops Module opens directly into the Site topology surface:
   `rack_group` tag), a blueprint-style top-down floor plan
   (`ServerRoomFloorPlan.tsx`), or a 2.5D axonometric room
   (`ServerRoomIsoView.tsx`). The two spatial layouts share one floor grid
-  (cell placement + facing, `roomIsoLayout.ts`), tint Racks by health with
-  always-on utilisation/power tags (`roomFloorPlan.ts` metrics), and hold
+  (cell placement + facing, `roomIsoLayout.ts`), paint Racks in their shell
+  finish (no status colouring) with always-on utilisation/power tags
+  (`roomFloorPlan.ts` metrics), and hold
   non-rack room objects with vertical stacking (`roomObjects.ts`). Both grow
   their floor grid to cover the whole view, carry a zoom stepper (50%–200%,
   also Ctrl+scroll; the level persists locally per layout), and pan with a
