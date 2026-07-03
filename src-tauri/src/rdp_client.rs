@@ -272,9 +272,26 @@ fn log_slow_path_bitmap_tile(
     );
 }
 
+/// Diagnostic sink for [`ironrdp::session::set_slow_path_unhandled_update_diagnostic_hook`].
+/// Fires when the server sends a slow-path drawing-orders or palette update,
+/// which this client does not apply to the framebuffer. If a server relies on
+/// orders (e.g. ScrBlt/MemBlt for scrolling or window moves) instead of
+/// re-sending bitmap updates, those screen changes are silently dropped here,
+/// which would show up as leftover/"ghosted" content.
+fn log_slow_path_unhandled_update(kind: &'static str, data_len: usize) {
+    rdp_debug(
+        "ironrdp.slow_path_unhandled_update",
+        &json!({
+            "kind": kind,
+            "dataLen": data_len,
+        }),
+    );
+}
+
 impl RdpClientSessionManager {
     pub fn new() -> Self {
         ironrdp::session::set_slow_path_bitmap_diagnostic_hook(log_slow_path_bitmap_tile);
+        ironrdp::session::set_slow_path_unhandled_update_diagnostic_hook(log_slow_path_unhandled_update);
         Self {
             runtime: Runtime::new().expect("RDP client runtime initializes"),
             sessions: Mutex::new(HashMap::new()),

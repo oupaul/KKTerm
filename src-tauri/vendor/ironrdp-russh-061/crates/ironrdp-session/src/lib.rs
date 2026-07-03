@@ -18,6 +18,7 @@ use core::fmt;
 
 pub use active_stage::{
     ActiveStage, ActiveStageOutput, GracefulDisconnectReason, set_slow_path_bitmap_diagnostic_hook,
+    set_slow_path_unhandled_update_diagnostic_hook,
 };
 
 pub type SessionResult<T> = Result<T, SessionError>;

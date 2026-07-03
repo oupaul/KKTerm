@@ -37,6 +37,20 @@ pub fn set_slow_path_bitmap_diagnostic_hook(hook: fn(u16, u16, u16, u16, u16, u1
     let _ = SLOW_PATH_BITMAP_DIAGNOSTIC_HOOK.set(hook);
 }
 
+/// Diagnostic hook fired whenever a slow-path GraphicsUpdate PDU carries a
+/// drawing-orders or palette payload, neither of which this client applies to
+/// the framebuffer (see [`process_slow_path_graphics`]). A server that relies
+/// on orders (e.g. ScrBlt/MemBlt for scrolling or window moves) instead of
+/// re-sending bitmap updates would have its screen changes silently dropped
+/// here, which would show up as leftover/"ghosted" content. Args: update kind
+/// ("orders" or "palette"), remaining payload length in bytes.
+pub static SLOW_PATH_UNHANDLED_UPDATE_DIAGNOSTIC_HOOK: std::sync::OnceLock<fn(&'static str, usize)> =
+    std::sync::OnceLock::new();
+
+pub fn set_slow_path_unhandled_update_diagnostic_hook(hook: fn(&'static str, usize)) {
+    let _ = SLOW_PATH_UNHANDLED_UPDATE_DIAGNOSTIC_HOOK.set(hook);
+}
+
 /// Converts the PDU-layer compression type to the bulk crate's compression type.
 fn to_bulk_compression_type(ct: PduCompressionType) -> ironrdp_bulk::CompressionType {
     match ct {
@@ -440,10 +454,16 @@ fn process_slow_path_graphics(
         }
         GraphicsUpdateType::Orders => {
             warn!("Slow-path drawing orders not supported (MS-RDPEGDI)");
+            if let Some(hook) = SLOW_PATH_UNHANDLED_UPDATE_DIAGNOSTIC_HOOK.get() {
+                hook("orders", src.remaining().len());
+            }
             Ok(Vec::new())
         }
         GraphicsUpdateType::Palette => {
             warn!("Slow-path palette update not supported (8bpp)");
+            if let Some(hook) = SLOW_PATH_UNHANDLED_UPDATE_DIAGNOSTIC_HOOK.get() {
+                hook("palette", src.remaining().len());
+            }
             Ok(Vec::new())
         }
         // Synchronize is an artifact from the T.128 multipoint protocol
