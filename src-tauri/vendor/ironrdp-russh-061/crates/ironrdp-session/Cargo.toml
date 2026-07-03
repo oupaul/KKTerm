@@ -1,0 +1,36 @@
+[package]
+name = "ironrdp-session"
+version = "0.10.0"
+readme = "README.md"
+description = "State machines to drive an RDP session"
+edition = "2024"
+rust-version = "1.89"
+license = "MIT OR Apache-2.0"
+homepage = "https://github.com/Devolutions/IronRDP"
+repository = "https://github.com/Devolutions/IronRDP"
+authors = ["Devolutions Inc. <infos@devolutions.net>"]
+keywords = ["rdp", "remote-desktop", "network", "client", "protocol"]
+categories = ["network-programming"]
+
+[lib]
+doctest = false
+test = false
+
+[features]
+default = []
+qoi = ["dep:qoicoubeh", "ironrdp-pdu/qoi"]
+qoiz = ["dep:zstd-safe", "qoi"]
+
+[dependencies]
+ironrdp-bulk = { version = "0.1" } # public
+ironrdp-core = { version = "0.2" } # public
+ironrdp-connector = { path = "../ironrdp-connector", version = "0.9" } # public
+ironrdp-svc = { version = "0.7" } # public
+ironrdp-dvc = { version = "0.7" } # public
+ironrdp-error = { version = "0.2" } # public
+ironrdp-graphics = { version = "0.8" } # public
+ironrdp-pdu = { version = "0.8", features = ["std"] } # public
+ironrdp-displaycontrol = { version = "0.7" }
+tracing = { version = "0.1", features = ["log"] }
+qoicoubeh = { version = "0.5", optional = true }
+zstd-safe = { version = "7.2", optional = true, features = ["std"] }

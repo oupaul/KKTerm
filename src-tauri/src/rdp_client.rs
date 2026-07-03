@@ -237,8 +237,44 @@ enum RdpCanvasEvent {
     },
 }
 
+/// Diagnostic sink for [`ironrdp::session::set_slow_path_bitmap_diagnostic_hook`],
+/// tracking down ghosting/misplaced-tile rendering against legacy hosts that
+/// lean heavily on slow-path (X224) bitmap updates. Logs each `TS_BITMAP_DATA`
+/// rectangle's wire-encoded bounds/dimensions before it reaches the shared
+/// bitmap-apply pipeline, so a corrupted screen can be cross-checked against
+/// exactly what tiles the server described and where it placed them.
+fn log_slow_path_bitmap_tile(
+    left: u16,
+    top: u16,
+    right: u16,
+    bottom: u16,
+    width: u16,
+    height: u16,
+    bits_per_pixel: u16,
+    compressed: bool,
+    data_len: usize,
+) {
+    rdp_debug(
+        "ironrdp.slow_path_tile",
+        &json!({
+            "left": left,
+            "top": top,
+            "right": right,
+            "bottom": bottom,
+            "rectWidth": right.saturating_sub(left).saturating_add(1),
+            "rectHeight": bottom.saturating_sub(top).saturating_add(1),
+            "width": width,
+            "height": height,
+            "bitsPerPixel": bits_per_pixel,
+            "compressed": compressed,
+            "dataLen": data_len,
+        }),
+    );
+}
+
 impl RdpClientSessionManager {
     pub fn new() -> Self {
+        ironrdp::session::set_slow_path_bitmap_diagnostic_hook(log_slow_path_bitmap_tile);
         Self {
             runtime: Runtime::new().expect("RDP client runtime initializes"),
             sessions: Mutex::new(HashMap::new()),

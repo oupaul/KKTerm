@@ -213,6 +213,10 @@ ironrdp-connector = { path = "vendor/ironrdp-russh-061/crates/ironrdp-connector"
 # thread the NTLM channel-binding token through connect_finalize/perform_credssp_step,
 # which the crates.io release has no parameter for).
 ironrdp-async = { path = "vendor/ironrdp-russh-061/crates/ironrdp-async" }
+# Vendored so we can add raw-PDU diagnostics to the slow-path bitmap tile apply
+# path, tracking down ghosting/misplaced-tile rendering against legacy hosts
+# that rely heavily on slow-path (X224) bitmap updates.
+ironrdp-session = { path = "vendor/ironrdp-russh-061/crates/ironrdp-session" }
 
 [dev-dependencies]
 tempfile = "3.27.0"
