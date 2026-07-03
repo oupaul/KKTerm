@@ -197,7 +197,7 @@ export function RoomZoomControl({
 
 // ── Rack status tags ──
 
-/** Compact always-visible tags on a rack footprint: health dot, occupied U,
+/** Compact always-visible tags on a rack footprint: device count, occupied U,
  *  and power draw (only when any device declares one). */
 export function RackTagChips({ rack }: { rack: Rack }) {
   const { t } = useTranslation();
@@ -205,9 +205,8 @@ export function RackTagChips({ rack }: { rack: Rack }) {
   return (
     <span className="rm-tags">
       <span
-        className="rm-tag rm-tag-health"
-        data-health={m.health}
-        title={t(`itops.floorPlan.health.${m.health}`)}
+        className="rm-tag rm-tag-count"
+        title={t("itops.racks.deviceCount", { count: m.deviceCount })}
       >
         <i />
         {m.deviceCount}

@@ -3816,8 +3816,9 @@
 /* ──────────────────────────────────────────────────────────────────────────
    Top-down Server Room View — a blueprint-style floor plan on the shared
    floor grid: rack footprints with facing edges and compact status tags,
-   plus non-rack room objects. `--tile` is the health accent set by
-   `data-health`; object accents come from `data-kind`.
+   plus non-rack room objects. Footprints render in the rack's shell finish
+   (`data-shell`, fixed hardware palette like the 2D rack skin — no status
+   colouring); object accents come from `data-kind`.
    ────────────────────────────────────────────────────────────────────────── */
 .itops-page .rm-toolbar {
   display: flex;
@@ -3907,19 +3908,32 @@
   pointer-events: none;
 }
 
-/* One rack footprint standing on its cell; `--tile` tracks health. The
-   `data-front` edge marks which way the front faces. */
+/* One rack footprint standing on its cell, painted in the rack's shell
+   finish (fixed hardware palette mirroring the .rk cabinet frame; black is
+   the default, `data-shell` overrides for white/grey). The `data-front` edge
+   marks which way the front faces. */
 .itops-page .rm-bp-rack {
-  --tile: var(--text-faint);
+  --cab-a: #1e1e21;
+  --cab-b: #161618;
+  --cab-edge: #38383a;
+  --cab-text: #f5f5f7;
   position: absolute;
-  border: 1.5px solid color-mix(in srgb, var(--tile) 55%, var(--border));
+  border: 1.5px solid var(--cab-edge);
   border-radius: 3px;
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--tile) 16%, var(--surface)),
-    color-mix(in srgb, var(--tile) 7%, var(--surface))
-  );
+  background: linear-gradient(180deg, var(--cab-a), var(--cab-b));
   box-shadow: var(--card-shadow);
+}
+.itops-page .rm-bp-rack[data-shell="white"] {
+  --cab-a: #e4e4e7;
+  --cab-b: #d2d2d7;
+  --cab-edge: #c2c2c8;
+  --cab-text: #1a1a1c;
+}
+.itops-page .rm-bp-rack[data-shell="grey"] {
+  --cab-a: #82828a;
+  --cab-b: #6a6a72;
+  --cab-edge: #58585e;
+  --cab-text: #16161a;
 }
 .itops-page .rm-bp-rack.editing {
   cursor: grab;
@@ -3932,7 +3946,7 @@
 .itops-page .rm-bp-rack::after {
   content: "";
   position: absolute;
-  background: var(--tile);
+  background: color-mix(in srgb, var(--cab-text) 60%, var(--cab-edge));
   border-radius: 2px;
   pointer-events: none;
 }
@@ -3960,15 +3974,6 @@
   right: -1px;
   width: 3px;
 }
-.itops-page .rm-bp-rack[data-health="ok"] {
-  --tile: var(--green);
-}
-.itops-page .rm-bp-rack[data-health="warning"] {
-  --tile: var(--amber);
-}
-.itops-page .rm-bp-rack[data-health="critical"] {
-  --tile: var(--red);
-}
 .itops-page .rm-bp-rack-body {
   position: absolute;
   inset: 0;
@@ -3980,7 +3985,7 @@
   padding: 2px 3px;
   border: 0;
   background: transparent;
-  color: var(--text);
+  color: var(--cab-text);
   cursor: pointer;
   overflow: hidden;
 }
@@ -3997,7 +4002,7 @@
   text-overflow: ellipsis;
 }
 
-/* Compact always-on status tags (health dot · used U · watts). */
+/* Compact always-on status tags (device count · used U · watts). */
 .itops-page .rm-tags {
   display: inline-flex;
   align-items: center;
@@ -4021,20 +4026,11 @@
   color: var(--text-muted);
   white-space: nowrap;
 }
-.itops-page .rm-tag-health i {
+.itops-page .rm-tag-count i {
   width: 5px;
   height: 5px;
   border-radius: 50%;
   background: var(--text-faint);
-}
-.itops-page .rm-tag-health[data-health="ok"] i {
-  background: var(--green);
-}
-.itops-page .rm-tag-health[data-health="warning"] i {
-  background: var(--amber);
-}
-.itops-page .rm-tag-health[data-health="critical"] i {
-  background: var(--red);
 }
 
 /* A non-rack room object on the plan; `--obj` accent comes from data-kind. */
@@ -4202,45 +4198,16 @@
 .itops-page .rm-dot.off i {
   background: var(--red);
 }
-/* Legend (health bands only — utilisation and power read as numeric tags). */
-.itops-page .rm-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 13px;
-  padding: 6px 2px 12px;
-}
-.itops-page .rm-legend-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  color: var(--text-muted);
-}
-.itops-page .rm-legend-sw {
-  width: 11px;
-  height: 11px;
-  border-radius: 3px;
-  background: var(--text-faint);
-  border: 0.5px solid color-mix(in srgb, var(--border) 60%, transparent);
-}
-.itops-page .rm-legend-sw.ok {
-  background: var(--green);
-}
-.itops-page .rm-legend-sw.warning {
-  background: var(--amber);
-}
-.itops-page .rm-legend-sw.critical {
-  background: var(--red);
-}
 
 /* ──────────────────────────────────────────────────────────────────────────
    2.5D Server Room View. An axonometric floor plane (rotateX(55°) rotateZ(45°),
    no perspective — angles must match ISO_TILT_DEG/ISO_ROT_DEG in
-   roomIsoLayout.ts) with each Rack extruded into a cabinet cuboid. The band
-   colour mapping mirrors the 2D floor plan's `--tile` pattern; faces mix
-   `--tile` into surface tokens so the room follows the theme. Name badges,
-   tooltips, and delete bubbles are billboarded back to screen alignment by
-   inline transforms in ServerRoomIsoView.tsx.
+   roomIsoLayout.ts) with each Rack extruded into a cabinet cuboid. Cabinet
+   faces render the rack's shell finish (`data-shell`, fixed hardware palette
+   like the 2D rack skin — no status colouring); room-object faces mix the
+   `--tile` kind accent into surface tokens. Name badges, tooltips, and delete
+   bubbles are billboarded back to screen alignment by inline transforms in
+   ServerRoomIsoView.tsx.
    ────────────────────────────────────────────────────────────────────────── */
 .itops-page .rm-iso {
   display: flex;
@@ -4368,11 +4335,24 @@
   pointer-events: none;
 }
 
-/* Cabinet cuboid. `--tile` defaults neutral; band rules below colour it. */
+/* Cabinet cuboid, painted in the rack's shell finish (fixed hardware palette
+   mirroring the .rk cabinet frame; black default, `data-shell` overrides). */
 .itops-page .rm-iso-cab {
-  --tile: var(--text-faint);
+  --cab-a: #1e1e21;
+  --cab-b: #161618;
+  --cab-edge: #38383a;
   position: absolute;
   transform-style: preserve-3d;
+}
+.itops-page .rm-iso-cab[data-shell="white"] {
+  --cab-a: #e4e4e7;
+  --cab-b: #d2d2d7;
+  --cab-edge: #c2c2c8;
+}
+.itops-page .rm-iso-cab[data-shell="grey"] {
+  --cab-a: #82828a;
+  --cab-b: #6a6a72;
+  --cab-edge: #58585e;
 }
 .itops-page .rm-iso-cab.editing {
   cursor: grab;
@@ -4447,19 +4427,31 @@
   );
   filter: brightness(0.82);
 }
-.itops-page .rm-iso-front.rear,
-.itops-page .rm-iso-side.rear {
+/* Cabinet faces override the generic (--tile) recipes with the shell finish,
+   so the whole cuboid reads as one cabinet colour. */
+.itops-page .rm-iso-cab .rm-iso-top {
+  border: 1px solid var(--cab-edge);
+  background:
+    linear-gradient(135deg, rgb(255 255 255 / 16%), rgb(255 255 255 / 0%) 62%),
+    linear-gradient(180deg, var(--cab-a), var(--cab-b));
+}
+.itops-page .rm-iso-cab .rm-iso-front {
+  border: 1px solid var(--cab-edge);
+  background: linear-gradient(180deg, var(--cab-a), var(--cab-b));
+}
+.itops-page .rm-iso-cab .rm-iso-side {
+  border: 1px solid var(--cab-edge);
+  background: linear-gradient(90deg, var(--cab-b), var(--cab-a));
+}
+.itops-page .rm-iso-cab .rm-iso-front.rear,
+.itops-page .rm-iso-cab .rm-iso-side.rear {
   background:
     repeating-linear-gradient(
       0deg,
-      color-mix(in srgb, var(--text) 16%, transparent) 0 1px,
+      color-mix(in srgb, var(--cab-edge) 85%, transparent) 0 1px,
       transparent 1px 4px
     ),
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--tile) 14%, var(--surface-muted)),
-      color-mix(in srgb, var(--tile) 6%, var(--surface-muted))
-    );
+    linear-gradient(180deg, var(--cab-a), var(--cab-b));
 }
 
 /* Miniature 2D rack skin painted on the cabinet's front face: the cabinet
@@ -4565,17 +4557,6 @@
 .itops-page .rm-iso-skin-item[data-kind="label"]::after {
   content: none;
 }
-.itops-page .rm-iso-led {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: var(--tile);
-  box-shadow: 0 0 5px var(--tile);
-}
-
 /* Billboarded name badge; hides while the detail card shows. */
 .itops-page .rm-iso-badge {
   position: absolute;
@@ -4594,26 +4575,6 @@
 }
 .itops-page .rm-iso-cab:hover .rm-iso-badge {
   opacity: 0;
-}
-.itops-page .rm-iso-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-.itops-page .rm-iso-badge-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--text-faint);
-}
-.itops-page .rm-iso-badge-dot[data-health="ok"] {
-  background: var(--green);
-}
-.itops-page .rm-iso-badge-dot[data-health="warning"] {
-  background: var(--amber);
-}
-.itops-page .rm-iso-badge-dot[data-health="critical"] {
-  background: var(--red);
 }
 /* Billboarded hover detail card. */
 .itops-page .rm-iso-tip {
@@ -4645,7 +4606,7 @@
 .itops-page .rm-iso-tip-detail {
   font-size: 11px;
   font-weight: 640;
-  color: color-mix(in srgb, var(--tile) 78%, var(--text));
+  color: var(--text-muted);
   white-space: nowrap;
 }
 .itops-page .rm-iso-tip-cap {
@@ -4669,17 +4630,6 @@
   padding: 0 2px;
   font-size: 11px;
   color: var(--text-muted);
-}
-
-/* Health → colour mapping (utilisation and power read as tags/tooltips). */
-.itops-page .rm-iso-cab[data-health="ok"] {
-  --tile: var(--green);
-}
-.itops-page .rm-iso-cab[data-health="warning"] {
-  --tile: var(--amber);
-}
-.itops-page .rm-iso-cab[data-health="critical"] {
-  --tile: var(--red);
 }
 
 /* A room object: an extruded box lifted to its vertical position. Faces

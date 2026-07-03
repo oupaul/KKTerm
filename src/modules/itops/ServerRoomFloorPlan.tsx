@@ -343,7 +343,6 @@ export function ServerRoomFloorPlan({
         </div>
       </div>
       {editMode ? <div className="rm-iso-hint">{t("itops.floorPlan.blueprintEditHint")}</div> : null}
-      <FloorLegend />
     </div>
   );
 }
@@ -392,7 +391,7 @@ function BlueprintRack({
   return (
     <div
       className={`rm-bp-rack${drag ? " dragging" : ""}${editMode ? " editing" : ""}`}
-      data-health={m.health}
+      data-shell={rack.shell && rack.shell !== "black" ? rack.shell : undefined}
       data-front={front}
       style={{
         left,
@@ -568,29 +567,6 @@ function BlueprintObject({
           ) : null}
         </span>
       ) : null}
-    </div>
-  );
-}
-
-// Health legend shared with the 2.5D view (the only coloured dimension now
-// that utilisation and power read as numeric tags).
-export function FloorLegend() {
-  const { t } = useTranslation();
-  const items = [
-    ["ok", t("itops.floorPlan.health.ok")],
-    ["warning", t("itops.floorPlan.health.warning")],
-    ["critical", t("itops.floorPlan.health.critical")],
-    ["empty", t("itops.floorPlan.health.empty")],
-  ] as const;
-
-  return (
-    <div className="rm-legend">
-      {items.map(([band, label]) => (
-        <span className="rm-legend-item" key={band}>
-          <span className={`rm-legend-sw ${band}`} />
-          {label}
-        </span>
-      ))}
     </div>
   );
 }
