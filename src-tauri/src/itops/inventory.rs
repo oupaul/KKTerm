@@ -76,6 +76,9 @@ pub fn normalize_metadata(mut metadata: RackItemMetadata) -> RackItemMetadata {
         metadata.snmp = (!snmp.target.is_empty()).then_some(snmp);
     }
 
+    // A 0 W draw carries no information for the power heatmap; store as unset.
+    metadata.power_w = metadata.power_w.filter(|watts| *watts > 0);
+
     metadata
 }
 

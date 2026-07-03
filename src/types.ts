@@ -243,6 +243,8 @@ export interface RackItemMetadata {
   disks?: number | null;
   battery?: number | null;
   load?: number | null;
+  /** Nameplate/typical power draw in watts; summed per rack for the power heatmap. */
+  powerW?: number | null;
   // Device faceplate shell colour; null/"black" = default metallic black.
   shell?: RackShell | null;
   /** Expiry date for consumables or support windows (ISO yyyy-mm-dd when set). */
@@ -297,6 +299,18 @@ export interface Rack {
   heightU: number;
   // Physical cabinet depth in millimetres (1000 mm is the default server rack).
   depthMm: number;
+  // Optional feed/PDU capacity in watts; null/undefined = unset (power heatmap
+  // shows the rack as "no capacity").
+  powerCapacityW?: number | null;
+  // Durable Server Room View placements: floor-plan free position (px) and
+  // 2.5D floor grid cell. null/undefined = automatic layout.
+  floorX?: number | null;
+  floorY?: number | null;
+  gridX?: number | null;
+  gridY?: number | null;
+  // Durable quarter-turn facing on the room floor grid (0-3, 0 = front toward
+  // +y). null/undefined = unset (legacy local store, then the default).
+  facing?: number | null;
   sortOrder: number;
   items: RackItem[];
 }

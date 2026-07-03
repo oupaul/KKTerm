@@ -16,7 +16,6 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import { ConfirmSheet } from "../../app/ui/dialog";
-import { invokeCommand } from "../../lib/tauri";
 import { useWorkspaceStore } from "../../store";
 import type { Site, Rack, RackItem, ResolvedHost, ServerRoom } from "../../types";
 import { ConnectionIcon } from "../workspace/connections/ConnectionIcon";
@@ -27,7 +26,8 @@ import { RackDialog } from "./RackDialog";
 import { ServerRoomDialog } from "./ServerRoomDialog";
 import { RackItemDialog } from "./RackItemDialog";
 import { RackItemBindingsDialog } from "./RackItemBindingsDialog";
-import { useItOpsStore } from "./state";
+import { RackItemConnectPopover, type ConnectPopoverAnchor } from "./RackItemConnectPopover";
+import { useItOpsStore, type RackPlacementKind } from "./state";
 import {
   EMPTY_DRILL,
   groupRackTopology,
@@ -36,10 +36,12 @@ import {
   topologyGroupKey,
   type DrillPath,
 } from "./rackTopology";
+import { sanitizeFacing } from "./roomIsoLayout";
 import { ItOpsBackground } from "./ItOpsBackground";
 import { RackStage } from "./RackStage";
 import { ServerRoomFloorPlan } from "./ServerRoomFloorPlan";
-import { selectRandomRackCallouts } from "./rackInventory";
+import { ServerRoomIsoView } from "./ServerRoomIsoView";
+import { collectBoundConnectionIds, selectRandomRackCallouts } from "./rackInventory";
 import type { DashboardBackground } from "../dashboard/types";
 import {
   SITE_TREE_COLLAPSED_WIDTH,
@@ -47,25 +49,28 @@ import {
   SITE_TREE_MIN_WIDTH,
   loadCollapsedNodeIds,
   loadFreePlacement,
-  loadRoomFloorMetric,
+  loadRackFacing,
+  loadRoomObjects,
   loadRoomViewMode,
   loadSiteTreeWidth,
   saveFreePlacement,
   saveCollapsedNodeIds,
-  saveRoomFloorMetric,
+  saveRackFacing,
+  saveRoomObjects,
   saveRoomViewMode,
   saveSiteTreeWidth,
   type FreePlacementMap,
-  type RoomFloorMetric,
+  type RackFacingMap,
   type RoomViewMode,
 } from "./siteTreeState";
+import type { RoomObject } from "./roomObjects";
 import {
   createItOpsPdfBytes,
   excelFilename,
   pdfFilename,
   rackExcelBytes,
   rackPdfDocument,
-  roomLayoutScope,
+  roomIsoLayoutScope,
   saveExportBytes,
   serverRoomPdfDocument,
   siteLayoutScope,
@@ -125,13 +130,15 @@ function iconForegroundForBackground(color?: string | null) {
 export function SitesTab({
   renderSidebarHeader,
   treeCollapsed,
+  onShowWorkspace,
 }: {
   renderSidebarHeader?: (props: { collapsed: boolean }) => ReactNode;
   treeCollapsed: boolean;
+  /** Navigate the app shell to the Workspace Module (connect popover jumps). */
+  onShowWorkspace: () => void;
 }) {
   const { t } = useTranslation();
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
-  const openConnection = useWorkspaceStore((state) => state.openConnection);
   const sites = useItOpsStore((state) => state.sites);
   const loaded = useItOpsStore((state) => state.loaded);
   const resolveSite = useItOpsStore((state) => state.resolveSite);
@@ -159,6 +166,10 @@ export function SitesTab({
     startU?: number;
   } | null>(null);
   const [bindingsDialog, setBindingsDialog] = useState<RackItem | null>(null);
+  const [connectPopover, setConnectPopover] = useState<{
+    item: RackItem;
+    anchor: ConnectPopoverAnchor;
+  } | null>(null);
   const moveRackItem = useItOpsStore((state) => state.moveRackItem);
   const deleteRack = useItOpsStore((state) => state.deleteRack);
   const removeRackItem = useItOpsStore((state) => state.removeRackItem);
@@ -332,15 +343,20 @@ export function SitesTab({
     }
   }
 
-  async function openRackItem(item: RackItem) {
-    if (!item.connectionId) return;
-    try {
-      const connection = await invokeCommand("itops_get_connection", { id: item.connectionId });
-      openConnection(connection);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      showStatusBarNotice(t("itops.errorNotice", { message }), { tone: "error" });
-    }
+  // Click on a bound device: anchor the connect popover to its faceplate.
+  function openRackItem(item: RackItem, anchorEl: HTMLElement) {
+    if (collectBoundConnectionIds(item).length === 0) return;
+    const rect = anchorEl.getBoundingClientRect();
+    setConnectPopover({
+      item,
+      anchor: {
+        top: rect.top,
+        left: rect.left,
+        right: rect.right,
+        width: rect.width,
+        height: rect.height,
+      },
+    });
   }
 
   async function confirmDelete() {
@@ -598,7 +614,7 @@ export function SitesTab({
             hostForItem={hostForItem}
             isGhostItem={isGhostItem}
             onSlotClick={(rack, startU) => setItemDialog({ rack, item: null, startU })}
-            onOpenItem={(item) => void openRackItem(item)}
+            onOpenItem={openRackItem}
             onEditItem={(rack, item) => setItemDialog({ rack, item })}
             onBindItem={setBindingsDialog}
             onMoveItem={(itemId, targetRackId, startU) => void moveItem(itemId, targetRackId, startU)}
@@ -669,6 +685,14 @@ export function SitesTab({
       ) : null}
       {bindingsDialog && activeGroup ? (
         <RackItemBindingsDialog siteId={activeGroup.id} item={bindingsDialog} onClose={() => setBindingsDialog(null)} />
+      ) : null}
+      {connectPopover ? (
+        <RackItemConnectPopover
+          item={connectPopover.item}
+          anchor={connectPopover.anchor}
+          onClose={() => setConnectPopover(null)}
+          onShowWorkspace={onShowWorkspace}
+        />
       ) : null}
       {pendingDelete ? (
         <ConfirmSheet
@@ -837,7 +861,7 @@ function RackDrill({
   hostForItem: (item: RackItem) => string | null;
   isGhostItem: (item: RackItem) => boolean;
   onSlotClick: (rack: Rack, startU: number) => void;
-  onOpenItem: (item: RackItem) => void;
+  onOpenItem: (item: RackItem, anchor: HTMLElement) => void;
   onEditItem: (rack: Rack, item: RackItem) => void;
   onBindItem: (item: RackItem) => void;
   onMoveItem: (itemId: string, targetRackId: string, startU: number) => void;
@@ -855,12 +879,10 @@ function RackDrill({
   const [editMode, setEditMode] = useState(false);
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
 
-  // Server Room View layout: rack elevations (default) or the top-down floor
-  // plan, plus which dimension colours the floor-plan tiles. Both persist.
+  // Server Room View layout: rack elevations (default), the blueprint floor
+  // plan, or the 2.5D room. Persists app-wide.
   const [roomView, setRoomView] = useState<RoomViewMode>(loadRoomViewMode);
-  const [floorMetric, setFloorMetric] = useState<RoomFloorMetric>(loadRoomFloorMetric);
   useEffect(() => saveRoomViewMode(roomView), [roomView]);
-  useEffect(() => saveRoomFloorMetric(floorMetric), [floorMetric]);
 
   const serverRoom =
     drill.serverRoom != null
@@ -885,13 +907,125 @@ function RackDrill({
     setSitePlacements(loadFreePlacement(sitePlacementScope));
   }, [sitePlacementScope]);
 
-  const roomPlacementScope = serverRoom ? roomLayoutScope(site.id, serverRoom.key) : "";
-  const [roomPlacements, setRoomPlacements] = useState<FreePlacementMap>(() =>
-    roomPlacementScope ? loadFreePlacement(roomPlacementScope) : {},
+  // Rack placements are durable rack fields (SQLite); the localStorage scopes
+  // remain as a legacy fallback for layouts saved before the durable columns
+  // existed. Merge order: legacy < durable < this session's live edits.
+  // The floor plan and the 2.5D view share this one grid-cell placement, so
+  // arranging the room in either view rearranges both.
+  const roomRacks = serverRoom?.racks;
+  const isoPlacementScope = serverRoom ? roomIsoLayoutScope(site.id, serverRoom.key) : "";
+  const legacyIsoPlacements = useMemo(
+    () => (isoPlacementScope ? loadFreePlacement(isoPlacementScope) : {}),
+    [isoPlacementScope],
   );
+  const [isoEdits, setIsoEdits] = useState<FreePlacementMap>({});
+  useEffect(() => setIsoEdits({}), [isoPlacementScope]);
+  const isoPlacements = useMemo(
+    () => ({
+      ...legacyIsoPlacements,
+      ...durablePlacement(roomRacks, "grid"),
+      ...isoEdits,
+    }),
+    [legacyIsoPlacements, roomRacks, isoEdits],
+  );
+
+  // Per-room rack facing, shared by the floor plan and the 2.5D view. Facing
+  // is a durable rack field; the localStorage scope remains as the legacy /
+  // non-Tauri fallback. Merge order: legacy < durable < this session's edits
+  // (the same merge as placements).
+  const legacyFacing = useMemo(
+    () => (isoPlacementScope ? loadRackFacing(isoPlacementScope) : {}),
+    [isoPlacementScope],
+  );
+  const [facingEdits, setFacingEdits] = useState<RackFacingMap>({});
+  useEffect(() => setFacingEdits({}), [isoPlacementScope]);
+  const roomFacing = useMemo(() => {
+    const durable: RackFacingMap = {};
+    for (const entry of roomRacks ?? []) {
+      if (entry.facing != null) durable[entry.id] = sanitizeFacing(entry.facing);
+    }
+    return { ...legacyFacing, ...durable, ...facingEdits };
+  }, [legacyFacing, roomRacks, facingEdits]);
+
+  const setRackFacings = useItOpsStore((state) => state.setRackFacings);
+  const loadDurableRoomObjects = useItOpsStore((state) => state.loadRoomObjects);
+  const saveDurableRoomObjects = useItOpsStore((state) => state.saveRoomObjects);
+
+  function saveRoomFacingState(next: RackFacingMap) {
+    setFacingEdits(next);
+    if (isoPlacementScope) saveRackFacing(isoPlacementScope, next);
+    const entries = Object.entries(next)
+      .filter(([id]) => rackIds.has(id))
+      .map(([id, facing]) => ({ id, facing }));
+    setRackFacings(site.id, entries).catch((error: unknown) => {
+      const message = error instanceof Error ? error.message : String(error);
+      showStatusBarNotice(t("itops.errorNotice", { message }), { tone: "error" });
+    });
+  }
+
+  // Non-rack room objects: durable per room (itops_room_objects), with the
+  // localStorage scope as the legacy / non-Tauri fallback until the first
+  // durable write.
+  const [roomObjects, setRoomObjects] = useState<RoomObject[]>([]);
+  const roomObjectsSaveTimer = useRef<number | undefined>(undefined);
+  const roomName = serverRoom ? serverRoom.key : null;
   useEffect(() => {
-    setRoomPlacements(roomPlacementScope ? loadFreePlacement(roomPlacementScope) : {});
-  }, [roomPlacementScope]);
+    let cancelled = false;
+    setRoomObjects(isoPlacementScope ? loadRoomObjects(isoPlacementScope) : []);
+    if (roomName == null) return;
+    loadDurableRoomObjects(site.id, roomName)
+      .then((durable) => {
+        if (!cancelled && durable.length > 0) setRoomObjects(durable);
+      })
+      .catch((error: unknown) => {
+        const message = error instanceof Error ? error.message : String(error);
+        showStatusBarNotice(t("itops.errorNotice", { message }), { tone: "error" });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isoPlacementScope, roomName, site.id, loadDurableRoomObjects, showStatusBarNotice, t]);
+
+  function saveRoomObjectsState(next: RoomObject[]) {
+    setRoomObjects(next);
+    if (isoPlacementScope) saveRoomObjects(isoPlacementScope, next);
+    if (roomName == null) return;
+    if (roomObjectsSaveTimer.current != null) {
+      window.clearTimeout(roomObjectsSaveTimer.current);
+    }
+    // Debounced like placement saves: dragging an object streams positions.
+    roomObjectsSaveTimer.current = window.setTimeout(() => {
+      roomObjectsSaveTimer.current = undefined;
+      saveDurableRoomObjects(site.id, roomName, next).catch((error: unknown) => {
+        const message = error instanceof Error ? error.message : String(error);
+        showStatusBarNotice(t("itops.errorNotice", { message }), { tone: "error" });
+      });
+    }, 500);
+  }
+
+  function notifyObjectBlocked() {
+    showStatusBarNotice(t("itops.floorPlan.objectNoSpace"), { tone: "warning" });
+  }
+
+  // Persist placements durably, debounced: the floor plan streams a position
+  // per pointermove, and even the iso view's one-per-drop saves batch cleanly.
+  const setRackPlacements = useItOpsStore((state) => state.setRackPlacements);
+  const durableSaveTimers = useRef<Partial<Record<RackPlacementKind, number>>>({});
+  const rackIds = useMemo(() => new Set(racks.map((entry) => entry.id)), [racks]);
+  function scheduleDurableSave(kind: RackPlacementKind, map: FreePlacementMap) {
+    const pending = durableSaveTimers.current[kind];
+    if (pending != null) window.clearTimeout(pending);
+    durableSaveTimers.current[kind] = window.setTimeout(() => {
+      durableSaveTimers.current[kind] = undefined;
+      const entries = Object.entries(map)
+        .filter(([id]) => rackIds.has(id))
+        .map(([id, point]) => ({ id, x: point.x, y: point.y }));
+      setRackPlacements(site.id, kind, entries).catch((error: unknown) => {
+        const message = error instanceof Error ? error.message : String(error);
+        showStatusBarNotice(t("itops.errorNotice", { message }), { tone: "error" });
+      });
+    }, 500);
+  }
 
   const roomCallouts = serverRoom
     ? selectRandomRackCallouts(
@@ -1031,9 +1165,10 @@ function RackDrill({
     saveFreePlacement(sitePlacementScope, next);
   }
 
-  function saveRoomPlacements(next: FreePlacementMap) {
-    setRoomPlacements(next);
-    if (roomPlacementScope) saveFreePlacement(roomPlacementScope, next);
+  function saveIsoPlacements(next: FreePlacementMap) {
+    setIsoEdits(next);
+    if (isoPlacementScope) saveFreePlacement(isoPlacementScope, next);
+    scheduleDurableSave("grid", next);
   }
 
   return (
@@ -1144,29 +1279,14 @@ function RackDrill({
                 >
                   {t("itops.floorPlan.viewFloor")}
                 </button>
-              </div>
-              {roomView === "floor" ? (
-                <div
-                  className="rm-segmented"
-                  role="group"
-                  aria-label={t("itops.floorPlan.metricLabel")}
+                <button
+                  type="button"
+                  data-active={roomView === "iso"}
+                  onClick={() => setRoomView("iso")}
                 >
-                  <button
-                    type="button"
-                    data-active={floorMetric === "health"}
-                    onClick={() => setFloorMetric("health")}
-                  >
-                    {t("itops.floorPlan.metricHealth")}
-                  </button>
-                  <button
-                    type="button"
-                    data-active={floorMetric === "utilization"}
-                    onClick={() => setFloorMetric("utilization")}
-                  >
-                    {t("itops.floorPlan.metricUtilization")}
-                  </button>
-                </div>
-              ) : null}
+                  {t("itops.floorPlan.view25d")}
+                </button>
+              </div>
             </div>
             {roomCallouts.length > 0 ? (
               <div className="rack-random-callouts room">
@@ -1191,15 +1311,34 @@ function RackDrill({
                 })}
               </div>
             ) : null}
-            {roomView === "floor" ? (
-              <ServerRoomFloorPlan
+            {roomView === "iso" ? (
+              <ServerRoomIsoView
                 racks={serverRoom.racks}
-                metric={floorMetric}
                 editMode={editMode}
-                placement={roomPlacements}
-                onPlacementChange={saveRoomPlacements}
+                placement={isoPlacements}
+                onPlacementChange={saveIsoPlacements}
+                facing={roomFacing}
+                onFacingChange={editMode ? saveRoomFacingState : undefined}
+                objects={roomObjects}
+                onObjectsChange={editMode ? saveRoomObjectsState : undefined}
                 onDeleteRack={editMode ? onDeleteRack : undefined}
                 onSelectRack={(rackId) => setDrill({ serverRoom: serverRoom.key, rackId })}
+                onAddRack={editMode ? () => onAddRack(serverRoom.key) : undefined}
+                onObjectBlocked={notifyObjectBlocked}
+              />
+            ) : roomView === "floor" ? (
+              <ServerRoomFloorPlan
+                racks={serverRoom.racks}
+                editMode={editMode}
+                placement={isoPlacements}
+                onPlacementChange={saveIsoPlacements}
+                facing={roomFacing}
+                onFacingChange={editMode ? saveRoomFacingState : undefined}
+                objects={roomObjects}
+                onObjectsChange={editMode ? saveRoomObjectsState : undefined}
+                onDeleteRack={editMode ? onDeleteRack : undefined}
+                onSelectRack={(rackId) => setDrill({ serverRoom: serverRoom.key, rackId })}
+                onObjectBlocked={notifyObjectBlocked}
               />
             ) : (
               groupRacksByGroup(serverRoom.racks).map((g) => (
@@ -1227,6 +1366,19 @@ function RackDrill({
       </ItOpsBackground>
     </div>
   );
+}
+
+// Fold the racks' durable placement columns into a FreePlacementMap.
+function durablePlacement(racks: Rack[] | undefined, kind: RackPlacementKind): FreePlacementMap {
+  const map: FreePlacementMap = {};
+  for (const rack of racks ?? []) {
+    const x = kind === "floor" ? rack.floorX : rack.gridX;
+    const y = kind === "floor" ? rack.floorY : rack.gridY;
+    if (x != null && y != null) {
+      map[rack.id] = { x, y };
+    }
+  }
+  return map;
 }
 
 function defaultFreePlacement(index: number, width: number, height: number) {

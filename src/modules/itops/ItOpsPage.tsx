@@ -13,10 +13,13 @@ export function ItOpsPage({
   active,
   siteTreeCollapsed,
   onAssistantContextChange,
+  onShowWorkspace,
 }: {
   active: boolean;
   siteTreeCollapsed: boolean;
   onAssistantContextChange: (context: AssistantPageContext) => void;
+  /** Navigate the app shell to the Workspace Module. */
+  onShowWorkspace: () => void;
 }) {
   const { t } = useTranslation();
   const sites = useItOpsStore((state) => state.sites);
@@ -63,7 +66,7 @@ export function ItOpsPage({
       aria-label={t("itops.title")}
       data-active={active ? "true" : "false"}
     >
-      <ItOpsModule siteTreeCollapsed={siteTreeCollapsed} />
+      <ItOpsModule siteTreeCollapsed={siteTreeCollapsed} onShowWorkspace={onShowWorkspace} />
     </section>
   );
 }

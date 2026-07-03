@@ -68,7 +68,7 @@ import { prepareAssistantTerminalInput } from "./terminalCommandSend";
 import { Channel } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { parseAssistantSecretRequests } from "./secretRequest";
-import { scrollAssistantChatToBottom } from "./assistantScroll";
+import { scrollAssistantChatToBottom, shouldFollowAssistantChat } from "./assistantScroll";
 import type { AiToolPermissionMode, AssistantContextSnippet } from "../types";
 import { AssistantMessageView, formatBytes } from "./AssistantMessageView";
 import { runAssistantLiveTool } from "./assistantLiveTools";
@@ -529,14 +529,12 @@ export function AssistantPanel({
           allowSession: true,
           toolName: request.toolName,
         });
-        forceChatScrollToBottomRef.current = true;
         return;
       }
       setPendingToolApprovals((current) => [
         ...current.filter((item) => item.requestId !== request.requestId),
         { ...request, status: "pending" },
       ]);
-      forceChatScrollToBottomRef.current = true;
     }).then((dispose) => {
       if (disposed) {
         dispose();
@@ -999,6 +997,10 @@ export function AssistantPanel({
     openExternalUrl(url).catch((error) => {
       setChatError(error instanceof Error ? error.message : String(error));
     });
+  }
+
+  function handleAssistantChatScroll() {
+    forceChatScrollToBottomRef.current = shouldFollowAssistantChat(chatLogRef.current);
   }
 
   function handleAddScreenshot() {
@@ -2037,6 +2039,7 @@ export function AssistantPanel({
 
       <div
         className={`assistant-chat-log${showAllChats && shouldShowChatHistory ? " assistant-chat-log-condensed" : ""}`}
+        onScroll={handleAssistantChatScroll}
         ref={chatLogRef}
       >
         {messages.map((message, index) => (

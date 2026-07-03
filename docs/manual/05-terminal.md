@@ -36,7 +36,7 @@ For troubleshooting, enable `settings.advancedDebugging` and inspect `telnet.deb
 
 Ctrl-click an `http` or `https` link rendered in any terminal Pane to open it in the OS default browser through KKTerm's external opener. This applies to local, SSH, Telnet, and Serial terminal Sessions because they share the same xterm.js renderer.
 
-- Selecting text with the mouse copies via `terminal.copy` (shortcut hint `terminal.copyShortcut`). Right-click → `terminal.copy` is also available.
+- Copy selected text with `terminal.copy` (shortcut hint `terminal.copyShortcut`) or Right-click → `terminal.copy`. When `settings.copyOnSelect` is enabled, completing a mouse selection copies it to the system clipboard automatically; in tmux mouse mode, hold Shift while selecting so xterm.js performs a local selection instead of forwarding the drag to tmux.
 - Paste: `terminal.paste`. Multi-line pastes prompt a confirmation `terminal.pasteMultilineConfirm` to prevent accidental command execution.
 - Send terminal buffer to AI: `terminal.sendToAi`. By default `settings.submitAiAttachmentsDirectly` submits the buffer with `ai.directAttachmentPrompt`; when disabled, the button only attaches the buffer to the composer.
 

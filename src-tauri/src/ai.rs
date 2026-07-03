@@ -1206,15 +1206,16 @@ impl AgentProvider for CliAgentProvider {
         let settings_for_acp = settings.clone();
         let output = tauri::async_runtime::spawn_blocking(move || {
             run_acp_agent_command(backend, &model, &prompt, &app_for_acp, &settings_for_acp)
-                .or_else(|acp_error| {
-                    if !should_fallback_from_acp_error(&acp_error) {
-                        return Err(acp_error);
+                .or_else(|acp_failure| {
+                    if !should_fallback_from_acp_error(&acp_failure) {
+                        return Err(acp_failure.error);
                     }
                     ai_interaction_debug!(
                         "agent.cli_acp_fallback",
                         json!({
                             "backend": backend,
-                            "error": acp_error,
+                            "error": acp_failure.error,
+                            "promptStarted": acp_failure.prompt_started,
                             "model": &model,
                             "promptBytes": prompt.len(),
                             "promptChars": prompt.chars().count(),
@@ -1270,15 +1271,16 @@ impl AgentProvider for CliAgentProvider {
                     &app_for_acp,
                     &settings_for_acp,
                 )
-                .or_else(|acp_error| {
-                    if !should_fallback_from_acp_error(&acp_error) {
-                        return Err(acp_error);
+                .or_else(|acp_failure| {
+                    if !should_fallback_from_acp_error(&acp_failure) {
+                        return Err(acp_failure.error);
                     }
                     ai_interaction_debug!(
                         "agent.cli_acp_streaming_fallback",
                         json!({
                             "backend": backend,
-                            "error": acp_error,
+                            "error": acp_failure.error,
+                            "promptStarted": acp_failure.prompt_started,
                             "model": &model,
                             "promptBytes": prompt.len(),
                             "promptChars": prompt.chars().count(),

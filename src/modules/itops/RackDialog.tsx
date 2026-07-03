@@ -19,6 +19,8 @@ import { useItOpsStore } from "./state";
 
 const MAX_RACK_U = 100;
 const MAX_RACK_DEPTH_MM = 5000;
+// Mirrors the backend sanity ceiling (1 MW).
+const MAX_RACK_POWER_W = 1_000_000;
 const HEIGHT_PRESETS = [6, 9, 12, 15, 18, 22, 24, 27, 32, 37, 42, 45, 48];
 const DEPTH_PRESETS = [600, 800, 900, 1000, 1070, 1200];
 const SHELL_OPTIONS: RackShell[] = ["black", "white", "grey"];
@@ -86,6 +88,10 @@ export function RackDialog({
   const [depthMode, setDepthMode] = useState<"preset" | "custom">(
     rack && !DEPTH_PRESETS.includes(rack.depthMm) ? "custom" : "preset",
   );
+  // Kept as text so the field can be blank (= capacity unset).
+  const [powerCapacity, setPowerCapacity] = useState(
+    rack?.powerCapacityW ? String(rack.powerCapacityW) : "",
+  );
   const [busy, setBusy] = useState(false);
 
   const trimmedName = name.trim();
@@ -122,6 +128,7 @@ export function RackDialog({
   async function handleSave() {
     if (!canSave) return;
     setBusy(true);
+    const parsedPower = Number.parseInt(powerCapacity, 10);
     const input = {
       name: trimmedName,
       serverRoom: serverRoom.trim(),
@@ -129,6 +136,10 @@ export function RackDialog({
       shell,
       heightU,
       depthMm,
+      powerCapacityW:
+        Number.isFinite(parsedPower) && parsedPower > 0
+          ? Math.min(parsedPower, MAX_RACK_POWER_W)
+          : null,
     };
     try {
       if (isEdit) {
@@ -324,6 +335,17 @@ export function RackDialog({
                     onChange={(event) => setDepthMm(numericInput(event.currentTarget.value, depthMm, MAX_RACK_DEPTH_MM))}
                   />
                 ) : null}
+              </Field>
+              <Field label={t("itops.racks.powerCapacityLabel")}>
+                <TextInput
+                  type="number"
+                  mono
+                  min={0}
+                  max={MAX_RACK_POWER_W}
+                  value={powerCapacity}
+                  placeholder={t("itops.racks.powerCapacityPlaceholder")}
+                  onChange={(event) => setPowerCapacity(event.currentTarget.value)}
+                />
               </Field>
             </div>
           </div>

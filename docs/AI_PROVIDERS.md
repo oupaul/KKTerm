@@ -48,7 +48,21 @@ adapters: KKTerm first tries an Agent Client Protocol (ACP) stdio backend using
 the registry adapters for Codex and Claude Agent. If the ACP adapter is not
 available or fails to initialize, KKTerm falls back to the documented one-shot
 vendor CLI commands (`codex exec` or `claude -p`) using the vendor CLI's own
-cached authentication. The API key field is disabled in these modes. Keep this
+cached authentication. The fallback is strictly a setup-failure path: once the
+ACP `session/prompt` turn has been dispatched, an error or timeout surfaces to
+the user instead of re-running the same turn through the one-shot command,
+because the ACP agent may already have streamed text or executed kkterm MCP
+tools and a re-run would duplicate both. ACP stdio is treated as line-delimited
+JSON-RPC with an idle timeout that resets on every received message, so long
+agent turns that keep streaming updates (or wait on an in-app tool approval) do
+not abort at a fixed wall-clock cutoff; agent-initiated requests are never
+mistaken for responses even when their JSON-RPC ids collide with KKTerm's, and
+unknown agent requests get a method-not-found reply whether their id is a
+number or a string. ACP `session/update` notifications beyond assistant text —
+thought chunks, tool-call lifecycle updates, and agent plans — are forwarded to
+the same `reasoningDelta` / `toolCallStart` / `toolCallEnd` / `planUpdate`
+stream events the native providers emit, so the Assistant work panel renders
+CLI-backed turns with the same progress affordances. The API key field is disabled in these modes. Keep this
 bridge conservative: use documented ACP or non-interactive CLI modes, avoid
 passing KKTerm secrets through environment variables or prompt text, and do not
 claim parity with KKTerm's native tool-calling loop unless ACP tool/client

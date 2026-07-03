@@ -486,6 +486,12 @@ mod tests {
             background: None,
             height_u: 42,
             depth_mm: 1000,
+            power_capacity_w: None,
+            floor_x: None,
+            floor_y: None,
+            grid_x: None,
+            grid_y: None,
+            facing: None,
             sort_order: 0,
             items: Vec::new(),
         }

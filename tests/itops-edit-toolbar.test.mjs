@@ -39,9 +39,11 @@ test("IT Ops free placement is local UI state for Site cards and floor tiles", a
   assert.match(treeState, /export function loadFreePlacement/);
   assert.match(treeState, /export function saveFreePlacement/);
   assert.match(sites, /siteLayoutScope\(site\.id\)/);
-  assert.match(sites, /roomLayoutScope\(site\.id, serverRoom\.key\)/);
+  // The blueprint floor plan and the 2.5D room share one grid placement scope.
+  assert.match(sites, /roomIsoLayoutScope\(site\.id, serverRoom\.key\)/);
+  assert.match(sites, /<ServerRoomFloorPlan[\s\S]*placement=\{isoPlacements\}/);
   assert.match(sites, /<SiteRoomCards[\s\S]*placement=\{sitePlacements\}/);
-  assert.match(floorPlan, /className="rm-floor free"/);
+  assert.match(floorPlan, /className=\{`rm-bp/);
   assert.match(floorPlan, /onPlacementChange/);
 });
 

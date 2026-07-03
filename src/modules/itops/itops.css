@@ -3292,14 +3292,32 @@
   background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 40%, transparent));
 }
 
-/* Drill-down detail. */
+/* Drill-down detail. Grows to fill the .hg-detail pane so the spatial room
+   views can take its full height; taller content keeps its natural height
+   (flex basis stays content-sized) and scrolls the pane as before. */
 .itops-page .ft-drill {
   display: flex;
   flex-direction: column;
+  flex: 1 0 auto;
   gap: 14px;
   min-height: 0;
   overflow: auto;
   padding: 2px;
+}
+/* The drill background host and its content stretch to the drill viewport so
+   the spatial room views can fill the window; tall content (rack elevations)
+   still scrolls the drill as before, since the flex basis stays
+   content-sized. */
+.itops-page .ft-drill > .ft-drill-bg {
+  display: flex;
+  flex-direction: column;
+  flex: 1 0 auto;
+}
+.itops-page .ft-drill > .ft-drill-bg > .itops-bg-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1 0 auto;
+  min-height: 0;
 }
 .itops-page .it-drill-toolbar {
   position: sticky;
@@ -3441,23 +3459,18 @@
     color-mix(in srgb, var(--surface-muted) 70%, transparent);
   border: 1px dashed var(--border);
 }
-.itops-page .it-free-card,
-.itops-page .rm-free-tile {
+.itops-page .it-free-card {
   position: absolute;
   top: 0;
   left: 0;
   touch-action: none;
   cursor: grab;
-}
-.itops-page .it-free-card {
   width: 240px;
 }
-.itops-page .it-free-card:active,
-.itops-page .rm-free-tile:active {
+.itops-page .it-free-card:active {
   cursor: grabbing;
 }
-.itops-page .it-free-card .ft-card,
-.itops-page .rm-free-tile .rm-tile {
+.itops-page .it-free-card .ft-card {
   width: 100%;
   height: 100%;
 }
@@ -3801,10 +3814,11 @@
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
-   Top-down Server Room View — a 2D room footprint where each Rack is a tile
-   coloured by health or utilisation (DCIM floor-plan pattern). Status/heat
-   colours read the shared theme tokens; `--tile` is the per-band accent set
-   by `data-metric` + `data-health`/`data-util`.
+   Top-down Server Room View — a blueprint-style floor plan on the shared
+   floor grid: rack footprints with facing edges and compact status tags,
+   plus non-rack room objects. Footprints render in the rack's shell finish
+   (`data-shell`, fixed hardware palette like the 2D rack skin — no status
+   colouring); object accents come from `data-kind`.
    ────────────────────────────────────────────────────────────────────────── */
 .itops-page .rm-toolbar {
   display: flex;
@@ -3843,122 +3857,533 @@
   color: var(--accent);
 }
 
-.itops-page .rm-floor {
+.itops-page .rm-bp-wrap {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  flex: 1 0 auto;
+  gap: 8px;
   padding: 6px 4px 8px;
 }
-.itops-page .rm-floor.free {
-  gap: 12px;
+/* The scroll area takes the drill's leftover height and its content-box size
+   drives how many floor cells the grid needs to cover the window. */
+.itops-page .rm-bp-scroll {
+  display: flex;
+  flex: 1 1 0;
+  min-height: 280px;
+  overflow: auto;
 }
-.itops-page .rm-floor-canvas {
+/* Sizer around the zoomed plan: sized to the scaled footprint so scrolling
+   and centering track the zoom level. */
+.itops-page .rm-bp-zoom {
+  flex: 0 0 auto;
+  margin: auto;
+}
+/* The room outline reads as a blueprint: heavy wall stroke, major grid per
+   floor cell, minor quarter-cell grid, cool tint. Cell size is set inline. */
+.itops-page .rm-bp {
   position: relative;
-  min-width: 0;
-  border-radius: 12px;
+  transform-origin: 0 0;
+  border: 2.5px solid color-mix(in srgb, var(--text) 52%, var(--surface));
+  border-radius: 3px;
   background:
-    linear-gradient(color-mix(in srgb, var(--border) 36%, transparent) 1px, transparent 1px) 0 0 / 28px 28px,
-    linear-gradient(90deg, color-mix(in srgb, var(--border) 36%, transparent) 1px, transparent 1px) 0 0 / 28px 28px,
-    color-mix(in srgb, var(--surface-muted) 78%, transparent);
-  border: 1px dashed var(--border);
-  overflow: hidden;
+    linear-gradient(color-mix(in srgb, var(--accent) 26%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--accent) 26%, transparent) 1px, transparent 1px),
+    linear-gradient(color-mix(in srgb, var(--accent) 10%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--accent) 10%, transparent) 1px, transparent 1px),
+    color-mix(in srgb, var(--accent) 4%, var(--surface-muted));
+  box-shadow: 0 0 0 8px color-mix(in srgb, var(--surface-muted) 38%, transparent);
 }
-.itops-page .rm-free-tile {
-  width: 124px;
+.itops-page .rm-bp.placing {
+  cursor: crosshair;
 }
-.itops-page .rm-floor-row {
-  display: flex;
-  flex-direction: column;
-  gap: 9px;
+.itops-page .rm-bp.placing .rm-bp-rack,
+.itops-page .rm-bp.placing .rm-bp-obj {
+  pointer-events: none;
 }
-.itops-page .rm-floor-row-h {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0 2px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--text-faint);
-}
-.itops-page .rm-floor-row-h::after {
-  content: "";
-  flex: 1 1 auto;
-  height: 1px;
-  background: var(--hairline);
-}
-.itops-page .rm-floor-strip {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+.itops-page .rm-bp-drop {
+  position: absolute;
+  border: 1.5px solid var(--accent);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  pointer-events: none;
 }
 
-/* One rack footprint. `--tile` defaults to a neutral hue; the band rules
-   below override it for the active metric. */
-.itops-page .rm-tile {
-  --tile: var(--text-faint);
-  position: relative;
-  width: 120px;
-  min-height: 94px;
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-  padding: 9px 11px 9px 13px;
-  border-radius: 10px;
-  border: 1px solid color-mix(in srgb, var(--tile) 40%, var(--border));
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--tile) 13%, var(--surface)),
-    color-mix(in srgb, var(--tile) 5%, var(--surface))
-  );
+/* One rack footprint standing on its cell, painted in the rack's shell
+   finish (fixed hardware palette mirroring the .rk cabinet frame; black is
+   the default, `data-shell` overrides for white/grey). The `data-front` edge
+   marks which way the front faces. */
+.itops-page .rm-bp-rack {
+  --cab-a: #1e1e21;
+  --cab-b: #161618;
+  --cab-edge: #38383a;
+  --cab-text: #f5f5f7;
+  position: absolute;
+  border: 1.5px solid var(--cab-edge);
+  border-radius: 3px;
+  background: linear-gradient(180deg, var(--cab-a), var(--cab-b));
   box-shadow: var(--card-shadow);
-  cursor: pointer;
-  text-align: left;
-  color: var(--text);
-  overflow: hidden;
-  transition: transform 0.16s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.16s, box-shadow 0.16s;
 }
-.itops-page .rm-tile::before {
+.itops-page .rm-bp-rack[data-shell="white"] {
+  --cab-a: #e4e4e7;
+  --cab-b: #d2d2d7;
+  --cab-edge: #c2c2c8;
+  --cab-text: #1a1a1c;
+}
+.itops-page .rm-bp-rack[data-shell="grey"] {
+  --cab-a: #82828a;
+  --cab-b: #6a6a72;
+  --cab-edge: #58585e;
+  --cab-text: #16161a;
+}
+.itops-page .rm-bp-rack.editing {
+  cursor: grab;
+  touch-action: none;
+}
+.itops-page .rm-bp-rack.dragging {
+  cursor: grabbing;
+  z-index: 5;
+}
+.itops-page .rm-bp-rack::after {
   content: "";
   position: absolute;
-  inset: 0 auto 0 0;
-  width: 4px;
-  background: var(--tile);
+  background: color-mix(in srgb, var(--cab-text) 60%, var(--cab-edge));
+  border-radius: 2px;
+  pointer-events: none;
 }
-.itops-page .rm-tile:hover {
-  transform: translateY(-1px);
-  border-color: var(--tile);
-  box-shadow: var(--shadow-control);
+.itops-page .rm-bp-rack[data-front="s"]::after {
+  left: 10%;
+  right: 10%;
+  bottom: -1px;
+  height: 3px;
 }
-.itops-page .rm-tile-name {
-  font-size: 12.5px;
-  font-weight: 640;
+.itops-page .rm-bp-rack[data-front="n"]::after {
+  left: 10%;
+  right: 10%;
+  top: -1px;
+  height: 3px;
+}
+.itops-page .rm-bp-rack[data-front="w"]::after {
+  top: 10%;
+  bottom: 10%;
+  left: -1px;
+  width: 3px;
+}
+.itops-page .rm-bp-rack[data-front="e"]::after {
+  top: 10%;
+  bottom: 10%;
+  right: -1px;
+  width: 3px;
+}
+.itops-page .rm-bp-rack-body {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 2px 3px;
+  border: 0;
+  background: transparent;
+  color: var(--cab-text);
+  cursor: pointer;
+  overflow: hidden;
+}
+.itops-page .rm-bp-rack.editing .rm-bp-rack-body {
+  cursor: inherit;
+}
+.itops-page .rm-bp-rack-name {
+  max-width: 100%;
+  font-size: 10.5px;
+  font-weight: 650;
   letter-spacing: -0.01em;
-  color: var(--text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.itops-page .rm-tile-fill {
-  flex: 1 1 auto;
-  display: flex;
+
+/* Compact always-on status tags (device count · used U · watts). */
+.itops-page .rm-tags {
+  display: inline-flex;
   align-items: center;
-}
-.itops-page .rm-tile-bar {
-  width: 100%;
-  height: 8px;
-  border-radius: 4px;
-  background: color-mix(in srgb, var(--tile) 16%, var(--surface-muted));
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 3px;
+  max-width: 100%;
   overflow: hidden;
 }
-.itops-page .rm-tile-bar > span {
-  display: block;
-  height: 100%;
-  min-width: 2px;
-  border-radius: 4px;
-  background: var(--tile);
+.itops-page .rm-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0.5px 4px;
+  border-radius: 5px;
+  border: 0.5px solid color-mix(in srgb, var(--border) 80%, transparent);
+  background: color-mix(in srgb, var(--surface) 72%, transparent);
+  font-size: 8.5px;
+  font-weight: 620;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+  white-space: nowrap;
 }
+.itops-page .rm-tag-count i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--text-faint);
+}
+
+/* A non-rack room object on the plan; `--obj` accent comes from data-kind. */
+.itops-page .rm-bp-obj {
+  --obj: var(--text-muted);
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: var(--obj);
+  filter: drop-shadow(0 2px 2px color-mix(in srgb, var(--text) 18%, transparent));
+}
+.itops-page .rm-bp-obj.editing {
+  cursor: grab;
+  touch-action: none;
+}
+.itops-page .rm-bp-obj.dragging {
+  cursor: grabbing;
+  z-index: 5;
+}
+.itops-page .rm-bp-obj-glyph {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.14s;
+}
+
+/* Reference-driven fixture artwork shared by the floor plan and 2.5D room.
+   Object identity stays on --obj; neutral hardware surfaces derive from app
+   tokens so every KKTerm colour scheme remains legible. */
+.itops-page .rm-object-art {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  fill: none;
+  stroke: var(--obj);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.itops-page .rm-object-art * {
+  vector-effect: non-scaling-stroke;
+}
+.itops-page .rm-art-soft {
+  fill: color-mix(in srgb, var(--obj) 14%, var(--surface));
+  stroke: var(--obj);
+}
+.itops-page .rm-art-fill {
+  fill: var(--obj);
+  stroke: var(--obj);
+}
+.itops-page .rm-art-line,
+.itops-page .rm-art-detail {
+  fill: none;
+  stroke: var(--obj);
+}
+.itops-page .rm-art-detail {
+  opacity: 0.58;
+  stroke-width: 1.5;
+}
+.itops-page .rm-art-dark,
+.itops-page .rm-art-dark-fill {
+  fill: color-mix(in srgb, var(--text) 88%, var(--surface));
+  stroke: color-mix(in srgb, var(--text) 72%, var(--border));
+}
+.itops-page .rm-art-alert,
+.itops-page .rm-art-bag-label {
+  fill: var(--red);
+  stroke: var(--red);
+}
+.itops-page .rm-art-ok {
+  fill: var(--green);
+  stroke: var(--green);
+  filter: drop-shadow(0 0 3px color-mix(in srgb, var(--green) 72%, transparent));
+  animation: rm-object-blink 2.6s steps(1) infinite;
+}
+.itops-page .rm-art-fov,
+.itops-page .rm-art-beam {
+  fill: color-mix(in srgb, var(--obj) 22%, transparent);
+  stroke: none;
+  transform-box: fill-box;
+  transform-origin: center bottom;
+  animation: rm-object-sweep 5s ease-in-out infinite;
+}
+.itops-page .rm-art-ring,
+.itops-page .rm-art-aura {
+  fill: none;
+  stroke: var(--obj);
+  opacity: 0.5;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: rm-object-ring 2.6s ease-out infinite;
+}
+.itops-page .rm-art-ring.delayed {
+  animation-delay: 1.3s;
+}
+.itops-page .rm-art-aura {
+  fill: color-mix(in srgb, var(--green) 20%, transparent);
+  stroke: var(--green);
+  animation: rm-object-aura 3s ease-in-out infinite;
+}
+.itops-page .rm-art-fan {
+  fill: none;
+  stroke: var(--obj);
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: rm-object-fan 3.4s linear infinite;
+}
+.itops-page .rm-art-fan.reverse {
+  animation-direction: reverse;
+  animation-duration: 4s;
+}
+.itops-page .rm-art-airflow {
+  fill: none;
+  stroke: var(--obj);
+  animation: rm-object-breathe 1.6s ease-in-out infinite;
+}
+.itops-page .rm-art-breathe {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: rm-object-breathe 2s ease-in-out infinite;
+}
+.itops-page .rm-art-cable {
+  fill: none;
+  stroke-width: 3;
+}
+.itops-page .rm-art-cable.blue { stroke: var(--accent); }
+.itops-page .rm-art-cable.green { stroke: var(--green); }
+.itops-page .rm-art-cable.amber { stroke: var(--amber); }
+.itops-page .rm-art-signal {
+  fill: var(--surface);
+  stroke: var(--accent);
+  animation: rm-object-signal 2.2s linear infinite;
+}
+.itops-page .rm-art-bag {
+  fill: var(--green);
+  stroke: color-mix(in srgb, var(--green) 72%, var(--text));
+}
+.itops-page .rm-art-bag-text,
+.itops-page .rm-art-terminal-text {
+  fill: var(--surface);
+  stroke: none;
+  font-family: var(--app-ui-font-family);
+  font-size: 8px;
+  font-weight: 800;
+  text-anchor: middle;
+}
+.itops-page .rm-art-terminal-text {
+  fill: color-mix(in srgb, var(--green) 82%, var(--surface));
+  font-family: var(--app-mono-font-family, monospace);
+  font-size: 9px;
+}
+.itops-page .rm-art-float {
+  animation: rm-object-float 3s ease-in-out infinite;
+}
+
+/* Screen-aligned 2.5D object illustrations. The plane still owns the floor
+   coordinates and z-level; this layer replaces the old one-size-fits-all box. */
+.itops-page .rm-iso-obj-model {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: block;
+  width: 48px;
+  height: 48px;
+  pointer-events: none;
+  transform-origin: 0 0;
+  filter: drop-shadow(0 5px 5px color-mix(in srgb, var(--text) 24%, transparent));
+}
+.itops-page .rm-iso-obj-model[data-kind="aircon"] { width: 62px; height: 96px; }
+.itops-page .rm-iso-obj-model[data-kind="ups"] { width: 48px; height: 58px; }
+.itops-page .rm-iso-obj-model[data-kind="crashCart"] { width: 58px; height: 66px; }
+.itops-page .rm-iso-obj-model[data-kind="camera"] { width: 62px; height: 48px; }
+.itops-page .rm-iso-obj-model[data-kind="sensor"] { width: 48px; height: 38px; }
+.itops-page .rm-iso-obj-model[data-kind="smokeDetector"] { width: 45px; height: 22px; }
+.itops-page .rm-iso-obj-model[data-kind="fireExtinguisher"] { width: 38px; height: 54px; }
+.itops-page .rm-iso-obj-model[data-kind="cableTray"] { width: 78px; height: 42px; }
+.itops-page .rm-iso-obj-model[data-kind="kuaikuai"] { width: 42px; height: 56px; }
+.itops-page .rm-art-iso-top,
+.itops-page .rm-art-smoke-top {
+  fill: color-mix(in srgb, var(--surface) 84%, var(--obj));
+  stroke: color-mix(in srgb, var(--border-strong) 72%, var(--obj));
+}
+.itops-page .rm-art-iso-front {
+  fill: color-mix(in srgb, var(--surface-muted) 90%, var(--obj));
+  stroke: color-mix(in srgb, var(--border-strong) 74%, var(--obj));
+}
+.itops-page .rm-art-iso-side,
+.itops-page .rm-art-smoke-side {
+  fill: color-mix(in srgb, var(--border) 70%, var(--obj));
+  stroke: color-mix(in srgb, var(--border-strong) 78%, var(--obj));
+}
+.itops-page .rm-art-vent,
+.itops-page .rm-art-led-bars,
+.itops-page .rm-art-terminal,
+.itops-page .rm-art-tray-rungs {
+  fill: none;
+  stroke: var(--obj);
+  stroke-width: 1.4;
+}
+.itops-page .rm-art-ups-top { fill: color-mix(in srgb, var(--obj) 30%, var(--text)); stroke: var(--obj); }
+.itops-page .rm-art-ups-front { fill: color-mix(in srgb, var(--obj) 18%, var(--text)); stroke: var(--obj); }
+.itops-page .rm-art-ups-side { fill: color-mix(in srgb, var(--obj) 28%, var(--text)); stroke: var(--obj); }
+.itops-page .rm-art-charge { fill: var(--obj); stroke: none; }
+.itops-page .rm-art-led-bars { stroke: var(--green); stroke-width: 2.5; }
+.itops-page .rm-art-shadow { fill: color-mix(in srgb, var(--text) 20%, transparent); stroke: none; }
+.itops-page .rm-art-cart { fill: color-mix(in srgb, var(--surface-muted) 80%, var(--obj)); stroke: var(--obj); }
+.itops-page .rm-art-cart-leg,
+.itops-page .rm-art-stand,
+.itops-page .rm-art-mast,
+.itops-page .rm-art-support { fill: none; stroke: color-mix(in srgb, var(--text-muted) 78%, var(--obj)); stroke-width: 3; }
+.itops-page .rm-art-wheel { fill: var(--text); stroke: var(--border-strong); }
+.itops-page .rm-art-screen { fill: color-mix(in srgb, var(--text) 92%, var(--surface)); stroke: var(--border-strong); }
+.itops-page .rm-art-terminal { stroke: var(--green); }
+.itops-page .rm-art-camera-cap { fill: color-mix(in srgb, var(--text-muted) 55%, var(--surface)); stroke: var(--border-strong); }
+.itops-page .rm-art-camera-dome { fill: color-mix(in srgb, var(--text) 88%, var(--obj)); stroke: var(--obj); }
+.itops-page .rm-art-camera-lens { fill: color-mix(in srgb, var(--obj) 52%, var(--text)); stroke: var(--obj); }
+.itops-page .rm-art-sensor { fill: color-mix(in srgb, var(--surface) 88%, var(--obj)); stroke: color-mix(in srgb, var(--border-strong) 72%, var(--obj)); }
+.itops-page .rm-art-reading { fill: var(--text-muted); stroke: none; font-family: var(--app-mono-font-family, monospace); font-size: 10px; }
+.itops-page .rm-art-extinguisher { fill: var(--red); stroke: color-mix(in srgb, var(--red) 68%, var(--text)); }
+.itops-page .rm-art-ext-top { fill: color-mix(in srgb, var(--red) 76%, var(--surface)); stroke: color-mix(in srgb, var(--red) 68%, var(--text)); }
+.itops-page .rm-art-ext-label { fill: var(--surface); stroke: color-mix(in srgb, var(--red) 55%, var(--border)); }
+.itops-page .rm-art-hose { fill: none; stroke: var(--text); stroke-width: 3; }
+.itops-page .rm-art-tray { fill: color-mix(in srgb, var(--surface-muted) 70%, var(--text-muted)); stroke: var(--text-muted); }
+.itops-page .rm-art-rack-top { fill: color-mix(in srgb, var(--text) 88%, var(--surface)); stroke: var(--border-strong); }
+
+@keyframes rm-object-fan { to { transform: rotate(360deg); } }
+@keyframes rm-object-breathe { 50% { opacity: 0.45; transform: scale(0.88); } }
+@keyframes rm-object-blink { 48% { opacity: 1; } 50%, 58% { opacity: 0.25; } 60% { opacity: 1; } }
+@keyframes rm-object-sweep { 50% { transform: rotate(28deg); } }
+@keyframes rm-object-ring { from { opacity: 0.55; transform: scale(0.4); } to { opacity: 0; transform: scale(1.35); } }
+@keyframes rm-object-aura { 50% { opacity: 0.85; transform: scale(1.12); } }
+@keyframes rm-object-signal { from { transform: translateX(0); } to { transform: translateX(62px); } }
+@keyframes rm-object-float { 50% { transform: translateY(-3px); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .itops-page .rm-object-art * {
+    animation: none !important;
+  }
+}
+.itops-page .rm-bp-obj-z {
+  position: absolute;
+  right: -6px;
+  bottom: -6px;
+  padding: 0 3px;
+  border-radius: 4px;
+  border: 0.5px solid var(--border);
+  background: var(--surface);
+  font-size: 8px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+}
+
+/* Hover control strip (rotate / raise / lower / delete) on plan footprints. */
+.itops-page .rm-bp-ctl {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 8;
+  display: inline-flex;
+  gap: 3px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s;
+}
+.itops-page .rm-bp-rack:hover .rm-bp-ctl,
+.itops-page .rm-bp-obj:hover .rm-bp-ctl {
+  opacity: 1;
+  pointer-events: auto;
+}
+.itops-page .rm-bp-ctl button,
+.itops-page .rm-iso-ctl button {
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  cursor: pointer;
+  box-shadow: var(--shadow-control);
+}
+.itops-page .rm-bp-ctl button:hover,
+.itops-page .rm-iso-ctl button:hover {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--border));
+}
+.itops-page .rm-bp-ctl button.danger,
+.itops-page .rm-iso-ctl button.danger {
+  border-color: color-mix(in srgb, var(--red) 70%, var(--border));
+  background: color-mix(in srgb, var(--surface) 86%, var(--red));
+  color: var(--red);
+}
+.itops-page .rm-bp-ctl button.danger:hover,
+.itops-page .rm-iso-ctl button.danger:hover {
+  background: var(--red);
+  border-color: var(--red);
+  color: #fff;
+}
+.itops-page .rm-flip {
+  display: inline-flex;
+  transform: rotate(180deg);
+}
+
+/* Edit-mode object palette shared by both spatial layouts. Object accents
+   (`--obj`/`--tile`) are set inline from the shared IT_ACCENTS palette. */
+.itops-page .rm-palette {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 2px 2px 0;
+}
+.itops-page .rm-palette-h {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin-right: 3px;
+}
+.itops-page .rm-palette button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border: 0.5px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 560;
+  cursor: pointer;
+  transition: background 0.14s, color 0.14s, border-color 0.14s;
+}
+.itops-page .rm-palette button:hover:not([data-active="true"]) {
+  background: var(--hover);
+  color: var(--text);
+}
+.itops-page .rm-palette button[data-active="true"] {
+  background: var(--accent-soft);
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
+  color: var(--accent);
+}
+
 .itops-page .rm-tile-dots {
   display: flex;
   align-items: center;
@@ -3989,98 +4414,493 @@
 .itops-page .rm-dot.off i {
   background: var(--red);
 }
-.itops-page .rm-tile-meta {
+
+/* ──────────────────────────────────────────────────────────────────────────
+   2.5D Server Room View. An axonometric floor plane (rotateX(55°) rotateZ(45°),
+   no perspective — angles must match ISO_TILT_DEG/ISO_ROT_DEG in
+   roomIsoLayout.ts) with each Rack extruded into a cabinet cuboid. Cabinet
+   faces render the rack's shell finish (`data-shell`, fixed hardware palette
+   like the 2D rack skin — no status colouring); room-object faces mix the
+   `--tile` kind accent into surface tokens. Name badges, tooltips, and delete
+   bubbles are billboarded back to screen alignment by inline transforms in
+   ServerRoomIsoView.tsx.
+   ────────────────────────────────────────────────────────────────────────── */
+.itops-page .rm-iso {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 6px;
+  flex-direction: column;
+  flex: 1 0 auto;
+  gap: 8px;
+  padding: 6px 4px 8px;
 }
-.itops-page .rm-tile-val {
+.itops-page .rm-iso-topbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+/* Right-aligned view controls: zoom stepper (both spatial views) plus the
+   fixed view-angle stepper (2.5D only). */
+.itops-page .rm-iso-topctls {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+/* Fixed view-angle stepper: the camera stays put, the room turns in quarter
+   steps (roomIsoLayout.ts rotates the grid under it). */
+.itops-page .rm-iso-angles,
+.itops-page .rm-zoom {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.itops-page .rm-iso-angles button,
+.itops-page .rm-zoom button {
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0.5px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.14s, color 0.14s;
+}
+.itops-page .rm-iso-angles button:hover,
+.itops-page .rm-zoom button:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+.itops-page .rm-zoom button:disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+/* Current level readout; clicking resets to 100%. */
+.itops-page .rm-zoom .rm-zoom-val {
+  width: auto;
+  min-width: 40px;
+  padding: 0 6px;
   font-size: 11px;
-  font-weight: 660;
-  color: color-mix(in srgb, var(--tile) 78%, var(--text));
+  font-variant-numeric: tabular-nums;
+}
+/* The scroll area takes the drill's leftover height; its content-box size is
+   the canvas the room's floor plane must cover. */
+.itops-page .rm-iso-scroll {
+  display: flex;
+  flex: 1 1 0;
+  min-height: 280px;
+  overflow: auto;
+}
+/* Sizer around the zoomed canvas: sized to the scaled footprint so scrolling
+   and centering track the zoom level. */
+.itops-page .rm-iso-zoom {
+  flex: 0 0 auto;
+  margin: auto;
+}
+/* Clip the decorative floor overhang: the plane's projection is sized to
+   cover the whole canvas, so its corners stick out past the viewport. */
+.itops-page .rm-iso-viewport {
+  position: relative;
+  transform-origin: 0 0;
+  overflow: hidden;
+}
+.itops-page .rm-iso-plane {
+  position: absolute;
+  left: 50%;
+  transform: translate(-50%, -50%) rotateX(55deg) rotateZ(45deg);
+  transform-style: preserve-3d;
+  background:
+    linear-gradient(color-mix(in srgb, var(--border) 52%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--border) 52%, transparent) 1px, transparent 1px),
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--surface-muted) 94%, transparent),
+      color-mix(in srgb, var(--surface-muted) 66%, transparent)
+    );
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  box-shadow: 0 0 0 10px color-mix(in srgb, var(--surface-muted) 38%, transparent);
+}
+
+/* Empty floor tile — edit-mode click target for adding a rack in place. */
+.itops-page .rm-iso-tile {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px dashed transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: transparent;
+  cursor: pointer;
+}
+.itops-page .rm-iso-tile:hover {
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--border));
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  color: var(--accent);
+}
+/* Snap-target highlight while dragging a cabinet. */
+.itops-page .rm-iso-drop {
+  position: absolute;
+  border: 1.5px solid var(--accent);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  pointer-events: none;
+}
+
+/* Cabinet cuboid, painted in the rack's shell finish (fixed hardware palette
+   mirroring the .rk cabinet frame; black default, `data-shell` overrides). */
+.itops-page .rm-iso-cab {
+  --cab-a: #1e1e21;
+  --cab-b: #161618;
+  --cab-edge: #38383a;
+  position: absolute;
+  transform-style: preserve-3d;
+}
+.itops-page .rm-iso-cab[data-shell="white"] {
+  --cab-a: #e4e4e7;
+  --cab-b: #d2d2d7;
+  --cab-edge: #c2c2c8;
+}
+.itops-page .rm-iso-cab[data-shell="grey"] {
+  --cab-a: #82828a;
+  --cab-b: #6a6a72;
+  --cab-edge: #58585e;
+}
+.itops-page .rm-iso-cab.editing {
+  cursor: grab;
+  touch-action: none;
+}
+.itops-page .rm-iso-cab.dragging {
+  cursor: grabbing;
+}
+/* Soft floor shadow, lifted 1px above the plane to avoid z-fighting. */
+.itops-page .rm-iso-cab::before {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--text) 16%, transparent);
+  filter: blur(4px);
+  transform: translateZ(1px);
+}
+.itops-page .rm-iso-body {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  transform-style: preserve-3d;
+  cursor: pointer;
+  transition: transform 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.itops-page .rm-iso-cab:not(.dragging) .rm-iso-body:hover {
+  transform: translateZ(8px);
+}
+.itops-page .rm-iso-face {
+  position: absolute;
+  display: block;
+}
+.itops-page .rm-iso-top {
+  inset: 0;
+  border: 1px solid color-mix(in srgb, var(--tile) 55%, var(--border));
+  border-radius: 2px;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--tile) 34%, var(--surface)),
+    color-mix(in srgb, var(--tile) 16%, var(--surface))
+  );
+}
+/* South (+y) face rises from its bottom edge on the floor line (top offset
+   and size set inline). Its role class decides the finish: `front` carries
+   the device skin, `side` plain metal, `rear` a vented cable panel. */
+.itops-page .rm-iso-front {
+  left: 0;
+  transform-origin: 50% 100%;
+  transform: rotateX(-90deg);
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--tile) 45%, var(--border));
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--tile) 30%, var(--surface-muted)),
+    color-mix(in srgb, var(--tile) 12%, var(--surface-muted))
+  );
+}
+/* East (+x) face swings up around its right edge (left offset set inline). */
+.itops-page .rm-iso-side {
+  top: 0;
+  transform-origin: 100% 50%;
+  transform: rotateY(90deg);
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--tile) 40%, var(--border));
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--tile) 10%, var(--surface-muted)),
+    color-mix(in srgb, var(--tile) 22%, var(--surface-muted))
+  );
+  filter: brightness(0.82);
+}
+/* Cabinet faces override the generic (--tile) recipes with the shell finish,
+   so the whole cuboid reads as one cabinet colour. */
+.itops-page .rm-iso-cab .rm-iso-top {
+  border: 1px solid var(--cab-edge);
+  background:
+    linear-gradient(135deg, rgb(255 255 255 / 16%), rgb(255 255 255 / 0%) 62%),
+    linear-gradient(180deg, var(--cab-a), var(--cab-b));
+}
+.itops-page .rm-iso-cab .rm-iso-front {
+  border: 1px solid var(--cab-edge);
+  background: linear-gradient(180deg, var(--cab-a), var(--cab-b));
+}
+.itops-page .rm-iso-cab .rm-iso-side {
+  border: 1px solid var(--cab-edge);
+  background: linear-gradient(90deg, var(--cab-b), var(--cab-a));
+}
+.itops-page .rm-iso-cab .rm-iso-front.rear,
+.itops-page .rm-iso-cab .rm-iso-side.rear {
+  background:
+    repeating-linear-gradient(
+      0deg,
+      color-mix(in srgb, var(--cab-edge) 85%, transparent) 0 1px,
+      transparent 1px 4px
+    ),
+    linear-gradient(180deg, var(--cab-a), var(--cab-b));
+}
+
+/* Miniature 2D rack skin painted on the cabinet's front face: the cabinet
+   frame in the rack's shell finish plus one faceplate strip per placed
+   device with a status LED. Fixed hardware palette like the full-size rack
+   skin above (physical equipment greys, not theme tokens); `data-shell`
+   overrides mirror the .rk cabinet finishes. */
+.itops-page .rm-iso-skin {
+  --skin-a: #1e1e21;
+  --skin-b: #161618;
+  --skin-rail: #38383a;
+  position: absolute;
+  inset: 0;
+  display: block;
+  background:
+    repeating-linear-gradient(
+      180deg,
+      rgb(255 255 255 / 5%) 0 1px,
+      transparent 1px 5px
+    ),
+    linear-gradient(180deg, var(--skin-a), var(--skin-b));
+  border-left: 2px solid var(--skin-rail);
+  border-right: 2px solid var(--skin-rail);
+}
+.itops-page .rm-iso-skin[data-shell="white"] {
+  --skin-a: #e4e4e7;
+  --skin-b: #d2d2d7;
+  --skin-rail: #c2c2c8;
+}
+.itops-page .rm-iso-skin[data-shell="grey"] {
+  --skin-a: #82828a;
+  --skin-b: #6a6a72;
+  --skin-rail: #58585e;
+}
+/* On the east face the fold maps the cabinet's up direction onto the
+   element's width (left edge = top), so rails and slats turn with it. */
+.itops-page .rm-iso-skin.axis-x {
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgb(255 255 255 / 5%) 0 1px,
+      transparent 1px 5px
+    ),
+    linear-gradient(270deg, var(--skin-a), var(--skin-b));
+  border-left: 0;
+  border-right: 0;
+  border-top: 2px solid var(--skin-rail);
+  border-bottom: 2px solid var(--skin-rail);
+}
+.itops-page .rm-iso-skin.axis-y .rm-iso-skin-item {
+  left: 2px;
+  right: 2px;
+}
+.itops-page .rm-iso-skin.axis-x .rm-iso-skin-item {
+  top: 2px;
+  bottom: 2px;
+}
+.itops-page .rm-iso-skin-item {
+  position: absolute;
+  display: block;
+  border-radius: 1px;
+  border: 0.5px solid rgb(255 255 255 / 14%);
+  background: linear-gradient(180deg, #313134, #222225);
+  box-shadow: 0 0.5px 1px rgb(0 0 0 / 40%);
+}
+.itops-page .rm-iso-skin-item::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 1.5px;
+  width: 2px;
+  height: 2px;
+  margin-top: -1px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 3px var(--green);
+}
+.itops-page .rm-iso-skin.axis-x .rm-iso-skin-item::after {
+  top: auto;
+  right: auto;
+  left: 50%;
+  bottom: 1.5px;
+  margin-top: 0;
+  margin-left: -1px;
+}
+.itops-page .rm-iso-skin-item[data-status="warning"]::after {
+  background: var(--amber);
+  box-shadow: 0 0 3px var(--amber);
+}
+.itops-page .rm-iso-skin-item[data-status="offline"]::after {
+  background: var(--red);
+  box-shadow: 0 0 3px var(--red);
+}
+.itops-page .rm-iso-skin-item[data-kind="kuaiguai"] {
+  background: linear-gradient(180deg, #3fae5a, #2f8746);
+}
+.itops-page .rm-iso-skin-item[data-kind="blank"],
+.itops-page .rm-iso-skin-item[data-kind="label"] {
+  background: linear-gradient(180deg, #2c2c30, #1a1a1c);
+  border-color: rgb(255 255 255 / 8%);
+}
+.itops-page .rm-iso-skin-item[data-kind="blank"]::after,
+.itops-page .rm-iso-skin-item[data-kind="label"]::after {
+  content: none;
+}
+/* Billboarded name badge; hides while the detail card shows. */
+.itops-page .rm-iso-badge {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  padding: 1px 6px;
+  border: 0.5px solid var(--border);
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--surface) 84%, transparent);
+  font-size: 10.5px;
+  font-weight: 640;
+  color: var(--text);
+  white-space: nowrap;
+  pointer-events: none;
+  transition: opacity 0.14s;
+}
+.itops-page .rm-iso-cab:hover .rm-iso-badge {
+  opacity: 0;
+}
+/* Billboarded hover detail card. */
+.itops-page .rm-iso-tip {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 136px;
+  padding: 8px 10px;
+  border: 0.5px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+  box-shadow: var(--shadow-control);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.14s;
+}
+.itops-page .rm-iso-cab:hover .rm-iso-tip {
+  opacity: 1;
+}
+.itops-page .rm-iso-tip-name {
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--text);
   white-space: nowrap;
 }
-.itops-page .rm-tile-cap {
+.itops-page .rm-iso-tip-detail {
+  font-size: 11px;
+  font-weight: 640;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.itops-page .rm-iso-tip-cap {
   font-size: 10px;
   color: var(--text-faint);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-
-/* Band → colour mapping. Health: worst placed-device status. Utilisation:
-   cool (low) → hot (full). Empty racks stay neutral in both metrics. */
-.itops-page .rm-floor[data-metric="health"] .rm-tile[data-health="ok"] {
-  --tile: var(--green);
+/* Billboarded edit controls (rotate / raise / lower / delete), static inside
+   their billboard wrapper. Button recipe shared with .rm-bp-ctl above. */
+.itops-page .rm-iso-ctl-wrap {
+  position: absolute;
+  left: 50%;
+  top: 50%;
 }
-.itops-page .rm-floor[data-metric="health"] .rm-tile[data-health="warning"] {
-  --tile: var(--amber);
-}
-.itops-page .rm-floor[data-metric="health"] .rm-tile[data-health="critical"] {
-  --tile: var(--red);
-}
-.itops-page .rm-floor[data-metric="utilization"] .rm-tile[data-util="low"] {
-  --tile: var(--green);
-}
-.itops-page .rm-floor[data-metric="utilization"] .rm-tile[data-util="med"] {
-  --tile: color-mix(in srgb, var(--green) 45%, var(--amber));
-}
-.itops-page .rm-floor[data-metric="utilization"] .rm-tile[data-util="high"] {
-  --tile: var(--amber);
-}
-.itops-page .rm-floor[data-metric="utilization"] .rm-tile[data-util="full"] {
-  --tile: var(--red);
-}
-
-/* Legend. */
-.itops-page .rm-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 13px;
-  padding: 6px 2px 12px;
-}
-.itops-page .rm-legend-item {
+.itops-page .rm-iso-ctl {
   display: inline-flex;
-  align-items: center;
-  gap: 6px;
+  gap: 3px;
+}
+.itops-page .rm-iso-hint {
+  padding: 0 2px;
   font-size: 11px;
   color: var(--text-muted);
 }
-.itops-page .rm-legend-sw {
-  width: 11px;
-  height: 11px;
-  border-radius: 3px;
-  background: var(--text-faint);
-  border: 0.5px solid color-mix(in srgb, var(--border) 60%, transparent);
+
+/* A room object anchored to its floor cell and vertical position; the
+   reference-driven model above supplies each kind's distinct silhouette. */
+.itops-page .rm-iso-obj {
+  --tile: var(--text-faint);
+  position: absolute;
+  transform-style: preserve-3d;
 }
-.itops-page .rm-legend-sw.ok,
-.itops-page .rm-legend-sw.low {
-  background: var(--green);
+.itops-page .rm-iso-obj.editing {
+  cursor: grab;
+  touch-action: none;
 }
-.itops-page .rm-legend-sw.med {
-  background: color-mix(in srgb, var(--green) 45%, var(--amber));
+.itops-page .rm-iso-obj.dragging {
+  cursor: grabbing;
 }
-.itops-page .rm-legend-sw.warning,
-.itops-page .rm-legend-sw.high {
-  background: var(--amber);
+/* Floor shadow only for objects actually standing on the floor. */
+.itops-page .rm-iso-obj.grounded::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--text) 14%, transparent);
+  filter: blur(3px);
+  transform: translateZ(1px);
 }
-.itops-page .rm-legend-sw.critical,
-.itops-page .rm-legend-sw.full {
-  background: var(--red);
+/* Billboarded kind chip above the box (icon + optional level). */
+.itops-page .rm-iso-obj-badge {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 5px;
+  border: 0.5px solid color-mix(in srgb, var(--tile) 45%, var(--border));
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--surface) 86%, transparent);
+  color: var(--tile);
+  pointer-events: none;
+}
+.itops-page .rm-iso-obj-badge em {
+  font-style: normal;
+  font-size: 8.5px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
 }
 
-.rack-item-preview {
-  height: 48px;
-  padding: 7px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface-muted);
-  display: flex;
-  align-items: center;
+.rack-item-dialog {
+  max-width: calc(100vw - 64px);
 }
 .rack-item-dialog .kk-dlg-body {
-  padding: 0;
-  overflow: hidden;
+  padding: 18px 22px;
+  overflow-x: hidden;
 }
 
 /* Add/Edit Rack follows the split preview/form reference while the preview
@@ -4262,37 +5082,171 @@
 }
 .rack-item-dialog-grid {
   display: grid;
-  grid-template-columns: minmax(300px, 1.05fr) minmax(260px, .85fr) minmax(340px, 1.2fr);
-  min-height: 0;
-  height: min(680px, calc(100vh - 190px));
+  grid-template-columns: minmax(0, 310px) minmax(0, 280px) minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
 }
 .rack-item-dialog-column {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   min-width: 0;
-  overflow-y: auto;
-  padding: 18px;
-  border-right: 1px solid var(--border);
 }
-.rack-item-dialog-column:last-child { border-right: 0; }
 .rack-item-dialog-column .kk-field:first-child { margin-top: 0; }
-.rack-item-dialog .rack-kind-preview-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+
+.rack-item-preview-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
-.itops-page .rack-kind-preview-grid {
+.rack-item-preview-stage {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  width: 100%;
+  height: 144px;
+  overflow: hidden;
+  border: 0.5px solid var(--border);
+  border-radius: 12px;
+  background-color: var(--surface-muted);
+  background-image: radial-gradient(circle, var(--hairline) 0.8px, transparent 0.8px);
+  background-size: 14px 14px;
+}
+.rack-item-preview-rack {
+  display: grid;
+  grid-template-columns: 7px minmax(0, 1fr) 7px;
+  width: 168px;
+  height: 100%;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to bottom, black 62%, transparent 96%);
+  mask-image: linear-gradient(to bottom, black 62%, transparent 96%);
+}
+.rack-item-preview-rail {
+  background:
+    radial-gradient(circle, var(--text-faint) 0 1px, transparent 1.5px) center 8px / 4px 18px repeat-y,
+    linear-gradient(90deg, var(--border-strong), var(--surface), var(--border-strong));
+  border-inline: 0.5px solid var(--border-strong);
+}
+.rack-item-preview-bay {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 13px 5px 0;
+  background: color-mix(in srgb, var(--surface-muted) 76%, transparent);
+}
+.rack-item-preview-device {
+  flex: 0 0 var(--rack-item-preview-height, 22px);
+  min-height: 30px;
+  max-height: 88px;
+}
+.rack-item-preview-empty-slot {
+  flex: 0 0 20px;
+  border: 0.5px solid var(--border);
+  border-radius: 5px;
+  background:
+    repeating-linear-gradient(90deg, transparent 0 8px, var(--hairline) 8px 9px),
+    color-mix(in srgb, var(--surface) 72%, transparent);
+}
+.rack-item-preview-caption {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  padding: 0 4px;
+  text-align: center;
+}
+.rack-item-preview-caption strong {
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rack-item-preview-caption span {
+  color: var(--text-muted);
+  font-family: var(--app-mono-font-family, monospace);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.rack-item-shell-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
-  margin: 10px 0 12px;
+  margin-top: 2px;
+}
+.rack-item-shell-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 8px 5px 7px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: var(--control-shadow);
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 10.5px;
+  font-weight: 500;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: background 0.14s, border-color 0.14s, box-shadow 0.14s, transform 0.06s;
+}
+.rack-item-shell-tile:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+.rack-item-shell-tile:active {
+  transform: translateY(0.5px);
+}
+.rack-item-shell-tile:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+.rack-item-shell-tile.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+  color: var(--text);
+  font-weight: 600;
+}
+.rack-item-shell-face {
+  display: block;
+  width: 100%;
+  height: 26px;
+}
+.rack-item-shell-face .rkd-id,
+.rack-item-shell-face .rkd-meta {
+  display: none;
+}
+.rack-item-shell-face .rkd-ear {
+  flex-basis: 8px;
+}
+.rack-item-shell-face .rkd-body {
+  gap: 2px;
+  padding-inline: 2px;
+}
+.itops-page .rack-kind-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  margin: 4px 0 0;
 }
 .itops-page .rack-kind-preview {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 4px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 9px;
   background: var(--surface);
   color: var(--text);
-  padding: 6px;
+  padding: 5px;
   cursor: pointer;
   text-align: left;
   transition: border-color 0.14s, background 0.14s, transform 0.14s;
@@ -4306,16 +5260,33 @@
   transform: translateY(1px);
 }
 .itops-page .rack-kind-preview-face {
-  height: 30px;
+  height: 28px;
   display: flex;
   align-items: center;
+}
+.itops-page .rack-kind-preview-face .rkd-id,
+.itops-page .rack-kind-preview-face .rkd-meta {
+  display: none;
+}
+.itops-page .rack-kind-preview-face .rkd-ear {
+  flex-basis: 7px;
+  padding-block: 4px;
+}
+.itops-page .rack-kind-preview-face .rkd-ear-bolt,
+.itops-page .rack-kind-preview-face .rkd-leds > span {
+  width: 4px;
+  height: 4px;
+}
+.itops-page .rack-kind-preview-face .rkd-body {
+  gap: 2px;
+  padding-inline: 2px;
 }
 .itops-page .rack-kind-preview-label {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 10.5px;
+  font-size: 10px;
   font-weight: 620;
   color: var(--text-muted);
 }
@@ -4333,6 +5304,10 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
+.rack-item-dialog .metadata-column .rack-form-grid.four {
+  grid-template-columns: 1fr;
+}
+
 .itops-page .rack-port-list {
   display: grid;
   gap: 8px;
@@ -4344,8 +5319,8 @@
   align-items: center;
 }
 
-.itops-page .rack-port-row {
-  grid-template-columns: minmax(0, 1fr) 108px 108px;
+.rack-item-dialog .rack-port-row {
+  grid-template-columns: 1fr;
 }
 
 .itops-page .connection-binding-list {
@@ -4463,9 +5438,21 @@
   background: var(--surface);
 }
 
+@media (max-width: 900px) {
+  .rack-item-dialog-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .rack-item-dialog .metadata-column {
+    grid-column: 1 / -1;
+  }
+}
+
 @media (max-width: 760px) {
-  .rack-item-dialog-grid { grid-template-columns: 1fr; height: auto; }
-  .rack-item-dialog-column { overflow: visible; border-right: 0; border-bottom: 1px solid var(--border); }
+  .rack-item-dialog {
+    max-width: calc(100vw - 24px);
+  }
+  .rack-item-dialog-grid { grid-template-columns: 1fr; }
+  .rack-item-dialog .metadata-column { grid-column: auto; }
   .itops-page .rack-form-grid.two,
   .itops-page .rack-form-grid.four,
   .itops-page .connection-binding-list,
@@ -4555,4 +5542,116 @@
   font-size: 6px;
   font-weight: 800;
   opacity: .82;
+}
+
+/* ── Rack-device connect popover (RackItemConnectPopover) ──
+   Portaled to document.body (see DialogPortal) so it escapes the itops-page
+   stacking context; selectors are intentionally NOT scoped to .itops-page.
+   Sits at the dialog layer (kk-dlg-backdrop is z-index 130). */
+.rkc-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 130;
+}
+.rkc-pop {
+  position: fixed;
+  z-index: 131;
+  display: flex;
+  flex-direction: column;
+  min-width: 240px;
+  max-width: 320px;
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.rkc-head {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 9px 12px 7px;
+  border-bottom: 1px solid var(--border);
+}
+.rkc-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rkc-count {
+  font-size: 10px;
+  color: var(--text-faint);
+}
+.rkc-rows {
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+.rkc-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  color: var(--text);
+}
+.rkc-row:hover {
+  background: var(--hover);
+}
+.rkc-row.missing {
+  cursor: default;
+  color: var(--text-faint);
+  font-size: 11px;
+  font-style: italic;
+}
+.rkc-row-txt {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1;
+}
+.rkc-row-name {
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rkc-row-host {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-family: var(--app-mono-font-family, monospace);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rkc-row-act {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--accent);
+  white-space: nowrap;
+}
+.rkc-row-act.open {
+  color: var(--green);
+}
+.rkc-live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 5px var(--green);
 }

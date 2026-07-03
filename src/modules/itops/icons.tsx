@@ -28,6 +28,7 @@ export type ItIconName =
   | "pending"
   | "spinner"
   | "plus"
+  | "minus"
   | "chevR"
   | "chevL"
   | "chevD"
@@ -219,6 +220,11 @@ const GLYPHS: Record<ItIconName, (p: GlyphProps) => ReactNode> = {
   plus: (p) => (
     <Svg {...p} sw={2}>
       <path d="M12 5.5v13" />
+      <path d="M5.5 12h13" />
+    </Svg>
+  ),
+  minus: (p) => (
+    <Svg {...p} sw={2}>
       <path d="M5.5 12h13" />
     </Svg>
   ),

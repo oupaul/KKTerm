@@ -96,7 +96,11 @@ impl AcpStdioSession {
         timeout_duration: Duration,
         notification_handler: &mut impl FnMut(&mut Self, Value) -> Result<(), String>,
     ) -> Result<Value, String> {
-        let deadline = Instant::now() + timeout_duration;
+        // Idle timeout: every received line proves the backend is alive, so the
+        // deadline restarts after each processed message. Long agent turns that
+        // keep streaming updates (or wait on an in-app permission answer) no
+        // longer abort at a fixed wall-clock cutoff; only true silence times out.
+        let mut deadline = Instant::now() + timeout_duration;
         while Instant::now() < deadline {
             if self.cancel_probe.as_ref().is_some_and(|probe| probe()) {
                 return Err(ASSISTANT_STREAM_CANCELED_ERROR.to_string());
@@ -108,10 +112,14 @@ impl AcpStdioSession {
             else {
                 continue;
             };
-            let value = serde_json::from_str::<Value>(&line)
-                .map_err(|error| format!("ACP backend returned invalid JSON-RPC: {error}"))?;
+            let Ok(value) = serde_json::from_str::<Value>(&line) else {
+                // Tolerate stray non-JSON stdout lines (npm/npx notices, adapter
+                // banners) instead of abandoning the whole session over one line.
+                ai_interaction_debug!("agent.acp_recv_invalid", json!({ "line": line }));
+                continue;
+            };
             ai_interaction_debug!("agent.acp_recv", value.clone());
-            if value.get("id").and_then(Value::as_u64) == Some(id) {
+            if acp_message_is_response_for(&value, id) {
                 if let Some(error) = value.get("error") {
                     return Err(format!("ACP backend returned an error: {error}"));
                 }
@@ -123,6 +131,7 @@ impl AcpStdioSession {
             if value.get("method").is_some() {
                 notification_handler(self, value)?;
             }
+            deadline = Instant::now() + timeout_duration;
         }
         Err(format!("timed out waiting for ACP response id {id}"))
     }
@@ -144,13 +153,30 @@ impl Drop for AcpStdioSession {
     }
 }
 
+/// A message is the response to KKTerm's request only when it carries no
+/// `method`: agent-initiated requests and notifications always have one, and
+/// their JSON-RPC ids live in the agent's own id namespace, which may collide
+/// numerically with KKTerm's request ids.
+pub(crate) fn acp_message_is_response_for(value: &Value, id: u64) -> bool {
+    value.get("method").is_none() && value.get("id").and_then(Value::as_u64) == Some(id)
+}
+
+/// Why an ACP turn failed, plus whether `session/prompt` had already been
+/// dispatched. Once the prompt starts, real agent work may have happened
+/// (streamed text, kkterm MCP tool side effects), so callers must not re-run
+/// the same turn through the one-shot CLI fallback.
+pub(crate) struct AcpRunFailure {
+    pub(crate) error: String,
+    pub(crate) prompt_started: bool,
+}
+
 pub(crate) fn run_acp_agent_command(
     backend: AiCliBackendKind,
     model: &str,
     prompt: &str,
     app: &tauri::AppHandle,
     settings: &AiProviderSettings,
-) -> Result<String, String> {
+) -> Result<String, AcpRunFailure> {
     run_acp_agent_command_streaming(backend, model, prompt, None, app, settings)
 }
 
@@ -161,6 +187,31 @@ pub(crate) fn run_acp_agent_command_streaming(
     channel: Option<&Channel<Value>>,
     app: &tauri::AppHandle,
     settings: &AiProviderSettings,
+) -> Result<String, AcpRunFailure> {
+    let mut prompt_started = false;
+    run_acp_agent_turn(
+        backend,
+        model,
+        prompt,
+        channel,
+        app,
+        settings,
+        &mut prompt_started,
+    )
+    .map_err(|error| AcpRunFailure {
+        error,
+        prompt_started,
+    })
+}
+
+fn run_acp_agent_turn(
+    backend: AiCliBackendKind,
+    model: &str,
+    prompt: &str,
+    channel: Option<&Channel<Value>>,
+    app: &tauri::AppHandle,
+    settings: &AiProviderSettings,
+    prompt_started: &mut bool,
 ) -> Result<String, String> {
     let spec = acp_command_spec(backend);
     let cwd = app
@@ -218,6 +269,7 @@ pub(crate) fn run_acp_agent_command_streaming(
         .ok_or_else(|| "ACP session/new response did not include sessionId".to_string())?
         .to_string();
     let prompt = format!("Requested model: {model}\n\n{prompt}");
+    *prompt_started = true;
     session.request(
         3,
         "session/prompt",
@@ -261,6 +313,10 @@ pub(crate) fn handle_acp_backend_message(
                 if let Some(channel) = channel {
                     emit_stream(channel, &AiStreamEvent::ContentDelta { delta })?;
                 }
+            } else if let Some(channel) = channel {
+                if let Some(event) = acp_session_update_stream_event(&message) {
+                    emit_stream(channel, &event)?;
+                }
             }
         }
         "session/request_permission" => {
@@ -277,7 +333,9 @@ pub(crate) fn handle_acp_backend_message(
             }
         }
         _ => {
-            if let Some(id) = message.get("id").and_then(Value::as_u64) {
+            // Reply method-not-found to any unknown agent request — numeric or
+            // string id — so the CLI backend never hangs waiting on KKTerm.
+            if let Some(id) = acp_jsonrpc_id(&message) {
                 session.write_json(json!({
                     "jsonrpc": "2.0",
                     "id": id,
@@ -402,6 +460,83 @@ pub(crate) fn acp_agent_message_delta_text(message: &Value) -> Option<String> {
         return None;
     }
     acp_content_text(update.get("content")?)
+}
+
+/// Maps non-content ACP `session/update` notifications onto the stream-event
+/// vocabulary the Assistant work panel already renders: thought chunks become
+/// reasoning deltas, tool-call lifecycle updates become tool chips, and agent
+/// plans become the work-plan step list.
+pub(crate) fn acp_session_update_stream_event(message: &Value) -> Option<AiStreamEvent> {
+    let update = message.pointer("/params/update")?;
+    let kind = update.get("sessionUpdate").and_then(Value::as_str)?;
+    match kind {
+        "agent_thought_chunk" => acp_content_text(update.get("content")?)
+            .map(|delta| AiStreamEvent::ReasoningDelta { delta }),
+        "tool_call" | "tool_call_update" => {
+            let tool_id = update
+                .get("toolCallId")
+                .and_then(Value::as_str)?
+                .to_string();
+            let tool_name = update
+                .get("title")
+                .and_then(Value::as_str)
+                .unwrap_or("")
+                .trim()
+                .to_string();
+            let status = update
+                .get("status")
+                .and_then(Value::as_str)
+                // A fresh `tool_call` without a status starts pending per ACP;
+                // a status-less `tool_call_update` changes nothing chip-worthy.
+                .unwrap_or(if kind == "tool_call" { "pending" } else { "" });
+            match status {
+                "completed" => Some(AiStreamEvent::ToolCallEnd {
+                    tool_id,
+                    tool_name,
+                    error: None,
+                }),
+                "failed" => Some(AiStreamEvent::ToolCallEnd {
+                    tool_id,
+                    tool_name,
+                    error: Some("failed".to_string()),
+                }),
+                "pending" | "in_progress" if !tool_name.is_empty() => {
+                    Some(AiStreamEvent::ToolCallStart { tool_id, tool_name })
+                }
+                _ => None,
+            }
+        }
+        "plan" => {
+            let entries = update.get("entries").and_then(Value::as_array)?;
+            let steps = entries
+                .iter()
+                .enumerate()
+                .filter_map(|(index, entry)| {
+                    let label = entry.get("content").and_then(Value::as_str)?.trim();
+                    if label.is_empty() {
+                        return None;
+                    }
+                    let status = match entry.get("status").and_then(Value::as_str) {
+                        Some("in_progress") => "running",
+                        Some("completed") => "completed",
+                        _ => "pending",
+                    };
+                    Some(AssistantPlanStep {
+                        id: format!("acp-plan-{index}"),
+                        label: label.to_string(),
+                        status: status.to_string(),
+                        detail: None,
+                    })
+                })
+                .collect::<Vec<_>>();
+            if steps.is_empty() {
+                None
+            } else {
+                Some(AiStreamEvent::PlanUpdate { goal: None, steps })
+            }
+        }
+        _ => None,
+    }
 }
 
 pub(crate) fn acp_content_text(content: &Value) -> Option<String> {
@@ -656,7 +791,7 @@ pub(crate) fn cli_backend_status(
             }),
             AiCliBackendKind::ClaudeCode => {
                 run_cli_capture(&command, &["auth", "status"], Some(Duration::from_secs(20)))
-                    .map(|_| true)
+                    .map(|output| claude_auth_status_logged_in(&output))
                     .unwrap_or_else(|message| {
                         error = Some(message);
                         false
@@ -673,6 +808,20 @@ pub(crate) fn cli_backend_status(
         authenticated,
         version,
         error,
+    }
+}
+
+/// `claude auth status` can exit 0 while logged out, reporting
+/// `"loggedIn": false` in its default JSON output — exit code alone is not an
+/// authentication signal. Non-JSON output falls back to exit-code success so a
+/// future CLI format change degrades to the old behavior instead of breaking.
+pub(crate) fn claude_auth_status_logged_in(output: &str) -> bool {
+    match serde_json::from_str::<Value>(output.trim()) {
+        Ok(value) => value
+            .get("loggedIn")
+            .and_then(Value::as_bool)
+            .unwrap_or(true),
+        Err(_) => true,
     }
 }
 
@@ -910,8 +1059,13 @@ pub(crate) fn run_cli_capture_with_stdin_and_cancel(
     }
 }
 
-pub(crate) fn should_fallback_from_acp_error(error: &str) -> bool {
-    error != ASSISTANT_STREAM_CANCELED_ERROR
+/// One-shot CLI fallback is only for ACP setup failures (adapter missing,
+/// initialize/session-new errors). Never fall back after `session/prompt`
+/// started — the agent may already have streamed text or executed kkterm MCP
+/// tools, and re-running the turn would duplicate both — and never fall back
+/// on user cancellation.
+pub(crate) fn should_fallback_from_acp_error(failure: &AcpRunFailure) -> bool {
+    !failure.prompt_started && failure.error != ASSISTANT_STREAM_CANCELED_ERROR
 }
 
 pub(crate) fn cli_process_invocation(command: &str, args: &[&str]) -> (String, Vec<String>) {

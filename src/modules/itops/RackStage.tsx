@@ -64,7 +64,7 @@ export function RackStage({
   hostFor?: (item: RackItem) => string | null;
   isGhost?: (item: RackItem) => boolean;
   onSlotClick?: (startU: number) => void;
-  onOpenItem?: (item: RackItem) => void;
+  onOpenItem?: (item: RackItem, anchor: HTMLElement) => void;
   onEditItem?: (item: RackItem) => void;
   onBindItem?: (item: RackItem) => void;
   onEditRack?: (rack: Rack) => void;

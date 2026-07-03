@@ -19,9 +19,9 @@ use super::runner::{self, DEFAULT_CONCURRENCY, DEFAULT_TIMEOUT_SECONDS, SshTrans
 use super::site_storage as topo;
 use super::storage as ito;
 use super::types::{
-    BatchTask, Rack, RackItem, RackItemKind, RackItemMetadata, RackNetworkPort, ResolvedHost,
-    RoomIcon, RunEvent, RunEventHost, RunHistoryEntry, RunScope, ServerRoom, Site, SiteFilter,
-    Transport,
+    BatchTask, Rack, RackFacingEntry, RackItem, RackItemKind, RackItemMetadata, RackNetworkPort,
+    RackPlacementEntry, ResolvedHost, RoomIcon, RoomObject, RunEvent, RunEventHost,
+    RunHistoryEntry, RunScope, ServerRoom, Site, SiteFilter, Transport,
 };
 
 fn storage(app: &AppHandle) -> State<'_, crate::storage::Storage> {
@@ -349,6 +349,7 @@ pub fn itops_delete_server_room(app: AppHandle, id: String) -> Result<(), String
 }
 
 #[tauri::command]
+#[allow(clippy::too_many_arguments)]
 pub fn itops_create_rack(
     app: AppHandle,
     site_id: String,
@@ -358,6 +359,7 @@ pub fn itops_create_rack(
     shell: Option<String>,
     height_u: u32,
     depth_mm: u32,
+    power_capacity_w: Option<u32>,
 ) -> Result<Rack, String> {
     let id = new_itops_id("rack");
     storage(&app).with_connection_infallible(|conn| {
@@ -371,12 +373,14 @@ pub fn itops_create_rack(
             shell.as_deref(),
             height_u,
             depth_mm,
+            power_capacity_w,
         )
         .map_err(|error| error.to_string())
     })
 }
 
 #[tauri::command]
+#[allow(clippy::too_many_arguments)]
 pub fn itops_update_rack(
     app: AppHandle,
     id: String,
@@ -386,6 +390,7 @@ pub fn itops_update_rack(
     shell: Option<String>,
     height_u: u32,
     depth_mm: u32,
+    power_capacity_w: Option<u32>,
 ) -> Result<Rack, String> {
     storage(&app).with_connection_infallible(|conn| {
         topo::update_rack(
@@ -397,8 +402,62 @@ pub fn itops_update_rack(
             shell.as_deref(),
             height_u,
             depth_mm,
+            power_capacity_w,
         )
         .map_err(|error| error.to_string())
+    })
+}
+
+/// Persist Server Room View placements (floor-plan px or 2.5D grid cells) for
+/// a batch of racks in one write — a tile swap moves two cabinets at once.
+#[tauri::command]
+pub fn itops_set_rack_placements(
+    app: AppHandle,
+    kind: String,
+    entries: Vec<RackPlacementEntry>,
+) -> Result<(), String> {
+    let kind = topo::RackPlacementKind::from_str(&kind).map_err(|error| error.to_string())?;
+    storage(&app).with_connection_infallible(|conn| {
+        topo::set_rack_placements(conn, kind, &entries).map_err(|error| error.to_string())
+    })
+}
+
+/// Persist quarter-turn facings for a batch of racks (Server Room View rotate
+/// controls).
+#[tauri::command]
+pub fn itops_set_rack_facings(
+    app: AppHandle,
+    entries: Vec<RackFacingEntry>,
+) -> Result<(), String> {
+    storage(&app).with_connection_infallible(|conn| {
+        topo::set_rack_facings(conn, &entries).map_err(|error| error.to_string())
+    })
+}
+
+/// All Room Objects of one Server Room (docs/SITE.md Room Object).
+#[tauri::command]
+pub fn itops_list_room_objects(
+    app: AppHandle,
+    site_id: String,
+    server_room: String,
+) -> Result<Vec<RoomObject>, String> {
+    storage(&app).with_connection_infallible(|conn| {
+        topo::list_room_objects(conn, &site_id, &server_room).map_err(|error| error.to_string())
+    })
+}
+
+/// Replace one Server Room's Room Objects (the spatial views edit the set as
+/// a whole: place, drag, rotate, re-level, delete).
+#[tauri::command]
+pub fn itops_set_room_objects(
+    app: AppHandle,
+    site_id: String,
+    server_room: String,
+    objects: Vec<RoomObject>,
+) -> Result<(), String> {
+    storage(&app).with_connection_infallible(|conn| {
+        topo::set_room_objects(conn, &site_id, &server_room, &objects)
+            .map_err(|error| error.to_string())
     })
 }
 
