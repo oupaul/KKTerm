@@ -35,3 +35,16 @@ test("Install Helper primary disabled buttons keep readable token colors", async
   assert.match(body, /border-color:\s*var\(--border\);/);
   assert.match(body, /color:\s*var\(--text-muted\);/);
 });
+
+test("Install Helper primary hover keeps the accent background", async () => {
+  const css = await readFile(
+    new URL("../src/modules/installer/installer.css", import.meta.url),
+    "utf8",
+  );
+  const match = css.match(/\.installer-button\.primary:hover:not\(:disabled\)\s*\{(?<body>[^}]*)\}/);
+  assert.ok(match?.groups?.body, "primary installer buttons need an explicit hover style");
+
+  const body = match.groups.body;
+  assert.match(body, /background:\s*var\(--accent-press\);/);
+  assert.match(body, /border-color:\s*var\(--accent-press\);/);
+});

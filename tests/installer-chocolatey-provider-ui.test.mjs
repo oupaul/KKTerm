@@ -10,6 +10,14 @@ const dagSource = await readFile(
   new URL("../src/modules/installer/dag.ts", import.meta.url),
   "utf8",
 );
+const installSource = await readFile(
+  new URL("../src-tauri/src/installer/install.rs", import.meta.url),
+  "utf8",
+);
+const latestVersionSource = await readFile(
+  new URL("../src-tauri/src/installer/latest_version.rs", import.meta.url),
+  "utf8",
+);
 
 test("Chocolatey provider selection opens Chocolatey install dialog when missing", () => {
   assert.match(
@@ -79,5 +87,36 @@ test("Chocolatey-backed plans depend on Chocolatey instead of the recipe's winge
     dagSource,
     /id !== targetRecipeId && detected\[id\]\?\.installed[\s\S]*order\.push\(recipe\)/,
     "Already-installed prerequisites should satisfy their own dependency chain.",
+  );
+});
+
+test("Chocolatey-installed alternate providers update through choco", () => {
+  assert.match(
+    installSource,
+    /if let Some\(provider @ Provider::Chocolatey \{ id \}\) = recipe\.chocolatey_provider\.as_ref\(\) \{[\s\S]*detect_chocolatey_package\(id\)\.installed[\s\S]*return provider;/,
+    "Rust provider selection should fall back to Chocolatey when that package is installed.",
+  );
+  assert.match(
+    installSource,
+    /let verb = if already_installed \{[\s\S]*"upgrade"[\s\S]*\} else \{[\s\S]*"install"[\s\S]*\};/,
+    "Chocolatey-backed updates should use choco upgrade instead of winget upgrade.",
+  );
+});
+
+test("GitHub-release fallback installs keep using the managed provider", () => {
+  assert.match(
+    installSource,
+    /Provider::GithubRelease \{ \.\. \}\) = recipe\.download_provider\.as_ref\(\) \{[\s\S]*github_release_marker_path\(&recipe\.id\)\.exists\(\)[\s\S]*return provider;/,
+    "Rust install selection should keep using a GitHub-release download provider once KKTerm has written its marker.",
+  );
+  assert.match(
+    installSource,
+    /fn default_winget_scope_for_recipe\([\s\S]*detect_one\(recipe\)\.install_scope/,
+    "WinGet updates should inherit the detected install scope instead of always defaulting to user scope.",
+  );
+  assert.match(
+    latestVersionSource,
+    /Provider::GithubRelease \{ \.\. \}\) = recipe\.download_provider\.as_ref\(\) \{[\s\S]*github_release_marker_path\(&recipe\.id\)\.exists\(\)[\s\S]*return provider;/,
+    "Latest-version checks should use the GitHub-release provider for managed fallback installs.",
   );
 });

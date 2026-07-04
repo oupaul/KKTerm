@@ -26,7 +26,8 @@ use serde_json::json;
 const HEARTBEAT_INTERVAL_SECS: u64 = 10;
 
 use super::detect::{
-    GithubReleaseMarker, detect_chocolatey_package, github_release_install_dir,
+    GithubReleaseMarker, InstallScope, detect_chocolatey_package, detect_one,
+    github_release_install_dir,
     github_release_marker_path,
 };
 use super::events::ProgressEvent;
@@ -173,6 +174,11 @@ fn selected_install_provider<'a>(recipe: &'a Recipe, options: &InstallOptions) -
     }
     if let Some(provider @ Provider::Chocolatey { id }) = recipe.chocolatey_provider.as_ref() {
         if detect_chocolatey_package(id).installed {
+            return provider;
+        }
+    }
+    if let Some(provider @ Provider::GithubRelease { .. }) = recipe.download_provider.as_ref() {
+        if github_release_marker_path(&recipe.id).exists() {
             return provider;
         }
     }
@@ -903,13 +909,27 @@ fn effective_install_options(recipe: &Recipe, options: &InstallOptions) -> Insta
     if matches!(recipe.provider, Provider::Winget { .. }) {
         if recipe.options.contains(&RecipeOption::Scope) {
             if next.scope.as_deref().unwrap_or_default().trim().is_empty() {
-                next.scope = Some("user".into());
+                next.scope = default_winget_scope_for_recipe(recipe);
             }
         } else {
             next.scope = None;
         }
     }
     next
+}
+
+fn default_winget_scope_for_recipe(recipe: &Recipe) -> Option<String> {
+    Some(winget_scope_option_for_detected_scope(
+        detect_one(recipe).install_scope,
+    ))
+}
+
+fn winget_scope_option_for_detected_scope(scope: Option<InstallScope>) -> String {
+    match scope {
+        Some(InstallScope::User) => "user".into(),
+        Some(InstallScope::Machine) => "machine".into(),
+        None => "user".into(),
+    }
 }
 
 // ---- winget ------------------------------------------------------------

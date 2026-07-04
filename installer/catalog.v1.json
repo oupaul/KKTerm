@@ -87,7 +87,6 @@
       },
       "options": [
         "provider",
-        "scope",
         "version"
       ],
       "descriptionLocales": {
@@ -311,7 +310,6 @@
       },
       "options": [
         "provider",
-        "scope",
         "version"
       ],
       "descriptionLocales": {
@@ -359,7 +357,6 @@
       },
       "options": [
         "provider",
-        "scope",
         "version"
       ],
       "descriptionLocales": {
@@ -586,7 +583,6 @@
       },
       "options": [
         "provider",
-        "scope",
         "version"
       ],
       "descriptionLocales": {
@@ -631,7 +627,6 @@
         "id": "nssm"
       },
       "options": [
-        "scope",
         "version",
         "provider"
       ],
@@ -726,7 +721,6 @@
         "id": "oh-my-posh"
       },
       "options": [
-        "scope",
         "version",
         "provider"
       ],
@@ -1045,7 +1039,6 @@
       },
       "options": [
         "provider",
-        "scope",
         "version"
       ],
       "descriptionLocales": {
@@ -1134,7 +1127,6 @@
       },
       "options": [
         "provider",
-        "scope",
         "version"
       ],
       "descriptionLocales": {
@@ -1176,7 +1168,6 @@
         "id": "ripgrep"
       },
       "options": [
-        "scope",
         "version",
         "provider"
       ],
@@ -1219,7 +1210,6 @@
         "id": "jq"
       },
       "options": [
-        "scope",
         "version",
         "provider"
       ],
@@ -1262,7 +1252,6 @@
         "id": "fzf"
       },
       "options": [
-        "scope",
         "version",
         "provider"
       ],
@@ -1361,7 +1350,6 @@
         "id": "opencode"
       },
       "options": [
-        "scope",
         "version",
         "provider"
       ],
@@ -1418,7 +1406,6 @@
       },
       "options": [
         "provider",
-        "scope",
         "version"
       ],
       "descriptionLocales": {
@@ -1473,7 +1460,6 @@
       },
       "options": [
         "provider",
-        "scope",
         "version",
         "location",
         "addToPath"
@@ -1734,7 +1720,6 @@
       },
       "options": [
         "provider",
-        "scope",
         "version"
       ],
       "descriptionLocales": {
@@ -1777,7 +1762,6 @@
         "id": "sysinternals"
       },
       "options": [
-        "scope",
         "version",
         "provider"
       ],
@@ -1830,7 +1814,6 @@
       },
       "options": [
         "provider",
-        "scope",
         "version"
       ],
       "descriptionLocales": {
@@ -1870,7 +1853,6 @@
         "id": "marlocarlo.psmux"
       },
       "options": [
-        "scope",
         "version"
       ],
       "descriptionLocales": {
@@ -1919,7 +1901,6 @@
       },
       "options": [
         "provider",
-        "scope",
         "version"
       ],
       "descriptionLocales": {
@@ -1968,7 +1949,6 @@
       },
       "options": [
         "provider",
-        "scope",
         "version"
       ],
       "descriptionLocales": {
@@ -2053,7 +2033,6 @@
       },
       "options": [
         "provider",
-        "scope",
         "version"
       ],
       "descriptionLocales": {
@@ -2191,7 +2170,6 @@
       },
       "options": [
         "provider",
-        "scope",
         "version",
         "location",
         "addToPath"
@@ -2390,7 +2368,6 @@
       },
       "options": [
         "provider",
-        "scope",
         "version"
       ],
       "descriptionLocales": {
@@ -2479,7 +2456,6 @@
       },
       "options": [
         "provider",
-        "scope",
         "version"
       ],
       "descriptionLocales": {
@@ -2524,7 +2500,6 @@
       },
       "options": [
         "provider",
-        "scope",
         "version"
       ],
       "descriptionLocales": {

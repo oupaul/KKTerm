@@ -116,6 +116,11 @@
   color: white;
 }
 
+.installer-button.primary:hover:not(:disabled) {
+  background: var(--accent-press);
+  border-color: var(--accent-press);
+}
+
 .installer-button.primary:disabled {
   --button-shadow-color: var(--border-strong);
   background: var(--surface-muted);
