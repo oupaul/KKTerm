@@ -26,6 +26,10 @@ test("macOS reports rejected URL certificates without bypassing validation", () 
 });
 
 test("macOS installs certificate handling on Wry's live navigation delegate class", () => {
+  assert.match(
+    backend,
+    /let webview: \*mut AnyObject = platform_webview\.inner\(\)\.cast\(\)/,
+  );
   assert.match(backend, /msg_send!\[webview, navigationDelegate\]/);
   assert.match(backend, /object_getClass\(navigation_delegate\.cast\(\)\)/);
   assert.doesNotMatch(backend, /AnyClass::get\(c"WryNavigationDelegate"\)/);

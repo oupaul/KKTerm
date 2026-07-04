@@ -1709,7 +1709,7 @@ fn configure_wkwebview_certificate_error_handling(
     let session_id = session_id.to_string();
     webview
         .with_webview(move |platform_webview| {
-            let webview = platform_webview.inner();
+            let webview: *mut AnyObject = platform_webview.inner().cast();
             if webview.is_null() {
                 webview_debug_log(
                     "cannot configure URL certificate handling: WKWebView handle is unavailable"
