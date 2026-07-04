@@ -38,7 +38,7 @@ The URL Pane chrome follows the File Explorer (SFTP) Apple-esque design language
 - Back: `webview.goBack` (`webview.back`)
 - Forward: `webview.goForward` (`webview.forward`)
 - Reload: `webview.reload`
-- Address bar: `webview.address`, placeholder `webview.urlPlaceholder`. The bar accepts hosts without a scheme; the backend assumes `https://` when no scheme is present. A leading lock/globe glyph reflects whether the current address is `https://` (secure) or not.
+- Address bar: `webview.address`, placeholder `webview.urlPlaceholder`. The bar accepts hosts without a scheme; the backend assumes `https://` when no scheme is present. A leading glyph reflects the current transport state: HTTPS uses a lock, plain HTTP uses a red unlocked glyph and address text, and non-http(s) drafts use the neutral globe.
 - The address bar disables OS autocorrect, autocapitalization, and spellcheck in the KKTerm WebView on Windows and macOS so URLs and hostnames are not rewritten while typing. Keyboard/IME suggestions outside the WebView may still appear.
 - Auto-refresh: `webview.autoRefresh` / `webview.autoRefreshOff`. Interval label `webview.autoRefreshSeconds`.
 - Open externally: toolbar button `webview.openExternally` (opens the current URL in the OS default browser).
