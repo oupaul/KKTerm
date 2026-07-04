@@ -16,7 +16,7 @@ Each URL Connection can use `connections.inheritSettingsDefaults` (follow the gl
 
 When Settings -> URL enables `settings.ignoreCertificateErrors`, newly opened URL Sessions accept invalid HTTPS server certificates, including self-signed certificates. Windows handles this through WebView2's certificate error callback; macOS marks the WKWebView and answers its server-trust authentication challenge with a trust credential. WKWebView does not expose Safari's manual "continue to this website" certificate-warning page to embedded apps, so this delegate challenge path is the macOS equivalent. Keep this scoped to URL Sessions that opt into the setting; do not make the main app WebView trust invalid certificates globally.
 
-On macOS, when certificate validation remains enabled and WKWebView rejects an invalid HTTPS certificate, the URL Session emits a `webview.invalidCertificateWarning` warning through the Status Bar popup. The backend observes both the server-trust challenge and WKWebView's provisional/final navigation-failure callbacks so the warning still appears when WebKit leaves the URL Pane blank. The warning directs the user to Settings -> URL if they choose to disable certificate validation for newly opened URL Sessions.
+On macOS, when certificate validation remains enabled and WKWebView rejects an invalid HTTPS certificate, the URL Session emits a `webview.invalidCertificateWarning` warning through the Status Bar popup, including for the first URL Session opened in an app run. The backend installs the server-trust and provisional/final navigation-failure callbacks on Wry's navigation delegate, then detaches and reattaches that retained delegate so WebKit recognizes the runtime-added callbacks on the first WKWebView. The warning still appears when WebKit leaves the URL Pane blank and directs the user to Settings -> URL if they choose to disable certificate validation for newly opened URL Sessions.
 
 ## Surface
 
@@ -93,9 +93,14 @@ overwrite username pages. All other field values are stored alongside the URL
 Connection in SQLite and are never secrets.
 Manage saved entries from either Settings → URL or Settings → Credentials
 ([15-settings.md](15-settings.md)). Both surfaces show the same single-row record
-controls. Edit opens a compact dialog for the username, optional replacement
-password, and captured non-secret input values; Delete removes both the page
-metadata and its secret-store password.
+controls. Edit opens a compact dialog where each captured field is labelled by
+its exact selector and matching-element occurrence. The primary password is
+masked and can be revealed with its eye control. Other captured values are
+visible by default; their lock control persists a masked presentation for the
+next editor opening, and a masked value has a separate eye control for temporary
+reveal. This mask flag is presentation metadata only: non-password values remain
+in SQLite and are not moved into the credential backend. Delete removes both the
+page metadata and its secret-store password.
 
 ## Downloads
 

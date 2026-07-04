@@ -1823,6 +1823,13 @@ fn configure_wkwebview_certificate_error_handling(
                     },
                     ASSOCIATION_ASSIGN,
                 );
+                // WebKit snapshots optional navigation-delegate capabilities when
+                // the delegate is attached. The first URL WebView is created before
+                // KKTerm adds these runtime methods, so reattach Wry's retained
+                // delegate once to make the callbacks visible immediately. Later
+                // URL WebViews already see the methods when Wry attaches it.
+                let _: () = msg_send![webview, setNavigationDelegate: std::ptr::null_mut::<AnyObject>()];
+                let _: () = msg_send![webview, setNavigationDelegate: navigation_delegate];
             }
         })
         .map_err(|error| format!("failed to access WKWebView for certificate settings: {error}"))?;

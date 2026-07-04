@@ -1957,6 +1957,10 @@ type CommandMap = {
     args: { request: SecretReferenceRequest };
     result: null;
   };
+  read_url_credential_password: {
+    args: { ownerId: string };
+    result: string | null;
+  };
   list_stored_credentials: {
     args: undefined;
     result: StoredCredentialSummary[];

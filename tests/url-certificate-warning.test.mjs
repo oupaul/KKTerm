@@ -52,6 +52,13 @@ test("macOS reports certificate failures from WKWebView navigation errors", () =
   );
 });
 
+test("macOS refreshes the first WKWebView delegate after adding certificate callbacks", () => {
+  assert.match(
+    backend,
+    /objc_setAssociatedObject\([\s\S]*BYPASS_ASSOCIATED_KEY[\s\S]*setNavigationDelegate: std::ptr::null_mut[\s\S]*setNavigationDelegate: navigation_delegate/,
+  );
+});
+
 test("URL workspace turns certificate errors into a warning notice", () => {
   assert.match(
     workspace,

@@ -1,11 +1,10 @@
-import { Pencil, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { Eye, EyeOff, Lock, LockOpen, Pencil, Trash2 } from "lucide-react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Actions,
   Btn,
   DialogShell,
-  Field,
   Sheet,
   TextInput,
 } from "../../app/ui/dialog";
@@ -20,6 +19,7 @@ type SavedInputField =
       index: number;
       kind: "value";
       value: string;
+      masked: boolean;
     }
   | {
       selector: string;
@@ -31,6 +31,7 @@ type SavedInputField =
 interface UrlCredentialEditDraft {
   username: string;
   password: string;
+  passwordDirty: boolean;
   fields: SavedInputField[];
 }
 
@@ -56,7 +57,13 @@ function parseSavedInputFields(value?: string): SavedInputField[] {
         return [{ selector: candidate.selector, index, kind: "checked", checked: Boolean(candidate.checked) }];
       }
       if (candidate.kind === "value") {
-        return [{ selector: candidate.selector, index, kind: "value", value: String(candidate.value ?? "") }];
+        return [{
+          selector: candidate.selector,
+          index,
+          kind: "value",
+          value: String(candidate.value ?? ""),
+          masked: Boolean(candidate.masked),
+        }];
       }
       return [];
     });
@@ -69,27 +76,29 @@ function draftFromCredential(credential: UrlCredentialSummary): UrlCredentialEdi
   return {
     username: credential.username,
     password: "",
+    passwordDirty: false,
     fields: parseSavedInputFields(credential.fieldValues),
   };
 }
 
-function serializeSavedInputFields(
+function serializeSavedInputFields(draft: UrlCredentialEditDraft) {
+  return draft.fields.length > 0 ? JSON.stringify(draft.fields) : undefined;
+}
+
+function savedInputKey(field: SavedInputField, fieldIndex: number) {
+  return `${field.selector}:${field.index}:${fieldIndex}`;
+}
+
+function editedUsername(
   credential: UrlCredentialSummary,
   draft: UrlCredentialEditDraft,
 ) {
-  const fields = draft.fields.map((field) =>
-    field.kind === "value" && field.selector === credential.usernameSelector
-      ? { ...field, value: draft.username }
-      : field,
+  const usernameField = draft.fields.find(
+    (field) => field.kind === "value" && field.selector === credential.usernameSelector,
   );
-  return fields.length > 0 ? JSON.stringify(fields) : undefined;
-}
-
-function savedInputLabel(selector: string) {
-  const attribute = selector.match(
-    /\[(?:aria-label|placeholder|name|id)=(?:"([^"]+)"|'([^']+)'|([^\]]+))\]/i,
-  );
-  return attribute?.[1] ?? attribute?.[2] ?? attribute?.[3] ?? selector;
+  return usernameField?.kind === "value" && usernameField.value.trim()
+    ? usernameField.value.trim()
+    : draft.username.trim();
 }
 
 export function UrlCredentialManager({
@@ -105,10 +114,30 @@ export function UrlCredentialManager({
   const [editDraft, setEditDraft] = useState<UrlCredentialEditDraft | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<UrlCredentialSummary | null>(null);
   const [saving, setSaving] = useState(false);
+  const [passwordVisible, setPasswordVisible] = useState(false);
+  const [revealedFields, setRevealedFields] = useState<Set<string>>(() => new Set());
+  const editOwnerRef = useRef<string | null>(null);
 
   function beginEdit(credential: UrlCredentialSummary) {
     setEditTarget(credential);
     setEditDraft(draftFromCredential(credential));
+    setPasswordVisible(false);
+    setRevealedFields(new Set());
+    editOwnerRef.current = credential.secretOwnerId;
+    if (credential.passwordSelector) {
+      void invokeCommand("read_url_credential_password", {
+        ownerId: credential.secretOwnerId,
+      }).then((password) => {
+        if (editOwnerRef.current !== credential.secretOwnerId || !password) {
+          return;
+        }
+        setEditDraft((current) => current ? { ...current, password } : current);
+      }).catch((error) => {
+        if (editOwnerRef.current === credential.secretOwnerId) {
+          showStatusBarNotice(error instanceof Error ? error.message : String(error), { tone: "error" });
+        }
+      });
+    }
   }
 
   function closeEditor() {
@@ -117,15 +146,20 @@ export function UrlCredentialManager({
     }
     setEditTarget(null);
     setEditDraft(null);
+    editOwnerRef.current = null;
   }
 
   async function saveEdit() {
-    if (!editTarget || !editDraft || !editDraft.username.trim()) {
+    if (!editTarget || !editDraft) {
+      return;
+    }
+    const username = editedUsername(editTarget, editDraft);
+    if (!username) {
       return;
     }
     setSaving(true);
     try {
-      if (editDraft.password) {
+      if (editDraft.passwordDirty && editDraft.password) {
         await invokeCommand("store_secret", {
           request: {
             kind: "urlPassword",
@@ -137,15 +171,16 @@ export function UrlCredentialManager({
       await invokeCommand("upsert_url_credential", {
         request: {
           connectionId: editTarget.connectionId,
-          username: editDraft.username.trim(),
+          username,
           pageUrl: editTarget.pageUrl,
           usernameSelector: editTarget.usernameSelector,
           passwordSelector: editTarget.passwordSelector,
-          fieldValues: serializeSavedInputFields(editTarget, editDraft),
+          fieldValues: serializeSavedInputFields(editDraft),
         },
       });
       setEditTarget(null);
       setEditDraft(null);
+      editOwnerRef.current = null;
       window.dispatchEvent(new CustomEvent("kkterm:connection-tree-invalidated"));
       await onChanged();
       showStatusBarNotice(t("settings.urlPasswordUpdated"), { tone: "success" });
@@ -220,7 +255,7 @@ export function UrlCredentialManager({
               <Actions
                 primary={
                   <Btn
-                    disabled={saving || !editDraft.username.trim()}
+                    disabled={saving || !editedUsername(editTarget, editDraft)}
                     icon="check"
                     kind="primary"
                     onClick={() => void saveEdit()}
@@ -242,44 +277,19 @@ export function UrlCredentialManager({
                 {editTarget.pageUrl ?? editTarget.url ?? t("settings.notSet")}
               </span>
             </div>
-            <div className="settings-url-credential-editor-grid">
-              <Field label={t("settings.urlCredentialUsername")} req>
-                <TextInput
-                  autoFocus
-                  autoComplete="username"
-                  disabled={saving}
-                  value={editDraft.username}
-                  onChange={(event) =>
-                    setEditDraft((current) => current ? { ...current, username: event.currentTarget.value } : current)
-                  }
-                />
-              </Field>
-              <Field
-                hint={t("settings.urlCredentialPasswordPlaceholder")}
-                label={t("settings.urlCredentialPassword")}
-              >
-                <TextInput
-                  autoComplete="new-password"
-                  disabled={saving}
-                  type="password"
-                  value={editDraft.password}
-                  onChange={(event) =>
-                    setEditDraft((current) => current ? { ...current, password: event.currentTarget.value } : current)
-                  }
-                />
-              </Field>
-            </div>
-            {editDraft.fields.some((field) => field.selector !== editTarget.usernameSelector) ? (
+            {editDraft.fields.length > 0 || editTarget.passwordSelector ? (
               <div className="settings-url-saved-fields">
                 {editDraft.fields
                   .map((field, fieldIndex) => ({ field, fieldIndex }))
-                  .filter(({ field }) => field.selector !== editTarget.usernameSelector)
                   .map(({ field, fieldIndex }) => (
-                    <label
+                    <div
                       className="settings-url-saved-field"
-                      key={`${field.selector}:${field.index}:${fieldIndex}`}
+                      key={savedInputKey(field, fieldIndex)}
                     >
-                      <span title={field.selector}>{savedInputLabel(field.selector)}</span>
+                      <code title={field.selector}>
+                        {field.selector}
+                        <span>#{field.index + 1}</span>
+                      </code>
                       {field.kind === "checked" ? (
                         <input
                           aria-label={field.selector}
@@ -299,25 +309,127 @@ export function UrlCredentialManager({
                           }}
                         />
                       ) : (
-                        <TextInput
-                          aria-label={field.selector}
-                          disabled={saving}
-                          value={field.value}
-                          onChange={(event) => {
-                            const value = event.currentTarget.value;
-                            setEditDraft((current) => current ? {
-                              ...current,
-                              fields: current.fields.map((candidate, index) =>
-                                index === fieldIndex && candidate.kind === "value"
-                                  ? { ...candidate, value }
-                                  : candidate,
-                              ),
-                            } : current);
-                          }}
-                        />
+                        <div className="settings-url-saved-field-control">
+                          <TextInput
+                            aria-label={field.selector}
+                            autoFocus={fieldIndex === 0}
+                            disabled={saving}
+                            type={
+                              !field.masked || revealedFields.has(savedInputKey(field, fieldIndex))
+                                ? "text"
+                                : "password"
+                            }
+                            value={field.value}
+                            onChange={(event) => {
+                              const value = event.currentTarget.value;
+                              setEditDraft((current) => current ? {
+                                ...current,
+                                fields: current.fields.map((candidate, index) =>
+                                  index === fieldIndex && candidate.kind === "value"
+                                    ? { ...candidate, value }
+                                    : candidate,
+                                ),
+                              } : current);
+                            }}
+                          />
+                          {field.masked ? (
+                            <button
+                              aria-label={t(
+                                revealedFields.has(savedInputKey(field, fieldIndex))
+                                  ? "settings.urlCredentialHideValue"
+                                  : "settings.urlCredentialShowValue",
+                              )}
+                              className="settings-url-field-icon-button"
+                              disabled={saving}
+                              type="button"
+                              onClick={() => {
+                                const key = savedInputKey(field, fieldIndex);
+                                setRevealedFields((current) => {
+                                  const next = new Set(current);
+                                  if (next.has(key)) {
+                                    next.delete(key);
+                                  } else {
+                                    next.add(key);
+                                  }
+                                  return next;
+                                });
+                              }}
+                            >
+                              {revealedFields.has(savedInputKey(field, fieldIndex))
+                                ? <EyeOff size={15} />
+                                : <Eye size={15} />}
+                            </button>
+                          ) : null}
+                          <button
+                            aria-label={t(
+                              field.masked
+                                ? "settings.urlCredentialUnmaskValue"
+                                : "settings.urlCredentialMaskValue",
+                            )}
+                            className="settings-url-field-icon-button"
+                            disabled={saving}
+                            type="button"
+                            onClick={() => {
+                              const masked = !field.masked;
+                              const key = savedInputKey(field, fieldIndex);
+                              setEditDraft((current) => current ? {
+                                ...current,
+                                fields: current.fields.map((candidate, index) =>
+                                  index === fieldIndex && candidate.kind === "value"
+                                    ? { ...candidate, masked }
+                                    : candidate,
+                                ),
+                              } : current);
+                              setRevealedFields((current) => {
+                                const next = new Set(current);
+                                next.delete(key);
+                                return next;
+                              });
+                            }}
+                          >
+                            {field.masked ? <LockOpen size={15} /> : <Lock size={15} />}
+                          </button>
+                        </div>
                       )}
-                    </label>
+                    </div>
                   ))}
+                {editTarget.passwordSelector ? (
+                  <div className="settings-url-saved-field">
+                    <code title={editTarget.passwordSelector}>{editTarget.passwordSelector}</code>
+                    <div className="settings-url-saved-field-control">
+                      <TextInput
+                        aria-label={editTarget.passwordSelector}
+                        autoComplete="new-password"
+                        disabled={saving}
+                        placeholder={t("settings.urlCredentialPasswordPlaceholder")}
+                        type={passwordVisible ? "text" : "password"}
+                        value={editDraft.password}
+                        onChange={(event) =>
+                          setEditDraft((current) => current
+                            ? {
+                                ...current,
+                                password: event.currentTarget.value,
+                                passwordDirty: true,
+                              }
+                            : current)
+                        }
+                      />
+                      <button
+                        aria-label={t(
+                          passwordVisible
+                            ? "settings.urlCredentialHideValue"
+                            : "settings.urlCredentialShowValue",
+                        )}
+                        className="settings-url-field-icon-button"
+                        disabled={saving}
+                        type="button"
+                        onClick={() => setPasswordVisible((visible) => !visible)}
+                      >
+                        {passwordVisible ? <EyeOff size={15} /> : <Eye size={15} />}
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
               </div>
             ) : null}
           </Sheet>

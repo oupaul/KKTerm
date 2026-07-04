@@ -1850,6 +1850,18 @@ fn delete_secret(
 }
 
 #[tauri::command]
+fn read_url_credential_password(
+    secrets: tauri::State<'_, secrets::Secrets>,
+    owner_id: String,
+) -> Result<Option<String>, String> {
+    let owner_id = owner_id.trim().to_string();
+    if owner_id.is_empty() {
+        return Err("URL credential owner id is required".to_string());
+    }
+    secrets.read_url_password(owner_id)
+}
+
+#[tauri::command]
 fn list_stored_credentials(
     storage: tauri::State<'_, storage::Storage>,
     secrets: tauri::State<'_, secrets::Secrets>,
@@ -3799,6 +3811,7 @@ pub fn run() {
             store_secret,
             secret_exists,
             delete_secret,
+            read_url_credential_password,
             list_stored_credentials,
             list_connection_password_credentials,
             create_connection_password_credential,

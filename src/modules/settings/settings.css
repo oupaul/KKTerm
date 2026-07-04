@@ -972,12 +972,6 @@
   font-size: 12px;
 }
 
-.settings-url-credential-editor-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-}
-
 .settings-url-saved-fields {
   display: grid;
   max-height: 210px;
@@ -1001,13 +995,64 @@
   border-bottom: 0;
 }
 
-.settings-url-saved-field > span {
+.settings-url-saved-field > code {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
   min-width: 0;
   overflow: hidden;
   color: var(--text-muted);
+  font-family: var(--font-mono, "SF Mono", ui-monospace, Menlo, monospace);
   font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.settings-url-saved-field > code > span {
+  flex: none;
+  color: var(--text-faint);
+  font-size: 10px;
+}
+
+.settings-url-saved-field-control {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  min-width: 0;
+}
+
+.settings-url-saved-field-control .kk-inp {
+  min-width: 0;
+}
+
+.settings-url-field-icon-button {
+  display: inline-flex;
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  color: var(--text-muted);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.settings-url-field-icon-button:hover:not(:disabled) {
+  color: var(--text);
+  background: var(--hover);
+}
+
+.settings-url-field-icon-button:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.settings-url-field-icon-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .settings-url-saved-field > input[type="checkbox"] {
