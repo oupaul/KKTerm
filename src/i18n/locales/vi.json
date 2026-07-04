@@ -1739,6 +1739,7 @@
     "addCustomShell": "Thêm shell",
     "removeCustomShell": "Xóa {{name}}",
     "copyOnSelect": "Copy selected terminal text automatically",
+    "copyOnSelectHint": "Văn bản terminal được chọn sẽ được sao chép ngay trong các Phiên cục bộ và SSH thông thường. Trong Phiên tmux có bật chế độ chuột, hãy giữ Shift khi chọn hoặc tắt chế độ chuột. Nội dung chọn trong chế độ sao chép của tmux không được tùy chọn này sao chép.",
     "allowLocalOsc52Clipboard": "Cho phép ghi clipboard OSC 52 terminal cục bộ",
     "allowSshOsc52Clipboard": "Cho phép ghi clipboard OSC 52 SSH",
     "confirmMultilinePaste": "Confirm multiline paste",

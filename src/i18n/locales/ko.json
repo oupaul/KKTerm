@@ -1739,6 +1739,7 @@
     "addCustomShell": "셸 추가",
     "removeCustomShell": "{{name}} 제거",
     "copyOnSelect": "선택 시 터미널 텍스트 자동 복사",
+    "copyOnSelectHint": "로컬 및 일반 SSH 세션에서는 터미널 텍스트를 선택하면 즉시 복사됩니다. 마우스 모드가 활성화된 tmux 세션에서는 Shift 키를 누른 채 선택하거나 마우스 모드를 끄세요. tmux 복사 모드에서 선택한 내용은 이 옵션으로 복사되지 않습니다.",
     "allowLocalOsc52Clipboard": "로컬 터미널 OSC 52 클립보드 쓰기 허용",
     "allowSshOsc52Clipboard": "SSH OSC 52 클립보드 쓰기 허용",
     "confirmMultilinePaste": "여러 줄 붙여넣기 확인",

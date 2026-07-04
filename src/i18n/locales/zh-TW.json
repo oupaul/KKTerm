@@ -1739,6 +1739,7 @@
     "addCustomShell": "新增 Shell",
     "removeCustomShell": "移除 {{name}}",
     "copyOnSelect": "選取時自動複製終端機文字",
+    "copyOnSelectHint": "在本機與一般 SSH 工作階段中，選取終端機文字後會立即複製。在已啟用滑鼠模式的 tmux 工作階段中，請按住 Shift 再選取文字，或關閉滑鼠模式。此選項不會複製在 tmux 複製模式中選取的內容。",
     "allowLocalOsc52Clipboard": "允許本機終端機 OSC 52 剪貼簿寫入",
     "allowSshOsc52Clipboard": "允許 SSH OSC 52 剪貼簿寫入",
     "confirmMultilinePaste": "確認多行貼上",

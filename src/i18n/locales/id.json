@@ -1739,6 +1739,7 @@
     "addCustomShell": "Tambah shell",
     "removeCustomShell": "Hapus {{name}}",
     "copyOnSelect": "Salin teks terminal otomatis saat dipilih",
+    "copyOnSelectHint": "Teks terminal yang dipilih langsung disalin dalam Sesi lokal dan SSH biasa. Dalam Sesi tmux dengan mode mouse aktif, tahan Shift saat memilih atau nonaktifkan mode mouse. Pilihan yang dibuat dalam mode salin tmux tidak disalin oleh opsi ini.",
     "allowLocalOsc52Clipboard": "Izinkan penulisan clipboard OSC 52 terminal lokal",
     "allowSshOsc52Clipboard": "Izinkan penulisan clipboard OSC 52 SSH",
     "confirmMultilinePaste": "Konfirmasi tempel multiline",

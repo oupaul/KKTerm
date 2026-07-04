@@ -1739,6 +1739,7 @@
     "addCustomShell": "添加 Shell",
     "removeCustomShell": "移除 {{name}}",
     "copyOnSelect": "选中时自动复制终端文字",
+    "copyOnSelectHint": "在本地和普通 SSH 会话中，选中终端文字后会立即复制。在已启用鼠标模式的 tmux 会话中，请按住 Shift 再选择，或关闭鼠标模式。此选项不会复制在 tmux 复制模式中选中的内容。",
     "allowLocalOsc52Clipboard": "允许本地终端 OSC 52 剪贴板写入",
     "allowSshOsc52Clipboard": "允许 SSH OSC 52 剪贴板写入",
     "confirmMultilinePaste": "确认多行粘贴",

@@ -532,6 +532,7 @@ export function TerminalSettings() {
             />
             <span>
               <strong>{t("settings.copyOnSelect")}</strong>
+              <small>{t("settings.copyOnSelectHint")}</small>
             </span>
           </label>
           <label className="settings-toggle-row">

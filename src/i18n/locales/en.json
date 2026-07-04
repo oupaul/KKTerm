@@ -1739,6 +1739,7 @@
     "addCustomShell": "Add shell",
     "removeCustomShell": "Remove {{name}}",
     "copyOnSelect": "Copy on select",
+    "copyOnSelectHint": "Selecting terminal text copies it immediately in local and regular SSH Sessions. In tmux Sessions with mouse mode enabled, hold Shift while selecting, or turn mouse mode off. Selections made in tmux copy mode are not copied by this option.",
     "allowLocalOsc52Clipboard": "Allow local OSC 52 clipboard writes",
     "allowSshOsc52Clipboard": "Allow SSH OSC 52 clipboard writes",
     "confirmMultilinePaste": "Confirm multiline paste",
