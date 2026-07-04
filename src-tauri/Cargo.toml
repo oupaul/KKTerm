@@ -1,6 +1,6 @@
 [package]
 name = "kkterm"
-version = "0.1.110"
+version = "0.1.111"
 description = "Fast local-first administration workspace for terminals, SSH, SFTP, and approval-based command assistance."
 authors = ["Ryan Tsai"]
 license = "MIT"
@@ -187,9 +187,9 @@ freedesktop-icons = "0.2"
 lto = "fat"
 codegen-units = 1
 strip = "symbols"
-# Unwind (not "abort") so a panic in a background worker ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â e.g. an SSH port
+# Unwind (not "abort") so a panic in a background worker ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â e.g. an SSH port
 # forward task, or a third-party `Drop` such as russh closing a channel via
-# `tokio::spawn` during teardown ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â terminates only that worker thread instead of
+# `tokio::spawn` during teardown ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â terminates only that worker thread instead of
 # aborting the whole app. The SSH worker additionally catches and logs panics
 # (see `run_native_terminal_thread`). Costs a little binary size vs. "abort".
 panic = "unwind"
