@@ -41,7 +41,8 @@ import { ItOpsBackground } from "./ItOpsBackground";
 import { RackStage } from "./RackStage";
 import { ServerRoomFloorPlan } from "./ServerRoomFloorPlan";
 import { ServerRoomIsoView } from "./ServerRoomIsoView";
-import { collectBoundConnectionIds, selectRandomRackCallouts } from "./rackInventory";
+import { RoomObjectPicker, type RoomTool } from "./roomViewParts";
+import { collectBoundConnectionIds } from "./rackInventory";
 import type { DashboardBackground } from "../dashboard/types";
 import {
   SITE_TREE_COLLAPSED_WIDTH,
@@ -157,6 +158,8 @@ export function SitesTab({
     siteId: string;
     rack: Rack | null;
     defaultServerRoom?: string;
+    /** Picker placement flow: consume the saved rack instead of drilling in. */
+    onSaved?: (saved: Rack) => void;
   } | null>(null);
   const [serverRoomDialogOpen, setServerRoomDialogOpen] = useState(false);
   const [addMenuOpen, setAddMenuOpen] = useState(false);
@@ -626,6 +629,14 @@ export function SitesTab({
                 defaultServerRoom: serverRoom,
               });
             }}
+            onAddRackForPlacement={(serverRoom, onSaved) => {
+              setRackDialog({
+                siteId: activeGroup.id,
+                rack: null,
+                defaultServerRoom: serverRoom,
+                onSaved,
+              });
+            }}
             onAddRackItem={(rack, startU) => setItemDialog({ rack, item: null, startU })}
             onDeleteServerRoom={(serverRoom, roomRacks) => {
               const room = serverRooms.find((entry) => topologyGroupKey(entry.name) === topologyGroupKey(serverRoom));
@@ -657,6 +668,12 @@ export function SitesTab({
           defaultServerRoom={rackDialog.defaultServerRoom}
           onClose={() => setRackDialog(null)}
           onSaved={(saved) => {
+            // Picker placement flow: stay in the room view and arm the new
+            // rack for its placement click instead of drilling into it.
+            if (rackDialog.onSaved) {
+              rackDialog.onSaved(saved);
+              return;
+            }
             setActiveId(saved.siteId);
             setDrill({ serverRoom: saved.serverRoom, rackId: saved.id });
           }}
@@ -846,6 +863,7 @@ function RackDrill({
   onMoveItem,
   onAddServerRoom,
   onAddRack,
+  onAddRackForPlacement,
   onAddRackItem,
   onDeleteServerRoom,
   onDeleteRack,
@@ -867,6 +885,9 @@ function RackDrill({
   onMoveItem: (itemId: string, targetRackId: string, startU: number) => void;
   onAddServerRoom: () => void;
   onAddRack: (serverRoom: string) => void;
+  /** Picker flow: open the New Rack dialog, hand the saved rack back for a
+   *  placement click instead of drilling into it. */
+  onAddRackForPlacement: (serverRoom: string, onSaved: (saved: Rack) => void) => void;
   onAddRackItem: (rack: Rack, startU?: number) => void;
   onDeleteServerRoom: (serverRoom: string, racks: Rack[]) => void;
   onDeleteRack: (rack: Rack) => void;
@@ -884,6 +905,11 @@ function RackDrill({
   const [roomView, setRoomView] = useState<RoomViewMode>(loadRoomViewMode);
   useEffect(() => saveRoomViewMode(roomView), [roomView]);
 
+  // Picker column state shared by the two spatial layouts: the armed room
+  // object kind, and a just-created rack awaiting its placement click.
+  const [roomTool, setRoomTool] = useState<RoomTool>(null);
+  const [placeRackId, setPlaceRackId] = useState<string | null>(null);
+
   const serverRoom =
     drill.serverRoom != null
       ? topology.find((s) => topologyGroupKey(s.key) === topologyGroupKey(drill.serverRoom))
@@ -898,6 +924,10 @@ function RackDrill({
     setEditMode(false);
     setExportMenuOpen(false);
   }, [viewKey]);
+  useEffect(() => {
+    setRoomTool(null);
+    setPlaceRackId(null);
+  }, [viewKey, editMode, roomView]);
 
   const sitePlacementScope = siteLayoutScope(site.id);
   const [sitePlacements, setSitePlacements] = useState<FreePlacementMap>(() =>
@@ -1026,14 +1056,6 @@ function RackDrill({
       });
     }, 500);
   }
-
-  const roomCallouts = serverRoom
-    ? selectRandomRackCallouts(
-        serverRoom.racks.flatMap((entry) => entry.items),
-        serverRoom.key,
-        3,
-      )
-    : [];
 
   function elevation(r: Rack) {
     return (
@@ -1176,6 +1198,38 @@ function RackDrill({
       <ItOpsBackground background={viewBackground} className="ft-drill-bg">
         <div className="it-drill-toolbar">
           <div className="it-drill-spacer" />
+          {serverRoom && !rack ? (
+            <div
+              className="rm-segmented"
+              role="group"
+              aria-label={t("itops.floorPlan.viewLabel")}
+            >
+              <button
+                type="button"
+                data-active={roomView === "elevation"}
+                onClick={() => setRoomView("elevation")}
+              >
+                <ItIcon name="rows" size={13} />
+                {t("itops.floorPlan.viewElevation")}
+              </button>
+              <button
+                type="button"
+                data-active={roomView === "floor"}
+                onClick={() => setRoomView("floor")}
+              >
+                <ItIcon name="grid" size={13} />
+                {t("itops.floorPlan.viewFloor")}
+              </button>
+              <button
+                type="button"
+                data-active={roomView === "iso"}
+                onClick={() => setRoomView("iso")}
+              >
+                <ItIcon name="cube" size={13} />
+                {t("itops.floorPlan.view25d")}
+              </button>
+            </div>
+          ) : null}
           <div className="it-drill-actions" aria-label={t("itops.actions.viewActions")}>
             <button
               type="button"
@@ -1258,99 +1312,73 @@ function RackDrill({
             onDeleteItem={editMode ? (item) => onDeleteItem(rack, item) : undefined}
           />
         ) : serverRoom ? (
-          <>
-            <div className="rm-toolbar">
-              <div
-                className="rm-segmented"
-                role="group"
-                aria-label={t("itops.floorPlan.viewLabel")}
-              >
-                <button
-                  type="button"
-                  data-active={roomView === "elevation"}
-                  onClick={() => setRoomView("elevation")}
-                >
-                  {t("itops.floorPlan.viewElevation")}
-                </button>
-                <button
-                  type="button"
-                  data-active={roomView === "floor"}
-                  onClick={() => setRoomView("floor")}
-                >
-                  {t("itops.floorPlan.viewFloor")}
-                </button>
-                <button
-                  type="button"
-                  data-active={roomView === "iso"}
-                  onClick={() => setRoomView("iso")}
-                >
-                  {t("itops.floorPlan.view25d")}
-                </button>
-              </div>
+          roomView === "iso" || roomView === "floor" ? (
+            <div className="rm-spatial">
+              {roomView === "iso" ? (
+                <ServerRoomIsoView
+                  racks={serverRoom.racks}
+                  editMode={editMode}
+                  tool={roomTool}
+                  placeRackId={placeRackId}
+                  onRackPlaced={() => setPlaceRackId(null)}
+                  placement={isoPlacements}
+                  onPlacementChange={saveIsoPlacements}
+                  facing={roomFacing}
+                  onFacingChange={editMode ? saveRoomFacingState : undefined}
+                  objects={roomObjects}
+                  onObjectsChange={editMode ? saveRoomObjectsState : undefined}
+                  onDeleteRack={editMode ? onDeleteRack : undefined}
+                  onSelectRack={(rackId) => setDrill({ serverRoom: serverRoom.key, rackId })}
+                  onAddRack={editMode ? () => onAddRack(serverRoom.key) : undefined}
+                  onObjectBlocked={notifyObjectBlocked}
+                />
+              ) : (
+                <ServerRoomFloorPlan
+                  racks={serverRoom.racks}
+                  editMode={editMode}
+                  tool={roomTool}
+                  placeRackId={placeRackId}
+                  onRackPlaced={() => setPlaceRackId(null)}
+                  placement={isoPlacements}
+                  onPlacementChange={saveIsoPlacements}
+                  facing={roomFacing}
+                  onFacingChange={editMode ? saveRoomFacingState : undefined}
+                  objects={roomObjects}
+                  onObjectsChange={editMode ? saveRoomObjectsState : undefined}
+                  onDeleteRack={editMode ? onDeleteRack : undefined}
+                  onSelectRack={(rackId) => setDrill({ serverRoom: serverRoom.key, rackId })}
+                  onObjectBlocked={notifyObjectBlocked}
+                />
+              )}
+              {editMode ? (
+                <RoomObjectPicker
+                  tool={roomTool}
+                  onToolChange={(tool) => {
+                    setPlaceRackId(null);
+                    setRoomTool(tool);
+                  }}
+                  rackArmed={placeRackId != null}
+                  onPickRack={() => {
+                    setRoomTool(null);
+                    if (placeRackId != null) {
+                      setPlaceRackId(null);
+                      return;
+                    }
+                    onAddRackForPlacement(serverRoom.key, (saved) => setPlaceRackId(saved.id));
+                  }}
+                />
+              ) : null}
             </div>
-            {roomCallouts.length > 0 ? (
-              <div className="rack-random-callouts room">
-                {roomCallouts.map((callout) => {
-                  const owner = serverRoom.racks.find((entry) =>
-                    entry.items.some((item) => item.id === callout.itemId),
-                  );
-                  const item = owner?.items.find((entry) => entry.id === callout.itemId);
-                  return (
-                    <button
-                      key={callout.itemId}
-                      type="button"
-                      onClick={() => owner && item && onEditItem(owner, item)}
-                    >
-                      <span>{callout.label}</span>
-                      {callout.text ? <small>{callout.text}</small> : null}
-                      {callout.connectionIds.length > 0 ? (
-                        <small>{t("itops.racks.boundConnectionCount", { count: callout.connectionIds.length })}</small>
-                      ) : null}
-                    </button>
-                  );
-                })}
+          ) : (
+            groupRacksByGroup(serverRoom.racks).map((g) => (
+              <div className="rk-group" key={g.key}>
+                {groupRacksByGroup(serverRoom.racks).length > 1 || g.key ? (
+                  <div className="rk-group-h">{g.key || ungrouped}</div>
+                ) : null}
+                <div className="rk-row">{g.racks.map((r) => elevation(r))}</div>
               </div>
-            ) : null}
-            {roomView === "iso" ? (
-              <ServerRoomIsoView
-                racks={serverRoom.racks}
-                editMode={editMode}
-                placement={isoPlacements}
-                onPlacementChange={saveIsoPlacements}
-                facing={roomFacing}
-                onFacingChange={editMode ? saveRoomFacingState : undefined}
-                objects={roomObjects}
-                onObjectsChange={editMode ? saveRoomObjectsState : undefined}
-                onDeleteRack={editMode ? onDeleteRack : undefined}
-                onSelectRack={(rackId) => setDrill({ serverRoom: serverRoom.key, rackId })}
-                onAddRack={editMode ? () => onAddRack(serverRoom.key) : undefined}
-                onObjectBlocked={notifyObjectBlocked}
-              />
-            ) : roomView === "floor" ? (
-              <ServerRoomFloorPlan
-                racks={serverRoom.racks}
-                editMode={editMode}
-                placement={isoPlacements}
-                onPlacementChange={saveIsoPlacements}
-                facing={roomFacing}
-                onFacingChange={editMode ? saveRoomFacingState : undefined}
-                objects={roomObjects}
-                onObjectsChange={editMode ? saveRoomObjectsState : undefined}
-                onDeleteRack={editMode ? onDeleteRack : undefined}
-                onSelectRack={(rackId) => setDrill({ serverRoom: serverRoom.key, rackId })}
-                onObjectBlocked={notifyObjectBlocked}
-              />
-            ) : (
-              groupRacksByGroup(serverRoom.racks).map((g) => (
-                <div className="rk-group" key={g.key}>
-                  {groupRacksByGroup(serverRoom.racks).length > 1 || g.key ? (
-                    <div className="rk-group-h">{g.key || ungrouped}</div>
-                  ) : null}
-                  <div className="rk-row">{g.racks.map((r) => elevation(r))}</div>
-                </div>
-              ))
-            )}
-          </>
+            ))
+          )
         ) : (
           <SiteRoomCards
             rooms={topology}

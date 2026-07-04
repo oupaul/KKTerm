@@ -5,8 +5,9 @@
 // instead of a metric toggle, a facing edge showing which way the front
 // points, and non-rack room objects (roomObjects.ts) drawn at their cells.
 // Edit mode drags footprints between cells (swapping on collision), rotates
-// facings, and places/stacks/deletes room objects; the object palette arms a
-// kind and a cell click drops it at the first free vertical span.
+// facings, and places/stacks/deletes room objects; the object picker column
+// (owned by SitesTab, shared with the 2.5D view) arms a rack or object kind
+// and a cell click drops it under the cursor.
 
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { useTranslation } from "react-i18next";
@@ -38,11 +39,10 @@ import { RoomObjectPlanArtwork } from "./RoomObjectArtwork";
 import {
   OBJECT_ACCENTS,
   RackTagChips,
-  RoomObjectPalette,
-  RoomZoomControl,
-  useCtrlWheelZoom,
+  RoomZoomRuler,
   useRoomPan,
   useRoomViewportSize,
+  useWheelZoom,
   type RoomTool,
 } from "./roomViewParts";
 
@@ -70,6 +70,9 @@ interface DragState {
 export function ServerRoomFloorPlan({
   racks,
   editMode,
+  tool = null,
+  placeRackId = null,
+  onRackPlaced,
   placement,
   onPlacementChange,
   facing,
@@ -82,6 +85,11 @@ export function ServerRoomFloorPlan({
 }: {
   racks: Rack[];
   editMode?: boolean;
+  /** Armed object kind from the shared picker column (SitesTab owns it). */
+  tool?: RoomTool;
+  /** A just-created rack awaiting its placement click. */
+  placeRackId?: string | null;
+  onRackPlaced?: () => void;
   placement: FreePlacementMap;
   onPlacementChange?: (next: FreePlacementMap) => void;
   facing: RackFacingMap;
@@ -100,7 +108,7 @@ export function ServerRoomFloorPlan({
   // (logical) px, so zooming out shows more floor cells in the same window.
   const [zoom, setZoom] = useState(() => loadRoomZoom("floor"));
   useEffect(() => saveRoomZoom("floor", zoom), [zoom]);
-  useCtrlWheelZoom(scrollRef, (dir) => setZoom((current) => stepRoomZoom(current, dir)));
+  useWheelZoom(scrollRef, (dir) => setZoom((current) => stepRoomZoom(current, dir)));
   useRoomPan(scrollRef);
   // Grid dimensions cover the racks, every placed object, and the visible
   // viewport; cell sizes stretch so the walls land on the viewport edge.
@@ -119,7 +127,7 @@ export function ServerRoomFloorPlan({
   const cellW = floorW > 0 ? Math.max(BP_MIN_CELL, floorW / cols) : BP_CELL;
   const cellH = floorH > 0 ? Math.max(BP_MIN_CELL, floorH / rows) : BP_CELL;
   const grid = { cols, rows, cells: layout.cells };
-  const [tool, setTool] = useState<RoomTool>(null);
+  const armed = tool != null || placeRackId != null;
   const [drag, setDrag] = useState<DragState | null>(null);
   const dragRef = useRef<{
     kind: "rack" | "object";
@@ -143,7 +151,7 @@ export function ServerRoomFloorPlan({
     id: string,
     origin: IsoCell,
   ) {
-    if (!editMode || tool != null) return;
+    if (!editMode || armed) return;
     // Left button only — the middle button pans the viewport (useRoomPan).
     if (event.button !== 0) return;
     const target = event.target as HTMLElement;
@@ -205,10 +213,11 @@ export function ServerRoomFloorPlan({
     );
   }
 
-  // An armed object tool places on any cell click (racks included — that is
-  // how a 乖乖 pack lands on top of a cabinet).
+  // An armed picker card places on any cell click: objects land on racks too
+  // (that is how a 乖乖 pack lands on top of a cabinet), and a pending rack
+  // moves to the clicked cell (swapping with any occupant).
   function placeAt(event: React.MouseEvent<HTMLDivElement>) {
-    if (!editMode || tool == null || !onObjectsChange) return;
+    if (!editMode || !armed) return;
     const surface = event.currentTarget;
     // The rect is the zoomed border box; clientLeft/Top are unzoomed CSS px.
     const rect = surface.getBoundingClientRect();
@@ -217,6 +226,14 @@ export function ServerRoomFloorPlan({
       x: Math.floor(((event.clientX - rect.left) / zoom - surface.clientLeft) / cellW),
       y: Math.floor(((event.clientY - rect.top) / zoom - surface.clientTop) / cellH),
     });
+    if (placeRackId != null) {
+      if (layout.cells[placeRackId]) {
+        onPlacementChange?.(moveIsoRack(grid, placeRackId, cell));
+        onRackPlaced?.();
+      }
+      return;
+    }
+    if (tool == null || !onObjectsChange) return;
     const spans = cellSpans(cell, racks, layout.cells, objects);
     const z = resolveDropZ(spans, tool);
     if (z == null) {
@@ -234,7 +251,7 @@ export function ServerRoomFloorPlan({
       suppressClickRef.current = false;
       return;
     }
-    if (tool == null) onSelectRack(rackId);
+    if (!armed) onSelectRack(rackId);
   }
 
   function rotateRack(rack: Rack) {
@@ -260,87 +277,84 @@ export function ServerRoomFloorPlan({
 
   return (
     <div className="rm-bp-wrap">
-      <div className="rm-iso-topbar">
-        {editMode ? <RoomObjectPalette tool={tool} onToolChange={setTool} /> : <span />}
-        <div className="rm-iso-topctls">
-          <RoomZoomControl zoom={zoom} onZoomChange={setZoom} />
-        </div>
-      </div>
-      {/* tabIndex: clicking the room focuses the viewport so arrow keys pan. */}
-      <div className="rm-bp-scroll" ref={scrollRef} tabIndex={0}>
-        <div
-          className="rm-bp-zoom"
-          style={{
-            width: (cols * cellW + BP_WALL) * zoom,
-            height: (rows * cellH + BP_WALL) * zoom,
-          }}
-        >
+      <div className="rm-view-body">
+        {/* tabIndex: clicking the room focuses the viewport so arrow keys pan. */}
+        <div className="rm-bp-scroll" ref={scrollRef} tabIndex={0}>
           <div
-            className={`rm-bp${tool != null && editMode ? " placing" : ""}`}
+            className="rm-bp-zoom"
             style={{
-              width: cols * cellW,
-              height: rows * cellH,
-              transform: zoom !== 1 ? `scale(${zoom})` : undefined,
-              backgroundSize: `${cellW}px ${cellH}px, ${cellW}px ${cellH}px, ${cellW / 4}px ${cellH / 4}px, ${cellW / 4}px ${cellH / 4}px, auto`,
+              width: (cols * cellW + BP_WALL) * zoom,
+              height: (rows * cellH + BP_WALL) * zoom,
             }}
-            onClick={placeAt}
           >
-            {drag ? (
-              <div
-                className="rm-bp-drop"
-                style={{
-                  left: drag.target.x * cellW,
-                  top: drag.target.y * cellH,
-                  width: cellW,
-                  height: cellH,
-                }}
-              />
-            ) : null}
-            {racks.map((rack) => (
-              <BlueprintRack
-                key={rack.id}
-                rack={rack}
-                cell={layout.cells[rack.id]}
-                cellW={cellW}
-                cellH={cellH}
-                facing={sanitizeFacing(facing[rack.id])}
-                editMode={!!editMode}
-                drag={drag?.kind === "rack" && drag.id === rack.id ? drag : null}
-                onPointerDown={(event) => startDrag(event, "rack", rack.id, layout.cells[rack.id])}
-                onPointerMove={moveDrag}
-                onPointerUp={endDrag}
-                onPointerCancel={endDrag}
-                onSelect={() => selectRack(rack.id)}
-                onRotate={editMode && onFacingChange ? () => rotateRack(rack) : undefined}
-                onDelete={editMode && onDeleteRack ? () => onDeleteRack(rack) : undefined}
-              />
-            ))}
-            {objects.map((object) => (
-              <BlueprintObject
-                key={object.id}
-                object={object}
-                cellW={cellW}
-                cellH={cellH}
-                editMode={!!editMode}
-                drag={drag?.kind === "object" && drag.id === object.id ? drag : null}
-                onPointerDown={(event) =>
-                  startDrag(event, "object", object.id, { x: object.x, y: object.y })
-                }
-                onPointerMove={moveDrag}
-                onPointerUp={endDrag}
-                onPointerCancel={endDrag}
-                onRotate={() => rotateObject(object)}
-                onRaise={() => nudgeObject(object, 1)}
-                onLower={() => nudgeObject(object, -1)}
-                onDelete={
-                  onObjectsChange
-                    ? () => onObjectsChange(objects.filter((entry) => entry.id !== object.id))
-                    : undefined
-                }
-              />
-            ))}
+            <div
+              className={`rm-bp${armed && editMode ? " placing" : ""}`}
+              style={{
+                width: cols * cellW,
+                height: rows * cellH,
+                transform: zoom !== 1 ? `scale(${zoom})` : undefined,
+                backgroundSize: `${cellW}px ${cellH}px, ${cellW}px ${cellH}px, ${cellW / 4}px ${cellH / 4}px, ${cellW / 4}px ${cellH / 4}px, auto`,
+              }}
+              onClick={placeAt}
+            >
+              {drag ? (
+                <div
+                  className="rm-bp-drop"
+                  style={{
+                    left: drag.target.x * cellW,
+                    top: drag.target.y * cellH,
+                    width: cellW,
+                    height: cellH,
+                  }}
+                />
+              ) : null}
+              {racks.map((rack) => (
+                <BlueprintRack
+                  key={rack.id}
+                  rack={rack}
+                  cell={layout.cells[rack.id]}
+                  cellW={cellW}
+                  cellH={cellH}
+                  facing={sanitizeFacing(facing[rack.id])}
+                  editMode={!!editMode}
+                  drag={drag?.kind === "rack" && drag.id === rack.id ? drag : null}
+                  onPointerDown={(event) => startDrag(event, "rack", rack.id, layout.cells[rack.id])}
+                  onPointerMove={moveDrag}
+                  onPointerUp={endDrag}
+                  onPointerCancel={endDrag}
+                  onSelect={() => selectRack(rack.id)}
+                  onRotate={editMode && onFacingChange ? () => rotateRack(rack) : undefined}
+                  onDelete={editMode && onDeleteRack ? () => onDeleteRack(rack) : undefined}
+                />
+              ))}
+              {objects.map((object) => (
+                <BlueprintObject
+                  key={object.id}
+                  object={object}
+                  cellW={cellW}
+                  cellH={cellH}
+                  editMode={!!editMode}
+                  drag={drag?.kind === "object" && drag.id === object.id ? drag : null}
+                  onPointerDown={(event) =>
+                    startDrag(event, "object", object.id, { x: object.x, y: object.y })
+                  }
+                  onPointerMove={moveDrag}
+                  onPointerUp={endDrag}
+                  onPointerCancel={endDrag}
+                  onRotate={() => rotateObject(object)}
+                  onRaise={() => nudgeObject(object, 1)}
+                  onLower={() => nudgeObject(object, -1)}
+                  onDelete={
+                    onObjectsChange
+                      ? () => onObjectsChange(objects.filter((entry) => entry.id !== object.id))
+                      : undefined
+                  }
+                />
+              ))}
+            </div>
           </div>
         </div>
+        <RoomZoomRuler zoom={zoom} onZoomChange={setZoom} />
       </div>
       {editMode ? <div className="rm-iso-hint">{t("itops.floorPlan.blueprintEditHint")}</div> : null}
     </div>

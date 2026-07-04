@@ -3820,21 +3820,25 @@
    (`data-shell`, fixed hardware palette like the 2D rack skin — no status
    colouring); object accents come from `data-kind`.
    ────────────────────────────────────────────────────────────────────────── */
-.itops-page .rm-toolbar {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 10px;
-  padding: 0 2px 2px;
-}
+/* The room layout switcher lives centered in the sticky drill toolbar, on the
+   same row as the edit/add/export actions. */
 .itops-page .rm-segmented {
+  position: absolute;
+  left: 50%;
+  top: 2px;
+  transform: translateX(-50%);
   display: inline-flex;
   border: 0.5px solid var(--border);
   border-radius: 8px;
   overflow: hidden;
-  background: var(--surface);
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  box-shadow: var(--shadow-control);
+  pointer-events: auto;
 }
 .itops-page .rm-segmented button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   border: 0;
   background: transparent;
   color: var(--text-muted);
@@ -3869,6 +3873,7 @@
 .itops-page .rm-bp-scroll {
   display: flex;
   flex: 1 1 0;
+  min-width: 0;
   min-height: 280px;
   overflow: auto;
 }
@@ -4342,30 +4347,93 @@
   transform: rotate(180deg);
 }
 
-/* Edit-mode object palette shared by both spatial layouts. Object accents
-   (`--obj`/`--tile`) are set inline from the shared IT_ACCENTS palette. */
-.itops-page .rm-palette {
+/* Edit-mode object picker: a full-height searchable column on the right of a
+   spatial layout, holding preview cards for Racks and every room-object kind.
+   Object accents (`--obj`/`--tile`) are set inline from IT_ACCENTS. */
+.itops-page .rm-spatial {
   display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 5px;
-  padding: 2px 2px 0;
+  align-items: stretch;
+  flex: 1 0 auto;
+  gap: 10px;
+  min-height: 0;
 }
-.itops-page .rm-palette-h {
+.itops-page .rm-spatial > .rm-bp-wrap,
+.itops-page .rm-spatial > .rm-iso {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.itops-page .rm-picker {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 218px;
+  gap: 8px;
+  padding: 8px;
+  margin: 6px 4px 8px 0;
+  border: 0.5px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+.itops-page .rm-picker-h {
   font-size: 10.5px;
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--text-faint);
-  margin-right: 3px;
+  padding: 0 2px;
 }
-.itops-page .rm-palette button {
-  display: inline-flex;
+.itops-page .rm-picker-search {
+  display: flex;
   align-items: center;
-  gap: 5px;
-  padding: 3px 8px;
+  gap: 6px;
+  padding: 0 8px;
+  height: 26px;
   border: 0.5px solid var(--border);
   border-radius: 7px;
+  background: var(--surface-muted);
+  color: var(--text-faint);
+}
+.itops-page .rm-picker-search input {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  outline: none;
+}
+.itops-page .rm-picker-search-x {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  padding: 1px;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-faint);
+  cursor: pointer;
+}
+.itops-page .rm-picker-search-x:hover {
+  color: var(--text);
+}
+.itops-page .rm-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  align-content: start;
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 1px;
+}
+.itops-page .rm-picker-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 4px 6px;
+  border: 0.5px solid var(--border);
+  border-radius: 8px;
   background: var(--surface);
   color: var(--text-muted);
   font: inherit;
@@ -4374,14 +4442,30 @@
   cursor: pointer;
   transition: background 0.14s, color 0.14s, border-color 0.14s;
 }
-.itops-page .rm-palette button:hover:not([data-active="true"]) {
+.itops-page .rm-picker-card:hover:not([data-active="true"]) {
   background: var(--hover);
   color: var(--text);
 }
-.itops-page .rm-palette button[data-active="true"] {
+.itops-page .rm-picker-card[data-active="true"] {
   background: var(--accent-soft);
   border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
   color: var(--accent);
+}
+.itops-page .rm-picker-thumb {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+}
+.itops-page .rm-picker-thumb .rm-object-art {
+  width: 100%;
+  height: 100%;
+}
+.itops-page .rm-picker-name {
+  max-width: 100%;
+  text-align: center;
+  line-height: 1.25;
 }
 
 .itops-page .rm-tile-dots {
@@ -4432,30 +4516,80 @@
   gap: 8px;
   padding: 6px 4px 8px;
 }
-.itops-page .rm-iso-topbar {
+/* Positioning context for a spatial layout's scroll viewport and its floating
+   overlays: the zoom ruler (top right) and the 2.5D angle stepper (top left). */
+.itops-page .rm-view-body {
+  position: relative;
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
+  flex: 1 1 0;
+  min-height: 0;
 }
-/* Right-aligned view controls: zoom stepper (both spatial views) plus the
-   fixed view-angle stepper (2.5D only). */
-.itops-page .rm-iso-topctls {
-  display: inline-flex;
+/* Vertical ruler-style zoom control floating over the room's top-right
+   corner: one clickable tick per fixed level, largest on top; the active tick
+   follows wheel-zoom steps. */
+.itops-page .rm-zoomruler {
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+  padding: 5px 6px;
+  border: 0.5px solid var(--border);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  box-shadow: var(--shadow-control);
+}
+.itops-page .rm-zoomruler-tick {
+  display: flex;
   align-items: center;
-  gap: 10px;
-  margin-left: auto;
+  gap: 5px;
+  border: 0;
+  padding: 2px 2px;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-faint);
+  font: inherit;
+  font-size: 9.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: background 0.14s, color 0.14s;
+}
+.itops-page .rm-zoomruler-tick i {
+  flex: 0 0 auto;
+  width: 10px;
+  height: 1.5px;
+  border-radius: 1px;
+  background: currentColor;
+}
+.itops-page .rm-zoomruler-tick:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+.itops-page .rm-zoomruler-tick[data-active="true"] {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.itops-page .rm-zoomruler-tick[data-active="true"] i {
+  width: 14px;
+  height: 2.5px;
 }
 /* Fixed view-angle stepper: the camera stays put, the room turns in quarter
-   steps (roomIsoLayout.ts rotates the grid under it). */
-.itops-page .rm-iso-angles,
-.itops-page .rm-zoom {
+   steps (roomIsoLayout.ts rotates the grid under it). Floats over the room's
+   top-left corner. */
+.itops-page .rm-iso-angles {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 4;
   display: inline-flex;
   align-items: center;
   gap: 4px;
 }
-.itops-page .rm-iso-angles button,
-.itops-page .rm-zoom button {
+.itops-page .rm-iso-angles button {
   width: 24px;
   height: 24px;
   display: inline-flex;
@@ -4463,33 +4597,22 @@
   justify-content: center;
   border: 0.5px solid var(--border);
   border-radius: 7px;
-  background: var(--surface);
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  box-shadow: var(--shadow-control);
   color: var(--text-muted);
   cursor: pointer;
   transition: background 0.14s, color 0.14s;
 }
-.itops-page .rm-iso-angles button:hover,
-.itops-page .rm-zoom button:hover {
+.itops-page .rm-iso-angles button:hover {
   background: var(--hover);
   color: var(--text);
-}
-.itops-page .rm-zoom button:disabled {
-  opacity: 0.45;
-  pointer-events: none;
-}
-/* Current level readout; clicking resets to 100%. */
-.itops-page .rm-zoom .rm-zoom-val {
-  width: auto;
-  min-width: 40px;
-  padding: 0 6px;
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
 }
 /* The scroll area takes the drill's leftover height; its content-box size is
    the canvas the room's floor plane must cover. */
 .itops-page .rm-iso-scroll {
   display: flex;
   flex: 1 1 0;
+  min-width: 0;
   min-height: 280px;
   overflow: auto;
 }
@@ -5385,16 +5508,6 @@
   gap: 8px;
   justify-content: center;
   pointer-events: none;
-}
-
-.itops-page .rack-random-callouts.room {
-  position: relative;
-  left: auto;
-  right: auto;
-  bottom: auto;
-  justify-content: flex-start;
-  margin: 0 2px 12px;
-  pointer-events: auto;
 }
 
 .itops-page .rack-random-callouts button {

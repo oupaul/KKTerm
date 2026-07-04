@@ -10,8 +10,9 @@
 // objects (roomObjects.ts) stand on the same grid at their vertical position:
 // a CRAC on the floor, a camera near the ceiling, a 乖乖 pack on a cabinet
 // top. Edit mode drags cabinets/objects across the floor, rotates facings,
-// nudges object levels, adds racks on empty tiles, and places objects with
-// the shared palette. Placement persists through the shared "grid" store.
+// nudges object levels, adds racks on empty tiles, and places racks/objects
+// armed by the shared picker column (owned by SitesTab). Placement persists
+// through the shared "grid" store.
 
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { useTranslation } from "react-i18next";
@@ -55,11 +56,10 @@ import { ItIcon } from "./icons";
 import {
   OBJECT_ACCENTS,
   ObjectGlyph,
-  RoomObjectPalette,
-  RoomZoomControl,
-  useCtrlWheelZoom,
+  RoomZoomRuler,
   useRoomPan,
   useRoomViewportSize,
+  useWheelZoom,
   type RoomTool,
 } from "./roomViewParts";
 
@@ -105,6 +105,9 @@ interface DragState {
 export function ServerRoomIsoView({
   racks,
   editMode,
+  tool = null,
+  placeRackId = null,
+  onRackPlaced,
   placement,
   onPlacementChange,
   facing,
@@ -118,6 +121,11 @@ export function ServerRoomIsoView({
 }: {
   racks: Rack[];
   editMode?: boolean;
+  /** Armed object kind from the shared picker column (SitesTab owns it). */
+  tool?: RoomTool;
+  /** A just-created rack awaiting its placement click. */
+  placeRackId?: string | null;
+  onRackPlaced?: () => void;
   placement: FreePlacementMap;
   onPlacementChange?: (next: FreePlacementMap) => void;
   facing: RackFacingMap;
@@ -139,9 +147,9 @@ export function ServerRoomIsoView({
   // (logical) px, so zooming out shows more floor in the same window.
   const [zoom, setZoom] = useState(() => loadRoomZoom("iso"));
   useEffect(() => saveRoomZoom("iso", zoom), [zoom]);
-  useCtrlWheelZoom(scrollRef, (dir) => setZoom((current) => stepRoomZoom(current, dir)));
+  useWheelZoom(scrollRef, (dir) => setZoom((current) => stepRoomZoom(current, dir)));
   useRoomPan(scrollRef);
-  const [tool, setTool] = useState<RoomTool>(null);
+  const armed = tool != null || placeRackId != null;
   const [drag, setDrag] = useState<DragState | null>(null);
   // Mutable drag bookkeeping: the live target must not lag behind React's
   // batched `drag` state when the pointer is released.
@@ -207,7 +215,7 @@ export function ServerRoomIsoView({
     id: string,
     origin: IsoCell,
   ) {
-    if (!editMode || tool != null) return;
+    if (!editMode || armed) return;
     // Left button only — the middle button pans the viewport (useRoomPan).
     if (event.button !== 0) return;
     if (kind === "rack" && !onPlacementChange) return;
@@ -285,9 +293,22 @@ export function ServerRoomIsoView({
     ]);
   }
 
+  // Drop the picker's just-created rack on a cell (swapping with an occupant).
+  function placeRackAt(cell: IsoCell) {
+    if (placeRackId == null) return;
+    if (layout.cells[placeRackId]) {
+      onPlacementChange?.(moveIsoRack(grid, placeRackId, cell));
+      onRackPlaced?.();
+    }
+  }
+
   function selectRack(rack: Rack) {
     if (suppressClickRef.current) {
       suppressClickRef.current = false;
+      return;
+    }
+    if (placeRackId != null) {
+      placeRackAt(layout.cells[rack.id]);
       return;
     }
     if (tool != null) {
@@ -319,11 +340,11 @@ export function ServerRoomIsoView({
   }
 
   // Edit-mode click targets: empty tiles add a rack (no tool) or take an
-  // armed object; cells holding only objects still get a tile while a tool is
-  // armed so a second fixture can stack in the same cell.
+  // armed rack/object; cells holding only objects still get a tile while a
+  // tool is armed so a second fixture can stack in the same cell.
   const rackCells = new Set(Object.values(layout.cells).map((cell) => `${cell.x},${cell.y}`));
   const editableTiles: IsoCell[] = [];
-  if (editMode && (onAddRack || tool != null)) {
+  if (editMode && (onAddRack || armed)) {
     for (let y = 0; y < gridRows; y += 1) {
       for (let x = 0; x < gridCols; x += 1) {
         if (!rackCells.has(`${x},${y}`)) editableTiles.push({ x, y });
@@ -333,124 +354,129 @@ export function ServerRoomIsoView({
 
   return (
     <div className="rm-iso">
-      <div className="rm-iso-topbar">
-        {editMode ? <RoomObjectPalette tool={tool} onToolChange={setTool} /> : <span />}
-        <div className="rm-iso-topctls">
-          <RoomZoomControl zoom={zoom} onZoomChange={setZoom} />
-          <div className="rm-iso-angles" role="group" aria-label={t("itops.floorPlan.viewAngleLabel")}>
-            <button
-              type="button"
-              title={t("itops.floorPlan.rotateViewLeft")}
-              aria-label={t("itops.floorPlan.rotateViewLeft")}
-              onClick={() => setAngle(((angle + 3) % 4) as IsoViewAngle)}
-            >
-              <ItIcon name="chevL" size={13} />
-            </button>
-            <button
-              type="button"
-              title={t("itops.floorPlan.rotateViewRight")}
-              aria-label={t("itops.floorPlan.rotateViewRight")}
-              onClick={() => setAngle(((angle + 1) % 4) as IsoViewAngle)}
-            >
-              <ItIcon name="chevR" size={13} />
-            </button>
-          </div>
-        </div>
-      </div>
-      {/* tabIndex: clicking the room focuses the viewport so arrow keys pan. */}
-      <div className="rm-iso-scroll" ref={scrollRef} tabIndex={0}>
-        <div className="rm-iso-zoom" style={{ width: viewW * zoom, height: viewH * zoom }}>
-          <div
-            className="rm-iso-viewport"
-            style={{
-              width: viewW,
-              height: viewH,
-              transform: zoom !== 1 ? `scale(${zoom})` : undefined,
-            }}
+      <div className="rm-view-body">
+        <div className="rm-iso-angles" role="group" aria-label={t("itops.floorPlan.viewAngleLabel")}>
+          <button
+            type="button"
+            title={t("itops.floorPlan.rotateViewLeft")}
+            aria-label={t("itops.floorPlan.rotateViewLeft")}
+            onClick={() => setAngle(((angle + 3) % 4) as IsoViewAngle)}
           >
+            <ItIcon name="chevL" size={13} />
+          </button>
+          <button
+            type="button"
+            title={t("itops.floorPlan.rotateViewRight")}
+            aria-label={t("itops.floorPlan.rotateViewRight")}
+            onClick={() => setAngle(((angle + 1) % 4) as IsoViewAngle)}
+          >
+            <ItIcon name="chevR" size={13} />
+          </button>
+        </div>
+        {/* tabIndex: clicking the room focuses the viewport so arrow keys pan. */}
+        <div className="rm-iso-scroll" ref={scrollRef} tabIndex={0}>
+          <div className="rm-iso-zoom" style={{ width: viewW * zoom, height: viewH * zoom }}>
             <div
-              className="rm-iso-plane"
+              className="rm-iso-viewport"
               style={{
-                width: planeW,
-                height: planeH,
-                backgroundSize: `${CELL}px ${CELL}px, ${CELL}px ${CELL}px, auto`,
-                top: `calc(50% + ${Math.round(maxTop * 0.38)}px)`,
+                width: viewW,
+                height: viewH,
+                transform: zoom !== 1 ? `scale(${zoom})` : undefined,
               }}
             >
-              {editableTiles.map((cell) => {
-                const at = toDisplay(cell);
-                return (
-                  <button
-                    key={`t-${cell.x}-${cell.y}`}
-                    type="button"
-                    className="rm-iso-tile"
-                    style={{ left: at.x * CELL, top: at.y * CELL, width: CELL, height: CELL }}
-                    title={
-                      tool != null
-                        ? t(`itops.floorPlan.object.${tool}`)
-                        : t("itops.floorPlan.isoAddHere")
+              <div
+                className="rm-iso-plane"
+                style={{
+                  width: planeW,
+                  height: planeH,
+                  backgroundSize: `${CELL}px ${CELL}px, ${CELL}px ${CELL}px, auto`,
+                  top: `calc(50% + ${Math.round(maxTop * 0.38)}px)`,
+                }}
+              >
+                {editableTiles.map((cell) => {
+                  const at = toDisplay(cell);
+                  return (
+                    <button
+                      key={`t-${cell.x}-${cell.y}`}
+                      type="button"
+                      className="rm-iso-tile"
+                      style={{ left: at.x * CELL, top: at.y * CELL, width: CELL, height: CELL }}
+                      title={
+                        placeRackId != null
+                          ? t("itops.floorPlan.pickerRack")
+                          : tool != null
+                            ? t(`itops.floorPlan.object.${tool}`)
+                            : t("itops.floorPlan.isoAddHere")
+                      }
+                      onClick={() =>
+                        placeRackId != null
+                          ? placeRackAt(cell)
+                          : tool != null
+                            ? placeObjectAt(cell)
+                            : onAddRack?.()
+                      }
+                    >
+                      <ItIcon name="plus" size={13} />
+                    </button>
+                  );
+                })}
+                {drag ? (
+                  <div
+                    className="rm-iso-drop"
+                    style={{
+                      left: toDisplay(drag.target).x * CELL,
+                      top: toDisplay(drag.target).y * CELL,
+                      width: CELL,
+                      height: CELL,
+                    }}
+                  />
+                ) : null}
+                {racks.map((rack) => (
+                  <IsoCabinet
+                    key={rack.id}
+                    rack={rack}
+                    cell={toDisplay(layout.cells[rack.id])}
+                    facing={rotateFacingForView(sanitizeFacing(facing[rack.id]), angle)}
+                    drag={drag?.kind === "rack" && drag.id === rack.id ? drag : null}
+                    editMode={!!editMode}
+                    onPointerDown={(event) => startDrag(event, "rack", rack.id, layout.cells[rack.id])}
+                    onPointerMove={moveDrag}
+                    onPointerUp={endDrag}
+                    onPointerCancel={endDrag}
+                    onSelect={() => selectRack(rack)}
+                    onRotate={editMode && onFacingChange ? () => rotateRack(rack) : undefined}
+                    onDelete={editMode && onDeleteRack ? () => onDeleteRack(rack) : undefined}
+                  />
+                ))}
+                {objects.map((object) => (
+                  <IsoObject
+                    key={object.id}
+                    object={object}
+                    cell={toDisplay(object)}
+                    rot={rotateFacingForView(object.rot, angle)}
+                    drag={drag?.kind === "object" && drag.id === object.id ? drag : null}
+                    editMode={!!editMode}
+                    onPointerDown={(event) =>
+                      startDrag(event, "object", object.id, { x: object.x, y: object.y })
                     }
-                    onClick={() => (tool != null ? placeObjectAt(cell) : onAddRack?.())}
-                  >
-                    <ItIcon name="plus" size={13} />
-                  </button>
-                );
-              })}
-              {drag ? (
-                <div
-                  className="rm-iso-drop"
-                  style={{
-                    left: toDisplay(drag.target).x * CELL,
-                    top: toDisplay(drag.target).y * CELL,
-                    width: CELL,
-                    height: CELL,
-                  }}
-                />
-              ) : null}
-              {racks.map((rack) => (
-                <IsoCabinet
-                  key={rack.id}
-                  rack={rack}
-                  cell={toDisplay(layout.cells[rack.id])}
-                  facing={rotateFacingForView(sanitizeFacing(facing[rack.id]), angle)}
-                  drag={drag?.kind === "rack" && drag.id === rack.id ? drag : null}
-                  editMode={!!editMode}
-                  onPointerDown={(event) => startDrag(event, "rack", rack.id, layout.cells[rack.id])}
-                  onPointerMove={moveDrag}
-                  onPointerUp={endDrag}
-                  onPointerCancel={endDrag}
-                  onSelect={() => selectRack(rack)}
-                  onRotate={editMode && onFacingChange ? () => rotateRack(rack) : undefined}
-                  onDelete={editMode && onDeleteRack ? () => onDeleteRack(rack) : undefined}
-                />
-              ))}
-              {objects.map((object) => (
-                <IsoObject
-                  key={object.id}
-                  object={object}
-                  cell={toDisplay(object)}
-                  rot={rotateFacingForView(object.rot, angle)}
-                  drag={drag?.kind === "object" && drag.id === object.id ? drag : null}
-                  editMode={!!editMode}
-                  onPointerDown={(event) =>
-                    startDrag(event, "object", object.id, { x: object.x, y: object.y })
-                  }
-                  onPointerMove={moveDrag}
-                  onPointerUp={endDrag}
-                  onPointerCancel={endDrag}
-                  onRotate={() => rotateObject(object)}
-                  onRaise={() => nudgeObject(object, 1)}
-                  onLower={() => nudgeObject(object, -1)}
-                  onDelete={
-                    onObjectsChange
-                      ? () => onObjectsChange(objects.filter((entry) => entry.id !== object.id))
-                      : undefined
-                  }
-                />
-              ))}
+                    onPointerMove={moveDrag}
+                    onPointerUp={endDrag}
+                    onPointerCancel={endDrag}
+                    onRotate={() => rotateObject(object)}
+                    onRaise={() => nudgeObject(object, 1)}
+                    onLower={() => nudgeObject(object, -1)}
+                    onDelete={
+                      onObjectsChange
+                        ? () => onObjectsChange(objects.filter((entry) => entry.id !== object.id))
+                        : undefined
+                    }
+                  />
+                ))}
+              </div>
             </div>
           </div>
         </div>
+        <RoomZoomRuler zoom={zoom} onZoomChange={setZoom} />
       </div>
       {editMode ? <div className="rm-iso-hint">{t("itops.floorPlan.isoEditHint")}</div> : null}
     </div>

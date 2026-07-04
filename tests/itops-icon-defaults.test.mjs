@@ -10,10 +10,13 @@ test("IT Ops topology defaults use the requested Lucide icons", async () => {
   const siteDialog = await read("src/modules/itops/SiteDialog.tsx");
   const serverRoomDialog = await read("src/modules/itops/ServerRoomDialog.tsx");
 
-  assert.match(icons, /import \{ Building2, Server, ShelvingUnit \} from "lucide-react"/);
+  assert.match(icons, /import \{ Box, Building2, Grid2x2, Rows3, Server, ShelvingUnit \} from "lucide-react"/);
   assert.match(icons, /site: \(p\) => LucideGlyph\(Building2, p\)/);
   assert.match(icons, /room: \(p\) => LucideGlyph\(Server, p\)/);
   assert.match(icons, /rack: \(p\) => LucideGlyph\(ShelvingUnit, p\)/);
+  assert.match(icons, /rows: \(p\) => LucideGlyph\(Rows3, p\)/);
+  assert.match(icons, /grid: \(p\) => LucideGlyph\(Grid2x2, p\)/);
+  assert.match(icons, /cube: \(p\) => LucideGlyph\(Box, p\)/);
   assert.match(sites, /return group\.filter \? "filter" : "site"/);
   assert.match(sites, /<ItIcon name="site" size=\{14\} \/>/);
   assert.match(sites, /<ItIcon name="rack" size=\{14\} \/>/);

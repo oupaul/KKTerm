@@ -4,7 +4,7 @@
 // entity icons use the product's Lucide defaults.
 
 import type { ComponentType, ReactNode } from "react";
-import { Building2, Server, ShelvingUnit } from "lucide-react";
+import { Box, Building2, Grid2x2, Rows3, Server, ShelvingUnit } from "lucide-react";
 
 export type ItIconName =
   | "ops"
@@ -57,7 +57,10 @@ export type ItIconName =
   | "arrow"
   | "history"
   | "image"
-  | "power";
+  | "power"
+  | "rows"
+  | "grid"
+  | "cube";
 
 type GlyphProps = { size: number; sw: number };
 
@@ -120,6 +123,9 @@ const GLYPHS: Record<ItIconName, (p: GlyphProps) => ReactNode> = {
   ),
   room: (p) => LucideGlyph(Server, p),
   rack: (p) => LucideGlyph(ShelvingUnit, p),
+  rows: (p) => LucideGlyph(Rows3, p),
+  grid: (p) => LucideGlyph(Grid2x2, p),
+  cube: (p) => LucideGlyph(Box, p),
   run: (p) => (
     <Svg {...p} sw={1.8}>
       <path d="M8 5.5l10 6.5-10 6.5z" />

@@ -1,13 +1,14 @@
 // Shared pieces for the two spatial Server Room layouts (floor plan + 2.5D):
 // the per-rack status tag chips that replaced the old health/utilisation/power
-// metric toggle, the room-object glyph set, and the edit-mode object palette
-// used to arm placement of a non-rack fixture (see roomObjects.ts).
+// metric toggle, the room-object glyph set, and the edit-mode object picker
+// column used to arm placement of a rack or non-rack fixture (roomObjects.ts).
 
 import {
   useEffect,
   useLayoutEffect,
   useRef,
   useState,
+  type CSSProperties,
   type ReactNode,
   type RefObject,
 } from "react";
@@ -15,7 +16,8 @@ import { useTranslation } from "react-i18next";
 import type { Rack } from "../../types";
 import { rackFloorMetrics } from "./roomFloorPlan";
 import { ROOM_OBJECT_KINDS, type RoomObjectKind } from "./roomObjects";
-import { ROOM_ZOOM_LEVELS, sanitizeRoomZoom, stepRoomZoom } from "./siteTreeState";
+import { ROOM_ZOOM_LEVELS, sanitizeRoomZoom } from "./siteTreeState";
+import { RoomObjectPlanArtwork } from "./RoomObjectArtwork";
 import { IT_ACCENTS, ItIcon } from "./icons";
 
 /** Accent colour per object kind (乖乖 is green — it has a job to do). Fed to
@@ -63,10 +65,11 @@ export function useRoomViewportSize(): [
   return [ref, size];
 }
 
-/** Step the zoom on Ctrl+wheel over the room's scroll viewport (the browser
- *  page-zoom gesture, repurposed for the room). A native non-passive listener
- *  because React registers `onWheel` passively, which cannot preventDefault. */
-export function useCtrlWheelZoom(
+/** Step the zoom on wheel over the room's scroll viewport (drag pans, so the
+ *  wheel is free to zoom; Ctrl+wheel — the browser page-zoom gesture — steps
+ *  the same way). A native non-passive listener because React registers
+ *  `onWheel` passively, which cannot preventDefault. */
+export function useWheelZoom(
   ref: RefObject<HTMLDivElement | null>,
   onStep: (dir: 1 | -1) => void,
 ): void {
@@ -76,7 +79,7 @@ export function useCtrlWheelZoom(
     const node = ref.current;
     if (!node) return;
     const onWheel = (event: WheelEvent) => {
-      if (!event.ctrlKey || event.deltaY === 0) return;
+      if (event.deltaY === 0) return;
       event.preventDefault();
       stepRef.current(event.deltaY < 0 ? 1 : -1);
     };
@@ -85,23 +88,25 @@ export function useCtrlWheelZoom(
   }, [ref]);
 }
 
-/** Pan the room by scrolling its viewport: middle-mouse drag (preventDefault
- *  suppresses the browser's autoscroll gadget) and arrow keys. The scroll
- *  element carries tabIndex 0, so clicking anywhere in the room — floor or a
- *  rack button inside it — puts focus where the keydown listener hears it. */
+/** Pan the room by scrolling its viewport: hold the left button on the floor
+ *  (presses on racks, objects, or controls keep their own click/drag
+ *  behaviour), middle-mouse drag from anywhere (preventDefault suppresses the
+ *  browser's autoscroll gadget), and arrow keys. A left pan only engages past
+ *  a small threshold so floor clicks (object placement) still land, and a
+ *  completed pan swallows the follow-up click. The scroll element carries
+ *  tabIndex 0, so clicking anywhere in the room — floor or a rack button
+ *  inside it — puts focus where the keydown listener hears it. */
 export function useRoomPan(ref: RefObject<HTMLDivElement | null>): void {
   useEffect(() => {
     const node = ref.current;
     if (!node) return;
     let pointerId: number | null = null;
+    let panning = false;
+    let button = 1;
     let lastX = 0;
     let lastY = 0;
-    const onPointerDown = (event: PointerEvent) => {
-      if (event.button !== 1) return;
-      event.preventDefault();
-      pointerId = event.pointerId;
-      lastX = event.clientX;
-      lastY = event.clientY;
+    const engage = (event: PointerEvent) => {
+      panning = true;
       node.style.cursor = "grabbing";
       node.focus({ preventScroll: true });
       try {
@@ -110,16 +115,53 @@ export function useRoomPan(ref: RefObject<HTMLDivElement | null>): void {
         // Keep panning uncaptured if the pointer is already gone.
       }
     };
+    const onPointerDown = (event: PointerEvent) => {
+      if (event.button === 0) {
+        // Elements with their own left-button press behaviour opt out.
+        const target = event.target as HTMLElement;
+        if (target.closest("button, .rm-bp-rack, .rm-bp-obj, .rm-iso-cab, .rm-iso-obj")) return;
+      } else if (event.button !== 1) {
+        return;
+      }
+      pointerId = event.pointerId;
+      button = event.button;
+      lastX = event.clientX;
+      lastY = event.clientY;
+      panning = false;
+      if (event.button === 1) {
+        event.preventDefault();
+        engage(event);
+      }
+    };
     const onPointerMove = (event: PointerEvent) => {
       if (pointerId !== event.pointerId) return;
+      if (!panning) {
+        if (Math.abs(event.clientX - lastX) < 4 && Math.abs(event.clientY - lastY) < 4) return;
+        engage(event);
+      }
       node.scrollLeft -= event.clientX - lastX;
       node.scrollTop -= event.clientY - lastY;
       lastX = event.clientX;
       lastY = event.clientY;
     };
+    const squelchClick = (event: MouseEvent) => {
+      event.preventDefault();
+      event.stopPropagation();
+    };
     const endPan = (event: PointerEvent) => {
       if (pointerId !== event.pointerId) return;
+      if (panning && button === 0) {
+        // The pan's pointerup still produces a click on whatever is under the
+        // cursor; capture-phase, one-shot: swallow it before placement/select
+        // handlers fire (the timeout clears the trap when no click follows).
+        node.addEventListener("click", squelchClick, { capture: true, once: true });
+        window.setTimeout(
+          () => node.removeEventListener("click", squelchClick, { capture: true }),
+          0,
+        );
+      }
       pointerId = null;
+      panning = false;
       node.style.cursor = "";
     };
     const PAN_STEP = 64;
@@ -150,11 +192,13 @@ export function useRoomPan(ref: RefObject<HTMLDivElement | null>): void {
   }, [ref]);
 }
 
-// ── Zoom stepper ──
+// ── Zoom ruler ──
 
-/** Fixed zoom levels shared by both spatial views; the middle button resets
- *  to 100%. Persisted per view via siteTreeState.loadRoomZoom/saveRoomZoom. */
-export function RoomZoomControl({
+/** Vertical ruler floating over the room's top-right corner: one clickable
+ *  tick per fixed zoom level (largest on top), with the active tick tracking
+ *  wheel-zoom steps. Levels persist per view via siteTreeState.loadRoomZoom /
+ *  saveRoomZoom, so a view reopens at its last zoom. */
+export function RoomZoomRuler({
   zoom,
   onZoomChange,
 }: {
@@ -164,33 +208,25 @@ export function RoomZoomControl({
   const { t } = useTranslation();
   const level = sanitizeRoomZoom(zoom);
   return (
-    <div className="rm-zoom" role="group" aria-label={t("itops.floorPlan.zoomLabel")}>
-      <button
-        type="button"
-        title={t("itops.floorPlan.zoomOut")}
-        aria-label={t("itops.floorPlan.zoomOut")}
-        disabled={level <= ROOM_ZOOM_LEVELS[0]}
-        onClick={() => onZoomChange(stepRoomZoom(level, -1))}
-      >
-        <ItIcon name="minus" size={13} />
-      </button>
-      <button
-        type="button"
-        className="rm-zoom-val"
-        title={t("itops.floorPlan.zoomReset")}
-        onClick={() => onZoomChange(1)}
-      >
-        {Math.round(level * 100)}%
-      </button>
-      <button
-        type="button"
-        title={t("itops.floorPlan.zoomIn")}
-        aria-label={t("itops.floorPlan.zoomIn")}
-        disabled={level >= ROOM_ZOOM_LEVELS[ROOM_ZOOM_LEVELS.length - 1]}
-        onClick={() => onZoomChange(stepRoomZoom(level, 1))}
-      >
-        <ItIcon name="plus" size={13} />
-      </button>
+    <div className="rm-zoomruler" role="group" aria-label={t("itops.floorPlan.zoomLabel")}>
+      {[...ROOM_ZOOM_LEVELS].reverse().map((value) => {
+        const percent = Math.round(value * 100);
+        return (
+          <button
+            key={value}
+            type="button"
+            className="rm-zoomruler-tick"
+            data-active={value === level}
+            title={t("itops.floorPlan.zoomSet", { percent })}
+            aria-label={t("itops.floorPlan.zoomSet", { percent })}
+            aria-pressed={value === level}
+            onClick={() => onZoomChange(value)}
+          >
+            <i />
+            <span>{percent}%</span>
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -325,36 +361,87 @@ export function ObjectGlyph({ kind, size = 14 }: { kind: RoomObjectKind; size?: 
   return <>{OBJECT_GLYPHS[kind](size)}</>;
 }
 
-// ── Edit-mode object palette ──
+// ── Edit-mode object picker ──
 
 /** The armed placement tool: null = move/select, or the object kind the next
  *  cell click will place. */
 export type RoomTool = RoomObjectKind | null;
 
-export function RoomObjectPalette({
+/** Full-height right-side picker column shown while editing a spatial room
+ *  view: a search box over a grid of preview cards — Racks first, then every
+ *  room-object kind. Clicking a card arms it; the next floor-cell click places
+ *  it under the cursor. Racks have properties, so the Rack card opens the New
+ *  Rack dialog first and the created rack is placed by the following click. */
+export function RoomObjectPicker({
   tool,
   onToolChange,
+  rackArmed,
+  onPickRack,
 }: {
   tool: RoomTool;
   onToolChange: (tool: RoomTool) => void;
+  /** A just-created rack is awaiting its placement click. */
+  rackArmed: boolean;
+  onPickRack: () => void;
 }) {
   const { t } = useTranslation();
+  const [query, setQuery] = useState("");
+  const q = query.trim().toLowerCase();
+  const rackLabel = t("itops.floorPlan.pickerRack");
+  const kinds = ROOM_OBJECT_KINDS.filter(
+    (kind) => !q || t(`itops.floorPlan.object.${kind}`).toLowerCase().includes(q),
+  );
   return (
-    <div className="rm-palette" role="group" aria-label={t("itops.floorPlan.paletteLabel")}>
-      <span className="rm-palette-h">{t("itops.floorPlan.paletteLabel")}</span>
-      {ROOM_OBJECT_KINDS.map((kind) => (
-        <button
-          key={kind}
-          type="button"
-          data-active={tool === kind}
-          title={t(`itops.floorPlan.object.${kind}`)}
-          aria-pressed={tool === kind}
-          onClick={() => onToolChange(tool === kind ? null : kind)}
-        >
-          <ObjectGlyph kind={kind} size={15} />
-          <span>{t(`itops.floorPlan.object.${kind}`)}</span>
-        </button>
-      ))}
+    <div className="rm-picker" role="group" aria-label={t("itops.floorPlan.pickerTitle")}>
+      <div className="rm-picker-h">{t("itops.floorPlan.pickerTitle")}</div>
+      <div className="rm-picker-search">
+        <ItIcon name="search" size={13} />
+        <input
+          type="text"
+          value={query}
+          placeholder={t("itops.floorPlan.pickerSearchPlaceholder")}
+          onChange={(event) => setQuery(event.currentTarget.value)}
+        />
+        {query ? (
+          <button type="button" className="rm-picker-search-x" onClick={() => setQuery("")}>
+            <ItIcon name="xmark" size={12} />
+          </button>
+        ) : null}
+      </div>
+      <div className="rm-picker-grid">
+        {!q || rackLabel.toLowerCase().includes(q) ? (
+          <button
+            type="button"
+            className="rm-picker-card"
+            data-active={rackArmed}
+            title={rackLabel}
+            aria-pressed={rackArmed}
+            onClick={onPickRack}
+          >
+            <span className="rm-picker-thumb rack">
+              <ItIcon name="rack" size={30} sw={1.3} />
+            </span>
+            <span className="rm-picker-name">{rackLabel}</span>
+          </button>
+        ) : null}
+        {kinds.map((kind) => (
+          <button
+            key={kind}
+            type="button"
+            className="rm-picker-card"
+            data-active={tool === kind}
+            style={{ "--obj": OBJECT_ACCENTS[kind] } as CSSProperties}
+            title={t(`itops.floorPlan.object.${kind}`)}
+            aria-pressed={tool === kind}
+            onClick={() => onToolChange(tool === kind ? null : kind)}
+          >
+            <span className="rm-picker-thumb">
+              <RoomObjectPlanArtwork kind={kind} />
+            </span>
+            <span className="rm-picker-name">{t(`itops.floorPlan.object.${kind}`)}</span>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
