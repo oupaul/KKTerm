@@ -132,11 +132,6 @@
   color: var(--text-faint);
 }
 
-.webview-address-bar.is-insecure-https .webview-address-lock,
-.webview-address-bar.is-insecure-https .webview-address-input {
-  color: var(--orange);
-}
-
 .webview-address-bar.is-http .webview-address-lock,
 .webview-address-bar.is-http .webview-address-input {
   color: var(--red);

@@ -1087,10 +1087,8 @@ export function WebViewWorkspace({
   const trimmedAddress = addressInput.trim();
   const isHttpsAddress = /^https:\/\//i.test(trimmedAddress);
   const isHttpAddress = /^http:\/\//i.test(trimmedAddress);
-  const isInsecureHttpsAddress = isHttpsAddress && ignoreCertificateErrors;
   const addressBarClassName = [
     "webview-address-bar",
-    isInsecureHttpsAddress ? "is-insecure-https" : "",
     isHttpAddress ? "is-http" : "",
   ]
     .filter(Boolean)
