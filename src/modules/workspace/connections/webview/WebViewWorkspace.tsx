@@ -1,7 +1,7 @@
 import { ScreenshotMenu } from "../../ScreenshotMenu";
 import { documentHasWebviewBlockingOverlay } from "../../nativeOverlay";
 
-import { ArrowLeft, ArrowRight, Bot, ExternalLink, Globe2, KeyRound, Lock, RefreshCw, Save, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Bot, ExternalLink, Globe2, KeyRound, Lock, RefreshCw, Save, Unlock, X } from "lucide-react";
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -1084,7 +1084,17 @@ export function WebViewWorkspace({
     }
   }
 
-  const isSecureAddress = /^https:\/\//i.test(addressInput.trim());
+  const trimmedAddress = addressInput.trim();
+  const isHttpsAddress = /^https:\/\//i.test(trimmedAddress);
+  const isHttpAddress = /^http:\/\//i.test(trimmedAddress);
+  const isInsecureHttpsAddress = isHttpsAddress && ignoreCertificateErrors;
+  const addressBarClassName = [
+    "webview-address-bar",
+    isInsecureHttpsAddress ? "is-insecure-https" : "",
+    isHttpAddress ? "is-http" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
   const addressHost = formatWebviewSubtitle(addressInput);
   const connectionIconSrc = tab.connection?.iconDataUrl;
   const connectionIdentityLabel = tab.connection?.name || addressHost;
@@ -1135,9 +1145,9 @@ export function WebViewWorkspace({
                 <RefreshCw size={14} />
               </button>
             </div>
-            <form className="webview-address-bar" onSubmit={handleNavigate}>
-              <span className={isSecureAddress ? "webview-address-lock" : "webview-address-lock insecure"}>
-                {isSecureAddress ? <Lock size={13} /> : <Globe2 size={13} />}
+            <form className={addressBarClassName} onSubmit={handleNavigate}>
+              <span className={isHttpsAddress || isHttpAddress ? "webview-address-lock" : "webview-address-lock insecure"}>
+                {isHttpAddress ? <Unlock size={13} /> : isHttpsAddress ? <Lock size={13} /> : <Globe2 size={13} />}
               </span>
               <input
                 aria-label={t("webview.address")}
