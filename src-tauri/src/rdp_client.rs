@@ -8,6 +8,7 @@
 //! - `ironrdp = "0.15"` with features `["connector", "session", "graphics", "pdu", "input"]`
 //! - `ironrdp-tokio = "0.9"` (re-exports all of `ironrdp_async` via `pub use ironrdp_async::*`)
 //! - `tokio-rustls = "0.26"` (for TLS upgrade — we implement the upgrade directly, no ironrdp-tls)
+//! - `tokio-native-tls = "0.3"` (legacy TLS fallback for old Windows hosts; see `RdpTlsStream`)
 //! - `sspi = "0.21"` (for CredSSP/NTLM)
 //!
 //! ## Key types
@@ -15,8 +16,8 @@
 //! // TokioFramed<S> = Framed<TokioStream<S>>
 //! // Framed::new(stream: S::InnerStream) -> Self
 //! // TokioStream<S>::InnerStream = S  =>  TokioFramed::new(tcp_stream) works directly
-//! ironrdp_tokio::TokioFramed<tokio::net::TcpStream>                       // pre-TLS
-//! ironrdp_tokio::TokioFramed<tokio_rustls::client::TlsStream<TcpStream>>  // post-TLS (concrete; see UpgradedFramed)
+//! ironrdp_tokio::TokioFramed<tokio::net::TcpStream>  // pre-TLS
+//! ironrdp_tokio::TokioFramed<RdpTlsStream>           // post-TLS (concrete; see UpgradedFramed)
 //! ironrdp::connector::ClientConnector  // config: connector::Config, client_addr: SocketAddr
 //! ironrdp::connector::ConnectionResult  // returned by connect_finalize on success
 //! ```
@@ -37,7 +38,11 @@
 //! // Step 4: Extract inner TCP stream + any leftover bytes
 //! let (initial_stream, leftover_bytes) = framed.into_inner();
 //!
-//! // Step 5: TLS upgrade via tokio-rustls
+//! // Step 5: TLS upgrade via tokio-rustls. If the rustls handshake itself
+//! // fails (old Windows Schannel with no cipher overlap resets the TCP
+//! // connection), the whole sequence is retried once from Step 1 with the
+//! // platform TLS stack via tokio-native-tls, which still speaks TLS 1.0-1.2
+//! // with the legacy CBC/RSA suites (see rdp_connect / RdpTlsStream).
 //! let tls_stream = tls_upgrade(initial_stream, &host).await?;
 //!
 //! // Step 6: Extract server public key
@@ -448,7 +453,7 @@ fn rdp_client_start_debug_payload(
             "enableCredSsp": true,
             "enableTls": false,
             "requestedProtocols": ["HYBRID", "HYBRID_EX"],
-            "legacyTlsFallbackAllowed": false,
+            "legacyTlsFallbackAllowed": true,
         },
     })
 }
@@ -518,13 +523,169 @@ impl rustls::client::danger::ServerCertVerifier for NoCertificateVerification {
     }
 }
 
+// ── TLS stream: rustls with a legacy native-tls fallback (issue #344) ─────────
+
+/// Which TLS implementation performs the security upgrade.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum TlsBackend {
+    /// Modern path: TLS 1.2/1.3, ECDHE + AEAD cipher suites only.
+    Rustls,
+    /// Legacy fallback via the platform TLS stack (SecureTransport on macOS,
+    /// OpenSSL on Linux). Old Windows Schannel configs — Win7/Server 2008 R2
+    /// (TLS 1.0 only by default) and Server 2012/2012 R2 (only CBC suites with
+    /// the RSA certs RDP uses) — have zero cipher overlap with rustls and
+    /// reset the TCP connection mid-handshake ("connection reset by peer").
+    /// The platform stacks still speak those suites, like mstsc does.
+    NativeTls,
+}
+
+impl TlsBackend {
+    fn label(self) -> &'static str {
+        match self {
+            Self::Rustls => "rustls",
+            Self::NativeTls => "native-tls",
+        }
+    }
+}
+
+/// The upgraded RDP stream, over either TLS backend. Kept as a concrete enum
+/// (not box-erased) so the spawned session future stays `Send`.
+enum RdpTlsStream {
+    Rustls(Box<tokio_rustls::client::TlsStream<TcpStream>>),
+    NativeTls(tokio_native_tls::TlsStream<TcpStream>),
+}
+
+impl tokio::io::AsyncRead for RdpTlsStream {
+    fn poll_read(
+        self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+        buf: &mut tokio::io::ReadBuf<'_>,
+    ) -> std::task::Poll<std::io::Result<()>> {
+        match self.get_mut() {
+            Self::Rustls(stream) => std::pin::Pin::new(stream).poll_read(cx, buf),
+            Self::NativeTls(stream) => std::pin::Pin::new(stream).poll_read(cx, buf),
+        }
+    }
+}
+
+impl tokio::io::AsyncWrite for RdpTlsStream {
+    fn poll_write(
+        self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+        buf: &[u8],
+    ) -> std::task::Poll<std::io::Result<usize>> {
+        match self.get_mut() {
+            Self::Rustls(stream) => std::pin::Pin::new(stream).poll_write(cx, buf),
+            Self::NativeTls(stream) => std::pin::Pin::new(stream).poll_write(cx, buf),
+        }
+    }
+
+    fn poll_flush(
+        self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<std::io::Result<()>> {
+        match self.get_mut() {
+            Self::Rustls(stream) => std::pin::Pin::new(stream).poll_flush(cx),
+            Self::NativeTls(stream) => std::pin::Pin::new(stream).poll_flush(cx),
+        }
+    }
+
+    fn poll_shutdown(
+        self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<std::io::Result<()>> {
+        match self.get_mut() {
+            Self::Rustls(stream) => std::pin::Pin::new(stream).poll_shutdown(cx),
+            Self::NativeTls(stream) => std::pin::Pin::new(stream).poll_shutdown(cx),
+        }
+    }
+}
+
 async fn tls_upgrade(
     stream: TcpStream,
     session_id: &str,
     host: &str,
     port: u16,
     server_name: &str,
-) -> Result<tokio_rustls::client::TlsStream<TcpStream>, String> {
+    backend: TlsBackend,
+) -> Result<RdpTlsStream, String> {
+    match backend {
+        TlsBackend::Rustls => tls_upgrade_rustls(stream, session_id, host, port, server_name).await,
+        TlsBackend::NativeTls => {
+            tls_upgrade_native(stream, session_id, host, port, server_name).await
+        }
+    }
+}
+
+async fn tls_upgrade_native(
+    stream: TcpStream,
+    session_id: &str,
+    host: &str,
+    port: u16,
+    server_name: &str,
+) -> Result<RdpTlsStream, String> {
+    use tokio_native_tls::native_tls;
+
+    rdp_debug(
+        "ironrdp.tls.start",
+        &json!({
+            "sessionId": session_id,
+            "host": host,
+            "port": port,
+            "serverName": server_name,
+            "backend": TlsBackend::NativeTls.label(),
+            "protocolVersions": ["TLS1.0", "TLS1.1", "TLS1.2"],
+            "certificateVerification": "disabled_for_rdp",
+        }),
+    );
+
+    let connector = native_tls::TlsConnector::builder()
+        // RDP wraps its own CredSSP auth inside TLS; chain/hostname
+        // verification is intentionally skipped, same as the rustls path.
+        .danger_accept_invalid_certs(true)
+        .danger_accept_invalid_hostnames(true)
+        // The whole point of this fallback is legacy protocol support.
+        .min_protocol_version(Some(native_tls::Protocol::Tlsv10))
+        .build()
+        .map_err(|e| format!("TLS config error: {e}"))?;
+    let connector = tokio_native_tls::TlsConnector::from(connector);
+
+    match connector.connect(server_name, stream).await {
+        Ok(tls_stream) => {
+            rdp_debug(
+                "ironrdp.tls.ok",
+                &json!({
+                    "sessionId": session_id,
+                    "host": host,
+                    "port": port,
+                    "backend": TlsBackend::NativeTls.label(),
+                }),
+            );
+            Ok(RdpTlsStream::NativeTls(tls_stream))
+        }
+        Err(error) => {
+            rdp_debug(
+                "ironrdp.tls.error",
+                &json!({
+                    "sessionId": session_id,
+                    "host": host,
+                    "port": port,
+                    "backend": TlsBackend::NativeTls.label(),
+                    "error": error_chain(&error),
+                }),
+            );
+            Err(format!("TLS handshake failed: {}", error_chain(&error)))
+        }
+    }
+}
+
+async fn tls_upgrade_rustls(
+    stream: TcpStream,
+    session_id: &str,
+    host: &str,
+    port: u16,
+    server_name: &str,
+) -> Result<RdpTlsStream, String> {
     let provider = Arc::new(rustls::crypto::ring::default_provider());
     let cipher_suites: Vec<String> = provider
         .cipher_suites
@@ -538,6 +699,7 @@ async fn tls_upgrade(
             "host": host,
             "port": port,
             "serverName": server_name,
+            "backend": TlsBackend::Rustls.label(),
             "protocolVersions": ["TLS1.2", "TLS1.3"],
             "cipherSuites": cipher_suites,
             "sessionResumption": false,
@@ -568,6 +730,7 @@ async fn tls_upgrade(
                     "sessionId": session_id,
                     "host": host,
                     "port": port,
+                    "backend": TlsBackend::Rustls.label(),
                     "protocolVersion": session.protocol_version().map(|version| format!("{version:?}")),
                     "cipherSuite": session
                         .negotiated_cipher_suite()
@@ -575,7 +738,7 @@ async fn tls_upgrade(
                     "peerCertificateCount": session.peer_certificates().map(|certs| certs.len()).unwrap_or(0),
                 }),
             );
-            Ok(tls_stream)
+            Ok(RdpTlsStream::Rustls(Box::new(tls_stream)))
         }
         Err(error) => {
             rdp_debug(
@@ -584,6 +747,7 @@ async fn tls_upgrade(
                     "sessionId": session_id,
                     "host": host,
                     "port": port,
+                    "backend": TlsBackend::Rustls.label(),
                     "error": error.to_string(),
                     "errorKind": tls_error_kind(&error),
                 }),
@@ -595,32 +759,41 @@ async fn tls_upgrade(
 
 fn extract_server_public_key(
     session_id: &str,
-    tls_stream: &tokio_rustls::client::TlsStream<TcpStream>,
+    tls_stream: &RdpTlsStream,
 ) -> Result<Vec<u8>, String> {
-    use x509_cert::der::Decode as _;
+    let (cert_der, peer_certificate_count) = match tls_stream {
+        RdpTlsStream::Rustls(tls_stream) => {
+            let (_, session) = tls_stream.get_ref();
+            let cert_der = session
+                .peer_certificates()
+                .and_then(|certs| certs.first())
+                .ok_or_else(|| "RDP server sent no TLS certificate".to_string())?;
+            let count = session
+                .peer_certificates()
+                .map(|certs| certs.len())
+                .unwrap_or(0);
+            (cert_der.as_ref().to_vec(), count)
+        }
+        RdpTlsStream::NativeTls(tls_stream) => {
+            let cert = tls_stream
+                .get_ref()
+                .peer_certificate()
+                .map_err(|e| format!("failed to read server certificate: {e}"))?
+                .ok_or_else(|| "RDP server sent no TLS certificate".to_string())?;
+            let cert_der = cert
+                .to_der()
+                .map_err(|e| format!("failed to encode server certificate: {e}"))?;
+            (cert_der, 1)
+        }
+    };
 
-    let (_, session) = tls_stream.get_ref();
-    let cert_der = session
-        .peer_certificates()
-        .and_then(|certs| certs.first())
-        .ok_or_else(|| "RDP server sent no TLS certificate".to_string())?;
-
-    let cert = x509_cert::Certificate::from_der(cert_der.as_ref())
-        .map_err(|e| format!("failed to parse server certificate: {e}"))?;
-
-    let spki_bytes = cert
-        .tbs_certificate
-        .subject_public_key_info
-        .subject_public_key
-        .as_bytes()
-        .ok_or_else(|| "server certificate subject public key is not a bitstring".to_string())?
-        .to_vec();
+    let spki_bytes = subject_public_key_from_cert_der(&cert_der)?;
 
     rdp_debug(
         "ironrdp.certificate.ok",
         &json!({
             "sessionId": session_id,
-            "peerCertificateCount": session.peer_certificates().map(|certs| certs.len()).unwrap_or(0),
+            "peerCertificateCount": peer_certificate_count,
             "subjectPublicKeyBytes": spki_bytes.len(),
         }),
     );
@@ -628,9 +801,42 @@ fn extract_server_public_key(
     Ok(spki_bytes)
 }
 
+/// Parse the certificate's SubjectPublicKeyInfo for the CredSSP public-key binding.
+fn subject_public_key_from_cert_der(cert_der: &[u8]) -> Result<Vec<u8>, String> {
+    use x509_cert::der::Decode as _;
+
+    let cert = x509_cert::Certificate::from_der(cert_der)
+        .map_err(|e| format!("failed to parse server certificate: {e}"))?;
+
+    Ok(cert
+        .tbs_certificate
+        .subject_public_key_info
+        .subject_public_key
+        .as_bytes()
+        .ok_or_else(|| "server certificate subject public key is not a bitstring".to_string())?
+        .to_vec())
+}
+
 // ── Connect helper ────────────────────────────────────────────────────────────
 
-type UpgradedFramed = ironrdp_tokio::TokioFramed<tokio_rustls::client::TlsStream<TcpStream>>;
+type UpgradedFramed = ironrdp_tokio::TokioFramed<RdpTlsStream>;
+
+/// Error from a single connect attempt. The TLS-handshake case is split out
+/// because it is the only failure that triggers the legacy TLS fallback:
+/// earlier failures (TCP, negotiation) would fail identically on a retry, and
+/// later ones (CredSSP, finalize) already went through the TLS upgrade fine.
+enum ConnectAttemptError {
+    TlsHandshake(String),
+    Other(String),
+}
+
+impl ConnectAttemptError {
+    fn into_message(self) -> String {
+        match self {
+            Self::TlsHandshake(message) | Self::Other(message) => message,
+        }
+    }
+}
 
 /// Flatten an error and its `source()` chain into one message, so a generic
 /// top-level label (e.g. "CredSSP") surfaces the underlying reason
@@ -663,13 +869,6 @@ async fn rdp_connect(
     width: u16,
     height: u16,
 ) -> Result<(ironrdp::connector::ConnectionResult, UpgradedFramed), String> {
-    use ironrdp::connector::{
-        ClientConnector, Config, Credentials, DesktopSize, ServerName, credssp::KerberosConfig,
-    };
-    use ironrdp::pdu::gcc::KeyboardType;
-    use ironrdp::pdu::rdp::capability_sets::MajorPlatformType;
-    use ironrdp_tokio::{TokioFramed, connect_begin, connect_finalize, mark_as_upgraded};
-
     // CredSSP/NTLM needs the domain separated from the username. Split a
     // `DOMAIN\user` login into (domain, user); otherwise keep the requested
     // domain and the username as-is (UPN `user@domain` is left intact).
@@ -680,6 +879,77 @@ async fn rdp_connect(
         _ => (username, domain),
     };
 
+    match rdp_connect_attempt(
+        &session_id,
+        &host,
+        port,
+        &username,
+        &password,
+        domain.as_deref(),
+        width,
+        height,
+        TlsBackend::Rustls,
+    )
+    .await
+    {
+        Ok(connected) => Ok(connected),
+        Err(ConnectAttemptError::TlsHandshake(rustls_error)) => {
+            // The TCP connection is dead after a failed handshake (old
+            // Schannel typically sends RST), so the fallback restarts the
+            // whole sequence — TCP connect and X.224 negotiation included.
+            rdp_debug(
+                "ironrdp.tls.fallback",
+                &json!({
+                    "sessionId": session_id,
+                    "host": host,
+                    "port": port,
+                    "from": TlsBackend::Rustls.label(),
+                    "to": TlsBackend::NativeTls.label(),
+                    "reason": rustls_error,
+                }),
+            );
+            rdp_connect_attempt(
+                &session_id,
+                &host,
+                port,
+                &username,
+                &password,
+                domain.as_deref(),
+                width,
+                height,
+                TlsBackend::NativeTls,
+            )
+            .await
+            .map_err(|fallback_error| {
+                format!(
+                    "{rustls_error}; legacy TLS fallback failed: {}",
+                    fallback_error.into_message()
+                )
+            })
+        }
+        Err(error) => Err(error.into_message()),
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn rdp_connect_attempt(
+    session_id: &str,
+    host: &str,
+    port: u16,
+    username: &str,
+    password: &str,
+    domain: Option<&str>,
+    width: u16,
+    height: u16,
+    backend: TlsBackend,
+) -> Result<(ironrdp::connector::ConnectionResult, UpgradedFramed), ConnectAttemptError> {
+    use ironrdp::connector::{
+        ClientConnector, Config, Credentials, DesktopSize, ServerName, credssp::KerberosConfig,
+    };
+    use ironrdp::pdu::gcc::KeyboardType;
+    use ironrdp::pdu::rdp::capability_sets::MajorPlatformType;
+    use ironrdp_tokio::{TokioFramed, connect_begin, connect_finalize, mark_as_upgraded};
+
     // Step 1: TCP connect + create framed
     rdp_debug(
         "ironrdp.tcp.start",
@@ -689,7 +959,7 @@ async fn rdp_connect(
             "port": port,
         }),
     );
-    let stream = match TcpStream::connect((host.as_str(), port)).await {
+    let stream = match TcpStream::connect((host, port)).await {
         Ok(stream) => stream,
         Err(error) => {
             rdp_debug(
@@ -702,10 +972,14 @@ async fn rdp_connect(
                     "errorKind": format!("{:?}", error.kind()),
                 }),
             );
-            return Err(format!("TCP connect to {host}:{port} failed: {error}"));
+            return Err(ConnectAttemptError::Other(format!(
+                "TCP connect to {host}:{port} failed: {error}"
+            )));
         }
     };
-    let client_addr = stream.local_addr().map_err(|e| e.to_string())?;
+    let client_addr = stream
+        .local_addr()
+        .map_err(|e| ConnectAttemptError::Other(e.to_string()))?;
     let peer_addr = stream.peer_addr().ok();
     rdp_debug(
         "ironrdp.tcp.ok",
@@ -721,8 +995,11 @@ async fn rdp_connect(
 
     // Step 2: Build connector config
     let config = Config {
-        credentials: Credentials::UsernamePassword { username, password },
-        domain,
+        credentials: Credentials::UsernamePassword {
+            username: username.to_string(),
+            password: password.to_string(),
+        },
+        domain: domain.map(str::to_string),
         enable_tls: false,
         enable_credssp: true,
         desktop_size: DesktopSize { width, height },
@@ -772,7 +1049,8 @@ async fn rdp_connect(
                 "enableCredSsp": config.enable_credssp,
                 "enableTls": config.enable_tls,
                 "requestedProtocols": ["HYBRID", "HYBRID_EX"],
-                "legacyTlsFallbackAllowed": config.enable_tls,
+                "legacyTlsFallbackAllowed": true,
+                "tlsBackend": backend.label(),
             },
         }),
     );
@@ -790,7 +1068,9 @@ async fn rdp_connect(
                     "error": error,
                 }),
             );
-            return Err(format!("RDP connect_begin failed: {error}"));
+            return Err(ConnectAttemptError::Other(format!(
+                "RDP connect_begin failed: {error}"
+            )));
         }
     };
     rdp_debug(
@@ -815,10 +1095,13 @@ async fn rdp_connect(
     );
 
     // Step 5: TLS upgrade
-    let tls_stream = tls_upgrade(tcp_stream, &session_id, &host, port, &host).await?;
+    let tls_stream = tls_upgrade(tcp_stream, session_id, host, port, host, backend)
+        .await
+        .map_err(ConnectAttemptError::TlsHandshake)?;
 
     // Step 6: Extract server public key
-    let server_public_key = extract_server_public_key(&session_id, &tls_stream)?;
+    let server_public_key = extract_server_public_key(session_id, &tls_stream)
+        .map_err(ConnectAttemptError::Other)?;
 
     // Step 7: Mark as upgraded
     let upgraded = mark_as_upgraded(should_upgrade, &mut connector);
@@ -840,7 +1123,7 @@ async fn rdp_connect(
         connector,
         &mut upgraded_framed,
         &mut NoopNetworkClient,
-        ServerName::new(host.clone()),
+        ServerName::new(host),
         server_public_key,
         None::<KerberosConfig>,
     )
@@ -858,7 +1141,9 @@ async fn rdp_connect(
                     "error": error,
                 }),
             );
-            return Err(format!("RDP connect_finalize failed: {error}"));
+            return Err(ConnectAttemptError::Other(format!(
+                "RDP connect_finalize failed: {error}"
+            )));
         }
     };
     rdp_debug(
@@ -1241,6 +1526,69 @@ fn extract_rgba_rect(full_rgba: &[u8], full_width: u16, x: u16, y: u16, w: u16, 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tokio::io::{AsyncReadExt as _, AsyncWriteExt as _};
+
+    /// TPKT + X.224 Connection Confirm with an RDP_NEG_RSP selecting HYBRID
+    /// (NLA) — the negotiation response a Windows host sends right before the
+    /// client starts the TLS upgrade.
+    const X224_CONNECTION_CONFIRM_HYBRID: [u8; 19] = [
+        0x03, 0x00, 0x00, 0x13, // TPKT header, total length 19
+        0x0e, 0xd0, 0x00, 0x00, 0x12, 0x34, 0x00, // X.224 Connection Confirm
+        0x02, 0x00, 0x08, 0x00, 0x02, 0x00, 0x00, 0x00, // RDP_NEG_RSP: PROTOCOL_HYBRID
+    ];
+
+    /// Regression test for issue #344: a host that accepts RDP negotiation but
+    /// kills the connection during the TLS handshake (old Schannel with no
+    /// cipher overlap against rustls) must trigger the legacy native-tls
+    /// fallback, i.e. a full second connection attempt from TCP connect on.
+    #[tokio::test]
+    async fn tls_handshake_failure_triggers_legacy_native_tls_fallback() {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let port = listener.local_addr().unwrap().port();
+
+        let server = tokio::spawn(async move {
+            let mut connections = 0u32;
+            for _ in 0..2 {
+                let Ok((mut socket, _)) = listener.accept().await else {
+                    break;
+                };
+                connections += 1;
+                let mut buf = [0u8; 512];
+                // Read the X.224 Connection Request, confirm HYBRID, then
+                // drop the socket as soon as the TLS ClientHello arrives.
+                let _ = socket.read(&mut buf).await;
+                let _ = socket.write_all(&X224_CONNECTION_CONFIRM_HYBRID).await;
+                let _ = socket.read(&mut buf).await;
+            }
+            connections
+        });
+
+        let error = match rdp_connect(
+            "rdp-test".to_string(),
+            "127.0.0.1".to_string(),
+            port,
+            "user".to_string(),
+            "password".to_string(),
+            None,
+            1280,
+            800,
+        )
+        .await
+        {
+            Ok(_) => panic!("connect must fail against the handshake-killing server"),
+            Err(error) => error,
+        };
+
+        let connections = server.await.unwrap();
+        assert_eq!(
+            connections, 2,
+            "expected a second (native-tls fallback) connection attempt"
+        );
+        assert!(
+            error.contains("legacy TLS fallback failed"),
+            "error should surface both attempts, got: {error}"
+        );
+    }
 
     #[test]
     fn validates_session_ids() {

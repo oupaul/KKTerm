@@ -151,6 +151,14 @@ battery = { package = "starship-battery", version = "0.10" }
 ironrdp = { version = "0.16", features = ["connector", "session", "graphics", "pdu", "input"] }
 ironrdp-tokio = "0.9"
 tokio-rustls = "0.26"
+# Legacy TLS fallback for the RDP upgrade (issue #344): rustls only speaks
+# TLS 1.2/1.3 with ECDHE+AEAD suites, which old Windows Schannel configs
+# (Win7/2008 R2 default to TLS 1.0; 2012/2012 R2 offer only CBC suites with RSA
+# certs) reject by resetting the connection mid-handshake. native-tls rides the
+# platform stack (SecureTransport on macOS, OpenSSL on Linux) which still
+# supports those suites. native-tls itself is already in the tree via
+# suppaftp/async-native-tls; this only adds the small tokio adapter.
+tokio-native-tls = "0.3"
 # Direct rustls use for the RDP TLS upgrade (no-cert-verify + ring provider). RDP
 # wraps its own CredSSP auth inside TLS, so chain verification is intentionally
 # skipped; `ring` matches the provider selected in rdp_client.rs::tls_upgrade.
