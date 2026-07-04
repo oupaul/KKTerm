@@ -116,6 +116,13 @@
   color: white;
 }
 
+.installer-button.primary:disabled {
+  --button-shadow-color: var(--border-strong);
+  background: var(--surface-muted);
+  border-color: var(--border);
+  color: var(--text-muted);
+}
+
 .installer-button.danger {
   --button-shadow-color: var(--red);
   border-color: var(--red);

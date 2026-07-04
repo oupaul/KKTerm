@@ -552,7 +552,7 @@ export function InstallerPage({ active }: { active: boolean }) {
           className="installer-button primary"
           data-tutorial-id="installer.updateAll"
           onClick={openUpdateAllConfirm}
-          disabled={scanning || !catalog || updateAllRecipes.length === 0}
+          disabled={checkInProgress || !catalog || updateAllRecipes.length === 0}
         >
           <CircleArrowUp size={14} strokeWidth={2} aria-hidden="true" />
           {t("installer.updateAll")}
