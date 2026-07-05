@@ -1217,6 +1217,7 @@
       "rotateViewRight": "向右旋轉視角",
       "zoomLabel": "縮放",
       "zoomSet": "將縮放設為 {{percent}}%",
+      "floorColorLabel": "地板顏色",
       "utilizationValue": "已用 {{percent}}%",
       "powerValue": "{{used}} W / {{capacity}} W",
       "powerDrawOnly": "{{watts}} W",
@@ -1233,6 +1234,13 @@
       "deleteObjectTitle": "移除物件",
       "objectLevel": "底部位於 {{z}}U",
       "objectNoSpace": "該位置沒有可用的垂直空間。",
+      "floorColor": {
+        "default": "預設",
+        "concrete": "混凝土",
+        "graphite": "石墨",
+        "green": "綠色地磚",
+        "blue": "藍色地磚"
+      },
       "health": {
         "empty": "空閒",
         "ok": "正常",

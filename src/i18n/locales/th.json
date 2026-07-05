@@ -1217,6 +1217,7 @@
       "rotateViewRight": "หมุนมุมมองไปทางขวา",
       "zoomLabel": "ซูม",
       "zoomSet": "ตั้งค่าซูมเป็น {{percent}}%",
+      "floorColorLabel": "สีพื้น",
       "utilizationValue": "ใช้ {{percent}}%",
       "powerValue": "{{used}} W / {{capacity}} W",
       "powerDrawOnly": "{{watts}} W",
@@ -1233,6 +1234,13 @@
       "deleteObjectTitle": "นำวัตถุออก",
       "objectLevel": "ฐานอยู่ที่ {{z}}U",
       "objectNoSpace": "ไม่มีพื้นที่แนวตั้งว่างในจุดนั้น",
+      "floorColor": {
+        "default": "ค่าเริ่มต้น",
+        "concrete": "คอนกรีต",
+        "graphite": "กราไฟต์",
+        "green": "กระเบื้องสีเขียว",
+        "blue": "กระเบื้องสีน้ำเงิน"
+      },
       "health": {
         "empty": "ว่าง",
         "ok": "ปกติ",

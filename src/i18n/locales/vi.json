@@ -1217,6 +1217,7 @@
       "rotateViewRight": "Xoay góc nhìn sang phải",
       "zoomLabel": "Thu phóng",
       "zoomSet": "Đặt thu phóng thành {{percent}}%",
+      "floorColorLabel": "Màu sàn",
       "utilizationValue": "Đã dùng {{percent}}%",
       "powerValue": "{{used}} W / {{capacity}} W",
       "powerDrawOnly": "{{watts}} W",
@@ -1233,6 +1234,13 @@
       "deleteObjectTitle": "Gỡ vật thể",
       "objectLevel": "Đáy ở {{z}}U",
       "objectNoSpace": "Không còn khoảng trống theo chiều dọc tại vị trí đó.",
+      "floorColor": {
+        "default": "Mặc định",
+        "concrete": "Bê tông",
+        "graphite": "Than chì",
+        "green": "Gạch xanh lá",
+        "blue": "Gạch xanh dương"
+      },
       "health": {
         "empty": "Trống",
         "ok": "Tốt",

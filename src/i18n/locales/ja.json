@@ -1217,6 +1217,7 @@
       "rotateViewRight": "視点を右に回転",
       "zoomLabel": "ズーム",
       "zoomSet": "ズームを{{percent}}%に設定",
+      "floorColorLabel": "床の色",
       "utilizationValue": "{{percent}}% 使用",
       "powerValue": "{{used}} W / {{capacity}} W",
       "powerDrawOnly": "{{watts}} W",
@@ -1233,6 +1234,13 @@
       "deleteObjectTitle": "オブジェクトを削除",
       "objectLevel": "底面 {{z}}U",
       "objectNoSpace": "この場所には空いている垂直スペースがありません。",
+      "floorColor": {
+        "default": "デフォルト",
+        "concrete": "コンクリート",
+        "graphite": "グラファイト",
+        "green": "グリーンタイル",
+        "blue": "ブルータイル"
+      },
       "health": {
         "empty": "空き",
         "ok": "正常",

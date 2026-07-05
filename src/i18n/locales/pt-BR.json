@@ -1217,6 +1217,7 @@
       "rotateViewRight": "Girar a visão para a direita",
       "zoomLabel": "Zoom",
       "zoomSet": "Definir o zoom para {{percent}}%",
+      "floorColorLabel": "Cor do piso",
       "utilizationValue": "{{percent}}% ocupado",
       "powerValue": "{{used}} W / {{capacity}} W",
       "powerDrawOnly": "{{watts}} W",
@@ -1233,6 +1234,13 @@
       "deleteObjectTitle": "Remover objeto",
       "objectLevel": "Base em {{z}}U",
       "objectNoSpace": "Não há espaço vertical livre nesse ponto.",
+      "floorColor": {
+        "default": "Padrão",
+        "concrete": "Concreto",
+        "graphite": "Grafite",
+        "green": "Ladrilho verde",
+        "blue": "Ladrilho azul"
+      },
       "health": {
         "empty": "Vazio",
         "ok": "Saudável",

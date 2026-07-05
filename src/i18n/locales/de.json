@@ -1217,6 +1217,7 @@
       "rotateViewRight": "Ansicht nach rechts drehen",
       "zoomLabel": "Zoom",
       "zoomSet": "Zoom auf {{percent}} % setzen",
+      "floorColorLabel": "Bodenfarbe",
       "utilizationValue": "{{percent}} % belegt",
       "powerValue": "{{used}} W / {{capacity}} W",
       "powerDrawOnly": "{{watts}} W",
@@ -1233,6 +1234,13 @@
       "deleteObjectTitle": "Objekt entfernen",
       "objectLevel": "Unterkante bei {{z}}U",
       "objectNoSpace": "An dieser Stelle ist kein vertikaler Platz frei.",
+      "floorColor": {
+        "default": "Standard",
+        "concrete": "Beton",
+        "graphite": "Graphit",
+        "green": "Grüne Fliesen",
+        "blue": "Blaue Fliesen"
+      },
       "health": {
         "empty": "Leer",
         "ok": "Intakt",

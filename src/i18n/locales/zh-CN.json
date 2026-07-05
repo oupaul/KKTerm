@@ -1217,6 +1217,7 @@
       "rotateViewRight": "向右旋转视角",
       "zoomLabel": "缩放",
       "zoomSet": "将缩放设为 {{percent}}%",
+      "floorColorLabel": "地板颜色",
       "utilizationValue": "已用 {{percent}}%",
       "powerValue": "{{used}} W / {{capacity}} W",
       "powerDrawOnly": "{{watts}} W",
@@ -1233,6 +1234,13 @@
       "deleteObjectTitle": "移除对象",
       "objectLevel": "底部位于 {{z}}U",
       "objectNoSpace": "该位置没有可用的垂直空间。",
+      "floorColor": {
+        "default": "默认",
+        "concrete": "混凝土",
+        "graphite": "石墨",
+        "green": "绿色地砖",
+        "blue": "蓝色地砖"
+      },
       "health": {
         "empty": "空闲",
         "ok": "正常",

@@ -1217,6 +1217,7 @@
       "rotateViewRight": "Putar tampilan ke kanan",
       "zoomLabel": "Zoom",
       "zoomSet": "Setel zoom ke {{percent}}%",
+      "floorColorLabel": "Warna lantai",
       "utilizationValue": "{{percent}}% terisi",
       "powerValue": "{{used}} W / {{capacity}} W",
       "powerDrawOnly": "{{watts}} W",
@@ -1233,6 +1234,13 @@
       "deleteObjectTitle": "Hapus objek",
       "objectLevel": "Dasar di {{z}}U",
       "objectNoSpace": "Tidak ada ruang vertikal kosong di titik itu.",
+      "floorColor": {
+        "default": "Bawaan",
+        "concrete": "Beton",
+        "graphite": "Grafit",
+        "green": "Ubin hijau",
+        "blue": "Ubin biru"
+      },
       "health": {
         "empty": "Kosong",
         "ok": "Sehat",

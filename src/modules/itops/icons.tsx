@@ -32,6 +32,8 @@ export type ItIconName =
   | "chevR"
   | "chevL"
   | "chevD"
+  | "rotateL"
+  | "rotateR"
   | "stop"
   | "rerun"
   | "bot"
@@ -247,6 +249,18 @@ const GLYPHS: Record<ItIconName, (p: GlyphProps) => ReactNode> = {
   chevD: (p) => (
     <Svg {...p} sw={2}>
       <path d="M6 9.5l6 6 6-6" />
+    </Svg>
+  ),
+  rotateL: (p) => (
+    <Svg {...p} sw={1.7}>
+      <path d="M4 12a8 8 0 1 0 2.34-5.66L4 8.5" />
+      <path d="M4 4v4.5h4.5" />
+    </Svg>
+  ),
+  rotateR: (p) => (
+    <Svg {...p} sw={1.7}>
+      <path d="M20 12a8 8 0 1 1-2.34-5.66L20 8.5" />
+      <path d="M20 4v4.5h-4.5" />
     </Svg>
   ),
   stop: (p) => (

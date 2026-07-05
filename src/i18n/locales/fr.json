@@ -1217,6 +1217,7 @@
       "rotateViewRight": "Pivoter la vue à droite",
       "zoomLabel": "Zoom",
       "zoomSet": "Régler le zoom à {{percent}} %",
+      "floorColorLabel": "Couleur du sol",
       "utilizationValue": "{{percent}} % occupé",
       "powerValue": "{{used}} W / {{capacity}} W",
       "powerDrawOnly": "{{watts}} W",
@@ -1233,6 +1234,13 @@
       "deleteObjectTitle": "Retirer l'objet",
       "objectLevel": "Base à {{z}}U",
       "objectNoSpace": "Aucun espace vertical libre à cet endroit.",
+      "floorColor": {
+        "default": "Par défaut",
+        "concrete": "Béton",
+        "graphite": "Graphite",
+        "green": "Carrelage vert",
+        "blue": "Carrelage bleu"
+      },
       "health": {
         "empty": "Vide",
         "ok": "Sain",

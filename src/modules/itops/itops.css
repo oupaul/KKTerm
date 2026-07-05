@@ -4602,14 +4602,24 @@
   width: 14px;
   height: 2.5px;
 }
-/* Fixed view-angle stepper: the camera stays put, the room turns in quarter
-   steps (roomIsoLayout.ts rotates the grid under it). Floats over the room's
-   top-left corner. */
-.itops-page .rm-iso-angles {
+/* Floating control column over the 2.5D room's top-right corner: the shared
+   zoom ruler with the view-angle stepper and floor-colour swatches under it. */
+.itops-page .rm-iso-corner {
   position: absolute;
   top: 10px;
-  left: 10px;
+  right: 14px;
   z-index: 4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.itops-page .rm-iso-corner .rm-zoomruler {
+  position: static;
+}
+/* Fixed view-angle stepper: the camera stays put, the room turns in quarter
+   steps (roomIsoLayout.ts rotates the grid under it). */
+.itops-page .rm-iso-angles {
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -4631,6 +4641,35 @@
 .itops-page .rm-iso-angles button:hover {
   background: var(--hover);
   color: var(--text);
+}
+/* Floor-colour swatches: one solid finish per option, painted with the same
+   `--floor-a/--floor-b` pair the plane uses (palettes below). */
+.itops-page .rm-iso-floors {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 5px;
+  border: 0.5px solid var(--border);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  box-shadow: var(--shadow-control);
+}
+.itops-page .rm-iso-floor-swatch {
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--floor-a), var(--floor-b));
+  cursor: pointer;
+  transition: transform 0.14s, box-shadow 0.14s;
+}
+.itops-page .rm-iso-floor-swatch:hover {
+  transform: scale(1.12);
+}
+.itops-page .rm-iso-floor-swatch[data-active="true"] {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
 }
 /* The scroll area takes the drill's leftover height; its content-box size is
    the canvas the room's floor plane must cover. */
@@ -4654,19 +4693,48 @@
   transform-origin: 0 0;
   overflow: hidden;
 }
+/* Solid floor finish shared by the plane and the corner swatches: the default
+   follows the app theme; `data-floor` picks a fixed material palette (hex like
+   the cabinet shell hardware palette). `--floor-line` draws the tile grid. */
+.itops-page .rm-iso-plane,
+.itops-page .rm-iso-floor-swatch {
+  --floor-a: color-mix(in srgb, var(--surface-muted) 94%, var(--surface));
+  --floor-b: color-mix(in srgb, var(--surface-muted) 66%, var(--surface));
+  --floor-line: color-mix(in srgb, var(--border) 52%, transparent);
+}
+.itops-page .rm-iso-plane[data-floor="concrete"],
+.itops-page .rm-iso-floor-swatch[data-floor="concrete"] {
+  --floor-a: #cfcfd4;
+  --floor-b: #b7b7bd;
+  --floor-line: rgb(40 40 46 / 22%);
+}
+.itops-page .rm-iso-plane[data-floor="graphite"],
+.itops-page .rm-iso-floor-swatch[data-floor="graphite"] {
+  --floor-a: #3b3b41;
+  --floor-b: #2c2c31;
+  --floor-line: rgb(255 255 255 / 14%);
+}
+.itops-page .rm-iso-plane[data-floor="green"],
+.itops-page .rm-iso-floor-swatch[data-floor="green"] {
+  --floor-a: #4c7d67;
+  --floor-b: #3b634f;
+  --floor-line: rgb(12 34 25 / 30%);
+}
+.itops-page .rm-iso-plane[data-floor="blue"],
+.itops-page .rm-iso-floor-swatch[data-floor="blue"] {
+  --floor-a: #4d6a99;
+  --floor-b: #3c527a;
+  --floor-line: rgb(13 22 40 / 32%);
+}
 .itops-page .rm-iso-plane {
   position: absolute;
   left: 50%;
   transform: translate(-50%, -50%) rotateX(55deg) rotateZ(45deg);
   transform-style: preserve-3d;
   background:
-    linear-gradient(color-mix(in srgb, var(--border) 52%, transparent) 1px, transparent 1px),
-    linear-gradient(90deg, color-mix(in srgb, var(--border) 52%, transparent) 1px, transparent 1px),
-    linear-gradient(
-      135deg,
-      color-mix(in srgb, var(--surface-muted) 94%, transparent),
-      color-mix(in srgb, var(--surface-muted) 66%, transparent)
-    );
+    linear-gradient(var(--floor-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--floor-line) 1px, transparent 1px),
+    linear-gradient(135deg, var(--floor-a), var(--floor-b));
   border: 1px solid var(--border);
   border-radius: 4px;
   box-shadow: 0 0 0 10px color-mix(in srgb, var(--surface-muted) 38%, transparent);

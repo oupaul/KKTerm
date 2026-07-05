@@ -1217,6 +1217,7 @@
       "rotateViewRight": "시점을 오른쪽으로 회전",
       "zoomLabel": "확대/축소",
       "zoomSet": "확대/축소를 {{percent}}%로 설정",
+      "floorColorLabel": "바닥 색상",
       "utilizationValue": "{{percent}}% 사용",
       "powerValue": "{{used}} W / {{capacity}} W",
       "powerDrawOnly": "{{watts}} W",
@@ -1233,6 +1234,13 @@
       "deleteObjectTitle": "오브젝트 제거",
       "objectLevel": "바닥에서 {{z}}U",
       "objectNoSpace": "해당 위치에 사용 가능한 수직 공간이 없습니다.",
+      "floorColor": {
+        "default": "기본값",
+        "concrete": "콘크리트",
+        "graphite": "그래파이트",
+        "green": "녹색 타일",
+        "blue": "파란색 타일"
+      },
       "health": {
         "empty": "비어 있음",
         "ok": "정상",

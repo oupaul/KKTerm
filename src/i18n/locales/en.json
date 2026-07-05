@@ -1217,6 +1217,7 @@
       "rotateViewRight": "Rotate view right",
       "zoomLabel": "Zoom",
       "zoomSet": "Set zoom to {{percent}}%",
+      "floorColorLabel": "Floor color",
       "utilizationValue": "{{percent}}% full",
       "powerValue": "{{used}} W / {{capacity}} W",
       "powerDrawOnly": "{{watts}} W",
@@ -1233,6 +1234,13 @@
       "deleteObjectTitle": "Remove object",
       "objectLevel": "Bottom at {{z}}U",
       "objectNoSpace": "No free vertical space in that spot.",
+      "floorColor": {
+        "default": "Default",
+        "concrete": "Concrete",
+        "graphite": "Graphite",
+        "green": "Green tile",
+        "blue": "Blue tile"
+      },
       "health": {
         "empty": "Empty",
         "ok": "Healthy",
