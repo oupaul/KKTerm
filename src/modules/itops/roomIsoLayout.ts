@@ -208,6 +208,46 @@ export interface CellRect {
   d: number;
 }
 
+export function rotatePointForView(
+  point: { x: number; y: number },
+  angle: IsoViewAngle,
+  cols: number,
+  rows: number,
+): { x: number; y: number } {
+  switch (angle) {
+    case 1:
+      return { x: rows - point.y, y: point.x };
+    case 2:
+      return { x: cols - point.x, y: rows - point.y };
+    case 3:
+      return { x: point.y, y: cols - point.x };
+    default:
+      return point;
+  }
+}
+
+/** Map a fractional floor rectangle into display coordinates for a view angle.
+ *  Use this for sub-cell footprints such as quarter-block Room Objects; a
+ *  whole-cell rect maps to the same display cell as `rotateCellForView`. */
+export function rotateRectForView(
+  rect: CellRect,
+  angle: IsoViewAngle,
+  cols: number,
+  rows: number,
+): CellRect {
+  const points = [
+    rotatePointForView({ x: rect.x, y: rect.y }, angle, cols, rows),
+    rotatePointForView({ x: rect.x + rect.w, y: rect.y }, angle, cols, rows),
+    rotatePointForView({ x: rect.x, y: rect.y + rect.d }, angle, cols, rows),
+    rotatePointForView({ x: rect.x + rect.w, y: rect.y + rect.d }, angle, cols, rows),
+  ];
+  const minX = Math.min(...points.map((point) => point.x));
+  const maxX = Math.max(...points.map((point) => point.x));
+  const minY = Math.min(...points.map((point) => point.y));
+  const maxY = Math.max(...points.map((point) => point.y));
+  return { x: minX, y: minY, w: maxX - minX, d: maxY - minY };
+}
+
 /** A rack's footprint inside its cell: the side axis spans the full cell (so
  *  adjacent cabinets touch), the depth axis is `frac` of a cell, and the
  *  front face sits flush on the cell borderline the facing points at. */

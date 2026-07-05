@@ -71,7 +71,7 @@ import {
   type RackFacingMap,
   type RoomViewMode,
 } from "./siteTreeState";
-import type { RoomObject } from "./roomObjects";
+import { settleRoomObjects, type RoomObject } from "./roomObjects";
 import {
   createItOpsPdfBytes,
   excelFilename,
@@ -1117,7 +1117,7 @@ function RackDrill({
     };
   }, [isoPlacementScope, roomName, site.id, loadDurableRoomObjects, showStatusBarNotice, t]);
 
-  function saveRoomObjectsState(next: RoomObject[]) {
+  const saveRoomObjectsState = useCallback((next: RoomObject[]) => {
     setRoomObjects(next);
     if (isoPlacementScope) saveRoomObjects(isoPlacementScope, next);
     if (roomName == null) return;
@@ -1132,7 +1132,13 @@ function RackDrill({
         showStatusBarNotice(t("itops.errorNotice", { message }), { tone: "error" });
       });
     }, 500);
-  }
+  }, [isoPlacementScope, roomName, saveDurableRoomObjects, showStatusBarNotice, site.id, t]);
+
+  useEffect(() => {
+    if (!isoPlacementScope || roomObjects.length === 0) return;
+    const settled = settleRoomObjects(roomObjects, roomRacks ?? [], isoPlacements, roomFacing);
+    if (!sameRoomObjects(roomObjects, settled)) saveRoomObjectsState(settled);
+  }, [isoPlacementScope, roomObjects, roomRacks, isoPlacements, roomFacing, saveRoomObjectsState]);
 
   function notifyObjectBlocked() {
     showStatusBarNotice(t("itops.floorPlan.objectNoSpace"), { tone: "warning" });
@@ -1583,6 +1589,22 @@ function defaultFreePlacement(index: number, width: number, height: number) {
 function freeSurfaceHeight(count: number, width: number, height: number) {
   if (count <= 0) return height + 28;
   return defaultFreePlacement(count - 1, width, height).y + height + 16;
+}
+
+function sameRoomObjects(a: RoomObject[], b: RoomObject[]): boolean {
+  if (a.length !== b.length) return false;
+  return a.every((object, index) => {
+    const other = b[index];
+    return (
+      object.id === other.id &&
+      object.kind === other.kind &&
+      object.x === other.x &&
+      object.y === other.y &&
+      object.z === other.z &&
+      object.rot === other.rot &&
+      object.corner === other.corner
+    );
+  });
 }
 
 function useFreeDrag(

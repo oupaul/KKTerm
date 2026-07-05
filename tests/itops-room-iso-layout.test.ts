@@ -10,8 +10,11 @@ import {
   rackDepthFrac,
   rackFootprint,
   resolveIsoLayout,
+  rotateCellForView,
+  rotateRectForView,
   screenDeltaToPlane,
   type Facing,
+  type IsoViewAngle,
 } from "../src/modules/itops/roomIsoLayout";
 
 function rack(id: string, rackGroup = ""): Rack {
@@ -28,6 +31,10 @@ function rack(id: string, rackGroup = ""): Rack {
     sortOrder: 0,
     items: [],
   };
+}
+
+function approx(actual: number, expected: number): void {
+  assert.ok(Math.abs(actual - expected) < 1e-9, `${actual} should be close to ${expected}`);
 }
 
 test("unplaced racks default to one floor row per rack group with an aisle between", () => {
@@ -109,6 +116,32 @@ test("rackFootprint keeps the front face flush on the facing borderline", () => 
   }
 });
 
+test("rotateRectForView matches cell rotation for whole cells", () => {
+  const cols = 10;
+  const rows = 8;
+  for (const angle of [0, 1, 2, 3] as IsoViewAngle[]) {
+    const cell = rotateCellForView({ x: 4, y: 3 }, angle, cols, rows);
+    assert.deepEqual(rotateRectForView({ x: 4, y: 3, w: 1, d: 1 }, angle, cols, rows), {
+      x: cell.x,
+      y: cell.y,
+      w: 1,
+      d: 1,
+    });
+  }
+});
+
+test("rotateRectForView preserves sub-cell room-object placement", () => {
+  const cols = 10;
+  const rows = 8;
+  const bottomLeft = { x: 4.07, y: 3.61, w: 0.36, d: 0.28 };
+  const opposite = rotateRectForView(bottomLeft, 2, cols, rows);
+
+  approx(opposite.x, cols - (bottomLeft.x + bottomLeft.w));
+  approx(opposite.y, rows - (bottomLeft.y + bottomLeft.d));
+  approx(opposite.w, bottomLeft.w);
+  approx(opposite.d, bottomLeft.d);
+});
+
 test("screenDeltaToPlane inverts the axonometric projection", () => {
   // Forward-project a known plane vector and check the round trip.
   const u = 56;
@@ -117,6 +150,6 @@ test("screenDeltaToPlane inverts the axonometric projection", () => {
   const sx = u * Math.cos(rot) - v * Math.sin(rot);
   const sy = (u * Math.sin(rot) + v * Math.cos(rot)) * ISO_TILT_COS;
   const back = screenDeltaToPlane(sx, sy);
-  assert.ok(Math.abs(back.u - u) < 1e-9);
-  assert.ok(Math.abs(back.v - v) < 1e-9);
+  approx(back.u, u);
+  approx(back.v, v);
 });

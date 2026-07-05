@@ -217,7 +217,17 @@ export function ServerRoomFloorPlan({
   function dropObject(id: string, target: IsoCell) {
     const object = objects.find((entry) => entry.id === id);
     if (!object || !onObjectsChange) return;
-    const spans = footprintSpans(target, object.kind, object.rot, racks, layout.cells, objects, id);
+    const spans = footprintSpans(
+      target,
+      object.kind,
+      object.rot,
+      racks,
+      layout.cells,
+      objects,
+      id,
+      object.corner,
+      facing,
+    );
     const z = resolveDropZ(spans, object.kind, object.z);
     if (z == null) {
       onObjectBlocked?.();
@@ -285,13 +295,13 @@ export function ServerRoomFloorPlan({
       return;
     }
     if (tool == null || !onObjectsChange) return;
-    const spans = footprintSpans(cell, tool, 0, racks, layout.cells, objects);
+    const corner = objectSpec(tool).quarter ? cornerFromEvent(event, cell) : (0 as Corner);
+    const spans = footprintSpans(cell, tool, 0, racks, layout.cells, objects, undefined, corner, facing);
     const z = resolveDropZ(spans, tool);
     if (z == null) {
       onObjectBlocked?.();
       return;
     }
-    const corner = objectSpec(tool).quarter ? cornerFromEvent(event, cell) : (0 as Corner);
     onObjectsChange([
       ...objects,
       { id: crypto.randomUUID(), kind: tool, x: cell.x, y: cell.y, z, rot: 0, corner },
@@ -330,7 +340,17 @@ export function ServerRoomFloorPlan({
   }
 
   function nudgeObject(object: RoomObject, dir: 1 | -1) {
-    const spans = footprintSpans(object, object.kind, object.rot, racks, layout.cells, objects, object.id);
+    const spans = footprintSpans(
+      object,
+      object.kind,
+      object.rot,
+      racks,
+      layout.cells,
+      objects,
+      object.id,
+      object.corner,
+      facing,
+    );
     const z = nudgeZ(spans, object.kind, object.z, dir);
     if (z === object.z) return;
     onObjectsChange?.(objects.map((entry) => (entry.id === object.id ? { ...entry, z } : entry)));
@@ -428,7 +448,10 @@ export function ServerRoomFloorPlan({
                     const spec = tool != null ? objectSpec(tool) : null;
                     const blocked =
                       tool != null &&
-                      resolveDropZ(footprintSpans(hover, tool, 0, racks, layout.cells, objects), tool) == null;
+                      resolveDropZ(
+                        footprintSpans(hover, tool, 0, racks, layout.cells, objects, undefined, hover.corner, facing),
+                        tool,
+                      ) == null;
                     const span = tool != null ? objectCellSpan(tool, 0) : { w: 1, h: 1 };
                     const slot = spec?.quarter
                       ? {

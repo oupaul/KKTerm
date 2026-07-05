@@ -27,6 +27,10 @@ import type { Rack, RackItem, RackItemStatus } from "../../types";
 import { rackFloorMetrics } from "./roomFloorPlan";
 import { RoomObjectIsoArtwork } from "./RoomObjectArtwork";
 import {
+  logUiDebug,
+  isTauriRuntime,
+} from "../../lib/tauri";
+import {
   ISO_ROT_DEG,
   ISO_TILT_COS,
   ISO_TILT_DEG,
@@ -36,11 +40,14 @@ import {
   rackFootprint,
   resolveIsoLayout,
   rotateCellForView,
+  rotatePointForView,
+  rotateRectForView,
   rotateFacingForView,
   sanitizeFacing,
   screenDeltaToPlane,
   viewDeltaToGrid,
   viewGridSize,
+  type CellRect,
   type Corner,
   type Facing,
   type IsoCell,
@@ -53,6 +60,7 @@ import {
   nudgeZ,
   objectCellSpan,
   objectFootprint,
+  objectSurfaceAnchor,
   objectSpec,
   resolveDropZ,
   type RoomObject,
@@ -84,6 +92,23 @@ const CELL = 58;
 // Vertical scale: one rack unit in plane px. Linear so stacking is exact —
 // an object with z = rack heightU sits flush on the cabinet top.
 const PX_PER_U = 2.1;
+
+function roundGeom(value: number): number {
+  return Math.round(value * 1000) / 1000;
+}
+
+function roundPoint(point: { x: number; y: number }): { x: number; y: number } {
+  return { x: roundGeom(point.x), y: roundGeom(point.y) };
+}
+
+function roundRect(rect: CellRect): CellRect {
+  return {
+    x: roundGeom(rect.x),
+    y: roundGeom(rect.y),
+    w: roundGeom(rect.w),
+    d: roundGeom(rect.d),
+  };
+}
 
 function cabHeight(heightU: number): number {
   return Math.min(124, Math.max(20, Math.max(1, heightU) * PX_PER_U));
@@ -249,14 +274,83 @@ export function ServerRoomIsoView({
   const dims = viewGridSize(floorCols, floorRows, angle);
   const toDisplay = (cell: IsoCell) =>
     rotateCellForView({ x: cell.x + offX, y: cell.y + offY }, angle, floorCols, floorRows);
-  // Display-space anchor of a multi-cell footprint: rotating the span moves
-  // the anchor to another of its corners, so rotate both extreme cells and
-  // keep the top-left one.
-  const spanDisplayAnchor = (cell: IsoCell, span: { w: number; h: number }): IsoCell => {
-    const a = toDisplay(cell);
-    const b = toDisplay({ x: cell.x + span.w - 1, y: cell.y + span.h - 1 });
-    return { x: Math.min(a.x, b.x), y: Math.min(a.y, b.y) };
+  const objectDisplayRect = (object: RoomObject): CellRect => {
+    const fp = objectFootprint(object.kind, object.rot, object.corner);
+    return rotateRectForView(
+      { x: object.x + offX + fp.x, y: object.y + offY + fp.y, w: fp.w, d: fp.d },
+      angle,
+      floorCols,
+      floorRows,
+    );
   };
+  const objectDisplayAnchor = (object: RoomObject): { x: number; y: number } => {
+    const anchor = objectSurfaceAnchor(object.kind, object.rot, object.corner);
+    return rotatePointForView(
+      { x: object.x + offX + anchor.x, y: object.y + offY + anchor.y },
+      angle,
+      floorCols,
+      floorRows,
+    );
+  };
+  useEffect(() => {
+    if (!isTauriRuntime() || objects.length === 0) return;
+    logUiDebug("itops.iso.objectPlacement", {
+      angle,
+      cellPx: CELL,
+      floor: { cols: floorCols, rows: floorRows, offX, offY },
+      objects: objects.map((object) => {
+        const footprint = objectFootprint(object.kind, object.rot, object.corner);
+        const anchor = objectSurfaceAnchor(object.kind, object.rot, object.corner);
+        const displayRect = rotateRectForView(
+          { x: object.x + offX + footprint.x, y: object.y + offY + footprint.y, w: footprint.w, d: footprint.d },
+          angle,
+          floorCols,
+          floorRows,
+        );
+        const displayAnchor = rotatePointForView(
+          { x: object.x + offX + anchor.x, y: object.y + offY + anchor.y },
+          angle,
+          floorCols,
+          floorRows,
+        );
+        const supportingRack = racks.find((rack) => {
+          const cell = layout.cells[rack.id];
+          if (!cell || cell.x !== object.x || cell.y !== object.y) return false;
+          return object.z === Math.min(ROOM_CEILING_U, Math.max(1, rack.heightU));
+        });
+        return {
+          id: object.id,
+          kind: object.kind,
+          cell: { x: object.x, y: object.y },
+          z: object.z,
+          rot: object.rot,
+          corner: object.corner,
+          footprint: roundRect(footprint),
+          anchor: roundPoint(anchor),
+          displayRect: roundRect(displayRect),
+          displayAnchor: roundPoint(displayAnchor),
+          supportingRack: supportingRack
+            ? {
+                id: supportingRack.id,
+                cell: layout.cells[supportingRack.id],
+                facing: sanitizeFacing(facing[supportingRack.id]),
+                depthFrac: roundGeom(rackDepthFrac(supportingRack.depthMm)),
+                displayCell: rotateCellForView(
+                  {
+                    x: layout.cells[supportingRack.id].x + offX,
+                    y: layout.cells[supportingRack.id].y + offY,
+                  },
+                  angle,
+                  floorCols,
+                  floorRows,
+                ),
+                displayFacing: rotateFacingForView(sanitizeFacing(facing[supportingRack.id]), angle),
+              }
+            : null,
+        };
+      }),
+    });
+  }, [angle, facing, floorCols, floorRows, objects, offX, offY, racks, layout.cells]);
   const planeW = dims.cols * CELL;
   const planeH = dims.rows * CELL;
 
@@ -325,7 +419,17 @@ export function ServerRoomIsoView({
   function dropObject(id: string, target: IsoCell) {
     const object = objects.find((entry) => entry.id === id);
     if (!object || !onObjectsChange) return;
-    const spans = footprintSpans(target, object.kind, object.rot, racks, layout.cells, objects, id);
+    const spans = footprintSpans(
+      target,
+      object.kind,
+      object.rot,
+      racks,
+      layout.cells,
+      objects,
+      id,
+      object.corner,
+      facing,
+    );
     const z = resolveDropZ(spans, object.kind, object.z);
     if (z == null) {
       onObjectBlocked?.();
@@ -338,7 +442,7 @@ export function ServerRoomIsoView({
 
   function placeObjectAt(cell: IsoCell) {
     if (tool == null || !onObjectsChange) return;
-    const spans = footprintSpans(cell, tool, 0, racks, layout.cells, objects);
+    const spans = footprintSpans(cell, tool, 0, racks, layout.cells, objects, undefined, 0, facing);
     const z = resolveDropZ(spans, tool);
     if (z == null) {
       onObjectBlocked?.();
@@ -441,7 +545,17 @@ export function ServerRoomIsoView({
   }
 
   function nudgeObject(object: RoomObject, dir: 1 | -1) {
-    const spans = footprintSpans(object, object.kind, object.rot, racks, layout.cells, objects, object.id);
+    const spans = footprintSpans(
+      object,
+      object.kind,
+      object.rot,
+      racks,
+      layout.cells,
+      objects,
+      object.id,
+      object.corner,
+      facing,
+    );
     const z = nudgeZ(spans, object.kind, object.z, dir);
     if (z === object.z) return;
     onObjectsChange?.(objects.map((entry) => (entry.id === object.id ? { ...entry, z } : entry)));
@@ -560,9 +674,8 @@ export function ServerRoomIsoView({
                   <IsoObject
                     key={object.id}
                     object={object}
-                    cell={spanDisplayAnchor(object, objectCellSpan(object.kind, object.rot))}
-                    rot={rotateFacingForView(object.rot, angle)}
-                    corner={rotateFacingForView(object.corner, angle)}
+                    rect={objectDisplayRect(object)}
+                    anchor={objectDisplayAnchor(object)}
                     drag={drag?.kind === "object" && drag.id === object.id ? drag : null}
                     editMode={!!editMode}
                     selected={selectedItem?.kind === "object" && selectedItem.id === object.id}
@@ -598,23 +711,38 @@ export function ServerRoomIsoView({
                       // for the pending rack at its depth, front flush.
                       if (tool != null) {
                         const z = resolveDropZ(
-                          footprintSpans(hover, tool, 0, racks, layout.cells, objects),
+                          footprintSpans(hover, tool, 0, racks, layout.cells, objects, undefined, 0, facing),
                           tool,
                         );
                         const span = objectCellSpan(tool, 0);
-                        const at = spanDisplayAnchor(hover, span);
+                        const tileRect = rotateRectForView(
+                          { x: hover.x + offX, y: hover.y + offY, w: span.w, d: span.h },
+                          angle,
+                          floorCols,
+                          floorRows,
+                        );
                         const tile = {
-                          left: at.x * CELL,
-                          top: at.y * CELL,
-                          width: (angle % 2 === 1 ? span.h : span.w) * CELL,
-                          height: (angle % 2 === 1 ? span.w : span.h) * CELL,
+                          left: tileRect.x * CELL,
+                          top: tileRect.y * CELL,
+                          width: tileRect.w * CELL,
+                          height: tileRect.d * CELL,
                         };
-                        // A fresh object drops with grid rot/corner 0; the
-                        // ghost shows both under the current view angle.
-                        const fp = objectFootprint(
-                          tool,
-                          rotateFacingForView(0, angle),
-                          rotateFacingForView(0, angle),
+                        // A fresh object drops with grid rot/corner 0. Rotate
+                        // the exact fractional footprint so quarter fixtures
+                        // keep their floor-plan corner in every view angle.
+                        const fp = objectFootprint(tool, 0, 0);
+                        const anchor = objectSurfaceAnchor(tool, 0, 0);
+                        const displayRect = rotateRectForView(
+                          { x: hover.x + offX + fp.x, y: hover.y + offY + fp.y, w: fp.w, d: fp.d },
+                          angle,
+                          floorCols,
+                          floorRows,
+                        );
+                        const displayAnchor = rotatePointForView(
+                          { x: hover.x + offX + anchor.x, y: hover.y + offY + anchor.y },
+                          angle,
+                          floorCols,
+                          floorRows,
                         );
                         return (
                           <>
@@ -628,19 +756,23 @@ export function ServerRoomIsoView({
                                 data-kind={tool}
                                 style={
                                   {
-                                    left: (at.x + fp.x) * CELL,
-                                    top: (at.y + fp.y) * CELL,
-                                    width: fp.w * CELL,
-                                    height: fp.d * CELL,
+                                    left: displayRect.x * CELL,
+                                    top: displayRect.y * CELL,
+                                    width: displayRect.w * CELL,
+                                    height: displayRect.d * CELL,
                                     "--obj": OBJECT_ACCENTS[tool],
                                     "--tile": OBJECT_ACCENTS[tool],
                                   } as React.CSSProperties
                                 }
-                              >
-                                <span
-                                  className="rm-iso-obj-model"
-                                  data-kind={tool}
-                                  style={{ transform: billboard(zPx(z), "-50%, -100%") }}
+                                >
+                                  <span
+                                    className="rm-iso-obj-model"
+                                    data-kind={tool}
+                                  style={{
+                                    left: (displayAnchor.x - displayRect.x) * CELL,
+                                    top: (displayAnchor.y - displayRect.y) * CELL,
+                                    transform: billboard(zPx(z), "-50%, -100%"),
+                                  }}
                                 >
                                   <RoomObjectIsoArtwork kind={tool} />
                                 </span>
@@ -906,9 +1038,8 @@ function IsoCabinet({
 
 function IsoObject({
   object,
-  cell,
-  rot,
-  corner,
+  rect,
+  anchor,
   drag,
   editMode,
   selected,
@@ -924,12 +1055,10 @@ function IsoObject({
   onDelete,
 }: {
   object: RoomObject;
-  /** Display anchor cell of the footprint span (already view-rotated). */
-  cell: IsoCell;
-  /** Display rotation (already view-rotated). */
-  rot: Facing;
-  /** Display cell corner (already view-rotated). */
-  corner: Corner;
+  /** Display footprint rectangle, already view-rotated. */
+  rect: CellRect;
+  /** Display point where the sprite touches the surface, already view-rotated. */
+  anchor: { x: number; y: number };
   drag: DragState | null;
   editMode: boolean;
   selected: boolean;
@@ -947,11 +1076,10 @@ function IsoObject({
 }) {
   const { t } = useTranslation();
   const spec = objectSpec(object.kind);
-  const fp = objectFootprint(object.kind, rot, corner);
-  const w = fp.w * CELL;
-  const d = fp.d * CELL;
-  const left = (cell.x + fp.x) * CELL;
-  const top = (cell.y + fp.y) * CELL;
+  const w = rect.w * CELL;
+  const d = rect.d * CELL;
+  const left = rect.x * CELL;
+  const top = rect.y * CELL;
   const h = Math.max(3, zPx(spec.heightU));
   const bottom = zPx(Math.min(object.z, ROOM_CEILING_U));
   const name = t(`itops.floorPlan.object.${object.kind}`);
@@ -981,7 +1109,11 @@ function IsoObject({
       <span
         className="rm-iso-obj-model"
         data-kind={object.kind}
-        style={{ transform: billboard(bottom, "-50%, -100%") }}
+        style={{
+          left: (anchor.x - rect.x) * CELL,
+          top: (anchor.y - rect.y) * CELL,
+          transform: billboard(bottom, "-50%, -100%"),
+        }}
       >
         <RoomObjectIsoArtwork kind={object.kind} />
       </span>

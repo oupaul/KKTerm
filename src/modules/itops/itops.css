@@ -4283,10 +4283,6 @@
   font-family: var(--app-mono-font-family, monospace);
   font-size: 9px;
 }
-.itops-page .rm-art-float {
-  animation: rm-object-float 3s ease-in-out infinite;
-}
-
 /* Screen-aligned 2.5D object illustrations. The plane still owns the floor
    coordinates and z-level; this layer replaces the old one-size-fits-all box. */
 .itops-page .rm-iso-obj-model {
@@ -4355,7 +4351,6 @@
 .itops-page .rm-art-ext-label { fill: var(--surface); stroke: color-mix(in srgb, var(--red) 55%, var(--border)); }
 .itops-page .rm-art-hose { fill: none; stroke: var(--text); stroke-width: 3; }
 .itops-page .rm-art-tray { fill: color-mix(in srgb, var(--surface-muted) 70%, var(--text-muted)); stroke: var(--text-muted); }
-.itops-page .rm-art-rack-top { fill: color-mix(in srgb, var(--text) 88%, var(--surface)); stroke: var(--border-strong); }
 
 @keyframes rm-object-fan { to { transform: rotate(360deg); } }
 @keyframes rm-object-breathe { 50% { opacity: 0.45; transform: scale(0.88); } }
@@ -4364,7 +4359,6 @@
 @keyframes rm-object-ring { from { opacity: 0.55; transform: scale(0.4); } to { opacity: 0; transform: scale(1.35); } }
 @keyframes rm-object-aura { 50% { opacity: 0.85; transform: scale(1.12); } }
 @keyframes rm-object-signal { from { transform: translateX(0); } to { transform: translateX(62px); } }
-@keyframes rm-object-float { 50% { transform: translateY(-3px); } }
 
 @media (prefers-reduced-motion: reduce) {
   .itops-page .rm-object-art * {

@@ -9,7 +9,16 @@
 // DOM, no persistence — the localStorage store lives in siteTreeState.ts.
 
 import type { Rack } from "../../types";
-import { sanitizeCorner, type Corner, type Facing, type IsoCell } from "./roomIsoLayout";
+import {
+  rackDepthFrac,
+  rackFootprint,
+  sanitizeCorner,
+  sanitizeFacing,
+  type CellRect,
+  type Corner,
+  type Facing,
+  type IsoCell,
+} from "./roomIsoLayout";
 
 /** Room height in rack units (~2.6 m at 44.45 mm per U). */
 export const ROOM_CEILING_U = 58;
@@ -121,10 +130,31 @@ export function objectFootprint(
   return { x: (span.w - w) / 2, y: (span.h - d) / 2, w, d };
 }
 
+/** Point where a billboarded 2.5D sprite touches the floor/rack surface. */
+export function objectSurfaceAnchor(
+  kind: RoomObjectKind,
+  rot: Facing,
+  corner: Corner,
+): { x: number; y: number } {
+  const fp = objectFootprint(kind, rot, corner);
+  return { x: fp.x + fp.w / 2, y: fp.y + fp.d / 2 };
+}
+
 /** One occupied vertical span in a cell: [z0, z1) in U. */
 export interface ZSpan {
   z0: number;
   z1: number;
+}
+
+function rectsOverlap(a: CellRect, b: CellRect): boolean {
+  return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.d && a.y + a.d > b.y;
+}
+
+interface CellSpanOptions {
+  /** Object footprint relative to this cell; used so rack-top support follows
+   *  the rack's drawn physical footprint instead of the whole floor cell. */
+  objectRect?: CellRect;
+  rackFacing?: Record<string, Facing | undefined>;
 }
 
 // Everything already occupying one floor cell: the rack standing on it (racks
@@ -137,11 +167,15 @@ export function cellSpans(
   rackCells: Record<string, IsoCell>,
   objects: RoomObject[],
   excludeObjectId?: string,
+  options: CellSpanOptions = {},
 ): ZSpan[] {
   const spans: ZSpan[] = [];
   for (const rack of racks) {
     const at = rackCells[rack.id];
     if (at && at.x === cell.x && at.y === cell.y) {
+      const facing = sanitizeFacing(options.rackFacing?.[rack.id]);
+      const rackRect = rackFootprint(facing, rackDepthFrac(rack.depthMm));
+      if (options.objectRect && !rectsOverlap(options.objectRect, rackRect)) continue;
       spans.push({ z0: 0, z1: Math.min(ROOM_CEILING_U, Math.max(1, rack.heightU)) });
     }
   }
@@ -150,6 +184,11 @@ export function cellSpans(
     const span = objectCellSpan(object.kind, object.rot);
     if (cell.x < object.x || cell.x >= object.x + span.w) continue;
     if (cell.y < object.y || cell.y >= object.y + span.h) continue;
+    if (options.objectRect) {
+      const rect = objectFootprint(object.kind, object.rot, object.corner);
+      const localRect = { ...rect, x: rect.x - (cell.x - object.x), y: rect.y - (cell.y - object.y) };
+      if (!rectsOverlap(options.objectRect, localRect)) continue;
+    }
     spans.push({ z0: object.z, z1: object.z + objectSpec(object.kind).heightU });
   }
   return spans;
@@ -166,11 +205,15 @@ export function footprintSpans(
   rackCells: Record<string, IsoCell>,
   objects: RoomObject[],
   excludeObjectId?: string,
+  corner: Corner = 0,
+  rackFacing: Record<string, Facing | undefined> = {},
 ): ZSpan[] {
   const span = objectCellSpan(kind, rot);
+  const rect = objectFootprint(kind, rot, corner);
   const spans: ZSpan[] = [];
   for (let dy = 0; dy < span.h; dy += 1) {
     for (let dx = 0; dx < span.w; dx += 1) {
+      const objectRect = { ...rect, x: rect.x - dx, y: rect.y - dy };
       spans.push(
         ...cellSpans(
           { x: cell.x + dx, y: cell.y + dy },
@@ -178,6 +221,7 @@ export function footprintSpans(
           rackCells,
           objects,
           excludeObjectId,
+          { objectRect, rackFacing },
         ),
       );
     }
@@ -225,6 +269,42 @@ export function nudgeZ(spans: ZSpan[], kind: RoomObjectKind, z: number, dir: 1 |
     if (fits(spans, next, heightU)) return next;
   }
   return z;
+}
+
+/** Re-apply the current footprint/gravity rules to persisted room objects.
+ *  Older saves may carry a stale raised `z` from less precise collision math;
+ *  settling bottom-up keeps deliberate same-corner stacks while letting
+ *  independent rack-top corners land on the same cabinet surface. */
+export function settleRoomObjects(
+  objects: RoomObject[],
+  racks: Rack[],
+  rackCells: Record<string, IsoCell>,
+  rackFacing: Record<string, Facing | undefined> = {},
+): RoomObject[] {
+  const settledById = new Map<string, RoomObject>();
+  const order = objects
+    .map((object, index) => ({ object, index }))
+    .sort((a, b) => a.object.z - b.object.z || a.index - b.index);
+
+  for (const entry of order) {
+    const object = entry.object;
+    const settled = Array.from(settledById.values());
+    const spans = footprintSpans(
+      { x: object.x, y: object.y },
+      object.kind,
+      object.rot,
+      racks,
+      rackCells,
+      settled,
+      object.id,
+      object.corner,
+      rackFacing,
+    );
+    const z = resolveDropZ(spans, object.kind, object.z);
+    settledById.set(object.id, z == null || z === object.z ? object : { ...object, z });
+  }
+
+  return objects.map((object) => settledById.get(object.id) ?? object);
 }
 
 // Validate a localStorage payload back into RoomObject[] (mirrors the

@@ -8,9 +8,11 @@ import {
   nudgeZ,
   objectCellSpan,
   objectFootprint,
+  objectSurfaceAnchor,
   objectSpec,
   resolveDropZ,
   sanitizeRoomObjects,
+  settleRoomObjects,
   type RoomObject,
 } from "../src/modules/itops/roomObjects";
 import {
@@ -59,6 +61,111 @@ test("cellSpans stacks the rack and every object sharing the cell", () => {
 test("a 乖乖 pack dropped on an occupied cell stacks on the cabinet top", () => {
   const spans = cellSpans({ x: 0, y: 0 }, [rack("a")], { a: { x: 0, y: 0 } }, []);
   assert.equal(resolveDropZ(spans, "kuaikuai"), 42);
+});
+
+test("rack-top stacking only counts the drawn cabinet footprint", () => {
+  const shallow = rack("a");
+  shallow.depthMm = 600;
+  const cells = { a: { x: 0, y: 0 } };
+  const racks = [shallow];
+  const supportedCorners = {
+    0: [2, 3],
+    1: [0, 3],
+    2: [0, 1],
+    3: [1, 2],
+  } as const;
+
+  for (const facing of [0, 1, 2, 3] as const) {
+    for (const corner of [0, 1, 2, 3] as const) {
+      const spans = footprintSpans(
+        { x: 0, y: 0 },
+        "kuaikuai",
+        0,
+        racks,
+        cells,
+        [],
+        undefined,
+        corner,
+        { a: facing },
+      );
+      const expected = supportedCorners[facing].includes(corner) ? 42 : 0;
+      assert.equal(resolveDropZ(spans, "kuaikuai"), expected, `facing ${facing} corner ${corner}`);
+    }
+  }
+});
+
+test("quarter objects in different rack corners share the same rack top", () => {
+  const racks = [rack("a")];
+  const cells = { a: { x: 0, y: 0 } };
+  const existing = [{ ...obj("left", "kuaikuai", 0, 0, 42), corner: 3 as const }];
+
+  const otherCorner = footprintSpans(
+    { x: 0, y: 0 },
+    "kuaikuai",
+    0,
+    racks,
+    cells,
+    existing,
+    undefined,
+    2,
+    { a: 0 },
+  );
+  assert.equal(resolveDropZ(otherCorner, "kuaikuai"), 42);
+
+  const sameCorner = footprintSpans(
+    { x: 0, y: 0 },
+    "kuaikuai",
+    0,
+    racks,
+    cells,
+    existing,
+    undefined,
+    3,
+    { a: 0 },
+  );
+  assert.equal(resolveDropZ(sameCorner, "kuaikuai"), 44);
+});
+
+test("settleRoomObjects repairs stale raised rack-top corner placements", () => {
+  const racks = [rack("a")];
+  const cells = { a: { x: 0, y: 0 } };
+  const objects: RoomObject[] = [
+    { ...obj("left", "kuaikuai", 0, 0, 42), corner: 3 },
+    { ...obj("right", "kuaikuai", 0, 0, 44), corner: 2 },
+  ];
+
+  assert.deepEqual(
+    settleRoomObjects(objects, racks, cells, { a: 0 }).map((object) => ({
+      id: object.id,
+      z: object.z,
+      corner: object.corner,
+    })),
+    [
+      { id: "left", z: 42, corner: 3 },
+      { id: "right", z: 42, corner: 2 },
+    ],
+  );
+});
+
+test("settleRoomObjects preserves intentional same-corner stacks", () => {
+  const racks = [rack("a")];
+  const cells = { a: { x: 0, y: 0 } };
+  const objects: RoomObject[] = [
+    { ...obj("bottom", "kuaikuai", 0, 0, 42), corner: 3 },
+    { ...obj("top", "kuaikuai", 0, 0, 44), corner: 3 },
+  ];
+
+  assert.deepEqual(
+    settleRoomObjects(objects, racks, cells, { a: 0 }).map((object) => ({
+      id: object.id,
+      z: object.z,
+      corner: object.corner,
+    })),
+    [
+      { id: "bottom", z: 42, corner: 3 },
+      { id: "top", z: 44, corner: 3 },
+    ],
+  );
 });
 
 test("gravity objects land on the lowest fitting surface", () => {
@@ -134,6 +241,18 @@ test("quarter-block fixtures anchor to their cell corner", () => {
     const q = objectSpec(kind);
     assert.ok(q.quarter && q.wide <= 0.5 && q.deep <= 0.5, kind);
   }
+});
+
+test("quarter-block billboard anchors use the chosen footprint center", () => {
+  const sw = objectFootprint("kuaikuai", 0, 3);
+  const se = objectFootprint("kuaikuai", 0, 2);
+  const nw = objectFootprint("kuaikuai", 0, 0);
+  const ne = objectFootprint("kuaikuai", 0, 1);
+
+  assert.deepEqual(objectSurfaceAnchor("kuaikuai", 0, 3), { x: sw.x + sw.w / 2, y: sw.y + sw.d / 2 });
+  assert.deepEqual(objectSurfaceAnchor("kuaikuai", 0, 2), { x: se.x + se.w / 2, y: se.y + se.d / 2 });
+  assert.deepEqual(objectSurfaceAnchor("kuaikuai", 0, 0), { x: nw.x + nw.w / 2, y: nw.y + nw.d / 2 });
+  assert.deepEqual(objectSurfaceAnchor("kuaikuai", 0, 1), { x: ne.x + ne.w / 2, y: ne.y + ne.d / 2 });
 });
 
 test("large fixtures span whole cells and rotate their span", () => {
