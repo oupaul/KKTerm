@@ -3826,9 +3826,8 @@ button.dashboard-pill-dot:focus-visible {
   color: var(--note-ink);
   border-radius: 0;
   filter:
-    drop-shadow(0 1px 0 rgb(255 255 255 / 28%))
-    drop-shadow(0 2px 2px rgb(0 0 0 / 10%))
-    drop-shadow(0 12px 18px rgb(0 0 0 / 15%));
+    drop-shadow(0 1px 0 rgb(20 30 60 / 4%))
+    drop-shadow(0 4px 10px rgb(20 30 60 / 8%));
   transform: rotate(var(--note-rotation, -0.6deg));
   transform-origin: 50% 0;
   overflow: visible;
@@ -3886,7 +3885,7 @@ button.dashboard-pill-dot:focus-visible {
     calc(0px - var(--note-fold-shadow-offset))
     var(--note-fold-shadow-offset)
     var(--note-fold-shadow-blur)
-    rgb(70 44 0 / calc(0.16 + var(--note-fold-depth-alpha)))
+    rgb(70 44 0 / calc(0.06 + var(--note-fold-depth-alpha)))
   );
   pointer-events: none;
 }
@@ -3930,7 +3929,7 @@ button.dashboard-pill-dot:focus-visible {
     var(--note-fold-shadow-offset)
     var(--note-fold-shadow-offset)
     var(--note-fold-shadow-blur)
-    rgb(70 44 0 / calc(0.16 + var(--note-fold-depth-alpha)))
+    rgb(70 44 0 / calc(0.06 + var(--note-fold-depth-alpha)))
   );
 }
 
@@ -3963,7 +3962,7 @@ button.dashboard-pill-dot:focus-visible {
     calc(0px - var(--note-fold-shadow-offset))
     calc(0px - var(--note-fold-shadow-offset))
     var(--note-fold-shadow-blur)
-    rgb(70 44 0 / calc(0.16 + var(--note-fold-depth-alpha)))
+    rgb(70 44 0 / calc(0.06 + var(--note-fold-depth-alpha)))
   );
 }
 
@@ -3997,7 +3996,7 @@ button.dashboard-pill-dot:focus-visible {
     var(--note-fold-shadow-offset)
     calc(0px - var(--note-fold-shadow-offset))
     var(--note-fold-shadow-blur)
-    rgb(70 44 0 / calc(0.16 + var(--note-fold-depth-alpha)))
+    rgb(70 44 0 / calc(0.06 + var(--note-fold-depth-alpha)))
   );
 }
 
