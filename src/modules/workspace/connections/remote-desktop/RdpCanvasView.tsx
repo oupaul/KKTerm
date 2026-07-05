@@ -1,4 +1,4 @@
-// Self-contained macOS RDP view: renders the IronRDP framebuffer to a <canvas>
+// Self-contained macOS/Linux RDP view: renders the IronRDP framebuffer to a <canvas>
 // and sends mouse + hybrid keyboard input. Kept independent of the VNC/Windows
 // ActiveX paths in RemoteDesktopWorkspace so neither is affected.
 //

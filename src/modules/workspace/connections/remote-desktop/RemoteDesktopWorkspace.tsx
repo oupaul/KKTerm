@@ -146,9 +146,9 @@ export function RemoteDesktopWorkspace({
   const [rdpCanvasCadSignal, setRdpCanvasCadSignal] = useState(0);
   const [optimisticViewMode, setOptimisticViewMode] = useState<RemoteDesktopViewMode | null>(null);
   const [vncHasDisplay, setVncHasDisplay] = useState(false);
-  // macOS renders RDP through the in-app IronRDP canvas (RdpCanvasView), not the
-  // Windows native ActiveX overlay. Keep the overlay path Windows-only so its
-  // effects never run on macOS.
+  // macOS and Linux render RDP through the in-app IronRDP canvas
+  // (RdpCanvasView), not the Windows native ActiveX overlay. Keep the overlay
+  // path Windows-only so its effects never run elsewhere.
   const useRdpCanvas = connection?.type === "rdp" && usesCanvasRdp();
   const canStartRdp = connection?.type === "rdp" && !useRdpCanvas;
   const canStartVnc = connection?.type === "vnc";

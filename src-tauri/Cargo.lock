@@ -4063,6 +4063,7 @@ dependencies = [
  "winping",
  "x509-cert",
  "xcap",
+ "zbus",
  "zip 8.6.0",
 ]
 

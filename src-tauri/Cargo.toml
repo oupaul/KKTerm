@@ -99,7 +99,8 @@ tauri-plugin-single-instance = "2"
 apple-native-keyring-store = { version = "1.0.0", features = ["keychain"] }
 security-framework = "3.7.0"
 # Host monitoring (Status Bar CPU/RAM/Network + detailed Dashboard counters).
-# macOS-only: the Windows path uses hand-rolled Win32 calls in performance.rs.
+# Shared with Linux (see the Linux target block); the Windows path uses
+# hand-rolled Win32 calls in performance.rs.
 sysinfo = "0.39"
 # CFString construction for the IOKit power assertion used by Don't Sleep.
 # IOKit itself links as a system framework via #[link] in power.rs.
@@ -130,9 +131,14 @@ objc2-foundation = { version = "0.3", default-features = false, features = [
 winping = "0.10"
 
 [target.'cfg(target_os = "linux")'.dependencies]
-# Dashboard PC Info enrichment on Linux: CPU brand/cores/frequency, disks, and
-# network adapters + MAC/IP. Windows uses CIM and macOS uses system_profiler.
+# Dashboard PC Info enrichment on Linux (CPU brand/cores/frequency, disks,
+# network adapters + MAC/IP) plus host monitoring (Status Bar CPU/RAM/Network
+# and detailed Dashboard counters). Windows uses CIM / hand-rolled Win32 calls.
 sysinfo = "0.39"
+# Don't Sleep: D-Bus idle/suspend inhibitors (xdg-desktop-portal with an
+# org.freedesktop.ScreenSaver fallback). Already in the tree via
+# tauri-plugin-opener/xcap, so this adds no new build cost.
+zbus = "5"
 
 [target.'cfg(not(target_os = "windows"))'.dependencies]
 # Unix ICMP via surge-ping (raw sockets - Unix users typically have CAP_NET_RAW or root).
@@ -142,7 +148,7 @@ surge-ping = "0.8"
 # sysfs on Linux). Windows reads batteries via CIM. `starship-battery` is the
 # maintained fork of the `battery` crate; aliased so the code can `use battery`.
 battery = { package = "starship-battery", version = "0.10" }
-# macOS RDP client via IronRDP (Windows uses the native ActiveX path in rdp.rs instead).
+# macOS/Linux RDP client via IronRDP (Windows uses the native ActiveX path in rdp.rs instead).
 # The umbrella crate pins a mutually-compatible sub-crate set.
 # ironrdp-tokio re-exports all of ironrdp-async (connect_begin, connect_finalize,
 # mark_as_upgraded, NetworkClient) via `pub use ironrdp_async::*`, so no separate

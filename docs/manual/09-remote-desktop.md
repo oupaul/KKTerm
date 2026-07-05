@@ -8,7 +8,7 @@
 
 ## Connection kinds
 
-- **RDP** (`connections.windowsRdp`) — Windows-native remote desktop Session via the Microsoft RDP ActiveX control in `mstscax.dll`. Renders to a native child HWND positioned over its Tab.
+- **RDP** (`connections.windowsRdp`) — remote desktop Session. On Windows it uses the Microsoft RDP ActiveX control in `mstscax.dll`, rendered to a native child HWND positioned over its Tab. On macOS and Linux it uses the in-app IronRDP client, rendered into the workspace canvas like VNC.
 - **VNC** (`connections.screenControl`) — RFB / VNC Session via the Rust `vnc-rs` client. Renders the remote framebuffer into the workspace canvas.
 
 Both store host, optional port, and non-secret account metadata in SQLite; passwords are in the Windows Credential Manager.
@@ -40,7 +40,7 @@ Transport labels for status messages: `remoteDesktop.rdpActiveX`, `remoteDesktop
 
 - `remoteDesktop.sendCtrlAltDel` — keyboard icon in the toolbar.
   - **RDP**: clicking opens a native context menu with the hint `remoteDesktop.sendCtrlAltDelHint` ("Press CTRL+ALT+END to Send CTRL+ALT+DEL"). The embedded Microsoft RDP ActiveX control cannot reliably synthesize the Secure Attention Sequence from outside its own keyboard hook, so the local Ctrl+Alt+End hotkey (set via `HotKeyCtrlAltDel = VK_END`) is the supported path.
-  - **macOS RDP**: clicking sends Ctrl+Alt+Delete directly through the IronRDP canvas session.
+  - **macOS/Linux RDP**: clicking sends Ctrl+Alt+Delete directly through the IronRDP canvas session.
   - **VNC**: the same button still calls `send_vnc_ctrl_alt_delete` directly.
 - `remoteDesktop.reconnect` — explicit reconnect button.
 - `workspace.sendEntirePanelToAi` — captures the visible remote desktop Pane for AI Assistant. By default `settings.submitAiAttachmentsDirectly` submits the screenshot with `ai.directAttachmentPrompt`; when disabled, the button only attaches the screenshot to the composer.

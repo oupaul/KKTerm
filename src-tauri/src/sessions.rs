@@ -2949,36 +2949,19 @@ fn sanitize_windows_local_environment(command: &mut CommandBuilder) {
 fn sanitize_linux_appimage_environment(command: &mut CommandBuilder) {
     #[cfg(target_os = "linux")]
     {
-        let Some(appdir) = std::env::var("APPDIR")
-            .ok()
-            .filter(|value| !value.is_empty())
-        else {
+        let Some(appdir) = crate::linux_env::appimage_dir() else {
             return;
         };
 
-        for name in [
-            "APPDIR",
-            "APPIMAGE",
-            "ARGV0",
-            "OWD",
-            "GDK_BACKEND",
-            "GTK_THEME",
-            "GTK_DATA_PREFIX",
-            "GTK_EXE_PREFIX",
-            "GTK_PATH",
-            "GTK_IM_MODULE_FILE",
-            "GDK_PIXBUF_MODULE_FILE",
-            "GSETTINGS_SCHEMA_DIR",
-            "GIO_EXTRA_MODULES",
-        ] {
+        for name in crate::linux_env::APPIMAGE_OVERWRITTEN_VARS {
             command.env_remove(name);
         }
 
-        for name in ["LD_LIBRARY_PATH", "XDG_DATA_DIRS"] {
+        for name in crate::linux_env::APPIMAGE_PREPENDED_PATH_VARS {
             let Ok(value) = std::env::var(name) else {
                 continue;
             };
-            match filter_appimage_path_list(&value, &appdir) {
+            match crate::linux_env::filter_appimage_path_list(&value, &appdir) {
                 Some(kept) => command.env(name, kept),
                 None => command.env_remove(name),
             }
@@ -2989,18 +2972,6 @@ fn sanitize_linux_appimage_environment(command: &mut CommandBuilder) {
     {
         let _ = command;
     }
-}
-
-/// Drops `:`-separated path entries that point into the AppImage mount,
-/// returning `None` when nothing user-provided remains.
-#[cfg(any(target_os = "linux", test))]
-fn filter_appimage_path_list(value: &str, appdir: &str) -> Option<String> {
-    let kept = value
-        .split(':')
-        .filter(|entry| !entry.is_empty() && !entry.starts_with(appdir))
-        .collect::<Vec<_>>()
-        .join(":");
-    (!kept.is_empty()).then_some(kept)
 }
 
 // Compose the current user's environment from the registry exactly as Windows
@@ -3385,6 +3356,8 @@ mod tests {
 
     #[test]
     fn appimage_path_list_filter_keeps_user_entries_only() {
+        use crate::linux_env::filter_appimage_path_list;
+
         let appdir = "/tmp/.mount_kktermXXXXXX";
         // AppRun prepends every bundled lib dir; user had one entry of their own.
         assert_eq!(

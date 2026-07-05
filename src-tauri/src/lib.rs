@@ -20,6 +20,7 @@ mod github_copilot;
 mod import;
 mod installer;
 mod itops;
+mod linux_env;
 mod logging;
 mod manual;
 mod mcp;
@@ -1594,7 +1595,31 @@ fn open_windows_task_manager() -> Result<(), String> {
             .map_err(|error| format!("failed to open Activity Monitor: {error}"))
     }
 
-    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
+    #[cfg(target_os = "linux")]
+    {
+        // No single activity monitor exists across desktops; launch the first
+        // installed one, GNOME first since Fedora/Ubuntu default to it.
+        const MONITORS: [&str; 6] = [
+            "gnome-system-monitor",
+            "plasma-systemmonitor",
+            "ksysguard",
+            "xfce4-taskmanager",
+            "mate-system-monitor",
+            "lxtask",
+        ];
+        for program in MONITORS {
+            match linux_env::spawn_detached_host_process(std::process::Command::new(program)) {
+                Ok(()) => return Ok(()),
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => continue,
+                Err(error) => {
+                    return Err(format!("failed to open {program}: {error}"));
+                }
+            }
+        }
+        Err("no system activity monitor application was found".to_string())
+    }
+
+    #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
     {
         Err("Opening the system activity monitor is not supported on this platform.".to_string())
     }
@@ -3238,7 +3263,7 @@ fn send_vnc_ctrl_alt_delete(
     vnc_sessions.send_ctrl_alt_delete(request)
 }
 
-// ── macOS IronRDP client commands (Windows uses the native ActiveX path) ──────
+// ── macOS/Linux IronRDP client commands (Windows uses the native ActiveX path) ─
 
 #[cfg(not(target_os = "windows"))]
 #[tauri::command]
