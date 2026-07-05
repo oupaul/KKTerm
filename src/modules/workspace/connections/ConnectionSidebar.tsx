@@ -2,7 +2,7 @@ import { ConnectionGlyph, connectionSubtitle, connectionTypeSubtitle } from "./C
 import { ConnectionIconBackgroundPicker } from "./ConnectionIconBackgroundPicker";
 import { ConnectionIconPicker } from "./ConnectionIconPicker";
 import { ConnectionIcon, connectionIconSrcForConnection } from "./ConnectionIcon";
-import { AddConnectionMenu, QuickConnectMenu } from "./ConnectionMenus";
+import { AddConnectionMenu } from "./ConnectionMenus";
 import { FtpConnectionFields, FtpConnectionOptions } from "./connection-dialog/FtpConnectionFields";
 import { LocalConnectionFields } from "./connection-dialog/LocalConnectionFields";
 import { defaultWslConnectionName, distroFromWslShell } from "./connection-dialog/wslLocalShell";
@@ -29,7 +29,7 @@ import {
   resolveDefaultTerminalAppearance,
   supportsTerminalAppearanceDefaults,
 } from "./terminalAppearanceDefaults";
-import { elevatedLocalShellAction, findMatchingConnection, nextQuickConnectName } from "./quickConnectMenuModel";
+import { elevatedLocalShellAction, findMatchingConnection, nextQuickConnectName, quickConnectRecentLabel } from "./quickConnectMenuModel";
 import {
   CONNECTION_TAB_CONTEXT_MENU_EVENT,
   type ConnectionTabContextMenuDetail,
@@ -241,6 +241,9 @@ type FolderIconDialogState = {
   folder: ConnectionFolder;
 };
 
+const QUICK_CONNECT_RECENT_TOP_LEVEL_LIMIT = 5;
+const QUICK_CONNECT_RECENT_SUBMENU_LIMIT = 20;
+
 export function ConnectionSidebar({
   onExternalOpenConnection,
   onTogglePanel,
@@ -299,7 +302,6 @@ export function ConnectionSidebar({
   const [formError, setFormError] = useState("");
   const [treeError, setTreeError] = useState("");
   const [addConnectionMenuOpen, setAddConnectionMenuOpen] = useState(false);
-  const [quickConnectMenuOpen, setQuickConnectMenuOpen] = useState(false);
   const [recentConnectionIds, setRecentConnectionIds] = useState(loadRecentConnectionIds);
   const [dropTarget, setDropTarget] = useState("");
   // Highlight shown while an OS file/folder is dragged over the tree, before it
@@ -348,7 +350,6 @@ export function ConnectionSidebar({
     return [...urls];
   }, [childConnections, tree]);
   const addConnectionRef = useRef<HTMLDivElement | null>(null);
-  const quickConnectRef = useRef<HTMLDivElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const treeListRef = useRef<HTMLDivElement | null>(null);
   const draggedItemRef = useRef<DraggedTreeItem | null>(null);
@@ -448,17 +449,13 @@ export function ConnectionSidebar({
   }, [collapsedFolderIds]);
 
   useEffect(() => {
-    if (!quickConnectMenuOpen && !addConnectionMenuOpen) {
+    if (!addConnectionMenuOpen) {
       return;
     }
 
     const handlePointerDown = (event: PointerEvent) => {
       const target = event.target as Node;
-      const quickConnectNode = quickConnectRef.current;
       const addConnectionNode = addConnectionRef.current;
-      if (quickConnectNode && !quickConnectNode.contains(target)) {
-        setQuickConnectMenuOpen(false);
-      }
       if (addConnectionNode && !addConnectionNode.contains(target)) {
         setAddConnectionMenuOpen(false);
       }
@@ -466,7 +463,6 @@ export function ConnectionSidebar({
 
     const handleKeyDown = (event: globalThis.KeyboardEvent) => {
       if (event.key === "Escape") {
-        setQuickConnectMenuOpen(false);
         setAddConnectionMenuOpen(false);
       }
     };
@@ -477,7 +473,7 @@ export function ConnectionSidebar({
       window.removeEventListener("pointerdown", handlePointerDown);
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [addConnectionMenuOpen, quickConnectMenuOpen]);
+  }, [addConnectionMenuOpen]);
 
   useEffect(
     () => () => {
@@ -608,7 +604,6 @@ export function ConnectionSidebar({
       return;
     }
     setAddConnectionMenuOpen(false);
-    setQuickConnectMenuOpen(false);
     setFormError("");
     setTreeError("");
     setNewConnectionType(connectionType);
@@ -617,7 +612,6 @@ export function ConnectionSidebar({
 
   async function handleNewFileViewConnectionSelected() {
     setAddConnectionMenuOpen(false);
-    setQuickConnectMenuOpen(false);
     setFormError("");
     const selectedPath = await selectFileViewPath({
       title: t("connections.fileViewPickerTitle"),
@@ -1080,7 +1074,6 @@ export function ConnectionSidebar({
   }
 
   function handleQuickLocalShell(option: LocalShellOption) {
-    setQuickConnectMenuOpen(false);
     const appearance = resolveDefaultTerminalAppearance("local", sshSettings, terminalSettings);
     const connection: Connection = {
       id: uniqueRuntimeId("quick"),
@@ -1098,20 +1091,12 @@ export function ConnectionSidebar({
     });
   }
 
-  function handleQuickSsh(connection: Connection) {
-    setQuickConnectMenuOpen(false);
-    void quickConnect(connection).catch((error) => {
-      setTreeError(error instanceof Error ? error.message : String(error));
-    });
-  }
-
   async function handleQuickAdminShell(option: LocalShellOption) {
     if (!option.value) {
       return;
     }
 
     setTreeError("");
-    setQuickConnectMenuOpen(false);
     try {
       const isAppElevated = await invokeCommand("is_app_elevated", undefined).catch(() => false);
       const action = elevatedLocalShellAction({
@@ -1809,8 +1794,98 @@ export function ConnectionSidebar({
     ];
   }
 
+  function handleQuickConnectTypeSelected(connectionType: ConnectionType) {
+    setAddConnectionMenuOpen(false);
+    setFormError("");
+    setTreeError("");
+    setNewConnectionType(connectionType);
+    setFormMode("quick");
+  }
+
+  function buildQuickConnectMenuItems(): NativeContextMenuItem[] {
+    const normalLabel = t("connections.normal");
+    const adminLabel = t("connections.admin");
+    const shellItems = quickConnectShellOptions.flatMap((option) => {
+      const iconSrc = connectionIconSrcForConnection({ type: "local", localShell: option.value });
+      if (!option.canElevate) {
+        return [
+          {
+            kind: "item" as const,
+            label: option.label,
+            iconSrc,
+            action: () => handleQuickLocalShell(option),
+          },
+        ];
+      }
+      return [
+        {
+          kind: "item" as const,
+          label: `${option.label} (${normalLabel})`,
+          iconSrc,
+          action: () => handleQuickLocalShell(option),
+        },
+        {
+          kind: "item" as const,
+          label: `${option.label} (${adminLabel})`,
+          iconSrc,
+          action: () => void handleQuickAdminShell(option),
+        },
+      ];
+    });
+
+    const recentConnectionMenuItem = (connection: Connection): NativeContextMenuItem => ({
+      kind: "item" as const,
+      label: quickConnectRecentLabel(connection),
+      iconSrc: connectionIconSrcForConnection({
+        iconDataUrl: connection.iconDataUrl,
+        localShell: connection.localShell,
+        type: connection.type,
+      }),
+      action: () => handleOpenConnection(connection),
+    });
+    const topLevelRecentConnections = recentConnections.slice(0, QUICK_CONNECT_RECENT_TOP_LEVEL_LIMIT);
+    const submenuRecentConnections = recentConnections.slice(
+      QUICK_CONNECT_RECENT_TOP_LEVEL_LIMIT,
+      QUICK_CONNECT_RECENT_SUBMENU_LIMIT,
+    );
+    const recentItems: NativeContextMenuItem[] =
+      topLevelRecentConnections.length > 0
+        ? [
+            ...topLevelRecentConnections.map(recentConnectionMenuItem),
+            ...(submenuRecentConnections.length > 0
+              ? [
+                  {
+                    kind: "submenu" as const,
+                    label: t("connections.moreRecent"),
+                    items: submenuRecentConnections.map(recentConnectionMenuItem),
+                  },
+                ]
+              : []),
+          ]
+        : [
+            {
+              kind: "item" as const,
+              label: t("connections.noRecent"),
+              iconSvg: nativeMenuIcons.server,
+              disabled: true,
+              action: () => undefined,
+            },
+          ];
+
+    return [
+      {
+        kind: "item",
+        label: t("connections.ssh"),
+        iconSrc: connectionIconSrcForConnection({ type: "ssh" }),
+        action: () => handleQuickConnectTypeSelected("ssh"),
+      },
+      ...shellItems,
+      { kind: "separator" },
+      ...recentItems,
+    ];
+  }
+
   async function handleAddConnectionButtonClick(event: ReactMouseEvent<HTMLButtonElement>) {
-    setQuickConnectMenuOpen(false);
     const opened = await showNativeContextMenu(
       buildAddConnectionMenuItems(),
       menuPositionFromElement(event.currentTarget),
@@ -1822,9 +1897,9 @@ export function ConnectionSidebar({
     setAddConnectionMenuOpen((isOpen) => !isOpen);
   }
 
-  function handleQuickConnectButtonClick() {
+  async function handleQuickConnectButtonClick(event: ReactMouseEvent<HTMLButtonElement>) {
     setAddConnectionMenuOpen(false);
-    setQuickConnectMenuOpen((isOpen) => !isOpen);
+    await showNativeContextMenu(buildQuickConnectMenuItems(), menuPositionFromElement(event.currentTarget));
   }
 
   function handleDragEnd() {
@@ -2094,7 +2169,6 @@ export function ConnectionSidebar({
 
   function handleTreeMenuCreateConnection() {
     setTreeContextMenu(null);
-    setQuickConnectMenuOpen(false);
     setAddConnectionMenuOpen(true);
   }
 
@@ -2802,32 +2876,18 @@ export function ConnectionSidebar({
           ) : null}
         </div>
 
-        <div className="quick-connect-anchor" ref={quickConnectRef}>
+        <div className="quick-connect-anchor">
           <button
-            {...dialogButtonAria(quickConnectMenuOpen)}
+            aria-haspopup="menu"
             aria-label={t("connections.quickConnect")}
             className="quick-connect quick-connect-icon-only"
             data-tutorial-id="connections.quickConnect"
-            onClick={handleQuickConnectButtonClick}
+            onClick={(event) => void handleQuickConnectButtonClick(event)}
             title={t("connections.quickConnect")}
             type="button"
           >
             <Play size={15} />
           </button>
-          {quickConnectMenuOpen ? (
-            <QuickConnectMenu
-              recentConnections={recentConnections}
-              shellOptions={quickConnectShellOptions}
-              sshSettings={sshSettings}
-              onOpenConnection={(connection) => {
-                setQuickConnectMenuOpen(false);
-                handleOpenConnection(connection);
-              }}
-              onOpenElevatedShell={(option) => void handleQuickAdminShell(option)}
-              onOpenLocalShell={handleQuickLocalShell}
-              onOpenSsh={handleQuickSsh}
-            />
-          ) : null}
         </div>
       </div>
       {treeError ? <p className="form-error tree-error">{treeError}</p> : null}

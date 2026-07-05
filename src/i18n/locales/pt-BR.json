@@ -2160,7 +2160,7 @@
     "normal": "Normal",
     "admin": "Admin",
     "noRecent": "Nenhuma conexão recente",
-    "loadMore": "Carregar mais...",
+    "moreRecent": "Mais...",
     "secureShell": "Shell seguro",
     "telnetShell": "Terminal com senha",
     "serialLine": "Linha serial",

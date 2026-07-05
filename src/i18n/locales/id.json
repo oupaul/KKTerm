@@ -2160,7 +2160,7 @@
     "normal": "Normal",
     "admin": "Admin",
     "noRecent": "Tidak ada koneksi terbaru",
-    "loadMore": "Muat lebih banyak...",
+    "moreRecent": "Lainnya...",
     "secureShell": "Secure shell",
     "telnetShell": "Terminal kata sandi",
     "serialLine": "Jalur serial",
