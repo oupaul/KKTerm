@@ -603,6 +603,68 @@ pub(crate) fn emit_terminal_output(app: &AppHandle, session_id: &str, data: Stri
     );
 }
 
+#[derive(Default)]
+pub(crate) struct TerminalOutputDecoder {
+    pending: Vec<u8>,
+}
+
+impl TerminalOutputDecoder {
+    pub(crate) fn decode(&mut self, bytes: &[u8]) -> Option<String> {
+        if bytes.is_empty() {
+            return None;
+        }
+
+        let mut combined;
+        let mut remaining = if self.pending.is_empty() {
+            bytes
+        } else {
+            combined = std::mem::take(&mut self.pending);
+            combined.extend_from_slice(bytes);
+            &combined
+        };
+        let mut output = String::new();
+
+        loop {
+            match std::str::from_utf8(remaining) {
+                Ok(valid) => {
+                    output.push_str(valid);
+                    break;
+                }
+                Err(error) => {
+                    let valid_up_to = error.valid_up_to();
+                    if valid_up_to > 0 {
+                        output.push_str(
+                            std::str::from_utf8(&remaining[..valid_up_to])
+                                .expect("valid_up_to must bound valid UTF-8"),
+                        );
+                    }
+
+                    match error.error_len() {
+                        Some(invalid_len) => {
+                            output.push('\u{FFFD}');
+                            remaining = &remaining[valid_up_to + invalid_len..];
+                        }
+                        None => {
+                            self.pending.extend_from_slice(&remaining[valid_up_to..]);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        (!output.is_empty()).then_some(output)
+    }
+
+    pub(crate) fn finish_lossy(&mut self) -> Option<String> {
+        if self.pending.is_empty() {
+            return None;
+        }
+        let pending = std::mem::take(&mut self.pending);
+        Some(String::from_utf8_lossy(&pending).to_string())
+    }
+}
+
 fn required_recording_part(label: &str, value: &str) -> Result<String, String> {
     let trimmed = value.trim();
     if trimmed.is_empty() {
@@ -913,14 +975,24 @@ impl SessionManager {
             thread::spawn(move || {
                 let mut reader = local_pty.reader;
                 let mut buffer = [0_u8; 8192];
+                let mut decoder = TerminalOutputDecoder::default();
                 loop {
                     match reader.read(&mut buffer) {
-                        Ok(0) => break,
+                        Ok(0) => {
+                            if let Some(data) = decoder.finish_lossy() {
+                                emit_terminal_output(&app, &output_session_id, data);
+                            }
+                            break;
+                        }
                         Ok(count) => {
-                            let data = String::from_utf8_lossy(&buffer[..count]).to_string();
-                            emit_terminal_output(&app, &output_session_id, data);
+                            if let Some(data) = decoder.decode(&buffer[..count]) {
+                                emit_terminal_output(&app, &output_session_id, data);
+                            }
                         }
                         Err(error) => {
+                            if let Some(data) = decoder.finish_lossy() {
+                                emit_terminal_output(&app, &output_session_id, data);
+                            }
                             emit_terminal_output(
                                 &app,
                                 &output_session_id,
@@ -973,14 +1045,24 @@ impl SessionManager {
         let output_session_id = session_id.clone();
         thread::spawn(move || {
             let mut buffer = [0_u8; 8192];
+            let mut decoder = TerminalOutputDecoder::default();
             loop {
                 match reader.read(&mut buffer) {
-                    Ok(0) => break,
+                    Ok(0) => {
+                        if let Some(data) = decoder.finish_lossy() {
+                            emit_terminal_output(&app, &output_session_id, data);
+                        }
+                        break;
+                    }
                     Ok(count) => {
-                        let data = String::from_utf8_lossy(&buffer[..count]).to_string();
-                        emit_terminal_output(&app, &output_session_id, data);
+                        if let Some(data) = decoder.decode(&buffer[..count]) {
+                            emit_terminal_output(&app, &output_session_id, data);
+                        }
                     }
                     Err(error) => {
+                        if let Some(data) = decoder.finish_lossy() {
+                            emit_terminal_output(&app, &output_session_id, data);
+                        }
                         emit_terminal_output(
                             &app,
                             &output_session_id,
@@ -3277,6 +3359,29 @@ fn make_session_id(title: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn terminal_output_decoder_preserves_multibyte_chars_split_across_chunks() {
+        let mut decoder = TerminalOutputDecoder::default();
+
+        assert_eq!(
+            decoder.decode(b"10.62 kB \xE2"),
+            Some("10.62 kB ".to_string())
+        );
+        assert_eq!(
+            decoder.decode(b"\x94\x82 gzip: 3.29 kB"),
+            Some("\u{2502} gzip: 3.29 kB".to_string())
+        );
+        assert_eq!(decoder.finish_lossy(), None);
+    }
+
+    #[test]
+    fn terminal_output_decoder_flushes_truncated_final_sequence_lossily() {
+        let mut decoder = TerminalOutputDecoder::default();
+
+        assert_eq!(decoder.decode(b"abc \xE2"), Some("abc ".to_string()));
+        assert_eq!(decoder.finish_lossy(), Some("\u{FFFD}".to_string()));
+    }
 
     #[test]
     fn appimage_path_list_filter_keeps_user_entries_only() {

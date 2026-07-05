@@ -499,9 +499,13 @@ pub fn start_native_terminal(
             recent_output: String::new(),
         };
         let mut buffer = [0_u8; 8192];
+        let mut output_decoder = crate::sessions::TerminalOutputDecoder::default();
         loop {
             match reader.read(&mut buffer) {
                 Ok(0) => {
+                    if let Some(text) = output_decoder.finish_lossy() {
+                        emit_terminal_output(&app, &request.session_id, text);
+                    }
                     telnet_debug(
                         "terminal.remote_closed",
                         json!({ "sessionId": reader_session_id }),
@@ -550,11 +554,9 @@ pub fn start_native_terminal(
                                 &parsed.data,
                             );
                         }
-                        emit_terminal_output(
-                            &app,
-                            &request.session_id,
-                            String::from_utf8_lossy(&parsed.data).to_string(),
-                        );
+                        if let Some(text) = output_decoder.decode(&parsed.data) {
+                            emit_terminal_output(&app, &request.session_id, text);
+                        }
                     }
                 }
                 Err(error)
@@ -566,6 +568,9 @@ pub fn start_native_terminal(
                     continue;
                 }
                 Err(error) => {
+                    if let Some(text) = output_decoder.finish_lossy() {
+                        emit_terminal_output(&app, &request.session_id, text);
+                    }
                     telnet_debug(
                         "terminal.read_error",
                         json!({
