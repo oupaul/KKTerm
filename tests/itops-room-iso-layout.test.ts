@@ -5,6 +5,7 @@ import {
   ISO_MIN_COLS,
   ISO_MIN_ROWS,
   ISO_TILT_COS,
+  expandIsoFloorFrame,
   moveIsoRack,
   resolveIsoLayout,
   screenDeltaToPlane,
@@ -69,6 +70,14 @@ test("moveIsoRack clamps to the grid and swaps with an occupied target", () => {
 
   const clamped = moveIsoRack(layout, "a", { x: -4, y: 999 });
   assert.deepEqual(clamped.a, { x: 0, y: layout.rows - 1 });
+});
+
+test("decorative 2.5D floor expansion keeps the room grid origin aligned", () => {
+  const frame = expandIsoFloorFrame(6, 4, 18 * 58 * Math.SQRT1_2, 58);
+  assert.ok(frame.floorCols > 6);
+  assert.ok(frame.floorRows > 4);
+  assert.equal(frame.offX, 0);
+  assert.equal(frame.offY, 0);
 });
 
 test("screenDeltaToPlane inverts the axonometric projection", () => {

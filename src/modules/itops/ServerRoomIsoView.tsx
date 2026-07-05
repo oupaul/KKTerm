@@ -30,6 +30,7 @@ import {
   ISO_ROT_DEG,
   ISO_TILT_COS,
   ISO_TILT_DEG,
+  expandIsoFloorFrame,
   moveIsoRack,
   resolveIsoLayout,
   rotateCellForView,
@@ -217,9 +218,9 @@ export function ServerRoomIsoView({
   }
 
   // The canvas is the projected bounding box of the interactive grid plus
-  // headroom, grown to fill the scroll viewport. The drawn floor then adds a
-  // decorative ring of cells around the interactive block until the plane's
-  // projection covers that canvas (the viewport clips the overhang).
+  // headroom, grown to fill the scroll viewport. The drawn floor then adds
+  // decorative cells beyond the room origin until the plane's projection
+  // covers that canvas (the viewport clips the overhang).
   // cols+rows fixes the projected diagonal — a view rotation only swaps them
   // — so the ring size is angle-independent.
   const contentDiag = (gridCols + gridRows) * CELL * Math.SQRT1_2;
@@ -229,13 +230,12 @@ export function ServerRoomIsoView({
     (viewport?.h ?? 0) / zoom,
   );
   const floorDiag = Math.max(viewW - 48, (viewH - Math.ceil(maxTop) - 84) / ISO_TILT_COS);
-  const ring = Math.max(0, Math.ceil(floorDiag / (CELL * Math.SQRT1_2)) - (gridCols + gridRows));
-  const ringCols = Math.ceil(ring / 2);
-  const floorCols = gridCols + ringCols;
-  const floorRows = gridRows + (ring - ringCols);
-  // Center the interactive block on the drawn floor.
-  const offX = Math.floor((floorCols - gridCols) / 2);
-  const offY = Math.floor((floorRows - gridRows) / 2);
+  const { floorCols, floorRows, offX, offY } = expandIsoFloorFrame(
+    gridCols,
+    gridRows,
+    floorDiag,
+    CELL,
+  );
   const dims = viewGridSize(floorCols, floorRows, angle);
   const toDisplay = (cell: IsoCell) =>
     rotateCellForView({ x: cell.x + offX, y: cell.y + offY }, angle, floorCols, floorRows);

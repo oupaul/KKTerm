@@ -38,6 +38,15 @@ export interface IsoLayout {
   cells: Record<string, IsoCell>;
 }
 
+export interface IsoFloorFrame {
+  /** Drawn floor dimensions, including decorative cells added past the room. */
+  floorCols: number;
+  floorRows: number;
+  /** Offset from durable room grid coordinates into the drawn floor. */
+  offX: number;
+  offY: number;
+}
+
 function cellKey(cell: IsoCell): string {
   return `${cell.x},${cell.y}`;
 }
@@ -119,6 +128,29 @@ export function moveIsoRack(
   }
   next[rackId] = to;
   return next;
+}
+
+// Grow the decorative 2.5D floor until its projected diagonal covers the
+// viewport, but keep durable cell (0,0) at the drawn floor origin. The top-down
+// floor plan grows the room down/right from the same origin, so adding cells on
+// both sides here would make identical placements look shifted between views.
+export function expandIsoFloorFrame(
+  gridCols: number,
+  gridRows: number,
+  projectedDiagPx: number,
+  cellPx: number,
+): IsoFloorFrame {
+  const extra = Math.max(
+    0,
+    Math.ceil(projectedDiagPx / (cellPx * Math.SQRT1_2)) - (gridCols + gridRows),
+  );
+  const extraCols = Math.ceil(extra / 2);
+  return {
+    floorCols: gridCols + extraCols,
+    floorRows: gridRows + (extra - extraCols),
+    offX: 0,
+    offY: 0,
+  };
 }
 
 // Convert a pointer drag delta (screen px) into floor-plane px by inverting
