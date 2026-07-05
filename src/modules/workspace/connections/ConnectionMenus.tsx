@@ -7,6 +7,8 @@ import { ConnectionGlyph, ConnectionTypeGlyph, connectionSubtitle } from "./Conn
 import { uniqueRuntimeId, type LocalShellOption } from "./utils";
 import type { Connection, ConnectionType, SshSettings } from "../../../types";
 
+const QUICK_CONNECT_RECENT_PAGE_SIZE = 5;
+
 export function QuickConnectMenu({
   recentConnections,
   shellOptions,
@@ -27,6 +29,7 @@ export function QuickConnectMenu({
   const [sshDialogOpen, setSshDialogOpen] = useState(false);
   const [sshHost, setSshHost] = useState("");
   const [sshPort, setSshPort] = useState(String(sshSettings.defaultPort));
+  const [visibleRecentCount, setVisibleRecentCount] = useState(QUICK_CONNECT_RECENT_PAGE_SIZE);
   const { t } = useTranslation();
   const normalizedSshPort = Number(sshPort || sshSettings.defaultPort);
   const canSubmitSsh =
@@ -34,6 +37,8 @@ export function QuickConnectMenu({
     Number.isInteger(normalizedSshPort) &&
     normalizedSshPort >= 1 &&
     normalizedSshPort <= 65535;
+  const visibleRecentConnections = recentConnections.slice(0, visibleRecentCount);
+  const hasMoreRecentConnections = visibleRecentCount < recentConnections.length;
 
   function handleSshSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -127,27 +132,39 @@ export function QuickConnectMenu({
       )}
       <div className="quick-connect-menu-separator" aria-hidden="true" />
       {recentConnections.length > 0 ? (
-        recentConnections.map((connection) => (
-          <button
-            key={connection.id}
-            onClick={() => onOpenConnection(connection)}
-            type="button"
-          >
-            <ConnectionGlyph
-              iconBackgroundColor={connection.iconBackgroundColor}
-              iconColor={connection.iconColor}
-              iconDataUrl={connection.iconDataUrl}
-              localShell={connection.localShell}
-              size={15}
-              type={connection.type}
-            />
-            <span className="connection-main">
-              <strong>{connection.name}</strong>
-              <small>{connectionSubtitle(connection)}</small>
-            </span>
-            <span className={`status-dot ${connection.status}`} />
-          </button>
-        ))
+        <>
+          {visibleRecentConnections.map((connection) => (
+            <button
+              key={connection.id}
+              onClick={() => onOpenConnection(connection)}
+              type="button"
+            >
+              <ConnectionGlyph
+                iconBackgroundColor={connection.iconBackgroundColor}
+                iconColor={connection.iconColor}
+                iconDataUrl={connection.iconDataUrl}
+                localShell={connection.localShell}
+                size={15}
+                type={connection.type}
+              />
+              <span className="connection-main">
+                <strong>{connection.name}</strong>
+                <small>{connectionSubtitle(connection)}</small>
+              </span>
+              <span className={`status-dot ${connection.status}`} />
+            </button>
+          ))}
+          {hasMoreRecentConnections ? (
+            <button
+              className="quick-connect-load-more"
+              onClick={() => setVisibleRecentCount((count) => count + QUICK_CONNECT_RECENT_PAGE_SIZE)}
+              type="button"
+            >
+              <ChevronDown size={13} />
+              <span>{t("connections.loadMore")}</span>
+            </button>
+          ) : null}
+        </>
       ) : (
         <button disabled type="button">
           <Server size={15} />

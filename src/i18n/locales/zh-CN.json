@@ -2160,6 +2160,7 @@
     "normal": "普通",
     "admin": "管理员",
     "noRecent": "无最近连接",
+    "loadMore": "加载更多...",
     "secureShell": "安全 Shell",
     "telnetShell": "密码终端",
     "serialLine": "串行线路",

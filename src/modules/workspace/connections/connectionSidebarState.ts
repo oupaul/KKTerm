@@ -1,7 +1,7 @@
 const RECENT_CONNECTION_STORAGE_KEY = "kkterm.recentConnectionIds";
 const COLLAPSED_FOLDER_IDS_KEY = "kkterm.collapsedFolderIds";
 
-export const RECENT_CONNECTION_LIMIT = 5;
+export const RECENT_CONNECTION_LIMIT = 50;
 
 export function createStoredSecretMask() {
   const maskLength = 12 + Math.floor(Math.random() * 5);

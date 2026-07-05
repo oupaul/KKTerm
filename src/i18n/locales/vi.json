@@ -2160,6 +2160,7 @@
     "normal": "Normal",
     "admin": "Admin",
     "noRecent": "No recent connections",
+    "loadMore": "Tải thêm...",
     "secureShell": "Secure shell",
     "telnetShell": "Password terminal",
     "serialLine": "Serial line",

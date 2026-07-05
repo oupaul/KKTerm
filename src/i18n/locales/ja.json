@@ -2160,6 +2160,7 @@
     "normal": "通常",
     "admin": "管理者",
     "noRecent": "最近の接続はありません",
+    "loadMore": "さらに読み込む...",
     "secureShell": "セキュアシェル",
     "telnetShell": "パスワード端末",
     "serialLine": "シリアル回線",

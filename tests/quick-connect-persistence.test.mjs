@@ -67,3 +67,54 @@ test("Quick Connect persists connections and rename guards non-persisted ids", a
     "commitConnectionRename should skip the backend call for non-persisted ids",
   );
 });
+
+test("Quick Connect recent menu keeps 50 entries and pages them five at a time", async () => {
+  const sidebarStateSource = await readFile(
+    new URL("../src/modules/workspace/connections/connectionSidebarState.ts", import.meta.url),
+    "utf8",
+  );
+  const sidebarSource = await readFile(
+    new URL("../src/modules/workspace/connections/ConnectionSidebar.tsx", import.meta.url),
+    "utf8",
+  );
+  const menuSource = await readFile(
+    new URL("../src/modules/workspace/connections/ConnectionMenus.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(
+    sidebarStateSource,
+    /export const RECENT_CONNECTION_LIMIT = 50;/,
+    "recent Connection storage should keep up to 50 ids",
+  );
+  assert.match(
+    menuSource,
+    /const QUICK_CONNECT_RECENT_PAGE_SIZE = 5;/,
+    "Quick Connect should show recent Connections in five-item pages",
+  );
+  assert.match(
+    menuSource,
+    /recentConnections\.slice\(0, visibleRecentCount\)/,
+    "Quick Connect should render only the visible recent page",
+  );
+  assert.match(
+    menuSource,
+    /setVisibleRecentCount\(\(count\) => count \+ QUICK_CONNECT_RECENT_PAGE_SIZE\)/,
+    "Load more should reveal one additional five-item page in the open menu",
+  );
+  assert.match(
+    menuSource,
+    /t\("connections\.loadMore"\)/,
+    "the Load more action should be localized",
+  );
+
+  const quickConnectButtonHandler = sidebarSource.slice(
+    sidebarSource.indexOf("function handleQuickConnectButtonClick()"),
+    sidebarSource.indexOf("function handleDragEnd()"),
+  );
+  assert.doesNotMatch(
+    quickConnectButtonHandler,
+    /showNativeContextMenu/,
+    "Quick Connect should use the React menu so Load more can update without closing",
+  );
+});

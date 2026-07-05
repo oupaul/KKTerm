@@ -29,7 +29,7 @@ import {
   resolveDefaultTerminalAppearance,
   supportsTerminalAppearanceDefaults,
 } from "./terminalAppearanceDefaults";
-import { elevatedLocalShellAction, findMatchingConnection, nextQuickConnectName, quickConnectRecentLabel } from "./quickConnectMenuModel";
+import { elevatedLocalShellAction, findMatchingConnection, nextQuickConnectName } from "./quickConnectMenuModel";
 import {
   CONNECTION_TAB_CONTEXT_MENU_EVENT,
   type ConnectionTabContextMenuDetail,
@@ -715,14 +715,6 @@ export function ConnectionSidebar({
       await reloadConnectionGroups();
       notifyConnectionTreeInvalidated();
     }
-  }
-
-  function handleQuickSshRequested() {
-    setAddConnectionMenuOpen(false);
-    setQuickConnectMenuOpen(false);
-    setFormError("");
-    setNewConnectionType("ssh");
-    setFormMode("quick");
   }
 
   function handleImportRequested() {
@@ -1817,76 +1809,6 @@ export function ConnectionSidebar({
     ];
   }
 
-  function buildQuickConnectMenuItems(): NativeContextMenuItem[] {
-    return [
-      {
-        kind: "item",
-        label: t("connections.ssh"),
-        iconSrc: connectionIconSrcForConnection({ type: "ssh" }),
-        action: handleQuickSshRequested,
-      },
-      ...quickConnectShellOptions.map((option) =>
-        option.canElevate
-          ? {
-              kind: "submenu" as const,
-              label: option.label,
-              iconSrc: connectionIconSrcForConnection({
-                localShell: option.value,
-                type: "local",
-              }),
-              items: [
-                {
-                  kind: "item" as const,
-                  label: t("connections.normal"),
-                  iconSrc: connectionIconSrcForConnection({
-                    localShell: option.value,
-                    type: "local",
-                  }),
-                  action: () => handleQuickLocalShell(option),
-                },
-                {
-                  kind: "item" as const,
-                  label: t("connections.admin"),
-                  iconSrc: connectionIconSrcForConnection({
-                    localShell: option.value,
-                    type: "local",
-                  }),
-                  action: () => void handleQuickAdminShell(option),
-                },
-              ],
-            }
-          : {
-              kind: "item" as const,
-              label: option.label,
-              iconSrc: connectionIconSrcForConnection({
-                localShell: option.value,
-                type: "local",
-              }),
-              action: () => handleQuickLocalShell(option),
-            },
-      ),
-      { kind: "separator" as const },
-      ...(recentConnections.length > 0
-        ? recentConnections.map((connection) => ({
-            kind: "item" as const,
-            label: quickConnectRecentLabel(connection),
-            iconSrc: connectionIconSrcForConnection(connection),
-            action: () => {
-              setQuickConnectMenuOpen(false);
-              handleOpenConnection(connection);
-            },
-          }))
-        : [
-            {
-              kind: "item" as const,
-              label: t("connections.noRecent"),
-              disabled: true,
-              action: () => undefined,
-            },
-          ]),
-    ];
-  }
-
   async function handleAddConnectionButtonClick(event: ReactMouseEvent<HTMLButtonElement>) {
     setQuickConnectMenuOpen(false);
     const opened = await showNativeContextMenu(
@@ -1900,16 +1822,8 @@ export function ConnectionSidebar({
     setAddConnectionMenuOpen((isOpen) => !isOpen);
   }
 
-  async function handleQuickConnectButtonClick(event: ReactMouseEvent<HTMLButtonElement>) {
+  function handleQuickConnectButtonClick() {
     setAddConnectionMenuOpen(false);
-    const opened = await showNativeContextMenu(
-      buildQuickConnectMenuItems(),
-      menuPositionFromElement(event.currentTarget),
-    );
-    if (opened) {
-      setQuickConnectMenuOpen(false);
-      return;
-    }
     setQuickConnectMenuOpen((isOpen) => !isOpen);
   }
 
@@ -2894,7 +2808,7 @@ export function ConnectionSidebar({
             aria-label={t("connections.quickConnect")}
             className="quick-connect quick-connect-icon-only"
             data-tutorial-id="connections.quickConnect"
-            onClick={(event) => void handleQuickConnectButtonClick(event)}
+            onClick={handleQuickConnectButtonClick}
             title={t("connections.quickConnect")}
             type="button"
           >

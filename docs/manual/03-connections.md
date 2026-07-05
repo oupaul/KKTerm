@@ -96,7 +96,7 @@ UI supplied outside the WebView may still appear.
 - Port (`connections.port`)
 - Save & connect button (`connections.saveAndConnect`), Cancel (`connections.cancel`). The compact recent-host menu uses `connections.connect`.
 - Permission tier toggle: `connections.normal` / `connections.admin`
-- Recently used Connections list, empty state `connections.noRecent`
+- Recently used Connections list: the compact menu shows five at a time, then `connections.loadMore` reveals the next five without closing the menu. Empty state: `connections.noRecent`.
 
 Opening a saved Connection or Quick Connect starts the live Session asynchronously. If a remote host is unreachable, host-key verification or startup can fail in the target Tab, but the Activity Rail, Connection Tree, Settings, and other open Tabs should remain usable while the attempt is pending.
 

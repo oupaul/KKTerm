@@ -173,6 +173,12 @@
   cursor: default;
 }
 
+.quick-connect-menu .quick-connect-load-more {
+  justify-content: center;
+  color: var(--text-muted);
+  font-weight: 800;
+}
+
 .quick-connect-mini-dialog {
   display: grid;
   gap: 9px;
