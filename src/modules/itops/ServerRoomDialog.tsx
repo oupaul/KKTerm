@@ -11,7 +11,7 @@ import {
   Sheet,
   TextInput,
 } from "../../app/ui/dialog";
-import { lucideIconRefForName } from "../../lib/iconCatalog";
+import { reiconIconRefForName } from "../../lib/iconCatalog";
 import { ConnectionIconBackgroundPicker } from "../workspace/connections/ConnectionIconBackgroundPicker";
 import { ConnectionIconPicker } from "../workspace/connections/ConnectionIconPicker";
 import { useWorkspaceStore } from "../../store";
@@ -23,7 +23,7 @@ import {
 } from "./siteTreeState";
 import { useItOpsStore } from "./state";
 
-const DEFAULT_SERVER_ROOM_ICON_REF = lucideIconRefForName("Server");
+const DEFAULT_SERVER_ROOM_ICON_REF = reiconIconRefForName("Server");
 
 export function ServerRoomDialog({
   sites,

@@ -1,4 +1,4 @@
-import { RefreshCw } from "lucide-react";
+import { RefreshCw } from "../../../../../lib/reicon";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { BuiltInWidgetBodyProps } from "../../../registry/builtInRegistry";

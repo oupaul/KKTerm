@@ -1,4 +1,4 @@
-import { Check, ShieldAlert, X } from "lucide-react";
+import { Check, ShieldAlert, X } from "../lib/reicon";
 import { useState, type ChangeEvent } from "react";
 import { useTranslation } from "react-i18next";
 import type { PendingToolApproval, ToolApprovalAction } from "./assistantTypes";

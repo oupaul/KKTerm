@@ -9,7 +9,7 @@ import {
   PinOff,
   Plus,
   Settings,
-} from "lucide-react";
+} from "../lib/reicon";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { useTranslation } from "react-i18next";

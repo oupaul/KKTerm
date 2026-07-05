@@ -1,4 +1,4 @@
-import { Network } from "lucide-react";
+import { Network } from "../../lib/reicon";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { invokeCommand, isTauriRuntime } from "../../lib/tauri";

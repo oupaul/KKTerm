@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut } from "lucide-react";
+import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut } from "../../../../../lib/reicon";
 import { invokeCommand } from "../../../../../lib/tauri";
 import type { DashboardBackground } from "../../../../dashboard/types";
 import { FileViewerBackgroundLayer } from "../FileViewerBackgroundLayer";

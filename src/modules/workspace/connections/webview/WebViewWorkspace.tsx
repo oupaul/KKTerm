@@ -1,7 +1,7 @@
 import { ScreenshotMenu } from "../../ScreenshotMenu";
 import { documentHasWebviewBlockingOverlay } from "../../nativeOverlay";
 
-import { ArrowLeft, ArrowRight, Bot, ExternalLink, Globe2, KeyRound, Lock, RefreshCw, Save, Unlock, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Bot, ExternalLink, Globe2, KeyRound, Lock, RefreshCw, Save, Unlock, X } from "../../../../lib/reicon";
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";

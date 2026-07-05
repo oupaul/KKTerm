@@ -2,9 +2,10 @@ import manifest from "../assets/file-icons/material-icon-theme/manifest.json";
 import { buildIconSearchGroups, iconSearchGroupsMatch } from "./iconSearchAliases";
 
 export const MATERIAL_ICON_REF_PREFIX = "material:";
+export const REICON_ICON_REF_PREFIX = "reicon:";
 export const LUCIDE_ICON_REF_PREFIX = "lucide:";
 const MATERIAL_ICON_ID_PATTERN = /^[a-z0-9][a-z0-9._-]{0,95}$/;
-const LUCIDE_ICON_NAME_PATTERN = /^[A-Z][A-Za-z0-9]{0,63}$/;
+const ICON_NAME_PATTERN = /^[A-Z][A-Za-z0-9]{0,63}$/;
 
 type MaterialIconManifest = {
   iconIds: string[];
@@ -94,6 +95,22 @@ export function isMaterialIconRef(value: string | null | undefined) {
   return typeof value === "string" && materialIconIdFromRef(value) !== null;
 }
 
+export function reiconIconRefForName(iconName: string) {
+  return `${REICON_ICON_REF_PREFIX}${iconName}`;
+}
+
+export function reiconIconNameFromRef(value: string | null | undefined) {
+  if (typeof value !== "string" || !value.startsWith(REICON_ICON_REF_PREFIX)) {
+    return null;
+  }
+  const iconName = value.slice(REICON_ICON_REF_PREFIX.length);
+  return ICON_NAME_PATTERN.test(iconName) ? iconName : null;
+}
+
+export function isReiconIconRef(value: string | null | undefined) {
+  return typeof value === "string" && reiconIconNameFromRef(value) !== null;
+}
+
 export function lucideIconRefForName(iconName: string) {
   return `${LUCIDE_ICON_REF_PREFIX}${iconName}`;
 }
@@ -103,7 +120,7 @@ export function lucideIconNameFromRef(value: string | null | undefined) {
     return null;
   }
   const iconName = value.slice(LUCIDE_ICON_REF_PREFIX.length);
-  return LUCIDE_ICON_NAME_PATTERN.test(iconName) ? iconName : null;
+  return ICON_NAME_PATTERN.test(iconName) ? iconName : null;
 }
 
 export function materialIconFileNameForId(iconId: string) {

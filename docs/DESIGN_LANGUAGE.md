@@ -142,7 +142,7 @@ Build every dialog footer from the kit — never hand-roll the action row:
 - Legacy `.connection-dialog` surfaces: use the styled `.dialog-actions` row
   through `LegacyDialogActions`, passing named `primary`, `cancel`, and optional
   `extraLeft` slots. Keep `.approve-button` primary + `.toolbar-button` cancel,
-  and put a glyph on the primary (e.g. lucide `<Save size={15} />`).
+  and put a glyph on the primary (e.g. a line icon such as `<Save size={15} />`).
 - The primary action carries an icon; primary and Cancel share one button size.
 
 **Never use the `connection-dialog-footer` class.** It has no CSS rule, so it

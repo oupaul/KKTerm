@@ -1,5 +1,3 @@
-import * as Icons from "lucide-react";
-import { Download, FileJson, Trash2, Upload, X } from "lucide-react";
 import type { CSSProperties } from "react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -13,6 +11,8 @@ import {
   TextArea,
 } from "../../../app/ui/dialog";
 import { selectAndReadWidgetImportFile, selectWidgetExportFile } from "../../../lib/tauri";
+import { Download, FileJson, Hash, Trash2, Upload, X } from "../../../lib/reicon";
+import { getReiconIconComponent } from "../../../lib/reiconCatalog";
 import { useWorkspaceStore } from "../../../store";
 import { exportCustomWidgets } from "../state/persistence";
 import { useDashboardStore } from "../state/dashboardStore";
@@ -187,7 +187,7 @@ export function CatalogOverlay({ viewId, onClose }: CatalogOverlayProps) {
             const alreadyOnView = instances.some(
               (i) => i.viewId === viewId && i.sourceId === entry.id && i.kind === entry.kind,
             );
-            const IconCmp = (Icons as unknown as Record<string, React.ComponentType<{ width?: number; height?: number }>>)[entry.defaultIcon] ?? Icons.Hash;
+            const IconCmp = getReiconIconComponent(entry.defaultIcon) ?? Hash;
             return (
               <button
                 key={entry.id}
@@ -241,7 +241,7 @@ export function CatalogOverlay({ viewId, onClose }: CatalogOverlayProps) {
                   </span>
                 )}
                 <span className="dw-catalog-thumb">
-                  <IconCmp width={36} height={36} />
+                  <IconCmp size={36} />
                 </span>
                 <h4>{entry.title}</h4>
                 <p>{entry.summary}</p>

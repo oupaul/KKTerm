@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import Papa from "papaparse";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp } from "../../../../../lib/reicon";
 import { ChromePortals } from "../chrome/FileViewerChromeContext";
 import { FootSeg, SearchField } from "../chrome/controls";
 

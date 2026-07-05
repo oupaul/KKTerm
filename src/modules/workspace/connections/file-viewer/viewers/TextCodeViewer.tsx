@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Search, WrapText } from "lucide-react";
+import { Search, WrapText } from "../../../../../lib/reicon";
 import { Compartment, EditorState } from "@codemirror/state";
 import { EditorView, lineNumbers, highlightActiveLine, keymap } from "@codemirror/view";
 import { history, historyKeymap, defaultKeymap, indentWithTab } from "@codemirror/commands";

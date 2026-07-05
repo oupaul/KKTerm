@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Fingerprint, KeyRound, Layers, LockKeyhole, ScrollText, Settings2, WandSparkles } from "lucide-react";
+import { Fingerprint, KeyRound, Layers, LockKeyhole, ScrollText, Settings2, WandSparkles } from "../../../../lib/reicon";
 import { useTranslation } from "react-i18next";
 import { Switch } from "../../../../app/ui/dialog";
 import { technicalInputProps } from "../../../../lib/inputBehavior";

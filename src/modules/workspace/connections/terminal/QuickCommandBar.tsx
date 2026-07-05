@@ -1,6 +1,5 @@
-import * as Icons from "lucide-react";
 import * as RadixTabs from "@radix-ui/react-tabs";
-import type { ComponentType, CSSProperties, PointerEvent as ReactPointerEvent } from "react";
+import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ConfirmDialog } from "../../../../app/ConfirmDialog";
@@ -20,6 +19,8 @@ import {
 } from "../../../../app/ui/dialog";
 import { technicalInputProps } from "../../../../lib/inputBehavior";
 import { invokeCommand, isTauriRuntime } from "../../../../lib/tauri";
+import { Plus, Settings, Terminal, WandSparkles } from "../../../../lib/reicon";
+import { getReiconIconComponent } from "../../../../lib/reiconCatalog";
 import { useWorkspaceStore } from "../../../../store";
 import type { Connection, QuickCommand, WorkspaceTab } from "../../../../types";
 import { ACCENT_PALETTE } from "../../../dashboard/registry/palette";
@@ -64,8 +65,7 @@ function payloadFor(command: QuickCommand) {
 }
 
 function iconFor(name: string) {
-  const iconMap = Icons as unknown as Record<string, ComponentType<{ size?: number }>>;
-  return iconMap[name] ?? Icons.Terminal;
+  return getReiconIconComponent(name) ?? Terminal;
 }
 
 function commandFromLibrary(entry: QuickCommandLibraryEntry, translate: (key: string) => string): QuickCommand {
@@ -173,7 +173,7 @@ export function QuickCommandBar({ tab }: { tab: WorkspaceTab }) {
       <div className="quick-command-bar" aria-label={t("terminal.quickCommandsBar")}>
         {quickCommands.length === 0 ? (
           <button className="quick-command-empty" onClick={() => setDialogOpen(true)} type="button">
-            <Icons.Plus size={13} />
+            <Plus size={13} />
             {t("terminal.quickCommandsAddFirst")}
           </button>
         ) : (
@@ -200,7 +200,7 @@ export function QuickCommandBar({ tab }: { tab: WorkspaceTab }) {
           title={t("terminal.quickCommandsManage")}
           type="button"
         >
-          <Icons.Settings size={13} />
+          <Settings size={13} />
         </button>
       </div>
       {dialogOpen ? (
@@ -655,7 +655,7 @@ function CustomCommandDialog({
                 type="button"
                 aria-label={t("terminal.quickCommandsGenerateWithAi")}
               >
-                <Icons.WandSparkles size={13} />
+                <WandSparkles size={13} />
               </button>
             ) : null}
           </div>

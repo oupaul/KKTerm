@@ -17,7 +17,7 @@ Use:
 - React, TypeScript, and Vite for the frontend.
 - Tailwind with strict CSS variable design tokens for styling.
 - Radix UI or Ariakit for accessible UI primitives.
-- lucide-react for icons.
+- reicon-react for icons, with lucide-react kept only for no-direct-equivalent fallback glyphs behind the adapter.
 - Zustand or TanStack Store for frontend state.
 - Typed Tauri command wrappers for frontend/backend calls.
 - SQLite for local non-secret data.

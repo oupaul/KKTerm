@@ -1034,7 +1034,7 @@
 }
 
 /* The foreground swatches live inside the icon selector popover and only show
-   for Lucide-capable glyphs; set them off from the icon grid above. */
+   for foreground-capable line glyphs; set them off from the icon grid above. */
 .connection-icon-foreground-section {
   padding-top: 8px;
   border-top: 1px solid var(--border);

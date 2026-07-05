@@ -5,7 +5,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Actions, Btn, DialogShell, Field, Sheet, TextInput } from "../../app/ui/dialog";
-import { lucideIconRefForName } from "../../lib/iconCatalog";
+import { reiconIconRefForName } from "../../lib/iconCatalog";
 import { ConnectionIconBackgroundPicker } from "../workspace/connections/ConnectionIconBackgroundPicker";
 import { ConnectionIconPicker } from "../workspace/connections/ConnectionIconPicker";
 import { useWorkspaceStore } from "../../store";
@@ -13,7 +13,7 @@ import type { Site, ItopsTransport } from "../../types";
 import { useItOpsStore } from "./state";
 
 const TRANSPORTS: ItopsTransport[] = ["auto", "ssh", "winrm", "psexec"];
-const DEFAULT_SITE_ICON_REF = lucideIconRefForName("Building2");
+const DEFAULT_SITE_ICON_REF = reiconIconRefForName("Building");
 
 export function SiteDialog({
   group,

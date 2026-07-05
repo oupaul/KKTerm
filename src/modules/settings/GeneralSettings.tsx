@@ -12,7 +12,7 @@ import {
   RotateCcw,
   Settings as SettingsIcon,
   Upload,
-} from "lucide-react";
+} from "../../lib/reicon";
 import { useTranslation } from "react-i18next";
 import { CHECK_FOR_APP_UPDATES_EVENT } from "../../app/AppUpdatePrompt";
 import { ModuleIconTile, type ModuleKind } from "../../app/ModuleHeader";

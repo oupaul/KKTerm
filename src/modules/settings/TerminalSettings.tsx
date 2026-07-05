@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { FolderOpen, Plus, RefreshCw, Terminal, Trash2 } from "lucide-react";
+import { FolderOpen, Plus, RefreshCw, Terminal, Trash2 } from "../../lib/reicon";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { invokeCommand, isTauriRuntime } from "../../lib/tauri";

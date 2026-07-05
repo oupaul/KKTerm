@@ -6,7 +6,7 @@
 // caller's responsibility. Reuses the `git-adv-*` classes from git.css.
 import { type PointerEvent as ReactPointerEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronDown, ChevronsDownUp, ChevronsUpDown, ChevronUp, Search, WrapText } from "lucide-react";
+import { ChevronDown, ChevronsDownUp, ChevronsUpDown, ChevronUp, Search, WrapText } from "../../lib/reicon";
 import type { GitDiffLine } from "../git/gitTypes";
 
 type DiffSideKind = "ctx" | "add" | "del" | "blank";

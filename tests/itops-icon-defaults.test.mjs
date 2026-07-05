@@ -4,43 +4,43 @@ import test from "node:test";
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
-test("IT Ops topology defaults use the requested Lucide icons", async () => {
+test("IT Ops topology defaults use the requested line icons", async () => {
   const icons = await read("src/modules/itops/icons.tsx");
   const sites = await read("src/modules/itops/SitesTab.tsx");
   const siteDialog = await read("src/modules/itops/SiteDialog.tsx");
   const serverRoomDialog = await read("src/modules/itops/ServerRoomDialog.tsx");
 
-  assert.match(icons, /import \{ Box, Building2, Grid2x2, Rows3, Server, ShelvingUnit \} from "lucide-react"/);
-  assert.match(icons, /site: \(p\) => LucideGlyph\(Building2, p\)/);
-  assert.match(icons, /room: \(p\) => LucideGlyph\(Server, p\)/);
-  assert.match(icons, /rack: \(p\) => LucideGlyph\(ShelvingUnit, p\)/);
-  assert.match(icons, /rows: \(p\) => LucideGlyph\(Rows3, p\)/);
-  assert.match(icons, /grid: \(p\) => LucideGlyph\(Grid2x2, p\)/);
-  assert.match(icons, /cube: \(p\) => LucideGlyph\(Box, p\)/);
+  assert.match(icons, /from "\.\.\/\.\.\/lib\/reicon"/);
+  assert.match(icons, /site: \(p\) => LineIconGlyph\(Building2, p\)/);
+  assert.match(icons, /room: \(p\) => LineIconGlyph\(Server, p\)/);
+  assert.match(icons, /rack: \(p\) => LineIconGlyph\(ShelvingUnit, p\)/);
+  assert.match(icons, /rows: \(p\) => LineIconGlyph\(Rows3, p\)/);
+  assert.match(icons, /grid: \(p\) => LineIconGlyph\(Grid2x2, p\)/);
+  assert.match(icons, /cube: \(p\) => LineIconGlyph\(Box, p\)/);
   assert.match(sites, /return group\.filter \? "filter" : "site"/);
   assert.match(sites, /<ItIcon name="site" size=\{14\} \/>/);
   assert.match(sites, /<ItIcon name="rack" size=\{14\} \/>/);
   assert.match(sites, /icon="room"/);
   assert.match(sites, /icon="rack"/);
-  assert.match(siteDialog, /DEFAULT_SITE_ICON_REF = lucideIconRefForName\("Building2"\)/);
+  assert.match(siteDialog, /DEFAULT_SITE_ICON_REF = reiconIconRefForName\("Building"\)/);
   assert.match(siteDialog, /defaultIconDataUrl=\{DEFAULT_SITE_ICON_REF\}/);
-  assert.match(serverRoomDialog, /DEFAULT_SERVER_ROOM_ICON_REF = lucideIconRefForName\("Server"\)/);
+  assert.match(serverRoomDialog, /DEFAULT_SERVER_ROOM_ICON_REF = reiconIconRefForName\("Server"\)/);
   assert.match(serverRoomDialog, /defaultIconDataUrl=\{DEFAULT_SERVER_ROOM_ICON_REF\}/);
 });
 
-test("shared Lucide icon selectors expose Site, Server Room, and Rack icons", async () => {
-  const dashboardTypes = await read("src/modules/dashboard/types.ts");
+test("shared line icon selectors expose Site, Server Room, and Rack icons", async () => {
+  const reiconNames = await read("src/lib/reiconNames.ts");
   const workspaceIcons = await read("src/modules/workspace/workspaceIcons.tsx");
   const dashboardValidation = await read("src-tauri/src/dashboard_validation.rs");
 
   for (const iconName of ["Building2", "Server", "ShelvingUnit"]) {
-    assert.match(dashboardTypes, new RegExp(`"${iconName}"`), `${iconName} missing from dashboard selector`);
+    assert.match(reiconNames, new RegExp(`"${iconName}"`), `${iconName} missing from dashboard selector`);
     assert.match(workspaceIcons, new RegExp(`"${iconName}"`), `${iconName} missing from workspace selector`);
     assert.match(dashboardValidation, new RegExp(`"${iconName}"`), `${iconName} missing from dashboard validator`);
   }
 });
 
-test("Connection icon picker keeps Lucide background and foreground separate", async () => {
+test("Connection icon picker keeps line-icon background and foreground separate", async () => {
   const picker = await read("src/modules/workspace/connections/ConnectionIconPicker.tsx");
   const palette = await read("src/modules/workspace/connections/ConnectionIconBackgroundPicker.tsx");
   const icon = await read("src/modules/workspace/connections/ConnectionIcon.tsx");
@@ -53,9 +53,11 @@ test("Connection icon picker keeps Lucide background and foreground separate", a
   assert.match(picker, /iconColor\?: string \| null/);
   assert.match(picker, /iconColor=\{iconColor\}/);
   // The foreground palette now lives inside the icon selector popover and only
-  // renders for Lucide-capable glyphs.
+  // renders for foreground-capable line glyphs.
   assert.match(icon, /export function iconSupportsForegroundColor/);
-  assert.match(icon, /lucideIconNameFromRef\(src\) !== null/);
+  assert.match(icon, /reiconIconNameFromRef\(src\) \?\? lucideIconNameFromRef\(src\)/);
+  assert.match(icon, /getReiconIconComponent\(iconName\) !== null/);
+  assert.match(picker, /reiconIconRefForName/);
   assert.match(picker, /import \{ ConnectionIconColorPicker \} from "\.\/ConnectionIconBackgroundPicker"/);
   assert.match(picker, /onIconColorChange\?: \(iconColor: string \| null\) => void/);
   assert.match(picker, /const supportsForeground = iconSupportsForegroundColor\(/);

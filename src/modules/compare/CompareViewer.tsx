@@ -5,7 +5,7 @@
 // so it inherits the same color variables and chrome.
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { X } from "lucide-react";
+import { X } from "../../lib/reicon";
 import { invokeCommand, type FileViewProbe } from "../../lib/tauri";
 import { gitDiffNoIndex } from "../git/gitCommands";
 import { detectViewerKind } from "../workspace/connections/file-viewer/fileViewerModel";

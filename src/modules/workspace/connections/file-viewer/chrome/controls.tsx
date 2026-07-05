@@ -1,8 +1,8 @@
-import type { ComponentType, CSSProperties, ReactNode } from "react";
-import { Search } from "lucide-react";
+import type { CSSProperties, ReactNode } from "react";
+import { Search, type IconComponent } from "../../../../../lib/reicon";
 
-/** A lucide-style icon component (all take a numeric `size`). */
-export type ViewerIcon = ComponentType<{ size?: number }>;
+/** A line-icon component (all take a numeric `size`). */
+export type ViewerIcon = IconComponent;
 
 /** Square icon button matching the redesign's `.fv-ibtn`. */
 export function IconButton({

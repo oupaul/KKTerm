@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Download, FileText } from "lucide-react";
+import { Download, FileText } from "../../../../../lib/reicon";
 import { invokeCommand, type PdfViewStatus } from "../../../../../lib/tauri";
 import { supportsInstallerHelper } from "../../../../../lib/platform";
 import { installRecipeAndWait } from "../../../../installer/progress";

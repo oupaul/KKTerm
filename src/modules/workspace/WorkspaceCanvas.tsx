@@ -6,7 +6,7 @@ import {
 import { ftpBrowserCommands, localBrowserCommands } from "../../lib/fileBrowserCommands";
 import { TerminalWorkspace } from "./connections/terminal/TerminalWorkspace";
 import { ConnectionIcon } from "./connections/ConnectionIcon";
-import { ChevronLeft, ChevronRight, Terminal, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Terminal, X } from "../../lib/reicon";
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type {

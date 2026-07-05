@@ -1,4 +1,4 @@
-import { Pencil, Save, Search, SquareCheck, SquareX } from "lucide-react";
+import { Pencil, Save, Search, SquareCheck, SquareX } from "../../lib/reicon";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
@@ -460,7 +460,7 @@ function WorkspaceIconPicker({
                 keywords: ["letter", "workspace"],
                 icon: <WorkspaceIcon backgroundColor={backgroundColor} color={color} icon={null} name={name} size={19} />,
               }}
-              lucideNames={WORKSPACE_ICON_NAMES}
+              iconNames={WORKSPACE_ICON_NAMES}
               staticOptions={BRAND_ICON_ENTRIES.flatMap((entry) => {
                 const url = brandIconUrlForId(entry.id);
                 return url

@@ -1,4 +1,4 @@
-import { KeyRound, RefreshCw, Trash2 } from "lucide-react";
+import { KeyRound, RefreshCw, Trash2 } from "../../lib/reicon";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {

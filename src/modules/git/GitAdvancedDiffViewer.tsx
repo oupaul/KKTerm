@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { X } from "lucide-react";
+import { X } from "../../lib/reicon";
 import type { GitChangedFile, GitDiffLine } from "./gitTypes";
 import { splitPath } from "./gitPath";
 import { GitIcon } from "./GitIcon";

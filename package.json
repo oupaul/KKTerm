@@ -83,6 +83,7 @@
     "react-dom": "^19.2.7",
     "react-grid-layout": "^2.2.3",
     "react-i18next": "^17.0.8",
+    "reicon-react": "^1.1.2",
     "roughjs": "^4.6.6",
     "simple-statistics": "^7.9.0",
     "three": "^0.184.0",

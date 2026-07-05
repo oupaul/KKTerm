@@ -1,6 +1,6 @@
 // Localized icon-search vocabulary.
 //
-// The icon catalog (Lucide names + Material icon ids/labels/tags) is searchable
+// The icon catalog (Reicon names, Lucide fallback names + Material icon ids/labels/tags) is searchable
 // in English only. This file maps localized search words to the English
 // keywords baked into that catalog, so a user can find icons by typing in their
 // own UI language (e.g. "資料夾" or "carpeta" both find folder icons).

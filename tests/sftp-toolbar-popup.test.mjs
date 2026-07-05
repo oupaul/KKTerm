@@ -48,7 +48,7 @@ test("SSH pane toolbar SFTP action is icon-only with a native SFTP tooltip", asy
 
   assert.match(
     terminalSource,
-    /import \{[^}]*Folder[^}]*\} from "lucide-react";/,
+    /import \{[^}]*Folder[^}]*\} from "\.\.\/\.\.\/\.\.\/\.\.\/lib\/reicon";/,
     "the SSH toolbar SFTP action should use the folder icon",
   );
   assert.match(

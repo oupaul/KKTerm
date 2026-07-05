@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown, Copy } from "lucide-react";
+import { ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown, Copy } from "../../../../../lib/reicon";
 import { ChromePortals } from "../chrome/FileViewerChromeContext";
 import { FootSeg, IconButton } from "../chrome/controls";
 

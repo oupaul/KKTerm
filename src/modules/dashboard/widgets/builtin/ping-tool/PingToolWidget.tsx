@@ -1,5 +1,5 @@
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
-import { Play, Square } from "lucide-react";
+import { Play, Square } from "../../../../../lib/reicon";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { technicalInputProps } from "../../../../../lib/inputBehavior";

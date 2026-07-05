@@ -1,4 +1,4 @@
-import { RefreshCw } from "lucide-react";
+import { RefreshCw } from "../../../../../lib/reicon";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { technicalInputProps } from "../../../../../lib/inputBehavior";

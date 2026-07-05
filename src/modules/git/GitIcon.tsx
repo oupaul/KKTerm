@@ -1,6 +1,6 @@
 // SF-Symbols-ish line glyphs for the Git Browser, ported from the redesign
 // mockup (`git-icons.jsx`). Drawn on a 24×24 grid in currentColor. These match
-// the mockup's bespoke look more closely than lucide equivalents.
+// the mockup's bespoke look more closely than generic line-icon equivalents.
 import type { JSX } from "react";
 
 export type GitIconName =

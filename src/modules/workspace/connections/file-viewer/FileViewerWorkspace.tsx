@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { Check, Lock, Menu, RefreshCw, Save, X } from "lucide-react";
+import { Check, Lock, Menu, RefreshCw, Save, X } from "../../../../lib/reicon";
 import type { CSSProperties } from "react";
 import type { WorkspaceTab } from "../../../../types";
 import type { DashboardBackground } from "../../../dashboard/types";

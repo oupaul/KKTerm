@@ -1,4 +1,4 @@
-import { Binary, Eye, Palette, Scaling, Settings2, Users } from "lucide-react";
+import { Binary, Eye, Palette, Scaling, Settings2, Users } from "../../../../lib/reicon";
 import { useTranslation } from "react-i18next";
 import { technicalInputProps } from "../../../../lib/inputBehavior";
 import type { Connection, SshSettings, StoredCredentialSummary, VncSettings } from "../../../../types";

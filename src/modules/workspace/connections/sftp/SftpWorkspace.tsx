@@ -1,6 +1,6 @@
 import { confirmTrustedSshHostKey, connectionToolbarTitle, resolveSshSocksProxyRequest, uniqueRuntimeId, usesNativeSshHostKeyVerification } from "../utils";
 
-import { AlertTriangle, ChevronsUpDown, X } from "lucide-react";
+import { AlertTriangle, ChevronsUpDown, X } from "../../../../lib/reicon";
 import { Actions, Btn, DIcon, DialogShell, Field, Sheet, TextInput } from "../../../../app/ui/dialog";
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useMemo, useRef, useState } from "react";

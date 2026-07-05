@@ -17,7 +17,7 @@ test("IT Ops drill views expose icon-only edit add export actions", async () => 
   assert.match(sites, /rack \? \([\s\S]*handleExport\("excel"\)/);
 });
 
-test("Server Room view switcher sits in the drill toolbar with Lucide icons", async () => {
+test("Server Room view switcher sits in the drill toolbar with line icons", async () => {
   const sites = await read("src/modules/itops/SitesTab.tsx");
 
   // The segmented control renders inside the toolbar row, only for rooms.

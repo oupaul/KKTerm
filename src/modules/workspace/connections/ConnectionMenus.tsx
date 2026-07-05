@@ -1,4 +1,4 @@
-import { Download } from "lucide-react";
+import { Download } from "../../../lib/reicon";
 import { useTranslation } from "react-i18next";
 import { ConnectionTypeGlyph } from "./ConnectionGlyph";
 import type { ConnectionType } from "../../../types";

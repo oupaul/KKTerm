@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ArrowDownToLine } from "lucide-react";
+import { ArrowDownToLine } from "../../../../../lib/reicon";
 import Convert from "ansi-to-html";
 import DOMPurify from "dompurify";
 import { invokeCommand } from "../../../../../lib/tauri";

@@ -39,8 +39,8 @@ import {
   List as ListIcon,
   RefreshCw,
   Search,
-} from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+} from "../../lib/reicon";
+import type { LucideIcon } from "../../lib/reicon";
 import {
   ModuleHeader,
   ModuleHeaderDivider,

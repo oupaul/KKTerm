@@ -38,9 +38,9 @@ assert.doesNotMatch(
   "SSH auth method should not be a dropdown select.",
 );
 
-assert.match(source, /LockKeyhole/, "Password auth should have a monochrome lucide icon.");
-assert.match(source, /KeyRound/, "Key-file auth should have a monochrome lucide icon.");
-assert.match(source, /Fingerprint/, "SSH-agent auth should have a monochrome lucide icon.");
+assert.match(source, /LockKeyhole/, "Password auth should have a monochrome line icon.");
+assert.match(source, /KeyRound/, "Key-file auth should have a monochrome line icon.");
+assert.match(source, /Fingerprint/, "SSH-agent auth should have a monochrome line icon.");
 
 const css = await readFile(
   new URL("../src/modules/workspace/connections/connections.css", import.meta.url),

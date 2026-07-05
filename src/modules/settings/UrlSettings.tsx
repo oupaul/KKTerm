@@ -1,4 +1,4 @@
-import { Globe, Trash2 } from "lucide-react";
+import { Globe, Trash2 } from "../../lib/reicon";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { invokeCommand, isTauriRuntime } from "../../lib/tauri";

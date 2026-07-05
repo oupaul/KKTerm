@@ -1,4 +1,4 @@
-import { Search } from "lucide-react";
+import { Search } from "../../../../../lib/reicon";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { technicalInputProps } from "../../../../../lib/inputBehavior";

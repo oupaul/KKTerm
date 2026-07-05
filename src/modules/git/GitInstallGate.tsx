@@ -3,7 +3,7 @@
 // the user to provide git on PATH, then re-checks.
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Download } from "lucide-react";
+import { Download } from "../../lib/reicon";
 import { invokeCommand } from "../../lib/tauri";
 import { supportsInstallerHelper } from "../../lib/platform";
 import { installRecipeAndWait } from "../installer/progress";

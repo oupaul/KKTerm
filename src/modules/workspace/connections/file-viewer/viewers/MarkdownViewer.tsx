@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { marked } from "marked";
 import DOMPurify from "dompurify";
-import { Code2, Columns2, Eye } from "lucide-react";
+import { Code2, Columns2, Eye } from "../../../../../lib/reicon";
 import { ChromePortals } from "../chrome/FileViewerChromeContext";
 import { FootSeg, Segmented } from "../chrome/controls";
 

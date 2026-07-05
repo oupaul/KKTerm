@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Eye, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Eye, CheckCircle2, AlertTriangle } from "../lib/reicon";
 import {
   useWatchdogStore,
   useWatchdogSubscription,

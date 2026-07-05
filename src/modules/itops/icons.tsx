@@ -1,10 +1,10 @@
 // Shared SF-Symbols-flavoured glyph set for the IT Ops Module, ported from the
 // redesign mockup (itops-icons.jsx). Most glyphs stay self-contained inline SVG
 // so dense status/transport/trigger iconography remains pixel-matched; topology
-// entity icons use the product's Lucide defaults.
+// entity icons use the product's default line-icon set.
 
-import type { ComponentType, ReactNode } from "react";
-import { Box, Building2, Grid2x2, Rows3, Server, ShelvingUnit } from "lucide-react";
+import type { ReactNode } from "react";
+import { Box, Building2, Grid2x2, Rows3, Server, ShelvingUnit, type IconComponent } from "../../lib/reicon";
 
 export type ItIconName =
   | "ops"
@@ -66,9 +66,7 @@ export type ItIconName =
 
 type GlyphProps = { size: number; sw: number };
 
-type LucideIconComponent = ComponentType<{ size?: number; strokeWidth?: number }>;
-
-function LucideGlyph(Icon: LucideIconComponent, { size, sw }: GlyphProps) {
+function LineIconGlyph(Icon: IconComponent, { size, sw }: GlyphProps) {
   return <Icon size={size} strokeWidth={sw} />;
 }
 
@@ -96,7 +94,7 @@ function Svg({
 }
 
 const GLYPHS: Record<ItIconName, (p: GlyphProps) => ReactNode> = {
-  site: (p) => LucideGlyph(Building2, p),
+  site: (p) => LineIconGlyph(Building2, p),
   ops: (p) => (
     <Svg {...p}>
       <path d="M4 5.5h16a1 1 0 0 1 1 1V9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6.5a1 1 0 0 1 1-1Z" />
@@ -123,11 +121,11 @@ const GLYPHS: Record<ItIconName, (p: GlyphProps) => ReactNode> = {
       <path d="M12 11l5 6" />
     </Svg>
   ),
-  room: (p) => LucideGlyph(Server, p),
-  rack: (p) => LucideGlyph(ShelvingUnit, p),
-  rows: (p) => LucideGlyph(Rows3, p),
-  grid: (p) => LucideGlyph(Grid2x2, p),
-  cube: (p) => LucideGlyph(Box, p),
+  room: (p) => LineIconGlyph(Server, p),
+  rack: (p) => LineIconGlyph(ShelvingUnit, p),
+  rows: (p) => LineIconGlyph(Rows3, p),
+  grid: (p) => LineIconGlyph(Grid2x2, p),
+  cube: (p) => LineIconGlyph(Box, p),
   run: (p) => (
     <Svg {...p} sw={1.8}>
       <path d="M8 5.5l10 6.5-10 6.5z" />

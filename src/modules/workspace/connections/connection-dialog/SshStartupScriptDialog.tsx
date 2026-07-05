@@ -1,5 +1,5 @@
 import { useId, useState } from "react";
-import { WandSparkles } from "lucide-react";
+import { WandSparkles } from "../../../../lib/reicon";
 import { useTranslation } from "react-i18next";
 import { Actions, Btn, DialogShell, GRow, Group, Sheet, Switch, TextArea } from "../../../../app/ui/dialog";
 import { technicalInputProps } from "../../../../lib/inputBehavior";

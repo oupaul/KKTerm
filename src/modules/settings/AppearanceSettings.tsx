@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { FolderOpen, Palette, RefreshCw, RotateCcw } from "lucide-react";
+import { FolderOpen, Palette, RefreshCw, RotateCcw } from "../../lib/reicon";
 import { useTranslation } from "react-i18next";
 import {
   loadCustomFontOptions,

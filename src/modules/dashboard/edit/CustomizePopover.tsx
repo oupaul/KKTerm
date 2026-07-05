@@ -293,7 +293,7 @@ function CommonSection({ instance }: { instance: DashboardWidgetInstance }) {
         <h4>{t("dashboard.icon")}</h4>
         <IconLibraryPicker
           className="dw-icon-library-picker"
-          lucideNames={ICON_NAMES}
+          iconNames={ICON_NAMES}
           onSelect={(iconName) => {
             if (iconName) {
               updateInstance(instance.id, { iconName: iconName as IconName });

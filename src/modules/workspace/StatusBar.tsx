@@ -13,7 +13,7 @@ import {
   TriangleAlert,
   Unlock,
   X,
-} from "lucide-react";
+} from "../../lib/reicon";
 import { useCallback, useEffect, useState } from "react";
 import type { MouseEvent, ReactNode } from "react";
 import { useTranslation } from "react-i18next";

@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { X } from "lucide-react";
+import { X } from "../lib/reicon";
 import { useWatchdogStore } from "./store";
 import type { WatchdogInterventionEntry } from "./store";
 import { isTerminalState } from "./types";

@@ -36,7 +36,7 @@ interface PcInfoConfig {
   activeSection: SectionId;
 }
 
-// Lucide-style 24×24 icon path pairs, one per tab. Ported from the reference
+// Line-icon-style 24×24 icon path pairs, one per tab. Ported from the reference
 // design so the tab bar reads at a glance.
 const TAB_ICONS: Record<SectionId, [string, string]> = {
   summary: ["M4 5h16v11H4z", "M9 20h6M12 16v4"],

@@ -26,7 +26,7 @@ import {
   Waypoints,
   X,
   type LucideIcon,
-} from "lucide-react";
+} from "../../lib/reicon";
 import { useTranslation } from "react-i18next";
 import { LegacyDialogActions } from "../../app/ui/dialog";
 import { ModuleIconTile, type ModuleKind } from "../../app/ModuleHeader";

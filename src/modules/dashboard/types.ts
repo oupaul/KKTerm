@@ -1,3 +1,5 @@
+import { ICON_PICKER_NAMES, VALID_ICON_NAMES } from "../../lib/reiconNames";
+
 export type WidgetKind = "builtIn" | "script";
 
 /**
@@ -48,27 +50,9 @@ export const ACCENT_NAMES = [
 ] as const;
 export type AccentName = (typeof ACCENT_NAMES)[number] | `#${string}`;
 
-export const ICON_NAMES = [
-  "Hash","Network","Terminal","Server","Building2","ShelvingUnit","Cpu","Activity","Bolt","Sun",
-  "Bell","Bot","Wrench","Folder","Clock","Doc","Cloud","Calendar",
-  "Database","Globe","Lock","Key","Mail","Mic","Monitor","Music",
-  "Package","Phone","Pin","Power","Printer","Radio","Search",
-  "Settings","Shield","ShoppingCart","Star","Tag","Tool","Trash",
-  "Truck","User","Users","Video","Volume","Watch","Wifi","Wind",
-  "Zap","Layers","List","Grid","Archive","BadgeCheck","BookOpen",
-  "Bookmark","Brain","Briefcase","Bug","ChartBar","ChartLine",
-  "CheckCircle","ChevronRight","CircleHelp","Clipboard","ClipboardCheck",
-  "ClipboardList","Code","Code2","Cog","Command","Compass","Container",
-  "Copy","Download","ExternalLink","Eye","File","FileCode","FileJson",
-  "FileTerminal","FileText","Fingerprint","Flag","Gauge","GitBranch",
-  "GitCommit","GitFork","Github","Hammer","HardDrive","HeartPulse","Home",
-  "Inbox","Keyboard","Laptop","Link","ListChecks","LogIn","LogOut","Map",
-  "MessageSquare","MousePointer2","PackageCheck","PanelTop","Play","Plus",
-  "Rocket","Route","Save","Send","Shell","SlidersHorizontal","Sparkles",
-  "SquareTerminal","Upload","Usb","Waypoints","Webhook","Workflow","XCircle",
-] as const;
+export const ICON_NAMES = ICON_PICKER_NAMES;
 export type MaterialIconName = `material:${string}`;
-export type IconName = (typeof ICON_NAMES)[number] | MaterialIconName;
+export type IconName = (typeof VALID_ICON_NAMES)[number] | MaterialIconName;
 
 export const GRID_DENSITIES = ["compact", "default", "roomy"] as const;
 export type GridDensity = (typeof GRID_DENSITIES)[number];

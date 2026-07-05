@@ -1,4 +1,4 @@
-import { Eye, EyeOff, Lock, LockOpen, Pencil, Trash2 } from "lucide-react";
+import { Eye, EyeOff, Lock, LockOpen, Pencil, Trash2 } from "../../lib/reicon";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {

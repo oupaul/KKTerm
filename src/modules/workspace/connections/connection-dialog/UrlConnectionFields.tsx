@@ -1,4 +1,4 @@
-import { Database, Settings2 } from "lucide-react";
+import { Database, Settings2 } from "../../../../lib/reicon";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { technicalInputProps } from "../../../../lib/inputBehavior";

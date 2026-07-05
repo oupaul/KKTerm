@@ -1,4 +1,4 @@
-import { Clipboard, HardDrive, Layers, Monitor, Palette, Scaling, Settings2, Zap } from "lucide-react";
+import { Clipboard, HardDrive, Layers, Monitor, Palette, Scaling, Settings2, Zap } from "../../../../lib/reicon";
 import { useTranslation } from "react-i18next";
 import { technicalInputProps } from "../../../../lib/inputBehavior";
 import {

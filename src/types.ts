@@ -161,7 +161,7 @@ export interface Site {
   background?: DashboardBackground | null;
   // Per-server-room backgrounds, keyed by the room's string tag.
   roomBackgrounds?: Record<string, DashboardBackground>;
-  // Custom icon (data URL or lucide/material ref), foreground colour, and background colour.
+  // Custom icon (data URL or reicon/lucide/material ref), foreground colour, and background colour.
   iconColor?: string | null;
   iconDataUrl?: string | null;
   iconBackgroundColor?: string | null;

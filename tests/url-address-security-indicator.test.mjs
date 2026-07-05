@@ -6,7 +6,7 @@ const workspace = readFileSync("src/modules/workspace/connections/webview/WebVie
 const css = readFileSync("src/modules/workspace/connections/webview/webview.css", "utf8");
 
 test("URL address bar distinguishes secure HTTPS and plain HTTP states", () => {
-  assert.match(workspace, /import \{[^}]*Lock[^}]*Unlock[^}]*\} from "lucide-react"/);
+  assert.match(workspace, /import \{[^}]*Lock[^}]*Unlock[^}]*\} from "\.\.\/\.\.\/\.\.\/\.\.\/lib\/reicon"/);
   assert.ok(workspace.includes("const isHttpsAddress = /^https:\\/\\//i.test(trimmedAddress);"));
   assert.ok(workspace.includes("const isHttpAddress = /^http:\\/\\//i.test(trimmedAddress);"));
   assert.doesNotMatch(workspace, /hasInvalidCertificate/);

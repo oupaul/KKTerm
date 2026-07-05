@@ -2,7 +2,7 @@
 // body, work panel, copy/expand actions, image preview, and the inline
 // secret-entry cards (which store secrets locally without exposing them to
 // the model). Extracted verbatim from AssistantPanel.tsx.
-import { Copy, Eye, EyeOff, FileImage, KeyRound, LoaderCircle, X } from "lucide-react";
+import { Copy, Eye, EyeOff, FileImage, KeyRound, LoaderCircle, X } from "../lib/reicon";
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import type { FormEvent } from "react";

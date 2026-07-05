@@ -3,7 +3,7 @@ import { ScreenshotMenu } from "../../ScreenshotMenu";
 
 import { documentHasRdpBlockingOverlay } from "../../nativeOverlay";
 import { showNativeContextMenu } from "../../../../lib/nativeContextMenu";
-import { Bot, Keyboard, Monitor, RotateCcw, Scaling } from "lucide-react";
+import { Bot, Keyboard, Monitor, RotateCcw, Scaling } from "../../../../lib/reicon";
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";

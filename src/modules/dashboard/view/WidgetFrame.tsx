@@ -1,11 +1,11 @@
-import { Settings as SettingsIcon, X as XIcon } from "lucide-react";
-import * as Icons from "lucide-react";
 import type { CSSProperties, ReactNode } from "react";
 import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
+import { Hash, Settings as SettingsIcon, X as XIcon } from "../../../lib/reicon";
 import { showNativeContextMenu, type NativeContextMenuPosition } from "../../../lib/nativeContextMenu";
 import { nativeMenuIcons } from "../../../lib/nativeMenuIcons";
 import { materialIconRefToUrl } from "../../../lib/iconCatalogUrls";
+import { getReiconIconComponent } from "../../../lib/reiconCatalog";
 import { useDashboardStore } from "../state/dashboardStore";
 import { getBuiltInWidget } from "../registry/builtInRegistry";
 import { PRESET_RENDERERS } from "../registry/presetRegistry";
@@ -57,11 +57,11 @@ export function WidgetFrame({
     ?? t("dashboard.untitledWidget");
 
   const materialIconUrl = materialIconRefToUrl(instance.iconName);
-  const IconCmp = (Icons as unknown as Record<string, React.ComponentType<{ width?: number; height?: number }>>)[instance.iconName] ?? Icons.Hash;
+  const IconCmp = getReiconIconComponent(instance.iconName) ?? Hash;
   const titleIcon = materialIconUrl ? (
     <img alt="" aria-hidden="true" className="dw-title-material-icon" draggable={false} src={materialIconUrl} />
   ) : (
-    <IconCmp width={14} height={14} />
+    <IconCmp size={14} />
   );
 
   useEffect(() => {
