@@ -2550,6 +2550,7 @@ fn command_for(request: &StartTerminalSessionRequest) -> Result<CommandBuilder, 
                 CommandBuilder::new(resolved_program.clone())
             };
             sanitize_windows_local_environment(&mut command);
+            sanitize_linux_appimage_environment(&mut command);
             set_terminal_environment(&mut command);
             apply_managed_terminal_environment(&mut command, &request.environment_variables)?;
             if let Some(session_id) = psmux_session_id {
@@ -2588,6 +2589,7 @@ fn command_for(request: &StartTerminalSessionRequest) -> Result<CommandBuilder, 
             }
 
             let mut command = CommandBuilder::new("ssh");
+            sanitize_linux_appimage_environment(&mut command);
             set_terminal_environment(&mut command);
             command.arg("-tt");
             if let Some(port) = request.port {
@@ -2849,6 +2851,74 @@ fn sanitize_windows_local_environment(command: &mut CommandBuilder) {
         // for every mainstream terminal); only explicit overrides are layered on.
         let _ = command;
     }
+}
+
+// When KKTerm runs from an AppImage, the AppRun wrapper and its bundled
+// linuxdeploy GTK hook rewrite the environment so the app loads the bundled
+// GTK/WebKit stack from the transient /tmp/.mount_* directory. Children that
+// execute *host* binaries must not inherit those values: the bundled
+// libraries come from the build host and mismatch the running system (e.g.
+// systemd tools abort with `OPENSSL_3.4.0' not found` on Fedora 44, ssh
+// silently uses the bundled libcrypto instead of the host's patched one).
+// Variables the hook overwrites wholesale are dropped — the pre-AppImage
+// value is unrecoverable and a plain desktop shell would not have them set —
+// while prepended path lists are filtered entry-by-entry so any entries the
+// user had before launch survive. No-op outside an AppImage (no APPDIR).
+fn sanitize_linux_appimage_environment(command: &mut CommandBuilder) {
+    #[cfg(target_os = "linux")]
+    {
+        let Some(appdir) = std::env::var("APPDIR")
+            .ok()
+            .filter(|value| !value.is_empty())
+        else {
+            return;
+        };
+
+        for name in [
+            "APPDIR",
+            "APPIMAGE",
+            "ARGV0",
+            "OWD",
+            "GDK_BACKEND",
+            "GTK_THEME",
+            "GTK_DATA_PREFIX",
+            "GTK_EXE_PREFIX",
+            "GTK_PATH",
+            "GTK_IM_MODULE_FILE",
+            "GDK_PIXBUF_MODULE_FILE",
+            "GSETTINGS_SCHEMA_DIR",
+            "GIO_EXTRA_MODULES",
+        ] {
+            command.env_remove(name);
+        }
+
+        for name in ["LD_LIBRARY_PATH", "XDG_DATA_DIRS"] {
+            let Ok(value) = std::env::var(name) else {
+                continue;
+            };
+            match filter_appimage_path_list(&value, &appdir) {
+                Some(kept) => command.env(name, kept),
+                None => command.env_remove(name),
+            }
+        }
+    }
+
+    #[cfg(not(target_os = "linux"))]
+    {
+        let _ = command;
+    }
+}
+
+/// Drops `:`-separated path entries that point into the AppImage mount,
+/// returning `None` when nothing user-provided remains.
+#[cfg(any(target_os = "linux", test))]
+fn filter_appimage_path_list(value: &str, appdir: &str) -> Option<String> {
+    let kept = value
+        .split(':')
+        .filter(|entry| !entry.is_empty() && !entry.starts_with(appdir))
+        .collect::<Vec<_>>()
+        .join(":");
+    (!kept.is_empty()).then_some(kept)
 }
 
 // Compose the current user's environment from the registry exactly as Windows
@@ -3207,6 +3277,32 @@ fn make_session_id(title: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn appimage_path_list_filter_keeps_user_entries_only() {
+        let appdir = "/tmp/.mount_kktermXXXXXX";
+        // AppRun prepends every bundled lib dir; user had one entry of their own.
+        assert_eq!(
+            filter_appimage_path_list(
+                "/tmp/.mount_kktermXXXXXX/usr/lib/:/tmp/.mount_kktermXXXXXX/usr/lib64/:/opt/custom/lib:",
+                appdir
+            ),
+            Some("/opt/custom/lib".to_string())
+        );
+        // Entirely AppImage-injected: nothing left, caller should unset.
+        assert_eq!(
+            filter_appimage_path_list("/tmp/.mount_kktermXXXXXX/usr/lib/:", appdir),
+            None
+        );
+        // The GTK hook prepends to XDG_DATA_DIRS; system entries survive.
+        assert_eq!(
+            filter_appimage_path_list(
+                "/tmp/.mount_kktermXXXXXX/usr/share:/usr/share:/usr/local/share",
+                appdir
+            ),
+            Some("/usr/share:/usr/local/share".to_string())
+        );
+    }
 
     #[cfg(target_os = "windows")]
     #[test]

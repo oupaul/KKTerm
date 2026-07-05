@@ -277,6 +277,21 @@ a clean Ubuntu, and runs the smoke path (open window, open a local terminal).**
 > Both fixes were validated end-to-end on the Fedora VM: extract → strip →
 > repack with `appimagetool` → relaunch showed no crash and a visibly
 > rendered window.
+>
+> **Follow-up (2026-07-05, v0.1.112 on the same Fedora 44 VM):** still blank —
+> a third bug in fix (2) itself. AppImage's AppRun wrapper exports
+> `LD_LIBRARY_PATH` pointing at the bundled libs, and the spawned host
+> `systemd-detect-virt` inherited it, aborting with
+> ``libcrypto.so.3: version `OPENSSL_3.4.0' not found`` (bundled Ubuntu
+> OpenSSL 3.0 vs. Fedora 44's `libsystemd-shared` needing 3.4 symbols) — so
+> VM detection reported "not a VM" and the DMA-BUF workaround never engaged.
+> Fix: `main.rs` scrubs `LD_LIBRARY_PATH` when spawning the detector. The
+> same leak reaches terminal shells and the spawned host `ssh` (which
+> silently loaded the *bundled* libcrypto), so `sessions.rs` now scrubs all
+> AppImage-injected variables (`LD_LIBRARY_PATH`, `GTK_*`, `GDK_*`,
+> `GIO_EXTRA_MODULES`, `GSETTINGS_SCHEMA_DIR`, `XDG_DATA_DIRS` entries under
+> `$APPDIR`, `APPDIR`/`APPIMAGE`/`ARGV0`/`OWD`) from local-shell and ssh
+> children; no-op outside an AppImage.
 
 - [ ] Add `appimage` to a **Linux-only** bundle target. Do NOT add it to the
       shared `tauri.conf.json` `bundle.targets` (which is `nsis`/`app`/`dmg`);
