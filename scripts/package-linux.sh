@@ -108,8 +108,11 @@ strip_bundled_wayland_libs() {
   ARCH="${TARGET_TRIPLE%%-*}" "$(prepare_appimagetool)" "$work_dir/squashfs-root" "$appimage" >/dev/null
 
   # tauri build already produced an updater signature over the pre-patch
-  # bytes; regenerate it now that the AppImage contents changed.
-  "./node_modules/.bin/tauri" signer sign "$appimage"
+  # bytes; regenerate it now that the AppImage contents changed. The signer
+  # subcommand rejects --private-key and --private-key-path being set
+  # together, so drop the path env var here since the key content is
+  # already loaded into TAURI_SIGNING_PRIVATE_KEY.
+  env -u TAURI_SIGNING_PRIVATE_KEY_PATH "./node_modules/.bin/tauri" signer sign "$appimage"
 }
 
 "./node_modules/.bin/tauri" build --target "$TARGET_TRIPLE" --bundles appimage "$@"
