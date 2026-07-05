@@ -87,11 +87,16 @@ Replaces the **Host Group** entry in `CONTEXT.md`; adds the rest. Follows the
   environment sensor, smoke detector, crash cart, 乖乖). A Room Object has a
   facing and a vertical position in rack units, so occupants can share a
   floor cell while their vertical spans don't intersect (a 乖乖 pack sits on
-  a cabinet top). Durable in `itops_room_objects`, scoped by Site + Server
-  Room name like racks (the pure model lives in `roomObjects.ts`; the
-  pre-durable localStorage scope remains a legacy fallback). Rack facing is a
-  durable `facing` column on `itops_site_racks`. _Avoid_: fixture entity,
-  prop.
+  a cabinet top). Footprints follow real-world size against the 1200 mm
+  floor cell: small hand-sized fixtures (camera, fire extinguisher, sensor,
+  smoke detector, 乖乖) occupy one cell quadrant chosen by a durable
+  `corner` property (clockwise 0=NW..3=SW), while large fixtures may span
+  several cells (a CRAC unit covers a 2×1-cell span, a cable-tray section
+  runs two cells) and block every covered cell for stacking. Durable in
+  `itops_room_objects`, scoped by Site + Server Room name like racks (the
+  pure model lives in `roomObjects.ts`; the pre-durable localStorage scope
+  remains a legacy fallback). Rack facing is a durable `facing` column on
+  `itops_site_racks`. _Avoid_: fixture entity, prop.
 - **Rack** — a durable, fixed-height (default 42U) cabinet that belongs to one
   Site, grouped by **Server Room** (topology Site → Server Room → Rack), with
   an optional **shell** finish (black/white/grey). Holds Rack Devices at U
@@ -320,7 +325,12 @@ The visible IT Ops Module opens directly into the Site topology surface:
   (cell placement + facing, `roomIsoLayout.ts`), paint Racks in their shell
   finish (no status colouring) with always-on utilisation/power tags
   (`roomFloorPlan.ts` metrics), and hold
-  non-rack room objects with vertical stacking (`roomObjects.ts`). Both grow
+  non-rack room objects with vertical stacking (`roomObjects.ts`). A Rack
+  footprint spans its full cell side-to-side, but its displayed depth tracks
+  the Rack's `depth_mm` against the 1200 mm cell (600 mm = half a cell,
+  ratio in between, anything ≥ 1200 mm = the full cell; `rackDepthFrac` in
+  `roomIsoLayout.ts`) with the front face flush on the cell borderline the
+  facing points at. Both grow
   their floor grid to cover the whole view, carry a zoom stepper (50%–200%,
   also Ctrl+scroll; the level persists locally per layout), and pan with a
   middle-mouse drag or the arrow keys. In 2.5D, Rack names are top-face

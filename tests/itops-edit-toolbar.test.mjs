@@ -82,7 +82,7 @@ test("Armed placement previews a cursor-snapped ghost and cancels on right-click
   for (const view of [floorPlan, isoView]) {
     assert.match(view, /onCancelPlacement\?: \(\) => void/);
     assert.match(view, /onContextMenu=\{/);
-    assert.match(view, /resolveDropZ\(\s*cellSpans\(hover/);
+    assert.match(view, /resolveDropZ\(\s*footprintSpans\(hover, tool, 0/);
   }
   // The floor plan tracks the hovered cell and renders the plan-artwork ghost.
   assert.match(floorPlan, /className=\{`rm-bp-ghost\$\{blocked \? " blocked" : ""\}`\}/);

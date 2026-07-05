@@ -1230,6 +1230,7 @@
       "pickerSearchPlaceholder": "오브젝트 검색…",
       "pickerRack": "랙",
       "rotateTitle": "회전",
+      "cornerTitle": "다음 모서리",
       "raiseTitle": "위로",
       "lowerTitle": "아래로",
       "deleteObjectTitle": "오브젝트 제거",

@@ -267,6 +267,10 @@ pub struct RoomObject {
     pub z: i64,
     /// Quarter turns, 0..=3.
     pub rot: i64,
+    /// Cell quadrant a quarter-block fixture sits in, clockwise 0=NW..=3=SW.
+    /// None on rows saved before the column existed (frontend defaults to NW).
+    #[serde(default)]
+    pub corner: Option<i64>,
 }
 
 /// What a Rack Device represents. `Connection` items are openable (carry a

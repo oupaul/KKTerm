@@ -4,7 +4,10 @@ import type { Rack } from "../src/types";
 import {
   ROOM_CEILING_U,
   cellSpans,
+  footprintSpans,
   nudgeZ,
+  objectCellSpan,
+  objectFootprint,
   objectSpec,
   resolveDropZ,
   sanitizeRoomObjects,
@@ -36,7 +39,7 @@ function rack(id: string, heightU = 42): Rack {
 }
 
 function obj(id: string, kind: RoomObject["kind"], x: number, y: number, z: number): RoomObject {
-  return { id, kind, x, y, z, rot: 0 };
+  return { id, kind, x, y, z, rot: 0, corner: 0 };
 }
 
 test("cellSpans stacks the rack and every object sharing the cell", () => {
@@ -86,13 +89,67 @@ test("nudgeZ moves to the next free level and clamps at floor/ceiling", () => {
 
 test("sanitizeRoomObjects drops malformed entries and rounds coordinates", () => {
   const parsed = sanitizeRoomObjects([
-    { id: "ok", kind: "camera", x: 1.4, y: 2.6, z: 52.2, rot: 3 },
+    { id: "ok", kind: "camera", x: 1.4, y: 2.6, z: 52.2, rot: 3, corner: 2 },
+    { id: "legacy", kind: "sensor", x: 0, y: 0, z: 40, rot: 0 },
     { id: "bad-kind", kind: "sofa", x: 0, y: 0, z: 0, rot: 0 },
     { id: 42, kind: "camera", x: 0, y: 0, z: 0, rot: 0 },
     { id: "bad-x", kind: "camera", x: "left", y: 0, z: 0, rot: 0 },
     "not-an-object",
   ]);
-  assert.deepEqual(parsed, [{ id: "ok", kind: "camera", x: 1, y: 3, z: 52, rot: 3 }]);
+  assert.deepEqual(parsed, [
+    { id: "ok", kind: "camera", x: 1, y: 3, z: 52, rot: 3, corner: 2 },
+    // Rows saved before corners existed default to the NW quadrant.
+    { id: "legacy", kind: "sensor", x: 0, y: 0, z: 40, rot: 0, corner: 0 },
+  ]);
+});
+
+test("quarter-block fixtures anchor to their cell corner", () => {
+  // 乖乖 packs and other small fixtures cover one cell quadrant.
+  assert.deepEqual(objectCellSpan("kuaikuai", 0), { w: 1, h: 1 });
+  const spec = objectSpec("kuaikuai");
+  assert.ok(spec.quarter);
+  // NW quadrant: centred within [0, 0.5); SE quadrant shifts by half a cell.
+  const nw = objectFootprint("kuaikuai", 0, 0);
+  const se = objectFootprint("kuaikuai", 0, 2);
+  assert.ok(nw.x >= 0 && nw.x + nw.w <= 0.5 && nw.y + nw.d <= 0.5);
+  assert.equal(se.x, nw.x + 0.5);
+  assert.equal(se.y, nw.y + 0.5);
+  // Every quarter kind fits inside its quadrant.
+  for (const kind of ["camera", "fireExtinguisher", "sensor", "smokeDetector"] as const) {
+    const q = objectSpec(kind);
+    assert.ok(q.quarter && q.wide <= 0.5 && q.deep <= 0.5, kind);
+  }
+});
+
+test("large fixtures span whole cells and rotate their span", () => {
+  // A CRAC unit is one and a half cells wide → it occupies a 2×1 cell span
+  // and draws centred over it; rotating a quarter turn swaps the span.
+  assert.deepEqual(objectCellSpan("aircon", 0), { w: 2, h: 1 });
+  assert.deepEqual(objectCellSpan("aircon", 1), { w: 1, h: 2 });
+  const fp = objectFootprint("aircon", 0, 0);
+  assert.equal(fp.w, objectSpec("aircon").wide);
+  assert.equal(fp.x, (2 - fp.w) / 2);
+  // A cable tray section runs two cells long.
+  assert.deepEqual(objectCellSpan("cableTray", 0), { w: 2, h: 1 });
+});
+
+test("cellSpans blocks every cell a multi-cell fixture covers", () => {
+  const crac = obj("crac", "aircon", 1, 0, 0);
+  // Both the anchor cell and the spanned neighbour are occupied…
+  assert.equal(cellSpans({ x: 1, y: 0 }, [], {}, [crac]).length, 1);
+  assert.equal(cellSpans({ x: 2, y: 0 }, [], {}, [crac]).length, 1);
+  // …but the next cell over is free.
+  assert.equal(cellSpans({ x: 3, y: 0 }, [], {}, [crac]).length, 0);
+});
+
+test("footprintSpans collision-checks a multi-cell fixture's whole span", () => {
+  // A rack on the CRAC's second cell blocks the placement even though the
+  // anchor cell itself is empty.
+  const spans = footprintSpans({ x: 0, y: 0 }, "aircon", 0, [rack("a")], { a: { x: 1, y: 0 } }, []);
+  assert.equal(resolveDropZ(spans, "aircon"), null);
+  // With the neighbour clear, the CRAC lands on the floor.
+  const clear = footprintSpans({ x: 0, y: 0 }, "aircon", 0, [rack("a")], { a: { x: 3, y: 0 } }, []);
+  assert.equal(resolveDropZ(clear, "aircon"), 0);
 });
 
 test("view rotation maps cells, facings, and grid size consistently", () => {

@@ -391,7 +391,9 @@ CREATE INDEX IF NOT EXISTS idx_itops_site_racks_site
 -- Object): cameras, CRAC units, fire extinguishers, cable trays, UPS
 -- cabinets, sensors, smoke detectors, crash carts, 乖乖. Scoped by Site +
 -- Server Room name like racks; z is the object's bottom in rack units so
--- occupants can stack in one floor cell. v41.
+-- occupants can stack in one floor cell. v41. corner is the cell quadrant a
+-- quarter-block fixture sits in (clockwise 0=NW..3=SW); NULL on rows saved
+-- before the column existed.
 CREATE TABLE IF NOT EXISTS itops_room_objects (
     id          TEXT PRIMARY KEY,
     site_id     TEXT NOT NULL REFERENCES itops_sites(id) ON DELETE CASCADE,
@@ -401,6 +403,7 @@ CREATE TABLE IF NOT EXISTS itops_room_objects (
     y           INTEGER NOT NULL,
     z           INTEGER NOT NULL DEFAULT 0,
     rot         INTEGER NOT NULL DEFAULT 0,
+    corner      INTEGER,
     created_at  TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at  TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -2468,6 +2471,8 @@ impl Storage {
             "use_psmux_sessions",
             "INTEGER NOT NULL DEFAULT 0",
         )?;
+        // Cell quadrant of quarter-block room fixtures (NULL = pre-corner row).
+        ensure_column(&connection, "itops_room_objects", "corner", "INTEGER")?;
         connection
             .execute_batch(&format!("PRAGMA user_version = {SCHEMA_USER_VERSION}"))
             .map_err(to_storage_error)?;

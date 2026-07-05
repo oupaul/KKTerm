@@ -176,6 +176,54 @@ export function screenDeltaToPlane(dx: number, dy: number): { u: number; v: numb
 /** Quarter-turn direction a rack/object front points (see numbering above). */
 export type Facing = 0 | 1 | 2 | 3;
 
+/** Corner (quadrant) of one floor cell, clockwise: 0 = NW, 1 = NE, 2 = SE,
+ *  3 = SW. Corners rotate under a view angle exactly like facings — one view
+ *  step maps corner c to (c + 1) % 4 — so `rotateFacingForView` applies. */
+export type Corner = 0 | 1 | 2 | 3;
+
+export function sanitizeCorner(value: unknown): Corner {
+  return value === 1 || value === 2 || value === 3 ? value : 0;
+}
+
+// ── Rack footprint depth ──
+//
+// A cabinet's displayed depth follows its physical depth: one floor cell is
+// 1200 mm deep, so a 1200 mm rack fills the whole cell and a 600 mm network
+// rack fills half of it, scaling by ratio in between. Deeper custom cabinets
+// still draw as one full cell, and very shallow ones keep a readable minimum.
+export const CELL_DEPTH_MM = 1200;
+const MIN_RACK_DEPTH_FRAC = 0.25;
+
+/** Displayed rack depth as a fraction of one floor cell. */
+export function rackDepthFrac(depthMm: number): number {
+  if (!Number.isFinite(depthMm) || depthMm <= 0) return 1;
+  return Math.min(1, Math.max(MIN_RACK_DEPTH_FRAC, depthMm / CELL_DEPTH_MM));
+}
+
+export interface CellRect {
+  /** Offset and size in cell fractions, relative to the anchor cell origin. */
+  x: number;
+  y: number;
+  w: number;
+  d: number;
+}
+
+/** A rack's footprint inside its cell: the side axis spans the full cell (so
+ *  adjacent cabinets touch), the depth axis is `frac` of a cell, and the
+ *  front face sits flush on the cell borderline the facing points at. */
+export function rackFootprint(facing: Facing, frac: number): CellRect {
+  switch (facing) {
+    case 1: // front toward −x → flush on the west border
+      return { x: 0, y: 0, w: frac, d: 1 };
+    case 2: // front toward −y → flush on the north border
+      return { x: 0, y: 0, w: 1, d: frac };
+    case 3: // front toward +x → flush on the east border
+      return { x: 1 - frac, y: 0, w: frac, d: 1 };
+    default: // front toward +y → flush on the south border
+      return { x: 0, y: 1 - frac, w: 1, d: frac };
+  }
+}
+
 /** Fixed 2.5D camera corner, as quarter turns of the room under the camera. */
 export type IsoViewAngle = 0 | 1 | 2 | 3;
 

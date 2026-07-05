@@ -7,8 +7,11 @@ import {
   ISO_TILT_COS,
   expandIsoFloorFrame,
   moveIsoRack,
+  rackDepthFrac,
+  rackFootprint,
   resolveIsoLayout,
   screenDeltaToPlane,
+  type Facing,
 } from "../src/modules/itops/roomIsoLayout";
 
 function rack(id: string, rackGroup = ""): Rack {
@@ -78,6 +81,32 @@ test("decorative 2.5D floor expansion keeps the room grid origin aligned", () =>
   assert.ok(frame.floorRows > 4);
   assert.equal(frame.offX, 0);
   assert.equal(frame.offY, 0);
+});
+
+test("rackDepthFrac scales displayed depth by the 1200 mm cell", () => {
+  // 600 mm = half a cell, 1200 mm = the whole cell, ratio in between.
+  assert.equal(rackDepthFrac(600), 0.5);
+  assert.equal(rackDepthFrac(1200), 1);
+  assert.equal(rackDepthFrac(900), 0.75);
+  // Custom depths past 1200 mm still draw as one full cell; very shallow
+  // ones keep a readable minimum, and nonsense falls back to a full cell.
+  assert.equal(rackDepthFrac(1800), 1);
+  assert.equal(rackDepthFrac(120), 0.25);
+  assert.equal(rackDepthFrac(Number.NaN), 1);
+});
+
+test("rackFootprint keeps the front face flush on the facing borderline", () => {
+  // Facing 0 = front toward +y: flush on the south border of the cell.
+  assert.deepEqual(rackFootprint(0, 0.5), { x: 0, y: 0.5, w: 1, d: 0.5 });
+  // Facing 2 = front toward −y: flush on the north border.
+  assert.deepEqual(rackFootprint(2, 0.5), { x: 0, y: 0, w: 1, d: 0.5 });
+  // Facing 1/3 run the depth along x, flush west/east respectively.
+  assert.deepEqual(rackFootprint(1, 0.75), { x: 0, y: 0, w: 0.75, d: 1 });
+  assert.deepEqual(rackFootprint(3, 0.75), { x: 0.25, y: 0, w: 0.75, d: 1 });
+  // A 1200 mm cabinet fills its whole cell whatever it faces.
+  for (const facing of [0, 1, 2, 3] as Facing[]) {
+    assert.deepEqual(rackFootprint(facing, 1), { x: 0, y: 0, w: 1, d: 1 });
+  }
 });
 
 test("screenDeltaToPlane inverts the axonometric projection", () => {

@@ -767,6 +767,13 @@ fn validate_room_object(object: &RoomObject) -> Result<()> {
             object.rot
         )));
     }
+    if let Some(corner) = object.corner {
+        if !(0..=3).contains(&corner) {
+            return Err(ItopsStorageError::Validation(format!(
+                "room object corner must be 0..=3, got {corner}"
+            )));
+        }
+    }
     Ok(())
 }
 
@@ -777,7 +784,7 @@ pub fn list_room_objects(
     server_room: &str,
 ) -> Result<Vec<RoomObject>> {
     let mut stmt = conn.prepare(
-        "SELECT id, kind, x, y, z, rot FROM itops_room_objects
+        "SELECT id, kind, x, y, z, rot, corner FROM itops_room_objects
          WHERE site_id = ? AND server_room = ? ORDER BY created_at, id",
     )?;
     Ok(stmt
@@ -789,6 +796,7 @@ pub fn list_room_objects(
                 y: row.get(3)?,
                 z: row.get(4)?,
                 rot: row.get(5)?,
+                corner: row.get(6)?,
             })
         })?
         .collect::<rusqlite::Result<Vec<_>>>()?)
@@ -820,8 +828,8 @@ pub fn set_room_objects(
     )?;
     for object in objects {
         tx.execute(
-            "INSERT INTO itops_room_objects (id, site_id, server_room, kind, x, y, z, rot)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO itops_room_objects (id, site_id, server_room, kind, x, y, z, rot, corner)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
             params![
                 object.id,
                 site_id,
@@ -830,7 +838,8 @@ pub fn set_room_objects(
                 object.x,
                 object.y,
                 object.z,
-                object.rot
+                object.rot,
+                object.corner
             ],
         )?;
     }
@@ -1011,6 +1020,7 @@ mod tests {
                 y INTEGER NOT NULL,
                 z INTEGER NOT NULL DEFAULT 0,
                 rot INTEGER NOT NULL DEFAULT 0,
+                corner INTEGER,
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
@@ -1223,6 +1233,7 @@ mod tests {
             y: 2,
             z,
             rot: 1,
+            corner: Some(2),
         };
 
         set_room_objects(
@@ -1239,7 +1250,15 @@ mod tests {
         let room_b = list_room_objects(&conn, "f1", "Room B").unwrap();
         assert_eq!(
             room_b,
-            vec![RoomObject { id: "o4".into(), kind: "aircon".into(), x: 1, y: 2, z: 0, rot: 1 }]
+            vec![RoomObject {
+                id: "o4".into(),
+                kind: "aircon".into(),
+                x: 1,
+                y: 2,
+                z: 0,
+                rot: 1,
+                corner: Some(2)
+            }]
         );
         assert_eq!(list_room_objects(&conn, "f1", "Room C").unwrap().len(), 1);
 
@@ -1262,6 +1281,12 @@ mod tests {
         spun.rot = 9;
         assert!(matches!(
             set_room_objects(&conn, "f1", "Room B", &[spun]),
+            Err(ItopsStorageError::Validation(_))
+        ));
+        let mut cornered = object("bad", "camera", 0);
+        cornered.corner = Some(4);
+        assert!(matches!(
+            set_room_objects(&conn, "f1", "Room B", &[cornered]),
             Err(ItopsStorageError::Validation(_))
         ));
         // A failed write leaves the previous layout intact.

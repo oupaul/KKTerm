@@ -1230,6 +1230,7 @@
       "pickerSearchPlaceholder": "Search objects…",
       "pickerRack": "Rack",
       "rotateTitle": "Rotate",
+      "cornerTitle": "Next corner",
       "raiseTitle": "Raise",
       "lowerTitle": "Lower",
       "deleteObjectTitle": "Remove object",

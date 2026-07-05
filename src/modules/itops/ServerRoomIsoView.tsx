@@ -32,6 +32,8 @@ import {
   ISO_TILT_DEG,
   expandIsoFloorFrame,
   moveIsoRack,
+  rackDepthFrac,
+  rackFootprint,
   resolveIsoLayout,
   rotateCellForView,
   rotateFacingForView,
@@ -39,6 +41,7 @@ import {
   screenDeltaToPlane,
   viewDeltaToGrid,
   viewGridSize,
+  type Corner,
   type Facing,
   type IsoCell,
   type IsoLayout,
@@ -46,8 +49,10 @@ import {
 } from "./roomIsoLayout";
 import {
   ROOM_CEILING_U,
-  cellSpans,
+  footprintSpans,
   nudgeZ,
+  objectCellSpan,
+  objectFootprint,
   objectSpec,
   resolveDropZ,
   type RoomObject,
@@ -71,11 +76,10 @@ import {
   type RoomTool,
 } from "./roomViewParts";
 
-// Floor tile size and cabinet depth, in plane px. Cabinets span the full CELL
-// along their side axis (adjacent racks touch); the front/back axis is inset
-// so aisles read between rows.
+// Floor tile size in plane px. Cabinets span the full CELL along their side
+// axis (adjacent racks touch); the depth axis tracks each rack's physical
+// depth (rackDepthFrac), front face flush on its facing borderline.
 const CELL = 58;
-const CAB = 44;
 
 // Vertical scale: one rack unit in plane px. Linear so stacking is exact —
 // an object with z = rack heightU sits flush on the cabinet top.
@@ -206,9 +210,15 @@ export function ServerRoomIsoView({
   const suppressClickRef = useRef(false);
 
   // Interactive grid: the layout's own cells, widened to cover any object a
-  // floor-plan edit placed beyond the racks.
-  const gridCols = Math.max(layout.cols, ...objects.map((object) => object.x + 1));
-  const gridRows = Math.max(layout.rows, ...objects.map((object) => object.y + 1));
+  // floor-plan edit placed beyond the racks (including multi-cell spans).
+  const gridCols = Math.max(
+    layout.cols,
+    ...objects.map((object) => object.x + objectCellSpan(object.kind, object.rot).w),
+  );
+  const gridRows = Math.max(
+    layout.rows,
+    ...objects.map((object) => object.y + objectCellSpan(object.kind, object.rot).h),
+  );
   const grid: IsoLayout = { cols: gridCols, rows: gridRows, cells: layout.cells };
 
   // Headroom for the tallest cabinet or elevated object.
@@ -239,6 +249,14 @@ export function ServerRoomIsoView({
   const dims = viewGridSize(floorCols, floorRows, angle);
   const toDisplay = (cell: IsoCell) =>
     rotateCellForView({ x: cell.x + offX, y: cell.y + offY }, angle, floorCols, floorRows);
+  // Display-space anchor of a multi-cell footprint: rotating the span moves
+  // the anchor to another of its corners, so rotate both extreme cells and
+  // keep the top-left one.
+  const spanDisplayAnchor = (cell: IsoCell, span: { w: number; h: number }): IsoCell => {
+    const a = toDisplay(cell);
+    const b = toDisplay({ x: cell.x + span.w - 1, y: cell.y + span.h - 1 });
+    return { x: Math.min(a.x, b.x), y: Math.min(a.y, b.y) };
+  };
   const planeW = dims.cols * CELL;
   const planeH = dims.rows * CELL;
 
@@ -307,7 +325,7 @@ export function ServerRoomIsoView({
   function dropObject(id: string, target: IsoCell) {
     const object = objects.find((entry) => entry.id === id);
     if (!object || !onObjectsChange) return;
-    const spans = cellSpans(target, racks, layout.cells, objects, id);
+    const spans = footprintSpans(target, object.kind, object.rot, racks, layout.cells, objects, id);
     const z = resolveDropZ(spans, object.kind, object.z);
     if (z == null) {
       onObjectBlocked?.();
@@ -320,7 +338,7 @@ export function ServerRoomIsoView({
 
   function placeObjectAt(cell: IsoCell) {
     if (tool == null || !onObjectsChange) return;
-    const spans = cellSpans(cell, racks, layout.cells, objects);
+    const spans = footprintSpans(cell, tool, 0, racks, layout.cells, objects);
     const z = resolveDropZ(spans, tool);
     if (z == null) {
       onObjectBlocked?.();
@@ -328,7 +346,7 @@ export function ServerRoomIsoView({
     }
     onObjectsChange([
       ...objects,
-      { id: crypto.randomUUID(), kind: tool, x: cell.x, y: cell.y, z, rot: 0 },
+      { id: crypto.randomUUID(), kind: tool, x: cell.x, y: cell.y, z, rot: 0, corner: 0 },
     ]);
   }
 
@@ -413,8 +431,17 @@ export function ServerRoomIsoView({
     );
   }
 
+  // Walk a quarter-block fixture to the next cell corner (NW→NE→SE→SW).
+  function cycleCorner(object: RoomObject) {
+    onObjectsChange?.(
+      objects.map((entry) =>
+        entry.id === object.id ? { ...entry, corner: ((entry.corner + 1) % 4) as Corner } : entry,
+      ),
+    );
+  }
+
   function nudgeObject(object: RoomObject, dir: 1 | -1) {
-    const spans = cellSpans(object, racks, layout.cells, objects, object.id);
+    const spans = footprintSpans(object, object.kind, object.rot, racks, layout.cells, objects, object.id);
     const z = nudgeZ(spans, object.kind, object.z, dir);
     if (z === object.z) return;
     onObjectsChange?.(objects.map((entry) => (entry.id === object.id ? { ...entry, z } : entry)));
@@ -533,8 +560,9 @@ export function ServerRoomIsoView({
                   <IsoObject
                     key={object.id}
                     object={object}
-                    cell={toDisplay(object)}
+                    cell={spanDisplayAnchor(object, objectCellSpan(object.kind, object.rot))}
                     rot={rotateFacingForView(object.rot, angle)}
+                    corner={rotateFacingForView(object.corner, angle)}
                     drag={drag?.kind === "object" && drag.id === object.id ? drag : null}
                     editMode={!!editMode}
                     selected={selectedItem?.kind === "object" && selectedItem.id === object.id}
@@ -546,6 +574,9 @@ export function ServerRoomIsoView({
                     onPointerCancel={endDrag}
                     onSelect={() => selectObject(object.id)}
                     onRotate={() => rotateObject(object)}
+                    onCorner={
+                      objectSpec(object.kind).quarter ? () => cycleCorner(object) : undefined
+                    }
                     onRaise={() => nudgeObject(object, 1)}
                     onLower={() => nudgeObject(object, -1)}
                     onDelete={
@@ -562,23 +593,29 @@ export function ServerRoomIsoView({
                   ? (() => {
                       // Realtime placement preview on the hovered cell: the
                       // armed fixture's 2.5D artwork at its resolved level
-                      // (red tile when the cell has no free vertical span),
-                      // or a translucent cabinet for the pending rack.
-                      const at = toDisplay(hover);
-                      const tile = {
-                        left: at.x * CELL,
-                        top: at.y * CELL,
-                        width: CELL,
-                        height: CELL,
-                      };
+                      // over its covered cell span (red tile when the cell
+                      // has no free vertical span), or a translucent cabinet
+                      // for the pending rack at its depth, front flush.
                       if (tool != null) {
                         const z = resolveDropZ(
-                          cellSpans(hover, racks, layout.cells, objects),
+                          footprintSpans(hover, tool, 0, racks, layout.cells, objects),
                           tool,
                         );
-                        const spec = objectSpec(tool);
-                        const w = Math.round(spec.wide * CELL);
-                        const d = Math.round(spec.deep * CELL);
+                        const span = objectCellSpan(tool, 0);
+                        const at = spanDisplayAnchor(hover, span);
+                        const tile = {
+                          left: at.x * CELL,
+                          top: at.y * CELL,
+                          width: (angle % 2 === 1 ? span.h : span.w) * CELL,
+                          height: (angle % 2 === 1 ? span.w : span.h) * CELL,
+                        };
+                        // A fresh object drops with grid rot/corner 0; the
+                        // ghost shows both under the current view angle.
+                        const fp = objectFootprint(
+                          tool,
+                          rotateFacingForView(0, angle),
+                          rotateFacingForView(0, angle),
+                        );
                         return (
                           <>
                             <div
@@ -591,10 +628,10 @@ export function ServerRoomIsoView({
                                 data-kind={tool}
                                 style={
                                   {
-                                    left: at.x * CELL + (CELL - w) / 2,
-                                    top: at.y * CELL + (CELL - d) / 2,
-                                    width: w,
-                                    height: d,
+                                    left: (at.x + fp.x) * CELL,
+                                    top: (at.y + fp.y) * CELL,
+                                    width: fp.w * CELL,
+                                    height: fp.d * CELL,
                                     "--obj": OBJECT_ACCENTS[tool],
                                     "--tile": OBJECT_ACCENTS[tool],
                                   } as React.CSSProperties
@@ -612,11 +649,22 @@ export function ServerRoomIsoView({
                           </>
                         );
                       }
+                      const at = toDisplay(hover);
                       const pending = racks.find((entry) => entry.id === placeRackId);
                       const gh = cabHeight(pending?.heightU ?? 42);
+                      // A fresh rack lands with grid facing 0.
+                      const fp = rackFootprint(
+                        rotateFacingForView(0, angle),
+                        rackDepthFrac(pending?.depthMm ?? 1000),
+                      );
+                      const w = fp.w * CELL;
+                      const d = fp.d * CELL;
                       return (
                         <>
-                          <div className="rm-iso-drop" style={tile} />
+                          <div
+                            className="rm-iso-drop"
+                            style={{ left: at.x * CELL, top: at.y * CELL, width: CELL, height: CELL }}
+                          />
                           <div
                             className="rm-iso-cab ghost"
                             data-shell={
@@ -625,10 +673,10 @@ export function ServerRoomIsoView({
                                 : undefined
                             }
                             style={{
-                              left: at.x * CELL,
-                              top: at.y * CELL + (CELL - CAB) / 2,
-                              width: CELL,
-                              height: CAB,
+                              left: (at.x + fp.x) * CELL,
+                              top: (at.y + fp.y) * CELL,
+                              width: w,
+                              height: d,
                             }}
                           >
                             <span
@@ -637,11 +685,11 @@ export function ServerRoomIsoView({
                             />
                             <span
                               className="rm-iso-face rm-iso-front side"
-                              style={{ width: CELL, height: gh, top: CAB - gh }}
+                              style={{ width: w, height: gh, top: d - gh }}
                             />
                             <span
                               className="rm-iso-face rm-iso-side side"
-                              style={{ width: gh, height: CAB, left: CELL - gh }}
+                              style={{ width: gh, height: d, left: w - gh }}
                             />
                           </div>
                         </>
@@ -757,13 +805,14 @@ function IsoCabinet({
   const { t } = useTranslation();
   const m = rackFloorMetrics(rack);
   const h = cabHeight(rack.heightU);
-  // Full cell along the side axis so adjacent cabinets connect; inset along
-  // the front/back axis. Facing 0/2 = front toward ±y → sides run along x.
-  const horizontal = facing === 0 || facing === 2;
-  const w = horizontal ? CELL : CAB;
-  const d = horizontal ? CAB : CELL;
-  const left = cell.x * CELL + (CELL - w) / 2;
-  const top = cell.y * CELL + (CELL - d) / 2;
+  // Full cell along the side axis so adjacent cabinets connect; the depth
+  // axis tracks the cabinet's physical depth, front face flush on the tile
+  // borderline the facing points at.
+  const fp = rackFootprint(facing, rackDepthFrac(rack.depthMm));
+  const w = fp.w * CELL;
+  const d = fp.d * CELL;
+  const left = (cell.x + fp.x) * CELL;
+  const top = (cell.y + fp.y) * CELL;
   // Which visible face (south = +y, east = +x) carries the device skin; the
   // other reads as a plain side, or as the cable rear when the front is
   // turned away from the camera.
@@ -859,6 +908,7 @@ function IsoObject({
   object,
   cell,
   rot,
+  corner,
   drag,
   editMode,
   selected,
@@ -868,15 +918,18 @@ function IsoObject({
   onPointerCancel,
   onSelect,
   onRotate,
+  onCorner,
   onRaise,
   onLower,
   onDelete,
 }: {
   object: RoomObject;
-  /** Display cell (already view-rotated). */
+  /** Display anchor cell of the footprint span (already view-rotated). */
   cell: IsoCell;
   /** Display rotation (already view-rotated). */
   rot: Facing;
+  /** Display cell corner (already view-rotated). */
+  corner: Corner;
   drag: DragState | null;
   editMode: boolean;
   selected: boolean;
@@ -886,17 +939,19 @@ function IsoObject({
   onPointerCancel: (event: ReactPointerEvent<HTMLDivElement>) => void;
   onSelect: () => void;
   onRotate: () => void;
+  /** Quarter-block fixtures only: walk to the next cell corner. */
+  onCorner?: () => void;
   onRaise: () => void;
   onLower: () => void;
   onDelete?: () => void;
 }) {
   const { t } = useTranslation();
   const spec = objectSpec(object.kind);
-  const across = rot % 2 === 1;
-  const w = Math.round((across ? spec.deep : spec.wide) * CELL);
-  const d = Math.round((across ? spec.wide : spec.deep) * CELL);
-  const left = cell.x * CELL + (CELL - w) / 2;
-  const top = cell.y * CELL + (CELL - d) / 2;
+  const fp = objectFootprint(object.kind, rot, corner);
+  const w = fp.w * CELL;
+  const d = fp.d * CELL;
+  const left = (cell.x + fp.x) * CELL;
+  const top = (cell.y + fp.y) * CELL;
   const h = Math.max(3, zPx(spec.heightU));
   const bottom = zPx(Math.min(object.z, ROOM_CEILING_U));
   const name = t(`itops.floorPlan.object.${object.kind}`);
@@ -947,6 +1002,19 @@ function IsoObject({
             >
               <ItIcon name="rerun" size={11} />
             </button>
+            {onCorner ? (
+              <button
+                type="button"
+                title={t("itops.floorPlan.cornerTitle")}
+                aria-label={t("itops.floorPlan.cornerTitle")}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onCorner();
+                }}
+              >
+                <ItIcon name="grid" size={11} />
+              </button>
+            ) : null}
             <button
               type="button"
               title={t("itops.floorPlan.raiseTitle")}

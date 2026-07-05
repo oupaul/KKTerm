@@ -14,14 +14,19 @@ import { useTranslation } from "react-i18next";
 import type { Rack } from "../../types";
 import {
   moveIsoRack,
+  rackDepthFrac,
+  rackFootprint,
   resolveIsoLayout,
   sanitizeFacing,
+  type Corner,
   type Facing,
   type IsoCell,
 } from "./roomIsoLayout";
 import {
-  cellSpans,
+  footprintSpans,
   nudgeZ,
+  objectCellSpan,
+  objectFootprint,
   objectSpec,
   resolveDropZ,
   type RoomObject,
@@ -56,8 +61,6 @@ const BP_CELL = 76;
 const BP_MIN_CELL = 56;
 // Px eaten by the room's wall border (2.5px per side, content-box sizing).
 const BP_WALL = 5;
-// Rack depth as a fraction of a cell (front/back aisles read between rows).
-const RACK_DEPTH_FRAC = 0.72;
 
 interface DragState {
   kind: "rack" | "object";
@@ -121,20 +124,21 @@ export function ServerRoomFloorPlan({
   const cols = Math.max(
     layout.cols,
     Math.floor(floorW / BP_CELL),
-    ...objects.map((object) => object.x + 1),
+    ...objects.map((object) => object.x + objectCellSpan(object.kind, object.rot).w),
   );
   const rows = Math.max(
     layout.rows,
     Math.floor(floorH / BP_CELL),
-    ...objects.map((object) => object.y + 1),
+    ...objects.map((object) => object.y + objectCellSpan(object.kind, object.rot).h),
   );
   const cellW = floorW > 0 ? Math.max(BP_MIN_CELL, floorW / cols) : BP_CELL;
   const cellH = floorH > 0 ? Math.max(BP_MIN_CELL, floorH / rows) : BP_CELL;
   const grid = { cols, rows, cells: layout.cells };
   const armed = tool != null || placeRackId != null;
   // Cursor-tracked placement preview: the armed object ghost snaps to the
-  // hovered cell so the grid shows the drop before the click commits.
-  const [hover, setHover] = useState<IsoCell | null>(null);
+  // hovered cell (and, for quarter-block fixtures, the cell quadrant under
+  // the pointer) so the grid shows the drop before the click commits.
+  const [hover, setHover] = useState<(IsoCell & { corner: Corner }) | null>(null);
   const placing = !!editMode && armed;
   useEffect(() => {
     if (!placing) setHover(null);
@@ -213,7 +217,7 @@ export function ServerRoomFloorPlan({
   function dropObject(id: string, target: IsoCell) {
     const object = objects.find((entry) => entry.id === id);
     if (!object || !onObjectsChange) return;
-    const spans = cellSpans(target, racks, layout.cells, objects, id);
+    const spans = footprintSpans(target, object.kind, object.rot, racks, layout.cells, objects, id);
     const z = resolveDropZ(spans, object.kind, object.z);
     if (z == null) {
       onObjectBlocked?.();
@@ -224,21 +228,41 @@ export function ServerRoomFloorPlan({
     );
   }
 
-  // Pointer position → floor cell on the plan surface.
-  function cellFromEvent(event: React.MouseEvent<HTMLDivElement>): IsoCell {
+  // Pointer position → continuous floor coordinates on the plan surface.
+  function pointFromEvent(event: React.MouseEvent<HTMLDivElement>): { x: number; y: number } {
     const surface = event.currentTarget;
     // The rect is the zoomed border box; clientLeft/Top are unzoomed CSS px.
     const rect = surface.getBoundingClientRect();
     // Children (and the grid background) sit inside the wall border.
-    return clampCell({
-      x: Math.floor(((event.clientX - rect.left) / zoom - surface.clientLeft) / cellW),
-      y: Math.floor(((event.clientY - rect.top) / zoom - surface.clientTop) / cellH),
-    });
+    return {
+      x: ((event.clientX - rect.left) / zoom - surface.clientLeft) / cellW,
+      y: ((event.clientY - rect.top) / zoom - surface.clientTop) / cellH,
+    };
+  }
+
+  function cellFromEvent(event: React.MouseEvent<HTMLDivElement>): IsoCell {
+    const point = pointFromEvent(event);
+    return clampCell({ x: Math.floor(point.x), y: Math.floor(point.y) });
+  }
+
+  // The cell quadrant under the pointer, anchoring a quarter-block fixture.
+  function cornerFromEvent(event: React.MouseEvent<HTMLDivElement>, cell: IsoCell): Corner {
+    const point = pointFromEvent(event);
+    const qx = point.x - cell.x >= 0.5 ? 1 : 0;
+    const qy = point.y - cell.y >= 0.5 ? 1 : 0;
+    // Clockwise numbering: 0 = NW, 1 = NE, 2 = SE, 3 = SW.
+    return qy === 0 ? (qx as Corner) : ((3 - qx) as Corner);
   }
 
   function trackPlacement(event: ReactPointerEvent<HTMLDivElement>) {
     const cell = cellFromEvent(event);
-    setHover((prev) => (prev && prev.x === cell.x && prev.y === cell.y ? prev : cell));
+    const corner =
+      tool != null && objectSpec(tool).quarter ? cornerFromEvent(event, cell) : (0 as Corner);
+    setHover((prev) =>
+      prev && prev.x === cell.x && prev.y === cell.y && prev.corner === corner
+        ? prev
+        : { ...cell, corner },
+    );
   }
 
   function cancelPlacement(event: React.MouseEvent<HTMLDivElement>) {
@@ -261,15 +285,16 @@ export function ServerRoomFloorPlan({
       return;
     }
     if (tool == null || !onObjectsChange) return;
-    const spans = cellSpans(cell, racks, layout.cells, objects);
+    const spans = footprintSpans(cell, tool, 0, racks, layout.cells, objects);
     const z = resolveDropZ(spans, tool);
     if (z == null) {
       onObjectBlocked?.();
       return;
     }
+    const corner = objectSpec(tool).quarter ? cornerFromEvent(event, cell) : (0 as Corner);
     onObjectsChange([
       ...objects,
-      { id: crypto.randomUUID(), kind: tool, x: cell.x, y: cell.y, z, rot: 0 },
+      { id: crypto.randomUUID(), kind: tool, x: cell.x, y: cell.y, z, rot: 0, corner },
     ]);
   }
 
@@ -295,8 +320,17 @@ export function ServerRoomFloorPlan({
     );
   }
 
+  // Walk a quarter-block fixture to the next cell corner (NW→NE→SE→SW).
+  function cycleCorner(object: RoomObject) {
+    onObjectsChange?.(
+      objects.map((entry) =>
+        entry.id === object.id ? { ...entry, corner: ((entry.corner + 1) % 4) as Corner } : entry,
+      ),
+    );
+  }
+
   function nudgeObject(object: RoomObject, dir: 1 | -1) {
-    const spans = cellSpans(object, racks, layout.cells, objects, object.id);
+    const spans = footprintSpans(object, object.kind, object.rot, racks, layout.cells, objects, object.id);
     const z = nudgeZ(spans, object.kind, object.z, dir);
     if (z === object.z) return;
     onObjectsChange?.(objects.map((entry) => (entry.id === object.id ? { ...entry, z } : entry)));
@@ -372,6 +406,9 @@ export function ServerRoomFloorPlan({
                   onPointerUp={endDrag}
                   onPointerCancel={endDrag}
                   onRotate={() => rotateObject(object)}
+                  onCorner={
+                    objectSpec(object.kind).quarter ? () => cycleCorner(object) : undefined
+                  }
                   onRaise={() => nudgeObject(object, 1)}
                   onLower={() => nudgeObject(object, -1)}
                   onDelete={
@@ -384,35 +421,62 @@ export function ServerRoomFloorPlan({
               {placing && hover
                 ? (() => {
                     // Realtime placement preview under the cursor: the armed
-                    // fixture's plan artwork (or the pending rack footprint)
-                    // on the hovered cell, red when no vertical span is free.
+                    // fixture's plan artwork on its slot — the hovered cell
+                    // quadrant for a quarter-block fixture, the covered cell
+                    // span otherwise — red when no vertical span is free.
+                    // The pending rack previews at its depth, front flush.
                     const spec = tool != null ? objectSpec(tool) : null;
                     const blocked =
                       tool != null &&
-                      resolveDropZ(cellSpans(hover, racks, layout.cells, objects), tool) == null;
-                    const w = spec ? Math.round(spec.wide * cellW) : cellW;
-                    const h = spec
-                      ? Math.round(spec.deep * cellH)
-                      : Math.round(cellH * RACK_DEPTH_FRAC);
+                      resolveDropZ(footprintSpans(hover, tool, 0, racks, layout.cells, objects), tool) == null;
+                    const span = tool != null ? objectCellSpan(tool, 0) : { w: 1, h: 1 };
+                    const slot = spec?.quarter
+                      ? {
+                          left:
+                            (hover.x + (hover.corner === 1 || hover.corner === 2 ? 0.5 : 0)) *
+                            cellW,
+                          top: (hover.y + (hover.corner >= 2 ? 0.5 : 0)) * cellH,
+                          width: cellW / 2,
+                          height: cellH / 2,
+                        }
+                      : {
+                          left: hover.x * cellW,
+                          top: hover.y * cellH,
+                          width: span.w * cellW,
+                          height: span.h * cellH,
+                        };
+                    const pending = racks.find((entry) => entry.id === placeRackId);
                     return (
                       <div
                         className={`rm-bp-ghost${blocked ? " blocked" : ""}`}
                         style={
                           {
-                            left: hover.x * cellW,
-                            top: hover.y * cellH,
-                            width: cellW,
-                            height: cellH,
+                            ...slot,
                             "--obj": tool != null ? OBJECT_ACCENTS[tool] : undefined,
                           } as React.CSSProperties
                         }
                       >
-                        {tool != null ? (
-                          <span className="rm-bp-ghost-item" style={{ width: w, height: h }}>
+                        {tool != null && spec ? (
+                          <span
+                            className="rm-bp-ghost-item"
+                            style={{
+                              width: Math.round(spec.wide * cellW),
+                              height: Math.round(spec.deep * cellH),
+                            }}
+                          >
                             <RoomObjectPlanArtwork kind={tool} />
                           </span>
                         ) : (
-                          <span className="rm-bp-ghost-rack" style={{ width: w, height: h }} />
+                          <span
+                            className="rm-bp-ghost-rack"
+                            style={{
+                              width: cellW,
+                              height: Math.round(
+                                cellH * rackDepthFrac(pending?.depthMm ?? 1000),
+                              ),
+                              alignSelf: "flex-end",
+                            }}
+                          />
                         )}
                       </div>
                     );
@@ -461,12 +525,13 @@ function BlueprintRack({
 }) {
   const { t } = useTranslation();
   const m = rackFloorMetrics(rack);
-  // Side axis spans the full cell; the front/back axis is inset for aisles.
-  const horizontal = facing === 0 || facing === 2;
-  const w = horizontal ? cellW : Math.round(cellW * RACK_DEPTH_FRAC);
-  const h = horizontal ? Math.round(cellH * RACK_DEPTH_FRAC) : cellH;
-  const left = cell.x * cellW + (cellW - w) / 2;
-  const top = cell.y * cellH + (cellH - h) / 2;
+  // Side axis spans the full cell; the depth axis tracks the cabinet's
+  // physical depth, front face flush on the borderline the facing points at.
+  const fp = rackFootprint(facing, rackDepthFrac(rack.depthMm));
+  const w = fp.w * cellW;
+  const h = fp.d * cellH;
+  const left = (cell.x + fp.x) * cellW;
+  const top = (cell.y + fp.y) * cellH;
   const front = (["s", "w", "n", "e"] as const)[facing];
 
   return (
@@ -547,6 +612,7 @@ function BlueprintObject({
   onPointerUp,
   onPointerCancel,
   onRotate,
+  onCorner,
   onRaise,
   onLower,
   onDelete,
@@ -561,17 +627,18 @@ function BlueprintObject({
   onPointerUp: (event: ReactPointerEvent<HTMLDivElement>) => void;
   onPointerCancel: (event: ReactPointerEvent<HTMLDivElement>) => void;
   onRotate: () => void;
+  /** Quarter-block fixtures only: walk to the next cell corner. */
+  onCorner?: () => void;
   onRaise: () => void;
   onLower: () => void;
   onDelete?: () => void;
 }) {
   const { t } = useTranslation();
-  const spec = objectSpec(object.kind);
-  const across = object.rot % 2 === 1;
-  const w = Math.round((across ? spec.deep : spec.wide) * cellW);
-  const h = Math.round((across ? spec.wide : spec.deep) * cellH);
-  const left = object.x * cellW + (cellW - w) / 2;
-  const top = object.y * cellH + (cellH - h) / 2;
+  const fp = objectFootprint(object.kind, object.rot, object.corner);
+  const w = fp.w * cellW;
+  const h = fp.d * cellH;
+  const left = (object.x + fp.x) * cellW;
+  const top = (object.y + fp.y) * cellH;
   const name = t(`itops.floorPlan.object.${object.kind}`);
 
   return (
@@ -610,6 +677,19 @@ function BlueprintObject({
           >
             <ItIcon name="rerun" size={11} />
           </button>
+          {onCorner ? (
+            <button
+              type="button"
+              title={t("itops.floorPlan.cornerTitle")}
+              aria-label={t("itops.floorPlan.cornerTitle")}
+              onClick={(event) => {
+                event.stopPropagation();
+                onCorner();
+              }}
+            >
+              <ItIcon name="grid" size={11} />
+            </button>
+          ) : null}
           <button
             type="button"
             title={t("itops.floorPlan.raiseTitle")}
