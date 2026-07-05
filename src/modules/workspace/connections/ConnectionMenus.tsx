@@ -39,6 +39,8 @@ export function QuickConnectMenu({
     normalizedSshPort <= 65535;
   const visibleRecentConnections = recentConnections.slice(0, visibleRecentCount);
   const hasMoreRecentConnections = visibleRecentCount < recentConnections.length;
+  const normalLabel = t("connections.normal");
+  const adminLabel = t("connections.admin");
 
   function handleSshSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -102,34 +104,32 @@ export function QuickConnectMenu({
           <span>{t("connections.ssh")}</span>
         </button>
       )}
-      {shellOptions.map((option) =>
-        option.canElevate ? (
-          <div className="quick-connect-submenu" key={option.value ?? option.label}>
-            <button aria-haspopup="menu" onClick={() => onOpenLocalShell(option)} type="button">
+      {shellOptions.flatMap((option) => {
+        const optionKey = option.value ?? option.label;
+        if (!option.canElevate) {
+          return [
+            <button
+              key={optionKey}
+              onClick={() => onOpenLocalShell(option)}
+              type="button"
+            >
               <Terminal size={15} />
               <span>{option.label}</span>
-              <ChevronDown size={13} />
-            </button>
-            <div className="quick-connect-submenu-panel">
-              <button onClick={() => onOpenLocalShell(option)} type="button">
-                {t("connections.normal")}
-              </button>
-              <button onClick={() => onOpenElevatedShell(option)} type="button">
-                {t("connections.admin")}
-              </button>
-            </div>
-          </div>
-        ) : (
-          <button
-            key={option.value ?? option.label}
-            onClick={() => onOpenLocalShell(option)}
-            type="button"
-          >
+            </button>,
+          ];
+        }
+
+        return [
+          <button key={`${optionKey}-normal`} onClick={() => onOpenLocalShell(option)} type="button">
             <Terminal size={15} />
-            <span>{option.label}</span>
-          </button>
-        ),
-      )}
+            <span>{`${option.label} (${normalLabel})`}</span>
+          </button>,
+          <button key={`${optionKey}-admin`} onClick={() => onOpenElevatedShell(option)} type="button">
+            <Terminal size={15} />
+            <span>{`${option.label} (${adminLabel})`}</span>
+          </button>,
+        ];
+      })}
       <div className="quick-connect-menu-separator" aria-hidden="true" />
       {recentConnections.length > 0 ? (
         <>

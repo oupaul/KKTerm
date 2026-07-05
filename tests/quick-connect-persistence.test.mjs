@@ -118,3 +118,35 @@ test("Quick Connect recent menu keeps 50 entries and pages them five at a time",
     "Quick Connect should use the React menu so Load more can update without closing",
   );
 });
+
+test("Quick Connect local shell menu flattens normal and admin choices", async () => {
+  const menuSource = await readFile(
+    new URL("../src/modules/workspace/connections/ConnectionMenus.tsx", import.meta.url),
+    "utf8",
+  );
+  const menuCss = await readFile(
+    new URL("../src/modules/workspace/connections/connections.css", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(
+    menuSource,
+    /const normalLabel = t\("connections\.normal"\);[\s\S]*const adminLabel = t\("connections\.admin"\);/,
+    "flat shell variants should reuse the localized Normal/Admin labels",
+  );
+  assert.match(
+    menuSource,
+    /key=\{`\$\{optionKey\}-normal`\}[\s\S]*onOpenLocalShell\(option\)[\s\S]*`\$\{option\.label\} \(\$\{normalLabel\}\)`/,
+    "the normal local-shell action should be a first-level menu item",
+  );
+  assert.match(
+    menuSource,
+    /key=\{`\$\{optionKey\}-admin`\}[\s\S]*onOpenElevatedShell\(option\)[\s\S]*`\$\{option\.label\} \(\$\{adminLabel\}\)`/,
+    "the admin local-shell action should be a first-level menu item",
+  );
+  assert.doesNotMatch(
+    menuSource + menuCss,
+    /quick-connect-submenu/,
+    "Quick Connect should not render or style a nested local-shell submenu",
+  );
+});
