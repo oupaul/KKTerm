@@ -254,6 +254,30 @@ Linux via the platform-capability signal — no broken buttons, no error spam.**
 **Success: a single `kkterm-<version>-linux-x86_64.AppImage` builds, launches on
 a clean Ubuntu, and runs the smoke path (open window, open a local terminal).**
 
+> **Result (2026-07-05, Fedora 44 VM against a build made on Ubuntu 24.04 CI):**
+> the AppImage launched to an **empty window** — two independent, stacked bugs:
+> 1. linuxdeploy bundles the build host's `libwayland-client.so.0`,
+>    `libwayland-egl.so.1`, `libwayland-cursor.so.0`, `libwayland-server.so.0`
+>    into the AppImage. Wayland's protocol marshalling must match the
+>    *running* machine's Mesa/EGL stack; the mismatch aborted the app before
+>    any window rendered with `Could not create default EGL display:
+>    EGL_BAD_PARAMETER. Aborting...` (confirmed via `journalctl`:
+>    `WebKitWebProcess` never spawned and SIGABRT'd). Fix: `scripts/
+>    package-linux.sh` now extracts the built AppImage, deletes those four
+>    `.so` files, repacks with `appimagetool`, and re-signs the updater
+>    signature (`tauri signer sign`).
+> 2. Even with (1) fixed, WebKitGTK's DMA-BUF renderer fails **silently**
+>    under some virtualized graphics stacks — the process and
+>    `WebKitWebProcess` stay alive, nothing crashes, but the webview renders
+>    nothing. Fix: `src-tauri/src/main.rs` sets `WEBKIT_DISABLE_DMABUF_RENDERER=1`
+>    before Tauri/GTK init, gated to Linux and only when `systemd-detect-virt
+>    --vm` reports a hypervisor (so bare-metal Linux keeps the faster
+>    DMA-BUF path).
+>
+> Both fixes were validated end-to-end on the Fedora VM: extract → strip →
+> repack with `appimagetool` → relaunch showed no crash and a visibly
+> rendered window.
+
 - [ ] Add `appimage` to a **Linux-only** bundle target. Do NOT add it to the
       shared `tauri.conf.json` `bundle.targets` (which is `nsis`/`app`/`dmg`);
       use a Linux config overlay (`src-tauri/tauri.linux.conf.json` passed via

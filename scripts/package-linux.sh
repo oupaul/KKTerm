@@ -58,4 +58,59 @@ export TAURI_SIGNING_PRIVATE_KEY_PASSWORD="${TAURI_SIGNING_PRIVATE_KEY_PASSWORD:
 # runtime. CI containers usually lack FUSE, so extract-and-run instead.
 export APPIMAGE_EXTRACT_AND_RUN="${APPIMAGE_EXTRACT_AND_RUN:-1}"
 
+# linuxdeploy bundles the build host's libwayland-*.so into the AppImage.
+# Wayland's protocol marshalling must match the *running* machine's Mesa/EGL
+# stack, so a build-host copy causes `EGL_BAD_PARAMETER` on eglGetDisplay/
+# eglInitialize on a different host -- the app aborts before any window
+# renders. Confirmed by launching an Ubuntu-24.04-built AppImage on a Fedora
+# VM. See docs/LINUX_PORT.md Phase 5.
+prepare_appimagetool() {
+  local cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/tauri"
+  local tool_path="$cache_dir/appimagetool-x86_64.AppImage"
+  mkdir -p "$cache_dir"
+  if [[ ! -f "$tool_path" ]]; then
+    curl -fsSL -o "$tool_path" \
+      "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage"
+    chmod +x "$tool_path"
+  fi
+  printf '%s' "$tool_path"
+}
+
+strip_bundled_wayland_libs() {
+  local bundle_dir="$REPO_ROOT/src-tauri/target/$TARGET_TRIPLE/release/bundle/appimage"
+  local appimage
+  appimage="$(find "$bundle_dir" -maxdepth 1 -name '*.AppImage' -print -quit)"
+  if [[ -z "$appimage" ]]; then
+    printf 'No AppImage found in %s to patch.\n' "$bundle_dir" >&2
+    exit 1
+  fi
+
+  local work_dir
+  work_dir="$(mktemp -d)"
+  trap 'rm -rf "$work_dir"' RETURN
+
+  ( cd "$work_dir" && "$appimage" --appimage-extract >/dev/null )
+
+  local removed=0 lib
+  for lib in libwayland-client.so.0 libwayland-egl.so.1 libwayland-cursor.so.0 libwayland-server.so.0; do
+    if [[ -f "$work_dir/squashfs-root/usr/lib/$lib" ]]; then
+      rm -f "$work_dir/squashfs-root/usr/lib/$lib"
+      removed=1
+    fi
+  done
+
+  if [[ "$removed" -eq 0 ]]; then
+    printf 'No bundled libwayland-*.so found; nothing to patch.\n'
+    return
+  fi
+
+  rm -f "$appimage"
+  ARCH="${TARGET_TRIPLE%%-*}" "$(prepare_appimagetool)" "$work_dir/squashfs-root" "$appimage" >/dev/null
+
+  # tauri build already produced an updater signature over the pre-patch
+  # bytes; regenerate it now that the AppImage contents changed.
+  "./node_modules/.bin/tauri" signer sign "$appimage"
+}
+
 "./node_modules/.bin/tauri" build --target "$TARGET_TRIPLE" --bundles appimage "$@"
+strip_bundled_wayland_libs
