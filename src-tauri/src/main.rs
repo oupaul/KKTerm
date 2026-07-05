@@ -16,8 +16,14 @@ fn main() {
 /// Tauri/GTK/WebKit touch the display (see docs/LINUX_PORT.md Phase 5/6).
 #[cfg(target_os = "linux")]
 fn apply_linux_gpu_workarounds() {
+    // When running from an AppImage, AppRun points LD_LIBRARY_PATH at the
+    // bundled libs; host binaries like systemd-detect-virt must not load
+    // those (e.g. bundled libcrypto.so.3 lacks the host's OPENSSL_3.4.0
+    // symbols on Fedora 44, so the loader aborts and detection reports
+    // "not a VM").
     let running_in_vm = std::process::Command::new("systemd-detect-virt")
         .args(["--vm", "--quiet"])
+        .env_remove("LD_LIBRARY_PATH")
         .status()
         .map(|status| status.success())
         .unwrap_or(false);
