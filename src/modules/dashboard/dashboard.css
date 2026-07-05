@@ -1588,6 +1588,7 @@ button.dashboard-pill-dot:focus-visible {
    only the canvas, leaving the accent-colored head fully opaque. */
 .dw-preset-panel {
   background: transparent;
+  box-shadow: var(--dashboard-shadow-card);
 }
 
 /* Fade the body surface with a translucent color rather than an absolutely
@@ -1694,7 +1695,7 @@ button.dashboard-pill-dot:focus-visible {
   overflow: visible;
   background: transparent;
   border: 0;
-  box-shadow: none;
+  box-shadow: var(--dashboard-shadow-card);
 }
 
 .dw-ambient-label {
@@ -1731,9 +1732,7 @@ button.dashboard-pill-dot:focus-visible {
   box-shadow:
     inset 0 1px 0 rgb(255 255 255 / 85%),
     inset 0 -10px 24px -12px rgb(0 0 0 / 18%),
-    0 1px 1px rgb(20 30 55 / 4%),
-    0 8px 24px -10px rgb(20 30 55 / 18%),
-    0 24px 48px -24px rgb(20 30 55 / 22%);
+    var(--dashboard-shadow-card);
   -webkit-backdrop-filter: blur(28px) saturate(180%) brightness(1.04);
   backdrop-filter: blur(28px) saturate(180%) brightness(1.04);
 }
@@ -1776,6 +1775,7 @@ button.dashboard-pill-dot:focus-visible {
   color: #fff;
   background: linear-gradient(135deg, var(--w-accent) 0%, color-mix(in srgb, var(--w-accent) 70%, black) 100%);
   border: 0;
+  box-shadow: var(--dashboard-shadow-card);
 }
 
 .dw-preset-hero::before {
