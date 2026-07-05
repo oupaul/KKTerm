@@ -1,5 +1,5 @@
 import { Plus, Search, X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ConnectionIcon } from "../../../../workspace/connections/ConnectionIcon";
 import { connectionSubtitle, connectionTypeLabel } from "../../../../workspace/connections/utils";
@@ -7,13 +7,22 @@ import { flattenConnections, withLiveConnectionStatuses } from "../../../../work
 import { invokeCommand, isTauriRuntime } from "../../../../../lib/tauri";
 import { tmuxSessionIdsForConnection, useWorkspaceStore } from "../../../../../store";
 import { defaultLayoutFor } from "../../../../workspace/layout";
-import { RemoteDesktopWorkspace } from "../../../../workspace/connections/remote-desktop/RemoteDesktopWorkspace";
 import { TerminalWorkspace } from "../../../../workspace/connections/terminal/TerminalWorkspace";
-import { WebViewWorkspace } from "../../../../workspace/connections/webview/WebViewWorkspace";
 import type { BuiltInWidgetBodyProps } from "../../../registry/builtInRegistry";
 import type { Connection, ConnectionTree, WorkspacePane, WorkspaceTab } from "../../../../../types";
 import { connectionTree as emptyConnectionTree } from "../../../../../app-defaults";
 import { useWidgetConfig } from "../../widgetLocalStorage";
+
+const WebViewWorkspace = lazy(() =>
+  import("../../../../workspace/connections/webview/WebViewWorkspace").then(({ WebViewWorkspace }) => ({
+    default: WebViewWorkspace,
+  })),
+);
+const RemoteDesktopWorkspace = lazy(() =>
+  import("../../../../workspace/connections/remote-desktop/RemoteDesktopWorkspace").then(({ RemoteDesktopWorkspace }) => ({
+    default: RemoteDesktopWorkspace,
+  })),
+);
 
 type ConnectionWidgetConfig = {
   connectionIds: string[];
@@ -378,11 +387,19 @@ function ConnectionWidgetSession({
   );
 
   if (connection.type === "url") {
-    return <WebViewWorkspace isActive={isViewActive && !suppressNativeWebviews} tab={tab} />;
+    return (
+      <Suspense fallback={null}>
+        <WebViewWorkspace isActive={isViewActive && !suppressNativeWebviews} tab={tab} />
+      </Suspense>
+    );
   }
 
   if (connection.type === "rdp" || connection.type === "vnc") {
-    return <RemoteDesktopWorkspace isActive={isViewActive} tab={tab} />;
+    return (
+      <Suspense fallback={null}>
+        <RemoteDesktopWorkspace isActive={isViewActive} tab={tab} />
+      </Suspense>
+    );
   }
 
   if (usesTmux && !tmuxSessionId) {

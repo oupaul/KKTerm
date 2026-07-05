@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AssistantPanel } from "./ai/AssistantPanel";
 import type { AssistantPageContext } from "./ai/AssistantPanel";
@@ -31,11 +31,8 @@ import {
   useWorkspaceChromeLayout,
 } from "./app/workspaceChromeLayout";
 import { ConnectionSidebar } from "./modules/workspace/connections/ConnectionSidebar";
-import { DashboardPage } from "./modules/dashboard/DashboardPage";
 import { useDashboardStore } from "./modules/dashboard/state/dashboardStore";
 import { useDashboardBackendInvalidation } from "./modules/dashboard/state/invalidation";
-import { InstallerPage } from "./modules/installer/InstallerPage";
-import { ItOpsPage } from "./modules/itops/ItOpsPage";
 import {
   loadSiteTreeCollapsed,
   saveSiteTreeCollapsed,
@@ -50,7 +47,6 @@ import { useBootstrapSettings } from "./lib/settings";
 import { CREDENTIAL_UNLOCK_REQUIRED_EVENT, invokeCommand } from "./lib/tauri";
 import type { CredentialUnlockRequestDetail } from "./lib/credentialUnlock";
 import { EncryptedSecretStoreDialog } from "./modules/settings/EncryptedSecretStoreDialog";
-import { SettingsPage } from "./modules/settings/SettingsPage";
 import type { SettingsAssistantContext } from "./modules/settings/settingsAssistantContext";
 import type { SettingsSectionId } from "./modules/settings/settingsAssistantContext";
 import { useWorkspaceStore } from "./store";
@@ -59,6 +55,27 @@ import { StatusBar } from "./modules/workspace/StatusBar";
 import { TabStrip, WorkspaceCanvas } from "./modules/workspace/WorkspaceCanvas";
 import "@xterm/xterm/css/xterm.css";
 import "./App.css";
+
+const DashboardPage = lazy(() =>
+  import("./modules/dashboard/DashboardPage").then(({ DashboardPage }) => ({
+    default: DashboardPage,
+  })),
+);
+const InstallerPage = lazy(() =>
+  import("./modules/installer/InstallerPage").then(({ InstallerPage }) => ({
+    default: InstallerPage,
+  })),
+);
+const ItOpsPage = lazy(() =>
+  import("./modules/itops/ItOpsPage").then(({ ItOpsPage }) => ({
+    default: ItOpsPage,
+  })),
+);
+const SettingsPage = lazy(() =>
+  import("./modules/settings/SettingsPage").then(({ SettingsPage }) => ({
+    default: SettingsPage,
+  })),
+);
 
 function App() {
   const { t } = useTranslation();
@@ -413,6 +430,7 @@ function App() {
           pageContext={assistantPageContext()}
         />
       </div>
+      <Suspense fallback={null}>
       {activePage === "settings" ? (
         <SettingsPage
           key="settings-page"
@@ -442,6 +460,7 @@ function App() {
           onShowWorkspace={() => navigateToPage("workspace")}
         />
       ) : null}
+      </Suspense>
       <TutorialOverlay
         key="tutorial-overlay"
         onDismiss={() => setTutorialHighlightRequest(undefined)}

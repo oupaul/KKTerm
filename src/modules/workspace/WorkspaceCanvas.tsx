@@ -4,17 +4,10 @@ import {
   isConnectionTabContextMenuConnection,
 } from "./connections/connectionTabContextMenu";
 import { ftpBrowserCommands, localBrowserCommands } from "../../lib/fileBrowserCommands";
-import { RemoteDesktopWorkspace } from "./connections/remote-desktop/RemoteDesktopWorkspace";
-import { SftpWorkspace } from "./connections/sftp/SftpWorkspace";
-import { FileViewerWorkspace } from "./connections/file-viewer/FileViewerWorkspace";
 import { TerminalWorkspace } from "./connections/terminal/TerminalWorkspace";
-import { WebViewWorkspace } from "./connections/webview/WebViewWorkspace";
-import { GitBrowser } from "../git/GitBrowser";
-import { CompareViewer } from "../compare/CompareViewer";
-import { FolderCompareView } from "../compare/FolderCompareView";
 import { ConnectionIcon } from "./connections/ConnectionIcon";
 import { ChevronLeft, ChevronRight, Terminal, X } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type {
   FormEvent,
@@ -25,6 +18,42 @@ import type {
 import { useTranslation } from "react-i18next";
 import { DEFAULT_WORKSPACE_ID, useWorkspaceStore } from "../../store";
 import type { WorkspaceTab } from "../../types";
+
+const SftpWorkspace = lazy(() =>
+  import("./connections/sftp/SftpWorkspace").then(({ SftpWorkspace }) => ({
+    default: SftpWorkspace,
+  })),
+);
+const FileViewerWorkspace = lazy(() =>
+  import("./connections/file-viewer/FileViewerWorkspace").then(({ FileViewerWorkspace }) => ({
+    default: FileViewerWorkspace,
+  })),
+);
+const WebViewWorkspace = lazy(() =>
+  import("./connections/webview/WebViewWorkspace").then(({ WebViewWorkspace }) => ({
+    default: WebViewWorkspace,
+  })),
+);
+const RemoteDesktopWorkspace = lazy(() =>
+  import("./connections/remote-desktop/RemoteDesktopWorkspace").then(({ RemoteDesktopWorkspace }) => ({
+    default: RemoteDesktopWorkspace,
+  })),
+);
+const GitBrowser = lazy(() =>
+  import("../git/GitBrowser").then(({ GitBrowser }) => ({
+    default: GitBrowser,
+  })),
+);
+const CompareViewer = lazy(() =>
+  import("../compare/CompareViewer").then(({ CompareViewer }) => ({
+    default: CompareViewer,
+  })),
+);
+const FolderCompareView = lazy(() =>
+  import("../compare/FolderCompareView").then(({ FolderCompareView }) => ({
+    default: FolderCompareView,
+  })),
+);
 
 function tabDisplayTitle(tab: WorkspaceTab) {
   return tab.displayTitle?.trim() || tab.title;
@@ -359,7 +388,9 @@ export function WorkspaceCanvas({
   // floats above workspace chrome and native surfaces, per the overlay rule.
   const gitBrowserOverlay = gitBrowser
     ? createPortal(
-        <GitBrowser target={gitBrowser} onClose={closeGitBrowser} />,
+        <Suspense fallback={null}>
+          <GitBrowser target={gitBrowser} onClose={closeGitBrowser} />
+        </Suspense>,
         document.body,
       )
     : null;
@@ -368,7 +399,9 @@ export function WorkspaceCanvas({
   // same as the Git Browser, per the overlay rule.
   const compareOverlay = compareView
     ? createPortal(
-        <CompareViewer view={compareView} onClose={closeCompareView} />,
+        <Suspense fallback={null}>
+          <CompareViewer view={compareView} onClose={closeCompareView} />
+        </Suspense>,
         document.body,
       )
     : null;
@@ -377,7 +410,9 @@ export function WorkspaceCanvas({
   // above workspace chrome the same way, per the overlay rule.
   const folderCompareOverlay = folderCompareView
     ? createPortal(
-        <FolderCompareView view={folderCompareView} onClose={closeFolderCompareView} />,
+        <Suspense fallback={null}>
+          <FolderCompareView view={folderCompareView} onClose={closeFolderCompareView} />
+        </Suspense>,
         document.body,
       )
     : null;
@@ -401,7 +436,7 @@ export function WorkspaceCanvas({
   }
 
   return (
-    <>
+    <Suspense fallback={null}>
       <div
         className="workspace-canvas"
         data-dock-empty-canvas={showEmptyState ? "" : undefined}
@@ -519,6 +554,6 @@ export function WorkspaceCanvas({
       {gitBrowserOverlay}
       {compareOverlay}
       {folderCompareOverlay}
-    </>
+    </Suspense>
   );
 }

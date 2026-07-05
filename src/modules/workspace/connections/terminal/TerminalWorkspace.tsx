@@ -5,14 +5,10 @@ import { readFromClipboard, writeToClipboard } from "../../../../lib/clipboard";
 import { CUSTOM_FONTS_LOADED_EVENT } from "../../../../lib/customFonts";
 import { ScreenshotMenu } from "../../ScreenshotMenu";
 
-import { RemoteDesktopWorkspace } from "../remote-desktop/RemoteDesktopWorkspace";
-import { SftpWorkspace } from "../sftp/SftpWorkspace";
-import { FileViewerWorkspace } from "../file-viewer/FileViewerWorkspace";
-import { WebViewWorkspace } from "../webview/WebViewWorkspace";
 import { ConnectionGlyph } from "../ConnectionGlyph";
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Bot, Check, FileText, Folder, FolderOpen, Mouse, ChevronRight, Circle, ClipboardPaste, Copy, Menu, Monitor, Network, PanelBottom, Pencil, Radio, RefreshCw, Save, Search, SplitSquareHorizontal, Square, Type, X } from "lucide-react";
 import { listen } from "@tauri-apps/api/event";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { FormEvent, KeyboardEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
@@ -46,6 +42,27 @@ import { SshPortForwardingDialog, hasEnabledSshPortForwardings } from "./SshPort
 import { startEnabledSshPortForwardings } from "./sshPortForwardingModel";
 import { classifyEnvironmentShell, prepareLocalStartup } from "../connection-dialog/environmentVariables";
 import { readSshApplyStartupToExistingTmux } from "../connection-dialog/sshStartupScript";
+
+const SftpWorkspace = lazy(() =>
+  import("../sftp/SftpWorkspace").then(({ SftpWorkspace }) => ({
+    default: SftpWorkspace,
+  })),
+);
+const FileViewerWorkspace = lazy(() =>
+  import("../file-viewer/FileViewerWorkspace").then(({ FileViewerWorkspace }) => ({
+    default: FileViewerWorkspace,
+  })),
+);
+const WebViewWorkspace = lazy(() =>
+  import("../webview/WebViewWorkspace").then(({ WebViewWorkspace }) => ({
+    default: WebViewWorkspace,
+  })),
+);
+const RemoteDesktopWorkspace = lazy(() =>
+  import("../remote-desktop/RemoteDesktopWorkspace").then(({ RemoteDesktopWorkspace }) => ({
+    default: RemoteDesktopWorkspace,
+  })),
+);
 
 type TerminalContextMenuState = {
   x: number;
@@ -531,13 +548,15 @@ export function TerminalWorkspace({
             role="dialog"
           >
             <div className="sftp-popup-dialog-body">
-              <SftpWorkspace
-                isActive={true}
-                tab={sftpDialogTab}
-                inline
-                onClose={closeSftpDialog}
-                protocolSourceConnection={sftpDialogConnection ?? undefined}
-              />
+              <Suspense fallback={null}>
+                <SftpWorkspace
+                  isActive={true}
+                  tab={sftpDialogTab}
+                  inline
+                  onClose={closeSftpDialog}
+                  protocolSourceConnection={sftpDialogConnection ?? undefined}
+                />
+              </Suspense>
             </div>
           </section>
         </div>,
@@ -833,7 +852,7 @@ function EmbeddedConnectionPane({
           <X size={13} />
         </button>
       ) : null}
-      {body}
+      <Suspense fallback={null}>{body}</Suspense>
     </article>
   );
 }
