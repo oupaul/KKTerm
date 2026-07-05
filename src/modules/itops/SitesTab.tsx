@@ -320,7 +320,10 @@ export function SitesTab({
     () => (activeGroup ? (racksBySite[activeGroup.id] ?? []) : []),
     [activeGroup, racksBySite],
   );
-  const serverRooms = activeGroup ? (serverRoomsBySite[activeGroup.id] ?? []) : [];
+  const serverRooms = useMemo(
+    () => (activeGroup ? (serverRoomsBySite[activeGroup.id] ?? []) : []),
+    [activeGroup, serverRoomsBySite],
+  );
   const topology = useMemo(() => groupRackTopology(racks, serverRooms), [racks, serverRooms]);
   const selectedSiteIdForDialog = activeGroup?.id ?? sites[0]?.id ?? "";
   const selectedServerRoomForDialog =
