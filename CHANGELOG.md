@@ -3,6 +3,68 @@
 All notable changes to KKTerm are documented here.
 
 ## Direct Downloads
+* 💻 [Download for Windows (64-bit)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.113/kkterm-0.1.113-windows-x64-setup.exe)
+* 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.113/kkterm-0.1.113-windows-arm64-setup.exe)
+
+## Highlights
+- **IT Ops Server Room views**: Improved how racks/room objects sit in both the floor plan and 2.5D views—no more “floating beside the rack” vibes.
+- **Linux stability**: Fixed AppImage build/signing conflicts and stopped AppImage environment variables from leaking into spawned host processes.
+- **Remote Desktop / Codex**: Routed IronRDP canvas assistant controls correctly.
+
+## New
+- Added **Reicon icon names** (including fallback/legacy names) to the icon catalog picker.
+
+## Improved
+- **IT Ops**: Added more physically grounded rendering for **Dashboard Widget Instance** server room visuals—rack footprints and room objects now better reflect depth/size expectations in Server Room views.
+
+## Fixed
+- **Linux (AppImage)**: Resolve conflicting signer private-key args during AppImage build. (by @ryantsai in https://github.com/ryantsai/KKTerm/pull/538, short SHA: ee7e769)
+- **Linux (AppImage runtime)**: Stop AppImage env leaking into spawned host processes, fixing issues like host VM detection and mis-loaded libraries. (by @ryantsai in https://github.com/ryantsai/KKTerm/pull/539, short SHA: 75f84cb)
+- **IT Ops**: Settle room objects against resolved rack cells; remove iso debug telemetry. (by @ryantsai in https://github.com/ryantsai/KKTerm/pull/542, short SHA: 20173b3)
+- **IT Ops**: Keep elevated 2.5D object sprites visually planted on their support. *(Issue reporter: @Claude Fable 5, via Co-Authored-By)* (by @ryantsai in https://github.com/ryantsai/KKTerm/pull/543, short SHA: 462cbe2)
+- **IT Ops**: Use Reicon cabinet and server room icons. (by @ryantsai in https://github.com/ryantsai/KKTerm/pull/544, short SHA: ff8f715)
+- **IT Ops**: Bottom-align 2.5D object artwork inside its sprite box. (by @ryantsai in https://github.com/ryantsai/KKTerm/pull/545, short SHA: 6148f85)
+- **Codex / IronRDP**: Fix IronRDP canvas assistant routing. *(Issue reporter: @ryantsai)* (by @ryantsai in https://github.com/ryantsai/KKTerm/pull/546, short SHA: b31129d)
+- **Linux platform gaps**: App Launcher browser fallback, “Don’t Sleep” behavior, missing host metrics, and RDP routing path fixes. (by @ryantsai in https://github.com/ryantsai/KKTerm/pull/541, short SHA: 4347ef0)
+
+## Internal
+- Installer/UI polish: share Install Helper module icon. (short SHA: 8a87c38)
+- Icon plumbing: refactor/adjust IT Ops icon references and styles for consistent Reicon usage. (short SHA: 7162948)
+- IT Ops correctness work: adjust site and rack Reicon defaults + related icon catalog test coverage. (short SHA: 038e2e4)
+- Tests/tooling: add/adjust tests for lazy boundaries, platform runtime, and icon catalog integration. (short SHAs: 16d3fbe, tests listed in context)
+- (Release engineering) AppImage signing/build step fixes included above. (short SHAs: ee7e769, 1c18ab4, 9930c00)
+
+---
+
+## Highlights
+- **IT Ops 机房视图**：改善机架/房间物件在平面与 2.5D 视图中的摆放效果——不再出现「明明贴着机架却像飄在旁边」的尴尬。
+- **Linux 稳定性**：修正 AppImage 打包/签名时的私钥参数冲突，并阻止 AppImage 的环境变量外泄到 KKTerm 生成的主机进程。
+- **远端桌面 / Codex**：已正确路由 IronRDP 的画布助理控制項。
+
+## New
+- 在图示目录选择器中加入 **Reicon 图示名称**（包含备用/旧版名称）。
+
+## Improved
+- **IT Ops**：让 Server Room 的渲染更贴近物理深度与尺寸预期——机架足迹与房间物件在 Server Room 视图中的深度/大小表现更一致，适合放进你的 **Dashboard Widget Instance** 里当好视觉证据。
+
+## Fixed
+- **Linux（AppImage 打包）**：解决 AppImage 签名器私钥参数冲突。（@ryantsai： https://github.com/ryantsai/KKTerm/pull/538，短 SHA：ee7e769）
+- **Linux（AppImage 執行期）**：阻止 AppImage 環境外泄到被生成的主机进程，修复如主机 VM 判定与套件库误加载等问题。*(“网路像宇宙”一样，环境变量也得管好)*（@ryantsai： https://github.com/ryantsai/KKTerm/pull/539，短 SHA：75f84cb）
+- **IT Ops**：让房间物件对齐到已解析的机架格子；移除 iso 偵錯遥测。（@ryantsai： https://github.com/ryantsai/KKTerm/pull/542，短 SHA：20173b3）
+- **IT Ops**：让抬高状态的 2.5D 物件精灵视觉上保持贴在支撑物上。*(Issue 回报者：@Claude Fable 5，透過 Co-Authored-By)*（@ryantsai： https://github.com/ryantsai/KKTerm/pull/543，短 SHA：462cbe2）
+- **IT Ops**：改用 Reicon 机柜与机房图示。（@ryantsai： https://github.com/ryantsai/KKTerm/pull/544，短 SHA：ff8f715）
+- **IT Ops**：让 2.5D 物件精灵盒内的画面靠下对齐。 （@ryantsai： https://github.com/ryantsai/KKTerm/pull/545，短 SHA：6148f85）
+- **Codex / IronRDP**：修复 IronRDP 画布助理路由。*(Issue 回报者：@ryantsai)*（@ryantsai： https://github.com/ryantsai/KKTerm/pull/546，短 SHA：b31129d）
+- **Linux 平台问题**：App Launcher 浏览器回退、“Don’t Sleep” 行为、主机指标缺失，以及 RDP 路由路径修正。 （@ryantsai： https://github.com/ryantsai/KKTerm/pull/541，短 SHA：4347ef0）
+
+## Internal
+- 安装/界面细节：共享 Install Helper 模块图示。 （短 SHA：8a87c38）
+- 图示管线整理：重构/调整 IT Ops 图示引用与样式，以一致使用 Reicon。 （短 SHA：7162948）
+- IT Ops 正确性与默认值：调整站点与机架的 Reicon 默认值，并补充相关图示目录测试覆盖。 （短 SHA：038e2e4）
+- 测试/工具：加入或调整懒加载、平台运行期与图示目录整合相关测试。 （短 SHAs：16d3fbe，context 中列出的 tests）
+- （发布工程）如上所述的 AppImage 打包/签名步骤修复。 （短 SHAs：ee7e769、1c18ab4、9930c00）
+
+## Direct Downloads
 * 💻 [Download for Windows (64-bit)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.112/kkterm-0.1.112-windows-x64-setup.exe)
 * 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.112/kkterm-0.1.112-windows-arm64-setup.exe)
 
