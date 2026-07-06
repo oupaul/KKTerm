@@ -33,6 +33,7 @@ import {
 } from "../../paneRegistry";
 import { usesCanvasRdp } from "../../../../lib/platform";
 import { RdpCanvasView } from "./RdpCanvasView";
+import { scancodeForCode } from "./rdpScancodes";
 
 type VncSessionEvent =
   | { kind: "connected"; sessionId: string; name: string }
@@ -264,6 +265,31 @@ export function RemoteDesktopWorkspace({
     }
     rdpConnectionCountedRef.current = false;
     markConnectionSessionEnded(connection.id);
+  };
+
+  const requireRdpCanvasSessionId = () => {
+    const sessionId = sessionIdRef.current;
+    if (!sessionId || !sessionStartedRef.current) {
+      throw new Error("RDP Session is not connected.");
+    }
+    return sessionId;
+  };
+
+  const handleRdpCanvasConnected = (sessionId: string) => {
+    sessionIdRef.current = sessionId;
+    sessionStartingRef.current = false;
+    sessionStartedRef.current = true;
+    setRdpStatus(t("remoteDesktop.connected"));
+    markRdpConnectionStarted();
+  };
+
+  const handleRdpCanvasDisconnected = (sessionId: string) => {
+    if (sessionIdRef.current === sessionId) {
+      sessionIdRef.current = null;
+    }
+    sessionStartingRef.current = false;
+    sessionStartedRef.current = false;
+    markRdpConnectionEnded();
   };
 
   const handleRdpDisconnectedStatus = (connectionState: number) => {
@@ -498,12 +524,34 @@ export function RemoteDesktopWorkspace({
     if (!paneId || !connection || !isTauriRuntime()) {
       return;
     }
+    const mouseClick: RemoteDesktopController["mouseClick"] = connection.type === "vnc"
+      ? (x, y, button) => sendVncMouseClick(x, y, button)
+      : useRdpCanvas
+        ? (x, y, button) => sendRdpCanvasMouseClick(requireRdpCanvasSessionId(), x, y, button)
+        : async (x, y, button) => {
+            const sessionId = sessionIdRef.current;
+            if (!sessionId || !sessionStartedRef.current) {
+              throw new Error("RDP Session is not connected.");
+            }
+            await invokeCommand("send_rdp_mouse_click", {
+              request: {
+                sessionId,
+                x: Math.max(0, Math.min(65535, Math.trunc(x))),
+                y: Math.max(0, Math.min(65535, Math.trunc(y))),
+                button,
+              },
+            });
+          };
     const controller: RemoteDesktopController = {
       kind: connection.type === "vnc" ? "vnc" : "rdp",
       captureScreenshot: captureRemoteDesktopScreenshot,
       sendText: async (text, pressEnter) => {
         if (connection.type === "vnc") {
           await sendVncText(text, pressEnter);
+          return;
+        }
+        if (useRdpCanvas) {
+          await sendRdpCanvasText(requireRdpCanvasSessionId(), text, pressEnter);
           return;
         }
         const sessionId = sessionIdRef.current;
@@ -519,6 +567,10 @@ export function RemoteDesktopWorkspace({
           await sendVncKeyPress(key);
           return;
         }
+        if (useRdpCanvas) {
+          await sendRdpCanvasKeyPress(requireRdpCanvasSessionId(), key);
+          return;
+        }
         const sessionId = sessionIdRef.current;
         if (!sessionId || !sessionStartedRef.current) {
           throw new Error("RDP Session is not connected.");
@@ -527,28 +579,25 @@ export function RemoteDesktopWorkspace({
           request: { sessionId, key },
         });
       },
-      mouseClick:
-        connection.type === "vnc"
-          ? (x, y, button) => sendVncMouseClick(x, y, button)
-          : async (x, y, button) => {
-              const sessionId = sessionIdRef.current;
-              if (!sessionId || !sessionStartedRef.current) {
-                throw new Error("RDP Session is not connected.");
-              }
-              await invokeCommand("send_rdp_mouse_click", {
-                request: {
-                  sessionId,
-                  x: Math.max(0, Math.min(65535, Math.trunc(x))),
-                  y: Math.max(0, Math.min(65535, Math.trunc(y))),
-                  button,
-                },
-              });
-            },
+      mouseClick,
     };
     registerRemoteDesktopController(paneId, controller);
     return () => unregisterRemoteDesktopController(paneId, controller);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connection?.type, tab.panes[0]?.id]);
+
+  useEffect(() => {
+    const paneId = tab.panes[0]?.id;
+    if (!useRdpCanvas || !paneId || !isTauriRuntime()) {
+      return;
+    }
+    const sender = async (text: string, pressEnter: boolean) => {
+      await sendRdpCanvasText(requireRdpCanvasSessionId(), text, pressEnter);
+    };
+    registerRdpTextSender(paneId, sender);
+    return () => unregisterRdpTextSender(paneId, sender);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [useRdpCanvas, tab.panes[0]?.id]);
 
   const triggerPreCapture = () => {
     if (!canStartRdp || !isActive || !rdpVisibleRef.current) {
@@ -1606,6 +1655,8 @@ export function RemoteDesktopWorkspace({
             cadSignal={rdpCanvasCadSignal}
             connection={connection}
             key={rdpStartKey}
+            onSessionConnected={handleRdpCanvasConnected}
+            onSessionDisconnected={handleRdpCanvasDisconnected}
             surfaceRef={canvasRef}
           />
         ) : null}
@@ -1781,6 +1832,87 @@ function pointerButtonMask(button: number) {
     return 4;
   }
   return 1;
+}
+
+async function sendRdpCanvasText(sessionId: string, text: string, pressEnter: boolean) {
+  if (text.length > 0) {
+    await invokeCommand("send_rdp_client_text", { request: { sessionId, text } });
+  }
+  if (pressEnter && !text.endsWith("\n") && !text.endsWith("\r")) {
+    await sendRdpCanvasKeyPress(sessionId, "enter");
+  }
+}
+
+async function sendRdpCanvasKeyPress(sessionId: string, key: string) {
+  if (normalizeRemoteDesktopKeyName(key) === "ctrlaltdelete") {
+    await invokeCommand("send_rdp_client_ctrl_alt_delete", { request: { sessionId } });
+    return;
+  }
+  const scancode = rdpCanvasScancodeForName(key);
+  await invokeCommand("send_rdp_client_key_event", {
+    request: { sessionId, scancode, down: true },
+  });
+  await invokeCommand("send_rdp_client_key_event", {
+    request: { sessionId, scancode, down: false },
+  });
+}
+
+async function sendRdpCanvasMouseClick(
+  sessionId: string,
+  x: number,
+  y: number,
+  button: "left" | "right" | "middle",
+) {
+  const request = {
+    sessionId,
+    x: Math.max(0, Math.min(65535, Math.trunc(x))),
+    y: Math.max(0, Math.min(65535, Math.trunc(y))),
+  };
+  const buttonMask = button === "right" ? 4 : button === "middle" ? 2 : 1;
+  await invokeCommand("send_rdp_client_pointer_event", {
+    request: { ...request, buttonMask },
+  });
+  await invokeCommand("send_rdp_client_pointer_event", {
+    request: { ...request, buttonMask: 0 },
+  });
+}
+
+function rdpCanvasScancodeForName(value: string) {
+  const code = rdpCanvasCodeForName(value);
+  const scancode = code ? scancodeForCode(code) : undefined;
+  if (scancode === undefined) {
+    throw new Error(`Unsupported RDP key press: ${value}`);
+  }
+  return scancode;
+}
+
+function rdpCanvasCodeForName(value: string) {
+  const keyCodes: Record<string, string> = {
+    enter: "Enter",
+    return: "Enter",
+    tab: "Tab",
+    escape: "Escape",
+    esc: "Escape",
+    backspace: "Backspace",
+    delete: "Delete",
+    del: "Delete",
+    arrowup: "ArrowUp",
+    up: "ArrowUp",
+    arrowdown: "ArrowDown",
+    down: "ArrowDown",
+    arrowleft: "ArrowLeft",
+    left: "ArrowLeft",
+    arrowright: "ArrowRight",
+    right: "ArrowRight",
+    home: "Home",
+    end: "End",
+    pageup: "PageUp",
+    pgup: "PageUp",
+    pagedown: "PageDown",
+    pgdn: "PageDown",
+    space: "Space",
+  };
+  return keyCodes[normalizeRemoteDesktopKeyName(value)];
 }
 
 function resolveRdpOptions(

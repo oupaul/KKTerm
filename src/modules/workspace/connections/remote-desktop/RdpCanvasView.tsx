@@ -58,10 +58,14 @@ function base64ToBytes(base64: string): Uint8Array {
 export function RdpCanvasView({
   cadSignal = 0,
   connection,
+  onSessionConnected,
+  onSessionDisconnected,
   surfaceRef,
 }: {
   cadSignal?: number;
   connection: Connection;
+  onSessionConnected?: (sessionId: string) => void;
+  onSessionDisconnected?: (sessionId: string) => void;
   surfaceRef?: RefObject<HTMLCanvasElement | null>;
 }) {
   const { t } = useTranslation();
@@ -80,10 +84,27 @@ export function RdpCanvasView({
     }
     let disposed = false;
     let unlisten: (() => void) | undefined;
+    let reportedConnected = false;
     const sessionId = createRdpSessionId();
     sessionIdRef.current = sessionId;
     setStatus("connecting");
     setErrorMessage("");
+
+    const reportConnected = () => {
+      if (reportedConnected) {
+        return;
+      }
+      reportedConnected = true;
+      onSessionConnected?.(sessionId);
+    };
+
+    const reportDisconnected = () => {
+      if (!reportedConnected) {
+        return;
+      }
+      reportedConnected = false;
+      onSessionDisconnected?.(sessionId);
+    };
 
     const draw = (event: RdpCanvasEvent) => {
       const canvas = canvasRef.current;
@@ -123,12 +144,15 @@ export function RdpCanvasView({
       switch (payload.kind) {
         case "connected":
           setStatus("connected");
+          reportConnected();
           break;
         case "error":
           setErrorMessage(payload.message);
+          reportDisconnected();
           break;
         case "disconnected":
           setStatus("disconnected");
+          reportDisconnected();
           break;
         default:
           draw(payload);
@@ -153,11 +177,13 @@ export function RdpCanvasView({
       if (!disposed) {
         setErrorMessage(error instanceof Error ? error.message : String(error));
         setStatus("disconnected");
+        reportDisconnected();
       }
     });
 
     return () => {
       disposed = true;
+      reportDisconnected();
       unlisten?.();
       void invokeCommand("close_rdp_client_session", { request: { sessionId } }).catch(() => undefined);
       sessionIdRef.current = null;
