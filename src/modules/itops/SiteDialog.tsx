@@ -13,7 +13,7 @@ import type { Site, ItopsTransport } from "../../types";
 import { useItOpsStore } from "./state";
 
 const TRANSPORTS: ItopsTransport[] = ["auto", "ssh", "winrm", "psexec"];
-const DEFAULT_SITE_ICON_REF = reiconIconRefForName("Building");
+const DEFAULT_SITE_ICON_REF = reiconIconRefForName("Buildings2");
 
 export function SiteDialog({
   group,

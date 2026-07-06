@@ -33,7 +33,7 @@ import {
   BookmarkAdd as ReBookmarkAdd, BookmarkCheck as ReBookmarkCheck, BookmarkCircle as ReBookmarkCircle, BookmarkMinus as ReBookmarkMinus,
   BookmarkOpen as ReBookmarkOpen, BookmarkSlash as ReBookmarkSlash, BookmarkSquare as ReBookmarkSquare, BookmarkSquare2 as ReBookmarkSquare2,
   BookmarkX as ReBookmarkX, Bookmarks as ReBookmarks, Box as ReBox, BrowserTerminal as ReBrowserTerminal,
-  Building as ReBuilding, Cabinet as ReCabinet, Calendar as ReCalendar, Camera as ReCamera, Camera2 as ReCamera2,
+  Building as ReBuilding, Buildings2 as ReBuildings2, Cabinet as ReCabinet, Calendar as ReCalendar, Camera as ReCamera, Camera2 as ReCamera2,
   Camera3 as ReCamera3, Camera4 as ReCamera4, CameraAdd as ReCameraAdd, CameraAdd2 as ReCameraAdd2,
   CameraAlt as ReCameraAlt, CameraOff as ReCameraOff, CameraRecord as ReCameraRecord, CameraRotate as ReCameraRotate,
   CameraSlash2 as ReCameraSlash2, CameraSquare as ReCameraSquare, ChartLine as ReChartLine, Check as ReCheck,
@@ -143,7 +143,7 @@ export type ReiconSearchItem = {
 const REICON_COMPONENTS = {
   "Activity2": ReActivity2, "AlertTriangle": ReAlertTriangle, "Archive": ReArchive, "Bell": ReBell,
   "BookOpen": ReBookOpen, "Bookmark": ReBookmark, "Box": ReBox, "Building": ReBuilding,
-  "Cabinet": ReCabinet, "Calendar": ReCalendar, "Camera": ReCamera, "ChartLine": ReChartLine, "Check": ReCheck,
+  "Buildings2": ReBuildings2, "Cabinet": ReCabinet, "Calendar": ReCalendar, "Camera": ReCamera, "ChartLine": ReChartLine, "Check": ReCheck,
   "CheckCircle": ReCheckCircle, "ChevronDown": ReChevronDown, "ChevronLeft": ReChevronLeft, "ChevronRight": ReChevronRight,
   "ChevronUp": ReChevronUp, "Clipboard": ReClipboard, "Cloud": ReCloud, "Code": ReCode,
   "Code2": ReCode2, "Command": ReCommand, "Copy": ReCopy, "Cpu": ReCpu,

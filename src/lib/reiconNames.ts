@@ -1,6 +1,6 @@
 export const REICON_PICKER_ICON_NAMES = [
   "Activity2", "AlertTriangle", "Archive", "Bell", "BookOpen", "Bookmark",
-  "Box", "Building", "Cabinet", "Calendar", "Camera", "ChartLine", "Check",
+  "Box", "Building", "Buildings2", "Cabinet", "Calendar", "Camera", "ChartLine", "Check",
   "CheckCircle", "ChevronDown", "ChevronLeft", "ChevronRight", "ChevronUp", "Clipboard",
   "Cloud", "Code", "Code2", "Command", "Copy", "Cpu",
   "Database", "Document2", "DocumentCode2", "DocumentText2", "Download", "Edit2",

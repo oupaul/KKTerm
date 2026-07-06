@@ -18,9 +18,9 @@ test("IT Ops topology defaults use the requested line icons", async () => {
   assert.match(icons, /ServerSquare/);
   assert.match(icons, /export function ItOpsModuleIcon/);
   assert.match(icons, /<ServerSquare size=\{size\} strokeWidth=\{sw \?\? 1\.7\} weight="Filled" \/>/);
-  assert.match(icons, /site: \(p\) => LineIconGlyph\(Building2, p\)/);
+  assert.match(icons, /site: \(p\) => LineIconGlyph\(Buildings2, p\)/);
   assert.match(icons, /room: \(p\) => LineIconGlyph\(ServerSquare, p, "Filled"\)/);
-  assert.match(icons, /rack: \(p\) => LineIconGlyph\(Cabinet, p, "Filled"\)/);
+  assert.match(icons, /rack: \(p\) => LineIconGlyph\(Cabinet, p\)/);
   assert.match(icons, /rows: \(p\) => LineIconGlyph\(Rows3, p\)/);
   assert.match(icons, /grid: \(p\) => LineIconGlyph\(Grid2x2, p\)/);
   assert.match(icons, /cube: \(p\) => LineIconGlyph\(Box, p\)/);
@@ -37,7 +37,7 @@ test("IT Ops topology defaults use the requested line icons", async () => {
   assert.match(sites, /<ItIcon name="rack" size=\{14\} \/>/);
   assert.match(sites, /icon="room"/);
   assert.match(sites, /icon="rack"/);
-  assert.match(siteDialog, /DEFAULT_SITE_ICON_REF = reiconIconRefForName\("Building"\)/);
+  assert.match(siteDialog, /DEFAULT_SITE_ICON_REF = reiconIconRefForName\("Buildings2"\)/);
   assert.match(siteDialog, /defaultIconDataUrl=\{DEFAULT_SITE_ICON_REF\}/);
   assert.match(serverRoomDialog, /DEFAULT_SERVER_ROOM_ICON_REF = reiconIconRefForName\("ServerSquare"\)/);
   assert.match(serverRoomDialog, /defaultIconDataUrl=\{DEFAULT_SERVER_ROOM_ICON_REF\}/);
@@ -48,7 +48,7 @@ test("shared line icon selectors expose Site, Server Room, and Rack icons", asyn
   const workspaceIcons = await read("src/modules/workspace/workspaceIcons.tsx");
   const dashboardValidation = await read("src-tauri/src/dashboard_validation.rs");
 
-  for (const iconName of ["Building2", "ServerSquare", "Cabinet"]) {
+  for (const iconName of ["Buildings2", "ServerSquare", "Cabinet"]) {
     assert.match(reiconNames, new RegExp(`"${iconName}"`), `${iconName} missing from dashboard selector`);
     assert.match(workspaceIcons, new RegExp(`"${iconName}"`), `${iconName} missing from workspace selector`);
     assert.match(dashboardValidation, new RegExp(`"${iconName}"`), `${iconName} missing from dashboard validator`);

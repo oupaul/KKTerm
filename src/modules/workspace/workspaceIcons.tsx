@@ -46,7 +46,7 @@ export const WORKSPACE_ICON_NAMES = [
   "Braces",
   "Wrench",
   "Settings",
-  "Building2",
+  "Buildings2",
   "Factory",
   "Warehouse",
   "Landmark",

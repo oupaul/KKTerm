@@ -5,7 +5,7 @@ import {
   ArrowSwapHorizontal2 as ReArrowSwapHorizontal2, ArrowUp as ReArrowUp, Bed as ReBed, Bell as ReBell,
   Bolt as ReBolt, BookOpen as ReBookOpen, Bookmark as ReBookmark, Box as ReBox,
   Box3 as ReBox3, BoxTick2 as ReBoxTick2, BranchUp as ReBranchUp, Briefcase as ReBriefcase,
-  Bug as ReBug, Building as ReBuilding, Cabinet as ReCabinet, Calendar as ReCalendar, Camera as ReCamera,
+  Bug as ReBug, Building as ReBuilding, Buildings2 as ReBuildings2, Cabinet as ReCabinet, Calendar as ReCalendar, Camera as ReCamera,
   Cart as ReCart, ChartBar as ReChartBar, ChartLine as ReChartLine, Check as ReCheck,
   CheckCircle as ReCheckCircle, CheckSquare as ReCheckSquare, ChevronDown as ReChevronDown, ChevronExpandY as ReChevronExpandY,
   ChevronLeft as ReChevronLeft, ChevronRight as ReChevronRight, ChevronUp as ReChevronUp, CircleArrowUp as ReCircleArrowUp,
@@ -65,7 +65,7 @@ const reiconIconComponents = {
   "BedSingle": ReBed, "Bell": ReBell, "Binary": ReCode, "Bolt": ReBolt,
   "BookOpen": ReBookOpen, "Bookmark": ReBookmark, "Box": ReBox, "Boxes": ReBox3,
   "Briefcase": ReBriefcase, "Brush": RePaintbrush, "Bug": ReBug, "Building2": ReBuilding,
-  "Cabinet": ReCabinet, "Calendar": ReCalendar, "Camera": ReCamera, "ChartBar": ReChartBar, "ChartLine": ReChartLine,
+  "Buildings2": ReBuildings2, "Cabinet": ReCabinet, "Calendar": ReCalendar, "Camera": ReCamera, "ChartBar": ReChartBar, "ChartLine": ReChartLine,
   "Check": ReCheck, "CheckCircle": ReCheckCircle, "CheckCircle2": ReCheckCircle, "ChevronDown": ReChevronDown,
   "ChevronLeft": ReChevronLeft, "ChevronRight": ReChevronRight, "ChevronUp": ReChevronUp, "ChevronsDownUp": ReChevronExpandY,
   "ChevronsUpDown": ReChevronExpandY, "CircleArrowUp": ReCircleArrowUp, "CircleCheck": ReCheckCircle, "CircleGauge": ReGauge3,
@@ -158,6 +158,7 @@ export const Briefcase = ReBriefcase;
 export const Brush = RePaintbrush;
 export const Bug = ReBug;
 export const Building2 = ReBuilding;
+export const Buildings2 = ReBuildings2;
 export const Cabinet = ReCabinet;
 export const Calendar = ReCalendar;
 export const Camera = ReCamera;

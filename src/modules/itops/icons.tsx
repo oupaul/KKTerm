@@ -6,7 +6,7 @@
 import type { ReactNode } from "react";
 import {
   Box,
-  Building2,
+  Buildings2,
   Cabinet,
   Grid2x2,
   Rows3,
@@ -107,7 +107,7 @@ function Svg({
 }
 
 const GLYPHS: Record<ItIconName, (p: GlyphProps) => ReactNode> = {
-  site: (p) => LineIconGlyph(Building2, p),
+  site: (p) => LineIconGlyph(Buildings2, p),
   ops: (p) => <ItOpsModuleIcon size={p.size} sw={p.sw} />,
   group: (p) => (
     <Svg {...p}>
@@ -128,7 +128,7 @@ const GLYPHS: Record<ItIconName, (p: GlyphProps) => ReactNode> = {
     </Svg>
   ),
   room: (p) => LineIconGlyph(ServerSquare, p, "Filled"),
-  rack: (p) => LineIconGlyph(Cabinet, p, "Filled"),
+  rack: (p) => LineIconGlyph(Cabinet, p),
   rows: (p) => LineIconGlyph(Rows3, p),
   grid: (p) => LineIconGlyph(Grid2x2, p),
   cube: (p) => LineIconGlyph(Box, p),

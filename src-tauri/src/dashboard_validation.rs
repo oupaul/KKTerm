@@ -16,7 +16,7 @@ pub const ACCENTS: &[&str] = &[
 
 pub const ICONS: &[&str] = &[
     "Activity2", "AlertTriangle", "Archive", "Bell", "BookOpen", "Bookmark", "Box", "Building",
-    "Cabinet", "Calendar", "Camera", "ChartLine", "Check", "CheckCircle", "ChevronDown", "ChevronLeft", "ChevronRight",
+    "Buildings2", "Cabinet", "Calendar", "Camera", "ChartLine", "Check", "CheckCircle", "ChevronDown", "ChevronLeft", "ChevronRight",
     "ChevronUp", "Clipboard", "Cloud", "Code", "Code2", "Command", "Copy", "Cpu",
     "Database", "Document2", "DocumentCode2", "DocumentText2", "Download", "Edit2", "Eye", "EyeOff",
     "File", "FileText", "FileUp", "Folder", "FolderOpen", "FolderFiles", "Gauge3", "Gear",
