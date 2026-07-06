@@ -120,7 +120,8 @@ test("2.5D edit controls are selection-scoped and the room owns its appearance",
   assert.match(isoView, /objectDisplayRect/);
   assert.match(isoView, /objectDisplayAnchor/);
   assert.match(isoView, /rotateRectForView/);
-  assert.match(isoView, /logUiDebug\("itops\.iso\.objectPlacement"/);
+  // The placement pipeline is pure math — no runtime debug telemetry.
+  assert.doesNotMatch(isoView, /logUiDebug/);
   assert.doesNotMatch(isoView, /corner=\{rotateFacingForView\(object\.corner, angle\)\}/);
   assert.match(isoView, /editMode && selected/);
   // Object kind chips no longer float above the artwork — the view stays clean.

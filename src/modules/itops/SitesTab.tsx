@@ -40,7 +40,7 @@ import {
   topologyGroupKey,
   type DrillPath,
 } from "./rackTopology";
-import { sanitizeFacing } from "./roomIsoLayout";
+import { resolveIsoLayout, sanitizeFacing } from "./roomIsoLayout";
 import { ItOpsBackground } from "./ItOpsBackground";
 import { RackStage } from "./RackStage";
 import { ServerRoomFloorPlan } from "./ServerRoomFloorPlan";
@@ -1135,8 +1135,13 @@ function RackDrill({
   }, [isoPlacementScope, roomName, saveDurableRoomObjects, showStatusBarNotice, site.id, t]);
 
   useEffect(() => {
-    if (!isoPlacementScope || roomObjects.length === 0) return;
-    const settled = settleRoomObjects(roomObjects, roomRacks ?? [], isoPlacements, roomFacing);
+    if (!isoPlacementScope || roomRacks == null || roomObjects.length === 0) return;
+    // Settle against the same resolved cells the room views draw (stored
+    // placements plus derived defaults), not the raw stored map — otherwise
+    // auto-placed racks are invisible to gravity and their rack-top objects
+    // would be yanked to the floor.
+    const rackCells = resolveIsoLayout(roomRacks, isoPlacements).cells;
+    const settled = settleRoomObjects(roomObjects, roomRacks, rackCells, roomFacing);
     if (!sameRoomObjects(roomObjects, settled)) saveRoomObjectsState(settled);
   }, [isoPlacementScope, roomObjects, roomRacks, isoPlacements, roomFacing, saveRoomObjectsState]);
 

@@ -27,10 +27,6 @@ import type { Rack, RackItem, RackItemStatus } from "../../types";
 import { rackFloorMetrics } from "./roomFloorPlan";
 import { RoomObjectIsoArtwork } from "./RoomObjectArtwork";
 import {
-  logUiDebug,
-  isTauriRuntime,
-} from "../../lib/tauri";
-import {
   ISO_ROT_DEG,
   ISO_TILT_COS,
   ISO_TILT_DEG,
@@ -92,23 +88,6 @@ const CELL = 58;
 // Vertical scale: one rack unit in plane px. Linear so stacking is exact —
 // an object with z = rack heightU sits flush on the cabinet top.
 const PX_PER_U = 2.1;
-
-function roundGeom(value: number): number {
-  return Math.round(value * 1000) / 1000;
-}
-
-function roundPoint(point: { x: number; y: number }): { x: number; y: number } {
-  return { x: roundGeom(point.x), y: roundGeom(point.y) };
-}
-
-function roundRect(rect: CellRect): CellRect {
-  return {
-    x: roundGeom(rect.x),
-    y: roundGeom(rect.y),
-    w: roundGeom(rect.w),
-    d: roundGeom(rect.d),
-  };
-}
 
 function cabHeight(heightU: number): number {
   return Math.min(124, Math.max(20, Math.max(1, heightU) * PX_PER_U));
@@ -292,65 +271,6 @@ export function ServerRoomIsoView({
       floorRows,
     );
   };
-  useEffect(() => {
-    if (!isTauriRuntime() || objects.length === 0) return;
-    logUiDebug("itops.iso.objectPlacement", {
-      angle,
-      cellPx: CELL,
-      floor: { cols: floorCols, rows: floorRows, offX, offY },
-      objects: objects.map((object) => {
-        const footprint = objectFootprint(object.kind, object.rot, object.corner);
-        const anchor = objectSurfaceAnchor(object.kind, object.rot, object.corner);
-        const displayRect = rotateRectForView(
-          { x: object.x + offX + footprint.x, y: object.y + offY + footprint.y, w: footprint.w, d: footprint.d },
-          angle,
-          floorCols,
-          floorRows,
-        );
-        const displayAnchor = rotatePointForView(
-          { x: object.x + offX + anchor.x, y: object.y + offY + anchor.y },
-          angle,
-          floorCols,
-          floorRows,
-        );
-        const supportingRack = racks.find((rack) => {
-          const cell = layout.cells[rack.id];
-          if (!cell || cell.x !== object.x || cell.y !== object.y) return false;
-          return object.z === Math.min(ROOM_CEILING_U, Math.max(1, rack.heightU));
-        });
-        return {
-          id: object.id,
-          kind: object.kind,
-          cell: { x: object.x, y: object.y },
-          z: object.z,
-          rot: object.rot,
-          corner: object.corner,
-          footprint: roundRect(footprint),
-          anchor: roundPoint(anchor),
-          displayRect: roundRect(displayRect),
-          displayAnchor: roundPoint(displayAnchor),
-          supportingRack: supportingRack
-            ? {
-                id: supportingRack.id,
-                cell: layout.cells[supportingRack.id],
-                facing: sanitizeFacing(facing[supportingRack.id]),
-                depthFrac: roundGeom(rackDepthFrac(supportingRack.depthMm)),
-                displayCell: rotateCellForView(
-                  {
-                    x: layout.cells[supportingRack.id].x + offX,
-                    y: layout.cells[supportingRack.id].y + offY,
-                  },
-                  angle,
-                  floorCols,
-                  floorRows,
-                ),
-                displayFacing: rotateFacingForView(sanitizeFacing(facing[supportingRack.id]), angle),
-              }
-            : null,
-        };
-      }),
-    });
-  }, [angle, facing, floorCols, floorRows, objects, offX, offY, racks, layout.cells]);
   const planeW = dims.cols * CELL;
   const planeH = dims.rows * CELL;
 
@@ -764,10 +684,10 @@ export function ServerRoomIsoView({
                                     "--tile": OBJECT_ACCENTS[tool],
                                   } as React.CSSProperties
                                 }
-                                >
-                                  <span
-                                    className="rm-iso-obj-model"
-                                    data-kind={tool}
+                              >
+                                <span
+                                  className="rm-iso-obj-model"
+                                  data-kind={tool}
                                   style={{
                                     left: (displayAnchor.x - displayRect.x) * CELL,
                                     top: (displayAnchor.y - displayRect.y) * CELL,
