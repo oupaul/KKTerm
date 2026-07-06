@@ -2106,7 +2106,20 @@
     "unsavedQuitBody": "Save your changes before closing Settings?",
     "saveAndQuit": "Save and quit",
     "quitWithoutSaving": "Quit without saving",
-    "sectionItOps": "IT Ops"
+    "sectionItOps": "IT Ops",
+    "urlUserAgent": "User agent",
+    "urlUserAgentHint": "Choose the default user-agent string for URL Connections. Leave blank to use each platform webview default; paste a custom value when a site requires one.",
+    "urlUserAgentDefault": "Default user agent",
+    "urlUserAgentDefaultPlaceholder": "Platform default",
+    "urlUserAgentChromeWindows": "Chrome on Windows",
+    "urlUserAgentChromeMac": "Chrome on macOS",
+    "urlUserAgentChromeLinux": "Chrome on Linux",
+    "urlUserAgentEdgeWindows": "Edge on Windows",
+    "urlUserAgentEdgeMac": "Edge on macOS",
+    "urlUserAgentFirefoxWindows": "Firefox on Windows",
+    "urlUserAgentFirefoxMac": "Firefox on macOS",
+    "urlUserAgentFirefoxLinux": "Firefox on Linux",
+    "urlUserAgentSafariMac": "Safari on macOS"
   },
   "connections": {
     "title": "Connections",

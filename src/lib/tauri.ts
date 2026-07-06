@@ -741,6 +741,7 @@ export interface StartWebviewSessionRequest {
   sessionId: string;
   url: string;
   dataPartition?: string;
+  userAgent?: string;
   proxyUrl?: string;
   ignoreCertificateErrors?: boolean;
   x: number;

@@ -12,7 +12,7 @@ import { invokeCommand, isTauriRuntime, logUrlConnectionDebug, openExternalUrl }
 import type { AssistantScreenshot, WebviewSessionStarted } from "../../../../lib/tauri";
 import { useWorkspaceStore } from "../../../../store";
 import { urlCredentialSecretOwnerId } from "./urlCredentialKeys";
-import { resolveUrlDataPartition, resolveUrlProxy } from "./urlProxy";
+import { resolveUrlDataPartition, resolveUrlProxy, resolveUrlUserAgent } from "./urlProxy";
 import type { WorkspaceTab } from "../../../../types";
 
 type WebviewNavigationEvent = {
@@ -565,6 +565,7 @@ export function WebViewWorkspace({
     const urlConnectionOptions = {
       ...tab.connection,
       dataPartition: tab.dataPartition ?? tab.connection?.dataPartition,
+      urlUserAgent: tab.connection?.urlUserAgent,
       urlProxyInheritDefaults: tab.connection
         ? tab.connection.urlProxyInheritDefaults
         : tab.dataPartition
@@ -573,6 +574,7 @@ export function WebViewWorkspace({
     };
     const proxyUrl = resolveUrlProxy(urlConnectionOptions, generalSettings);
     const dataPartition = resolveUrlDataPartition(urlConnectionOptions, urlSettings);
+    const userAgent = resolveUrlUserAgent(urlConnectionOptions, urlSettings);
     sessionStartingRef.current = true;
     lastBoundsRef.current = bounds;
     markWebviewConnectionStarted();
@@ -581,6 +583,7 @@ export function WebViewWorkspace({
       dataPartition,
       ignoreCertificateErrors,
       proxyUrl,
+      userAgentConfigured: Boolean(userAgent),
     });
     const lease = acquireWebviewSession(sessionId, () =>
       invokeCommand("start_webview_session", {
@@ -588,6 +591,7 @@ export function WebViewWorkspace({
           sessionId,
           url: initialUrl,
           dataPartition,
+          userAgent,
           proxyUrl,
           ignoreCertificateErrors,
           ...bounds,

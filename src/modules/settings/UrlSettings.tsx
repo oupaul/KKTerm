@@ -8,6 +8,7 @@ import type { UrlCredentialSummary, UrlDataPartitionSummary } from "../../types"
 import { SettingsSectionHeader, useSettingsSaveRegistration } from "./shared";
 import { ToggleSwitch } from "./ToggleSwitch";
 import { UrlCredentialManager } from "./UrlCredentialManager";
+import { COMMON_URL_USER_AGENTS } from "../workspace/connections/webview/urlUserAgents";
 
 export function UrlSettings() {
   const { t } = useTranslation();
@@ -21,10 +22,12 @@ export function UrlSettings() {
     JSON.stringify({
       ...draft,
       defaultDataPartition: draft.defaultDataPartition?.trim() || undefined,
+      defaultUserAgent: draft.defaultUserAgent?.trim() || undefined,
     }) !==
     JSON.stringify({
       ...urlSettings,
       defaultDataPartition: urlSettings.defaultDataPartition?.trim() || undefined,
+      defaultUserAgent: urlSettings.defaultUserAgent?.trim() || undefined,
     });
 
   useEffect(() => {
@@ -58,6 +61,7 @@ export function UrlSettings() {
       const request = {
         ...draft,
         defaultDataPartition: draft.defaultDataPartition?.trim() || undefined,
+      defaultUserAgent: draft.defaultUserAgent?.trim() || undefined,
       };
       const saved = isTauriRuntime() ? await invokeCommand("update_url_settings", { request }) : request;
       setUrlSettings(saved);
@@ -110,6 +114,33 @@ export function UrlSettings() {
               <small>{t("settings.ignoreCertificateErrorsHint")}</small>
             </span>
           </label>
+        </div>
+      </fieldset>
+
+
+      <fieldset className="settings-subsection settings-fieldset">
+        <legend>{t("settings.urlUserAgent")}</legend>
+        <div>
+          <p className="field-hint">{t("settings.urlUserAgentHint")}</p>
+        </div>
+        <div className="form-grid one-column">
+          <label>
+            <span>{t("settings.urlUserAgentDefault")}</span>
+            <input
+              {...technicalInputProps}
+              list="url-user-agent-presets"
+              onChange={(event) =>
+                setDraft((settings) => ({ ...settings, defaultUserAgent: event.currentTarget.value }))
+              }
+              placeholder={t("settings.urlUserAgentDefaultPlaceholder")}
+              value={draft.defaultUserAgent ?? ""}
+            />
+          </label>
+          <datalist id="url-user-agent-presets">
+            {COMMON_URL_USER_AGENTS.map((preset) => (
+              <option key={preset.id} label={t(preset.labelKey)} value={preset.value} />
+            ))}
+          </datalist>
         </div>
       </fieldset>
 

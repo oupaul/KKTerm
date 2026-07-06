@@ -5,6 +5,7 @@ import { technicalInputProps } from "../../../../lib/inputBehavior";
 import type { Connection } from "../../../../types";
 import { useWorkspaceStore } from "../../../../store";
 import { globalWebviewProxy, splitUrlProxy, type UrlProxyMode } from "../webview/urlProxy";
+import { COMMON_URL_USER_AGENTS } from "../webview/urlUserAgents";
 import { PasswordField } from "./ConnectionPasswordFields";
 
 export function UrlConnectionFields({
@@ -71,8 +72,10 @@ export function UrlConnectionOptions({ initialConnection }: { initialConnection?
   const [proxyHost, setProxyHost] = useState(initialProxy.host);
   const [proxyPort, setProxyPort] = useState(initialProxy.port);
   const [dataPartitionDraft, setDataPartitionDraft] = useState(initialConnection?.dataPartition ?? "");
+  const [userAgentDraft, setUserAgentDraft] = useState(initialConnection?.urlUserAgent ?? "");
   const displayedProxy = inheritsDefaults ? inheritedProxy : { mode: proxyMode, host: proxyHost, port: proxyPort };
   const displayedDataPartition = inheritsDefaults ? (urlSettings.defaultDataPartition ?? "") : dataPartitionDraft;
+  const displayedUserAgent = inheritsDefaults ? (urlSettings.defaultUserAgent ?? "") : userAgentDraft;
 
   return (
     <fieldset className="connection-session-fields connection-specific-options">
@@ -101,6 +104,23 @@ export function UrlConnectionOptions({ initialConnection }: { initialConnection?
               value={displayedDataPartition}
             />
           </label>
+          <label className="connection-proxy-row">
+            <span>{t("settings.urlUserAgent")}</span>
+            <input
+              {...technicalInputProps}
+              disabled={inheritsDefaults}
+              list="connection-url-user-agent-presets"
+              name="urlUserAgent"
+              onChange={(event) => setUserAgentDraft(event.currentTarget.value)}
+              placeholder={t("settings.urlUserAgentDefaultPlaceholder")}
+              value={displayedUserAgent}
+            />
+          </label>
+          <datalist id="connection-url-user-agent-presets">
+            {COMMON_URL_USER_AGENTS.map((preset) => (
+              <option key={preset.id} label={t(preset.labelKey)} value={preset.value} />
+            ))}
+          </datalist>
           <label className="connection-proxy-row">
             <span>{t("settings.urlProxyMode")}</span>
             <select

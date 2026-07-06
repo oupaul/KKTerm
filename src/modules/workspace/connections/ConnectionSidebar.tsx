@@ -529,6 +529,7 @@ export function ConnectionSidebar({
       localStartupScript: connection.localStartupScript,
       url: connection.url,
       dataPartition: connection.dataPartition,
+      urlUserAgent: connection.urlUserAgent,
       urlProxy: connection.urlProxy,
       urlProxyInheritDefaults: connection.urlProxyInheritDefaults,
       useTmuxSessions: connection.useTmuxSessions,
@@ -1336,6 +1337,7 @@ export function ConnectionSidebar({
       serialSpeed: connectionRequest.serialSpeed,
       url: connectionRequest.url,
       dataPartition: connectionRequest.dataPartition,
+      urlUserAgent: connectionRequest.urlUserAgent,
       urlProxy: connectionRequest.urlProxy,
       urlProxyInheritDefaults: connectionRequest.urlProxyInheritDefaults,
       useTmuxSessions: connectionRequest.useTmuxSessions,
@@ -4311,6 +4313,13 @@ function ConnectionDialog({
             : String(form.get("dataPartition") ?? "")
           )?.trim() || undefined
         : undefined;
+    const urlUserAgent =
+      connectionType === "url"
+        ? (urlProxyInheritDefaults
+            ? urlSettings.defaultUserAgent
+            : String(form.get("urlUserAgent") ?? "")
+          )?.trim() || undefined
+        : undefined;
 
     void onSubmit({
       name,
@@ -4362,6 +4371,7 @@ function ConnectionDialog({
       url: connectionType === "url" ? rawUrl : undefined,
       dataPartition:
         connectionType === "url" ? dataPartition : undefined,
+      urlUserAgent: connectionType === "url" ? urlUserAgent : undefined,
       urlProxy: connectionType === "url" ? urlProxy : undefined,
       urlProxyInheritDefaults: connectionType === "url" ? urlProxyInheritDefaults : undefined,
       rdpOptions:

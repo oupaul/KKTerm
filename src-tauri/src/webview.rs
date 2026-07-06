@@ -328,6 +328,7 @@ pub struct StartWebviewSessionRequest {
     url: String,
     data_partition: Option<String>,
     proxy_url: Option<String>,
+    user_agent: Option<String>,
     #[serde(default)]
     ignore_certificate_errors: bool,
     x: f64,
@@ -491,6 +492,7 @@ impl WebviewSessionManager {
             url,
             data_partition,
             proxy_url,
+            user_agent,
             ignore_certificate_errors,
             x: initial_x,
             y: initial_y,
@@ -521,6 +523,7 @@ impl WebviewSessionManager {
                 },
                 "partition": partition,
                 "ignoreCertificateErrors": ignore_certificate_errors,
+                "userAgentConfigured": user_agent.as_ref().is_some_and(|value| !value.trim().is_empty()),
                 "proxy": proxy_url.as_ref().map(|proxy| json!({
                     "scheme": proxy.scheme(),
                     "host": proxy.host_str(),
@@ -683,6 +686,14 @@ impl WebviewSessionManager {
                 .parent(&host_window)
                 .map_err(|error| format!("failed to assign URL webview parent: {error}"))?;
         }
+        if let Some(user_agent) = user_agent
+            .as_deref()
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+        {
+            builder = builder.user_agent(user_agent);
+        }
+
         #[cfg(windows)]
         if let Some(proxy_url) = proxy_url.as_ref() {
             // WebView2 browser arguments belong to an Environment, and
