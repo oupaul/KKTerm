@@ -62,6 +62,7 @@ CREATE TABLE IF NOT EXISTS connections (
     local_startup_script TEXT,
     url TEXT,
     data_partition TEXT,
+    url_user_agent TEXT,
     url_proxy TEXT,
     url_proxy_inherit_defaults INTEGER NOT NULL DEFAULT 1,
     use_tmux_sessions INTEGER NOT NULL DEFAULT 1,
@@ -770,6 +771,8 @@ pub struct UrlSettings {
     ignore_certificate_errors: bool,
     #[serde(default)]
     default_data_partition: Option<String>,
+    #[serde(default)]
+    default_user_agent: Option<String>,
 }
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -1226,6 +1229,7 @@ pub struct SavedConnection {
     local_startup_script: Option<String>,
     url: Option<String>,
     data_partition: Option<String>,
+    url_user_agent: Option<String>,
     url_proxy: Option<String>,
     url_proxy_inherit_defaults: bool,
     use_tmux_sessions: bool,
@@ -1333,6 +1337,8 @@ pub struct CreateConnectionRequest {
     url: Option<String>,
     data_partition: Option<String>,
     #[serde(default)]
+    url_user_agent: Option<String>,
+    #[serde(default)]
     url_proxy: Option<String>,
     #[serde(default)]
     url_proxy_inherit_defaults: Option<bool>,
@@ -1380,6 +1386,8 @@ pub struct UpdateConnectionRequest {
     local_startup_script: Option<String>,
     url: Option<String>,
     data_partition: Option<String>,
+    #[serde(default)]
+    url_user_agent: Option<String>,
     #[serde(default)]
     url_proxy: Option<String>,
     #[serde(default)]
@@ -1934,8 +1942,7 @@ impl Storage {
         // rewrites the child FK references when a parent table is renamed, so the
         // rack/item foreign keys follow automatically. Each step is guarded by an
         // existence check: it runs once on upgrade and no-ops on fresh installs.
-        if table_exists(&connection, "itops_fleets")?
-            && !table_exists(&connection, "itops_sites")?
+        if table_exists(&connection, "itops_fleets")? && !table_exists(&connection, "itops_sites")?
         {
             connection
                 .execute_batch("ALTER TABLE itops_fleets RENAME TO itops_sites;")
@@ -2056,7 +2063,12 @@ impl Storage {
         ensure_column(&connection, "itops_site_racks", "background_json", "TEXT")?;
         // v40: per-rack power capacity + durable Server Room View placements
         // (floor-plan free position and 2.5D grid cell).
-        ensure_column(&connection, "itops_site_racks", "power_capacity_w", "INTEGER")?;
+        ensure_column(
+            &connection,
+            "itops_site_racks",
+            "power_capacity_w",
+            "INTEGER",
+        )?;
         ensure_column(&connection, "itops_site_racks", "floor_x", "REAL")?;
         ensure_column(&connection, "itops_site_racks", "floor_y", "REAL")?;
         ensure_column(&connection, "itops_site_racks", "grid_x", "INTEGER")?;
@@ -2078,13 +2090,15 @@ impl Storage {
         ensure_column(&connection, "itops_sites", "icon_data_url", "TEXT")?;
         ensure_column(&connection, "itops_sites", "icon_background_color", "TEXT")?;
         ensure_column(&connection, "itops_sites", "room_icons_json", "TEXT")?;
-        connection.execute_batch(
-            "INSERT OR IGNORE INTO itops_server_rooms (id, site_id, name, sort_order)
+        connection
+            .execute_batch(
+                "INSERT OR IGNORE INTO itops_server_rooms (id, site_id, name, sort_order)
              SELECT 'room-legacy-' || lower(hex(randomblob(12))), site_id, server_room, 0
              FROM itops_site_racks
              WHERE trim(server_room) <> ''
              GROUP BY site_id, server_room;",
-        ).map_err(to_storage_error)?;
+            )
+            .map_err(to_storage_error)?;
         ensure_column(&connection, "connections", "rdp_options", "TEXT")?;
         ensure_column(&connection, "connections", "vnc_options", "TEXT")?;
         ensure_column(&connection, "connections", "ftp_options", "TEXT")?;
@@ -2409,6 +2423,7 @@ impl Storage {
         // fresh install (still at user_version 0 when v25 runs) loses it. NULL
         // inherits the global SSH default; 'off'/'fast' force a choice.
         ensure_column(&connection, "connections", "ssh_compression", "TEXT")?;
+        ensure_column(&connection, "connections", "url_user_agent", "TEXT")?;
         ensure_column(&connection, "connections", "url_proxy", "TEXT")?;
         ensure_column(
             &connection,
@@ -2706,10 +2721,7 @@ fn migrate_url_credentials_page_keys(connection: &SqliteConnection) -> Result<()
         .map_err(to_storage_error)?;
     let columns = statement
         .query_map([], |row| {
-            Ok((
-                row.get::<_, String>(1)?,
-                row.get::<_, i64>(5)?,
-            ))
+            Ok((row.get::<_, String>(1)?, row.get::<_, i64>(5)?))
         })
         .map_err(to_storage_error)?
         .collect::<Result<Vec<_>, _>>()
@@ -3330,7 +3342,7 @@ fn list_root_connections_for_workspace(
     let mut statement = connection
         .prepare(
             "SELECT connections.id, name, tab_title, host, connections.username, port, key_path, proxy_jump, ssh_socks_proxy, ssh_socks_proxy_username, ssh_socks_proxy_inherit_defaults, auth_method, local_shell, local_startup_directory, local_startup_script, url, data_partition, use_tmux_sessions, tmux_connection_id, connection_type, serial_line, serial_speed, rdp_options, vnc_options, ftp_options, icon_color, icon_data_url, icon_background_color, terminal_opacity, terminal_background_json, password_credential_id,
-                    (SELECT username FROM url_credentials WHERE url_credentials.connection_id = connections.id ORDER BY updated_at DESC LIMIT 1), file_browser_view_options_json, file_view_open_external, ssh_port_forwardings_json, use_psmux_sessions, ssh_compression, url_proxy, url_proxy_inherit_defaults
+                    (SELECT username FROM url_credentials WHERE url_credentials.connection_id = connections.id ORDER BY updated_at DESC LIMIT 1), file_browser_view_options_json, file_view_open_external, ssh_port_forwardings_json, use_psmux_sessions, ssh_compression, url_proxy, url_proxy_inherit_defaults, url_user_agent
              FROM connections
              WHERE folder_id IS NULL AND workspace_id = ?1
              ORDER BY sort_order, name",
@@ -3392,7 +3404,7 @@ fn list_connections_for_folder(
     let mut statement = connection
         .prepare(&format!(
             "SELECT connections.id, name, tab_title, host, connections.username, port, key_path, proxy_jump, ssh_socks_proxy, ssh_socks_proxy_username, ssh_socks_proxy_inherit_defaults, auth_method, local_shell, local_startup_directory, local_startup_script, url, data_partition, use_tmux_sessions, tmux_connection_id, connection_type, serial_line, serial_speed, rdp_options, vnc_options, ftp_options, icon_color, icon_data_url, icon_background_color, terminal_opacity, terminal_background_json, password_credential_id,
-                    (SELECT username FROM url_credentials WHERE url_credentials.connection_id = connections.id ORDER BY updated_at DESC LIMIT 1), file_browser_view_options_json, file_view_open_external, ssh_port_forwardings_json, use_psmux_sessions, ssh_compression, url_proxy, url_proxy_inherit_defaults
+                    (SELECT username FROM url_credentials WHERE url_credentials.connection_id = connections.id ORDER BY updated_at DESC LIMIT 1), file_browser_view_options_json, file_view_open_external, ssh_port_forwardings_json, use_psmux_sessions, ssh_compression, url_proxy, url_proxy_inherit_defaults, url_user_agent
              FROM connections
              WHERE {where_clause}
              ORDER BY sort_order, name",
@@ -3767,7 +3779,7 @@ fn get_connection_by_id(
     let saved_connection = connection
         .query_row(
             "SELECT connections.id, name, tab_title, host, connections.username, port, key_path, proxy_jump, ssh_socks_proxy, ssh_socks_proxy_username, ssh_socks_proxy_inherit_defaults, auth_method, local_shell, local_startup_directory, local_startup_script, url, data_partition, use_tmux_sessions, tmux_connection_id, connection_type, serial_line, serial_speed, rdp_options, vnc_options, ftp_options, icon_color, icon_data_url, icon_background_color, terminal_opacity, terminal_background_json, password_credential_id,
-                    (SELECT username FROM url_credentials WHERE url_credentials.connection_id = connections.id ORDER BY updated_at DESC LIMIT 1), file_browser_view_options_json, file_view_open_external, ssh_port_forwardings_json, use_psmux_sessions, ssh_compression, url_proxy, url_proxy_inherit_defaults
+                    (SELECT username FROM url_credentials WHERE url_credentials.connection_id = connections.id ORDER BY updated_at DESC LIMIT 1), file_browser_view_options_json, file_view_open_external, ssh_port_forwardings_json, use_psmux_sessions, ssh_compression, url_proxy, url_proxy_inherit_defaults, url_user_agent
              FROM connections
              WHERE connections.id = ?1",
             params![connection_id],
@@ -3795,6 +3807,7 @@ fn get_connection_by_id(
                     data_partition: row.get(16)?,
                     url_proxy: row.get(37)?,
                     url_proxy_inherit_defaults: row.get(38)?,
+                    url_user_agent: row.get(39)?,
                     use_tmux_sessions: row.get(17)?,
                     use_psmux_sessions: row.get(35)?,
                     tmux_connection_id: row.get(18)?,
@@ -3854,6 +3867,7 @@ fn saved_connection_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<SavedC
         data_partition: row.get(16)?,
         url_proxy: row.get(37)?,
         url_proxy_inherit_defaults: row.get(38)?,
+        url_user_agent: row.get(39)?,
         use_tmux_sessions: row.get(17)?,
         use_psmux_sessions: row.get(35)?,
         tmux_connection_id: row.get(18)?,
@@ -4961,6 +4975,7 @@ fn default_url_settings() -> UrlSettings {
     UrlSettings {
         ignore_certificate_errors: false,
         default_data_partition: None,
+        default_user_agent: None,
     }
 }
 
@@ -5276,7 +5291,8 @@ pub(crate) fn normalize_app_proxy_url(value: Option<String>) -> Result<Option<St
         return Ok(None);
     }
 
-    let parsed = url::Url::parse(&value).map_err(|error| format!("Proxy URL is invalid: {error}"))?;
+    let parsed =
+        url::Url::parse(&value).map_err(|error| format!("Proxy URL is invalid: {error}"))?;
     if !matches!(parsed.scheme(), "http" | "https" | "socks5") {
         return Err("Proxy scheme must be http, https, or socks5".to_string());
     }
@@ -5609,7 +5625,34 @@ fn validate_url_settings(mut settings: UrlSettings) -> Result<UrlSettings, Strin
         .default_data_partition
         .map(|partition| partition.trim().to_string())
         .filter(|partition| !partition.is_empty());
+    settings.default_user_agent = normalize_user_agent(settings.default_user_agent)?;
     Ok(settings)
+}
+
+fn normalize_user_agent(value: Option<String>) -> Result<Option<String>, String> {
+    let Some(value) = value.map(|value| value.trim().to_string()) else {
+        return Ok(None);
+    };
+    if value.is_empty() {
+        return Ok(None);
+    }
+    if value.chars().any(|ch| ch.is_control()) {
+        return Err("URL user agent must not contain control characters".to_string());
+    }
+    if value.len() > 512 {
+        return Err("URL user agent must be 512 characters or fewer".to_string());
+    }
+    Ok(Some(value))
+}
+
+fn normalize_url_connection_user_agent(
+    value: Option<String>,
+    connection_type: &str,
+) -> Result<Option<String>, String> {
+    if connection_type != "url" {
+        return Ok(None);
+    }
+    normalize_user_agent(value)
 }
 
 pub(crate) fn normalize_url_proxy(value: Option<String>) -> Result<Option<String>, String> {
@@ -5620,14 +5663,16 @@ pub(crate) fn normalize_url_proxy(value: Option<String>) -> Result<Option<String
         return Ok(None);
     }
 
-    let parsed = url::Url::parse(&value).map_err(|error| format!("URL proxy is invalid: {error}"))?;
+    let parsed =
+        url::Url::parse(&value).map_err(|error| format!("URL proxy is invalid: {error}"))?;
     if !matches!(parsed.scheme(), "http" | "socks5") {
         return Err("URL proxy scheme must be http or socks5".to_string());
     }
     if !parsed.username().is_empty() || parsed.password().is_some() {
         return Err("URL proxy credentials are not supported".to_string());
     }
-    if !matches!(parsed.path(), "" | "/") || parsed.query().is_some() || parsed.fragment().is_some() {
+    if !matches!(parsed.path(), "" | "/") || parsed.query().is_some() || parsed.fragment().is_some()
+    {
         return Err("URL proxy must not include a path, query, or fragment".to_string());
     }
     let host = parsed

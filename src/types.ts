@@ -103,6 +103,7 @@ export interface Connection {
   serialSpeed?: number;
   url?: string;
   dataPartition?: string;
+  urlUserAgent?: string;
   urlProxy?: string;
   urlProxyInheritDefaults?: boolean;
   useTmuxSessions?: boolean;
@@ -453,6 +454,7 @@ export interface CreateConnectionRequest {
   serialSpeed?: number;
   url?: string;
   dataPartition?: string;
+  urlUserAgent?: string;
   urlProxy?: string;
   urlProxyInheritDefaults?: boolean;
   useTmuxSessions?: boolean;
@@ -913,6 +915,7 @@ export interface SftpSettings {
 export interface UrlSettings {
   ignoreCertificateErrors: boolean;
   defaultDataPartition?: string;
+  defaultUserAgent?: string;
 }
 
 export type RdpPerformanceProfile = "balanced" | "quality" | "speed";

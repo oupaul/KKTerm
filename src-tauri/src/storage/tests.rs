@@ -57,6 +57,7 @@ fn create_test_ssh_connection(
             local_startup_script: None,
             url: None,
             data_partition: None,
+            url_user_agent: None,
             url_proxy: None,
             url_proxy_inherit_defaults: None,
             use_tmux_sessions: None,
@@ -99,6 +100,7 @@ fn create_test_ssh_connection_in_workspace(
             local_startup_script: None,
             url: None,
             data_partition: None,
+            url_user_agent: None,
             url_proxy: None,
             url_proxy_inherit_defaults: None,
             use_tmux_sessions: None,
@@ -155,6 +157,7 @@ fn create_test_local_connection(storage: &Storage, name: &str, shell: &str) -> S
             local_startup_script: None,
             url: None,
             data_partition: None,
+            url_user_agent: None,
             url_proxy: None,
             url_proxy_inherit_defaults: None,
             use_tmux_sessions: None,
@@ -246,6 +249,7 @@ fn create_connection_can_persist_root_ssh_connection() {
             local_startup_script: None,
             url: None,
             data_partition: None,
+            url_user_agent: None,
             url_proxy: None,
             url_proxy_inherit_defaults: None,
             use_tmux_sessions: None,
@@ -308,6 +312,7 @@ fn ssh_compression_override_round_trips_and_validates() {
             local_startup_script: None,
             url: None,
             data_partition: None,
+            url_user_agent: None,
             url_proxy: None,
             url_proxy_inherit_defaults: None,
             use_tmux_sessions: None,
@@ -353,10 +358,11 @@ fn ssh_compression_override_round_trips_and_validates() {
         local_startup_directory: None,
         local_startup_script: None,
         url: None,
-            data_partition: None,
-            url_proxy: None,
-            url_proxy_inherit_defaults: None,
-            use_tmux_sessions: None,
+        data_partition: None,
+        url_user_agent: None,
+        url_proxy: None,
+        url_proxy_inherit_defaults: None,
+        use_tmux_sessions: None,
         use_psmux_sessions: None,
         serial_line: None,
         serial_speed: None,
@@ -367,7 +373,10 @@ fn ssh_compression_override_round_trips_and_validates() {
         ssh_port_forwardings: None,
         workspace_id: None,
     });
-    assert!(invalid.is_err(), "invalid compression value must be rejected");
+    assert!(
+        invalid.is_err(),
+        "invalid compression value must be rejected"
+    );
 }
 
 #[test]
@@ -395,6 +404,7 @@ fn ssh_socks_proxy_username_round_trips_without_storing_passwords_in_sqlite() {
             local_startup_script: None,
             url: None,
             data_partition: None,
+            url_user_agent: None,
             url_proxy: None,
             url_proxy_inherit_defaults: None,
             use_tmux_sessions: None,
@@ -458,6 +468,7 @@ fn local_connection_persists_startup_directory_and_script() {
             local_startup_script: Some("  npm run check  ".to_string()),
             url: None,
             data_partition: None,
+            url_user_agent: None,
             url_proxy: None,
             url_proxy_inherit_defaults: None,
             use_tmux_sessions: None,
@@ -524,6 +535,7 @@ fn ssh_connection_persists_startup_script() {
             local_startup_script: Some("  cd /srv/app\nsource .venv/bin/activate  ".to_string()),
             url: None,
             data_partition: None,
+            url_user_agent: None,
             url_proxy: None,
             url_proxy_inherit_defaults: None,
             use_tmux_sessions: None,
@@ -582,6 +594,7 @@ fn local_connection_persists_psmux_preference() {
             local_startup_script: None,
             url: None,
             data_partition: None,
+            url_user_agent: None,
             url_proxy: None,
             url_proxy_inherit_defaults: None,
             use_tmux_sessions: None,
@@ -628,6 +641,7 @@ fn local_connection_persists_psmux_preference() {
             local_startup_script: None,
             url: None,
             data_partition: None,
+            url_user_agent: None,
             url_proxy: None,
             url_proxy_inherit_defaults: None,
             use_tmux_sessions: None,
@@ -669,6 +683,7 @@ fn local_files_connection_can_be_created_with_starting_directory() {
             local_startup_script: None,
             url: None,
             data_partition: None,
+            url_user_agent: None,
             url_proxy: None,
             url_proxy_inherit_defaults: None,
             use_tmux_sessions: None,
@@ -719,6 +734,7 @@ fn file_view_connection_persists_file_path_and_no_host() {
             local_startup_script: None,
             url: None,
             data_partition: None,
+            url_user_agent: None,
             url_proxy: None,
             url_proxy_inherit_defaults: None,
             use_tmux_sessions: None,
@@ -783,6 +799,7 @@ fn create_connection_can_persist_remote_desktop_connections() {
             local_startup_script: None,
             url: None,
             data_partition: None,
+            url_user_agent: None,
             url_proxy: None,
             url_proxy_inherit_defaults: None,
             use_tmux_sessions: Some(true),
@@ -826,6 +843,7 @@ fn create_connection_can_persist_remote_desktop_connections() {
             local_startup_script: None,
             url: None,
             data_partition: None,
+            url_user_agent: None,
             url_proxy: None,
             url_proxy_inherit_defaults: None,
             use_tmux_sessions: None,
@@ -870,6 +888,7 @@ fn create_connection_can_persist_telnet_and_serial_connections() {
             local_startup_script: None,
             url: None,
             data_partition: None,
+            url_user_agent: None,
             url_proxy: None,
             url_proxy_inherit_defaults: None,
             use_tmux_sessions: Some(true),
@@ -911,6 +930,7 @@ fn create_connection_can_persist_telnet_and_serial_connections() {
             local_startup_script: None,
             url: None,
             data_partition: None,
+            url_user_agent: None,
             url_proxy: None,
             url_proxy_inherit_defaults: None,
             use_tmux_sessions: None,
@@ -957,6 +977,7 @@ fn url_credentials_round_trip_without_storing_passwords_in_sqlite() {
             local_startup_script: None,
             url: Some("router.internal".to_string()),
             data_partition: Some("ops".to_string()),
+            url_user_agent: Some(" CustomUA ".to_string()),
             url_proxy: Some(" socks5://127.0.0.1:1080 ".to_string()),
             url_proxy_inherit_defaults: Some(false),
             use_tmux_sessions: None,
@@ -973,7 +994,10 @@ fn url_credentials_round_trip_without_storing_passwords_in_sqlite() {
         .expect("URL connection is created");
 
     assert_eq!(created.url.as_deref(), Some("https://router.internal/"));
-    assert_eq!(created.url_proxy.as_deref(), Some("socks5://127.0.0.1:1080"));
+    assert_eq!(
+        created.url_proxy.as_deref(),
+        Some("socks5://127.0.0.1:1080")
+    );
     assert!(!created.url_proxy_inherit_defaults);
     assert!(!created.has_url_credential);
 
@@ -1000,7 +1024,10 @@ fn url_credentials_round_trip_without_storing_passwords_in_sqlite() {
         .expect("URL connection exists");
     assert!(reloaded.has_url_credential);
     assert_eq!(reloaded.url_credential_username.as_deref(), Some("admin"));
-    assert_eq!(reloaded.url_proxy.as_deref(), Some("socks5://127.0.0.1:1080"));
+    assert_eq!(
+        reloaded.url_proxy.as_deref(),
+        Some("socks5://127.0.0.1:1080")
+    );
     assert!(!reloaded.url_proxy_inherit_defaults);
 
     let duplicated = storage
@@ -1054,8 +1081,7 @@ fn connection_icon_data_url_updates_for_any_connection_type() {
 
 #[test]
 fn connection_brand_icon_ref_updates_for_any_connection_type() {
-    let storage =
-        Storage::open(temp_db_path("connection-brand-icon-ref")).expect("storage opens");
+    let storage = Storage::open(temp_db_path("connection-brand-icon-ref")).expect("storage opens");
     let created = create_test_ssh_connection(&storage, "Claude", "claude.internal", None);
 
     let updated = storage
@@ -1078,7 +1104,9 @@ fn connection_icon_color_updates_for_any_connection_type() {
 
     assert_eq!(updated.icon_color.as_deref(), Some("#ff375f"));
 
-    let tree = storage.list_connection_tree().expect("connection tree loads");
+    let tree = storage
+        .list_connection_tree()
+        .expect("connection tree loads");
     let reloaded = tree
         .connections
         .iter()
@@ -1218,6 +1246,7 @@ fn stored_credential_candidates_include_connection_url_and_widget_metadata() {
             local_startup_script: None,
             url: None,
             data_partition: None,
+            url_user_agent: None,
             url_proxy: None,
             url_proxy_inherit_defaults: None,
             use_tmux_sessions: None,
@@ -1252,6 +1281,7 @@ fn stored_credential_candidates_include_connection_url_and_widget_metadata() {
             local_startup_script: None,
             url: Some("https://portal.example".to_string()),
             data_partition: None,
+            url_user_agent: None,
             url_proxy: None,
             url_proxy_inherit_defaults: None,
             use_tmux_sessions: None,
@@ -1372,6 +1402,7 @@ fn assigning_connection_password_credential_requires_matching_type() {
             local_startup_script: None,
             url: None,
             data_partition: None,
+            url_user_agent: None,
             url_proxy: None,
             url_proxy_inherit_defaults: None,
             use_tmux_sessions: None,
@@ -1453,6 +1484,7 @@ fn url_credentials_keep_multiple_page_steps_and_ignore_ephemeral_url_parts() {
             local_startup_script: None,
             url: Some("https://portal.example".to_string()),
             data_partition: None,
+            url_user_agent: None,
             url_proxy: None,
             url_proxy_inherit_defaults: None,
             use_tmux_sessions: None,
@@ -1511,7 +1543,10 @@ fn url_credentials_keep_multiple_page_steps_and_ignore_ephemeral_url_parts() {
         .expect("username step lookup succeeds")
         .expect("username step exists");
     let password_step = storage
-        .url_credential_fill(&created.id, Some("https://portal.example/password?nonce=five#ignored"))
+        .url_credential_fill(
+            &created.id,
+            Some("https://portal.example/password?nonce=five#ignored"),
+        )
         .expect("password step lookup succeeds")
         .expect("password step exists");
 
@@ -1614,6 +1649,7 @@ fn update_connection_edits_fields_and_moves_folder() {
             local_startup_script: None,
             url: None,
             data_partition: None,
+            url_user_agent: None,
             url_proxy: None,
             url_proxy_inherit_defaults: None,
             use_tmux_sessions: Some(false),
@@ -1678,6 +1714,7 @@ fn update_connection_preserves_existing_tmux_preference_when_omitted() {
             local_startup_script: None,
             url: None,
             data_partition: None,
+            url_user_agent: None,
             url_proxy: None,
             url_proxy_inherit_defaults: None,
             use_tmux_sessions: Some(false),
@@ -1713,6 +1750,7 @@ fn update_connection_preserves_existing_tmux_preference_when_omitted() {
             local_startup_script: None,
             url: None,
             data_partition: None,
+            url_user_agent: None,
             url_proxy: None,
             url_proxy_inherit_defaults: None,
             use_tmux_sessions: None,
@@ -1972,6 +2010,7 @@ fn deleting_folder_removes_connections_in_that_folder() {
             local_startup_script: None,
             url: None,
             data_partition: None,
+            url_user_agent: None,
             url_proxy: None,
             url_proxy_inherit_defaults: None,
             use_tmux_sessions: None,
@@ -2616,7 +2655,10 @@ fn database_backup_import_restores_settings_and_connections() {
     assert!(!imported.general_settings.show_installer_on_rail);
     assert!(!imported.general_settings.show_it_ops);
     assert!(!imported.general_settings.show_dont_sleep_on_rail);
-    assert_eq!(imported.general_settings.activity_rail_order[0], "dontSleep");
+    assert_eq!(
+        imported.general_settings.activity_rail_order[0],
+        "dontSleep"
+    );
     assert_eq!(
         imported.general_settings.pinned_connection_ids,
         vec!["connection-pinned".to_string()]
@@ -2876,7 +2918,10 @@ fn sftp_settings_round_trip_through_settings_table() {
     let defaults = storage.sftp_settings().expect("default SFTP settings load");
     assert_eq!(defaults.overwrite_behavior, "fail");
     assert_eq!(defaults.file_explorer_open_mode, "external");
-    assert_eq!(defaults.file_explorer_terminal_shell, default_file_explorer_terminal_shell());
+    assert_eq!(
+        defaults.file_explorer_terminal_shell,
+        default_file_explorer_terminal_shell()
+    );
     assert!(!defaults.file_explorer_terminal_elevated);
 
     let updated = storage
@@ -2891,13 +2936,19 @@ fn sftp_settings_round_trip_through_settings_table() {
     assert_eq!(updated.overwrite_behavior, "overwrite");
     assert_eq!(updated.file_explorer_open_mode, "inlineEditor");
     assert_eq!(updated.file_explorer_terminal_shell, "powershell.exe");
-    assert_eq!(updated.file_explorer_terminal_elevated, cfg!(target_os = "windows"));
+    assert_eq!(
+        updated.file_explorer_terminal_elevated,
+        cfg!(target_os = "windows")
+    );
 
     let reloaded = storage.sftp_settings().expect("SFTP settings reload");
     assert_eq!(reloaded.overwrite_behavior, "overwrite");
     assert_eq!(reloaded.file_explorer_open_mode, "inlineEditor");
     assert_eq!(reloaded.file_explorer_terminal_shell, "powershell.exe");
-    assert_eq!(reloaded.file_explorer_terminal_elevated, cfg!(target_os = "windows"));
+    assert_eq!(
+        reloaded.file_explorer_terminal_elevated,
+        cfg!(target_os = "windows")
+    );
 }
 
 #[test]
@@ -2907,20 +2958,24 @@ fn url_settings_round_trip_through_settings_table() {
     let defaults = storage.url_settings().expect("default URL settings load");
     assert!(!defaults.ignore_certificate_errors);
     assert_eq!(defaults.default_data_partition, None);
+    assert_eq!(defaults.default_user_agent, None);
 
     let updated = storage
         .update_url_settings(UrlSettings {
             ignore_certificate_errors: true,
             default_data_partition: Some(" ops ".to_string()),
+            default_user_agent: Some(" CustomUA ".to_string()),
         })
         .expect("URL settings update");
 
     assert!(updated.ignore_certificate_errors);
     assert_eq!(updated.default_data_partition.as_deref(), Some("ops"));
+    assert_eq!(updated.default_user_agent.as_deref(), Some("CustomUA"));
 
     let reloaded = storage.url_settings().expect("URL settings reload");
     assert!(reloaded.ignore_certificate_errors);
     assert_eq!(reloaded.default_data_partition.as_deref(), Some("ops"));
+    assert_eq!(reloaded.default_user_agent.as_deref(), Some("CustomUA"));
 }
 
 #[test]
@@ -3031,6 +3086,7 @@ fn sftp_protocol_ftp_connection_persists_ssh_auth_fields() {
             local_startup_script: None,
             url: None,
             data_partition: None,
+            url_user_agent: None,
             url_proxy: None,
             url_proxy_inherit_defaults: None,
             use_tmux_sessions: None,
@@ -3081,6 +3137,7 @@ fn remote_desktop_connection_options_are_optional_protocol_overrides() {
             local_startup_script: None,
             url: None,
             data_partition: None,
+            url_user_agent: None,
             url_proxy: None,
             url_proxy_inherit_defaults: None,
             use_tmux_sessions: None,
@@ -3136,6 +3193,7 @@ fn remote_desktop_connection_options_are_optional_protocol_overrides() {
             local_startup_script: None,
             url: None,
             data_partition: None,
+            url_user_agent: None,
             url_proxy: None,
             url_proxy_inherit_defaults: None,
             use_tmux_sessions: None,

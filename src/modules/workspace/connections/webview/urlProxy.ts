@@ -4,6 +4,7 @@ export type UrlProxyMode = "direct" | "http" | "socks5";
 
 type UrlProxyConnection = Pick<Connection, "urlProxy" | "urlProxyInheritDefaults">;
 type UrlDataPartitionConnection = Pick<Connection, "dataPartition" | "urlProxyInheritDefaults">;
+type UrlUserAgentConnection = Pick<Connection, "urlUserAgent" | "urlProxyInheritDefaults">;
 type GlobalProxySettings = Pick<GeneralSettings, "proxyMode" | "proxyUrl">;
 
 /**
@@ -41,6 +42,14 @@ export function resolveUrlDataPartition(
 ): string | undefined {
   const value =
     connection.urlProxyInheritDefaults !== false ? settings.defaultDataPartition : connection.dataPartition;
+  return value?.trim() || undefined;
+}
+
+export function resolveUrlUserAgent(
+  connection: UrlUserAgentConnection,
+  settings: UrlSettings,
+): string | undefined {
+  const value = connection.urlProxyInheritDefaults !== false ? settings.defaultUserAgent : connection.urlUserAgent;
   return value?.trim() || undefined;
 }
 
