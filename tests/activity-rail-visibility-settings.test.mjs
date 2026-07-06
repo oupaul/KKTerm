@@ -28,11 +28,11 @@ test("General settings owns all built-in Activity Rail visibility controls", () 
   assert.match(generalSettings, /visibleActivityRailModuleOrder\.map/);
   assert.match(generalSettings, /reorderActivityRailItems/);
   assert.match(generalSettings, /activity-rail-order-main/);
-  for (const icon of ["LayoutDashboard", "Gauge", "Box", "ItIcon", "BedSingle"]) {
+  for (const icon of ["LayoutDashboard", "Gauge", "InstallHelperModuleIcon", "ItIcon", "BedSingle"]) {
     assert.match(generalSettings, new RegExp(`\\b${icon}\\b`));
   }
   assert.match(generalSettings, /<ModuleIconTile compact module=\{module\}>\{icon\}<\/ModuleIconTile>/);
-  assert.match(generalSettings, /id === "installer"[\s\S]*<Box aria-hidden="true" \/>/);
+  assert.match(generalSettings, /id === "installer"[\s\S]*<InstallHelperModuleIcon aria-hidden="true" \/>/);
   assert.match(generalSettings, /<ItIcon name="ops" size=\{17\} sw=\{1\.7\} \/>/);
   for (const setting of [
     "showWorkspaceOnRail",

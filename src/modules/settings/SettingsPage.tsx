@@ -8,7 +8,6 @@ import {
 } from "react";
 import {
   Bot,
-  Box,
   Coffee,
   FolderOpen,
   Info,
@@ -30,6 +29,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { LegacyDialogActions } from "../../app/ui/dialog";
 import { ModuleIconTile, type ModuleKind } from "../../app/ModuleHeader";
+import { InstallHelperModuleIcon } from "../../app/moduleIdentityIcons";
 import { AI_PROVIDER_SECRET_OWNER_ID } from "../../lib/settings";
 import { supportsInstallerHelper, supportsRdp } from "../../lib/platform";
 import { AboutSettings } from "./AboutSettings";
@@ -95,7 +95,7 @@ const SETTINGS_NAV: readonly {
   { id: "workspace-settings", Icon: LayoutDashboard, color: "#5e5ce6", labelKey: "settings.sectionWorkspace", module: "workspace" },
   { id: "file-explorer-settings", Icon: FolderOpen, color: "#14b8a6", labelKey: "settings.fileExplorer" },
   { id: "dashboard-settings", Icon: Gauge, color: "#0a84ff", labelKey: "settings.sectionDashboard", module: "dashboard" },
-  { id: "installer-settings", Icon: Box, color: "#ff9f0a", labelKey: "settings.sectionInstaller", module: "installer", requires: "installer" },
+  { id: "installer-settings", Icon: InstallHelperModuleIcon, color: "#ff9f0a", labelKey: "settings.sectionInstaller", module: "installer", requires: "installer" },
   { id: "credentials-settings", Icon: KeyRound, color: "#34c759", labelKey: "settings.sectionCredentials" },
   { id: "assistant-settings", Icon: Bot, color: "#bf5af2", labelKey: "settings.sectionAiAssistant" },
   { id: "ssh-settings", Icon: Server, color: "#30b0c7", labelKey: "settings.sectionSsh" },

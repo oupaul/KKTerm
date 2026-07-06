@@ -29,7 +29,6 @@ import type { CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 import { listen } from "@tauri-apps/api/event";
 import {
-  Box,
   CircleArrowUp,
   CircleCheck,
   CircleDashed,
@@ -49,6 +48,7 @@ import {
   ModuleHeaderTitle,
   ModuleIconTile,
 } from "../../app/ModuleHeader";
+import { InstallHelperModuleIcon } from "../../app/moduleIdentityIcons";
 import { invokeCommand, isTauriRuntime } from "../../lib/tauri";
 import { useWorkspaceStore } from "../../store";
 import { useInstallerStore } from "./state";
@@ -476,7 +476,7 @@ export function InstallerPage({ active }: { active: boolean }) {
       <ModuleHeader className="installer-module-header">
         <ModuleHeaderLead className="installer-topbar__kind">
           <ModuleIconTile module="installer">
-            <Box size={16} strokeWidth={1.9} aria-hidden="true" />
+            <InstallHelperModuleIcon size={16} aria-hidden="true" />
           </ModuleIconTile>
           <ModuleHeaderTitle as="span">{t("installer.title")}</ModuleHeaderTitle>
         </ModuleHeaderLead>

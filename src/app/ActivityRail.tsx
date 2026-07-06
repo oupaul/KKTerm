@@ -4,7 +4,6 @@ import {
   Coffee,
   Gauge,
   LayoutDashboard,
-  Package,
   Pin,
   PinOff,
   Plus,
@@ -28,6 +27,7 @@ import { NewWorkspaceDialog } from "../modules/workspace/NewWorkspaceDialog";
 import { DeleteWorkspaceDialog } from "../modules/workspace/WorkspaceRailDialogs";
 import { WorkspaceIcon } from "../modules/workspace/workspaceIcons";
 import { ItOpsModuleIcon } from "../modules/itops/icons";
+import { InstallHelperModuleIcon } from "./moduleIdentityIcons";
 import { RailTooltip } from "./RailTooltip";
 
 export type ActivePage =
@@ -749,7 +749,7 @@ export function ActivityRail({
           onClick={() => onNavigate("installer")}
           style={activityRailItemStyle("installer")}
         >
-          <Package size={18} />
+          <InstallHelperModuleIcon size={18} />
           <RailTooltip label={t("installer.railLabel")} />
         </button>
       ) : null}
