@@ -262,14 +262,40 @@ export function ServerRoomIsoView({
       floorRows,
     );
   };
+  // An elevated billboard sprite anchored near the camera-far edge of a
+  // cabinet top rises against empty air and reads as floating, because the
+  // artwork is drawn much larger than its physical footprint. Keep the
+  // sprite's base at least this far into its cell span from the two far
+  // edges so it always visually stands on its support surface; the stored
+  // position, footprint, and collision math stay exact.
+  const PLANT_NEAR_FRAC = 0.4;
+  const plantAnchor = (
+    point: { x: number; y: number },
+    cell: IsoCell,
+    span: { w: number; h: number },
+    z: number,
+  ): { x: number; y: number } => {
+    if (z <= 0) return point;
+    const rect = rotateRectForView(
+      { x: cell.x + offX, y: cell.y + offY, w: span.w, d: span.h },
+      angle,
+      floorCols,
+      floorRows,
+    );
+    return {
+      x: Math.max(point.x, rect.x + rect.w * PLANT_NEAR_FRAC),
+      y: Math.max(point.y, rect.y + rect.d * PLANT_NEAR_FRAC),
+    };
+  };
   const objectDisplayAnchor = (object: RoomObject): { x: number; y: number } => {
     const anchor = objectSurfaceAnchor(object.kind, object.rot, object.corner);
-    return rotatePointForView(
+    const point = rotatePointForView(
       { x: object.x + offX + anchor.x, y: object.y + offY + anchor.y },
       angle,
       floorCols,
       floorRows,
     );
+    return plantAnchor(point, object, objectCellSpan(object.kind, object.rot), object.z);
   };
   const planeW = dims.cols * CELL;
   const planeH = dims.rows * CELL;
@@ -658,11 +684,16 @@ export function ServerRoomIsoView({
                           floorCols,
                           floorRows,
                         );
-                        const displayAnchor = rotatePointForView(
-                          { x: hover.x + offX + anchor.x, y: hover.y + offY + anchor.y },
-                          angle,
-                          floorCols,
-                          floorRows,
+                        const displayAnchor = plantAnchor(
+                          rotatePointForView(
+                            { x: hover.x + offX + anchor.x, y: hover.y + offY + anchor.y },
+                            angle,
+                            floorCols,
+                            floorRows,
+                          ),
+                          hover,
+                          span,
+                          z ?? 0,
                         );
                         return (
                           <>
