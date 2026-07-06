@@ -27,8 +27,7 @@ const HEARTBEAT_INTERVAL_SECS: u64 = 10;
 
 use super::detect::{
     GithubReleaseMarker, InstallScope, detect_chocolatey_package, detect_one,
-    github_release_install_dir,
-    github_release_marker_path,
+    github_release_install_dir, github_release_marker_path,
 };
 use super::events::ProgressEvent;
 use super::managed_app::{
@@ -945,13 +944,21 @@ fn install_winget(
         ensure_uv_is_not_running()?;
     }
     let already_installed = super::detect::detect_winget_recipe_by_id(winget_id).installed;
-    let verb = if already_installed { "upgrade" } else { "install" };
+    let verb = if already_installed {
+        "upgrade"
+    } else {
+        "install"
+    };
     emit(ProgressEvent::Step {
         tool_id: tool_id.into(),
         message: format!("winget {verb} --id {winget_id}"),
     });
     let args = winget_command_args(verb, winget_id, options);
-    run_streamed("winget", &args, tool_id, cancel, emit)?;
+    if winget_should_run_elevated(winget_id, options) {
+        run_streamed_elevated("winget", &args, tool_id, cancel, emit)?;
+    } else {
+        run_streamed("winget", &args, tool_id, cancel, emit)?;
+    }
     if winget_tool_should_add_links_to_path(tool_id) {
         if let Some(dir) = winget_links_dir() {
             add_to_user_path(&dir, tool_id, emit);
@@ -961,6 +968,50 @@ fn install_winget(
     // a subsequent detect_one() reads the local installed-software inventory.
     // Returning None lets the caller decide whether to re-detect.
     Ok(None)
+}
+
+fn winget_should_run_elevated(winget_id: &str, options: &InstallOptions) -> bool {
+    options.scope.as_deref() == Some("machine")
+        || is_known_machine_only_winget_id(winget_id)
+        || is_known_self_elevating_winget_id(winget_id)
+}
+
+fn is_known_machine_only_winget_id(winget_id: &str) -> bool {
+    let id = winget_id.to_ascii_lowercase();
+    [
+        "7zip.7zip",
+        "blenderfoundation.blender",
+        "bruno.bruno",
+        "chocolatey.chocolatey",
+        "ditto.ditto",
+        "docker.dockerdesktop",
+        "github.cli",
+        "jgraph.draw",
+        "kde.krita",
+        "microsoft.coreutils",
+        "microsoft.powershell",
+        "notepad++.notepad++",
+        "tailscale.tailscale",
+        "voidtools.everything",
+        "inkscape.inkscape",
+        "marha.vcxsrv",
+    ]
+    .iter()
+    .any(|needle| id.contains(needle))
+}
+
+fn is_known_self_elevating_winget_id(winget_id: &str) -> bool {
+    let id = winget_id.to_ascii_lowercase();
+    [
+        "coreybutler.nvmforwindows",
+        "docker.dockerdesktop",
+        "git.git",
+        "microsoft.coreutils",
+        "oracle.virtualbox",
+        "vmware.workstationpro",
+    ]
+    .iter()
+    .any(|needle| id.contains(needle))
 }
 
 #[cfg(test)]
@@ -1020,8 +1071,8 @@ fn ensure_uv_is_not_running() -> Result<(), String> {
 #[cfg(target_os = "windows")]
 fn running_process_ids_by_image(image_name: &str) -> Vec<String> {
     let filter = format!("IMAGENAME eq {image_name}");
-    let output = no_window(Command::new("tasklist").args(["/FI", &filter, "/FO", "CSV", "/NH"]))
-        .output();
+    let output =
+        no_window(Command::new("tasklist").args(["/FI", &filter, "/FO", "CSV", "/NH"])).output();
     let Ok(output) = output else {
         return Vec::new();
     };
@@ -1039,7 +1090,11 @@ fn running_process_ids_by_image(_image_name: &str) -> Vec<String> {
 
 fn parse_tasklist_csv_process_ids(output: &str, image_name: &str) -> Vec<String> {
     let mut ids = Vec::new();
-    for line in output.lines().map(str::trim).filter(|line| !line.is_empty()) {
+    for line in output
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+    {
         if line.starts_with("INFO:") {
             continue;
         }
@@ -1918,8 +1973,11 @@ fn run_streamed_elevated_impl(
     let log_path = dir.join(format!("{safe_tool}-{stamp}.log"));
     let batch_path = dir.join(format!("{safe_tool}-{stamp}.cmd"));
 
-    std::fs::write(&batch_path, elevated_batch_contents(program, args, &log_path))
-        .map_err(|e| format!("failed to write elevated batch: {e}"))?;
+    std::fs::write(
+        &batch_path,
+        elevated_batch_contents(program, args, &log_path),
+    )
+    .map_err(|e| format!("failed to write elevated batch: {e}"))?;
     std::fs::write(&log_path, b"").ok();
 
     let script = elevated_powershell_script(&batch_path);
@@ -1999,7 +2057,9 @@ fn run_streamed_elevated_impl(
                     step_id: None,
                     line: format!("[installer] `{program}` exited {code}{hint} after {elapsed}s"),
                 });
-                break Err(format!("elevated `{program}` exited with status {code}{hint}"));
+                break Err(format!(
+                    "elevated `{program}` exited with status {code}{hint}"
+                ));
             }
             Ok(None) => std::thread::sleep(std::time::Duration::from_millis(150)),
             Err(e) => break Err(format!("wait on elevated launcher failed: {e}")),
@@ -2589,7 +2649,10 @@ mod tests {
             "must launch the batch wrapper: {script}"
         );
         // A declined UAC prompt throws; we map it to ERROR_CANCELLED (1223).
-        assert!(script.contains("exit 1223"), "must map declined UAC: {script}");
+        assert!(
+            script.contains("exit 1223"),
+            "must map declined UAC: {script}"
+        );
     }
 
     #[test]
@@ -2607,17 +2670,17 @@ mod tests {
 
     #[test]
     fn drain_elevated_log_holds_back_partial_trailing_line() {
-        let dir = std::env::temp_dir().join(format!(
-            "kkterm-drain-test-{}",
-            std::process::id()
-        ));
+        let dir = std::env::temp_dir().join(format!("kkterm-drain-test-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join("log.txt");
 
         std::fs::write(&path, b"line one\npartial").unwrap();
         let mut emitted = 0usize;
         // Mid-stream: "partial" (no trailing newline) is held back.
-        assert_eq!(drain_elevated_log(&path, &mut emitted, false), vec!["line one"]);
+        assert_eq!(
+            drain_elevated_log(&path, &mut emitted, false),
+            vec!["line one"]
+        );
 
         std::fs::write(&path, b"line one\npartial done\n").unwrap();
         assert_eq!(
@@ -2766,6 +2829,50 @@ mod tests {
         );
 
         assert_eq!(effective.scope.as_deref(), Some("machine"));
+    }
+
+    #[test]
+    fn machine_scope_winget_runs_elevated() {
+        assert!(winget_should_run_elevated(
+            "Example.Tool",
+            &InstallOptions {
+                scope: Some("machine".into()),
+                ..InstallOptions::default()
+            }
+        ));
+    }
+
+    #[test]
+    fn known_machine_only_winget_runs_elevated() {
+        assert!(winget_should_run_elevated(
+            "Docker.DockerDesktop",
+            &InstallOptions {
+                scope: Some("user".into()),
+                ..InstallOptions::default()
+            }
+        ));
+    }
+
+    #[test]
+    fn known_self_elevating_winget_runs_elevated() {
+        assert!(winget_should_run_elevated(
+            "CoreyButler.NVMforWindows",
+            &InstallOptions {
+                scope: Some("user".into()),
+                ..InstallOptions::default()
+            }
+        ));
+    }
+
+    #[test]
+    fn ordinary_user_scope_winget_stays_non_elevated() {
+        assert!(!winget_should_run_elevated(
+            "BurntSushi.ripgrep.MSVC",
+            &InstallOptions {
+                scope: Some("user".into()),
+                ..InstallOptions::default()
+            }
+        ));
     }
 
     #[test]
@@ -2980,11 +3087,13 @@ mod tests {
 
     #[test]
     fn tasklist_csv_parser_ignores_no_task_info() {
-        assert!(parse_tasklist_csv_process_ids(
-            "INFO: No tasks are running which match the specified criteria.\r\n",
-            "uv.exe"
-        )
-        .is_empty());
+        assert!(
+            parse_tasklist_csv_process_ids(
+                "INFO: No tasks are running which match the specified criteria.\r\n",
+                "uv.exe"
+            )
+            .is_empty()
+        );
     }
 
     #[test]
