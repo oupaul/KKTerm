@@ -2325,11 +2325,12 @@ async fn detect_ssh_remote_os(
 async fn list_remote_loopback_ports(
     app: tauri::AppHandle,
     request: sessions::TmuxConnectionRequest,
+    session_id: Option<String>,
 ) -> Result<Vec<sessions::RemoteLoopbackPort>, String> {
     run_blocking_command("SSH loopback port discovery", move || {
         let sessions = app.state::<sessions::SessionManager>();
         let secrets = app.state::<secrets::Secrets>();
-        sessions.list_remote_loopback_ports(app.clone(), &secrets, request, false)
+        sessions.list_remote_loopback_ports(app.clone(), &secrets, request, session_id, false)
     })
     .await
 }

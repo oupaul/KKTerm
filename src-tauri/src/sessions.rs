@@ -1276,14 +1276,16 @@ impl SessionManager {
         app: AppHandle,
         secrets: &secrets::Secrets,
         request: TmuxConnectionRequest,
+        session_id: Option<String>,
         hide_common_ports: bool,
     ) -> Result<Vec<RemoteLoopbackPort>, String> {
-        let output = run_ssh_command(
+        let output = self.run_ssh_probe_command(
             app,
             secrets,
             &request,
+            session_id.as_deref(),
             remote_loopback_port_command(),
-            Some(Duration::from_secs(5)),
+            Duration::from_secs(5),
         )?;
         Ok(filter_remote_loopback_ports(
             parse_remote_loopback_ports(&output),

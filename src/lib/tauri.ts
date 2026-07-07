@@ -2254,6 +2254,7 @@ type CommandMap = {
         secretOwnerId?: string;
         passphraseOwnerId?: string;
       };
+      sessionId?: string;
     };
     result: RemoteLoopbackPort[];
   };
