@@ -117,6 +117,11 @@ test("SFTP-over-FTP Connections keep the SFTP runtime adapter after metadata ref
     /connection: refreshedConnection/,
     "the refreshed SFTP tab should retain the converted runtime Connection",
   );
+  assert.match(
+    storeSource,
+    /ftpOptions: connection\.ftpOptions/,
+    "the converted runtime Connection should preserve standalone SFTP start-path preferences",
+  );
 });
 
 test("SFTP titlebar stays compact with equal vertical padding", async () => {
