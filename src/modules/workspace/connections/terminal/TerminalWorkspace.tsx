@@ -148,6 +148,7 @@ export function TerminalWorkspace({
     generalSettings.separateSplitTerminalBackgrounds &&
     tab.panes.filter(isTerminalPane).length > 1;
   const [sftpDialogConnection, setSftpDialogConnection] = useState<Connection | null>(null);
+  const [sftpDialogInitialRemotePath, setSftpDialogInitialRemotePath] = useState<string | undefined>(undefined);
   const [sshPortForwardingDialogConnection, setSshPortForwardingDialogConnection] = useState<Connection | null>(null);
   const [sshPortForwardingDialogSessionId, setSshPortForwardingDialogSessionId] = useState<string | null>(null);
   const [sshPortForwardingDialogPaneId, setSshPortForwardingDialogPaneId] = useState<string | null>(null);
@@ -229,6 +230,13 @@ export function TerminalWorkspace({
 
   function openSftpDialog(connection: Connection, paneId: string) {
     sftpFocusRestorePaneIdRef.current = paneId === focusedPaneId ? paneId : null;
+    // Open the remote pane at the SSH session's OSC 7-reported cwd when the
+    // shell publishes one; otherwise the browser starts at the remote home.
+    const pane = tab.panes.find((candidate) => candidate.id === paneId);
+    const paneCwd = pane && isTerminalPane(pane) ? pane.cwd : "";
+    setSftpDialogInitialRemotePath(
+      connection.type === "ssh" && isRemoteInitialDirectory(paneCwd) ? paneCwd.trim() : undefined,
+    );
     setSftpDialogConnection(connection);
   }
 
@@ -555,6 +563,7 @@ export function TerminalWorkspace({
                   inline
                   onClose={closeSftpDialog}
                   protocolSourceConnection={sftpDialogConnection ?? undefined}
+                  initialRemotePath={sftpDialogInitialRemotePath}
                 />
               </Suspense>
             </div>

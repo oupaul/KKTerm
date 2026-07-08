@@ -1696,8 +1696,8 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  width: min(1180px, calc(100vw - 48px));
-  height: min(820px, calc(100vh - 48px));
+  width: min(90vw, calc(100vw - 48px));
+  height: min(90vh, calc(100vh - 48px));
   max-height: calc(100vh - 48px);
   padding: 0;
   overflow: hidden;

@@ -141,8 +141,13 @@ test("file browser password prompts pass transient passwords without saving them
   );
   assert.match(
     workspaceSource,
-    /password: enteredPassword/,
+    /result = await startSessionAt\(enteredPassword\)/,
     "the retry after a password prompt should use the entered password transiently",
+  );
+  assert.match(
+    workspaceSource,
+    /path: preferredRemoteDirectory,[\s\S]*password: sessionPassword,/,
+    "session startup should pass the transient password alongside the preferred start directory",
   );
   assert.match(
     commandSource,
