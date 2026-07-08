@@ -2491,10 +2491,9 @@ fn psmux_list_format() -> &'static str {
 
 fn is_powershell_family_program(program: &str) -> bool {
     let lower = program.to_ascii_lowercase();
-    let name = std::path::Path::new(&lower)
-        .file_name()
-        .and_then(|value| value.to_str())
-        .unwrap_or(lower.as_str());
+    // Split on both separators explicitly: these are Windows program paths, and
+    // std::path::Path only treats `\` as a separator on Windows hosts.
+    let name = lower.rsplit(['/', '\\']).next().unwrap_or(lower.as_str());
     matches!(name, "powershell.exe" | "pwsh.exe" | "powershell" | "pwsh")
 }
 
@@ -3722,9 +3721,15 @@ mod tests {
 
         let resolved = resolve_managed_terminal_environment(&variable, root.path())
             .expect("managed environment resolves");
+        // The app data folder name matches the resolver: "KKTerm" on Windows,
+        // lowercase "kkterm" elsewhere.
         let expected = root
             .path()
-            .join("KKTerm")
+            .join(if cfg!(target_os = "windows") {
+                "KKTerm"
+            } else {
+                "kkterm"
+            })
             .join("cli-accounts")
             .join("claude-code")
             .join("work");
