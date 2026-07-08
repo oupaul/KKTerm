@@ -3688,7 +3688,10 @@ function sftpBrowserConnectionFromFtpConnection(connection: Connection): Connect
     port: connection.port ?? 22,
     keyPath: connection.authMethod === "keyFile" ? connection.keyPath : undefined,
     proxyJump: undefined,
-    ftpOptions: undefined,
+    // Keep standalone SFTP browser preferences such as local/remote start paths
+    // available to SftpWorkspace after the runtime adapter normalizes the
+    // Connection to the SSH command path.
+    ftpOptions: connection.ftpOptions,
     // Keep the file-browser identity for the rail/tab glyph instead of the
     // default SSH terminal icon (this connection opens a file browser). Use a
     // catalog icon ref so non-Vite consumers, like the test runner, don't import

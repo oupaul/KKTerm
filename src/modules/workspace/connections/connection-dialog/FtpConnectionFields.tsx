@@ -197,12 +197,18 @@ export function FtpConnectionFields({
 }
 
 export function FtpConnectionOptions({
+  ftpLocalPath,
   ftpProtocol,
   initialConnection,
+  onBrowseFtpLocalPath,
+  onFtpLocalPathChange,
   onFtpProtocolChange,
 }: {
+  ftpLocalPath: string;
   ftpProtocol: "ftp" | "ftps" | "sftp";
   initialConnection?: Connection;
+  onBrowseFtpLocalPath: () => void;
+  onFtpLocalPathChange: (value: string) => void;
   onFtpProtocolChange: (protocol: "ftp" | "ftps" | "sftp") => void;
 }) {
   const { t } = useTranslation();
@@ -299,6 +305,30 @@ export function FtpConnectionOptions({
                 max="3600"
                 type="number"
                 placeholder="0"
+              />
+            </label>
+            <label className="connection-proxy-row">
+              <span>{t("connections.ftpLocalPath")}</span>
+              <div className="input-with-button">
+                <input
+                  name="ftpLocalPath"
+                  {...technicalInputProps}
+                  onChange={(event) => onFtpLocalPathChange(event.currentTarget.value)}
+                  placeholder={t("connections.ftpLocalPathPlaceholder")}
+                  value={ftpLocalPath}
+                />
+                <button className="toolbar-button" onClick={onBrowseFtpLocalPath} type="button">
+                  {t("connections.browse")}
+                </button>
+              </div>
+            </label>
+            <label className="connection-proxy-row">
+              <span>{t("connections.ftpRemotePath")}</span>
+              <input
+                name="ftpRemotePath"
+                {...technicalInputProps}
+                defaultValue={initialConnection?.ftpOptions?.remotePath ?? ""}
+                placeholder={t("connections.ftpRemotePathPlaceholder")}
               />
             </label>
           </div>

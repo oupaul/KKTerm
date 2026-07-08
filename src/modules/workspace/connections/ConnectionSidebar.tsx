@@ -4024,6 +4024,9 @@ function ConnectionDialog({
   const [ftpProtocol, setFtpProtocol] = useState<"ftp" | "ftps" | "sftp">(
     initialConnection?.ftpOptions?.protocol ?? "sftp",
   );
+  const [ftpLocalPath, setFtpLocalPath] = useState(
+    initialConnection?.ftpOptions?.localPath ?? "",
+  );
   const [keyPath, setKeyPath] = useState(
     initialConnection?.keyPath ?? sshSettings.defaultKeyPath ?? "",
   );
@@ -4191,6 +4194,28 @@ function ConnectionDialog({
       disposed = true;
     };
   }, [canUseSavedPasswordCredential, connectionType]);
+
+  // New FTP/SFTP Connections prefill the local start path with the actual home
+  // folder so the user sees (and can adjust) the concrete default.
+  useEffect(() => {
+    if (connectionType !== "ftp" || isEditMode || !isTauriRuntime()) {
+      return;
+    }
+
+    let disposed = false;
+    void invokeCommand("list_local_places", undefined)
+      .then((places) => {
+        const homePath = places.home?.path ?? "";
+        if (!disposed && homePath) {
+          setFtpLocalPath((current) => current || homePath);
+        }
+      })
+      .catch(() => undefined);
+
+    return () => {
+      disposed = true;
+    };
+  }, [connectionType, isEditMode]);
 
   useEffect(() => {
     if (connectionType !== "localFiles" || !isTauriRuntime()) {
@@ -4449,6 +4474,8 @@ function ConnectionDialog({
                 Number(String(form.get("ftpConnectTimeoutSecs") ?? "30")) || 30,
               keepaliveSecs:
                 Number(String(form.get("ftpKeepaliveSecs") ?? "0")) || undefined,
+              localPath: String(form.get("ftpLocalPath") ?? "").trim() || undefined,
+              remotePath: String(form.get("ftpRemotePath") ?? "").trim() || undefined,
             }
           : undefined,
       password:
@@ -4477,6 +4504,15 @@ function ConnectionDialog({
     const selectedPath = await selectKeyFile(keyPath || sshSettings.defaultKeyPath);
     if (selectedPath) {
       setKeyPath(selectedPath);
+    }
+  }
+
+  async function handleBrowseFtpLocalPath() {
+    const selectedPath = await selectAppLauncherFolder({
+      title: t("connections.ftpLocalPathPickerTitle"),
+    });
+    if (selectedPath) {
+      setFtpLocalPath(selectedPath);
     }
   }
 
@@ -4736,8 +4772,11 @@ function ConnectionDialog({
       case "ftp":
         return (
           <FtpConnectionOptions
+            ftpLocalPath={ftpLocalPath}
             ftpProtocol={ftpProtocol}
             initialConnection={initialConnection}
+            onBrowseFtpLocalPath={handleBrowseFtpLocalPath}
+            onFtpLocalPathChange={setFtpLocalPath}
             onFtpProtocolChange={handleFtpProtocolChange}
           />
         );

@@ -486,17 +486,22 @@ fn windows_cli_process_args_run_cmd_shims_through_cmd_exe() {
 
 #[test]
 fn windows_external_terminal_command_line_wraps_quoted_command() {
-    // A `.cmd` shim installed via nvm-for-windows: shell_quote wraps the path in
-    // double quotes, and the external-terminal command line must wrap that whole
-    // command in a second quote pair so the inner `cmd /K` strips exactly the
-    // outer pair and runs the original quoted command. Regression for the
-    // `'\"...claude.cmd\"' is not recognized` failure on quote-escaped launches.
-    let command = format!(
-        "{} auth login",
-        shell_quote("C:\\nvm4w\\nodejs\\claude.cmd")
+    // A `.cmd` shim installed via nvm-for-windows: on Windows `shell_quote`
+    // wraps the path in double quotes, and the external-terminal command line
+    // must wrap that whole command in a second quote pair so the inner
+    // `cmd /K` strips exactly the outer pair and runs the original quoted
+    // command. Regression for the `'\"...claude.cmd\"' is not recognized`
+    // failure on quote-escaped launches. The Windows-quoted command is spelled
+    // out (instead of calling the host-dependent `shell_quote`) so this cmd.exe
+    // command line is asserted identically on every test host.
+    let command = "\"C:\\nvm4w\\nodejs\\claude.cmd\" auth login";
+    #[cfg(target_os = "windows")]
+    assert_eq!(
+        command,
+        format!("{} auth login", shell_quote("C:\\nvm4w\\nodejs\\claude.cmd"))
     );
 
-    let line = windows_external_terminal_command_line(&command);
+    let line = windows_external_terminal_command_line(command);
 
     assert_eq!(
         line,
@@ -509,12 +514,19 @@ fn windows_external_terminal_command_line_wraps_quoted_command() {
 
 #[test]
 fn windows_external_terminal_command_line_handles_paths_with_spaces() {
-    let command = format!(
-        "{} auth login",
-        shell_quote("C:\\Program Files\\nodejs\\claude.cmd")
+    // Windows-quoted input spelled out for host-independent assertions; see
+    // windows_external_terminal_command_line_wraps_quoted_command.
+    let command = "\"C:\\Program Files\\nodejs\\claude.cmd\" auth login";
+    #[cfg(target_os = "windows")]
+    assert_eq!(
+        command,
+        format!(
+            "{} auth login",
+            shell_quote("C:\\Program Files\\nodejs\\claude.cmd")
+        )
     );
 
-    let line = windows_external_terminal_command_line(&command);
+    let line = windows_external_terminal_command_line(command);
 
     // Outer wrap keeps the space-containing path quoted after cmd strips one pair.
     assert!(line.ends_with("/K \"\"C:\\Program Files\\nodejs\\claude.cmd\" auth login\""));

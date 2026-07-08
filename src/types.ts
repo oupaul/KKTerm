@@ -1012,6 +1012,10 @@ export interface FtpConnectionOptions {
   connectTimeoutSecs?: number;
   ignoreCertErrors: boolean;
   keepaliveSecs?: number;
+  /** Start directory for the local pane; empty/undefined = the OS home folder. */
+  localPath?: string;
+  /** Start directory for the remote pane; empty/undefined = the server's home. */
+  remotePath?: string;
 }
 
 export interface ScreenshotSettings {
