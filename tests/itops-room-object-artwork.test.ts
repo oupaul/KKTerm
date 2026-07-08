@@ -20,3 +20,10 @@ test("every Server Room object has distinct floor-plan and 2.5D artwork", () => 
     assert.notEqual(plan, iso);
   }
 });
+
+test("2.5D 乖乖 sits on the real room surface instead of a fake rack top", () => {
+  const iso = renderToStaticMarkup(createElement(RoomObjectIsoArtwork, { kind: "kuaikuai" }));
+
+  assert.doesNotMatch(iso, /rm-art-rack-top/);
+  assert.doesNotMatch(iso, /rm-art-float/);
+});

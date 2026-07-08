@@ -1,7 +1,7 @@
 import { ScreenshotMenu } from "../../ScreenshotMenu";
 import { documentHasWebviewBlockingOverlay } from "../../nativeOverlay";
 
-import { ArrowLeft, ArrowRight, Bot, ExternalLink, Globe2, KeyRound, Lock, RefreshCw, Save, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Bot, ExternalLink, Globe2, KeyRound, Lock, RefreshCw, Save, Unlock, X } from "../../../../lib/reicon";
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -12,7 +12,7 @@ import { invokeCommand, isTauriRuntime, logUrlConnectionDebug, openExternalUrl }
 import type { AssistantScreenshot, WebviewSessionStarted } from "../../../../lib/tauri";
 import { useWorkspaceStore } from "../../../../store";
 import { urlCredentialSecretOwnerId } from "./urlCredentialKeys";
-import { resolveUrlDataPartition, resolveUrlProxy } from "./urlProxy";
+import { resolveUrlDataPartition, resolveUrlProxy, resolveUrlUserAgent } from "./urlProxy";
 import type { WorkspaceTab } from "../../../../types";
 
 type WebviewNavigationEvent = {
@@ -565,6 +565,7 @@ export function WebViewWorkspace({
     const urlConnectionOptions = {
       ...tab.connection,
       dataPartition: tab.dataPartition ?? tab.connection?.dataPartition,
+      urlUserAgent: tab.connection?.urlUserAgent,
       urlProxyInheritDefaults: tab.connection
         ? tab.connection.urlProxyInheritDefaults
         : tab.dataPartition
@@ -573,6 +574,7 @@ export function WebViewWorkspace({
     };
     const proxyUrl = resolveUrlProxy(urlConnectionOptions, generalSettings);
     const dataPartition = resolveUrlDataPartition(urlConnectionOptions, urlSettings);
+    const userAgent = resolveUrlUserAgent(urlConnectionOptions, urlSettings);
     sessionStartingRef.current = true;
     lastBoundsRef.current = bounds;
     markWebviewConnectionStarted();
@@ -581,6 +583,7 @@ export function WebViewWorkspace({
       dataPartition,
       ignoreCertificateErrors,
       proxyUrl,
+      userAgentConfigured: Boolean(userAgent),
     });
     const lease = acquireWebviewSession(sessionId, () =>
       invokeCommand("start_webview_session", {
@@ -588,6 +591,7 @@ export function WebViewWorkspace({
           sessionId,
           url: initialUrl,
           dataPartition,
+          userAgent,
           proxyUrl,
           ignoreCertificateErrors,
           ...bounds,
@@ -1084,7 +1088,15 @@ export function WebViewWorkspace({
     }
   }
 
-  const isSecureAddress = /^https:\/\//i.test(addressInput.trim());
+  const trimmedAddress = addressInput.trim();
+  const isHttpsAddress = /^https:\/\//i.test(trimmedAddress);
+  const isHttpAddress = /^http:\/\//i.test(trimmedAddress);
+  const addressBarClassName = [
+    "webview-address-bar",
+    isHttpAddress ? "is-http" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
   const addressHost = formatWebviewSubtitle(addressInput);
   const connectionIconSrc = tab.connection?.iconDataUrl;
   const connectionIdentityLabel = tab.connection?.name || addressHost;
@@ -1135,9 +1147,9 @@ export function WebViewWorkspace({
                 <RefreshCw size={14} />
               </button>
             </div>
-            <form className="webview-address-bar" onSubmit={handleNavigate}>
-              <span className={isSecureAddress ? "webview-address-lock" : "webview-address-lock insecure"}>
-                {isSecureAddress ? <Lock size={13} /> : <Globe2 size={13} />}
+            <form className={addressBarClassName} onSubmit={handleNavigate}>
+              <span className={isHttpsAddress || isHttpAddress ? "webview-address-lock" : "webview-address-lock insecure"}>
+                {isHttpAddress ? <Unlock size={13} /> : isHttpsAddress ? <Lock size={13} /> : <Globe2 size={13} />}
               </span>
               <input
                 aria-label={t("webview.address")}

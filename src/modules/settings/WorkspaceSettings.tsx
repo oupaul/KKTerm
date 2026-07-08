@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { SquareStack } from "lucide-react";
+import { SquareStack } from "../../lib/reicon";
 import { useTranslation } from "react-i18next";
 import { invokeCommand, isTauriRuntime } from "../../lib/tauri";
 import { useWorkspaceStore } from "../../store";

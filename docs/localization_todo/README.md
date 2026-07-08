@@ -21,6 +21,13 @@ every non-English locale, because the backlog is the explicit review record for
 new translation work. Before finishing, run `npm run i18n:check` to prove every
 locale contains the key in the same relative order.
 
+Do not skip the todo file just because an AI coding session filled in translated
+values. Treat direct translations as complete only when the session is
+intentionally doing a localization pass, preserves every placeholder, respects
+regional terminology rules, runs the checks below, and removes the matching todo
+file as part of that verified translation work. Otherwise, keep the todo file so
+the key remains visible for localization review.
+
 When you add or change an English key in `src/i18n/locales/en.json` and do **not** translate it into the other 13 locales in the same change:
 
 1. Copy `_TEMPLATE.md` to `<namespace>.<keyPath>.md`.

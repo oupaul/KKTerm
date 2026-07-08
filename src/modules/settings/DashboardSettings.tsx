@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { LayoutDashboard } from "lucide-react";
+import { LayoutDashboard } from "../../lib/reicon";
 import { useTranslation } from "react-i18next";
 import { useDashboardStore } from "../dashboard/state/dashboardStore";
 import { useWorkspaceStore } from "../../store";

@@ -21,6 +21,7 @@ const MAX_RACK_DEPTH_MM: u32 = 5000;
 /// Generous ceiling on a rack's power capacity (1 MW) — a sanity bound, not a
 /// physical model.
 const MAX_RACK_POWER_W: u32 = 1_000_000;
+const ISO_FLOOR_COLORS: [&str; 5] = ["default", "concrete", "graphite", "green", "blue"];
 
 // ── Pure placement validation ───────────────────────────────────────────────
 
@@ -122,7 +123,7 @@ fn validate_power_capacity(power_capacity_w: Option<u32>) -> Result<Option<u32>>
 
 pub fn list_server_rooms(conn: &SqliteConnection, site_id: &str) -> Result<Vec<ServerRoom>> {
     let mut statement = conn.prepare(
-        "SELECT id, site_id, name, sort_order FROM itops_server_rooms WHERE site_id = ? ORDER BY sort_order",
+        "SELECT id, site_id, name, floor_color, sort_order FROM itops_server_rooms WHERE site_id = ? ORDER BY sort_order",
     )?;
     Ok(statement
         .query_map(params![site_id], |row| {
@@ -130,7 +131,8 @@ pub fn list_server_rooms(conn: &SqliteConnection, site_id: &str) -> Result<Vec<S
                 id: row.get(0)?,
                 site_id: row.get(1)?,
                 name: row.get(2)?,
-                sort_order: row.get(3)?,
+                floor_color: row.get(3)?,
+                sort_order: row.get(4)?,
             })
         })?
         .collect::<rusqlite::Result<Vec<_>>>()?)
@@ -141,6 +143,7 @@ pub fn create_server_room(
     id: &str,
     site_id: &str,
     name: &str,
+    floor_color: &str,
 ) -> Result<ServerRoom> {
     let name = name.trim();
     if name.is_empty() {
@@ -148,20 +151,142 @@ pub fn create_server_room(
             "server room name must not be empty".to_string(),
         ));
     }
+    let floor_color = validate_floor_color(floor_color)?;
     let next_sort: i64 = conn.query_row(
         "SELECT COALESCE(MAX(sort_order), -1) + 1 FROM itops_server_rooms WHERE site_id = ?",
         params![site_id],
         |row| row.get(0),
     )?;
     conn.execute(
-        "INSERT INTO itops_server_rooms (id, site_id, name, sort_order) VALUES (?, ?, ?, ?)",
-        params![id, site_id, name, next_sort],
+        "INSERT INTO itops_server_rooms (id, site_id, name, floor_color, sort_order) VALUES (?, ?, ?, ?, ?)",
+        params![id, site_id, name, floor_color, next_sort],
     )?;
     Ok(ServerRoom {
         id: id.to_string(),
         site_id: site_id.to_string(),
         name: name.to_string(),
+        floor_color,
         sort_order: next_sort,
+    })
+}
+
+fn validate_floor_color(value: &str) -> Result<String> {
+    let value = value.trim();
+    if ISO_FLOOR_COLORS.contains(&value) {
+        Ok(value.to_string())
+    } else {
+        Err(ItopsStorageError::Validation(
+            "invalid server room floor color".to_string(),
+        ))
+    }
+}
+
+fn rename_json_map_key(
+    raw: Option<String>,
+    old_name: &str,
+    new_name: &str,
+) -> Result<Option<String>> {
+    if old_name == new_name {
+        return Ok(raw);
+    }
+    let Some(raw) = raw else {
+        return Ok(None);
+    };
+    let Ok(mut map) = serde_json::from_str::<serde_json::Map<String, serde_json::Value>>(&raw)
+    else {
+        return Ok(Some(raw));
+    };
+    if let Some(value) = map.remove(old_name) {
+        map.insert(new_name.to_string(), value);
+    }
+    serde_json::to_string(&map)
+        .map(Some)
+        .map_err(|error| ItopsStorageError::Validation(error.to_string()))
+}
+
+/// Update first-class Server Room properties. Renames every name-keyed
+/// dependent in one transaction so racks, fixtures, icons, and backgrounds
+/// cannot split across two room names.
+pub fn update_server_room(
+    conn: &SqliteConnection,
+    id: &str,
+    name: &str,
+    floor_color: &str,
+) -> Result<ServerRoom> {
+    let name = name.trim();
+    if name.is_empty() {
+        return Err(ItopsStorageError::Validation(
+            "server room name must not be empty".to_string(),
+        ));
+    }
+    let floor_color = validate_floor_color(floor_color)?;
+    let (site_id, old_name, sort_order): (String, String, i64) = conn
+        .query_row(
+            "SELECT site_id, name, sort_order FROM itops_server_rooms WHERE id = ?",
+            params![id],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        )
+        .optional()?
+        .ok_or(ItopsStorageError::NotFound)?;
+    let duplicate: bool = conn.query_row(
+        "SELECT EXISTS(
+            SELECT 1 FROM itops_server_rooms
+            WHERE site_id = ? AND id <> ? AND name = ? COLLATE NOCASE
+         )",
+        params![site_id, id, name],
+        |row| row.get(0),
+    )?;
+    if duplicate {
+        return Err(ItopsStorageError::Validation(
+            "a server room with that name already exists".to_string(),
+        ));
+    }
+
+    let tx = conn.unchecked_transaction()?;
+    tx.execute(
+        "UPDATE itops_server_rooms
+         SET name = ?, floor_color = ?, updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?",
+        params![name, floor_color, id],
+    )?;
+    if old_name != name {
+        tx.execute(
+            "UPDATE itops_site_racks SET server_room = ?, updated_at = CURRENT_TIMESTAMP
+             WHERE site_id = ? AND server_room = ?",
+            params![name, site_id, old_name],
+        )?;
+        tx.execute(
+            "UPDATE itops_room_objects SET server_room = ?, updated_at = CURRENT_TIMESTAMP
+             WHERE site_id = ? AND server_room = ?",
+            params![name, site_id, old_name],
+        )?;
+        let metadata: Option<(Option<String>, Option<String>)> = tx
+            .query_row(
+                "SELECT room_backgrounds_json, room_icons_json FROM itops_sites WHERE id = ?",
+                params![site_id],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .optional()?;
+        if let Some((backgrounds, icons)) = metadata {
+            tx.execute(
+                "UPDATE itops_sites
+                 SET room_backgrounds_json = ?, room_icons_json = ?, updated_at = CURRENT_TIMESTAMP
+                 WHERE id = ?",
+                params![
+                    rename_json_map_key(backgrounds, &old_name, name)?,
+                    rename_json_map_key(icons, &old_name, name)?,
+                    site_id
+                ],
+            )?;
+        }
+    }
+    tx.commit()?;
+    Ok(ServerRoom {
+        id: id.to_string(),
+        site_id,
+        name: name.to_string(),
+        floor_color,
+        sort_order,
     })
 }
 
@@ -642,6 +767,13 @@ fn validate_room_object(object: &RoomObject) -> Result<()> {
             object.rot
         )));
     }
+    if let Some(corner) = object.corner {
+        if !(0..=3).contains(&corner) {
+            return Err(ItopsStorageError::Validation(format!(
+                "room object corner must be 0..=3, got {corner}"
+            )));
+        }
+    }
     Ok(())
 }
 
@@ -652,7 +784,7 @@ pub fn list_room_objects(
     server_room: &str,
 ) -> Result<Vec<RoomObject>> {
     let mut stmt = conn.prepare(
-        "SELECT id, kind, x, y, z, rot FROM itops_room_objects
+        "SELECT id, kind, x, y, z, rot, corner FROM itops_room_objects
          WHERE site_id = ? AND server_room = ? ORDER BY created_at, id",
     )?;
     Ok(stmt
@@ -664,6 +796,7 @@ pub fn list_room_objects(
                 y: row.get(3)?,
                 z: row.get(4)?,
                 rot: row.get(5)?,
+                corner: row.get(6)?,
             })
         })?
         .collect::<rusqlite::Result<Vec<_>>>()?)
@@ -695,8 +828,8 @@ pub fn set_room_objects(
     )?;
     for object in objects {
         tx.execute(
-            "INSERT INTO itops_room_objects (id, site_id, server_room, kind, x, y, z, rot)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO itops_room_objects (id, site_id, server_room, kind, x, y, z, rot, corner)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
             params![
                 object.id,
                 site_id,
@@ -705,7 +838,8 @@ pub fn set_room_objects(
                 object.x,
                 object.y,
                 object.z,
-                object.rot
+                object.rot,
+                object.corner
             ],
         )?;
     }
@@ -886,6 +1020,7 @@ mod tests {
                 y INTEGER NOT NULL,
                 z INTEGER NOT NULL DEFAULT 0,
                 rot INTEGER NOT NULL DEFAULT 0,
+                corner INTEGER,
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
@@ -893,11 +1028,21 @@ mod tests {
                 id TEXT PRIMARY KEY,
                 site_id TEXT NOT NULL,
                 name TEXT NOT NULL,
+                floor_color TEXT NOT NULL DEFAULT 'default',
                 sort_order INTEGER NOT NULL,
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE(site_id, name)
             );
+            CREATE TABLE itops_sites (
+                id TEXT PRIMARY KEY,
+                room_backgrounds_json TEXT,
+                room_icons_json TEXT,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+            INSERT INTO itops_sites (id, room_backgrounds_json, room_icons_json)
+            VALUES ('f1', '{"Room B":{"kind":"preset","preset":"paper"}}',
+                    '{"Room B":{"iconColor":"red"}}');
             INSERT INTO itops_server_rooms (id, site_id, name, sort_order)
             VALUES ('room-b', 'f1', 'Room B', 0), ('room-c', 'f1', 'Room C', 1);
             CREATE TABLE itops_site_rack_items (
@@ -1088,6 +1233,7 @@ mod tests {
             y: 2,
             z,
             rot: 1,
+            corner: Some(2),
         };
 
         set_room_objects(
@@ -1104,7 +1250,15 @@ mod tests {
         let room_b = list_room_objects(&conn, "f1", "Room B").unwrap();
         assert_eq!(
             room_b,
-            vec![RoomObject { id: "o4".into(), kind: "aircon".into(), x: 1, y: 2, z: 0, rot: 1 }]
+            vec![RoomObject {
+                id: "o4".into(),
+                kind: "aircon".into(),
+                x: 1,
+                y: 2,
+                z: 0,
+                rot: 1,
+                corner: Some(2)
+            }]
         );
         assert_eq!(list_room_objects(&conn, "f1", "Room C").unwrap().len(), 1);
 
@@ -1127,6 +1281,12 @@ mod tests {
         spun.rot = 9;
         assert!(matches!(
             set_room_objects(&conn, "f1", "Room B", &[spun]),
+            Err(ItopsStorageError::Validation(_))
+        ));
+        let mut cornered = object("bad", "camera", 0);
+        cornered.corner = Some(4);
+        assert!(matches!(
+            set_room_objects(&conn, "f1", "Room B", &[cornered]),
             Err(ItopsStorageError::Validation(_))
         ));
         // A failed write leaves the previous layout intact.
@@ -1311,7 +1471,7 @@ mod tests {
     #[test]
     fn server_room_persists_without_a_rack() {
         let conn = open_test_db();
-        let created = create_server_room(&conn, "room-empty", "f1", " Empty Room ").unwrap();
+        let created = create_server_room(&conn, "room-empty", "f1", " Empty Room ", "default").unwrap();
         assert_eq!(created.name, "Empty Room");
         assert!(
             list_server_rooms(&conn, "f1")
@@ -1320,6 +1480,39 @@ mod tests {
                 .any(|room| room.id == "room-empty")
         );
         assert!(list_racks(&conn, "f1").unwrap().is_empty());
+    }
+
+    #[test]
+    fn server_room_properties_rename_dependents() {
+        let conn = open_test_db();
+        create_rack(&conn, "r1", "f1", "A12", "Room B", "", None, 42, 1000, None).unwrap();
+        conn.execute(
+            "INSERT INTO itops_room_objects (id, site_id, server_room, kind, x, y, z, rot)
+             VALUES ('obj-1', 'f1', 'Room B', 'sensor', 0, 0, 0, 0)",
+            [],
+        )
+        .unwrap();
+
+        let updated = update_server_room(&conn, "room-b", " Core Room ", "blue").unwrap();
+        assert_eq!(updated.name, "Core Room");
+        assert_eq!(updated.floor_color, "blue");
+        assert_eq!(list_racks(&conn, "f1").unwrap()[0].server_room, "Core Room");
+        assert_eq!(
+            list_room_objects(&conn, "f1", "Core Room").unwrap().len(),
+            1
+        );
+
+        let (backgrounds, icons): (String, String) = conn
+            .query_row(
+                "SELECT room_backgrounds_json, room_icons_json FROM itops_sites WHERE id = 'f1'",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .unwrap();
+        assert!(backgrounds.contains("Core Room"));
+        assert!(!backgrounds.contains("Room B"));
+        assert!(icons.contains("Core Room"));
+        assert!(!icons.contains("Room B"));
     }
 
     #[test]

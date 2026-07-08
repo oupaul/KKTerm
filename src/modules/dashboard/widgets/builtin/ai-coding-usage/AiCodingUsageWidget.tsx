@@ -1,4 +1,4 @@
-import { ExternalLink, PanelBottom, PanelBottomDashed, Plus, RefreshCw, X } from "lucide-react";
+import { ExternalLink, PanelBottom, PanelBottomDashed, Plus, RefreshCw, X } from "../../../../../lib/reicon";
 import { ClaudeCodeColorIcon, CodexColorIcon } from "./providerIcons";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode, RefObject } from "react";

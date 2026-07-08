@@ -82,7 +82,7 @@
 - **원격 `claude` / `codex` 세션에 자동으로 다시 붙는 SSH Pane**. Wi-Fi가 아무리 떼를 써도 6시간짜리 작업이 살아남는다.
 - **워크스페이스(Workspaces)**. 홈랩, 본업, 그리고 그 고객사 서버를 한 번의 클릭으로 전환하는 별도의 격리된 컨테이너로 나눠 둔다.
 - **Install Helper**. 평소엔 브라우저 탭 열 개를 헤매며 찾던 Windows 개발 도구를 찾고·설치하고·업데이트하고·실행한다.
-- Dashboard *와 터미널*용 **애니메이션 배경 26종**(그래, `matrix`도 있다). 좀 과하긴 한데, 후회는 없다.
+- Dashboard *와 터미널*용 **애니메이션 배경 36종**(그래, `matrix`도 있다). 좀 과하긴 한데, 후회는 없다.
 
 그리고 가장 좋은 부분：AI 어시스턴트는 한 문장을, 당신이 실제로 계속 쓰게 될 작은 Dashboard 도구로 바꿔 준다.
 
@@ -220,14 +220,14 @@ Dashboard는 드래그·리사이즈 가능한 위젯 그리드다. 페타바이
 
 #### Dashboard／터미널 애니메이션 배경 (그냥 하고 싶어서)
 
-Dashboard 뷰마다, *또는 아무 터미널 뒤에*, **26종**의 캔버스 애니메이션 배경에서 기분을 고를 수 있다：
+Dashboard 뷰마다, *또는 아무 터미널 뒤에*, **36종**의 캔버스 애니메이션 배경에서 기분을 고를 수 있다：
 
 | 기분 | 배경 |
 | --- | --- |
-| 잔잔 | `aurora`, `clouds`, `ocean`, `raindrops`, `rainywindow`, `frostedWindow`, `snow`, `sakura`, `fireflies`, `bubbles`, `aquarium`, `ricefield`, `lanterns` |
-| 우주 | `starfield`, `nebula` |
-| 따뜻 | `embers`, `lava` |
-| 긱 | `matrix`, `topo`, `synthwave` |
+| 잔잔 | `fuji`, `aurora`, `halftone`, `clouds`, `ocean`, `raindrops`, `rainywindow`, `frostedWindow`, `snow`, `sakura`, `fireflies`, `bubbles`, `aquarium`, `jellyfish`, `lighthouse`, `balloons`, `ricefield`, `lanterns` |
+| 우주 | `starfield`, `nebula`, `orbitals` |
+| 따뜻 | `embers`, `lava`, `ink`, `dunes`, `savanna` |
+| 긱 | `matrix`, `topo`, `synthwave`, `circuit`, `crystals` |
 | 들썩 | `cyberpunk`, `taipei101`, `thunderstorm`, `confetti`, `particleCursor` |
 
 같은 선택기가 터미널 페인에도 적용되므로, 돌아가는 SSH 세션 뒤에 `matrix`를 깔 수 있다. 다른 화면에 있을 땐 멈추므로 비용은 거의 0이다. `matrix`를 AI 어시스턴트와 짝지으면 "나는 극도로 생산적이며 아마도 워쇼스키 영화 속에 있다"는 분위기가 난다. 아니면 `ocean`을 골라 진지한 사람처럼 보이거나. 어느 쪽이든 우리는 평가하지 않는다.

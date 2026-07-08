@@ -1,6 +1,7 @@
 import type { AccentName, IconName } from "../types";
 import { ACCENT_NAMES, ICON_NAMES } from "../types";
 import { isMaterialIconRef } from "../../../lib/iconCatalog";
+import { VALID_ICON_NAMES } from "../../../lib/reiconNames";
 
 export interface AccentDefinition {
   name: AccentName;
@@ -54,5 +55,5 @@ export function isAccentName(value: string): value is AccentName {
 }
 
 export function isIconName(value: string): value is IconName {
-  return (ICON_NAMES as readonly string[]).includes(value) || isMaterialIconRef(value);
+  return (VALID_ICON_NAMES as readonly string[]).includes(value) || isMaterialIconRef(value);
 }

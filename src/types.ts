@@ -103,6 +103,7 @@ export interface Connection {
   serialSpeed?: number;
   url?: string;
   dataPartition?: string;
+  urlUserAgent?: string;
   urlProxy?: string;
   urlProxyInheritDefaults?: boolean;
   useTmuxSessions?: boolean;
@@ -161,7 +162,7 @@ export interface Site {
   background?: DashboardBackground | null;
   // Per-server-room backgrounds, keyed by the room's string tag.
   roomBackgrounds?: Record<string, DashboardBackground>;
-  // Custom icon (data URL or lucide/material ref), foreground colour, and background colour.
+  // Custom icon (data URL or reicon/lucide/material ref), foreground colour, and background colour.
   iconColor?: string | null;
   iconDataUrl?: string | null;
   iconBackgroundColor?: string | null;
@@ -179,6 +180,8 @@ export interface ServerRoom {
   id: string;
   siteId: string;
   name: string;
+  /** Durable 2.5D floor finish; validated against the room floor palette. */
+  floorColor?: string;
   sortOrder: number;
 }
 
@@ -451,6 +454,7 @@ export interface CreateConnectionRequest {
   serialSpeed?: number;
   url?: string;
   dataPartition?: string;
+  urlUserAgent?: string;
   urlProxy?: string;
   urlProxyInheritDefaults?: boolean;
   useTmuxSessions?: boolean;
@@ -911,6 +915,7 @@ export interface SftpSettings {
 export interface UrlSettings {
   ignoreCertificateErrors: boolean;
   defaultDataPartition?: string;
+  defaultUserAgent?: string;
 }
 
 export type RdpPerformanceProfile = "balanced" | "quality" | "speed";

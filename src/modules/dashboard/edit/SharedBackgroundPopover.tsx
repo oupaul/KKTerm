@@ -114,7 +114,7 @@ export function SharedBackgroundPopover({
           title: t("dashboard.backgroundChooseMedia"),
           filters: [{
             name: t("dashboard.backgroundMediaFilter"),
-            extensions: ["png", "jpg", "jpeg", "webp", "gif", "bmp", "mp4", "webm", "mov", "m4v", "ogv"],
+            extensions: ["png", "jpg", "jpeg", "webp", "gif", "bmp", "svg", "mp4", "webm", "mov", "m4v", "ogv"],
           }],
         });
         sourcePath = typeof selected === "string" ? selected : null;

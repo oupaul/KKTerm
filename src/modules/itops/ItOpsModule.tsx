@@ -6,11 +6,16 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { listen } from "@tauri-apps/api/event";
 import { Actions, Btn, DialogShell, Sheet } from "../../app/ui/dialog";
-import { ModuleHeader, ModuleHeaderTitle, ModuleIconTile } from "../../app/ModuleHeader";
+import {
+  ModuleHeader,
+  ModuleHeaderLead,
+  ModuleHeaderTitle,
+  ModuleIconTile,
+} from "../../app/ModuleHeader";
 import { isTauriRuntime } from "../../lib/tauri";
 import { useWorkspaceStore } from "../../store";
 import type { RunEvent, RunScope } from "../../types";
-import { ItIcon } from "./icons";
+import { ItOpsModuleIcon } from "./icons";
 import { SitesTab } from "./SitesTab";
 import { BatchRunDialog } from "./BatchRunDialog";
 import { useItOpsStore } from "./state";
@@ -108,16 +113,19 @@ export function ItOpsModule({
         <SitesTab
           treeCollapsed={siteTreeCollapsed}
           onShowWorkspace={onShowWorkspace}
-          renderSidebarHeader={({ collapsed }) => (
-            <ModuleHeader className="it-head it-side-head">
-              <ModuleIconTile className="it-head-tile" module="itops">
-                <ItIcon name="ops" size={20} sw={1.7} />
-              </ModuleIconTile>
-              {collapsed ? null : (
-                <div className="it-head-txt">
-                  <ModuleHeaderTitle>{t("itops.title")}</ModuleHeaderTitle>
-                </div>
-              )}
+          renderSidebarHeader={({ actions, collapsed }) => (
+            <ModuleHeader className="it-side-head">
+              <ModuleHeaderLead className="it-head-txt">
+                <ModuleIconTile module="itops">
+                  <ItOpsModuleIcon size={16} />
+                </ModuleIconTile>
+                {collapsed ? null : (
+                  <>
+                    <ModuleHeaderTitle>{t("itops.title")}</ModuleHeaderTitle>
+                    {actions ? <div className="it-head-actions">{actions}</div> : null}
+                  </>
+                )}
+              </ModuleHeaderLead>
             </ModuleHeader>
           )}
         />

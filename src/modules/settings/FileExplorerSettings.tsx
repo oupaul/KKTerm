@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { FolderOpen } from "lucide-react";
+import { FolderOpen } from "../../lib/reicon";
 import { useTranslation } from "react-i18next";
 import { currentPlatform } from "../../lib/platform";
 import { invokeCommand, isTauriRuntime } from "../../lib/tauri";

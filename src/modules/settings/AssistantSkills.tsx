@@ -1,4 +1,4 @@
-import { FolderOpen, RefreshCw } from "lucide-react";
+import { FolderOpen, RefreshCw } from "../../lib/reicon";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {

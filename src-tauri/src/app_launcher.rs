@@ -2,7 +2,7 @@ use crate::storage;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use std::time::SystemTime;
-#[cfg(not(target_os = "windows"))]
+#[cfg(not(any(target_os = "windows", target_os = "linux")))]
 use tauri_plugin_opener::OpenerExt;
 
 const FALLBACK_ICON_DATA_URL: &str = "data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2032%2032'%3E%3Crect%20x='5'%20y='5'%20width='22'%20height='22'%20rx='5'%20fill='%23eef3fb'%20stroke='%2395a3b8'/%3E%3Cpath%20d='M11%2012h10M11%2016h10M11%2020h6'%20stroke='%23516275'%20stroke-width='2'%20stroke-linecap='round'/%3E%3C/svg%3E";
@@ -186,7 +186,13 @@ fn launch_plan(app: tauri::AppHandle, plan: AppLauncherLaunchPlan) -> Result<(),
         launch_plan_windows(plan)
     }
 
-    #[cfg(not(target_os = "windows"))]
+    #[cfg(target_os = "linux")]
+    {
+        let _ = app;
+        launch_plan_linux(plan)
+    }
+
+    #[cfg(not(any(target_os = "windows", target_os = "linux")))]
     {
         if plan.operation.is_some() {
             return Err(
@@ -210,6 +216,65 @@ fn launch_plan(app: tauri::AppHandle, plan: AppLauncherLaunchPlan) -> Result<(),
             .spawn()
             .map(|_| ())
             .map_err(|error| format!("failed to launch {}: {error}", plan.target))
+    }
+}
+
+// Launch everything through host processes with the AppImage environment
+// scrubbed. The opener plugin spawns xdg-open with KKTerm's own environment;
+// inside an AppImage the rewritten XDG_DATA_DIRS/GIO variables break MIME and
+// .desktop-database resolution, so xdg-open's generic fallback opened every
+// entry — files, folders, even executables — in the default browser. Runnable
+// files execute directly, .desktop entries launch the app they describe via
+// `gio launch` (GLib ships with every GTK desktop KKTerm runs on), and
+// everything else opens through the desktop's default handler via xdg-open.
+#[cfg(target_os = "linux")]
+fn launch_plan_linux(plan: AppLauncherLaunchPlan) -> Result<(), String> {
+    if plan.operation.is_some() {
+        return Err("Admin and alternate-user launch are only available on Windows".to_string());
+    }
+
+    if is_runnable_path(&plan.target) {
+        let mut command = match plan.parameters.as_deref() {
+            // `sh -c` makes $0 the target and applies shell quoting to the
+            // arguments string, matching how a terminal would parse it.
+            Some(parameters) => {
+                let mut command = std::process::Command::new("/bin/sh");
+                command
+                    .arg("-c")
+                    .arg(format!("exec \"$0\" {parameters}"))
+                    .arg(&plan.target);
+                command
+            }
+            None => std::process::Command::new(&plan.target),
+        };
+        if let Some(working_directory) = plan.working_directory.as_deref() {
+            command.current_dir(working_directory);
+        }
+        return crate::linux_env::spawn_detached_host_process(command)
+            .map_err(|error| format!("failed to launch {}: {error}", plan.target));
+    }
+
+    if path_extension(&plan.target).as_deref() == Some("desktop") {
+        // A .desktop file is an application definition: launch the app it
+        // describes instead of opening the file itself in a text editor.
+        let mut command = std::process::Command::new("gio");
+        command.arg("launch").arg(&plan.target);
+        return crate::linux_env::spawn_detached_host_process(command)
+            .map_err(|error| format!("failed to launch desktop entry {}: {error}", plan.target));
+    }
+
+    let mut command = std::process::Command::new("xdg-open");
+    command.arg(&plan.target);
+    match crate::linux_env::spawn_detached_host_process(command) {
+        Ok(()) => Ok(()),
+        // xdg-utils missing (minimal installs): fall back to GLib's opener.
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            let mut command = std::process::Command::new("gio");
+            command.arg("open").arg(&plan.target);
+            crate::linux_env::spawn_detached_host_process(command)
+                .map_err(|error| format!("failed to open {}: {error}", plan.target))
+        }
+        Err(error) => Err(format!("failed to open {}: {error}", plan.target)),
     }
 }
 
@@ -635,11 +700,30 @@ fn native_icon_data_url(_path: &str) -> Option<String> {
     None
 }
 
+#[cfg(not(target_os = "linux"))]
 fn is_runnable_path(path: &str) -> bool {
     matches!(
         path_extension(path).as_deref(),
         Some("exe" | "lnk" | "bat" | "cmd" | "ps1")
     )
+}
+
+// On Linux "runnable" means the target itself can be executed: a regular file
+// with any execute bit set (ELF binaries, scripts, AppImages). Windows-style
+// extensions are meaningless here; everything else opens through the desktop's
+// default handler. `.desktop` entries are excluded even though desktops mark
+// trusted ones executable — they are application definitions to launch via
+// `gio launch`, not programs to exec.
+#[cfg(target_os = "linux")]
+fn is_runnable_path(path: &str) -> bool {
+    use std::os::unix::fs::PermissionsExt;
+
+    if path_extension(path).as_deref() == Some("desktop") {
+        return false;
+    }
+    std::fs::metadata(path)
+        .map(|metadata| metadata.is_file() && metadata.permissions().mode() & 0o111 != 0)
+        .unwrap_or(false)
 }
 
 #[cfg(target_os = "windows")]
@@ -817,6 +901,10 @@ mod tests {
         assert_eq!(plan.operation, None);
     }
 
+    // On Linux runnable is decided by the execute bit, not the extension, so
+    // these Windows-shaped paths are not runnable there (covered by the
+    // Linux-specific tests below).
+    #[cfg(not(target_os = "linux"))]
     #[test]
     fn launch_plan_limits_admin_to_runnable_files() {
         let plan = plan_launch("C:\\Tools\\script.ps1", AppLauncherLaunchMode::Admin)
@@ -835,6 +923,7 @@ mod tests {
         assert!(error.contains("only available for runnable files"));
     }
 
+    #[cfg(not(target_os = "linux"))]
     #[test]
     fn launch_plan_uses_windows_runasuser_verb_for_alternate_user() {
         let plan = plan_launch("C:\\Tools\\tool.exe", AppLauncherLaunchMode::DifferentUser)
@@ -842,6 +931,74 @@ mod tests {
 
         assert_eq!(plan.target, "C:\\Tools\\tool.exe");
         assert_eq!(plan.operation, Some("runasuser"));
+    }
+
+    #[cfg(target_os = "linux")]
+    fn write_temp_file(dir: &std::path::Path, name: &str, mode: u32) -> PathBuf {
+        use std::os::unix::fs::PermissionsExt;
+
+        let path = dir.join(name);
+        std::fs::write(&path, "#!/bin/sh\n").expect("write temp file");
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(mode))
+            .expect("set permissions");
+        path
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn linux_runnable_detection_uses_executable_bit() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let tool = write_temp_file(dir.path(), "tool", 0o755);
+        let notes = write_temp_file(dir.path(), "notes.txt", 0o644);
+        // Desktops mark trusted .desktop entries executable; they must still
+        // launch through `gio launch`, not be exec'd as programs.
+        let desktop_entry = write_temp_file(dir.path(), "app.desktop", 0o755);
+
+        assert!(is_runnable_path(&tool.to_string_lossy()));
+        assert!(!is_runnable_path(&notes.to_string_lossy()));
+        assert!(!is_runnable_path(&desktop_entry.to_string_lossy()));
+        assert!(!is_runnable_path(&dir.path().to_string_lossy()));
+        assert!(!is_runnable_path("/nonexistent/path"));
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn linux_launch_plan_keeps_arguments_for_executables() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let tool = write_temp_file(dir.path(), "tool", 0o755);
+        let tool_path = tool.to_string_lossy().to_string();
+        let dir_path = dir.path().to_string_lossy().to_string();
+
+        let plan = plan_launch_with_options(
+            &tool_path,
+            Some("--flag value"),
+            Some(&dir_path),
+            AppLauncherLaunchMode::Normal,
+        )
+        .expect("executables launch directly with their arguments");
+
+        assert_eq!(plan.target, tool_path);
+        assert_eq!(plan.parameters.as_deref(), Some("--flag value"));
+        assert_eq!(plan.working_directory.as_deref(), Some(dir_path.as_str()));
+        assert_eq!(plan.operation, None);
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn linux_launch_plan_limits_admin_to_executable_files() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let tool = write_temp_file(dir.path(), "tool", 0o755);
+        let notes = write_temp_file(dir.path(), "notes.txt", 0o644);
+
+        // Planning accepts the admin verb for executables; `launch_plan`
+        // rejects the verb itself off Windows.
+        let plan = plan_launch(&tool.to_string_lossy(), AppLauncherLaunchMode::Admin)
+            .expect("executables can plan an admin launch");
+        assert_eq!(plan.operation, Some("runas"));
+
+        let error = plan_launch(&notes.to_string_lossy(), AppLauncherLaunchMode::Admin)
+            .expect_err("documents cannot use admin launch");
+        assert!(error.contains("only available for runnable files"));
     }
 
     #[test]

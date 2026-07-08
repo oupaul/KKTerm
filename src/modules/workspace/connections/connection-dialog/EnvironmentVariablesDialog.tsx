@@ -1,4 +1,4 @@
-import { WandSparkles } from "lucide-react";
+import { WandSparkles } from "../../../../lib/reicon";
 import { useId, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import claudeCodeIcon from "../../../../assets/installer-icons/claude-code.svg?url";

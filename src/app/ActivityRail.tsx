@@ -4,12 +4,11 @@ import {
   Coffee,
   Gauge,
   LayoutDashboard,
-  Package,
   Pin,
   PinOff,
   Plus,
   Settings,
-} from "lucide-react";
+} from "../lib/reicon";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { useTranslation } from "react-i18next";
@@ -27,7 +26,8 @@ import type { Connection, Workspace } from "../types";
 import { NewWorkspaceDialog } from "../modules/workspace/NewWorkspaceDialog";
 import { DeleteWorkspaceDialog } from "../modules/workspace/WorkspaceRailDialogs";
 import { WorkspaceIcon } from "../modules/workspace/workspaceIcons";
-import { ItIcon } from "../modules/itops/icons";
+import { ItOpsModuleIcon } from "../modules/itops/icons";
+import { InstallHelperModuleIcon } from "./moduleIdentityIcons";
 import { RailTooltip } from "./RailTooltip";
 
 export type ActivePage =
@@ -737,7 +737,7 @@ export function ActivityRail({
           onClick={() => onNavigate("itops")}
           style={activityRailItemStyle("itops")}
         >
-          <ItIcon name="ops" size={18} />
+          <ItOpsModuleIcon size={18} />
           <RailTooltip label={t("itops.railLabel")} />
         </button>
       ) : null}
@@ -749,7 +749,7 @@ export function ActivityRail({
           onClick={() => onNavigate("installer")}
           style={activityRailItemStyle("installer")}
         >
-          <Package size={18} />
+          <InstallHelperModuleIcon size={18} />
           <RailTooltip label={t("installer.railLabel")} />
         </button>
       ) : null}

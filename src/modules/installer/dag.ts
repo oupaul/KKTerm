@@ -213,7 +213,24 @@ function estimateUacPromptsFor(
 function isKnownMachineOnlyWingetRecipe(recipe: Recipe): boolean {
   if (recipe.provider.kind !== "winget") return false;
   const id = recipe.provider.id.toLowerCase();
-  const machineOnly = ["marha.vcxsrv"];
+  const machineOnly = [
+    "7zip.7zip",
+    "blenderfoundation.blender",
+    "bruno.bruno",
+    "chocolatey.chocolatey",
+    "ditto.ditto",
+    "docker.dockerdesktop",
+    "github.cli",
+    "jgraph.draw",
+    "kde.krita",
+    "microsoft.coreutils",
+    "microsoft.powershell",
+    "notepad++.notepad++",
+    "tailscale.tailscale",
+    "voidtools.everything",
+    "inkscape.inkscape",
+    "marha.vcxsrv",
+  ];
   return machineOnly.some((needle) => id.includes(needle));
 }
 

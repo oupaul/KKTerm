@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Waypoints } from "lucide-react";
+import { Waypoints } from "../../lib/reicon";
 import { useTranslation } from "react-i18next";
 import { invokeCommand, isTauriRuntime } from "../../lib/tauri";
 import { technicalInputProps } from "../../lib/inputBehavior";

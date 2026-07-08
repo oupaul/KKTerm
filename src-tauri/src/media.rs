@@ -386,7 +386,18 @@ pub(crate) fn background_media_extension(path: &std::path::Path) -> Option<Strin
         .map(|extension| extension.to_lowercase())?;
     if matches!(
         extension.as_str(),
-        "png" | "jpg" | "jpeg" | "webp" | "gif" | "bmp" | "mp4" | "webm" | "mov" | "m4v" | "ogv",
+        "png"
+            | "jpg"
+            | "jpeg"
+            | "webp"
+            | "gif"
+            | "bmp"
+            | "svg"
+            | "mp4"
+            | "webm"
+            | "mov"
+            | "m4v"
+            | "ogv",
     ) {
         Some(extension)
     } else {
@@ -401,6 +412,7 @@ pub(crate) fn background_media_mime(extension: &str) -> &'static str {
         "webp" => "image/webp",
         "gif" => "image/gif",
         "bmp" => "image/bmp",
+        "svg" => "image/svg+xml",
         "mp4" | "m4v" => "video/mp4",
         "webm" => "video/webm",
         "mov" => "video/quicktime",
@@ -412,6 +424,7 @@ pub(crate) fn background_media_mime(extension: &str) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::Path;
 
     #[test]
     fn custom_font_entry_serializes_terminal_monospace_flag() {
@@ -430,10 +443,19 @@ mod tests {
         assert_eq!(value.get("isMonospace"), Some(&serde_json::Value::Bool(true)));
         assert!(value.get("isMonospaced").is_none());
     }
+
+    #[test]
+    fn background_media_accepts_svg_with_svg_mime() {
+        assert_eq!(
+            background_media_extension(Path::new("background.svg")),
+            Some("svg".to_string())
+        );
+        assert_eq!(background_media_mime("svg"), "image/svg+xml");
+    }
 }
 
 pub(crate) fn background_media_extension_error() -> &'static str {
-    "background file must be .png, .jpg, .jpeg, .webp, .gif, .bmp, .mp4, .webm, .mov, .m4v, or .ogv"
+    "background file must be .png, .jpg, .jpeg, .webp, .gif, .bmp, .svg, .mp4, .webm, .mov, .m4v, or .ogv"
 }
 
 #[cfg(test)]

@@ -14,11 +14,13 @@ export function topologyGroupKey(value: string | null | undefined): string {
 export interface ServerRoomGroup {
   /** Stored value ("" = Unassigned). */
   key: string;
+  /** First-class Server Room properties when this is not a legacy rack-only group. */
+  room?: ServerRoom;
   racks: Rack[];
 }
 
 export function groupRackTopology(racks: Rack[], durableRooms: ServerRoom[] = []): ServerRoomGroup[] {
-  const rooms: ServerRoomGroup[] = durableRooms.map((room) => ({ key: room.name, racks: [] }));
+  const rooms: ServerRoomGroup[] = durableRooms.map((room) => ({ key: room.name, room, racks: [] }));
   for (const rack of racks) {
     const roomKey = rack.serverRoom ?? "";
     const comparableKey = topologyGroupKey(roomKey);

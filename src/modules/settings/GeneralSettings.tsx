@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import {
   BedSingle,
-  Box,
   Download,
   FolderOpen,
   Gauge,
@@ -12,10 +11,11 @@ import {
   RotateCcw,
   Settings as SettingsIcon,
   Upload,
-} from "lucide-react";
+} from "../../lib/reicon";
 import { useTranslation } from "react-i18next";
 import { CHECK_FOR_APP_UPDATES_EVENT } from "../../app/AppUpdatePrompt";
 import { ModuleIconTile, type ModuleKind } from "../../app/ModuleHeader";
+import { InstallHelperModuleIcon } from "../../app/moduleIdentityIcons";
 import {
   activityRailModuleOrder,
   canHideActivityRailModule,
@@ -103,7 +103,7 @@ function ActivityRailModuleIcon({ id }: { id: ActivityRailItemId }) {
     ) : id === "dashboard" ? (
       <Gauge aria-hidden="true" />
     ) : id === "installer" ? (
-      <Box aria-hidden="true" />
+      <InstallHelperModuleIcon aria-hidden="true" />
     ) : (
       <ItIcon name="ops" size={17} sw={1.7} />
     );

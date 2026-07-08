@@ -176,6 +176,7 @@ test("curated Chocolatey overlaps expose Chocolatey alternate providers", () => 
     ["nssm", "nssm"],
     ["powershell-7", "powershell-core"],
     ["ffmpeg", "ffmpeg"],
+    ["blender", "blender"],
   ]);
 
   for (const [toolId, packageId] of expected) {

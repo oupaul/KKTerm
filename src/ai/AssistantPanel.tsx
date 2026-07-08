@@ -20,7 +20,7 @@ import {
   Square,
   Trash2,
   X,
-} from "lucide-react";
+} from "../lib/reicon";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type {

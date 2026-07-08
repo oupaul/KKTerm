@@ -316,6 +316,7 @@ export function SshPortForwardingDialog({
       .catch(() => undefined);
     void invokeCommand("list_remote_loopback_ports", {
       request: sshConnectionRequest(connection),
+      sessionId: sessionId ?? undefined,
     })
       .then((ports) => {
         if (!cancelled) {

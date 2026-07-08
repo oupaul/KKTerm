@@ -4,10 +4,15 @@ import type { Rack } from "../src/types";
 import {
   ROOM_CEILING_U,
   cellSpans,
+  footprintSpans,
   nudgeZ,
+  objectCellSpan,
+  objectFootprint,
+  objectSurfaceAnchor,
   objectSpec,
   resolveDropZ,
   sanitizeRoomObjects,
+  settleRoomObjects,
   type RoomObject,
 } from "../src/modules/itops/roomObjects";
 import {
@@ -36,7 +41,7 @@ function rack(id: string, heightU = 42): Rack {
 }
 
 function obj(id: string, kind: RoomObject["kind"], x: number, y: number, z: number): RoomObject {
-  return { id, kind, x, y, z, rot: 0 };
+  return { id, kind, x, y, z, rot: 0, corner: 0 };
 }
 
 test("cellSpans stacks the rack and every object sharing the cell", () => {
@@ -56,6 +61,126 @@ test("cellSpans stacks the rack and every object sharing the cell", () => {
 test("a 乖乖 pack dropped on an occupied cell stacks on the cabinet top", () => {
   const spans = cellSpans({ x: 0, y: 0 }, [rack("a")], { a: { x: 0, y: 0 } }, []);
   assert.equal(resolveDropZ(spans, "kuaikuai"), 42);
+});
+
+test("rack-top stacking only counts the drawn cabinet footprint", () => {
+  const shallow = rack("a");
+  shallow.depthMm = 600;
+  const cells = { a: { x: 0, y: 0 } };
+  const racks = [shallow];
+  const supportedCorners = {
+    0: [2, 3],
+    1: [0, 3],
+    2: [0, 1],
+    3: [1, 2],
+  } as const;
+
+  for (const facing of [0, 1, 2, 3] as const) {
+    for (const corner of [0, 1, 2, 3] as const) {
+      const spans = footprintSpans(
+        { x: 0, y: 0 },
+        "kuaikuai",
+        0,
+        racks,
+        cells,
+        [],
+        undefined,
+        corner,
+        { a: facing },
+      );
+      const expected = supportedCorners[facing].includes(corner) ? 42 : 0;
+      assert.equal(resolveDropZ(spans, "kuaikuai"), expected, `facing ${facing} corner ${corner}`);
+    }
+  }
+});
+
+test("quarter objects in different rack corners share the same rack top", () => {
+  const racks = [rack("a")];
+  const cells = { a: { x: 0, y: 0 } };
+  const existing = [{ ...obj("left", "kuaikuai", 0, 0, 42), corner: 3 as const }];
+
+  const otherCorner = footprintSpans(
+    { x: 0, y: 0 },
+    "kuaikuai",
+    0,
+    racks,
+    cells,
+    existing,
+    undefined,
+    2,
+    { a: 0 },
+  );
+  assert.equal(resolveDropZ(otherCorner, "kuaikuai"), 42);
+
+  const sameCorner = footprintSpans(
+    { x: 0, y: 0 },
+    "kuaikuai",
+    0,
+    racks,
+    cells,
+    existing,
+    undefined,
+    3,
+    { a: 0 },
+  );
+  assert.equal(resolveDropZ(sameCorner, "kuaikuai"), 44);
+});
+
+test("settleRoomObjects repairs stale raised rack-top corner placements", () => {
+  const racks = [rack("a")];
+  const cells = { a: { x: 0, y: 0 } };
+  const objects: RoomObject[] = [
+    { ...obj("left", "kuaikuai", 0, 0, 42), corner: 3 },
+    { ...obj("right", "kuaikuai", 0, 0, 44), corner: 2 },
+  ];
+
+  assert.deepEqual(
+    settleRoomObjects(objects, racks, cells, { a: 0 }).map((object) => ({
+      id: object.id,
+      z: object.z,
+      corner: object.corner,
+    })),
+    [
+      { id: "left", z: 42, corner: 3 },
+      { id: "right", z: 42, corner: 2 },
+    ],
+  );
+});
+
+test("settleRoomObjects preserves intentional same-corner stacks", () => {
+  const racks = [rack("a")];
+  const cells = { a: { x: 0, y: 0 } };
+  const objects: RoomObject[] = [
+    { ...obj("bottom", "kuaikuai", 0, 0, 42), corner: 3 },
+    { ...obj("top", "kuaikuai", 0, 0, 44), corner: 3 },
+  ];
+
+  assert.deepEqual(
+    settleRoomObjects(objects, racks, cells, { a: 0 }).map((object) => ({
+      id: object.id,
+      z: object.z,
+      corner: object.corner,
+    })),
+    [
+      { id: "bottom", z: 42, corner: 3 },
+      { id: "top", z: 44, corner: 3 },
+    ],
+  );
+});
+
+test("gravity objects land on the lowest fitting surface", () => {
+  const spans = cellSpans(
+    { x: 0, y: 0 },
+    [rack("a")],
+    { a: { x: 0, y: 0 } },
+    [obj("cam", "camera", 0, 0, 52)],
+  );
+  assert.equal(resolveDropZ(spans, "kuaikuai"), 42);
+  assert.equal(resolveDropZ(spans, "kuaikuai", 52), 42);
+});
+
+test("floor objects do not keep a stale raised level when moved", () => {
+  assert.equal(resolveDropZ([], "ups", 42), 0);
 });
 
 test("two objects share a cell only while their vertical spans do not intersect", () => {
@@ -86,13 +211,79 @@ test("nudgeZ moves to the next free level and clamps at floor/ceiling", () => {
 
 test("sanitizeRoomObjects drops malformed entries and rounds coordinates", () => {
   const parsed = sanitizeRoomObjects([
-    { id: "ok", kind: "camera", x: 1.4, y: 2.6, z: 52.2, rot: 3 },
+    { id: "ok", kind: "camera", x: 1.4, y: 2.6, z: 52.2, rot: 3, corner: 2 },
+    { id: "legacy", kind: "sensor", x: 0, y: 0, z: 40, rot: 0 },
     { id: "bad-kind", kind: "sofa", x: 0, y: 0, z: 0, rot: 0 },
     { id: 42, kind: "camera", x: 0, y: 0, z: 0, rot: 0 },
     { id: "bad-x", kind: "camera", x: "left", y: 0, z: 0, rot: 0 },
     "not-an-object",
   ]);
-  assert.deepEqual(parsed, [{ id: "ok", kind: "camera", x: 1, y: 3, z: 52, rot: 3 }]);
+  assert.deepEqual(parsed, [
+    { id: "ok", kind: "camera", x: 1, y: 3, z: 52, rot: 3, corner: 2 },
+    // Rows saved before corners existed default to the NW quadrant.
+    { id: "legacy", kind: "sensor", x: 0, y: 0, z: 40, rot: 0, corner: 0 },
+  ]);
+});
+
+test("quarter-block fixtures anchor to their cell corner", () => {
+  // 乖乖 packs and other small fixtures cover one cell quadrant.
+  assert.deepEqual(objectCellSpan("kuaikuai", 0), { w: 1, h: 1 });
+  const spec = objectSpec("kuaikuai");
+  assert.ok(spec.quarter);
+  // NW quadrant: centred within [0, 0.5); SE quadrant shifts by half a cell.
+  const nw = objectFootprint("kuaikuai", 0, 0);
+  const se = objectFootprint("kuaikuai", 0, 2);
+  assert.ok(nw.x >= 0 && nw.x + nw.w <= 0.5 && nw.y + nw.d <= 0.5);
+  assert.equal(se.x, nw.x + 0.5);
+  assert.equal(se.y, nw.y + 0.5);
+  // Every quarter kind fits inside its quadrant.
+  for (const kind of ["camera", "fireExtinguisher", "sensor", "smokeDetector"] as const) {
+    const q = objectSpec(kind);
+    assert.ok(q.quarter && q.wide <= 0.5 && q.deep <= 0.5, kind);
+  }
+});
+
+test("quarter-block billboard anchors use the chosen footprint center", () => {
+  const sw = objectFootprint("kuaikuai", 0, 3);
+  const se = objectFootprint("kuaikuai", 0, 2);
+  const nw = objectFootprint("kuaikuai", 0, 0);
+  const ne = objectFootprint("kuaikuai", 0, 1);
+
+  assert.deepEqual(objectSurfaceAnchor("kuaikuai", 0, 3), { x: sw.x + sw.w / 2, y: sw.y + sw.d / 2 });
+  assert.deepEqual(objectSurfaceAnchor("kuaikuai", 0, 2), { x: se.x + se.w / 2, y: se.y + se.d / 2 });
+  assert.deepEqual(objectSurfaceAnchor("kuaikuai", 0, 0), { x: nw.x + nw.w / 2, y: nw.y + nw.d / 2 });
+  assert.deepEqual(objectSurfaceAnchor("kuaikuai", 0, 1), { x: ne.x + ne.w / 2, y: ne.y + ne.d / 2 });
+});
+
+test("large fixtures span whole cells and rotate their span", () => {
+  // A CRAC unit is one and a half cells wide → it occupies a 2×1 cell span
+  // and draws centred over it; rotating a quarter turn swaps the span.
+  assert.deepEqual(objectCellSpan("aircon", 0), { w: 2, h: 1 });
+  assert.deepEqual(objectCellSpan("aircon", 1), { w: 1, h: 2 });
+  const fp = objectFootprint("aircon", 0, 0);
+  assert.equal(fp.w, objectSpec("aircon").wide);
+  assert.equal(fp.x, (2 - fp.w) / 2);
+  // A cable tray section runs two cells long.
+  assert.deepEqual(objectCellSpan("cableTray", 0), { w: 2, h: 1 });
+});
+
+test("cellSpans blocks every cell a multi-cell fixture covers", () => {
+  const crac = obj("crac", "aircon", 1, 0, 0);
+  // Both the anchor cell and the spanned neighbour are occupied…
+  assert.equal(cellSpans({ x: 1, y: 0 }, [], {}, [crac]).length, 1);
+  assert.equal(cellSpans({ x: 2, y: 0 }, [], {}, [crac]).length, 1);
+  // …but the next cell over is free.
+  assert.equal(cellSpans({ x: 3, y: 0 }, [], {}, [crac]).length, 0);
+});
+
+test("footprintSpans collision-checks a multi-cell fixture's whole span", () => {
+  // A rack on the CRAC's second cell blocks the placement even though the
+  // anchor cell itself is empty.
+  const spans = footprintSpans({ x: 0, y: 0 }, "aircon", 0, [rack("a")], { a: { x: 1, y: 0 } }, []);
+  assert.equal(resolveDropZ(spans, "aircon"), null);
+  // With the neighbour clear, the CRAC lands on the floor.
+  const clear = footprintSpans({ x: 0, y: 0 }, "aircon", 0, [rack("a")], { a: { x: 3, y: 0 } }, []);
+  assert.equal(resolveDropZ(clear, "aircon"), 0);
 });
 
 test("view rotation maps cells, facings, and grid size consistently", () => {

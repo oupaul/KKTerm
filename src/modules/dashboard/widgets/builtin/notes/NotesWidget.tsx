@@ -1,4 +1,4 @@
-import { Minus, Plus } from "lucide-react";
+import { Minus, Plus } from "../../../../../lib/reicon";
 import DOMPurify from "dompurify";
 import { marked } from "marked";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -22,6 +22,9 @@ interface NotesWidgetSettings {
   rotationDegrees: number;
   foldSizePx: number;
   foldDepth: number;
+  /* Width/height ratio of the dog-ear; values off 1 make the crease sit at a
+     slight angle so randomly created notes don't all fold at a perfect 45°. */
+  foldAspect: number;
   foldCorner: NotesFoldCorner;
   markdownEnabled: boolean;
 }
@@ -36,6 +39,7 @@ const DEFAULT_SETTINGS: NotesWidgetSettings = {
   rotationDegrees: -0.6,
   foldSizePx: 22,
   foldDepth: 0.5,
+  foldAspect: 1,
   foldCorner: "topRight",
   markdownEnabled: true,
 };
@@ -80,6 +84,7 @@ export function randomNotesSettings(): NotesWidgetSettings {
     rotationDegrees: randomNotesRotationDegrees(),
     foldSizePx: Math.round(18 + Math.random() * 16),
     foldDepth: Math.round((0.3 + Math.random() * 0.5) * 100) / 100,
+    foldAspect: Math.round((0.82 + Math.random() * 0.4) * 100) / 100,
     foldCorner: FOLD_CORNER_VALUES[Math.floor(Math.random() * FOLD_CORNER_VALUES.length)] ?? "topRight",
     markdownEnabled: true,
   };
@@ -97,13 +102,16 @@ export function parseNotesSettingsJson(settingsValuesJson: string): NotesWidgetS
     const foldDepth = typeof parsed.foldDepth === "number"
       ? Math.max(0, Math.min(1, parsed.foldDepth))
       : DEFAULT_SETTINGS.foldDepth;
+    const foldAspect = typeof parsed.foldAspect === "number"
+      ? Math.max(0.7, Math.min(1.4, parsed.foldAspect))
+      : DEFAULT_SETTINGS.foldAspect;
     const foldCorner =
       typeof parsed.foldCorner === "string" && FOLD_CORNER_VALUES.includes(parsed.foldCorner as NotesFoldCorner)
         ? (parsed.foldCorner as NotesFoldCorner)
         : DEFAULT_SETTINGS.foldCorner;
     const markdownEnabled =
       typeof parsed.markdownEnabled === "boolean" ? parsed.markdownEnabled : DEFAULT_SETTINGS.markdownEnabled;
-    return { rotationDegrees, foldSizePx, foldDepth, foldCorner, markdownEnabled };
+    return { rotationDegrees, foldSizePx, foldDepth, foldAspect, foldCorner, markdownEnabled };
   } catch {
     return DEFAULT_SETTINGS;
   }
@@ -216,6 +224,8 @@ export function NotesBody({ instance }: BuiltInWidgetBodyProps) {
       style={{
         "--note-rotation": `${settings.rotationDegrees}deg`,
         "--note-fold-size": `${settings.foldSizePx}px`,
+        "--note-fold-size-x": `${Math.round(settings.foldSizePx * settings.foldAspect)}px`,
+        "--note-fold-size-y": `${Math.round(settings.foldSizePx / settings.foldAspect)}px`,
         "--note-fold-depth": settings.foldDepth,
         "--note-fold-depth-alpha": String(0.08 + settings.foldDepth * 0.18),
         "--note-fold-shadow-offset": `${settings.foldDepth * 5}px`,

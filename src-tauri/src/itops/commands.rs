@@ -334,10 +334,24 @@ pub fn itops_create_server_room(
     app: AppHandle,
     site_id: String,
     name: String,
+    floor_color: String,
 ) -> Result<ServerRoom, String> {
     let id = new_itops_id("room");
     storage(&app).with_connection_infallible(|conn| {
-        topo::create_server_room(conn, &id, &site_id, &name).map_err(|e| e.to_string())
+        topo::create_server_room(conn, &id, &site_id, &name, &floor_color)
+            .map_err(|e| e.to_string())
+    })
+}
+
+#[tauri::command]
+pub fn itops_update_server_room(
+    app: AppHandle,
+    id: String,
+    name: String,
+    floor_color: String,
+) -> Result<ServerRoom, String> {
+    storage(&app).with_connection_infallible(|conn| {
+        topo::update_server_room(conn, &id, &name, &floor_color).map_err(|e| e.to_string())
     })
 }
 

@@ -1,4 +1,4 @@
-import { KeyRound, RefreshCw, Trash2 } from "lucide-react";
+import { KeyRound, RefreshCw, Trash2 } from "../../lib/reicon";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -13,6 +13,7 @@ import type {
   SecretStoreKind,
   StoredCredentialKind,
   StoredCredentialSummary,
+  UrlCredentialSummary,
 } from "../../types";
 import { CredentialDeleteConfirmDialog } from "./CredentialDeleteConfirmDialog";
 import { EncryptedSecretStoreDialog } from "./EncryptedSecretStoreDialog";
@@ -25,6 +26,7 @@ import {
 } from "./credentialStorageModel";
 import { groupCredentialsByKind, groupCredentialsForSettings } from "./credentialGroups";
 import { SettingsSectionHeader, useSettingsSaveRegistration } from "./shared";
+import { UrlCredentialManager } from "./UrlCredentialManager";
 
 function credentialKindKey(kind: StoredCredentialKind) {
   switch (kind) {
@@ -73,6 +75,7 @@ export function CredentialsSettings() {
   const aiProviderSettings = useWorkspaceStore((state) => state.aiProviderSettings);
   const setAiProviderHasApiKey = useWorkspaceStore((state) => state.setAiProviderHasApiKey);
   const [credentials, setCredentials] = useState<StoredCredentialSummary[]>([]);
+  const [urlCredentials, setUrlCredentials] = useState<UrlCredentialSummary[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<StoredCredentialSummary | null>(null);
   const [draft, setDraft] = useState(credentialSettings);
   const [secretStatus, setSecretStatus] = useState<KeychainStatus | null>(null);
@@ -86,9 +89,13 @@ export function CredentialsSettings() {
     () => groupCredentialsForSettings(credentials),
     [credentials],
   );
-  const storedCredentialGroups = useMemo(
-    () => groupCredentialsByKind(storedCredentials),
+  const nonUrlStoredCredentials = useMemo(
+    () => storedCredentials.filter((credential) => credential.kind !== "urlPassword"),
     [storedCredentials],
+  );
+  const storedCredentialGroups = useMemo(
+    () => groupCredentialsByKind(nonUrlStoredCredentials),
+    [nonUrlStoredCredentials],
   );
   const selectedSecretStore = normalizeSecretStoreKind(draft.secretStore);
   const platform = currentPlatform();
@@ -104,6 +111,7 @@ export function CredentialsSettings() {
   async function load() {
     if (!isTauriRuntime()) {
       setCredentials([]);
+      setUrlCredentials([]);
       return;
     }
     setLoading(true);
@@ -111,10 +119,15 @@ export function CredentialsSettings() {
       const nextStatus = await invokeCommand("keychain_status", undefined);
       setSecretStatus(nextStatus);
       try {
-        const nextCredentials = await invokeCommand("list_stored_credentials", undefined);
+        const [nextCredentials, nextUrlCredentials] = await Promise.all([
+          invokeCommand("list_stored_credentials", undefined),
+          invokeCommand("list_url_credentials", undefined),
+        ]);
         setCredentials(nextCredentials);
+        setUrlCredentials(nextUrlCredentials);
       } catch (error) {
         setCredentials([]);
+        setUrlCredentials([]);
         showStatusBarNotice(error instanceof Error ? error.message : String(error), {
           tone: "error",
         });
@@ -311,26 +324,28 @@ export function CredentialsSettings() {
       >
         <legend>{t("settings.credentialsStored")}</legend>
         <p className="field-hint">{t("settings.credentialsHint")}</p>
-        {storedCredentials.length === 0 ? (
-          <p className="settings-empty-state">
-            {loading ? t("common.loading") : t("settings.credentialsEmpty")}
-          </p>
-        ) : (
-          <div className="settings-list" aria-label={t("settings.credentialsStored")}>
-            {storedCredentialGroups.map(({ kind, rows }) => (
-              <div className="settings-credential-group" key={kind}>
-                <h3>{t(credentialKindKey(kind))}</h3>
-                {rows.map((credential) => (
-                  <CredentialRow
-                    credential={credential}
-                    key={credential.id}
-                    onDelete={setDeleteTarget}
-                  />
-                ))}
-              </div>
-            ))}
+        <div className="settings-list" aria-label={t("settings.credentialsStored")}>
+          <div className="settings-credential-group">
+            <h3>{t("settings.savedWebsitePasswords")}</h3>
+            {loading && urlCredentials.length === 0 ? (
+              <p className="settings-empty-state">{t("common.loading")}</p>
+            ) : (
+              <UrlCredentialManager credentials={urlCredentials} onChanged={load} />
+            )}
           </div>
-        )}
+          {storedCredentialGroups.map(({ kind, rows }) => (
+            <div className="settings-credential-group" key={kind}>
+              <h3>{t(credentialKindKey(kind))}</h3>
+              {rows.map((credential) => (
+                <CredentialRow
+                  credential={credential}
+                  key={credential.id}
+                  onDelete={setDeleteTarget}
+                />
+              ))}
+            </div>
+          ))}
+        </div>
       </fieldset>
 
       <fieldset

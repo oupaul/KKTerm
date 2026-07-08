@@ -6,7 +6,7 @@ use std::process::Command;
 use serde::Deserialize;
 use serde_json::json;
 
-use super::detect::detect_chocolatey_package;
+use super::detect::{detect_chocolatey_package, github_release_marker_path};
 use super::proc::no_window;
 use super::schema::{Catalog, Provider, Recipe};
 
@@ -78,6 +78,11 @@ fn provider_kind(provider: &Provider) -> &'static str {
 fn latest_provider_for_recipe(recipe: &Recipe) -> &Provider {
     if let Some(provider @ Provider::Chocolatey { id }) = recipe.chocolatey_provider.as_ref() {
         if detect_chocolatey_package(id).installed {
+            return provider;
+        }
+    }
+    if let Some(provider @ Provider::GithubRelease { .. }) = recipe.download_provider.as_ref() {
+        if github_release_marker_path(&recipe.id).exists() {
             return provider;
         }
     }

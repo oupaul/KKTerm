@@ -1,10 +1,19 @@
 // Shared SF-Symbols-flavoured glyph set for the IT Ops Module, ported from the
 // redesign mockup (itops-icons.jsx). Most glyphs stay self-contained inline SVG
 // so dense status/transport/trigger iconography remains pixel-matched; topology
-// entity icons use the product's Lucide defaults.
+// entity icons use the product's default line-icon set.
 
-import type { ComponentType, ReactNode } from "react";
-import { Building2, Server, ShelvingUnit } from "lucide-react";
+import type { ReactNode } from "react";
+import {
+  Box,
+  Buildings2,
+  Cabinet,
+  Grid2x2,
+  Rows3,
+  ServerSquare,
+  type IconComponent,
+  type IconWeight,
+} from "../../lib/reicon";
 
 export type ItIconName =
   | "ops"
@@ -32,6 +41,8 @@ export type ItIconName =
   | "chevR"
   | "chevL"
   | "chevD"
+  | "rotateL"
+  | "rotateR"
   | "stop"
   | "rerun"
   | "bot"
@@ -57,14 +68,19 @@ export type ItIconName =
   | "arrow"
   | "history"
   | "image"
-  | "power";
+  | "power"
+  | "rows"
+  | "grid"
+  | "cube";
 
 type GlyphProps = { size: number; sw: number };
 
-type LucideIconComponent = ComponentType<{ size?: number; strokeWidth?: number }>;
+function LineIconGlyph(Icon: IconComponent, { size, sw }: GlyphProps, weight?: IconWeight) {
+  return <Icon size={size} strokeWidth={sw} weight={weight} />;
+}
 
-function LucideGlyph(Icon: LucideIconComponent, { size, sw }: GlyphProps) {
-  return <Icon size={size} strokeWidth={sw} />;
+export function ItOpsModuleIcon({ size = 16, sw }: { size?: number; sw?: number }) {
+  return <ServerSquare size={size} strokeWidth={sw ?? 1.7} weight="Filled" />;
 }
 
 function Svg({
@@ -91,15 +107,8 @@ function Svg({
 }
 
 const GLYPHS: Record<ItIconName, (p: GlyphProps) => ReactNode> = {
-  site: (p) => LucideGlyph(Building2, p),
-  ops: (p) => (
-    <Svg {...p}>
-      <path d="M4 5.5h16a1 1 0 0 1 1 1V9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6.5a1 1 0 0 1 1-1Z" />
-      <path d="M4 14h16a1 1 0 0 1 1 1v2.5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V15a1 1 0 0 1 1-1Z" />
-      <path d="M6.5 7.6h0" />
-      <path d="M6.5 16.4h0" />
-    </Svg>
-  ),
+  site: (p) => LineIconGlyph(Buildings2, p),
+  ops: (p) => <ItOpsModuleIcon size={p.size} sw={p.sw} />,
   group: (p) => (
     <Svg {...p}>
       <path d="M7 8.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" />
@@ -118,8 +127,11 @@ const GLYPHS: Record<ItIconName, (p: GlyphProps) => ReactNode> = {
       <path d="M12 11l5 6" />
     </Svg>
   ),
-  room: (p) => LucideGlyph(Server, p),
-  rack: (p) => LucideGlyph(ShelvingUnit, p),
+  room: (p) => LineIconGlyph(ServerSquare, p, "Filled"),
+  rack: (p) => LineIconGlyph(Cabinet, p),
+  rows: (p) => LineIconGlyph(Rows3, p),
+  grid: (p) => LineIconGlyph(Grid2x2, p),
+  cube: (p) => LineIconGlyph(Box, p),
   run: (p) => (
     <Svg {...p} sw={1.8}>
       <path d="M8 5.5l10 6.5-10 6.5z" />
@@ -241,6 +253,18 @@ const GLYPHS: Record<ItIconName, (p: GlyphProps) => ReactNode> = {
   chevD: (p) => (
     <Svg {...p} sw={2}>
       <path d="M6 9.5l6 6 6-6" />
+    </Svg>
+  ),
+  rotateL: (p) => (
+    <Svg {...p} sw={1.7}>
+      <path d="M4 12a8 8 0 1 0 2.34-5.66L4 8.5" />
+      <path d="M4 4v4.5h4.5" />
+    </Svg>
+  ),
+  rotateR: (p) => (
+    <Svg {...p} sw={1.7}>
+      <path d="M20 12a8 8 0 1 1-2.34-5.66L20 8.5" />
+      <path d="M20 4v4.5h-4.5" />
     </Svg>
   ),
   stop: (p) => (

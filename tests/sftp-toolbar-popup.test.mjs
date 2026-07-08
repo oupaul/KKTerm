@@ -10,8 +10,8 @@ test("SSH pane toolbar SFTP button opens an in-place popup instead of a workspac
 
   assert.match(
     terminalSource,
-    /import \{ SftpWorkspace \} from "\.\.\/sftp\/SftpWorkspace";/,
-    "the terminal toolbar popup should reuse the SFTP/FTP workspace surface",
+    /const SftpWorkspace = lazy\(\(\) =>\s*import\("\.\.\/sftp\/SftpWorkspace"\)/,
+    "the terminal toolbar popup should reuse the (lazily loaded) SFTP/FTP workspace surface",
   );
   assert.match(
     terminalSource,
@@ -48,7 +48,7 @@ test("SSH pane toolbar SFTP action is icon-only with a native SFTP tooltip", asy
 
   assert.match(
     terminalSource,
-    /import \{[^}]*Folder[^}]*\} from "lucide-react";/,
+    /import \{[^}]*Folder[^}]*\} from "\.\.\/\.\.\/\.\.\/\.\.\/lib\/reicon";/,
     "the SSH toolbar SFTP action should use the folder icon",
   );
   assert.match(

@@ -1,4 +1,4 @@
-import { Copy, Save } from "lucide-react";
+import { Copy, Save } from "../../../../../lib/reicon";
 import QRCode from "qrcode";
 import JsBarcode from "jsbarcode";
 import { useEffect, useRef, useState } from "react";

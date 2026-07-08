@@ -33,6 +33,310 @@ All notable changes to KKTerm are documented here.
 - Dashboard background SVG previews are sanitized with DOMPurify before rendering.
 
 ## Direct Downloads
+* 💻 [Download for Windows (64-bit)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.116/kkterm-0.1.116-windows-x64-setup.exe)
+* 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.116/kkterm-0.1.116-windows-arm64-setup.exe)
+
+## Highlights
+- Fixed SSH port-forwarding loopback-port discovery to reuse the live SSH **Session**, avoiding an extra SSH login that could reset/re-login your original **Terminal** session. (Closes #551 — thanks catyku; PR #552 by @ryantsai)
+- Fixed install helper **winget** UAC handling. (PR #549 by @ryantsai)
+
+## New
+- N/A
+
+## Improved
+- N/A
+
+## Fixed
+- **SSH Session reuse for port-forwarding**: Loopback-port discovery now routes through the existing live **Session** instead of creating a second one-shot SSH connection. This prevents network-appliance “one login at a time” behavior from kicking your original session. (Closes #551; PR #552 — @ryantsai; linked reporter: catyku)
+- **Installer (winget) UAC handling**: Improved **winget** UAC behavior in the install helper. (PR #549 — @ryantsai)
+
+## Internal
+- N/A
+
+---
+
+## 精華重點
+- 修正 SSH 連線的埠轉送（port-forwarding）環回埠（loopback-port）偵測：會重用現有的即時 SSH **Session**，避免額外開啟第二次 SSH 登入，從而避免把你原本的 **Terminal** 工作階段踢掉/重登。 （關閉 #551 — 感謝 catyku；PR #552 由 @ryantsai 貢獻）
+- 修正安裝助手中的 **winget** UAC 處理。 (PR #549 — @ryantsai)
+
+## 新增
+- N/A
+
+## 改善
+- N/A
+
+## 修正
+- **SSH Session 重用（埠轉送環回埠偵測）**：環回埠偵測改為透過已存在的即時 **Session** 執行，而不是再建立一個額外的 one-shot SSH 連線。這能避免在常見的網路設備上因「同一帳號同時登入次數限制」而導致你原本的工作階段被踢掉。（關閉 #551；PR #552 — @ryantsai；連結的回報者：catyku）
+- **安裝器（winget）UAC 處理**：改善安裝助手中的 **winget** UAC 行為。 (PR #549 — @ryantsai)
+
+## 內部
+- N/A
+
+## Direct Downloads
+* 💻 [Download for Windows (64-bit)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.115/kkterm-0.1.115-windows-x64-setup.exe)
+* 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.115/kkterm-0.1.115-windows-arm64-setup.exe)
+
+## Highlights
+- Added new Dashboard dynamic backgrounds: **Circuit**, **Halftone**, **Orbitals**, **Ink**, and **Crystals**. (Your Tab/Panes now have more “network-ready” vibes.)
+
+## New
+- **Dashboard dynamic backgrounds**: Circuit, Halftone, Orbitals, Ink, Crystals.
+- **Localization**: Added i18n localization entries to support the new dynamic backgrounds across languages.
+
+## Improved
+- Updated the dynamic backgrounds **registry** to include the new backgrounds.
+- Refreshed **tests** to validate the presence and functionality of the new backgrounds.
+- Improved code organization by introducing **abstract dynamic backgrounds** for the dynamic background implementation.
+
+## Internal
+- Documentation and localization TODO cleanup for dynamic backgrounds (removed unused localization files for dynamic backgrounds).
+
+---
+
+## 亮點（Highlights）
+- 新增 Dashboard 動態背景：**Circuit（電路）**、**Halftone（半色調）**、**Orbitals（軌道）**、**Ink（墨水）**、**Crystals（水晶）**。 （你的 Tab/Panes 現在更有「網路就緒」的氛圍。）
+
+## 新增（New）
+- **Dashboard 動態背景**：Circuit、Halftone、Orbitals、Ink、Crystals。
+- **在地化（Localization）**：為新增的動態背景加入 i18n 對應內容，支援多語系。
+
+## 改善（Improved）
+- 更新動態背景 **註冊表（registry）**，納入新的背景。
+- 更新 **測試（tests）**，驗證新動態背景的存在性與功能。
+- 透過引入 **抽象動態背景（abstract dynamic backgrounds）**，改善動態背景實作的程式碼組織。
+
+## Internal
+- 清理動態背景相關的文件與在地化 TODO（移除未使用的動態背景在地化檔案）。
+
+## Direct Downloads
+* 💻 [Download for Windows (64-bit)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.114/kkterm-0.1.114-windows-x64-setup.exe)
+* 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.114/kkterm-0.1.114-windows-arm64-setup.exe)
+
+## Highlights
+- **Configurable URL user-agent support** (DB, backend, and UI) so your Connection can present the web identity you intend. (PR #548)
+
+## New
+- Add **configurable URL user-agent** setting across the app (DB, backend, and UI).  
+  https://github.com/ryantsai/KKTerm/pull/548
+
+## Improved
+- Added/updated **localized strings** for the URL user-agent setting in multiple languages. (7307c0d)
+
+## Fixed
+- **WebKit view issues on macOS**. (PR #548, merged via 54a8b53)  
+  https://github.com/ryantsai/KKTerm/pull/548
+
+## Internal
+- Add tests for **dashboard dynamic backgrounds** registration/validation coverage. (64cef41)
+
+---
+
+## 亮點
+- **支援可自訂 URL User-Agent**（DB、後端與 UI），讓你的 **Connection** 能以你想要的網路身分呈現。 (PR #548)
+
+## 新增
+- 新增 **可自訂 URL User-agent** 設定，覆蓋整個應用（DB、後端與 UI）。  
+  https://github.com/ryantsai/KKTerm/pull/548
+
+## 改善
+- 對 URL User-agent 設定的**多語系在地化字串**進行新增/更新。 (7307c0d)
+
+## 修正
+- **修正 macOS 上 WebKit View 的問題**。 (PR #548，透過 54a8b53 合併)  
+  https://github.com/ryantsai/KKTerm/pull/548
+
+## Internal
+- 新增測試，覆蓋 Dashboard **動態背景** 的註冊/驗證流程。 (64cef41)
+
+## Direct Downloads
+* 💻 [Download for Windows (64-bit)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.113/kkterm-0.1.113-windows-x64-setup.exe)
+* 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.113/kkterm-0.1.113-windows-arm64-setup.exe)
+
+## Highlights
+- **IT Ops Server Room views**: Improved how racks/room objects sit in both the floor plan and 2.5D views—no more “floating beside the rack” vibes.
+- **Linux stability**: Fixed AppImage build/signing conflicts and stopped AppImage environment variables from leaking into spawned host processes.
+- **Remote Desktop / Codex**: Routed IronRDP canvas assistant controls correctly.
+
+## New
+- Added **Reicon icon names** (including fallback/legacy names) to the icon catalog picker.
+
+## Improved
+- **IT Ops**: Added more physically grounded rendering for **Dashboard Widget Instance** server room visuals—rack footprints and room objects now better reflect depth/size expectations in Server Room views.
+
+## Fixed
+- **Linux (AppImage)**: Resolve conflicting signer private-key args during AppImage build. (by @ryantsai in https://github.com/ryantsai/KKTerm/pull/538, short SHA: ee7e769)
+- **Linux (AppImage runtime)**: Stop AppImage env leaking into spawned host processes, fixing issues like host VM detection and mis-loaded libraries. (by @ryantsai in https://github.com/ryantsai/KKTerm/pull/539, short SHA: 75f84cb)
+- **IT Ops**: Settle room objects against resolved rack cells; remove iso debug telemetry. (by @ryantsai in https://github.com/ryantsai/KKTerm/pull/542, short SHA: 20173b3)
+- **IT Ops**: Keep elevated 2.5D object sprites visually planted on their support. *(Issue reporter: @Claude Fable 5, via Co-Authored-By)* (by @ryantsai in https://github.com/ryantsai/KKTerm/pull/543, short SHA: 462cbe2)
+- **IT Ops**: Use Reicon cabinet and server room icons. (by @ryantsai in https://github.com/ryantsai/KKTerm/pull/544, short SHA: ff8f715)
+- **IT Ops**: Bottom-align 2.5D object artwork inside its sprite box. (by @ryantsai in https://github.com/ryantsai/KKTerm/pull/545, short SHA: 6148f85)
+- **Codex / IronRDP**: Fix IronRDP canvas assistant routing. *(Issue reporter: @ryantsai)* (by @ryantsai in https://github.com/ryantsai/KKTerm/pull/546, short SHA: b31129d)
+- **Linux platform gaps**: App Launcher browser fallback, “Don’t Sleep” behavior, missing host metrics, and RDP routing path fixes. (by @ryantsai in https://github.com/ryantsai/KKTerm/pull/541, short SHA: 4347ef0)
+
+## Internal
+- Installer/UI polish: share Install Helper module icon. (short SHA: 8a87c38)
+- Icon plumbing: refactor/adjust IT Ops icon references and styles for consistent Reicon usage. (short SHA: 7162948)
+- IT Ops correctness work: adjust site and rack Reicon defaults + related icon catalog test coverage. (short SHA: 038e2e4)
+- Tests/tooling: add/adjust tests for lazy boundaries, platform runtime, and icon catalog integration. (short SHAs: 16d3fbe, tests listed in context)
+- (Release engineering) AppImage signing/build step fixes included above. (short SHAs: ee7e769, 1c18ab4, 9930c00)
+
+---
+
+## Highlights
+- **IT Ops 机房视图**：改善机架/房间物件在平面与 2.5D 视图中的摆放效果——不再出现「明明贴着机架却像飄在旁边」的尴尬。
+- **Linux 稳定性**：修正 AppImage 打包/签名时的私钥参数冲突，并阻止 AppImage 的环境变量外泄到 KKTerm 生成的主机进程。
+- **远端桌面 / Codex**：已正确路由 IronRDP 的画布助理控制項。
+
+## New
+- 在图示目录选择器中加入 **Reicon 图示名称**（包含备用/旧版名称）。
+
+## Improved
+- **IT Ops**：让 Server Room 的渲染更贴近物理深度与尺寸预期——机架足迹与房间物件在 Server Room 视图中的深度/大小表现更一致，适合放进你的 **Dashboard Widget Instance** 里当好视觉证据。
+
+## Fixed
+- **Linux（AppImage 打包）**：解决 AppImage 签名器私钥参数冲突。（@ryantsai： https://github.com/ryantsai/KKTerm/pull/538，短 SHA：ee7e769）
+- **Linux（AppImage 執行期）**：阻止 AppImage 環境外泄到被生成的主机进程，修复如主机 VM 判定与套件库误加载等问题。*(“网路像宇宙”一样，环境变量也得管好)*（@ryantsai： https://github.com/ryantsai/KKTerm/pull/539，短 SHA：75f84cb）
+- **IT Ops**：让房间物件对齐到已解析的机架格子；移除 iso 偵錯遥测。（@ryantsai： https://github.com/ryantsai/KKTerm/pull/542，短 SHA：20173b3）
+- **IT Ops**：让抬高状态的 2.5D 物件精灵视觉上保持贴在支撑物上。*(Issue 回报者：@Claude Fable 5，透過 Co-Authored-By)*（@ryantsai： https://github.com/ryantsai/KKTerm/pull/543，短 SHA：462cbe2）
+- **IT Ops**：改用 Reicon 机柜与机房图示。（@ryantsai： https://github.com/ryantsai/KKTerm/pull/544，短 SHA：ff8f715）
+- **IT Ops**：让 2.5D 物件精灵盒内的画面靠下对齐。 （@ryantsai： https://github.com/ryantsai/KKTerm/pull/545，短 SHA：6148f85）
+- **Codex / IronRDP**：修复 IronRDP 画布助理路由。*(Issue 回报者：@ryantsai)*（@ryantsai： https://github.com/ryantsai/KKTerm/pull/546，短 SHA：b31129d）
+- **Linux 平台问题**：App Launcher 浏览器回退、“Don’t Sleep” 行为、主机指标缺失，以及 RDP 路由路径修正。 （@ryantsai： https://github.com/ryantsai/KKTerm/pull/541，短 SHA：4347ef0）
+
+## Internal
+- 安装/界面细节：共享 Install Helper 模块图示。 （短 SHA：8a87c38）
+- 图示管线整理：重构/调整 IT Ops 图示引用与样式，以一致使用 Reicon。 （短 SHA：7162948）
+- IT Ops 正确性与默认值：调整站点与机架的 Reicon 默认值，并补充相关图示目录测试覆盖。 （短 SHA：038e2e4）
+- 测试/工具：加入或调整懒加载、平台运行期与图示目录整合相关测试。 （短 SHAs：16d3fbe，context 中列出的 tests）
+- （发布工程）如上所述的 AppImage 打包/签名步骤修复。 （短 SHAs：ee7e769、1c18ab4、9930c00）
+
+## Direct Downloads
+* 💻 [Download for Windows (64-bit)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.112/kkterm-0.1.112-windows-x64-setup.exe)
+* 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.112/kkterm-0.1.112-windows-arm64-setup.exe)
+
+## Highlights
+- **IT Ops Server Room views:** hover detail cards, solid selectable **2.5D floor colours**, and the **rotate stepper relocated under the zoom ruler**.  
+  PR #535 by @ryantsai (short SHA: `99c2e99`)
+- **IT Ops drill + Site View:** full-bleed drill pane views, free-form **Site View** with **Auto Organize**, and clearer 2.5D readability (no floating kind chips).  
+  PR #536 by @ryantsai (short SHA: `d3451cf`)
+
+## New
+- **Background media:** added support for **SVG files** in background media handling. (short SHA: `b4e2eb1`)
+- **Server Room views:** selection + context menu support, plus updated rack/object property handling. (short SHA: `c629842`)
+- **Cursor-tracked placement preview:** added right-click **cancel** functionality in Server Room views. (short SHA: `1e1390a`)
+- **SitesTab:** enhanced with expandable tree controls and sidebar actions. (short SHA: `875ae0a`)
+- **IT Ops UI text:** added a `properties` translation for multiple languages. (short SHA: `f23bf03`)
+
+## Improved
+- **Quick Connect:** refactored the Quick Connect menu to use native menu items and updated localization strings; also flattened local shell menu options and removed nested submenu styling. (short SHA: `1c705bd`, `28e7598`)
+- **Recent connections:** added pagination for recent connections and updated localization strings. (short SHA: `79c0df0`)
+- **Server Room floor plan (2.5D):** moved rack-unit figures off the view itself and into **hover detail cards**. (short SHA: `5cdbfe5`)
+- **Server Room floor plan / Site calculations:** improved state management and optimized server room calculations in SitesTab. (short SHA: `d53b72d`)
+- **Server Room IsoView:** solid selectable 2.5D floor colours and moved rotate stepper under the zoom ruler (including updated translations). (short SHA: `4fbe218`)
+
+## Fixed
+- **Linux AppImage:** fixed blank window on other hosts caused by bundled `libwayland-*` conflicting with the target machine, plus WebKit DMA-BUF renderer issues on virtualized graphics stacks.  
+  PR #537 by @ryantsai (short SHA: `aca963f`) — reported and fixed by **@ryantsai**. (Yes, the sysadmin gremlins were on both ends of the wire.)
+  - Resources updated: `docs/LINUX_PORT.md`, `scripts/package-linux.sh`, `src-tauri/src/main.rs`
+
+## Internal
+- **Developer experience:** bound Vite and Tailwind source scans to avoid large diagnostic artifacts stalling debug launch. (short SHA: `4bc6e16`)
+- **Input tests:** enhanced input-autocorrect policy tests for Quick Connect fields. (short SHA: `67ce515`)
+- **Localization workflow:** updated localization guidelines for handling new/changed keys. (short SHA: `c6d0801`)
+
+---
+
+## Highlights（繁體中文-台灣）
+- **IT Ops 機櫃伺服器機房（Server Room）檢視：** 顯示滑入細節卡（hover detail cards）、可選的**實心 2.5D 地板顏色（solid 2.5D floor colours）**，以及**旋轉步進器（rotate stepper）改到縮放尺（zoom ruler）下方**。  
+  PR #535 由 @ryantsai（短 SHA：`99c2e99`）
+- **IT Ops 鑽取（drill）+ Site View：** 全寬（full-bleed）的 drill 面板檢視、支援**自由擺放的 Site View**（含 **Auto Organize**），並提升 2.5D 可讀性（移除漂浮的物件種類標籤）。  
+  PR #536 由 @ryantsai（短 SHA：`d3451cf`）
+
+## New（新增）
+- **背景媒體：** 背景媒體處理新增 **SVG 檔支援**。 （短 SHA：`b4e2eb1`）
+- **Server Room 檢視：** 新增選取狀態與情境選單（context menu），並更新機櫃/物件屬性處理方式。 （短 SHA：`c629842`）
+- **游標追蹤擺放預覽：** 在 Server Room 檢視加入右鍵**取消**功能。 （短 SHA：`1e1390a`）
+- **SitesTab：** 增強為支援可展開的樹狀控制項與側邊欄動作。 （短 SHA：`875ae0a`）
+- **IT Ops 翻譯字串：** 新增多語系的 `properties` 翻譯。 （短 SHA：`f23bf03`）
+
+## Improved（改進）
+- **Quick Connect：** 重構 Quick Connect 選單改用原生選單項，並更新在地化字串；同時也展平本機 shell 選單選項、移除巢狀子選單的樣式。 （短 SHA：`1c705bd`、`28e7598`）
+- **最近連線（recent connections）：** 新增近期連線分頁（pagination），並更新在地化字串。 （短 SHA：`79c0df0`）
+- **Server Room 地板平面 / 2.5D：** 將機櫃單位高度（rack-unit figures）從檢視本體移除，改由**滑入細節卡（hover detail cards）**呈現。 （短 SHA：`5cdbfe5`）
+- **SitesTab 計算/狀態：** 改善狀態管理並最佳化 SitesTab 中的 server room 計算。 （短 SHA：`d53b72d`）
+- **Server Room IsoView：** 實心可選的 2.5D 地板顏色、並將旋轉步進器移到縮放尺下方（含翻譯更新）。 （短 SHA：`4fbe218`）
+
+## Fixed（修正）
+- **Linux AppImage：** 修正其他主機上啟動後出現空白視窗的問題：原因是 AppImage 內建的 `libwayland-*` 與目標主機的環境衝突，另外也修正虛擬化圖形堆疊上的 WebKit DMA-BUF 繪製問題。  
+  PR #537 由 @ryantsai（短 SHA：`aca963f`）— **@ryantsai** 既是回報者也是修正者。（是的，資深系統工程師也會遇到「兩端同時壞掉」的網路妖精。）  
+  - 相關文件更新：`docs/LINUX_PORT.md`、`scripts/package-linux.sh`、`src-tauri/src/main.rs`
+
+## Internal（內部）
+- **開發體驗：** 綁定 Vite 與 Tailwind 的來源掃描範圍，避免大型除錯診斷產物卡住 debug 啟動。 （短 SHA：`4bc6e16`）
+- **輸入測試：** 強化 Quick Connect 欄位的輸入自動更正政策測試。 （短 SHA：`67ce515`）
+- **在地化流程：** 更新在地化規範以處理新增/變更的 key。 （短 SHA：`c6d0801`）
+
+## Direct Downloads
+* 💻 [Download for Windows (64-bit)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.111/kkterm-0.1.111-windows-x64-setup.exe)
+* 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.111/kkterm-0.1.111-windows-arm64-setup.exe)
+
+## Highlights
+- **Server Room floor plan & 2.5D view overhaul**: shared grid/facing/view angles, full-height sizing, and room objects in the views. (PRs **#522**, **#526**, **#527** by @ryantsai)  
+- **Terminal reliability wins**: copy-on-select focus/clipboard fallbacks fixed, and terminal focus restored after multiline paste. (PRs **#529**, **#530** by @ryantsai; issue reports by **truedano**/**catyku**)  
+- **RDP on older Windows**: add a legacy TLS fallback to reduce “TLS handshake failed” connection issues. (Issue **#344**, PR **#532** by @ryantsai; reporter **BossTsai**)
+
+## New
+- **IT Ops: Reworked Server Room View controls** and **full-height searchable object picker** for editing. (PR **#531** by @ryantsai)
+
+## Improved
+- **Server Room floor plan & 2.5D view**: window-filling grids, zoom levels, and panning for a better “fill the pane, not the void” experience. (PR **#526** by @ryantsai)
+- **Room-view racks**: painted in their **shell finish** (instead of status colors) for a cleaner visual separation. (PR **#528** by @ryantsai)
+- **Server Room floor plan & 2.5D view**: shared grid, facing, view angles, and room objects between the two spatial views. (PR **#522** by @ryantsai)
+
+## Fixed
+- **Server Room floor plan / 2.5D view**: taking the **full pane height**. (PR **#527** by @ryantsai)
+- **[codex] Terminal copy-on-select clipboard fallback**. (PR **#529** by @ryantsai; reporter **truedano**)
+- **Terminal focus restored** after the multiline paste confirmation closes. (PR **#530** by @ryantsai; reporter **catyku**)
+- **[rdp] Legacy TLS fallback** via native-tls for old Windows hosts. (Issue **#344**, PR **#532** by @ryantsai; reporter **BossTsai**)
+
+## Internal
+- TypeScript/Vite configuration updates (PR/commit: `c12b67b`)
+- Installer provider handling + installer button UI style updates (commit `842618d`)
+- URL address bar security state indicators and styling updates (commit `0bee5a4`, `ffe2093` indirectly via context)
+- URL credential management UI improvements + tests (commit `ada83dc`, `65a7a2e`)
+- WebView certificate handling fixes + tests (commit `d4bd571`, `dbd0d9a`)
+- Misc localization/document/tooling updates (commit `718f28f`)
+
+---
+
+## 亮點
+- **機房平面圖與 2.5D 檢視大改版**：共享格狀配置/朝向/視角，並確保視圖能滿版高度，同時在檢視中顯示機房物件。（PR **#522**、**#526**、**#527**，作者 @ryantsai）
+- **終端機可靠性提升**：修正複製選取（copy-on-select）相關的焦點/剪貼簿 fallback，以及多行貼上確認後的終端機焦點回復。（PR **#529**、**#530**，作者 @ryantsai；問題回報者 **truedano**/**catyku**）
+- **舊版 Windows 的 RDP**：加入 legacy TLS fallback，降低遇到「TLS handshake failed」連線問題的機率。（Issue **#344**，PR **#532**，作者 @ryantsai；回報者 **BossTsai**）
+
+## 新增
+- **IT Ops：機房檢視控制項重做**，以及編輯用的**全高可搜尋物件選擇器**。（PR **#531**，作者 @ryantsai）
+
+## 改善
+- **機房平面圖與 2.5D 檢視**：格狀配置可填滿視窗、支援縮放等級與平移，讓體驗更像是「填滿 Pane，不是留下空洞」。（PR **#526**，作者 @ryantsai）
+- **機房檢視的機架（racks）**：改以 **機架外殼（shell）質感**上色（取代狀態色），視覺更乾淨。（PR **#528**，作者 @ryantsai）
+- **機房平面圖與 2.5D 檢視**：共享格狀配置、朝向與視角，並讓兩個空間檢視之間的機房物件一致。（PR **#522**，作者 @ryantsai）
+
+## 修正
+- **機房平面圖 / 2.5D 檢視**：能套用**完整的 Pane 高度**。（PR **#527**，作者 @ryantsai）
+- **[codex] 終端機複製選取（copy-on-select）剪貼簿 fallback**。（PR **#529**，作者 @ryantsai；回報者 **truedano**）
+- **多行貼上確認視窗關閉後回復焦點**。（PR **#530**，作者 @ryantsai；回報者 **catyku**）
+- **[rdp] 舊版 Windows 的 native-tls legacy TLS fallback**。（Issue **#344**，PR **#532**，作者 @ryantsai；回報者 **BossTsai**）
+
+## Internal
+- TypeScript/Vite 設定更新（`c12b67b`）
+- 安裝程式（installer）提供者處理與按鈕 UI 樣式更新（`842618d`）
+- URL 位址列安全狀態指示與樣式更新（`0bee5a4`；另含背景提及 `ffe2093`）
+- URL 憑證管理 UI 改善與測試（`ada83dc`、`65a7a2e`）
+- WebView 憑證處理修正與測試（`d4bd571`、`dbd0d9a`）
+- 雜項本地化/文件/工具更新（`718f28f`）
+
+## Direct Downloads
 * 💻 [Download for Windows (64-bit)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.110/kkterm-0.1.110-windows-x64-setup.exe)
 * 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.110/kkterm-0.1.110-windows-arm64-setup.exe)
 

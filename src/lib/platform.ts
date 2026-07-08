@@ -26,6 +26,10 @@ export function isMacPlatform() {
   return currentPlatform() === "macos";
 }
 
+export function isLinuxPlatform() {
+  return currentPlatform() === "linux";
+}
+
 // macOS keeps the native traffic-light window controls (the overlay title bar
 // applied in Rust), so the custom minimize/maximize/close buttons must not be
 // drawn there and the title label must clear the controls on the left.
@@ -48,15 +52,16 @@ export function supportsBuiltInMcp() {
 }
 
 export function supportsRdp() {
-  // Windows uses the native ActiveX control; macOS uses the in-app IronRDP
-  // canvas client. Both render RDP inside the workspace.
-  return isWindowsPlatform() || isMacPlatform();
+  // Windows uses the native ActiveX control; macOS and Linux use the in-app
+  // IronRDP canvas client. All render RDP inside the workspace.
+  return isWindowsPlatform() || isMacPlatform() || isLinuxPlatform();
 }
 
-// RDP on macOS renders to the shared remote-desktop <canvas> via the IronRDP
-// backend (rdp-canvas-event), like VNC — not the Windows native ActiveX overlay.
+// RDP on macOS and Linux renders to the shared remote-desktop <canvas> via the
+// IronRDP backend (rdp-canvas-event), like VNC — not the Windows native
+// ActiveX overlay.
 export function usesCanvasRdp() {
-  return isMacPlatform();
+  return isMacPlatform() || isLinuxPlatform();
 }
 
 export function defaultLocalShell() {

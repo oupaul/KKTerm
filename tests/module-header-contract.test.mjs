@@ -20,6 +20,19 @@ test("top-level Modules use the shared compact header template", async () => {
   }
 });
 
+test("Install Helper pane header uses the Activity Rail module icon", async () => {
+  const [activityRail, installerPage] = await Promise.all([
+    read("src/app/ActivityRail.tsx"),
+    read("src/modules/installer/InstallerPage.tsx"),
+  ]);
+
+  assert.match(activityRail, /import \{ InstallHelperModuleIcon \} from "\.\/moduleIdentityIcons"/);
+  assert.match(activityRail, /<InstallHelperModuleIcon size=\{18\} \/>/);
+  assert.match(installerPage, /import \{ InstallHelperModuleIcon \} from "\.\.\/\.\.\/app\/moduleIdentityIcons"/);
+  assert.match(installerPage, /<InstallHelperModuleIcon size=\{16\} aria-hidden="true" \/>/);
+  assert.doesNotMatch(installerPage, /<Box size=\{16\}/);
+});
+
 test("Settings reuses Module identity tiles", async () => {
   const [general, page] = await Promise.all([
     read("src/modules/settings/GeneralSettings.tsx"),

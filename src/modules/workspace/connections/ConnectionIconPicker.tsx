@@ -1,10 +1,10 @@
-import { ImagePlus, Pencil, RotateCcw } from "lucide-react";
+import { ImagePlus, Pencil, RotateCcw } from "../../../lib/reicon";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { IconLibraryPicker, type IconLibraryStaticOption } from "../../../app/IconLibraryPicker";
 import { BRAND_ICON_ENTRIES, brandIconRefForId } from "../../../lib/brandIcons";
-import { lucideIconRefForName } from "../../../lib/iconCatalog";
+import { reiconIconRefForName } from "../../../lib/iconCatalog";
 import { OS_ICON_ENTRIES, osIconRefForId } from "../../../lib/osIcons";
 import {
   ConnectionIcon,
@@ -107,9 +107,9 @@ export function ConnectionIconPicker({
     }
   }
 
-  // Keep the popover open after picking a foreground-capable (Lucide) icon so
-  // the foreground swatches appear and the user can recolor it in one flow;
-  // close it after picking an image icon that ignores the foreground color.
+  // Keep the popover open after picking a foreground-capable line icon so the
+  // foreground swatches appear and the user can recolor it in one flow; close it
+  // after picking an image icon that ignores the foreground color.
   function closeAfterSelect(nextValue: string | null) {
     const effective = nextValue ?? defaultIconDataUrl ?? null;
     if (onIconColorChange && iconSupportsForegroundColor({ iconDataUrl: effective, localShell, type })) {
@@ -197,8 +197,8 @@ export function ConnectionIconPicker({
                 />
               ),
             }}
-            lucideNames={ICON_NAMES}
-            lucideValueForName={lucideIconRefForName}
+            iconNames={ICON_NAMES}
+            iconValueForName={reiconIconRefForName}
             onSelect={(nextIcon) => {
               void handleSelectIcon(nextIcon);
             }}

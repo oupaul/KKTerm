@@ -44,6 +44,21 @@ test("terminal copy-on-select reads the live setting so toggling applies to open
   assert.match(selectionHandler, /useWorkspaceStore\.getState\(\)\.terminalSettings\.copyOnSelect/);
 });
 
+test("copy-on-select setting explains regular SSH and tmux selection behavior", async () => {
+  const settingsSource = await readFile(
+    new URL("../src/modules/settings/TerminalSettings.tsx", import.meta.url),
+    "utf8",
+  );
+  const english = JSON.parse(
+    await readFile(new URL("../src/i18n/locales/en.json", import.meta.url), "utf8"),
+  );
+
+  assert.match(settingsSource, /t\("settings\.copyOnSelectHint"\)/);
+  assert.match(english.settings.copyOnSelectHint, /regular SSH Sessions/i);
+  assert.match(english.settings.copyOnSelectHint, /hold Shift/i);
+  assert.match(english.settings.copyOnSelectHint, /tmux copy mode/i);
+});
+
 test("multiline paste confirmation returns focus to the terminal after the dialog closes", async () => {
   const workspaceSource = await readFile(
     new URL("../src/modules/workspace/connections/terminal/TerminalWorkspace.tsx", import.meta.url),

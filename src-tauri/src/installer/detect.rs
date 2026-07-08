@@ -34,6 +34,9 @@ pub struct DetectedState {
     /// update comparisons, while this carries the managed runtime version.
     #[serde(default)]
     pub runtime_version: Option<String>,
+    /// Best-effort provider that detected and will manage this installed tool.
+    #[serde(default)]
+    pub install_provider: Option<String>,
     /// Unix timestamp from the most recent detection pass. Cached registry
     /// results carry this so the UI can show how stale the snapshot is.
     pub last_checked_at: Option<i64>,
@@ -48,6 +51,7 @@ impl DetectedState {
             install_location: None,
             install_scope: None,
             runtime_version: None,
+            install_provider: None,
             last_checked_at: None,
         }
     }
@@ -59,6 +63,7 @@ impl DetectedState {
             install_location: None,
             install_scope: None,
             runtime_version: None,
+            install_provider: None,
             last_checked_at: None,
         }
     }
@@ -68,6 +73,12 @@ impl DetectedState {
     }
     pub fn with_install_scope(mut self, scope: Option<InstallScope>) -> Self {
         self.install_scope = scope;
+        self
+    }
+    pub fn with_install_provider(mut self, provider: Option<&str>) -> Self {
+        if self.installed {
+            self.install_provider = provider.map(String::from);
+        }
         self
     }
     pub fn with_last_checked_at(mut self, checked_at: Option<i64>) -> Self {
@@ -179,18 +190,18 @@ pub fn detect_one(recipe: &Recipe) -> DetectedState {
                     "detect.one.chocolatey_provider",
                     &json!({ "toolId": recipe.id, "packageId": id, "state": chocolatey_state }),
                 );
-                return chocolatey_state;
+                return chocolatey_state.with_install_provider(Some("chocolatey"));
             }
         }
         match &recipe.provider {
             Provider::Winget { .. } => {
-                let state = detect_winget(recipe);
+                let state = detect_winget(recipe).with_install_provider(Some("winget"));
                 if !state.installed && recipe.id == "chocolatey" {
-                    detect_chocolatey_cli()
+                    detect_chocolatey_cli().with_install_provider(Some("chocolatey"))
                 } else if !state.installed
                     && let Some(cli_state) = detect_winget_cli_fallback(&recipe.id)
                 {
-                    cli_state
+                    cli_state.with_install_provider(Some("winget"))
                 } else if !state.installed
                     && matches!(
                         &recipe.download_provider,
@@ -198,21 +209,32 @@ pub fn detect_one(recipe: &Recipe) -> DetectedState {
                     )
                 {
                     detect_github_release_marker(&recipe.id)
+                        .with_install_provider(Some("githubRelease"))
                 } else {
                     state
                 }
             }
-            Provider::Chocolatey { id } => detect_chocolatey_package(id),
-            Provider::Npm { pkg } => detect_npm(pkg),
-            Provider::UvPip { .. } => DetectedState::not_installed(),
-            Provider::DownloadInstaller { .. } if recipe.id == "winget" => detect_winget_cli(),
-            Provider::DownloadInstaller { .. } if recipe.id == "antigravity-cli" => {
-                detect_antigravity_cli()
+            Provider::Chocolatey { id } => {
+                detect_chocolatey_package(id).with_install_provider(Some("chocolatey"))
             }
-            Provider::DownloadInstaller { .. } => detect_installed_software_aliases(recipe),
-            Provider::GithubRelease { .. } => detect_github_release_marker(&recipe.id),
-            Provider::WindowsFeature { feature, .. } => detect_windows_feature(feature),
-            Provider::WslDistro { distro } => detect_wsl_distro(distro),
+            Provider::Npm { pkg } => detect_npm(pkg).with_install_provider(Some("npm")),
+            Provider::UvPip { .. } => DetectedState::not_installed(),
+            Provider::DownloadInstaller { .. } if recipe.id == "winget" => {
+                detect_winget_cli().with_install_provider(Some("downloadInstaller"))
+            }
+            Provider::DownloadInstaller { .. } if recipe.id == "antigravity-cli" => {
+                detect_antigravity_cli().with_install_provider(Some("downloadInstaller"))
+            }
+            Provider::DownloadInstaller { .. } => detect_installed_software_aliases(recipe)
+                .with_install_provider(Some("downloadInstaller")),
+            Provider::GithubRelease { .. } => detect_github_release_marker(&recipe.id)
+                .with_install_provider(Some("githubRelease")),
+            Provider::WindowsFeature { feature, .. } => {
+                detect_windows_feature(feature).with_install_provider(Some("windowsFeature"))
+            }
+            Provider::WslDistro { distro } => {
+                detect_wsl_distro(distro).with_install_provider(Some("wslDistro"))
+            }
             Provider::Bundle { .. } => DetectedState::not_installed(),
         }
     };
@@ -293,6 +315,7 @@ fn default_bundle_detected_state(child_states: &[&DetectedState], total: u32) ->
             install_location: None,
             install_scope: None,
             runtime_version: None,
+            install_provider: None,
             last_checked_at: None,
         }
     }
@@ -322,6 +345,7 @@ fn runtime_bundle_detected_state(
             install_location: None,
             install_scope: None,
             runtime_version: None,
+            install_provider: None,
             last_checked_at: None,
         },
     }

@@ -1,8 +1,12 @@
-import * as Icons from "lucide-react";
-import { Search } from "lucide-react";
+import { Search } from "../lib/reicon";
 import { useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { ariaPressed } from "../lib/aria";
+import {
+  getReiconIconComponent,
+  iconKeywordsForName,
+  iconLabelForName,
+} from "../lib/reiconCatalog";
 import {
   materialIconRefForId,
   searchMaterialIcons,
@@ -12,8 +16,6 @@ import { materialIconUrlForId } from "../lib/iconCatalogUrls";
 import { buildIconSearchGroups, iconSearchGroupsMatch } from "../lib/iconSearchAliases";
 
 const DEFAULT_MATERIAL_RESULT_LIMIT = 180;
-
-type LucideIcon = React.ComponentType<{ size?: number; width?: number; height?: number }>;
 
 export type IconLibraryStaticOption = {
   value: string | null;
@@ -26,8 +28,8 @@ export function IconLibraryPicker({
   className = "",
   defaultOption,
   emptyHint,
-  lucideNames,
-  lucideValueForName = (name) => name,
+  iconNames,
+  iconValueForName = (name) => name,
   materialResultLimit = DEFAULT_MATERIAL_RESULT_LIMIT,
   onSelect,
   savedImageDataUrls = [],
@@ -39,8 +41,8 @@ export function IconLibraryPicker({
   className?: string;
   defaultOption?: IconLibraryStaticOption;
   emptyHint?: string;
-  lucideNames: readonly string[];
-  lucideValueForName?: (name: string) => string;
+  iconNames: readonly string[];
+  iconValueForName?: (name: string) => string;
   materialResultLimit?: number;
   onSelect: (value: string | null) => void;
   savedImageDataUrls?: readonly string[];
@@ -55,13 +57,13 @@ export function IconLibraryPicker({
   const visibleBaseOptions = useMemo(
     () => createStaticOptions({
       defaultOption,
-      lucideNames,
-      lucideValueForName,
+      iconNames,
+      iconValueForName,
       savedImageDataUrls,
       savedImageLabelForIndex,
       staticOptions: extraStaticOptions,
     }),
-    [defaultOption, lucideNames, lucideValueForName, savedImageDataUrls, savedImageLabelForIndex, extraStaticOptions],
+    [defaultOption, iconNames, iconValueForName, savedImageDataUrls, savedImageLabelForIndex, extraStaticOptions],
   );
   const visibleStaticOptions = useMemo(
     () => filterStaticOptions(visibleBaseOptions, query, language),
@@ -111,15 +113,15 @@ export function IconLibraryPicker({
 
 function createStaticOptions({
   defaultOption,
-  lucideNames,
-  lucideValueForName,
+  iconNames,
+  iconValueForName,
   savedImageDataUrls,
   savedImageLabelForIndex,
   staticOptions,
 }: {
   defaultOption?: IconLibraryStaticOption;
-  lucideNames: readonly string[];
-  lucideValueForName: (name: string) => string;
+  iconNames: readonly string[];
+  iconValueForName: (name: string) => string;
   savedImageDataUrls: readonly string[];
   savedImageLabelForIndex: (index: number) => string;
   staticOptions: readonly IconLibraryStaticOption[];
@@ -130,12 +132,12 @@ function createStaticOptions({
   }
   options.push(...staticOptions);
   options.push(
-    ...lucideNames.map((name) => {
-      const Icon = (Icons as unknown as Record<string, LucideIcon | undefined>)[name];
+    ...iconNames.map((name) => {
+      const Icon = getReiconIconComponent(name);
       return {
-        value: lucideValueForName(name),
-        label: name,
-        keywords: splitIconName(name),
+        value: iconValueForName(name),
+        label: iconLabelForName(name),
+        keywords: iconKeywordsForName(name),
         icon: Icon ? <Icon size={20} /> : null,
       };
     }),
@@ -212,11 +214,4 @@ function IconLibraryButton({
       {icon}
     </button>
   );
-}
-
-function splitIconName(name: string) {
-  return name
-    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
-    .split(/\s+/)
-    .filter(Boolean);
 }

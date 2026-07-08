@@ -235,6 +235,79 @@ BUILDERS.aquarium = (id) => {
   return svgWrap(id, inner, d);
 };
 
+/* 28. 燈塔 — night coast, rotating beam, tower on rock, wave glints */
+BUILDERS.lighthouse = (id) => {
+  const d = lg(id+'sky',[[0,'#040814'],[.7,'#0a1428'],[1,'#152540']])
+    + lg(id+'sea',[[0,'#182a41'],[.5,'#0d1b2e'],[1,'#050c16']],0,.62,0,1)
+    + lg(id+'beam',[[0,'#fff4c6',.5],[.6,'#fff4c6',.12],[1,'#fff4c6',0]],126,26,40,26);
+  const r=rng(id); let stars='';
+  for(let i=0;i<26;i++){ stars+=`<circle class="anim tw" style="--d:${f2(1.5+r()*2)}s; animation-delay:${f2(-r()*3)}s" cx="${f2(r()*160)}" cy="${f2(r()*52)}" r="${f2(.4+r()*.7)}" fill="#d7e4ff"/>`; }
+  let waves=''; for(let i=0;i<4;i++){ const y=70+i*8;
+    waves+=`<path class="anim" style="animation:driftX ${9-i}s linear infinite" d="M-20,${y} q20,-2 40,0 t40,0 t40,0 t40,0 t40,0" fill="none" stroke="rgba(150,190,225,${f2(.08+i*.05)})" stroke-width="1"/>`; }
+  const inner = `<rect width="160" height="62" fill="url(#${id}sky)"/>${stars}
+    <rect y="62" width="160" height="38" fill="url(#${id}sea)"/>${waves}
+    <g class="anim" style="animation:sweep 6s linear infinite; transform-origin:126px 26px; transform-box:view-box">
+      <path d="M126,26 L-40,10 L-40,42 Z" fill="url(#${id}beam)"/>
+      <path d="M126,26 L292,10 L292,42 Z" fill="url(#${id}beam)" transform="rotate(180 126 26)"/>
+    </g>
+    <path d="M100,72 Q112,58 126,57 L146,58 Q156,60 160,70 L160,100 L100,100 Z" fill="#060a12"/>
+    <path d="M122,57 L124,33 L128,33 L130,57 Z" fill="#0a0f1a" stroke="rgba(140,170,210,.35)" stroke-width=".7"/>
+    <rect x="121" y="31.5" width="10" height="1.6" fill="#0a0f1a"/>
+    <rect x="123" y="27" width="6" height="4.5" fill="#0a0f1a" stroke="rgba(160,200,240,.4)" stroke-width=".6"/>
+    <path d="M122,27 L126,23.5 L130,27 Z" fill="#0a0f1a"/>
+    <circle cx="126" cy="29" r="4" fill="#fff0b4" opacity=".35" class="anim br" style="--d:3s; transform-box:fill-box; transform-origin:center"/>
+    <circle cx="126" cy="29" r="1.4" fill="#fff8dc"/>`;
+  return svgWrap(id, inner, d);
+};
+
+/* 30. 深海水母 — abyss gradient, glowing pulsing jellies, marine snow */
+BUILDERS.jellyfish = (id) => {
+  const d = lg(id+'bg',[[0,'#04121f'],[.5,'#041627'],[1,'#010710']])
+    + rg(id+'g1',[[0,'#7de0f0',.4],[1,'#7de0f0',0]],46,40,22)
+    + rg(id+'g2',[[0,'#d08af5',.35],[1,'#d08af5',0]],112,60,18)
+    + rg(id+'g3',[[0,'#8ab4ff',.3],[1,'#8ab4ff',0]],86,26,12);
+  const r=rng(id); let snow='';
+  for(let i=0;i<30;i++){ snow+=`<rect x="${f2(r()*160)}" y="${f2(r()*100)}" width="1" height="1" fill="#bed7eb" opacity="${f2(.15+r()*.3)}"/>`; }
+  function jelly(x,y,sc,hue){ let tent='';
+    for(let k=0;k<4;k++){ const bx=x-sc*6+k*sc*4;
+      tent+=`<path d="M${f2(bx)},${f2(y+sc*1)} q${f2(sc*2)},${f2(sc*8)} ${f2((k%2?1:-1)*sc*2.5)},${f2(sc*16)}" fill="none" stroke="hsla(${hue},85%,72%,.35)" stroke-width="${f2(sc*.5)}" stroke-linecap="round"/>`; }
+    return `<g class="anim br" style="--d:${f2(2.5+sc)}s; transform-box:fill-box; transform-origin:center">
+      ${tent}
+      <path d="M${f2(x-sc*9)},${f2(y)} C${f2(x-sc*9)},${f2(y-sc*10)} ${f2(x+sc*9)},${f2(y-sc*10)} ${f2(x+sc*9)},${f2(y)} C${f2(x+sc*5.5)},${f2(y+sc*1.5)} ${f2(x-sc*5.5)},${f2(y+sc*1.5)} ${f2(x-sc*9)},${f2(y)} Z" fill="hsla(${hue},85%,70%,.5)" stroke="hsla(${hue},90%,80%,.5)" stroke-width=".7"/></g>`; }
+  const inner = `<rect width="160" height="100" fill="url(#${id}bg)"/>
+    <g class="anim fall" style="--d:9s">${loopY(snow,'fall')}</g>
+    <g style="mix-blend-mode:screen">
+      <rect width="160" height="100" fill="url(#${id}g1)"/>
+      <rect width="160" height="100" fill="url(#${id}g2)"/>
+      <rect width="160" height="100" fill="url(#${id}g3)"/>
+      <g class="anim rise" style="--d:14s">${loopY(jelly(46,40,2.2,'190')+jelly(112,60,1.7,'285')+jelly(86,26,1.1,'220'),'rise')}</g>
+    </g>`;
+  return svgWrap(id, inner, d);
+};
+
+/* 31. 熱氣球 — dawn gradient, misty ridgelines, striped balloons rising */
+BUILDERS.balloons = (id) => {
+  const d = lg(id+'sky',[[0,'#8894c8'],[.42,'#c9a3b4'],[.72,'#eec39a'],[1,'#f7d98f']])
+    + rg(id+'sun',[[0,'#ffecb4',.7],[.4,'#ffdc96',.25],[1,'#ffdc96',0]],38,68,55);
+  function balloon(x,y,sc,c1,c2){
+    const r1=sc*9;
+    return `<g transform="translate(${x},${y})">
+      <path d="M${f2(-r1*.26)},${f2(r1*1.3)} C${f2(-r1)},${f2(r1*.5)} ${f2(-r1)},${f2(-r1*.7)} 0,${f2(-r1)} C${f2(r1)},${f2(-r1*.7)} ${f2(r1)},${f2(r1*.5)} ${f2(r1*.26)},${f2(r1*1.3)} Z" fill="${c1}"/>
+      <path d="M${f2(-r1*.18)},${f2(r1*1.3)} C${f2(-r1*.7)},${f2(r1*.5)} ${f2(-r1*.7)},${f2(-r1*.7)} 0,${f2(-r1)} C${f2(r1*.7)},${f2(-r1*.7)} ${f2(r1*.7)},${f2(r1*.5)} ${f2(r1*.18)},${f2(r1*1.3)} Z" fill="${c2}"/>
+      <path d="M${f2(-r1*.09)},${f2(r1*1.3)} C${f2(-r1*.36)},${f2(r1*.5)} ${f2(-r1*.36)},${f2(-r1*.7)} 0,${f2(-r1)} C${f2(r1*.36)},${f2(-r1*.7)} ${f2(r1*.36)},${f2(r1*.5)} ${f2(r1*.09)},${f2(r1*1.3)} Z" fill="${c1}"/>
+      <rect x="${f2(-r1*.15)}" y="${f2(r1*1.62)}" width="${f2(r1*.3)}" height="${f2(r1*.22)}" fill="#6b4a2f"/>
+      <line x1="${f2(-r1*.2)}" y1="${f2(r1*1.32)}" x2="${f2(-r1*.1)}" y2="${f2(r1*1.62)}" stroke="#463024" stroke-width=".5"/>
+      <line x1="${f2(r1*.2)}" y1="${f2(r1*1.32)}" x2="${f2(r1*.1)}" y2="${f2(r1*1.62)}" stroke="#463024" stroke-width=".5"/></g>`; }
+  const inner = `<rect width="160" height="100" fill="url(#${id}sky)"/>
+    <rect width="160" height="100" fill="url(#${id}sun)"/>
+    <path d="M0,72 Q30,66 60,71 T120,69 T160,71 L160,100 L0,100 Z" fill="#a8afc4"/>
+    <path d="M0,80 Q40,73 85,79 T160,77 L160,100 L0,100 Z" fill="#82909f"/>
+    <path d="M0,90 Q45,82 95,89 T160,86 L160,100 L0,100 Z" fill="#4d686a"/>
+    <g class="anim rise" style="--d:12s">${loopY(
+      balloon(40,34,1.5,'#e2543e','#f2cf5b')+balloon(104,58,1.05,'#3f7fae','#e8e3d3')+balloon(134,22,.7,'#8a5aa8','#f0b95a'),'rise')}</g>`;
+  return svgWrap(id, inner, d);
+};
+
 /* 13. 稻田 — green-gold sky, sun UR, distant mountain, golden field, swaying stalks */
 BUILDERS.ricefield = (id) => {
   const d = lg(id+'sky',[[0,'#e8f0d4'],[.5,'#f4e2b0'],[1,'#f6cc88']],0,0,0,.5)
@@ -323,6 +396,56 @@ BUILDERS.lava = (id) => {
     blobs+=`<circle class="anim blob" style="--d:${10+i*2}s; animation-delay:${-i}s" cx="${c[0]}" cy="${c[1]}" r="${c[2]}" fill="url(#${gid})"/>`; });
   const inner = `<rect width="160" height="100" fill="url(#${id}bg)"/><g style="mix-blend-mode:screen">${blobs}</g>`;
   return svgWrap(id, inner, defs);
+};
+
+/* 27. 沙丘 — bleached sky, sun, layered dunes w/ crest lines, blowing sand */
+BUILDERS.dunes = (id) => {
+  const d = lg(id+'sky',[[0,'#8fbdd6'],[.6,'#d9e2d6'],[1,'#f4ddab']])
+    + rg(id+'sun',[[0,'#fffbe8',.9],[.3,'#fff2cb',.3],[1,'#fff2cb',0]],115,16,55)
+    + lg(id+'d1',[[0,'#eecd92'],[1,'#dcab63']],0,.45,0,1)
+    + lg(id+'d2',[[0,'#e4b26d'],[1,'#c78c46']],0,.55,0,1)
+    + lg(id+'d3',[[0,'#d09550'],[1,'#a06428']],0,.7,0,1);
+  const r=rng(id); let wisps='';
+  for(let i=0;i<12;i++){ const x=r()*160,y=45+r()*50,len=10+r()*16;
+    wisps+=`<path d="M${f2(x)},${f2(y)} q${f2(len*.5)},-2 ${f2(len)},0" fill="none" stroke="#ffeecd" stroke-width="1" stroke-opacity="${f2(.2+r()*.3)}" stroke-linecap="round"/>`; }
+  const inner = `<rect width="160" height="100" fill="url(#${id}sky)"/>
+    <rect width="160" height="56" fill="url(#${id}sun)"/>
+    <circle cx="115" cy="16" r="5.5" fill="#fffdf0"/>
+    <path d="M0,52 Q40,44 80,50 T160,48 L160,100 L0,100 Z" fill="url(#${id}d1)"/>
+    <path d="M0,52 Q40,44 80,50 T160,48" fill="none" stroke="#fff0cd" stroke-opacity=".5" stroke-width="1"/>
+    <path d="M0,68 Q50,58 95,66 T160,62 L160,100 L0,100 Z" fill="url(#${id}d2)"/>
+    <path d="M0,68 Q50,58 95,66 T160,62" fill="none" stroke="#ffe9bd" stroke-opacity=".45" stroke-width="1"/>
+    <path d="M0,86 Q45,76 90,84 T160,80 L160,100 L0,100 Z" fill="url(#${id}d3)"/>
+    <path d="M0,86 Q45,76 90,84 T160,80" fill="none" stroke="#ffe3ad" stroke-opacity=".4" stroke-width="1"/>
+    <g class="anim drift" style="--d:5s">${loopX(wisps)}</g>`;
+  return svgWrap(id, inner, d);
+};
+
+/* 29. 草原夕陽 — plum→orange sky, huge sun, acacia + grass silhouettes, birds */
+BUILDERS.savanna = (id) => {
+  const d = lg(id+'sky',[[0,'#2d1436'],[.45,'#7a2340'],[.78,'#c9502e'],[1,'#f5913c']])
+    + lg(id+'sun',[[0,'#ffe3ae'],[.55,'#ffb45e'],[1,'#ff8438']],0,.22,0,.74)
+    + rg(id+'halo',[[0,'#ffaa50',.45],[1,'#ffaa50',0]],62,72,48);
+  const r=rng(id); let grass='';
+  for(let i=0;i<40;i++){ const x=r()*160, len=4+r()*6, sw=(r()-.5)*4;
+    grass+=`<path class="anim sway" style="--d:${f2(2.5+r()*2)}s; animation-delay:${f2(-r()*3)}s" d="M${f2(x)},${f2(78+r()*22)} q${f2(sw*.4)},${f2(-len*.6)} ${f2(sw)},${f2(-len)}" stroke="#170b06" stroke-width="${f2(1+r())}" fill="none" stroke-linecap="round"/>`; }
+  const birds = `<g stroke="#20101c" stroke-width="1.2" fill="none" stroke-linecap="round">
+      <path class="anim sway" style="--d:.9s" d="M30,22 q3,3 6,0 M36,22 q3,3 6,0" transform="translate(-3,0)"/>
+      <path class="anim sway" style="--d:1.1s" d="M52,16 q2.5,2.5 5,0 M57,16 q2.5,2.5 5,0"/>
+      <path class="anim sway" style="--d:1s" d="M44,30 q2,2 4,0 M48,30 q2,2 4,0"/></g>`;
+  const inner = `<rect width="160" height="76" fill="url(#${id}sky)"/>
+    <rect width="160" height="76" fill="url(#${id}halo)"/>
+    <circle cx="62" cy="72" r="16" fill="url(#${id}sun)"/>
+    <g class="anim drift" style="--d:26s">${loopX(birds)}</g>
+    <path d="M0,77 Q80,73 160,77 L160,100 L0,100 Z" fill="#1c0d08"/>
+    <g fill="#150a06" stroke="#150a06" stroke-linecap="round">
+      <path d="M124,78 Q122,68 116,60" stroke-width="2.4" fill="none"/>
+      <path d="M123,71 Q129,65 133,61" stroke-width="1.6" fill="none"/>
+      <ellipse cx="122" cy="57" rx="22" ry="4.5"/>
+      <ellipse cx="110" cy="60" rx="9" ry="3"/>
+      <ellipse cx="136" cy="60" rx="8" ry="2.6"/></g>
+    ${grass}`;
+  return svgWrap(id, inner, d);
 };
 
 /* 19. 矩陣 — black, green falling katakana columns */
@@ -449,6 +572,98 @@ BUILDERS.particleCursor = (id) => {
   const inner = `<rect width="160" height="100" fill="#08080e"/>
     <rect width="160" height="100" fill="url(#${id}bg)"/>
     <g style="mix-blend-mode:screen"><g class="anim br" style="--d:3.4s">${glow}</g>${core}</g>`;
+  return svgWrap(id, inner, d);
+};
+
+/* 32. Circuit — dark PCB traces with cyan signal pulses */
+BUILDERS.circuit = (id) => {
+  const r = rng(id);
+  let traces = '';
+  let pads = '';
+  let pulses = '';
+  for (let i = 0; i < 20; i++) {
+    const sx = Math.floor(r() * 8) * 22 - 8;
+    const sy = Math.floor(r() * 6) * 20;
+    const midX = sx + (r() > .5 ? 22 : 44);
+    const midY = sy + (r() > .5 ? 20 : -20);
+    const ex = midX + (r() > .5 ? 44 : -22);
+    const ey = midY + (r() > .5 ? 20 : -20);
+    traces += `<path d="M${sx},${sy} L${midX},${sy} L${midX},${midY} L${ex},${midY} L${ex},${ey}" fill="none" stroke="rgba(38,74,78,.58)" stroke-width="1.2" stroke-linejoin="round"/>`;
+    pads += `<circle cx="${sx}" cy="${sy}" r="2.4" fill="rgba(60,110,112,.72)"/><circle cx="${ex}" cy="${ey}" r="2.4" fill="rgba(60,110,112,.72)"/>`;
+    if (i % 4 === 0) {
+      pulses += `<circle class="anim tw" style="--d:${f2(1.2 + r() * 1.4)}s; animation-delay:${f2(-r() * 2)}s" cx="${midX}" cy="${midY}" r="6" fill="hsl(${r() > .25 ? 160 : 205},95%,65%)" opacity=".8"/>`;
+    }
+  }
+  const inner = `<rect width="160" height="100" fill="#080d12"/>${traces}${pads}<g style="mix-blend-mode:screen">${pulses}</g>`;
+  return svgWrap(id, inner, '');
+};
+
+/* 33. Halftone — warm paper with pulsing interference dots */
+BUILDERS.halftone = (id) => {
+  let dots = '';
+  for (let y = 10; y < 100; y += 13) {
+    for (let x = 10; x < 160; x += 13) {
+      const d = Math.hypot(x - 80, y - 50);
+      const k = .5 + .5 * Math.sin(x * .11 + y * .07 + d * .08);
+      const rr = f2(.9 + k * 4.1);
+      const hi = k > .94 ? '#0a84ff' : '#2b3340';
+      dots += `<circle class="anim br" style="--d:${f2(2.4 + k)}s; animation-delay:${f2(-k)}s" cx="${x}" cy="${y}" r="${rr}" fill="${hi}" opacity="${f2(hi === '#0a84ff' ? .85 : .22 + k * .5)}"/>`;
+    }
+  }
+  const inner = `<rect width="160" height="100" fill="#efeeea"/>${dots}`;
+  return svgWrap(id, inner, '');
+};
+
+/* 34. Orbitals — concentric tilted rings with glowing particles */
+BUILDERS.orbitals = (id) => {
+  const d = rg(id+'bg',[[0,'#0d1122',1],[1,'#04060c',1]],80,50,96)
+    + rg(id+'core',[[0,'#d2e1ff',.85],[.42,'#8caaff',.25],[1,'#8caaff',0]],80,50,24);
+  let rings = '';
+  for (let i = 0; i < 7; i++) {
+    const rx = 15 + i * 9;
+    const ry = rx * (.34 + (i % 3) * .05);
+    const rot = -24 + i * 8;
+    const hue = 198 + i * 9;
+    rings += `<g transform="rotate(${rot} 80 50)">
+      <ellipse cx="80" cy="50" rx="${rx}" ry="${f2(ry)}" fill="none" stroke="rgba(150,180,255,.1)" stroke-width="1"/>
+      <ellipse class="anim" style="animation:dwbg_spin ${f2(10 + i * 1.5)}s linear infinite; transform-box:view-box; transform-origin:80px 50px" cx="80" cy="50" rx="${rx}" ry="${f2(ry)}" fill="none" stroke="hsla(${hue},80%,70%,.35)" stroke-width="1.3" stroke-dasharray="10 58"/>
+      <circle class="anim tw" style="--d:${f2(2 + i * .2)}s" cx="${f2(80 + rx)}" cy="50" r="3" fill="hsl(${hue},90%,78%)"/></g>`;
+  }
+  const inner = `<rect width="160" height="100" fill="url(#${id}bg)"/><g style="mix-blend-mode:screen">${rings}<circle cx="80" cy="50" r="24" fill="url(#${id}core)"/></g>`;
+  return svgWrap(id, inner, d);
+};
+
+/* 35. Ink — soft warm pigment blobs on paper */
+BUILDERS.ink = (id) => {
+  const cfg = [
+    [50,44,38,'#e8a85c'], [76,60,34,'#d87654'], [105,42,32,'#c9943c'],
+    [112,70,42,'#e05e4a'], [40,72,30,'#ba7a60'], [76,30,28,'#e9c480'],
+  ];
+  let defs = blurFilter(id+'b',5);
+  let blobs = '';
+  cfg.forEach((c, i) => {
+    const gid = id+'ink'+i;
+    defs += rg(gid,[[0,c[3],.52],[.65,c[3],.28],[1,c[3],0]],c[0],c[1],c[2]);
+    blobs += `<circle class="anim blob" style="--d:${11 + i * 1.3}s; animation-delay:${-i}s" cx="${c[0]}" cy="${c[1]}" r="${c[2]}" fill="url(#${gid})"/>`;
+  });
+  const inner = `<rect width="160" height="100" fill="#f6efe6"/><g filter="url(#${id}b)" style="mix-blend-mode:multiply">${blobs}</g>`;
+  return svgWrap(id, inner, defs);
+};
+
+/* 36. Crystals — dark faceted lattice with glowing seams */
+BUILDERS.crystals = (id) => {
+  const d = lg(id+'c1',[[0,'#0d2f31'],[1,'#031013']],0,0,1,1)
+    + lg(id+'c2',[[0,'#123d3e'],[1,'#061616']],1,0,0,1)
+    + lg(id+'c3',[[0,'#17464b'],[1,'#071c1f']],0,1,1,0);
+  const polys = [
+    'M0,0 L52,0 L38,36 L0,54 Z', 'M52,0 L105,0 L94,42 L38,36 Z',
+    'M105,0 L160,0 L160,48 L94,42 Z', 'M0,54 L38,36 L58,86 L0,100 Z',
+    'M38,36 L94,42 L88,100 L58,86 Z', 'M94,42 L160,48 L160,100 L88,100 Z',
+  ];
+  const fills = [`url(#${id}c1)`, `url(#${id}c2)`, `url(#${id}c3)`];
+  const cells = polys.map((p, i) => `<path class="anim br" style="--d:${4.6 + i * .25}s; animation-delay:${-i * .2}s" d="${p}" fill="${fills[i % fills.length]}" stroke="hsl(${176 + i * 7},90%,64%)" stroke-width="1.15" stroke-opacity=".72"/>`).join('');
+  const sparks = `<circle cx="38" cy="36" r="2" fill="#e1fffa"/><circle cx="94" cy="42" r="2.2" fill="#e1fffa"/><circle cx="88" cy="100" r="1.6" fill="#e1fffa"/>`;
+  const inner = `<rect width="160" height="100" fill="#060b0d"/><g>${cells}</g><g class="anim tw" style="mix-blend-mode:screen; --d:2.4s">${sparks}</g>`;
   return svgWrap(id, inner, d);
 };
 

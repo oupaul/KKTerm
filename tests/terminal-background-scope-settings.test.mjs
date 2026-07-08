@@ -105,6 +105,7 @@ test("split terminal pane backgrounds serialize with stored layouts", () => {
 test("terminal and Dashboard background pickers share the same component and datasource", () => {
   assert.match(terminalBackgroundPopover, /SharedBackgroundPopover/);
   assert.match(dashboardBackgroundPopover, /SharedBackgroundPopover/);
+  assert.match(sharedBackgroundPopover, /extensions:\s*\[[^\]]*"svg"/);
   assert.doesNotMatch(terminalBackgroundPopover, /BACKGROUND_PRESETS\.map/);
   assert.doesNotMatch(terminalBackgroundPopover, /DYNAMIC_BACKGROUNDS\.map/);
 });
@@ -143,6 +144,7 @@ test("dynamic background live preview stages selection and animates only one til
   assert.match(dashboardCss, /\.dw-bg-preview-art\s*\{[\s\S]*pointer-events:\s*none;/);
   assert.match(dashboardCss, /\.dw-bg-preview-frame \.dw-canvas-bg\s*\{[\s\S]*pointer-events:\s*none;/);
   assert.match(dashboardCss, /@keyframes driftX\s*\{/);
+  assert.match(dashboardCss, /@keyframes sweep\s*\{/);
   assert.match(dashboardCss, /@keyframes dwbg_blob\s*\{[\s\S]*translate\(14px,\s*-10px\) scale\(1\.18\)/);
   assert.match(dashboardCss, /@keyframes dwbg_sway\s*\{[\s\S]*rotate\(-5deg\)[\s\S]*rotate\(5deg\)/);
 });

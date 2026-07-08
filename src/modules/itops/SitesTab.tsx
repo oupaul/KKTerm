@@ -11,11 +11,15 @@ import {
   useMemo,
   useRef,
   useState,
+  type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from "react";
 import { useTranslation } from "react-i18next";
+import { Maximize2, Minimize2 } from "../../lib/reicon";
 import { ConfirmSheet } from "../../app/ui/dialog";
+import { showNativeContextMenu } from "../../lib/nativeContextMenu";
+import { nativeMenuIcons } from "../../lib/nativeMenuIcons";
 import { useWorkspaceStore } from "../../store";
 import type { Site, Rack, RackItem, ResolvedHost, ServerRoom } from "../../types";
 import { ConnectionIcon } from "../workspace/connections/ConnectionIcon";
@@ -36,13 +40,16 @@ import {
   topologyGroupKey,
   type DrillPath,
 } from "./rackTopology";
-import { sanitizeFacing } from "./roomIsoLayout";
+import { resolveIsoLayout, sanitizeFacing } from "./roomIsoLayout";
 import { ItOpsBackground } from "./ItOpsBackground";
 import { RackStage } from "./RackStage";
 import { ServerRoomFloorPlan } from "./ServerRoomFloorPlan";
 import { ServerRoomIsoView } from "./ServerRoomIsoView";
-import { collectBoundConnectionIds, selectRandomRackCallouts } from "./rackInventory";
+import { RoomObjectPicker, type RoomTool } from "./roomViewParts";
+import { collectBoundConnectionIds } from "./rackInventory";
 import type { DashboardBackground } from "../dashboard/types";
+import { SharedBackgroundPopover } from "../dashboard/edit/SharedBackgroundPopover";
+import { loadBackgroundImage } from "../dashboard/state/persistence";
 import {
   SITE_TREE_COLLAPSED_WIDTH,
   SITE_TREE_MAX_WIDTH,
@@ -59,11 +66,12 @@ import {
   saveRoomObjects,
   saveRoomViewMode,
   saveSiteTreeWidth,
+  sanitizeIsoFloor,
   type FreePlacementMap,
   type RackFacingMap,
   type RoomViewMode,
 } from "./siteTreeState";
-import type { RoomObject } from "./roomObjects";
+import { settleRoomObjects, type RoomObject } from "./roomObjects";
 import {
   createItOpsPdfBytes,
   excelFilename,
@@ -132,7 +140,7 @@ export function SitesTab({
   treeCollapsed,
   onShowWorkspace,
 }: {
-  renderSidebarHeader?: (props: { collapsed: boolean }) => ReactNode;
+  renderSidebarHeader?: (props: { actions?: ReactNode; collapsed: boolean }) => ReactNode;
   treeCollapsed: boolean;
   /** Navigate the app shell to the Workspace Module (connect popover jumps). */
   onShowWorkspace: () => void;
@@ -157,8 +165,13 @@ export function SitesTab({
     siteId: string;
     rack: Rack | null;
     defaultServerRoom?: string;
+    /** Picker placement flow: consume the saved rack instead of drilling in. */
+    onSaved?: (saved: Rack) => void;
   } | null>(null);
-  const [serverRoomDialogOpen, setServerRoomDialogOpen] = useState(false);
+  const [serverRoomDialog, setServerRoomDialog] = useState<{
+    siteId: string;
+    room: ServerRoom | null;
+  } | null>(null);
   const [addMenuOpen, setAddMenuOpen] = useState(false);
   const [itemDialog, setItemDialog] = useState<{
     rack: Rack;
@@ -193,6 +206,26 @@ export function SitesTab({
       return next;
     });
   }, []);
+  const expandAllNodes = useCallback(() => setCollapsed(new Set()), []);
+  const collapseAllNodes = useCallback(() => {
+    setCollapsed(() => {
+      const next = new Set<string>();
+      for (const site of sites) {
+        const siteId = nodeId.site(site.id);
+        const siteRacks = racksBySite[site.id] ?? [];
+        const siteTopo = groupRackTopology(siteRacks, serverRoomsBySite[site.id] ?? []);
+        if (siteRacks.length > 0) {
+          next.add(siteId);
+        }
+        for (const room of siteTopo) {
+          if (room.racks.length > 0) {
+            next.add(nodeId.serverRoom(site.id, room.key));
+          }
+        }
+      }
+      return next;
+    });
+  }, [racksBySite, serverRoomsBySite, sites]);
 
   // Drag the splitter to resize the tree. During the drag we set the width
   // directly on the DOM element so the cursor stays in sync with the bar —
@@ -296,7 +329,10 @@ export function SitesTab({
     () => (activeGroup ? (racksBySite[activeGroup.id] ?? []) : []),
     [activeGroup, racksBySite],
   );
-  const serverRooms = activeGroup ? (serverRoomsBySite[activeGroup.id] ?? []) : [];
+  const serverRooms = useMemo(
+    () => (activeGroup ? (serverRoomsBySite[activeGroup.id] ?? []) : []),
+    [activeGroup, serverRoomsBySite],
+  );
   const topology = useMemo(() => groupRackTopology(racks, serverRooms), [racks, serverRooms]);
   const selectedSiteIdForDialog = activeGroup?.id ?? sites[0]?.id ?? "";
   const selectedServerRoomForDialog =
@@ -323,6 +359,22 @@ export function SitesTab({
   function selectNode(siteId: string, next: DrillPath) {
     setActiveId(siteId);
     setDrill(next);
+  }
+
+  function showPropertiesMenu(event: ReactMouseEvent<HTMLElement>, action: () => void) {
+    event.preventDefault();
+    event.stopPropagation();
+    void showNativeContextMenu(
+      [
+        {
+          kind: "item",
+          label: t("common.properties"),
+          iconSvg: nativeMenuIcons.pencil,
+          action,
+        },
+      ],
+      { x: event.clientX, y: event.clientY },
+    );
   }
 
   async function moveItem(itemId: string, targetRackId: string, startU: number) {
@@ -432,6 +484,68 @@ export function SitesTab({
   const q = query.trim().toLowerCase();
   const matchQ = (s: string) => !q || (s || t("itops.racks.unassigned")).toLowerCase().includes(q);
   const effectiveTreeWidth = treeCollapsed ? SITE_TREE_COLLAPSED_WIDTH : treeWidth;
+  const hasExpandableTreeNodes = sites.some((site) => (racksBySite[site.id] ?? []).length > 0);
+  const addTopologyMenu = !treeCollapsed ? (
+    <div className="ft-add-wrap">
+      <button
+        type="button"
+        className="icon-button"
+        title={t("itops.racks.addNode")}
+        aria-label={t("itops.racks.addNode")}
+        aria-haspopup="menu"
+        aria-expanded={addMenuOpen}
+        onClick={() => setAddMenuOpen((open) => !open)}
+      >
+        <ItIcon name="plus" size={14} />
+      </button>
+      {addMenuOpen ? (
+        <>
+          <div className="ft-add-backdrop" onClick={() => setAddMenuOpen(false)} />
+          <div className="ft-add-menu" role="menu">
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setAddMenuOpen(false);
+                setDialog({ group: null });
+              }}
+            >
+              <ItIcon name="site" size={14} />
+              {t("itops.racks.addSite")}
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              disabled={!activeGroup}
+              onClick={() => {
+                setAddMenuOpen(false);
+                setServerRoomDialog({ siteId: selectedSiteIdForDialog, room: null });
+              }}
+            >
+              <ItIcon name="room" size={14} />
+              {t("itops.racks.addServerRoom")}
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              disabled={!activeGroup}
+              onClick={() => {
+                setAddMenuOpen(false);
+                setRackDialog({
+                  siteId: selectedSiteIdForDialog,
+                  rack: null,
+                  defaultServerRoom: selectedServerRoomForDialog,
+                });
+              }}
+            >
+              <ItIcon name="rack" size={14} />
+              {t("itops.racks.addRack")}
+            </button>
+          </div>
+        </>
+      ) : null}
+    </div>
+  ) : null;
 
   return (
     <div className={`hg ft${treeCollapsed ? " ft-collapsed" : ""}`}>
@@ -442,69 +556,33 @@ export function SitesTab({
         data-tutorial-id="itops.sitesTree"
         style={{ width: effectiveTreeWidth, flex: `0 0 ${effectiveTreeWidth}px` }}
       >
-        {renderSidebarHeader?.({ collapsed: treeCollapsed })}
+        {renderSidebarHeader?.({ actions: addTopologyMenu, collapsed: treeCollapsed })}
         {!treeCollapsed ? (
           <>
             <div className="ft-head">
               <span className="ft-head-title">{t("itops.sites.heading")}</span>
-              <div className="ft-add-wrap">
-                <button
-                  type="button"
-                  className="it-icon-btn sm"
-                  title={t("itops.racks.addNode")}
-                  aria-haspopup="menu"
-                  aria-expanded={addMenuOpen}
-                  onClick={() => setAddMenuOpen((open) => !open)}
-                >
-                  <ItIcon name="plus" size={14} />
-                </button>
-                {addMenuOpen ? (
-                  <>
-                    <div className="ft-add-backdrop" onClick={() => setAddMenuOpen(false)} />
-                    <div className="ft-add-menu" role="menu">
-                      <button
-                        type="button"
-                        role="menuitem"
-                        onClick={() => {
-                          setAddMenuOpen(false);
-                          setDialog({ group: null });
-                        }}
-                      >
-                        <ItIcon name="site" size={14} />
-                        {t("itops.racks.addSite")}
-                      </button>
-                      <button
-                        type="button"
-                        role="menuitem"
-                        disabled={!activeGroup}
-                        onClick={() => {
-                          setAddMenuOpen(false);
-                          setServerRoomDialogOpen(true);
-                        }}
-                      >
-                        <ItIcon name="room" size={14} />
-                        {t("itops.racks.addServerRoom")}
-                      </button>
-                      <button
-                        type="button"
-                        role="menuitem"
-                        disabled={!activeGroup}
-                        onClick={() => {
-                          setAddMenuOpen(false);
-                          setRackDialog({
-                            siteId: selectedSiteIdForDialog,
-                            rack: null,
-                            defaultServerRoom: selectedServerRoomForDialog,
-                          });
-                        }}
-                      >
-                        <ItIcon name="rack" size={14} />
-                        {t("itops.racks.addRack")}
-                      </button>
-                    </div>
-                  </>
-                ) : null}
-              </div>
+              {hasExpandableTreeNodes ? (
+                <div className="ft-tree-controls" aria-label={t("itops.sites.heading")}>
+                  <button
+                    aria-label={t("connections.collapseAll")}
+                    className="it-icon-btn sm ft-tree-control"
+                    onClick={collapseAllNodes}
+                    title={t("connections.collapseAll")}
+                    type="button"
+                  >
+                    <Minimize2 size={13} />
+                  </button>
+                  <button
+                    aria-label={t("connections.expandAll")}
+                    className="it-icon-btn sm ft-tree-control"
+                    onClick={expandAllNodes}
+                    title={t("connections.expandAll")}
+                    type="button"
+                  >
+                    <Maximize2 size={13} />
+                  </button>
+                </div>
+              ) : null}
             </div>
             <div className="ft-search">
               <ItIcon name="search" size={13} />
@@ -542,6 +620,9 @@ export function SitesTab({
                         setActiveId(site.id);
                         setDrill(EMPTY_DRILL);
                       }}
+                      onContextMenu={(event) =>
+                        showPropertiesMenu(event, () => setDialog({ group: site }))
+                      }
                     />
                     {open
                       ? siteTopo
@@ -564,6 +645,14 @@ export function SitesTab({
                                   onSelect={() =>
                                     selectNode(site.id, { serverRoom: room.key, rackId: null })
                                   }
+                                  onContextMenu={
+                                    room.room
+                                      ? (event) =>
+                                          showPropertiesMenu(event, () =>
+                                            setServerRoomDialog({ siteId: site.id, room: room.room! }),
+                                          )
+                                      : undefined
+                                  }
                                 />
                                 {mOpen
                                   ? room.racks.map((rack) => (
@@ -580,6 +669,11 @@ export function SitesTab({
                                             serverRoom: room.key,
                                             rackId: rack.id,
                                           })
+                                        }
+                                        onContextMenu={(event) =>
+                                          showPropertiesMenu(event, () =>
+                                            setRackDialog({ siteId: site.id, rack }),
+                                          )
                                         }
                                       />
                                     ))
@@ -618,12 +712,22 @@ export function SitesTab({
             onEditItem={(rack, item) => setItemDialog({ rack, item })}
             onBindItem={setBindingsDialog}
             onMoveItem={(itemId, targetRackId, startU) => void moveItem(itemId, targetRackId, startU)}
-            onAddServerRoom={() => setServerRoomDialogOpen(true)}
+            onAddServerRoom={() =>
+              setServerRoomDialog({ siteId: activeGroup.id, room: null })
+            }
             onAddRack={(serverRoom) => {
               setRackDialog({
                 siteId: activeGroup.id,
                 rack: null,
                 defaultServerRoom: serverRoom,
+              });
+            }}
+            onAddRackForPlacement={(serverRoom, onSaved) => {
+              setRackDialog({
+                siteId: activeGroup.id,
+                rack: null,
+                defaultServerRoom: serverRoom,
+                onSaved,
               });
             }}
             onAddRackItem={(rack, startU) => setItemDialog({ rack, item: null, startU })}
@@ -657,17 +761,24 @@ export function SitesTab({
           defaultServerRoom={rackDialog.defaultServerRoom}
           onClose={() => setRackDialog(null)}
           onSaved={(saved) => {
+            // Picker placement flow: stay in the room view and arm the new
+            // rack for its placement click instead of drilling into it.
+            if (rackDialog.onSaved) {
+              rackDialog.onSaved(saved);
+              return;
+            }
             setActiveId(saved.siteId);
             setDrill({ serverRoom: saved.serverRoom, rackId: saved.id });
           }}
         />
       ) : null}
-      {serverRoomDialogOpen ? (
+      {serverRoomDialog ? (
         <ServerRoomDialog
           sites={sites}
-          defaultSiteId={selectedSiteIdForDialog}
-          onClose={() => setServerRoomDialogOpen(false)}
-          onCreated={(saved) => {
+          defaultSiteId={serverRoomDialog.siteId}
+          room={serverRoomDialog.room}
+          onClose={() => setServerRoomDialog(null)}
+          onSaved={(saved) => {
             setActiveId(saved.siteId);
             setDrill({ serverRoom: saved.name, rackId: null });
           }}
@@ -788,6 +899,7 @@ function TreeRow({
   selected,
   onToggle,
   onSelect,
+  onContextMenu,
 }: {
   depth: number;
   icon: ItIconName;
@@ -800,12 +912,14 @@ function TreeRow({
   selected: boolean;
   onToggle?: () => void;
   onSelect: () => void;
+  onContextMenu?: (event: ReactMouseEvent<HTMLDivElement>) => void;
 }) {
   return (
     <div
       className={`ft-row${selected ? " sel" : ""}`}
       style={{ paddingLeft: 8 + depth * 14 }}
       onClick={onSelect}
+      onContextMenu={onContextMenu}
     >
       <button
         type="button"
@@ -846,6 +960,7 @@ function RackDrill({
   onMoveItem,
   onAddServerRoom,
   onAddRack,
+  onAddRackForPlacement,
   onAddRackItem,
   onDeleteServerRoom,
   onDeleteRack,
@@ -867,6 +982,9 @@ function RackDrill({
   onMoveItem: (itemId: string, targetRackId: string, startU: number) => void;
   onAddServerRoom: () => void;
   onAddRack: (serverRoom: string) => void;
+  /** Picker flow: open the New Rack dialog, hand the saved rack back for a
+   *  placement click instead of drilling into it. */
+  onAddRackForPlacement: (serverRoom: string, onSaved: (saved: Rack) => void) => void;
   onAddRackItem: (rack: Rack, startU?: number) => void;
   onDeleteServerRoom: (serverRoom: string, racks: Rack[]) => void;
   onDeleteRack: (rack: Rack) => void;
@@ -878,11 +996,19 @@ function RackDrill({
   const ungrouped = t("itops.racks.ungrouped");
   const [editMode, setEditMode] = useState(false);
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const [backgroundOpen, setBackgroundOpen] = useState(false);
+  const setServerRoomBackground = useItOpsStore((state) => state.setServerRoomBackground);
+  const setSiteBackground = useItOpsStore((state) => state.setSiteBackground);
 
   // Server Room View layout: rack elevations (default), the blueprint floor
   // plan, or the 2.5D room. Persists app-wide.
   const [roomView, setRoomView] = useState<RoomViewMode>(loadRoomViewMode);
   useEffect(() => saveRoomViewMode(roomView), [roomView]);
+
+  // Picker column state shared by the two spatial layouts: the armed room
+  // object kind, and a just-created rack awaiting its placement click.
+  const [roomTool, setRoomTool] = useState<RoomTool>(null);
+  const [placeRackId, setPlaceRackId] = useState<string | null>(null);
 
   const serverRoom =
     drill.serverRoom != null
@@ -897,7 +1023,12 @@ function RackDrill({
   useEffect(() => {
     setEditMode(false);
     setExportMenuOpen(false);
+    setBackgroundOpen(false);
   }, [viewKey]);
+  useEffect(() => {
+    setRoomTool(null);
+    setPlaceRackId(null);
+  }, [viewKey, editMode, roomView]);
 
   const sitePlacementScope = siteLayoutScope(site.id);
   const [sitePlacements, setSitePlacements] = useState<FreePlacementMap>(() =>
@@ -986,7 +1117,7 @@ function RackDrill({
     };
   }, [isoPlacementScope, roomName, site.id, loadDurableRoomObjects, showStatusBarNotice, t]);
 
-  function saveRoomObjectsState(next: RoomObject[]) {
+  const saveRoomObjectsState = useCallback((next: RoomObject[]) => {
     setRoomObjects(next);
     if (isoPlacementScope) saveRoomObjects(isoPlacementScope, next);
     if (roomName == null) return;
@@ -1001,10 +1132,49 @@ function RackDrill({
         showStatusBarNotice(t("itops.errorNotice", { message }), { tone: "error" });
       });
     }, 500);
-  }
+  }, [isoPlacementScope, roomName, saveDurableRoomObjects, showStatusBarNotice, site.id, t]);
+
+  useEffect(() => {
+    if (!isoPlacementScope || roomRacks == null || roomObjects.length === 0) return;
+    // Settle against the same resolved cells the room views draw (stored
+    // placements plus derived defaults), not the raw stored map — otherwise
+    // auto-placed racks are invisible to gravity and their rack-top objects
+    // would be yanked to the floor.
+    const rackCells = resolveIsoLayout(roomRacks, isoPlacements).cells;
+    const settled = settleRoomObjects(roomObjects, roomRacks, rackCells, roomFacing);
+    if (!sameRoomObjects(roomObjects, settled)) saveRoomObjectsState(settled);
+  }, [isoPlacementScope, roomObjects, roomRacks, isoPlacements, roomFacing, saveRoomObjectsState]);
 
   function notifyObjectBlocked() {
     showStatusBarNotice(t("itops.floorPlan.objectNoSpace"), { tone: "warning" });
+  }
+
+  // The background popover serves the Server Room 2.5D view and Site View;
+  // each persists to its own durable scope.
+  async function saveDrillViewBackground(background: DashboardBackground | null) {
+    try {
+      if (serverRoom) {
+        await setServerRoomBackground(site.id, serverRoom.key, background);
+      } else {
+        await setSiteBackground(site.id, background);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      showStatusBarNotice(t("itops.errorNotice", { message }), { tone: "error" });
+    }
+  }
+
+  // Snap every Server Room card back onto the default Site View grid.
+  function autoOrganizeSiteRooms() {
+    const next: FreePlacementMap = {};
+    topology.forEach((room, index) => {
+      next[topologyGroupKey(room.key)] = defaultFreePlacement(
+        index,
+        FREE_CARD_WIDTH,
+        FREE_CARD_HEIGHT,
+      );
+    });
+    saveSitePlacements(next);
   }
 
   // Persist placements durably, debounced: the floor plan streams a position
@@ -1026,14 +1196,6 @@ function RackDrill({
       });
     }, 500);
   }
-
-  const roomCallouts = serverRoom
-    ? selectRandomRackCallouts(
-        serverRoom.racks.flatMap((entry) => entry.items),
-        serverRoom.key,
-        3,
-      )
-    : [];
 
   function elevation(r: Rack) {
     return (
@@ -1176,7 +1338,50 @@ function RackDrill({
       <ItOpsBackground background={viewBackground} className="ft-drill-bg">
         <div className="it-drill-toolbar">
           <div className="it-drill-spacer" />
+          {serverRoom && !rack ? (
+            <div
+              className="rm-segmented"
+              role="group"
+              aria-label={t("itops.floorPlan.viewLabel")}
+            >
+              <button
+                type="button"
+                data-active={roomView === "elevation"}
+                onClick={() => setRoomView("elevation")}
+              >
+                <ItIcon name="rows" size={13} />
+                {t("itops.floorPlan.viewElevation")}
+              </button>
+              <button
+                type="button"
+                data-active={roomView === "floor"}
+                onClick={() => setRoomView("floor")}
+              >
+                <ItIcon name="grid" size={13} />
+                {t("itops.floorPlan.viewFloor")}
+              </button>
+              <button
+                type="button"
+                data-active={roomView === "iso"}
+                onClick={() => setRoomView("iso")}
+              >
+                <ItIcon name="cube" size={13} />
+                {t("itops.floorPlan.view25d")}
+              </button>
+            </div>
+          ) : null}
           <div className="it-drill-actions" aria-label={t("itops.actions.viewActions")}>
+            {!rack && !serverRoom && topology.length > 0 ? (
+              <button
+                type="button"
+                className="it-drill-action"
+                title={t("itops.sites.autoOrganize")}
+                aria-label={t("itops.sites.autoOrganize")}
+                onClick={autoOrganizeSiteRooms}
+              >
+                <ItIcon name="grid" size={15} />
+              </button>
+            ) : null}
             <button
               type="button"
               className={`it-drill-action${editMode ? " active" : ""}`}
@@ -1258,99 +1463,83 @@ function RackDrill({
             onDeleteItem={editMode ? (item) => onDeleteItem(rack, item) : undefined}
           />
         ) : serverRoom ? (
-          <>
-            <div className="rm-toolbar">
-              <div
-                className="rm-segmented"
-                role="group"
-                aria-label={t("itops.floorPlan.viewLabel")}
-              >
-                <button
-                  type="button"
-                  data-active={roomView === "elevation"}
-                  onClick={() => setRoomView("elevation")}
-                >
-                  {t("itops.floorPlan.viewElevation")}
-                </button>
-                <button
-                  type="button"
-                  data-active={roomView === "floor"}
-                  onClick={() => setRoomView("floor")}
-                >
-                  {t("itops.floorPlan.viewFloor")}
-                </button>
-                <button
-                  type="button"
-                  data-active={roomView === "iso"}
-                  onClick={() => setRoomView("iso")}
-                >
-                  {t("itops.floorPlan.view25d")}
-                </button>
-              </div>
+          roomView === "iso" || roomView === "floor" ? (
+            <div className="rm-spatial">
+              {roomView === "iso" ? (
+                <ServerRoomIsoView
+                  racks={serverRoom.racks}
+                  editMode={editMode}
+                  floorColor={sanitizeIsoFloor(serverRoom.room?.floorColor)}
+                  tool={roomTool}
+                  placeRackId={placeRackId}
+                  onRackPlaced={() => setPlaceRackId(null)}
+                  placement={isoPlacements}
+                  onPlacementChange={saveIsoPlacements}
+                  facing={roomFacing}
+                  onFacingChange={editMode ? saveRoomFacingState : undefined}
+                  objects={roomObjects}
+                  onObjectsChange={editMode ? saveRoomObjectsState : undefined}
+                  onDeleteRack={editMode ? onDeleteRack : undefined}
+                  onSelectRack={(rackId) => setDrill({ serverRoom: serverRoom.key, rackId })}
+                  onAddRack={editMode ? () => onAddRack(serverRoom.key) : undefined}
+                  onObjectBlocked={notifyObjectBlocked}
+                  onOpenBackground={() => setBackgroundOpen(true)}
+                  onCancelPlacement={() => {
+                    setRoomTool(null);
+                    setPlaceRackId(null);
+                  }}
+                />
+              ) : (
+                <ServerRoomFloorPlan
+                  racks={serverRoom.racks}
+                  editMode={editMode}
+                  tool={roomTool}
+                  placeRackId={placeRackId}
+                  onRackPlaced={() => setPlaceRackId(null)}
+                  placement={isoPlacements}
+                  onPlacementChange={saveIsoPlacements}
+                  facing={roomFacing}
+                  onFacingChange={editMode ? saveRoomFacingState : undefined}
+                  objects={roomObjects}
+                  onObjectsChange={editMode ? saveRoomObjectsState : undefined}
+                  onDeleteRack={editMode ? onDeleteRack : undefined}
+                  onSelectRack={(rackId) => setDrill({ serverRoom: serverRoom.key, rackId })}
+                  onObjectBlocked={notifyObjectBlocked}
+                  onCancelPlacement={() => {
+                    setRoomTool(null);
+                    setPlaceRackId(null);
+                  }}
+                />
+              )}
+              {editMode ? (
+                <RoomObjectPicker
+                  tool={roomTool}
+                  onToolChange={(tool) => {
+                    setPlaceRackId(null);
+                    setRoomTool(tool);
+                  }}
+                  rackArmed={placeRackId != null}
+                  onPickRack={() => {
+                    setRoomTool(null);
+                    if (placeRackId != null) {
+                      setPlaceRackId(null);
+                      return;
+                    }
+                    onAddRackForPlacement(serverRoom.key, (saved) => setPlaceRackId(saved.id));
+                  }}
+                />
+              ) : null}
             </div>
-            {roomCallouts.length > 0 ? (
-              <div className="rack-random-callouts room">
-                {roomCallouts.map((callout) => {
-                  const owner = serverRoom.racks.find((entry) =>
-                    entry.items.some((item) => item.id === callout.itemId),
-                  );
-                  const item = owner?.items.find((entry) => entry.id === callout.itemId);
-                  return (
-                    <button
-                      key={callout.itemId}
-                      type="button"
-                      onClick={() => owner && item && onEditItem(owner, item)}
-                    >
-                      <span>{callout.label}</span>
-                      {callout.text ? <small>{callout.text}</small> : null}
-                      {callout.connectionIds.length > 0 ? (
-                        <small>{t("itops.racks.boundConnectionCount", { count: callout.connectionIds.length })}</small>
-                      ) : null}
-                    </button>
-                  );
-                })}
+          ) : (
+            groupRacksByGroup(serverRoom.racks).map((g) => (
+              <div className="rk-group" key={g.key}>
+                {groupRacksByGroup(serverRoom.racks).length > 1 || g.key ? (
+                  <div className="rk-group-h">{g.key || ungrouped}</div>
+                ) : null}
+                <div className="rk-row">{g.racks.map((r) => elevation(r))}</div>
               </div>
-            ) : null}
-            {roomView === "iso" ? (
-              <ServerRoomIsoView
-                racks={serverRoom.racks}
-                editMode={editMode}
-                placement={isoPlacements}
-                onPlacementChange={saveIsoPlacements}
-                facing={roomFacing}
-                onFacingChange={editMode ? saveRoomFacingState : undefined}
-                objects={roomObjects}
-                onObjectsChange={editMode ? saveRoomObjectsState : undefined}
-                onDeleteRack={editMode ? onDeleteRack : undefined}
-                onSelectRack={(rackId) => setDrill({ serverRoom: serverRoom.key, rackId })}
-                onAddRack={editMode ? () => onAddRack(serverRoom.key) : undefined}
-                onObjectBlocked={notifyObjectBlocked}
-              />
-            ) : roomView === "floor" ? (
-              <ServerRoomFloorPlan
-                racks={serverRoom.racks}
-                editMode={editMode}
-                placement={isoPlacements}
-                onPlacementChange={saveIsoPlacements}
-                facing={roomFacing}
-                onFacingChange={editMode ? saveRoomFacingState : undefined}
-                objects={roomObjects}
-                onObjectsChange={editMode ? saveRoomObjectsState : undefined}
-                onDeleteRack={editMode ? onDeleteRack : undefined}
-                onSelectRack={(rackId) => setDrill({ serverRoom: serverRoom.key, rackId })}
-                onObjectBlocked={notifyObjectBlocked}
-              />
-            ) : (
-              groupRacksByGroup(serverRoom.racks).map((g) => (
-                <div className="rk-group" key={g.key}>
-                  {groupRacksByGroup(serverRoom.racks).length > 1 || g.key ? (
-                    <div className="rk-group-h">{g.key || ungrouped}</div>
-                  ) : null}
-                  <div className="rk-row">{g.racks.map((r) => elevation(r))}</div>
-                </div>
-              ))
-            )}
-          </>
+            ))
+          )
         ) : (
           <SiteRoomCards
             rooms={topology}
@@ -1361,9 +1550,23 @@ function RackDrill({
             onPlacementChange={saveSitePlacements}
             onDeleteRoom={onDeleteServerRoom}
             onSelectRoom={(room) => setDrill({ serverRoom: room.key, rackId: null })}
+            onOpenBackground={() => setBackgroundOpen(true)}
           />
         )}
       </ItOpsBackground>
+      {backgroundOpen && ((serverRoom && roomView === "iso") || (!serverRoom && !rack)) ? (
+        <SharedBackgroundPopover
+          className="itops-bg-popover"
+          background={viewBackground ?? null}
+          titleKey="itops.racks.changeBackground"
+          defaultHintKey="itops.racks.backgroundDefaultHint"
+          onBackgroundChange={saveDrillViewBackground}
+          onLoadBackgroundImage={(file) => {
+            void loadBackgroundImage(file);
+          }}
+          onClose={() => setBackgroundOpen(false)}
+        />
+      ) : null}
     </div>
   );
 }
@@ -1391,6 +1594,22 @@ function defaultFreePlacement(index: number, width: number, height: number) {
 function freeSurfaceHeight(count: number, width: number, height: number) {
   if (count <= 0) return height + 28;
   return defaultFreePlacement(count - 1, width, height).y + height + 16;
+}
+
+function sameRoomObjects(a: RoomObject[], b: RoomObject[]): boolean {
+  if (a.length !== b.length) return false;
+  return a.every((object, index) => {
+    const other = b[index];
+    return (
+      object.id === other.id &&
+      object.kind === other.kind &&
+      object.x === other.x &&
+      object.y === other.y &&
+      object.z === other.z &&
+      object.rot === other.rot &&
+      object.corner === other.corner
+    );
+  });
 }
 
 function useFreeDrag(
@@ -1449,6 +1668,9 @@ function useFreeDrag(
   return { startDrag, moveDrag, endDrag };
 }
 
+// Site View is a free-form Server Room placement surface in both modes: cards
+// sit on a full-pane dot grid at their stored positions. Edit mode adds drag
+// and delete; right-clicking empty surface offers the Site background change.
 function SiteRoomCards({
   rooms,
   roomIcons,
@@ -1458,6 +1680,7 @@ function SiteRoomCards({
   onPlacementChange,
   onDeleteRoom,
   onSelectRoom,
+  onOpenBackground,
 }: {
   rooms: ReturnType<typeof groupRackTopology>;
   roomIcons?: Record<string, ItOpsCustomIcon>;
@@ -1467,24 +1690,25 @@ function SiteRoomCards({
   onPlacementChange: (next: FreePlacementMap) => void;
   onDeleteRoom: (serverRoom: string, racks: Rack[]) => void;
   onSelectRoom: (room: ReturnType<typeof groupRackTopology>[number]) => void;
+  onOpenBackground?: () => void;
 }) {
   const { t } = useTranslation();
   const drag = useFreeDrag(placement, onPlacementChange);
 
-  if (!editMode) {
-    return (
-      <div className="ft-cards">
-        {rooms.map((room) => (
-          <DrillCard
-            key={room.key}
-            icon="room"
-            customIcon={roomIcons?.[room.key]}
-            title={room.key || unassigned}
-            meta={t("itops.racks.rackCount", { count: room.racks.length })}
-            onClick={() => onSelectRoom(room)}
-          />
-        ))}
-      </div>
+  async function handleSurfaceContextMenu(event: ReactMouseEvent<HTMLDivElement>) {
+    if (!onOpenBackground) return;
+    const target = event.target as HTMLElement;
+    if (target.closest(".it-free-card")) return;
+    event.preventDefault();
+    await showNativeContextMenu(
+      [
+        {
+          kind: "item",
+          label: t("itops.racks.changeBackground"),
+          action: onOpenBackground,
+        },
+      ],
+      { x: event.clientX, y: event.clientY },
     );
   }
 
@@ -1492,6 +1716,7 @@ function SiteRoomCards({
     <div
       className="it-free-surface site"
       style={{ minHeight: freeSurfaceHeight(rooms.length, FREE_CARD_WIDTH, FREE_CARD_HEIGHT) }}
+      onContextMenu={onOpenBackground ? handleSurfaceContextMenu : undefined}
     >
       {rooms.map((room, index) => {
         const id = topologyGroupKey(room.key);
@@ -1500,12 +1725,12 @@ function SiteRoomCards({
         return (
           <div
             key={id}
-            className="it-free-card"
+            className={`it-free-card${editMode ? " editing" : ""}`}
             style={{ transform: `translate(${point.x}px, ${point.y}px)` }}
-            onPointerDown={(event) => drag.startDrag(event, id, fallback)}
-            onPointerMove={drag.moveDrag}
-            onPointerUp={drag.endDrag}
-            onPointerCancel={drag.endDrag}
+            onPointerDown={editMode ? (event) => drag.startDrag(event, id, fallback) : undefined}
+            onPointerMove={editMode ? drag.moveDrag : undefined}
+            onPointerUp={editMode ? drag.endDrag : undefined}
+            onPointerCancel={editMode ? drag.endDrag : undefined}
           >
             <DrillCard
               icon="room"
@@ -1514,18 +1739,20 @@ function SiteRoomCards({
               meta={t("itops.racks.rackCount", { count: room.racks.length })}
               onClick={() => onSelectRoom(room)}
             />
-            <button
-              type="button"
-              className="it-free-delete"
-              title={t("itops.racks.deleteServerRoomTitle")}
-              aria-label={t("itops.racks.deleteServerRoomTitle")}
-              onClick={(event) => {
-                event.stopPropagation();
-                onDeleteRoom(room.key, room.racks);
-              }}
-            >
-              <ItIcon name="xmark" size={11} />
-            </button>
+            {editMode ? (
+              <button
+                type="button"
+                className="it-free-delete"
+                title={t("itops.racks.deleteServerRoomTitle")}
+                aria-label={t("itops.racks.deleteServerRoomTitle")}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onDeleteRoom(room.key, room.racks);
+                }}
+              >
+                <ItIcon name="xmark" size={11} />
+              </button>
+            ) : null}
           </div>
         );
       })}

@@ -216,7 +216,13 @@ interface ItOpsState {
   racksBySite: Record<string, Rack[]>;
   serverRoomsBySite: Record<string, ServerRoom[]>;
   loadServerRooms: (siteId: string) => Promise<void>;
-  createServerRoom: (siteId: string, name: string) => Promise<ServerRoom>;
+  createServerRoom: (siteId: string, name: string, floorColor: string) => Promise<ServerRoom>;
+  updateServerRoom: (
+    siteId: string,
+    id: string,
+    name: string,
+    floorColor: string,
+  ) => Promise<ServerRoom>;
   deleteServerRoom: (siteId: string, id: string) => Promise<void>;
   loadRacks: (siteId: string) => Promise<void>;
   createRack: (siteId: string, input: RackInput) => Promise<Rack>;
@@ -377,10 +383,16 @@ export const useItOpsStore = create<ItOpsState>((set, get) => ({
     set({ serverRoomsBySite: { ...get().serverRoomsBySite, [siteId]: rooms } });
   },
 
-  async createServerRoom(siteId, name) {
-    const created = await invokeCommand("itops_create_server_room", { siteId, name });
+  async createServerRoom(siteId, name, floorColor) {
+    const created = await invokeCommand("itops_create_server_room", { siteId, name, floorColor });
     await get().loadServerRooms(siteId);
     return created;
+  },
+
+  async updateServerRoom(siteId, id, name, floorColor) {
+    const updated = await invokeCommand("itops_update_server_room", { id, name, floorColor });
+    await Promise.all([get().loadServerRooms(siteId), get().loadRacks(siteId)]);
+    return updated;
   },
 
   async deleteServerRoom(siteId, id) {

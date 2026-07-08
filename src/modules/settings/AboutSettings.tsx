@@ -1,4 +1,4 @@
-import { ExternalLink, PackageOpen } from "lucide-react";
+import { ExternalLink, PackageOpen } from "../../lib/reicon";
 import { useTranslation } from "react-i18next";
 import { ABOUT_PRODUCT } from "./aboutData";
 import { SettingsSectionHeader, SettingsSummary } from "./shared";

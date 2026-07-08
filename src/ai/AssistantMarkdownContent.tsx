@@ -1,5 +1,5 @@
 import DOMPurify from "dompurify";
-import { Copy, Terminal } from "lucide-react";
+import { Copy, Terminal } from "../lib/reicon";
 import { marked, type Tokens } from "marked";
 import { useMemo, type MouseEvent } from "react";
 import { useTranslation } from "react-i18next";

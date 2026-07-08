@@ -44,7 +44,7 @@ AI Created Widget text is UTF-8 end to end. Titles, summaries, labels, placehold
 
 **Accent** — a named palette value or a strict six-digit custom hex color, persisted on each instance. Named values resolve through the shared palette table; custom colors derive their soft tint and readable title text at render time.
 
-**Icon** — a lucide icon name from a curated whitelist of ~50 entries in `palette.ts`. The whitelist bounds the visual language and keeps the bundle predictable.
+**Icon** — a Reicon-compatible icon name from the generated picker list. The list keeps the dashboard visual language predictable while offering a broader project-relevant catalog.
 
 **Widget Archetype** — the AI-facing scaffold family selected before creating an AI Created Widget. The archetype defines the expected chrome, root layout, state handling, library bias, lifecycle, and first-pass grid size. It is not stored as durable Dashboard data; the persisted result remains a script widget plus normal Widget Instance presentation fields.
 
@@ -148,7 +148,7 @@ Rust validation invariants:
 
 - `preset` is one of the three known names (`panel`, `ambient`, `hero`).
 - `accent_name` is in the palette whitelist or is a strict `#RRGGBB` custom color.
-- `icon_name` is in the lucide icon whitelist.
+- `icon_name` is in the Reicon-compatible icon whitelist.
 - Grid bounds: `w ≥ 1`, `h ≥ 1`, `x ≥ 0`, `y ≥ 0`, `x + w ≤ 12`.
 - Script source is required and ≤ 64 KB; `pollSeconds ≥ 1`; only declared `permissions` values are accepted.
 - Script bodies and settings schemas are UTF-8 JSON strings. Structured `dashboard_create_widget.body` and `dashboard_update_custom_widget.patch.body` are preferred because KKTerm serializes them directly; legacy `bodyJson` / `settingsSchemaJson` submissions must still be valid UTF-8 JSON.
@@ -184,7 +184,7 @@ src/modules/dashboard/
   registry/
     builtInRegistry.ts           ── one row per built-in widget; the only place to add new built-ins
     presetRegistry.tsx            ── three preset chrome components (panel, ambient, hero)
-    palette.ts                   ── accent palette + ~50-icon whitelist
+    palette.ts                   ── accent palette + icon validation helpers
   view/
     DashboardCanvas.tsx          ── react-grid-layout host
     WidgetFrame.tsx              ── preset chrome + edit-mode controls
@@ -223,7 +223,7 @@ The customize popover is anchored to a widget's settings (⚙) button and contai
 
 1. **Preset** — three chips (`panel`, `ambient`, `hero`), click to apply.
 2. **Accent** — palette swatches plus a rainbow button that opens the shared custom color selector.
-3. **Icon** — scrollable grid of the curated lucide set.
+3. **Icon** — scrollable grid of the generated Reicon picker set, with Lucide fallbacks only where Reicon has no direct equivalent.
 4. **Title** — text input; empty clears the override.
 5. **Widget settings** — for AI Created Widgets with `settings_schema_json`, KKTerm renders text, number, boolean, select, and secret fields. Non-secret values are stored on the instance. Secret values are written to the OS keychain under the `widgetSecret` kind and the instance stores only a reference.
 6. **Advanced** — kind-specific:
@@ -345,13 +345,13 @@ Secret widget settings are also visible from Settings → Credentials. That unif
 Each Dashboard View carries an optional background, stored as a nullable `background_json` column on `dashboard_views` (`NULL` = theme default). Right-clicking empty canvas space opens a native context menu with "Change Background…", which opens the app-owned `BackgroundPopover`. Four modes:
 
 - **Theme Default** — `NULL`; the canvas uses the active color scheme's `--app-bg`.
-- **Color & Gradient** — `{ kind: "preset", preset }` referencing one of the 16 fixed entries in `src/modules/dashboard/registry/backgroundPresets.ts` (whitelisted in Rust as `BACKGROUND_PRESET_IDS`).
-- **Image** — `{ kind: "image", file, fit, dim }`. The image file is copied into a `backgrounds/` folder next to the executable (mirroring custom fonts) and referenced by filename. `fit` is one of fill/fit/stretch/tile/center; `dim` is a signed −100..100 value (negative darkens, positive lightens). Unreferenced image files are swept after view-mutating commands by `prune_unreferenced_backgrounds`.
+- **Color & Gradient** — `{ kind: "preset", preset }` referencing one of the fixed entries in `src/modules/dashboard/registry/backgroundPresets.ts` (whitelisted in Rust as `BACKGROUND_PRESET_IDS`).
+- **Image / Video** — `{ kind: "image", file, fit, dim }` for PNG/JPEG/WebP/GIF/BMP/SVG and `{ kind: "video", file, fit, dim }` for MP4/WebM/MOV/M4V/OGV. The media file is copied into a `backgrounds/` folder next to the executable (mirroring custom fonts) and referenced by filename. `fit` is one of fill/fit/stretch/tile/center; `dim` is a signed −100..100 value (negative darkens, positive lightens). Unreferenced media files are swept after view-mutating commands by `prune_unreferenced_backgrounds`.
 - **Dynamic** — `{ kind: "dynamic", dynamic }` referencing one of the local HTML5 animation backgrounds in `src/modules/dashboard/registry/dynamicBackgrounds.tsx` (whitelisted in Rust as `DYNAMIC_BACKGROUND_IDS`). Dynamic backgrounds are app-owned React/canvas/CSS animations, not script widgets and not persisted code.
 
-The background renders on a dedicated layer behind the widget grid and does not affect the topbar or widget chrome. A missing image file, unknown dynamic id, or unparseable `background_json` falls back to theme default rather than erroring.
+The background renders on a dedicated layer behind the widget grid and does not affect the topbar or widget chrome. A missing media file, unknown dynamic id, or unparseable `background_json` falls back to theme default rather than erroring.
 
-Background image files are **not** included in Settings `.kkbackup` exports — an imported Dashboard segment may reference a missing image, which is handled by the theme-default fallback.
+Background media files are **not** included in Settings `.kkbackup` exports — an imported Dashboard segment may reference a missing media file, which is handled by the theme-default fallback.
 
 ## Settings → Dashboard
 

@@ -603,6 +603,68 @@ pub(crate) fn emit_terminal_output(app: &AppHandle, session_id: &str, data: Stri
     );
 }
 
+#[derive(Default)]
+pub(crate) struct TerminalOutputDecoder {
+    pending: Vec<u8>,
+}
+
+impl TerminalOutputDecoder {
+    pub(crate) fn decode(&mut self, bytes: &[u8]) -> Option<String> {
+        if bytes.is_empty() {
+            return None;
+        }
+
+        let mut combined;
+        let mut remaining = if self.pending.is_empty() {
+            bytes
+        } else {
+            combined = std::mem::take(&mut self.pending);
+            combined.extend_from_slice(bytes);
+            &combined
+        };
+        let mut output = String::new();
+
+        loop {
+            match std::str::from_utf8(remaining) {
+                Ok(valid) => {
+                    output.push_str(valid);
+                    break;
+                }
+                Err(error) => {
+                    let valid_up_to = error.valid_up_to();
+                    if valid_up_to > 0 {
+                        output.push_str(
+                            std::str::from_utf8(&remaining[..valid_up_to])
+                                .expect("valid_up_to must bound valid UTF-8"),
+                        );
+                    }
+
+                    match error.error_len() {
+                        Some(invalid_len) => {
+                            output.push('\u{FFFD}');
+                            remaining = &remaining[valid_up_to + invalid_len..];
+                        }
+                        None => {
+                            self.pending.extend_from_slice(&remaining[valid_up_to..]);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        (!output.is_empty()).then_some(output)
+    }
+
+    pub(crate) fn finish_lossy(&mut self) -> Option<String> {
+        if self.pending.is_empty() {
+            return None;
+        }
+        let pending = std::mem::take(&mut self.pending);
+        Some(String::from_utf8_lossy(&pending).to_string())
+    }
+}
+
 fn required_recording_part(label: &str, value: &str) -> Result<String, String> {
     let trimmed = value.trim();
     if trimmed.is_empty() {
@@ -913,14 +975,24 @@ impl SessionManager {
             thread::spawn(move || {
                 let mut reader = local_pty.reader;
                 let mut buffer = [0_u8; 8192];
+                let mut decoder = TerminalOutputDecoder::default();
                 loop {
                     match reader.read(&mut buffer) {
-                        Ok(0) => break,
+                        Ok(0) => {
+                            if let Some(data) = decoder.finish_lossy() {
+                                emit_terminal_output(&app, &output_session_id, data);
+                            }
+                            break;
+                        }
                         Ok(count) => {
-                            let data = String::from_utf8_lossy(&buffer[..count]).to_string();
-                            emit_terminal_output(&app, &output_session_id, data);
+                            if let Some(data) = decoder.decode(&buffer[..count]) {
+                                emit_terminal_output(&app, &output_session_id, data);
+                            }
                         }
                         Err(error) => {
+                            if let Some(data) = decoder.finish_lossy() {
+                                emit_terminal_output(&app, &output_session_id, data);
+                            }
                             emit_terminal_output(
                                 &app,
                                 &output_session_id,
@@ -973,14 +1045,24 @@ impl SessionManager {
         let output_session_id = session_id.clone();
         thread::spawn(move || {
             let mut buffer = [0_u8; 8192];
+            let mut decoder = TerminalOutputDecoder::default();
             loop {
                 match reader.read(&mut buffer) {
-                    Ok(0) => break,
+                    Ok(0) => {
+                        if let Some(data) = decoder.finish_lossy() {
+                            emit_terminal_output(&app, &output_session_id, data);
+                        }
+                        break;
+                    }
                     Ok(count) => {
-                        let data = String::from_utf8_lossy(&buffer[..count]).to_string();
-                        emit_terminal_output(&app, &output_session_id, data);
+                        if let Some(data) = decoder.decode(&buffer[..count]) {
+                            emit_terminal_output(&app, &output_session_id, data);
+                        }
                     }
                     Err(error) => {
+                        if let Some(data) = decoder.finish_lossy() {
+                            emit_terminal_output(&app, &output_session_id, data);
+                        }
                         emit_terminal_output(
                             &app,
                             &output_session_id,
@@ -1194,14 +1276,16 @@ impl SessionManager {
         app: AppHandle,
         secrets: &secrets::Secrets,
         request: TmuxConnectionRequest,
+        session_id: Option<String>,
         hide_common_ports: bool,
     ) -> Result<Vec<RemoteLoopbackPort>, String> {
-        let output = run_ssh_command(
+        let output = self.run_ssh_probe_command(
             app,
             secrets,
             &request,
+            session_id.as_deref(),
             remote_loopback_port_command(),
-            Some(Duration::from_secs(5)),
+            Duration::from_secs(5),
         )?;
         Ok(filter_remote_loopback_ports(
             parse_remote_loopback_ports(&output),
@@ -2550,6 +2634,7 @@ fn command_for(request: &StartTerminalSessionRequest) -> Result<CommandBuilder, 
                 CommandBuilder::new(resolved_program.clone())
             };
             sanitize_windows_local_environment(&mut command);
+            sanitize_linux_appimage_environment(&mut command);
             set_terminal_environment(&mut command);
             apply_managed_terminal_environment(&mut command, &request.environment_variables)?;
             if let Some(session_id) = psmux_session_id {
@@ -2588,6 +2673,7 @@ fn command_for(request: &StartTerminalSessionRequest) -> Result<CommandBuilder, 
             }
 
             let mut command = CommandBuilder::new("ssh");
+            sanitize_linux_appimage_environment(&mut command);
             set_terminal_environment(&mut command);
             command.arg("-tt");
             if let Some(port) = request.port {
@@ -2847,6 +2933,45 @@ fn sanitize_windows_local_environment(command: &mut CommandBuilder) {
     {
         // Non-Windows shells inherit KKTerm's full environment (the convention
         // for every mainstream terminal); only explicit overrides are layered on.
+        let _ = command;
+    }
+}
+
+// When KKTerm runs from an AppImage, the AppRun wrapper and its bundled
+// linuxdeploy GTK hook rewrite the environment so the app loads the bundled
+// GTK/WebKit stack from the transient /tmp/.mount_* directory. Children that
+// execute *host* binaries must not inherit those values: the bundled
+// libraries come from the build host and mismatch the running system (e.g.
+// systemd tools abort with `OPENSSL_3.4.0' not found` on Fedora 44, ssh
+// silently uses the bundled libcrypto instead of the host's patched one).
+// Variables the hook overwrites wholesale are dropped — the pre-AppImage
+// value is unrecoverable and a plain desktop shell would not have them set —
+// while prepended path lists are filtered entry-by-entry so any entries the
+// user had before launch survive. No-op outside an AppImage (no APPDIR).
+fn sanitize_linux_appimage_environment(command: &mut CommandBuilder) {
+    #[cfg(target_os = "linux")]
+    {
+        let Some(appdir) = crate::linux_env::appimage_dir() else {
+            return;
+        };
+
+        for name in crate::linux_env::APPIMAGE_OVERWRITTEN_VARS {
+            command.env_remove(name);
+        }
+
+        for name in crate::linux_env::APPIMAGE_PREPENDED_PATH_VARS {
+            let Ok(value) = std::env::var(name) else {
+                continue;
+            };
+            match crate::linux_env::filter_appimage_path_list(&value, &appdir) {
+                Some(kept) => command.env(name, kept),
+                None => command.env_remove(name),
+            }
+        }
+    }
+
+    #[cfg(not(target_os = "linux"))]
+    {
         let _ = command;
     }
 }
@@ -3207,6 +3332,57 @@ fn make_session_id(title: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn terminal_output_decoder_preserves_multibyte_chars_split_across_chunks() {
+        let mut decoder = TerminalOutputDecoder::default();
+
+        assert_eq!(
+            decoder.decode(b"10.62 kB \xE2"),
+            Some("10.62 kB ".to_string())
+        );
+        assert_eq!(
+            decoder.decode(b"\x94\x82 gzip: 3.29 kB"),
+            Some("\u{2502} gzip: 3.29 kB".to_string())
+        );
+        assert_eq!(decoder.finish_lossy(), None);
+    }
+
+    #[test]
+    fn terminal_output_decoder_flushes_truncated_final_sequence_lossily() {
+        let mut decoder = TerminalOutputDecoder::default();
+
+        assert_eq!(decoder.decode(b"abc \xE2"), Some("abc ".to_string()));
+        assert_eq!(decoder.finish_lossy(), Some("\u{FFFD}".to_string()));
+    }
+
+    #[test]
+    fn appimage_path_list_filter_keeps_user_entries_only() {
+        use crate::linux_env::filter_appimage_path_list;
+
+        let appdir = "/tmp/.mount_kktermXXXXXX";
+        // AppRun prepends every bundled lib dir; user had one entry of their own.
+        assert_eq!(
+            filter_appimage_path_list(
+                "/tmp/.mount_kktermXXXXXX/usr/lib/:/tmp/.mount_kktermXXXXXX/usr/lib64/:/opt/custom/lib:",
+                appdir
+            ),
+            Some("/opt/custom/lib".to_string())
+        );
+        // Entirely AppImage-injected: nothing left, caller should unset.
+        assert_eq!(
+            filter_appimage_path_list("/tmp/.mount_kktermXXXXXX/usr/lib/:", appdir),
+            None
+        );
+        // The GTK hook prepends to XDG_DATA_DIRS; system entries survive.
+        assert_eq!(
+            filter_appimage_path_list(
+                "/tmp/.mount_kktermXXXXXX/usr/share:/usr/share:/usr/local/share",
+                appdir
+            ),
+            Some("/usr/share:/usr/local/share".to_string())
+        );
+    }
 
     #[cfg(target_os = "windows")]
     #[test]

@@ -1,4 +1,4 @@
-import { FileUp, X } from "lucide-react";
+import { FileUp, X } from "../../../../../lib/reicon";
 import { jwtDecode } from "jwt-decode";
 import { useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";

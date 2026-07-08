@@ -5,6 +5,7 @@ use russh_sftp::{
     protocol::{FileAttributes, FileType, OpenFlags},
 };
 use serde::{Deserialize, Serialize};
+use serde_json::{Value, json};
 use std::{
     collections::HashMap,
     fs,
@@ -13,22 +14,25 @@ use std::{
     path::{Path, PathBuf},
     pin::Pin,
     sync::{
-        Arc,
+        Arc, Mutex,
         atomic::{AtomicBool, Ordering},
     },
-    time::{SystemTime, UNIX_EPOCH},
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 use tauri::{AppHandle, Emitter};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::runtime::Runtime;
 
 const TRANSFER_CHUNK_SIZE: usize = 64 * 1024;
+const SFTP_STARTUP_TIMEOUT: Duration = Duration::from_secs(45);
+const SFTP_TRANSFER_IO_TIMEOUT: Duration = Duration::from_secs(60);
+const SFTP_CLOSE_TIMEOUT: Duration = Duration::from_secs(5);
 const TRANSFER_CANCELED: &str = "transfer canceled";
 const WINDOWS_DRIVES_PATH: &str = "__KKTERM_WINDOWS_DRIVES__";
 
 pub struct SftpSessionManager {
-    sessions: std::sync::Mutex<HashMap<String, SftpConnection>>,
-    transfers: std::sync::Mutex<HashMap<String, Arc<AtomicBool>>>,
+    sessions: Mutex<HashMap<String, Arc<Mutex<SftpConnection>>>>,
+    transfers: Mutex<HashMap<String, Arc<AtomicBool>>>,
 }
 
 struct SftpConnection {
@@ -268,11 +272,15 @@ struct RemoteUploadTarget {
     existed: bool,
 }
 
+fn sftp_debug(event: &str, payload: Value) {
+    crate::logging::sftp_debug(event, &payload);
+}
+
 impl SftpSessionManager {
     pub fn new() -> Self {
         Self {
-            sessions: std::sync::Mutex::new(HashMap::new()),
-            transfers: std::sync::Mutex::new(HashMap::new()),
+            sessions: Mutex::new(HashMap::new()),
+            transfers: Mutex::new(HashMap::new()),
         }
     }
 
@@ -314,7 +322,8 @@ impl SftpSessionManager {
             .filter(|value| !value.is_empty())
             .unwrap_or(".")
             .to_string();
-        let auth = auth_for(secrets, &request)?;
+        let auth_method = auth_method_for(&request)?;
+        let auth = auth_for(secrets, &request, auth_method)?;
         let known_hosts_path = ssh::app_known_hosts_path(&app)?;
         let runtime = tokio::runtime::Builder::new_current_thread()
             .enable_all()
@@ -326,47 +335,129 @@ impl SftpSessionManager {
         let port = request.port.unwrap_or(22);
         let socks_proxy = request.ssh_socks_proxy.clone();
         let compression = request.ssh_compression.unwrap_or(true);
-        let (ssh_session, sftp, listing) = runtime.block_on(async {
-            let ssh_session = ssh::connect_verified_client(ssh::NativeSshConnectionRequest {
-                host,
-                user,
-                port,
-                auth,
-                known_hosts_path,
-                x11_forwarding: None,
-                socks_proxy,
-                compression,
-                remote_forward_targets: None,
-                bridge_tasks: None,
-            })
-            .await?;
+        sftp_debug(
+            "session.start.begin",
+            json!({
+                "sessionId": session_id,
+                "host": host,
+                "port": port,
+                "user": user,
+                "authMethod": sftp_auth_method_name(auth_method),
+                "keyPathConfigured": request.key_path.as_deref().map(str::trim).is_some_and(|value| !value.is_empty()),
+                "transientPasswordProvided": request.password.as_deref().map(str::trim).is_some_and(|value| !value.is_empty()),
+                "passphraseOwnerConfigured": request.passphrase_owner_id.as_deref().map(str::trim).is_some_and(|value| !value.is_empty()),
+                "socksProxyConfigured": request.ssh_socks_proxy.as_deref().map(str::trim).is_some_and(|value| !value.is_empty()),
+                "compression": compression,
+                "path": path,
+                "timeoutSeconds": SFTP_STARTUP_TIMEOUT.as_secs(),
+            }),
+        );
+        let startup = runtime.block_on(async {
+            tokio::time::timeout(SFTP_STARTUP_TIMEOUT, async {
+                let ssh_session = ssh::connect_verified_client(ssh::NativeSshConnectionRequest {
+                    host: host.clone(),
+                    user: user.clone(),
+                    port,
+                    auth,
+                    known_hosts_path,
+                    x11_forwarding: None,
+                    socks_proxy,
+                    compression,
+                    remote_forward_targets: None,
+                    bridge_tasks: None,
+                })
+                .await?;
+                sftp_debug(
+                    "session.start.ssh_connected",
+                    json!({
+                        "sessionId": session_id,
+                        "host": host,
+                        "port": port,
+                        "user": user,
+                    }),
+                );
 
-            let channel = ssh_session
-                .channel_open_session()
-                .await
-                .map_err(|error| format!("failed to open SFTP SSH channel: {error}"))?;
-            channel
-                .request_subsystem(true, "sftp")
-                .await
-                .map_err(|error| format!("failed to start SFTP subsystem: {error}"))?;
-            let sftp = SftpSession::new(channel.into_stream())
-                .await
-                .map_err(|error| format!("failed to initialize SFTP session: {error}"))?;
-            let listing = read_directory(&sftp, &session_id, &path).await?;
-            Ok::<_, String>((ssh_session, sftp, listing))
-        })?;
+                let channel = ssh_session
+                    .channel_open_session()
+                    .await
+                    .map_err(|error| format!("failed to open SFTP SSH channel: {error}"))?;
+                sftp_debug(
+                    "session.start.channel_opened",
+                    json!({
+                        "sessionId": session_id,
+                        "host": host,
+                        "port": port,
+                    }),
+                );
+                channel
+                    .request_subsystem(true, "sftp")
+                    .await
+                    .map_err(|error| format!("failed to start SFTP subsystem: {error}"))?;
+                sftp_debug(
+                    "session.start.subsystem_started",
+                    json!({
+                        "sessionId": session_id,
+                        "host": host,
+                        "port": port,
+                    }),
+                );
+                let sftp = SftpSession::new(channel.into_stream())
+                    .await
+                    .map_err(|error| format!("failed to initialize SFTP session: {error}"))?;
+                let listing = read_directory(&sftp, &session_id, &path).await?;
+                sftp_debug(
+                    "session.start.listing_ok",
+                    json!({
+                        "sessionId": session_id,
+                        "host": host,
+                        "port": port,
+                        "path": listing.path,
+                        "entryCount": listing.entries.len(),
+                    }),
+                );
+                Ok::<_, String>((ssh_session, sftp, listing))
+            })
+            .await
+            .map_err(|_| sftp_timeout_message("starting SFTP session", SFTP_STARTUP_TIMEOUT))?
+        });
+        let (ssh_session, sftp, listing) = match startup {
+            Ok(started) => started,
+            Err(error) => {
+                sftp_debug(
+                    "session.start.error",
+                    json!({
+                        "sessionId": session_id,
+                        "host": request.host,
+                        "port": port,
+                        "user": request.user,
+                        "error": error,
+                    }),
+                );
+                return Err(error);
+            }
+        };
 
         self.sessions
             .lock()
             .map_err(|_| "SFTP session lock is poisoned".to_string())?
             .insert(
                 session_id.clone(),
-                SftpConnection {
+                Arc::new(Mutex::new(SftpConnection {
                     runtime,
                     ssh_session,
                     sftp,
-                },
+                })),
             );
+        sftp_debug(
+            "session.start.ok",
+            json!({
+                "sessionId": session_id,
+                "host": request.host,
+                "port": port,
+                "path": listing.path,
+                "entryCount": listing.entries.len(),
+            }),
+        );
 
         Ok(SftpSessionStarted {
             session_id,
@@ -379,18 +470,13 @@ impl SftpSessionManager {
         &self,
         request: ListSftpDirectoryRequest,
     ) -> Result<SftpDirectoryListing, String> {
-        let sessions = self
-            .sessions
-            .lock()
-            .map_err(|_| "SFTP session lock is poisoned".to_string())?;
-        let session = sessions
-            .get(&request.session_id)
-            .ok_or_else(|| "SFTP session was not found".to_string())?;
-        session.runtime.block_on(read_directory(
-            &session.sftp,
-            &request.session_id,
-            &request.path,
-        ))
+        self.with_session(&request.session_id, "listDirectory", |session| {
+            session.runtime.block_on(read_directory(
+                &session.sftp,
+                &request.session_id,
+                &request.path,
+            ))
+        })
     }
 
     pub fn upload_path(
@@ -398,26 +484,37 @@ impl SftpSessionManager {
         app: AppHandle,
         request: UploadSftpPathRequest,
     ) -> Result<SftpTransferResult, String> {
-        let sessions = self
-            .sessions
-            .lock()
-            .map_err(|_| "SFTP session lock is poisoned".to_string())?;
-        let session = sessions
-            .get(&request.session_id)
-            .ok_or_else(|| "SFTP session was not found".to_string())?;
         let overwrite_behavior =
             normalize_sftp_overwrite_behavior(request.overwrite_behavior.as_deref())?;
         let cancellation = self.register_transfer(&request.transfer_id)?;
-        let result = session.runtime.block_on(upload_path(
-            &session.sftp,
-            app,
-            &request.transfer_id,
-            cancellation,
-            overwrite_behavior,
-            &request.local_path,
-            &request.remote_directory,
-        ));
+        sftp_debug(
+            "transfer.upload.begin",
+            json!({
+                "sessionId": request.session_id,
+                "transferId": request.transfer_id,
+                "localPath": request.local_path,
+                "remoteDirectory": request.remote_directory,
+                "overwriteBehavior": sftp_overwrite_behavior_name(overwrite_behavior),
+            }),
+        );
+        let result = self.with_session(&request.session_id, "upload", |session| {
+            session.runtime.block_on(upload_path(
+                &session.sftp,
+                app,
+                &request.transfer_id,
+                cancellation,
+                overwrite_behavior,
+                &request.local_path,
+                &request.remote_directory,
+            ))
+        });
         self.finish_transfer(&request.transfer_id);
+        log_transfer_result(
+            "transfer.upload",
+            &request.session_id,
+            &request.transfer_id,
+            &result,
+        );
         result
     }
 
@@ -426,96 +523,97 @@ impl SftpSessionManager {
         app: AppHandle,
         request: DownloadSftpPathRequest,
     ) -> Result<SftpTransferResult, String> {
-        let sessions = self
-            .sessions
-            .lock()
-            .map_err(|_| "SFTP session lock is poisoned".to_string())?;
-        let session = sessions
-            .get(&request.session_id)
-            .ok_or_else(|| "SFTP session was not found".to_string())?;
         let overwrite_behavior =
             normalize_sftp_overwrite_behavior(request.overwrite_behavior.as_deref())?;
         let cancellation = self.register_transfer(&request.transfer_id)?;
-        let result = session.runtime.block_on(download_path(
-            &session.sftp,
-            app,
-            &request.transfer_id,
-            cancellation,
-            overwrite_behavior,
-            &request.remote_path,
-            &request.local_directory,
-        ));
+        sftp_debug(
+            "transfer.download.begin",
+            json!({
+                "sessionId": request.session_id,
+                "transferId": request.transfer_id,
+                "remotePath": request.remote_path,
+                "localDirectory": request.local_directory,
+                "overwriteBehavior": sftp_overwrite_behavior_name(overwrite_behavior),
+            }),
+        );
+        let result = self.with_session(&request.session_id, "download", |session| {
+            session.runtime.block_on(download_path(
+                &session.sftp,
+                app,
+                &request.transfer_id,
+                cancellation,
+                overwrite_behavior,
+                &request.remote_path,
+                &request.local_directory,
+            ))
+        });
         self.finish_transfer(&request.transfer_id);
+        log_transfer_result(
+            "transfer.download",
+            &request.session_id,
+            &request.transfer_id,
+            &result,
+        );
         result
     }
 
     pub fn cancel_transfer(&self, request: CancelSftpTransferRequest) -> Result<(), String> {
-        if let Some(cancellation) = self
+        let found = if let Some(cancellation) = self
             .transfers
             .lock()
             .map_err(|_| "SFTP transfer lock is poisoned".to_string())?
             .get(&request.transfer_id)
         {
             cancellation.store(true, Ordering::SeqCst);
-        }
+            true
+        } else {
+            false
+        };
+        sftp_debug(
+            "transfer.cancel",
+            json!({
+                "transferId": request.transfer_id,
+                "found": found,
+            }),
+        );
         Ok(())
     }
 
     pub fn create_folder(&self, request: CreateSftpFolderRequest) -> Result<(), String> {
-        let sessions = self
-            .sessions
-            .lock()
-            .map_err(|_| "SFTP session lock is poisoned".to_string())?;
-        let session = sessions
-            .get(&request.session_id)
-            .ok_or_else(|| "SFTP session was not found".to_string())?;
-        session.runtime.block_on(create_folder(
-            &session.sftp,
-            &request.parent_path,
-            &request.name,
-        ))
+        self.with_session(&request.session_id, "createFolder", |session| {
+            session.runtime.block_on(create_folder(
+                &session.sftp,
+                &request.parent_path,
+                &request.name,
+            ))
+        })
     }
 
     pub fn rename_path(&self, request: RenameSftpPathRequest) -> Result<(), String> {
-        let sessions = self
-            .sessions
-            .lock()
-            .map_err(|_| "SFTP session lock is poisoned".to_string())?;
-        let session = sessions
-            .get(&request.session_id)
-            .ok_or_else(|| "SFTP session was not found".to_string())?;
-        session
-            .runtime
-            .block_on(rename_path(&session.sftp, &request.path, &request.new_name))
+        self.with_session(&request.session_id, "rename", |session| {
+            session
+                .runtime
+                .block_on(rename_path(&session.sftp, &request.path, &request.new_name))
+        })
     }
 
     pub fn delete_path(&self, request: DeleteSftpPathRequest) -> Result<(), String> {
-        let sessions = self
-            .sessions
-            .lock()
-            .map_err(|_| "SFTP session lock is poisoned".to_string())?;
-        let session = sessions
-            .get(&request.session_id)
-            .ok_or_else(|| "SFTP session was not found".to_string())?;
-        session
-            .runtime
-            .block_on(delete_remote_entry(&session.sftp, &request.path))
+        self.with_session(&request.session_id, "delete", |session| {
+            session
+                .runtime
+                .block_on(delete_remote_entry(&session.sftp, &request.path))
+        })
     }
 
     pub fn path_properties(
         &self,
         request: SftpPathPropertiesRequest,
     ) -> Result<SftpPathProperties, String> {
-        let sessions = self
-            .sessions
-            .lock()
-            .map_err(|_| "SFTP session lock is poisoned".to_string())?;
-        let session = sessions
-            .get(&request.session_id)
-            .ok_or_else(|| "SFTP session was not found".to_string())?;
-        session
-            .runtime
-            .block_on(path_properties(&session.sftp, &request.path))
+        self.with_session(&request.session_id, "properties", |session| {
+            session
+                .runtime
+                .block_on(path_properties(&session.sftp, &request.path))
+        })
     }
 
     pub fn update_path_properties(
@@ -530,42 +628,126 @@ impl SftpSessionManager {
             return Err("at least one SFTP property must be changed".to_string());
         }
 
-        let sessions = self
-            .sessions
-            .lock()
-            .map_err(|_| "SFTP session lock is poisoned".to_string())?;
-        let session = sessions
-            .get(&request.session_id)
-            .ok_or_else(|| "SFTP session was not found".to_string())?;
-        session.runtime.block_on(async {
-            update_path_properties(
-                &session.sftp,
-                &request.path,
-                permissions,
-                request.uid,
-                request.gid,
-            )
-            .await?;
-            path_properties(&session.sftp, &request.path).await
+        self.with_session(&request.session_id, "updateProperties", |session| {
+            session.runtime.block_on(async {
+                update_path_properties(
+                    &session.sftp,
+                    &request.path,
+                    permissions,
+                    request.uid,
+                    request.gid,
+                )
+                .await?;
+                path_properties(&session.sftp, &request.path).await
+            })
         })
     }
 
     pub fn close_sftp_session(&self, session_id: String) -> Result<(), String> {
-        let session = self
-            .sessions
-            .lock()
-            .map_err(|_| "SFTP session lock is poisoned".to_string())?
-            .remove(&session_id);
+        let session = {
+            self.sessions
+                .lock()
+                .map_err(|_| "SFTP session lock is poisoned".to_string())?
+                .remove(&session_id)
+        };
         if let Some(session) = session {
-            let _ = session.runtime.block_on(async {
-                let _ = session.sftp.close().await;
-                session
-                    .ssh_session
-                    .disconnect(Disconnect::ByApplication, "", "en")
+            sftp_debug(
+                "session.close.begin",
+                json!({
+                    "sessionId": session_id,
+                    "sharedReferences": Arc::strong_count(&session),
+                    "timeoutSeconds": SFTP_CLOSE_TIMEOUT.as_secs(),
+                }),
+            );
+            let close_result = {
+                let session = session
+                    .lock()
+                    .map_err(|_| "SFTP session lock is poisoned".to_string())?;
+                session.runtime.block_on(async {
+                    tokio::time::timeout(SFTP_CLOSE_TIMEOUT, async {
+                        let _ = session.sftp.close().await;
+                        session
+                            .ssh_session
+                            .disconnect(Disconnect::ByApplication, "", "en")
+                            .await
+                    })
                     .await
-            });
+                    .map_err(|_| sftp_timeout_message("closing SFTP session", SFTP_CLOSE_TIMEOUT))
+                })
+            };
+            match close_result {
+                Ok(_) => sftp_debug("session.close.ok", json!({ "sessionId": session_id })),
+                Err(error) => sftp_debug(
+                    "session.close.error",
+                    json!({
+                        "sessionId": session_id,
+                        "error": error,
+                    }),
+                ),
+            }
+        } else {
+            sftp_debug(
+                "session.close.missing",
+                json!({
+                    "sessionId": session_id,
+                }),
+            );
         }
         Ok(())
+    }
+
+    fn shared_session(&self, session_id: &str) -> Result<Arc<Mutex<SftpConnection>>, String> {
+        self.sessions
+            .lock()
+            .map_err(|_| "SFTP session map lock is poisoned".to_string())?
+            .get(session_id)
+            .cloned()
+            .ok_or_else(|| "SFTP session was not found".to_string())
+    }
+
+    fn with_session<R>(
+        &self,
+        session_id: &str,
+        operation: &'static str,
+        f: impl FnOnce(&SftpConnection) -> Result<R, String>,
+    ) -> Result<R, String> {
+        let session = self.shared_session(session_id)?;
+        sftp_debug(
+            "session.operation.wait",
+            json!({
+                "sessionId": session_id,
+                "operation": operation,
+            }),
+        );
+        let session = session
+            .lock()
+            .map_err(|_| "SFTP session lock is poisoned".to_string())?;
+        sftp_debug(
+            "session.operation.begin",
+            json!({
+                "sessionId": session_id,
+                "operation": operation,
+            }),
+        );
+        let result = f(&session);
+        match &result {
+            Ok(_) => sftp_debug(
+                "session.operation.ok",
+                json!({
+                    "sessionId": session_id,
+                    "operation": operation,
+                }),
+            ),
+            Err(error) => sftp_debug(
+                "session.operation.error",
+                json!({
+                    "sessionId": session_id,
+                    "operation": operation,
+                    "error": error,
+                }),
+            ),
+        }
+        result
     }
 
     fn register_transfer(&self, transfer_id: &str) -> Result<Arc<AtomicBool>, String> {
@@ -603,6 +785,15 @@ async fn upload_path(
     let name = local_path_name(&source)?;
     let remote_target = join_remote_path(remote_directory, &name);
     let total_bytes = local_transfer_size(&source)?;
+    sftp_debug(
+        "transfer.upload.plan",
+        json!({
+            "transferId": transfer_id,
+            "localPath": display_local_path(&source),
+            "remoteTarget": remote_target,
+            "totalBytes": total_bytes,
+        }),
+    );
     let mut progress = TransferProgress::new(app, transfer_id, cancellation, total_bytes);
     progress.emit();
 
@@ -614,6 +805,7 @@ async fn upload_path(
         sftp,
         &source,
         &remote_target,
+        transfer_id,
         overwrite_behavior,
         &mut summary,
         &mut progress,
@@ -712,6 +904,7 @@ fn upload_local_entry<'a>(
     sftp: &'a SftpSession,
     local_path: &'a Path,
     remote_path: &'a str,
+    transfer_id: &'a str,
     overwrite_behavior: SftpOverwriteBehavior,
     summary: &'a mut TransferSummary,
     progress: &'a mut TransferProgress,
@@ -736,6 +929,7 @@ fn upload_local_entry<'a>(
                     sftp,
                     &child_path,
                     &child_remote_path,
+                    transfer_id,
                     overwrite_behavior,
                     summary,
                     progress,
@@ -750,23 +944,63 @@ fn upload_local_entry<'a>(
         }
 
         let target = remote_upload_target(sftp, remote_path, overwrite_behavior).await?;
-        let mut file = sftp
-            .open_with_flags(remote_path.to_string(), target.flags)
-            .await
-            .map_err(|error| format!("failed to create remote file: {error}"))?;
-        let upload_result =
-            upload_file_chunks(&mut file, local_path, metadata.len(), summary, progress).await;
-        if upload_result
-            .as_ref()
-            .is_err_and(|error| is_transfer_canceled(error))
-        {
-            let _ = file.shutdown().await;
+        sftp_debug(
+            "transfer.upload.file_open.begin",
+            json!({
+                "transferId": transfer_id,
+                "localPath": display_local_path(local_path),
+                "remotePath": remote_path,
+                "bytes": metadata.len(),
+                "targetExisted": target.existed,
+                "timeoutSeconds": SFTP_TRANSFER_IO_TIMEOUT.as_secs(),
+            }),
+        );
+        let mut file = with_sftp_io_timeout("opening remote upload file", async {
+            sftp.open_with_flags(remote_path.to_string(), target.flags)
+                .await
+                .map_err(|error| format!("failed to create remote file: {error}"))
+        })
+        .await?;
+        sftp_debug(
+            "transfer.upload.file_open.ok",
+            json!({
+                "transferId": transfer_id,
+                "remotePath": remote_path,
+                "targetExisted": target.existed,
+            }),
+        );
+        let upload_result = upload_file_chunks(
+            &mut file,
+            local_path,
+            remote_path,
+            transfer_id,
+            metadata.len(),
+            summary,
+            progress,
+        )
+        .await;
+        if let Err(error) = upload_result {
+            let _ = with_sftp_io_timeout("closing failed remote upload file", async {
+                file.shutdown()
+                    .await
+                    .map_err(|error| format!("failed to close failed remote upload: {error}"))
+            })
+            .await;
             if !target.existed {
-                let _ = sftp.remove_file(remote_path.to_string()).await;
+                let cleanup = sftp.remove_file(remote_path.to_string()).await;
+                sftp_debug(
+                    "transfer.upload.partial_cleanup",
+                    json!({
+                        "transferId": transfer_id,
+                        "remotePath": remote_path,
+                        "reason": error,
+                        "removed": cleanup.is_ok(),
+                        "cleanupError": cleanup.err().map(|cleanup_error| cleanup_error.to_string()),
+                    }),
+                );
             }
-            return upload_result;
+            return Err(error);
         }
-        upload_result?;
         summary.files += 1;
         Ok(())
     })
@@ -775,6 +1009,8 @@ fn upload_local_entry<'a>(
 async fn upload_file_chunks(
     remote_file: &mut russh_sftp::client::fs::File,
     local_path: &Path,
+    remote_path: &str,
+    transfer_id: &str,
     file_size: u64,
     summary: &mut TransferSummary,
     progress: &mut TransferProgress,
@@ -782,6 +1018,7 @@ async fn upload_file_chunks(
     let mut local_file = fs::File::open(local_path)
         .map_err(|error| format!("failed to read local file: {error}"))?;
     let mut buffer = vec![0; TRANSFER_CHUNK_SIZE];
+    let mut wrote_first_chunk = false;
     loop {
         progress.check_cancelled()?;
         let read = local_file
@@ -790,17 +1027,43 @@ async fn upload_file_chunks(
         if read == 0 {
             break;
         }
-        remote_file
-            .write_all(&buffer[..read])
-            .await
-            .map_err(|error| format!("failed to upload remote file: {error}"))?;
+        with_sftp_io_timeout("uploading remote file chunk", async {
+            remote_file
+                .write_all(&buffer[..read])
+                .await
+                .map_err(|error| format!("failed to upload remote file: {error}"))
+        })
+        .await?;
+        if !wrote_first_chunk {
+            wrote_first_chunk = true;
+            sftp_debug(
+                "transfer.upload.first_chunk",
+                json!({
+                    "transferId": transfer_id,
+                    "remotePath": remote_path,
+                    "chunkBytes": read,
+                    "fileBytes": file_size,
+                }),
+            );
+        }
         summary.bytes += read as u64;
         progress.add_bytes(read as u64);
     }
-    remote_file
-        .shutdown()
-        .await
-        .map_err(|error| format!("failed to finish remote upload: {error}"))?;
+    with_sftp_io_timeout("finishing remote upload", async {
+        remote_file
+            .shutdown()
+            .await
+            .map_err(|error| format!("failed to finish remote upload: {error}"))
+    })
+    .await?;
+    sftp_debug(
+        "transfer.upload.file_ok",
+        json!({
+            "transferId": transfer_id,
+            "remotePath": remote_path,
+            "bytes": file_size,
+        }),
+    );
     if file_size == 0 {
         progress.emit();
     }
@@ -1609,8 +1872,11 @@ fn compare_dir_level(
             });
 
             let subtree_differs = compare_dir_level(
-                left.filter(|entry| entry.is_dir).map(|entry| entry.path.as_path()),
-                right.filter(|entry| entry.is_dir).map(|entry| entry.path.as_path()),
+                left.filter(|entry| entry.is_dir)
+                    .map(|entry| entry.path.as_path()),
+                right
+                    .filter(|entry| entry.is_dir)
+                    .map(|entry| entry.path.as_path()),
                 &relative_path,
                 depth + 1,
                 rows,
@@ -1692,15 +1958,15 @@ fn bump_summary(summary: &mut FolderCompareSummary, status: &str) {
 // Byte-exact file comparison: cheap size check first, then a streamed chunk
 // compare that bails at the first mismatch.
 fn files_equal(left: &Path, right: &Path) -> Result<bool, String> {
-    let left_meta = fs::metadata(left)
-        .map_err(|error| format!("cannot read {}: {error}", left.display()))?;
-    let right_meta = fs::metadata(right)
-        .map_err(|error| format!("cannot read {}: {error}", right.display()))?;
+    let left_meta =
+        fs::metadata(left).map_err(|error| format!("cannot read {}: {error}", left.display()))?;
+    let right_meta =
+        fs::metadata(right).map_err(|error| format!("cannot read {}: {error}", right.display()))?;
     if left_meta.len() != right_meta.len() {
         return Ok(false);
     }
-    let mut left_file = fs::File::open(left)
-        .map_err(|error| format!("cannot open {}: {error}", left.display()))?;
+    let mut left_file =
+        fs::File::open(left).map_err(|error| format!("cannot open {}: {error}", left.display()))?;
     let mut right_file = fs::File::open(right)
         .map_err(|error| format!("cannot open {}: {error}", right.display()))?;
     let mut left_buf = vec![0u8; TRANSFER_CHUNK_SIZE];
@@ -2168,8 +2434,8 @@ fn format_octal_permissions(permissions: u32) -> String {
 fn auth_for(
     secrets: &secrets::Secrets,
     request: &StartSftpSessionRequest,
+    auth_method: SftpAuthMethod,
 ) -> Result<ssh::NativeSshAuth, String> {
-    let auth_method = auth_method_for(request)?;
     match auth_method {
         SftpAuthMethod::KeyFile => Ok(ssh::NativeSshAuth::KeyFile {
             key_path: request.key_path.clone().unwrap_or_default(),
@@ -2227,6 +2493,66 @@ fn auth_method_for(request: &StartSftpSessionRequest) -> Result<SftpAuthMethod, 
             Ok(SftpAuthMethod::KeyFile)
         }
         None => Ok(SftpAuthMethod::Agent),
+    }
+}
+
+fn sftp_auth_method_name(method: SftpAuthMethod) -> &'static str {
+    match method {
+        SftpAuthMethod::KeyFile => "keyFile",
+        SftpAuthMethod::Password => "password",
+        SftpAuthMethod::Agent => "agent",
+    }
+}
+
+fn sftp_overwrite_behavior_name(behavior: SftpOverwriteBehavior) -> &'static str {
+    match behavior {
+        SftpOverwriteBehavior::Fail => "fail",
+        SftpOverwriteBehavior::Overwrite => "overwrite",
+    }
+}
+
+fn sftp_timeout_message(operation: &str, timeout: Duration) -> String {
+    format!(
+        "timed out while {operation} after {} seconds",
+        timeout.as_secs()
+    )
+}
+
+async fn with_sftp_io_timeout<T, F>(operation: &'static str, future: F) -> Result<T, String>
+where
+    F: Future<Output = Result<T, String>>,
+{
+    tokio::time::timeout(SFTP_TRANSFER_IO_TIMEOUT, future)
+        .await
+        .map_err(|_| sftp_timeout_message(operation, SFTP_TRANSFER_IO_TIMEOUT))?
+}
+
+fn log_transfer_result(
+    event_prefix: &str,
+    session_id: &str,
+    transfer_id: &str,
+    result: &Result<SftpTransferResult, String>,
+) {
+    match result {
+        Ok(summary) => sftp_debug(
+            &format!("{event_prefix}.ok"),
+            json!({
+                "sessionId": session_id,
+                "transferId": transfer_id,
+                "name": summary.name,
+                "files": summary.files,
+                "folders": summary.folders,
+                "bytes": summary.bytes,
+            }),
+        ),
+        Err(error) => sftp_debug(
+            &format!("{event_prefix}.error"),
+            json!({
+                "sessionId": session_id,
+                "transferId": transfer_id,
+                "error": error,
+            }),
+        ),
     }
 }
 

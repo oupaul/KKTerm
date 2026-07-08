@@ -200,25 +200,31 @@ Linux.**
       - The seed-entry UI needs new i18n strings (en.json first + pending files).
       - This is the one place we add real Linux-specific security code rather
         than reusing a platform path — keep it small and auditable.
-- [ ] **Host metrics (`performance.rs`):** give Linux a metrics path. `sysinfo`
-      (already a macOS dep) is cross-platform — widen the macOS metric blocks to
-      `cfg(any(macos, linux))` where the body is `sysinfo`-based, and move
-      `sysinfo` to a `cfg(not(windows))` dep block. Verify Status Bar CPU/RAM/
-      network + Dashboard counters populate.
+- [x] **Host metrics (`performance.rs`):** done (2026-07-05). The sysinfo-based
+      macOS metric blocks are widened to `cfg(any(macos, linux))` (`sysinfo` was
+      already a Linux dep for PC Info), reporting `linux-sysinfo` sources.
+      Status Bar CPU/RAM/network + Dashboard counters populate; the Status Bar
+      metrics click launches the first installed desktop system monitor
+      (GNOME System Monitor, plasma-systemmonitor, …) via
+      `open_windows_task_manager`.
 - [ ] **System theme (`system_theme.rs`):** detect dark/light via the
       `org.freedesktop.appearance` `color-scheme` portal (or GTK setting); fall
       back to light if unavailable.
-- [ ] **Don't Sleep (`power.rs`) — SACRIFICED v1:** ship as a documented no-op
-      on Linux (capability flag off → hide the Don't Sleep / coffee Status Bar
-      indicator). Revisit with a freedesktop idle-inhibit portal later.
+- [x] **Don't Sleep (`power.rs`):** done (2026-07-05) — no longer sacrificed.
+      Implemented via the `org.freedesktop.portal.Inhibit` portal (suspend +
+      idle flags; GNOME and KDE both back it) with a legacy
+      `org.freedesktop.ScreenSaver` D-Bus fallback, over `zbus` (already in the
+      tree via tauri-plugin-opener/xcap).
 
 ### Phase 3 — Connection types beyond terminal
 **Success: VNC and RDP open on Linux; URL/WebView connections render.**
 
-- [ ] **RDP:** the non-Windows IronRDP path (`rdp_client.rs`) already exists for
-      macOS — validate it on Linux. The Windows ActiveX path (`rdp.rs`,
-      `mstscax.dll`) stays Windows-only. RDP rendering goes into the canvas like
-      the macOS path, not a native child HWND.
+- [x] **RDP:** frontend enabled (2026-07-05): `usesCanvasRdp()`/`supportsRdp()`
+      now include Linux, so the workspace renders the IronRDP canvas
+      (`RdpCanvasView`) instead of falling into the Windows ActiveX overlay
+      path (which showed the "ActiveX host" status text on Linux). The backend
+      `rdp_client.rs` commands were already compiled `cfg(not(windows))`.
+      Needs an end-to-end connect validation against a real Windows host.
 - [ ] **VNC:** `vnc-rs` framebuffer path is platform-neutral — validate.
 - [ ] **URL/WebView Connections (`webview.rs`):** Windows uses an owned overlay
       `WebviewWindow` over the Pane (the borderless WebView2 overlay). Confirm
@@ -243,8 +249,14 @@ Linux via the platform-capability signal — no broken buttons, no error spam.**
 - [ ] **Native tooltips / native context menus:** confirm `native_tooltip.rs`
       and `nativeContextMenu` behave under GTK; fall back to existing DOM
       paths where they don't.
-- [ ] Audit `app_launcher.rs` (launches local apps — needs `xdg-open`/desktop
-      semantics), `ai/cli_backend.rs` and `ai_coding_usage.rs` (CLI path
+- [x] `app_launcher.rs` audited + fixed (2026-07-05): the opener plugin spawned
+      xdg-open with the AppImage-poisoned environment (rewritten XDG_DATA_DIRS/
+      GIO vars broke MIME resolution → everything opened in the default
+      browser). Linux launches now go through host spawns with the shared
+      AppImage env scrub (`linux_env.rs`): exec-bit files run directly,
+      `.desktop` entries launch via `gio launch`, everything else opens via
+      `xdg-open` (fallback `gio open`).
+- [ ] Audit `ai/cli_backend.rs` and `ai_coding_usage.rs` (CLI path
       discovery — already has a Linux branch at `ai_coding_usage.rs:863`),
       `mcp_bridge.rs`, and `x_server.rs` (managed X server is a Windows
       VcXsrv/XLaunch concept; on Linux X11 is native — likely no-op the managed
@@ -253,6 +265,45 @@ Linux via the platform-capability signal — no broken buttons, no error spam.**
 ### Phase 5 — Packaging (AppImage)
 **Success: a single `kkterm-<version>-linux-x86_64.AppImage` builds, launches on
 a clean Ubuntu, and runs the smoke path (open window, open a local terminal).**
+
+> **Result (2026-07-05, Fedora 44 VM against a build made on Ubuntu 24.04 CI):**
+> the AppImage launched to an **empty window** — two independent, stacked bugs:
+> 1. linuxdeploy bundles the build host's `libwayland-client.so.0`,
+>    `libwayland-egl.so.1`, `libwayland-cursor.so.0`, `libwayland-server.so.0`
+>    into the AppImage. Wayland's protocol marshalling must match the
+>    *running* machine's Mesa/EGL stack; the mismatch aborted the app before
+>    any window rendered with `Could not create default EGL display:
+>    EGL_BAD_PARAMETER. Aborting...` (confirmed via `journalctl`:
+>    `WebKitWebProcess` never spawned and SIGABRT'd). Fix: `scripts/
+>    package-linux.sh` now extracts the built AppImage, deletes those four
+>    `.so` files, repacks with `appimagetool`, and re-signs the updater
+>    signature (`tauri signer sign`).
+> 2. Even with (1) fixed, WebKitGTK's DMA-BUF renderer fails **silently**
+>    under some virtualized graphics stacks — the process and
+>    `WebKitWebProcess` stay alive, nothing crashes, but the webview renders
+>    nothing. Fix: `src-tauri/src/main.rs` sets `WEBKIT_DISABLE_DMABUF_RENDERER=1`
+>    before Tauri/GTK init, gated to Linux and only when `systemd-detect-virt
+>    --vm` reports a hypervisor (so bare-metal Linux keeps the faster
+>    DMA-BUF path).
+>
+> Both fixes were validated end-to-end on the Fedora VM: extract → strip →
+> repack with `appimagetool` → relaunch showed no crash and a visibly
+> rendered window.
+>
+> **Follow-up (2026-07-05, v0.1.112 on the same Fedora 44 VM):** still blank —
+> a third bug in fix (2) itself. AppImage's AppRun wrapper exports
+> `LD_LIBRARY_PATH` pointing at the bundled libs, and the spawned host
+> `systemd-detect-virt` inherited it, aborting with
+> ``libcrypto.so.3: version `OPENSSL_3.4.0' not found`` (bundled Ubuntu
+> OpenSSL 3.0 vs. Fedora 44's `libsystemd-shared` needing 3.4 symbols) — so
+> VM detection reported "not a VM" and the DMA-BUF workaround never engaged.
+> Fix: `main.rs` scrubs `LD_LIBRARY_PATH` when spawning the detector. The
+> same leak reaches terminal shells and the spawned host `ssh` (which
+> silently loaded the *bundled* libcrypto), so `sessions.rs` now scrubs all
+> AppImage-injected variables (`LD_LIBRARY_PATH`, `GTK_*`, `GDK_*`,
+> `GIO_EXTRA_MODULES`, `GSETTINGS_SCHEMA_DIR`, `XDG_DATA_DIRS` entries under
+> `$APPDIR`, `APPDIR`/`APPIMAGE`/`ARGV0`/`OWD`) from local-shell and ssh
+> children; no-op outside an AppImage.
 
 - [ ] Add `appimage` to a **Linux-only** bundle target. Do NOT add it to the
       shared `tauri.conf.json` `bundle.targets` (which is `nsis`/`app`/`dmg`);
@@ -319,11 +370,11 @@ Working-state target for the **first Linux release**. Update as phases land.
 | Host metrics (Status Bar) | Win32 | sysinfo | sysinfo (reuse) | low |
 | System theme | native | native | freedesktop portal | low |
 | VNC | vnc-rs | vnc-rs | vnc-rs | low |
-| RDP | ActiveX | IronRDP | IronRDP (reuse mac path) | med |
+| RDP | ActiveX | IronRDP | IronRDP (mac path, enabled) | med |
 | URL / WebView | WebView2 overlay | WKWebView | WebKitGTK overlay/child | **med** |
 | Window effects (Mica) | yes | n/a | no-op | none (cosmetic) |
 | Tray / minimize-to-tray | yes | yes | appindicator (DE-dependent) | med |
-| Don't Sleep | yes | yes | **sacrificed v1** (no-op) | low |
+| Don't Sleep | yes | yes | inhibit portal + ScreenSaver D-Bus | low |
 | Screenshot → AI context | yes | yes | **sacrificed v1** (no-op) | med |
 | Auto-start | yes | yes | **sacrificed v1** (no-op) | low |
 | Install Helper Module | yes | (n/a) | **sacrificed v1** (hidden) | n/a |

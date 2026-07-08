@@ -1,5 +1,5 @@
 import { type FormEvent, useEffect, useRef, useState } from "react";
-import { FolderOpen, KeyRound, Play, Server } from "lucide-react";
+import { FolderOpen, KeyRound, Play, Server } from "../../lib/reicon";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { invokeCommand, isTauriRuntime, selectKeyFile } from "../../lib/tauri";

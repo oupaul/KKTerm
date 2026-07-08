@@ -342,7 +342,7 @@ const SETTINGS_SECTIONS: Record<SettingsSectionId, SettingsSectionSummary> = {
       },
       {
         key: "settings.urlSavedPasswords",
-        description: "Saved website password metadata.",
+        description: "Saved website password and input-data records.",
         tutorialTargetId: "settings.urlSavedPasswords",
       },
       {

@@ -26,9 +26,37 @@ test("macOS reports rejected URL certificates without bypassing validation", () 
 });
 
 test("macOS installs certificate handling on Wry's live navigation delegate class", () => {
+  assert.match(
+    backend,
+    /let webview: \*mut AnyObject = platform_webview\.inner\(\)\.cast\(\)/,
+  );
   assert.match(backend, /msg_send!\[webview, navigationDelegate\]/);
   assert.match(backend, /object_getClass\(navigation_delegate\.cast\(\)\)/);
   assert.doesNotMatch(backend, /AnyClass::get\(c"WryNavigationDelegate"\)/);
+});
+
+test("macOS reports certificate failures from WKWebView navigation errors", () => {
+  assert.match(backend, /fn certificate_navigation_failure_handler\(/);
+  assert.match(
+    backend,
+    /sel!\(webView:didFailProvisionalNavigation:withError:\)/,
+  );
+  assert.match(backend, /sel!\(webView:didFailNavigation:withError:\)/);
+  assert.match(
+    backend,
+    /NS_URL_ERROR_SERVER_CERTIFICATE_HAS_BAD_DATE[\s\S]*NS_URL_ERROR_SERVER_CERTIFICATE_NOT_YET_VALID/,
+  );
+  assert.match(
+    backend,
+    /if bypass_enabled\.is_null\(\)[\s\S]*"webview-certificate-error"/,
+  );
+});
+
+test("macOS refreshes the first WKWebView delegate after adding certificate callbacks", () => {
+  assert.match(
+    backend,
+    /objc_setAssociatedObject\([\s\S]*BYPASS_ASSOCIATED_KEY[\s\S]*setNavigationDelegate: std::ptr::null_mut[\s\S]*setNavigationDelegate: navigation_delegate/,
+  );
 });
 
 test("URL workspace turns certificate errors into a warning notice", () => {

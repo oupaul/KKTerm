@@ -82,7 +82,7 @@ Y unas cuantas cosas que no sabías que querías:
 - **Paneles SSH que se vuelven a enganchar a tu sesión remota `claude` / `codex`** tras cada rabieta del wifi, para que un trabajo de seis horas sobreviva a una caída.
 - **Espacios de trabajo (Workspaces)** que mantienen tu homelab, el trabajo y los servidores de ese cliente en contenedores separados e intercambiables.
 - Un **Install Helper** que encuentra, instala, actualiza y lanza las herramientas para devs de Windows que normalmente persigues por diez pestañas del navegador.
-- **Veintiséis fondos animados** para el panel *y tus terminales* (sí, incluido `matrix`), porque no estamos por encima de eso.
+- **36 fondos animados** para el panel *y tus terminales* (sí, incluido `matrix`), porque no estamos por encima de eso.
 
 Y lo mejor: el asistente de IA puede convertir una sola frase en una pequeña herramienta de panel que de verdad acabas usando.
 
@@ -220,14 +220,14 @@ Algunos son simples paneles de visualización (markdown, listas de tareas, una c
 
 #### Fondos animados del panel/terminal (porque nos apetecía)
 
-Elige un ambiente — por vista del panel, *o detrás de cualquier terminal* — entre **veintiséis** fondos animados sobre canvas:
+Elige un ambiente — por vista del panel, *o detrás de cualquier terminal* — entre **36** fondos animados sobre canvas:
 
 | Ambiente | Fondos |
 | --- | --- |
-| Calma | `aurora`, `clouds`, `ocean`, `raindrops`, `rainywindow`, `frostedWindow`, `snow`, `sakura`, `fireflies`, `bubbles`, `aquarium`, `ricefield`, `lanterns` |
-| Espacial | `starfield`, `nebula` |
-| Cálido | `embers`, `lava` |
-| Friki | `matrix`, `topo`, `synthwave` |
+| Calma | `fuji`, `aurora`, `halftone`, `clouds`, `ocean`, `raindrops`, `rainywindow`, `frostedWindow`, `snow`, `sakura`, `fireflies`, `bubbles`, `aquarium`, `jellyfish`, `lighthouse`, `balloons`, `ricefield`, `lanterns` |
+| Espacial | `starfield`, `nebula`, `orbitals` |
+| Cálido | `embers`, `lava`, `ink`, `dunes`, `savanna` |
+| Friki | `matrix`, `topo`, `synthwave`, `circuit`, `crystals` |
 | Inquieto | `cyberpunk`, `taipei101`, `thunderstorm`, `confetti`, `particleCursor` |
 
 El mismo selector también respalda tus paneles de terminal, así que puedes poner `matrix` detrás de una sesión SSH activa. Se pausan cuando estás en otra parte, así que casi no cuestan nada. Combina `matrix` con tu asistente de IA para un ambiente que dice «soy extremadamente productivo y posiblemente estoy en una película de las Wachowski». O elige `ocean` y aparenta ser una persona seria. No juzgamos ninguna de las dos opciones.

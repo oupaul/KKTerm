@@ -354,12 +354,14 @@ Your PR description must include:
 
 ## UI Walkthrough
 
-### Activity Rail (left sidebar)
+### Activity Rail
 
 The narrow left rail is the app's navigation spine. Icons from top to bottom:
 
-- **Workspace** (terminal icon) — the main connection and session area
+- **Workspace switcher** — the Default Workspace, any additional Workspaces, and the New Workspace action
 - **Dashboard** — widget playground with App Launcher and AI Created Widgets
+- **Install Helper** — curated developer-tool install/update flows when supported on the current platform
+- **IT Ops** — site operations surfaces when enabled while under development
 - **Settings** (gear icon, bottom) — app configuration
 
 Hover any rail icon for a tooltip label. Right-click connection shortcut icons in the rail for quick actions.
@@ -368,7 +370,7 @@ Hover any rail icon for a tooltip label. Right-click connection shortcut icons i
 
 Inside Workspace, the left panel shows the Connection tree. Connections are organized into optional folders. Actions:
 
-- **Click a Connection** to open it as a new Session Tab
+- **Click a Connection** to open a Session in a Tab
 - **Right-click** for rename, duplicate, delete, open SFTP, pin to rail
 - **Drag** to reorder or move into folders
 - **Search bar** at top filters the tree
@@ -376,7 +378,7 @@ Inside Workspace, the left panel shows the Connection tree. Connections are orga
 
 ### Sessions and Tabs
 
-Each open Session appears as a Tab in the workspace area. Tabs are managed from the tab bar:
+Each open workspace container appears as a Tab in the workspace area. Tabs are managed from the Tab Strip:
 
 - Click a Tab to switch to it — live Sessions stay mounted
 - Right-click a Tab for close, rename, duplicate pane options
@@ -452,6 +454,6 @@ For **Ollama** (local models): set the provider to Ollama, leave the API key bla
 
 3. **Download and install the app** — I'll walk you through the GitHub Releases page and the installer, including the unsigned-installer warning.
 
-4. **Learn how to use KKTerm + set up an AI provider** — I'll give you a guided walkthrough of the UI: connections, terminal sessions, SFTP, the Dashboard, and how to configure an AI provider in Settings.
+4. **Learn how to use KKTerm + set up an AI provider** — I'll give you a guided walkthrough of the UI: Connections, terminal Sessions, SFTP, the Dashboard, and how to configure an AI provider in Settings.
 
 Just tell me which number (or describe what you want) and we'll get started.

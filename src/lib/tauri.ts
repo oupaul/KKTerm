@@ -741,6 +741,7 @@ export interface StartWebviewSessionRequest {
   sessionId: string;
   url: string;
   dataPartition?: string;
+  userAgent?: string;
   proxyUrl?: string;
   ignoreCertificateErrors?: boolean;
   x: number;
@@ -1170,7 +1171,11 @@ type CommandMap = {
     result: ServerRoom[];
   };
   itops_create_server_room: {
-    args: { siteId: string; name: string };
+    args: { siteId: string; name: string; floorColor: string };
+    result: ServerRoom;
+  };
+  itops_update_server_room: {
+    args: { id: string; name: string; floorColor: string };
     result: ServerRoom;
   };
   itops_delete_server_room: {
@@ -1958,6 +1963,10 @@ type CommandMap = {
     args: { request: SecretReferenceRequest };
     result: null;
   };
+  read_url_credential_password: {
+    args: { ownerId: string };
+    result: string | null;
+  };
   list_stored_credentials: {
     args: undefined;
     result: StoredCredentialSummary[];
@@ -2246,6 +2255,7 @@ type CommandMap = {
         secretOwnerId?: string;
         passphraseOwnerId?: string;
       };
+      sessionId?: string;
     };
     result: RemoteLoopbackPort[];
   };

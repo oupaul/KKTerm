@@ -17,7 +17,7 @@ import {
   RefreshCw,
   Trash2,
   X,
-} from "lucide-react";
+} from "../../lib/reicon";
 import { invokeCommand, isTauriRuntime, type FolderCompareResult, type FolderCompareRow } from "../../lib/tauri";
 import { useWorkspaceStore } from "../../store";
 import { formatFileSize, formatRemoteTime, joinLocalPath } from "../workspace/connections/sftp/format";

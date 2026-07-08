@@ -15,7 +15,7 @@ import {
   Trash2,
   UserRound,
   X,
-} from "lucide-react";
+} from "../../../../../lib/reicon";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type {
   DragEvent,

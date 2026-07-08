@@ -5,11 +5,11 @@
 // invisible until its id is listed here. See docs/ADR/0008 "Adding a recipe
 // (developer checklist)".
 //
-// Each section also carries a lucide glyph and a CSS tint variable (defined in
+// Each section also carries a line-icon glyph and a CSS tint variable (defined in
 // src/styles/colorSchemes.css) so the rail rows match the house-style mockup.
 
-import { Bot, Box, Boxes, Brush, Code2, Cpu, Globe, Wrench, Zap } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { Bot, Box, Boxes, Brush, Code2, Cpu, Globe, Wrench, Zap } from "../../lib/reicon";
+import type { LucideIcon } from "../../lib/reicon";
 
 export interface InstallerSection {
   /// Stable id; also the `sec:<id>` sidebar filter value.

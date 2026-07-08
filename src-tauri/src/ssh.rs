@@ -1377,6 +1377,7 @@ async fn run_native_terminal_once(
     // forward-drain below before this function returns and the tokio runtime is
     // torn down. See `forward_tasks` for why draining in-context matters.
     let outcome: Result<TerminalRunOutcome, String> = async {
+        let mut output_decoder = crate::sessions::TerminalOutputDecoder::default();
         loop {
         tokio::select! {
             control = control_rx.recv() => {
@@ -1582,13 +1583,14 @@ async fn run_native_terminal_once(
                                 "bytes": data.len(),
                             }),
                         );
-                        emit_terminal_output(
-                            &app,
-                            &request.session_id,
-                            String::from_utf8_lossy(&data).to_string(),
-                        );
+                        if let Some(text) = output_decoder.decode(&data) {
+                            emit_terminal_output(app, &request.session_id, text);
+                        }
                     }
                     Some(ChannelMsg::Eof) | Some(ChannelMsg::Close) | None => {
+                        if let Some(text) = output_decoder.finish_lossy() {
+                            emit_terminal_output(app, &request.session_id, text);
+                        }
                         ssh_debug(
                             "terminal.channel.closed",
                             json!({

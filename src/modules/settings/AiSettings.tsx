@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Bot, Copy, RefreshCw, X } from "lucide-react";
+import { Bot, Copy, RefreshCw, X } from "../../lib/reicon";
 import { useTranslation } from "react-i18next";
 import {
   AI_PROVIDER_DEFINITIONS,

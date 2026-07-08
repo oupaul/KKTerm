@@ -1,4 +1,4 @@
-import { Globe, Search } from "lucide-react";
+import { Globe, Search } from "../../../../../lib/reicon";
 import { useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { useTranslation } from "react-i18next";

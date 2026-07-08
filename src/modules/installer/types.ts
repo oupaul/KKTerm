@@ -90,6 +90,8 @@ export interface DetectedState {
   /// bundles, installedVersion remains nvm/uv for update comparisons while
   /// this carries the managed Node/Python runtime version.
   runtimeVersion?: string | null;
+  /// Best-effort provider that detected and will manage this installed tool.
+  installProvider?: ProviderKind | null;
   /// Unix timestamp from the last completed detection pass. Cached Windows
   /// registry snapshots use this so the tile can show how stale it is.
   lastCheckedAt?: number | null;

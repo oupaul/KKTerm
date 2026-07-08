@@ -1,5 +1,4 @@
-import type { ComponentType, CSSProperties } from "react";
-import * as Icons from "lucide-react";
+import type { CSSProperties } from "react";
 import type { ConnectionType } from "../../../types";
 import rdpIcon from "../../../assets/connection-icons/rdp.png";
 import serialIcon from "../../../assets/connection-icons/serial.png";
@@ -11,14 +10,13 @@ import terminalIcon from "../../../assets/connection-icons/terminal.png";
 import urlIcon from "../../../assets/connection-icons/url.png";
 import vncIcon from "../../../assets/connection-icons/vnc.png";
 import wslIcon from "../../../assets/connection-icons/wsl.png";
-import { lucideIconNameFromRef } from "../../../lib/iconCatalog";
+import { lucideIconNameFromRef, reiconIconNameFromRef } from "../../../lib/iconCatalog";
 import { brandIconRefToUrl } from "../../../lib/brandIconUrls";
 import { materialIconRefToUrl } from "../../../lib/iconCatalogUrls";
 import { osIconRefToUrl } from "../../../lib/osIconUrls";
+import { getReiconIconComponent } from "../../../lib/reiconCatalog";
 import { fileBrowserConnectionIconSrc } from "./fileBrowserConnectionIcons";
 import documentIcon from "../../../assets/file-icons/material-icon-theme/icons/document.svg";
-
-type LucideIcon = ComponentType<{ size?: number; style?: CSSProperties }>;
 
 export const CONNECTION_ICON_SRC: Record<ConnectionType, string> = {
   local: terminalIcon,
@@ -78,9 +76,10 @@ export function connectionIconSrcForConnection({
 
 /**
  * Whether a Connection-style icon can have its foreground color recolored. Only
- * inline Lucide SVG glyphs honor `--connection-icon-fg`; every other icon (the
- * default protocol PNGs, brand/OS/Material artwork, and saved/chosen raster or
- * SVG images) renders as an `<img>` and ignores the foreground color.
+ * inline Reicon/Lucide fallback SVG glyphs honor `--connection-icon-fg`; every
+ * other icon (the default protocol PNGs, brand/OS/Material artwork, and
+ * saved/chosen raster or SVG images) renders as an `<img>` and ignores the
+ * foreground color.
  */
 export function iconSupportsForegroundColor({
   iconDataUrl,
@@ -92,7 +91,8 @@ export function iconSupportsForegroundColor({
   type: ConnectionType;
 }) {
   const src = connectionIconSrcForConnection({ iconDataUrl, localShell, type });
-  return lucideIconNameFromRef(src) !== null;
+  const iconName = reiconIconNameFromRef(src) ?? lucideIconNameFromRef(src);
+  return getReiconIconComponent(iconName) !== null;
 }
 
 export function ConnectionIcon({
@@ -114,10 +114,8 @@ export function ConnectionIcon({
 }) {
   const src = connectionIconSrcForConnection({ iconDataUrl, localShell, type });
   const MaterialOrImage = brandIconRefToUrl(src) ?? osIconRefToUrl(src) ?? materialIconRefToUrl(src) ?? src;
-  const lucideIconName = lucideIconNameFromRef(src);
-  const LucideIcon = lucideIconName
-    ? (Icons as unknown as Record<string, LucideIcon | undefined>)[lucideIconName]
-    : null;
+  const iconName = reiconIconNameFromRef(src) ?? lucideIconNameFromRef(src);
+  const InlineIcon = getReiconIconComponent(iconName);
   const hasBackground = Boolean(iconBackgroundColor);
   const shellSize = hasBackground ? size + 6 : size;
   const style = {
@@ -136,8 +134,8 @@ export function ConnectionIcon({
         .join(" ")}
       style={style}
     >
-      {LucideIcon ? (
-        <LucideIcon size={size} />
+      {InlineIcon ? (
+        <InlineIcon size={size} />
       ) : (
         <img
           alt=""

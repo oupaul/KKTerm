@@ -1,4 +1,4 @@
-import { Bot, PanelLeft } from "lucide-react";
+import { Bot, PanelLeft } from "../lib/reicon";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { ActivePage } from "./ActivityRail";

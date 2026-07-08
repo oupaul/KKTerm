@@ -1,4 +1,4 @@
-import { ImageUp, Link, Save, Unlink, X } from "lucide-react";
+import { ImageUp, Link, Save, Unlink, X } from "../../../../../lib/reicon";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { technicalInputProps } from "../../../../../lib/inputBehavior";

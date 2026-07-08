@@ -4047,7 +4047,7 @@ checksum = "e2db585e1d738fc771bf08a151420d3ed193d9d895a36df7f6f8a9456b911ddc"
 
 [[package]]
 name = "kkterm"
-version = "0.1.110"
+version = "0.1.116"
 dependencies = [
  "aes-gcm 0.10.3",
  "anyhow",
@@ -4089,7 +4089,6 @@ dependencies = [
  "rusqlite",
  "russh",
  "russh-sftp",
- "rustls",
  "scraper",
  "security-framework",
  "serde",
@@ -4114,7 +4113,6 @@ dependencies = [
  "time",
  "tokio",
  "tokio-openssl",
- "tokio-rustls",
  "tokio-util",
  "ttf-parser",
  "url",
@@ -4128,6 +4126,7 @@ dependencies = [
  "winping",
  "x509-cert",
  "xcap",
+ "zbus",
  "zip 8.6.0",
 ]
 

@@ -1,5 +1,5 @@
 import { useId, type CSSProperties } from "react";
-import { Check } from "lucide-react";
+import { Check } from "../../lib/reicon";
 import { useTranslation } from "react-i18next";
 import type { ColorScheme } from "../../types";
 

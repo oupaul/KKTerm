@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import "tailwindcss" source(".");
 @import "./styles/colorSchemes.css";
 @import "./styles/base.css";
 @import "./app/ui/dialog/dialogs.css";

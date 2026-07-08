@@ -328,6 +328,7 @@ pub struct StartWebviewSessionRequest {
     url: String,
     data_partition: Option<String>,
     proxy_url: Option<String>,
+    user_agent: Option<String>,
     #[serde(default)]
     ignore_certificate_errors: bool,
     x: f64,
@@ -491,6 +492,7 @@ impl WebviewSessionManager {
             url,
             data_partition,
             proxy_url,
+            user_agent,
             ignore_certificate_errors,
             x: initial_x,
             y: initial_y,
@@ -521,6 +523,7 @@ impl WebviewSessionManager {
                 },
                 "partition": partition,
                 "ignoreCertificateErrors": ignore_certificate_errors,
+                "userAgentConfigured": user_agent.as_ref().is_some_and(|value| !value.trim().is_empty()),
                 "proxy": proxy_url.as_ref().map(|proxy| json!({
                     "scheme": proxy.scheme(),
                     "host": proxy.host_str(),
@@ -683,6 +686,14 @@ impl WebviewSessionManager {
                 .parent(&host_window)
                 .map_err(|error| format!("failed to assign URL webview parent: {error}"))?;
         }
+        if let Some(user_agent) = user_agent
+            .as_deref()
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+        {
+            builder = builder.user_agent(user_agent);
+        }
+
         #[cfg(windows)]
         if let Some(proxy_url) = proxy_url.as_ref() {
             // WebView2 browser arguments belong to an Environment, and
@@ -1614,6 +1625,10 @@ fn configure_wkwebview_certificate_error_handling(
     const ASSOCIATION_RETAIN_NONATOMIC: usize = 1;
     const SEC_TRUST_RESULT_PROCEED: u32 = 1;
     const SEC_TRUST_RESULT_UNSPECIFIED: u32 = 4;
+    const NS_URL_ERROR_SERVER_CERTIFICATE_HAS_BAD_DATE: isize = -1201;
+    const NS_URL_ERROR_SERVER_CERTIFICATE_UNTRUSTED: isize = -1202;
+    const NS_URL_ERROR_SERVER_CERTIFICATE_HAS_UNKNOWN_ROOT: isize = -1203;
+    const NS_URL_ERROR_SERVER_CERTIFICATE_NOT_YET_VALID: isize = -1204;
     static BYPASS_ASSOCIATED_KEY: u8 = 0;
     static SESSION_ASSOCIATED_KEY: u8 = 0;
     static APP_HANDLE: OnceLock<AppHandle> = OnceLock::new();
@@ -1679,6 +1694,52 @@ fn configure_wkwebview_certificate_error_handling(
         }
     }
 
+    unsafe extern "C-unwind" fn certificate_navigation_failure_handler(
+        _delegate: *mut AnyObject,
+        _selector: Sel,
+        webview: *mut AnyObject,
+        _navigation: *mut AnyObject,
+        error: *mut AnyObject,
+    ) {
+        unsafe {
+            if error.is_null() {
+                return;
+            }
+            let bypass_enabled: *mut c_void = objc_getAssociatedObject(
+                webview.cast(),
+                (&BYPASS_ASSOCIATED_KEY as *const u8).cast(),
+            );
+            let error_code: isize = msg_send![error, code];
+            let domain: *mut NSString = msg_send![error, domain];
+            let is_certificate_error = !domain.is_null()
+                && (&*domain).to_string() == "NSURLErrorDomain"
+                && matches!(
+                    error_code,
+                    NS_URL_ERROR_SERVER_CERTIFICATE_HAS_BAD_DATE
+                        | NS_URL_ERROR_SERVER_CERTIFICATE_UNTRUSTED
+                        | NS_URL_ERROR_SERVER_CERTIFICATE_HAS_UNKNOWN_ROOT
+                        | NS_URL_ERROR_SERVER_CERTIFICATE_NOT_YET_VALID
+                );
+            if bypass_enabled.is_null() && is_certificate_error {
+                let session_id = objc_getAssociatedObject(
+                    webview.cast(),
+                    (&SESSION_ASSOCIATED_KEY as *const u8).cast(),
+                );
+                if !session_id.is_null()
+                    && let Some(app) = APP_HANDLE.get()
+                {
+                    let session_id = &*session_id.cast::<NSString>();
+                    let _ = app.emit(
+                        "webview-certificate-error",
+                        WebviewCertificateErrorPayload {
+                            session_id: session_id.to_string(),
+                        },
+                    );
+                }
+            }
+        }
+    }
+
     unsafe extern "C" {
         fn class_addMethod(
             cls: *const AnyClass,
@@ -1709,7 +1770,7 @@ fn configure_wkwebview_certificate_error_handling(
     let session_id = session_id.to_string();
     webview
         .with_webview(move |platform_webview| {
-            let webview = platform_webview.inner();
+            let webview: *mut AnyObject = platform_webview.inner().cast();
             if webview.is_null() {
                 webview_debug_log(
                     "cannot configure URL certificate handling: WKWebView handle is unavailable"
@@ -1745,6 +1806,18 @@ fn configure_wkwebview_certificate_error_handling(
                     certificate_challenge_handler,
                     c"v@:@@@".as_ptr(),
                 );
+                let _ = class_addMethod(
+                    delegate_class,
+                    sel!(webView:didFailProvisionalNavigation:withError:),
+                    certificate_navigation_failure_handler,
+                    c"v@:@@@".as_ptr(),
+                );
+                let _ = class_addMethod(
+                    delegate_class,
+                    sel!(webView:didFailNavigation:withError:),
+                    certificate_navigation_failure_handler,
+                    c"v@:@@@".as_ptr(),
+                );
                 let session_id = NSString::from_str(&session_id);
                 objc_setAssociatedObject(
                     webview.cast(),
@@ -1762,6 +1835,13 @@ fn configure_wkwebview_certificate_error_handling(
                     },
                     ASSOCIATION_ASSIGN,
                 );
+                // WebKit snapshots optional navigation-delegate capabilities when
+                // the delegate is attached. The first URL WebView is created before
+                // KKTerm adds these runtime methods, so reattach Wry's retained
+                // delegate once to make the callbacks visible immediately. Later
+                // URL WebViews already see the methods when Wry attaches it.
+                let _: () = msg_send![webview, setNavigationDelegate: std::ptr::null_mut::<AnyObject>()];
+                let _: () = msg_send![webview, setNavigationDelegate: navigation_delegate];
             }
         })
         .map_err(|error| format!("failed to access WKWebView for certificate settings: {error}"))?;

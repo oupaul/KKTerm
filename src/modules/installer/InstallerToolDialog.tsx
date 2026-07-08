@@ -116,7 +116,8 @@ function InstalledInfoBody({ recipe }: { recipe: Recipe }) {
   const [updateConfirm, setUpdateConfirm] = useState(false);
 
   const isWsl = isWslFeature(recipe);
-  const usesChocolatey = recipeUsesChocolateyProvider(recipe, allDetected);
+  const installedProvider = detectedProviderForRecipe(recipe, detected);
+  const usesChocolatey = recipeUsesChocolateyProvider(recipe, detected);
 
   const description =
     recipe.descriptionLocales?.[i18n.language] ?? recipe.descriptionEn;
@@ -399,7 +400,7 @@ function InstalledInfoBody({ recipe }: { recipe: Recipe }) {
             </Row>
           ) : null}
           <Row label={t("installer.dialog.provider")}>
-            {providerSummary(recipe.provider)}
+            {providerSummary(installedProvider)}
           </Row>
           {installMode ? (
             <Row label={t("installer.options.scope")}>
@@ -660,7 +661,6 @@ function InstalledInfoBody({ recipe }: { recipe: Recipe }) {
       {updateConfirm ? (
         <InstallerConfirmDialog
           title={t("installer.confirm.updateTitle", { name: recipe.name })}
-          body={t("installer.dialog.adminRequiredChocolatey")}
           footer={t("installer.confirm.adminChocolateyFooter")}
           confirmLabel={t("installer.actions.update")}
           onConfirm={() => runUpdate()}
@@ -1309,14 +1309,34 @@ function selectedProviderForRecipe(
   return recipe.provider;
 }
 
+/// Provider that detected this installed recipe. Mirrors the backend detection
+/// provider marker, with older cached states falling back to the catalog
+/// primary provider.
+function detectedProviderForRecipe(
+  recipe: Recipe,
+  detected: DetectedState | undefined,
+): Provider {
+  if (
+    detected?.installProvider === "chocolatey" &&
+    recipe.chocolateyProvider?.kind === "chocolatey"
+  ) {
+    return recipe.chocolateyProvider;
+  }
+  if (
+    detected?.installProvider === "githubRelease" &&
+    recipe.downloadProvider?.kind === "githubRelease"
+  ) {
+    return recipe.downloadProvider;
+  }
+  return recipe.provider;
+}
+
 /// Whether an install/update/uninstall of this recipe will run through the
 /// Chocolatey provider — which the Rust side always runs elevated (one UAC
-/// prompt) and machine-wide. Mirrors `selected_install_provider` in
-/// `src-tauri/src/installer/install.rs`: explicit user choice, a primary
-/// chocolatey provider, or a chocolatey fallback once Chocolatey is installed.
+/// prompt) and machine-wide.
 function recipeUsesChocolateyProvider(
   recipe: Recipe,
-  detected: Record<string, DetectedState>,
+  detected: DetectedState | undefined,
   options?: InstallOptions,
 ): boolean {
   if (
@@ -1326,10 +1346,7 @@ function recipeUsesChocolateyProvider(
     return true;
   }
   if (recipe.provider.kind === "chocolatey") return true;
-  return (
-    recipe.chocolateyProvider?.kind === "chocolatey" &&
-    (detected["chocolatey"]?.installed ?? false)
-  );
+  return detectedProviderForRecipe(recipe, detected).kind === "chocolatey";
 }
 
 function recipeSupportsScope(recipe: Recipe): boolean {

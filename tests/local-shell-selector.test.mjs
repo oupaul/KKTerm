@@ -87,9 +87,9 @@ assert.doesNotMatch(
   "Local shell should not be a dropdown select.",
 );
 
-assert.match(source, /SquareTerminal/, "Command Prompt should have a monochrome lucide icon.");
-assert.match(source, /Command/, "PowerShell should have a monochrome lucide icon.");
-assert.match(source, /Shell/, "WSL should have a monochrome lucide icon.");
+assert.match(source, /SquareTerminal/, "Command Prompt should have a monochrome line icon.");
+assert.match(source, /Command/, "PowerShell should have a monochrome line icon.");
+assert.match(source, /Shell/, "WSL should have a monochrome line icon.");
 
 const css = await readFile(
   new URL("../src/modules/workspace/connections/connections.css", import.meta.url),

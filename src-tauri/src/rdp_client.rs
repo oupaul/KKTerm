@@ -2,12 +2,16 @@
 //! emits `rdp-canvas-event`s for the workspace canvas. Windows uses the native
 //! ActiveX path in `rdp.rs` instead; this module is compiled only off-Windows.
 //!
-//! # Pinned IronRDP connect sequence (verified against ironrdp 0.15 / ironrdp-tokio 0.9)
+//! # Pinned IronRDP connect sequence (verified against ironrdp 0.16 / ironrdp-tokio 0.9)
 //!
 //! ## Dependencies used
-//! - `ironrdp = "0.15"` with features `["connector", "session", "graphics", "pdu", "input"]`
+//! - `ironrdp = "0.16"` with features `["connector", "session", "graphics", "pdu", "input"]`
 //! - `ironrdp-tokio = "0.9"` (re-exports all of `ironrdp_async` via `pub use ironrdp_async::*`)
-//! - `tokio-rustls = "0.26"` (for TLS upgrade — we implement the upgrade directly, no ironrdp-tls)
+//! - `openssl = "0.10"` (vendored) + `tokio-openssl = "0.6"` (for the TLS upgrade; see
+//!   `tls_upgrade`). Both rustls and native-tls (macOS Secure Transport) refuse the
+//!   legacy cipher suites (TLS 1.0, RSA key-exchange/CBC-SHA) that old Windows RDP
+//!   hosts (Windows Server 2008 R2 and earlier) offer; OpenSSL at SECLEVEL=0
+//!   negotiates them the same way the official Microsoft RDP client does.
 //! - `sspi = "0.21"` (for CredSSP/NTLM)
 //!
 //! ## Key types
@@ -15,8 +19,8 @@
 //! // TokioFramed<S> = Framed<TokioStream<S>>
 //! // Framed::new(stream: S::InnerStream) -> Self
 //! // TokioStream<S>::InnerStream = S  =>  TokioFramed::new(tcp_stream) works directly
-//! ironrdp_tokio::TokioFramed<tokio::net::TcpStream>                       // pre-TLS
-//! ironrdp_tokio::TokioFramed<tokio_rustls::client::TlsStream<TcpStream>>  // post-TLS (concrete; see UpgradedFramed)
+//! ironrdp_tokio::TokioFramed<tokio::net::TcpStream>                     // pre-TLS
+//! ironrdp_tokio::TokioFramed<tokio_openssl::SslStream<TcpStream>>       // post-TLS (concrete; see UpgradedFramed)
 //! ironrdp::connector::ClientConnector  // config: connector::Config, client_addr: SocketAddr
 //! ironrdp::connector::ConnectionResult  // returned by connect_finalize on success
 //! ```
@@ -37,11 +41,12 @@
 //! // Step 4: Extract inner TCP stream + any leftover bytes
 //! let (initial_stream, leftover_bytes) = framed.into_inner();
 //!
-//! // Step 5: TLS upgrade via tokio-rustls
+//! // Step 5: TLS upgrade via OpenSSL (see tls_upgrade).
 //! let tls_stream = tls_upgrade(initial_stream, &host).await?;
 //!
-//! // Step 6: Extract server public key
-//! let server_public_key = extract_server_public_key(&tls_stream)?;
+//! // Step 6: Extract the server certificate's public key and RFC 5929 channel
+//! // binding token (see extract_server_public_key), both bound into CredSSP.
+//! let server_cert_data = extract_server_public_key(&tls_stream)?;
 //!
 //! // Step 7: Mark as upgraded
 //! let upgraded = ironrdp_tokio::mark_as_upgraded(should_upgrade, &mut connector);
@@ -51,9 +56,10 @@
 //! let mut upgraded_framed = ironrdp_tokio::TokioFramed::new_with_leftover(tls_stream, leftover_bytes);
 //!
 //! // Step 9: Finalize connection
-//! let connection_result = ironrdp_tokio::connect_finalize(
+//! let connection_result = ironrdp_tokio::connect_finalize_with_channel_bindings(
 //!     upgraded, connector, &mut upgraded_framed, &mut NoopNetworkClient,
-//!     ServerName::new(host), server_public_key, None,
+//!     ServerName::new(host), server_cert_data.subject_public_key, None,
+//!     Some(server_cert_data.channel_binding_token),
 //! ).await?;
 //! ```
 
@@ -505,7 +511,7 @@ fn rdp_client_start_debug_payload(
             "enableCredSsp": true,
             "enableTls": false,
             "requestedProtocols": ["HYBRID", "HYBRID_EX"],
-            "legacyTlsFallbackAllowed": false,
+            "legacyTlsFallbackAllowed": true,
         },
     })
 }
@@ -525,7 +531,7 @@ impl ironrdp_tokio::NetworkClient for NoopNetworkClient {
     }
 }
 
-// ── TLS: native-tls upgrade (uses macOS Secure Transport for Windows compatibility) ──
+// ── TLS: OpenSSL upgrade (legacy Windows RDP cipher-suite compatibility) ──
 
 async fn tls_upgrade(
     stream: TcpStream,

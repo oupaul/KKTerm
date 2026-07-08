@@ -896,6 +896,172 @@
   min-width: 0;
 }
 
+.settings-url-credential-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 220px) minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  min-width: 0;
+  min-height: 46px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.settings-url-credential-row:last-child {
+  border-bottom: 0;
+}
+
+.settings-url-credential-row > strong,
+.settings-url-credential-address {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-url-credential-row > strong {
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 520;
+}
+
+.settings-url-credential-address {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.settings-url-credential-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.settings-url-credential-actions .secondary-button {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.settings-url-credential-context {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 10px 12px;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+}
+
+.settings-url-credential-context strong,
+.settings-url-credential-context span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-url-credential-context strong {
+  color: var(--text);
+  font-size: 13px;
+}
+
+.settings-url-credential-context span {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.settings-url-saved-fields {
+  display: grid;
+  max-height: 210px;
+  overflow-y: auto;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+}
+
+.settings-url-saved-field {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) minmax(160px, 1.4fr);
+  gap: 12px;
+  align-items: center;
+  min-width: 0;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.settings-url-saved-field:last-child {
+  border-bottom: 0;
+}
+
+.settings-url-saved-field > code {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-muted);
+  font-family: var(--font-mono, "SF Mono", ui-monospace, Menlo, monospace);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-url-saved-field > code > span {
+  flex: none;
+  color: var(--text-faint);
+  font-size: 10px;
+}
+
+.settings-url-saved-field-control {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  min-width: 0;
+}
+
+.settings-url-saved-field-control .kk-inp {
+  min-width: 0;
+}
+
+.settings-url-field-icon-button {
+  display: inline-flex;
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  color: var(--text-muted);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.settings-url-field-icon-button:hover:not(:disabled) {
+  color: var(--text);
+  background: var(--hover);
+}
+
+.settings-url-field-icon-button:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.settings-url-field-icon-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.settings-url-saved-field > input[type="checkbox"] {
+  justify-self: end;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+}
+
 .settings-empty-state {
   margin: 0;
   color: var(--text-muted);

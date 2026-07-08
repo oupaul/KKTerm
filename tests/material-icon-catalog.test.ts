@@ -7,6 +7,9 @@ import {
   lucideIconRefForName,
   materialIconIdFromRef,
   materialIconRefForId,
+  reiconIconNameFromRef,
+  reiconIconRefForName,
+  isReiconIconRef,
   searchMaterialIcons,
 } from "../src/lib/iconCatalog.ts";
 
@@ -16,6 +19,11 @@ test("material icon refs are explicit and reject unsafe ids", () => {
   assert.equal(isMaterialIconRef("material:folder-server"), true);
   assert.equal(isMaterialIconRef("material:../folder-server"), false);
   assert.equal(isMaterialIconRef("Folder"), false);
+  assert.equal(reiconIconRefForName("Server"), "reicon:Server");
+  assert.equal(reiconIconNameFromRef("reicon:Server"), "Server");
+  assert.equal(isReiconIconRef("reicon:Server"), true);
+  assert.equal(isReiconIconRef("reicon:../Server"), false);
+  assert.equal(isReiconIconRef("Server"), false);
   assert.equal(lucideIconRefForName("Server"), "lucide:Server");
   assert.equal(lucideIconNameFromRef("lucide:Server"), "Server");
   assert.equal(lucideIconNameFromRef("lucide:../Server"), null);

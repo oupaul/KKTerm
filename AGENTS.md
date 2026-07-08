@@ -74,9 +74,11 @@ Strong success criteria let you loop independently.
   these mappings.
 - All user-visible strings go through i18n. Add English keys first in
   `src/i18n/locales/en.json`; whenever new UI strings are created or changed,
-  follow `docs/localization_todo/README.md` exactly. If translations are not
-  completed in the same change, add one pending file per key under
-  `docs/localization_todo/` using that README's flow and template. When the
+  follow `docs/localization_todo/README.md` exactly. Add one pending file per
+  key under `docs/localization_todo/` in the same change, even if an AI session
+  adds best-effort translations to the non-English locale files. Delete that
+  file only after an intentional, verified localization pass completes every
+  supported locale using the README's flow and template. When the
   meaning of an English word shifts by context (e.g. "Play" starts media, runs
   something, or names a theatrical play — each translates differently), create a
   separate key per context instead of reusing one; reuse a key only when the

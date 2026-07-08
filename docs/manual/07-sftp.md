@@ -3,8 +3,8 @@
 ## AI grep hints
 
 - Keys: `sftp.*` (full namespace), `terminal.openSftp`, `terminal.sftp`, `compare.*` (File Compare overlay)
-- Topics: symmetric dual-pane browser, breadcrumb navigation, list/gallery view switch, per-pane view-options (hamburger) menu with item zoom + content-view background, upload, download, conflicts, cut/copy/paste, rename, delete, copy path, new folder, properties, chmod/chown, sort, collapsible transfer activity bar, file compare (select left / compare to, text/image/hex, difference heatmap), tutorial targets `sftp.toolbar`, `sftp.upload`, `sftp.download`, `sftp.terminal`, `sftp.localPane`, `sftp.remotePane`, `sftp.transferQueue`
-- Synonyms: "file transfer", "scp", "upload to server", "download from server", "remote files", "diff files", "compare files", "beyond compare", "hex compare", "image diff"
+- Topics: symmetric dual-pane browser, breadcrumb navigation, list/gallery view switch, per-pane view-options (hamburger) menu with item zoom + content-view background, upload, download, conflicts, cut/copy/paste, rename, delete, copy path, new folder, properties, chmod/chown, sort, collapsible transfer activity bar, SFTP debug log, file compare (select left / compare to, text/image/hex, difference heatmap), tutorial targets `sftp.toolbar`, `sftp.upload`, `sftp.download`, `sftp.terminal`, `sftp.localPane`, `sftp.remotePane`, `sftp.transferQueue`
+- Synonyms: "file transfer", "scp", "upload to server", "download from server", "remote files", "diff files", "compare files", "beyond compare", "hex compare", "image diff", "sftp.debug.log", "SFTP upload stuck"
 
 ## Opening an SFTP browser
 
@@ -78,6 +78,10 @@ Per-transfer controls:
 
 - Cancel: `sftp.cancelTransfer` / `sftp.cancelTransferName`, in-flight `sftp.canceling`, post-state `sftp.canceledBeforeStart` or `sftp.transferCanceled`.
 - Skip existing target: `sftp.skippedExisting`.
+
+## SFTP Debug Logging
+
+Debug builds write SFTP startup and transfer records to `sftp.debug.log` beside `kkterm.log`. Release builds write the same JSONL log only when Settings → General → Debug → `settings.advancedDebugging` is enabled. Records include SFTP browser startup stages, per-session operation waits, transfer start/completion/error summaries, upload open/write/shutdown timeouts, and whether KKTerm removed a newly-created partial remote file after a failed upload. The log omits passwords, SSH key passphrases, terminal contents, and file contents, but it may include remote hostnames, usernames, local paths, and remote paths, so users should review it before sharing.
 
 ## Conflict resolution
 

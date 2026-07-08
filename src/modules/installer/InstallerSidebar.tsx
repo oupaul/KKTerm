@@ -9,8 +9,8 @@ import {
   CircleCheck,
   CircleDashed,
   Layers,
-} from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+} from "../../lib/reicon";
+import type { LucideIcon } from "../../lib/reicon";
 import type { CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 import { INSTALLER_CATEGORY_SECTIONS } from "./sections";

@@ -39,10 +39,11 @@ Detailed rules are in `docs/ARCHITECTURE.md` §Internationalization. Summary:
 
 1. Every user-visible string must go through `t()` / `useTranslation()`. Bare English in JSX is a bug.
 2. English changes happen in `src/i18n/locales/en.json` first.
-3. Pending translations are tracked one-key-per-file under `docs/localization_todo/` (copy `_TEMPLATE.md`). Delete the corresponding file when a translation lands.
-4. Only update non-English locale files when intentionally translating; keep all 14 locale JSON files structurally aligned. `en.json` defines the canonical namespace/key order for every locale. Insert translated keys in the same relative position, run `npm run i18n:normalize` if order drifts, and always run `npm run i18n:check` during translation runs to compare every locale against `en.json` for missing, redundant, and misordered keys.
-5. Renames must update every locale file plus the matching `docs/localization_todo/` filename.
-6. Related regional locales must be translated independently. Cross-locale translation bleed is strictly forbidden even when scripts or words overlap: `zh-CN` and `zh-TW`, `es-ES` and `es-MX`, and `pt-PT` and `pt-BR` must use their own script, spelling, and regional terminology.
+3. Every new or changed English key gets a matching one-key file under `docs/localization_todo/` (copy `_TEMPLATE.md`) in the same change. Add this file even when an AI session adds best-effort translated values, because the todo file is the explicit localization review record.
+4. Delete the corresponding `docs/localization_todo/` file only after an intentional localization pass translates the key in every non-English locale, preserves placeholders, follows regional terminology rules, and verifies the result.
+5. Only update non-English locale files when intentionally translating; keep all 14 locale JSON files structurally aligned. `en.json` defines the canonical namespace/key order for every locale. Insert translated keys in the same relative position, run `npm run i18n:normalize` if order drifts, and always run `npm run i18n:check` during translation runs to compare every locale against `en.json` for missing, redundant, and misordered keys.
+6. Renames must update every locale file plus the matching `docs/localization_todo/` filename.
+7. Related regional locales must be translated independently. Cross-locale translation bleed is strictly forbidden even when scripts or words overlap: `zh-CN` and `zh-TW`, `es-ES` and `es-MX`, and `pt-PT` and `pt-BR` must use their own script, spelling, and regional terminology.
 
 ### CRITICAL — zh-TW must never contain Mainland Chinese terminology
 
@@ -98,8 +99,8 @@ Detailed rules are in `docs/ARCHITECTURE.md` §Internationalization. Summary:
 - `處理程序` (process) is the Taiwan term — do not confuse with `程序` (program, Mainland).
 - All characters must be traditional, never simplified.
 - When in doubt, consult an established Taiwan computing glossary. Do not copy from `zh-CN.json` and convert characters — the vocabulary itself differs.
-7. Prefer context-specific keys over reusing one key. When a single English word covers meanings that other languages translate differently — e.g. "Play" for start-media vs. run vs. a theatrical play — add a separate key per context and name it after the meaning, not the spelling. Reuse a key only when the meaning is identical everywhere it appears.
-8. Keep placeholders translation-safe. Use named i18next placeholders (`{{count}}`, `{{host}}`) so translators can reorder them, keep one full sentence per key (never concatenate keys or fragments around a variable), and confirm every `{{…}}` token survives unchanged in each locale. Prefer i18next plural/context features over English-shaped string assembly.
+8. Prefer context-specific keys over reusing one key. When a single English word covers meanings that other languages translate differently — e.g. "Play" for start-media vs. run vs. a theatrical play — add a separate key per context and name it after the meaning, not the spelling. Reuse a key only when the meaning is identical everywhere it appears.
+9. Keep placeholders translation-safe. Use named i18next placeholders (`{{count}}`, `{{host}}`) so translators can reorder them, keep one full sentence per key (never concatenate keys or fragments around a variable), and confirm every `{{…}}` token survives unchanged in each locale. Prefer i18next plural/context features over English-shaped string assembly.
 
 Technical terms (SSH, SFTP, RDP, VNC, tmux, ProxyJump, PowerShell, WSL, API, URL) typically stay English across languages.
 

@@ -1,4 +1,4 @@
-import { Camera } from "lucide-react";
+import { Camera } from "../../lib/reicon";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { KeyboardEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, RefObject } from "react";
 import { useTranslation } from "react-i18next";

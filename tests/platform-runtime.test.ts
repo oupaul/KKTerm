@@ -88,10 +88,10 @@ test("built-in MCP is supported on Windows, macOS, and Linux", () => {
   }
 });
 
-test("RDP is supported on Windows and macOS", () => {
-  withNavigator(WINDOWS, () => assert.equal(supportsRdp(), true));
-  withNavigator(MAC, () => assert.equal(supportsRdp(), true));
-  withNavigator(LINUX, () => assert.equal(supportsRdp(), false));
+test("RDP is supported on Windows, macOS, and Linux", () => {
+  for (const nav of [WINDOWS, MAC, LINUX]) {
+    withNavigator(nav, () => assert.equal(supportsRdp(), true));
+  }
 });
 
 test("native window controls are used only on macOS (overlay title bar)", () => {

@@ -99,8 +99,18 @@ export function RoomObjectPlanArtwork({ kind }: { kind: RoomObjectKind }) {
 }
 
 export function RoomObjectIsoArtwork({ kind }: { kind: RoomObjectKind }) {
+  // The 2.5D sprite box is bottom-anchored on the object's surface point, but
+  // the square viewBox letterboxes inside the per-kind portrait boxes; keep
+  // the artwork flush with the box bottom so bags/cabinets stand on their
+  // anchor instead of hovering above it.
   return (
-    <svg className="rm-object-art rm-object-art-iso" data-kind={kind} viewBox="0 0 100 100" aria-hidden="true">
+    <svg
+      className="rm-object-art rm-object-art-iso"
+      data-kind={kind}
+      viewBox="0 0 100 100"
+      preserveAspectRatio="xMidYMax meet"
+      aria-hidden="true"
+    >
       {kind === "aircon" ? (
         <>
           <path className="rm-art-iso-top" d="m25 20 39-12 17 12-39 13Z" />
@@ -181,9 +191,9 @@ export function RoomObjectIsoArtwork({ kind }: { kind: RoomObjectKind }) {
       ) : null}
       {kind === "kuaikuai" ? (
         <>
-          <path className="rm-art-rack-top" d="m16 78 35-16 33 15-35 17Z" />
-          <ellipse className="rm-art-aura rm-art-breathe" cx="50" cy="73" rx="26" ry="10" />
-          <g className="rm-art-float">
+          <ellipse className="rm-art-shadow" cx="50" cy="91" rx="24" ry="7" />
+          <ellipse className="rm-art-aura rm-art-breathe" cx="50" cy="88" rx="24" ry="8" />
+          <g transform="translate(0 18)">
             <path className="rm-art-bag" d="m34 22 4-3 4 3 4-3 4 3 4-3 4 3 4-3 4 3v51l-4 3-4-3-4 3-4-3-4 3-4-3-4 3-4-3Z" />
             <rect className="rm-art-bag-label" x="42" y="31" width="16" height="9" rx="2" />
             <text className="rm-art-bag-text" x="50" y="39">KK</text>

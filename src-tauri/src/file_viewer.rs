@@ -554,17 +554,17 @@ mod tests {
     use super::*;
     use std::io::Write;
 
-    fn temp_file(name: &str, bytes: &[u8]) -> std::path::PathBuf {
-        let mut path = std::env::temp_dir();
-        path.push(format!("kkterm-fileview-{}-{name}", std::process::id()));
+    fn temp_file(name: &str, bytes: &[u8]) -> (tempfile::TempDir, std::path::PathBuf) {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join(name);
         let mut file = File::create(&path).unwrap();
         file.write_all(bytes).unwrap();
-        path
+        (dir, path)
     }
 
     #[test]
     fn probe_detects_text_and_size() {
-        let path = temp_file("text.txt", b"hello\nworld\n");
+        let (_dir, path) = temp_file("text.txt", b"hello\nworld\n");
         let probe = probe(FileViewProbeRequest {
             path: path.to_string_lossy().into_owned(),
         })
@@ -579,7 +579,7 @@ mod tests {
     fn probe_detects_png_magic_and_binary() {
         let mut bytes = b"\x89PNG\r\n\x1a\n".to_vec();
         bytes.extend_from_slice(&[0, 1, 2, 3]);
-        let path = temp_file("img.png", &bytes);
+        let (_dir, path) = temp_file("img.png", &bytes);
         let probe = probe(FileViewProbeRequest {
             path: path.to_string_lossy().into_owned(),
         })
@@ -591,7 +591,7 @@ mod tests {
 
     #[test]
     fn read_text_truncates_and_tails() {
-        let path = temp_file("big.log", b"0123456789");
+        let (_dir, path) = temp_file("big.log", b"0123456789");
         let head = read_text(FileViewTextRequest {
             path: path.to_string_lossy().into_owned(),
             max_bytes: 4,
@@ -617,7 +617,7 @@ mod tests {
     #[test]
     fn read_text_decodes_named_encoding() {
         // "中文" in GBK is D6 D0 CE C4; as UTF-8 lossy this would be mojibake.
-        let path = temp_file("gbk.txt", &[0xD6, 0xD0, 0xCE, 0xC4]);
+        let (_dir, path) = temp_file("gbk.txt", &[0xD6, 0xD0, 0xCE, 0xC4]);
         let result = read_text(FileViewTextRequest {
             path: path.to_string_lossy().into_owned(),
             max_bytes: 64,
@@ -632,7 +632,7 @@ mod tests {
 
     #[test]
     fn read_text_auto_detects_and_reports_encoding() {
-        let path = temp_file("utf8.txt", "héllo".as_bytes());
+        let (_dir, path) = temp_file("utf8.txt", "héllo".as_bytes());
         let result = read_text(FileViewTextRequest {
             path: path.to_string_lossy().into_owned(),
             max_bytes: 64,
@@ -647,7 +647,7 @@ mod tests {
 
     #[test]
     fn read_bytes_chunks_with_offset() {
-        let path = temp_file("bin.dat", b"ABCDEFGH");
+        let (_dir, path) = temp_file("bin.dat", b"ABCDEFGH");
         let chunk = read_bytes(FileViewBytesRequest {
             path: path.to_string_lossy().into_owned(),
             offset: 2,
@@ -665,7 +665,7 @@ mod tests {
 
     #[test]
     fn write_text_saves_atomically_and_reports_mtime() {
-        let path = temp_file("edit.txt", b"original");
+        let (_dir, path) = temp_file("edit.txt", b"original");
         let path_str = path.to_string_lossy().into_owned();
         let result = write_text(FileViewWriteRequest {
             path: path_str.clone(),
@@ -693,7 +693,7 @@ mod tests {
 
     #[test]
     fn write_text_detects_and_can_force_conflicts() {
-        let path = temp_file("conflict.txt", b"v1");
+        let (_dir, path) = temp_file("conflict.txt", b"v1");
         let path_str = path.to_string_lossy().into_owned();
         // A stale expected mtime is treated as a conflict.
         let err = write_text(FileViewWriteRequest {

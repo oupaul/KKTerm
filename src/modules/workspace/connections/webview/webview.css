@@ -132,6 +132,11 @@
   color: var(--text-faint);
 }
 
+.webview-address-bar.is-http .webview-address-lock,
+.webview-address-bar.is-http .webview-address-input {
+  color: var(--red);
+}
+
 .webview-pane .webview-address-input {
   flex: 1 1 auto;
   min-width: 0;

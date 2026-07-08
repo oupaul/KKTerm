@@ -1,7 +1,7 @@
 import DOMPurify from "dompurify";
 import { marked } from "marked";
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
-import { Download, ExternalLink } from "lucide-react";
+import { Download, ExternalLink } from "../lib/reicon";
 import { useTranslation } from "react-i18next";
 import {
   checkForAppUpdate,

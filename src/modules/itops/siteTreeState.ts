@@ -177,6 +177,20 @@ export function saveIsoViewAngle(angle: IsoViewAngle): void {
   localStorage.setItem(ISO_ANGLE_KEY, String(angle));
 }
 
+// ── 2.5D floor colour ──
+
+/** Solid floor finishes for the 2.5D room; "default" follows the app theme,
+ *  the rest are fixed material palettes defined in itops.css. */
+export const ISO_FLOOR_COLORS = ["default", "concrete", "graphite", "green", "blue"] as const;
+
+export type IsoFloorColor = (typeof ISO_FLOOR_COLORS)[number];
+
+export function sanitizeIsoFloor(value: unknown): IsoFloorColor {
+  return (ISO_FLOOR_COLORS as readonly unknown[]).includes(value)
+    ? (value as IsoFloorColor)
+    : "default";
+}
+
 // ── Room view zoom (app-wide like the view mode, one level per spatial view) ──
 
 export const ROOM_ZOOM_LEVELS = [0.5, 0.75, 1, 1.25, 1.5, 2] as const;

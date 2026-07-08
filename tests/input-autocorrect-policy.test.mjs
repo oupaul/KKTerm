@@ -26,8 +26,17 @@ assertTechnicalProps(sshFields.match(/name="keyPath"[\s\S]*?\/>/)?.[0] ?? "", "S
 const passwordFields = read("src/modules/workspace/connections/connection-dialog/ConnectionPasswordFields.tsx");
 assertTechnicalProps(passwordFields.match(/<input[\s\S]*?type="password"[\s\S]*?\/>/)?.[0] ?? "", "connection password field");
 
-const quickConnect = read("src/modules/workspace/connections/ConnectionMenus.tsx");
-assertTechnicalProps(quickConnect.match(/autoFocus[\s\S]*?value=\{sshHost\}[\s\S]*?\/>/)?.[0] ?? "", "Quick Connect host field");
+const connectionSidebar = read("src/modules/workspace/connections/ConnectionSidebar.tsx");
+assert.match(
+  connectionSidebar,
+  /mode === "quick"[\s\S]*\{renderConnectionTypeFields\(\)\}/,
+  "Quick Connect dialog should render the shared connection type fields",
+);
+assert.match(
+  connectionSidebar.match(/case "ssh":[\s\S]*?<SshConnectionFields[\s\S]*?\/>/)?.[0] ?? "",
+  /SshConnectionFields/,
+  "Quick Connect SSH fields should reuse the shared SSH connection fields",
+);
 
 const quickCommands = read("src/modules/workspace/connections/terminal/QuickCommandBar.tsx");
 assertTechnicalProps(quickCommands.match(/id=\{commandInputId\}[\s\S]*?\/>/)?.[0] ?? "", "Quick Command command field");

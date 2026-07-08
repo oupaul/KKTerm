@@ -82,7 +82,7 @@ Plus a few things you didn't know you wanted:
 - **SSH panes that reattach to your remote `claude` / `codex` session** after every Wi-Fi tantrum, so a six-hour job survives a dropped connection.
 - **Workspaces** that keep your home lab, the day job, and that one client's servers in separate, switchable containers.
 - An **Install Helper** that finds, installs, updates, and launches the Windows dev tools you usually chase through ten browser tabs.
-- **Twenty-six animated backgrounds** for the dashboard *and your terminals* (yes, including `matrix`), because we are not above it.
+- **36 animated backgrounds** for the dashboard *and your terminals* (yes, including `matrix`), because we are not above it.
 
 And the best part: the AI assistant can turn a single sentence into a tiny dashboard tool you actually keep using.
 
@@ -220,14 +220,14 @@ Some are simple display panels (markdown, checklists, a single big stat); others
 
 #### Animated dashboard/terminal backgrounds (because we wanted to)
 
-Pick a mood — per dashboard view, *or behind any terminal* — from **twenty-six** canvas-animated backgrounds:
+Pick a mood — per dashboard view, *or behind any terminal* — from **36** canvas-animated backgrounds:
 
 | Mood | Backgrounds |
 | --- | --- |
-| Calm | `fuji`, `aurora`, `clouds`, `ocean`, `raindrops`, `rainywindow`, `frostedWindow`, `snow`, `sakura`, `fireflies`, `bubbles`, `aquarium`, `ricefield`, `lanterns` |
-| Spacey | `starfield`, `nebula` |
-| Warm | `embers`, `lava` |
-| Geeky | `matrix`, `topo`, `synthwave` |
+| Calm | `fuji`, `aurora`, `halftone`, `clouds`, `ocean`, `raindrops`, `rainywindow`, `frostedWindow`, `snow`, `sakura`, `fireflies`, `bubbles`, `aquarium`, `jellyfish`, `lighthouse`, `balloons`, `ricefield`, `lanterns` |
+| Spacey | `starfield`, `nebula`, `orbitals` |
+| Warm | `embers`, `lava`, `ink`, `dunes`, `savanna` |
+| Geeky | `matrix`, `topo`, `synthwave`, `circuit`, `crystals` |
 | Erratic | `cyberpunk`, `taipei101`, `thunderstorm`, `confetti`, `particleCursor` |
 
 The same picker backs your terminal panes too, so you can drop `matrix` behind a live SSH session. They pause when you're elsewhere, so they cost roughly nothing. Pair `matrix` with your AI assistant for a vibe that says "I am extremely productive and also possibly in a Wachowski film." Or pick `ocean` and look like a serious person. We do not judge either choice.

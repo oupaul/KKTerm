@@ -1,5 +1,5 @@
 import { type CSSProperties, useEffect, useMemo, useState } from "react";
-import { Command, Layers, Shell, SquareTerminal, Terminal, WandSparkles, type LucideIcon } from "lucide-react";
+import { Command, Layers, Shell, SquareTerminal, Terminal, WandSparkles, type LucideIcon } from "../../../../lib/reicon";
 import { useTranslation } from "react-i18next";
 import { technicalInputProps } from "../../../../lib/inputBehavior";
 import { invokeCommand, isTauriRuntime } from "../../../../lib/tauri";

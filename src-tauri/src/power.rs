@@ -412,7 +412,150 @@ mod platform {
     }
 }
 
-#[cfg(not(any(target_os = "windows", target_os = "macos")))]
+// Hold a D-Bus idle/suspend inhibitor while Don't Sleep is enabled. Primary:
+// the xdg-desktop-portal Inhibit portal (org.freedesktop.portal.Inhibit),
+// which is desktop-agnostic — GNOME and KDE both back it, it works from
+// sandboxes, and its idle flag keeps the display awake, matching the Windows
+// ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED behavior. Fallback for desktops
+// without a portal: the legacy org.freedesktop.ScreenSaver interface.
+#[cfg(target_os = "linux")]
+mod platform {
+    use std::collections::HashMap;
+    use std::sync::mpsc;
+
+    use zbus::blocking::Connection;
+    use zbus::zvariant::{OwnedObjectPath, Value};
+
+    const INHIBIT_REASON: &str = "KKTerm Don't Sleep mode is enabled.";
+    const PORTAL_DESTINATION: &str = "org.freedesktop.portal.Desktop";
+    // org.freedesktop.portal.Inhibit flags: 4 = suspend, 8 = idle.
+    const PORTAL_INHIBIT_SUSPEND_AND_IDLE: u32 = 4 | 8;
+    const SCREENSAVER_DESTINATION: &str = "org.freedesktop.ScreenSaver";
+    const SCREENSAVER_PATH: &str = "/org/freedesktop/ScreenSaver";
+
+    enum InhibitHold {
+        Portal { request_path: OwnedObjectPath },
+        ScreenSaver { cookie: u32 },
+    }
+
+    struct DontSleepGuard {
+        connection: Connection,
+        hold: InhibitHold,
+    }
+
+    impl DontSleepGuard {
+        fn acquire() -> Result<Self, String> {
+            let connection = Connection::session()
+                .map_err(|error| format!("failed to connect to the session D-Bus: {error}"))?;
+            let portal_error = match portal_inhibit(&connection) {
+                Ok(request_path) => {
+                    return Ok(Self {
+                        connection,
+                        hold: InhibitHold::Portal { request_path },
+                    });
+                }
+                Err(error) => error,
+            };
+            match screensaver_inhibit(&connection) {
+                Ok(cookie) => Ok(Self {
+                    connection,
+                    hold: InhibitHold::ScreenSaver { cookie },
+                }),
+                Err(fallback_error) => Err(format!(
+                    "failed to acquire a sleep inhibitor (portal: {portal_error}; screensaver: {fallback_error})"
+                )),
+            }
+        }
+    }
+
+    impl Drop for DontSleepGuard {
+        fn drop(&mut self) {
+            match &self.hold {
+                InhibitHold::Portal { request_path } => {
+                    let _ = self.connection.call_method(
+                        Some(PORTAL_DESTINATION),
+                        request_path.as_ref(),
+                        Some("org.freedesktop.portal.Request"),
+                        "Close",
+                        &(),
+                    );
+                }
+                InhibitHold::ScreenSaver { cookie } => {
+                    let _ = self.connection.call_method(
+                        Some(SCREENSAVER_DESTINATION),
+                        SCREENSAVER_PATH,
+                        Some(SCREENSAVER_DESTINATION),
+                        "UnInhibit",
+                        &(*cookie,),
+                    );
+                }
+            }
+        }
+    }
+
+    fn portal_inhibit(connection: &Connection) -> Result<OwnedObjectPath, String> {
+        let mut options: HashMap<&str, Value> = HashMap::new();
+        options.insert("reason", Value::from(INHIBIT_REASON));
+        let reply = connection
+            .call_method(
+                Some(PORTAL_DESTINATION),
+                "/org/freedesktop/portal/desktop",
+                Some("org.freedesktop.portal.Inhibit"),
+                "Inhibit",
+                &("", PORTAL_INHIBIT_SUSPEND_AND_IDLE, options),
+            )
+            .map_err(|error| error.to_string())?;
+        reply
+            .body()
+            .deserialize::<OwnedObjectPath>()
+            .map_err(|error| error.to_string())
+    }
+
+    fn screensaver_inhibit(connection: &Connection) -> Result<u32, String> {
+        let reply = connection
+            .call_method(
+                Some(SCREENSAVER_DESTINATION),
+                SCREENSAVER_PATH,
+                Some(SCREENSAVER_DESTINATION),
+                "Inhibit",
+                &("KKTerm", INHIBIT_REASON),
+            )
+            .map_err(|error| error.to_string())?;
+        reply
+            .body()
+            .deserialize::<u32>()
+            .map_err(|error| error.to_string())
+    }
+
+    pub fn run_dont_sleep_worker(
+        stop_rx: mpsc::Receiver<()>,
+        ready_tx: mpsc::Sender<Result<(), String>>,
+    ) -> Result<(), String> {
+        let guard = match DontSleepGuard::acquire() {
+            Ok(guard) => {
+                let _ = ready_tx.send(Ok(()));
+                guard
+            }
+            Err(error) => {
+                let _ = ready_tx.send(Err(error.clone()));
+                return Err(error);
+            }
+        };
+
+        // Hold the inhibitor until the manager asks the worker to stop; the
+        // guard releases it on drop.
+        loop {
+            match stop_rx.recv() {
+                Ok(()) | Err(mpsc::RecvError) => break,
+            }
+        }
+
+        drop(guard);
+        Ok(())
+    }
+}
+
+#[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
 mod platform {
     use std::sync::mpsc;
 
@@ -428,12 +571,28 @@ mod platform {
 
 #[cfg(test)]
 mod tests {
-    #[cfg(target_os = "macos")]
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
     use super::*;
 
     #[cfg(target_os = "macos")]
     #[test]
     fn macos_set_enabled_acquires_and_releases_assertion() {
+        let manager = DontSleepManager::new();
+
+        assert!(manager.set_enabled(true).expect("enable should succeed"));
+        assert!(manager.is_enabled());
+
+        manager.set_enabled(false).expect("disable should succeed");
+        assert!(!manager.is_enabled());
+    }
+
+    // Needs a live session D-Bus with xdg-desktop-portal (or a ScreenSaver
+    // service), so it is ignored by default; run manually on a desktop with
+    // `cargo test -- --ignored linux_set_enabled`.
+    #[cfg(target_os = "linux")]
+    #[test]
+    #[ignore = "requires a desktop session D-Bus"]
+    fn linux_set_enabled_acquires_and_releases_inhibitor() {
         let manager = DontSleepManager::new();
 
         assert!(manager.set_enabled(true).expect("enable should succeed"));

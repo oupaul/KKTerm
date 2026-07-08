@@ -1,4 +1,4 @@
-import { Play, RefreshCw } from "lucide-react";
+import { Play, RefreshCw } from "../../../../../lib/reicon";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { BuiltInWidgetBodyProps } from "../../../registry/builtInRegistry";

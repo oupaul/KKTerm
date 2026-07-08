@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, LoaderCircle } from "lucide-react";
+import { ChevronDown, ChevronRight, LoaderCircle } from "../lib/reicon";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import i18next from "../i18n/config";

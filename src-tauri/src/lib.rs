@@ -20,6 +20,7 @@ mod github_copilot;
 mod import;
 mod installer;
 mod itops;
+mod linux_env;
 mod logging;
 mod manual;
 mod mcp;
@@ -1594,7 +1595,31 @@ fn open_windows_task_manager() -> Result<(), String> {
             .map_err(|error| format!("failed to open Activity Monitor: {error}"))
     }
 
-    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
+    #[cfg(target_os = "linux")]
+    {
+        // No single activity monitor exists across desktops; launch the first
+        // installed one, GNOME first since Fedora/Ubuntu default to it.
+        const MONITORS: [&str; 6] = [
+            "gnome-system-monitor",
+            "plasma-systemmonitor",
+            "ksysguard",
+            "xfce4-taskmanager",
+            "mate-system-monitor",
+            "lxtask",
+        ];
+        for program in MONITORS {
+            match linux_env::spawn_detached_host_process(std::process::Command::new(program)) {
+                Ok(()) => return Ok(()),
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => continue,
+                Err(error) => {
+                    return Err(format!("failed to open {program}: {error}"));
+                }
+            }
+        }
+        Err("no system activity monitor application was found".to_string())
+    }
+
+    #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
     {
         Err("Opening the system activity monitor is not supported on this platform.".to_string())
     }
@@ -1847,6 +1872,18 @@ fn delete_secret(
     request: secrets::SecretReferenceRequest,
 ) -> Result<(), String> {
     secrets.delete_secret(request)
+}
+
+#[tauri::command]
+fn read_url_credential_password(
+    secrets: tauri::State<'_, secrets::Secrets>,
+    owner_id: String,
+) -> Result<Option<String>, String> {
+    let owner_id = owner_id.trim().to_string();
+    if owner_id.is_empty() {
+        return Err("URL credential owner id is required".to_string());
+    }
+    secrets.read_url_password(owner_id)
 }
 
 #[tauri::command]
@@ -2288,11 +2325,12 @@ async fn detect_ssh_remote_os(
 async fn list_remote_loopback_ports(
     app: tauri::AppHandle,
     request: sessions::TmuxConnectionRequest,
+    session_id: Option<String>,
 ) -> Result<Vec<sessions::RemoteLoopbackPort>, String> {
     run_blocking_command("SSH loopback port discovery", move || {
         let sessions = app.state::<sessions::SessionManager>();
         let secrets = app.state::<secrets::Secrets>();
-        sessions.list_remote_loopback_ports(app.clone(), &secrets, request, false)
+        sessions.list_remote_loopback_ports(app.clone(), &secrets, request, session_id, false)
     })
     .await
 }
@@ -3226,7 +3264,7 @@ fn send_vnc_ctrl_alt_delete(
     vnc_sessions.send_ctrl_alt_delete(request)
 }
 
-// ── macOS IronRDP client commands (Windows uses the native ActiveX path) ──────
+// ── macOS/Linux IronRDP client commands (Windows uses the native ActiveX path) ─
 
 #[cfg(not(target_os = "windows"))]
 #[tauri::command]
@@ -3800,6 +3838,7 @@ pub fn run() {
             store_secret,
             secret_exists,
             delete_secret,
+            read_url_credential_password,
             list_stored_credentials,
             list_connection_password_credentials,
             create_connection_password_credential,
@@ -3991,6 +4030,7 @@ pub fn run() {
             itops::commands::itops_list_racks,
             itops::commands::itops_list_server_rooms,
             itops::commands::itops_create_server_room,
+            itops::commands::itops_update_server_room,
             itops::commands::itops_delete_server_room,
             itops::commands::itops_create_rack,
             itops::commands::itops_update_rack,

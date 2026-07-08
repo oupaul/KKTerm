@@ -10,11 +10,19 @@
 // objects (roomObjects.ts) stand on the same grid at their vertical position:
 // a CRAC on the floor, a camera near the ceiling, a 乖乖 pack on a cabinet
 // top. Edit mode drags cabinets/objects across the floor, rotates facings,
-// nudges object levels, adds racks on empty tiles, and places objects with
-// the shared palette. Placement persists through the shared "grid" store.
+// nudges object levels, adds racks on empty tiles, and places racks/objects
+// armed by the shared picker column (owned by SitesTab). Placement persists
+// through the shared "grid" store.
 
-import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 import { useTranslation } from "react-i18next";
+import { showNativeContextMenu } from "../../lib/nativeContextMenu";
 import type { Rack, RackItem, RackItemStatus } from "../../types";
 import { rackFloorMetrics } from "./roomFloorPlan";
 import { RoomObjectIsoArtwork } from "./RoomObjectArtwork";
@@ -22,14 +30,21 @@ import {
   ISO_ROT_DEG,
   ISO_TILT_COS,
   ISO_TILT_DEG,
+  expandIsoFloorFrame,
   moveIsoRack,
+  rackDepthFrac,
+  rackFootprint,
   resolveIsoLayout,
   rotateCellForView,
+  rotatePointForView,
+  rotateRectForView,
   rotateFacingForView,
   sanitizeFacing,
   screenDeltaToPlane,
   viewDeltaToGrid,
   viewGridSize,
+  type CellRect,
+  type Corner,
   type Facing,
   type IsoCell,
   type IsoLayout,
@@ -37,13 +52,16 @@ import {
 } from "./roomIsoLayout";
 import {
   ROOM_CEILING_U,
-  cellSpans,
+  footprintSpans,
   nudgeZ,
+  objectCellSpan,
+  objectFootprint,
+  objectSurfaceAnchor,
   objectSpec,
   resolveDropZ,
   type RoomObject,
 } from "./roomObjects";
-import type { FreePlacementMap, RackFacingMap } from "./siteTreeState";
+import type { FreePlacementMap, IsoFloorColor, RackFacingMap } from "./siteTreeState";
 import {
   loadIsoViewAngle,
   loadRoomZoom,
@@ -54,20 +72,18 @@ import {
 import { ItIcon } from "./icons";
 import {
   OBJECT_ACCENTS,
-  ObjectGlyph,
-  RoomObjectPalette,
-  RoomZoomControl,
-  useCtrlWheelZoom,
+  RackTipContent,
+  RoomZoomRuler,
   useRoomPan,
   useRoomViewportSize,
+  useWheelZoom,
   type RoomTool,
 } from "./roomViewParts";
 
-// Floor tile size and cabinet depth, in plane px. Cabinets span the full CELL
-// along their side axis (adjacent racks touch); the front/back axis is inset
-// so aisles read between rows.
+// Floor tile size in plane px. Cabinets span the full CELL along their side
+// axis (adjacent racks touch); the depth axis tracks each rack's physical
+// depth (rackDepthFrac), front face flush on its facing borderline.
 const CELL = 58;
-const CAB = 44;
 
 // Vertical scale: one rack unit in plane px. Linear so stacking is exact —
 // an object with z = rack heightU sits flush on the cabinet top.
@@ -105,6 +121,10 @@ interface DragState {
 export function ServerRoomIsoView({
   racks,
   editMode,
+  floorColor = "default",
+  tool = null,
+  placeRackId = null,
+  onRackPlaced,
   placement,
   onPlacementChange,
   facing,
@@ -115,9 +135,17 @@ export function ServerRoomIsoView({
   onSelectRack,
   onAddRack,
   onObjectBlocked,
+  onCancelPlacement,
+  onOpenBackground,
 }: {
   racks: Rack[];
   editMode?: boolean;
+  floorColor?: IsoFloorColor;
+  /** Armed object kind from the shared picker column (SitesTab owns it). */
+  tool?: RoomTool;
+  /** A just-created rack awaiting its placement click. */
+  placeRackId?: string | null;
+  onRackPlaced?: () => void;
   placement: FreePlacementMap;
   onPlacementChange?: (next: FreePlacementMap) => void;
   facing: RackFacingMap;
@@ -129,6 +157,10 @@ export function ServerRoomIsoView({
   onAddRack?: () => void;
   /** A placement click found no free vertical span in the cell. */
   onObjectBlocked?: () => void;
+  /** Right-click while a picker card is armed disarms it. */
+  onCancelPlacement?: () => void;
+  /** Empty-space context-menu action owned by the Server Room view. */
+  onOpenBackground?: () => void;
 }) {
   const { t } = useTranslation();
   const layout = resolveIsoLayout(racks, placement);
@@ -139,10 +171,33 @@ export function ServerRoomIsoView({
   // (logical) px, so zooming out shows more floor in the same window.
   const [zoom, setZoom] = useState(() => loadRoomZoom("iso"));
   useEffect(() => saveRoomZoom("iso", zoom), [zoom]);
-  useCtrlWheelZoom(scrollRef, (dir) => setZoom((current) => stepRoomZoom(current, dir)));
+  useWheelZoom(scrollRef, (dir) => setZoom((current) => stepRoomZoom(current, dir)));
   useRoomPan(scrollRef);
-  const [tool, setTool] = useState<RoomTool>(null);
+  const armed = tool != null || placeRackId != null;
+  const placing = !!editMode && armed;
+  // Cursor-tracked placement preview: hovering a tile (or a cabinet) while a
+  // picker card is armed snaps the armed object's ghost to that grid cell.
+  const [hover, setHover] = useState<IsoCell | null>(null);
+  useEffect(() => {
+    if (!placing) setHover(null);
+  }, [placing]);
+  const setHoverCell = (cell: IsoCell) =>
+    setHover((prev) => (prev && prev.x === cell.x && prev.y === cell.y ? prev : cell));
   const [drag, setDrag] = useState<DragState | null>(null);
+  const [selectedItem, setSelectedItem] = useState<{
+    kind: "rack" | "object";
+    id: string;
+  } | null>(null);
+  useEffect(() => {
+    if (!editMode) setSelectedItem(null);
+  }, [editMode]);
+  useEffect(() => {
+    if (!selectedItem) return;
+    const exists = selectedItem.kind === "rack"
+      ? racks.some((rack) => rack.id === selectedItem.id)
+      : objects.some((object) => object.id === selectedItem.id);
+    if (!exists) setSelectedItem(null);
+  }, [objects, racks, selectedItem]);
   // Mutable drag bookkeeping: the live target must not lag behind React's
   // batched `drag` state when the pointer is released.
   const dragRef = useRef<{
@@ -159,9 +214,15 @@ export function ServerRoomIsoView({
   const suppressClickRef = useRef(false);
 
   // Interactive grid: the layout's own cells, widened to cover any object a
-  // floor-plan edit placed beyond the racks.
-  const gridCols = Math.max(layout.cols, ...objects.map((object) => object.x + 1));
-  const gridRows = Math.max(layout.rows, ...objects.map((object) => object.y + 1));
+  // floor-plan edit placed beyond the racks (including multi-cell spans).
+  const gridCols = Math.max(
+    layout.cols,
+    ...objects.map((object) => object.x + objectCellSpan(object.kind, object.rot).w),
+  );
+  const gridRows = Math.max(
+    layout.rows,
+    ...objects.map((object) => object.y + objectCellSpan(object.kind, object.rot).h),
+  );
   const grid: IsoLayout = { cols: gridCols, rows: gridRows, cells: layout.cells };
 
   // Headroom for the tallest cabinet or elevated object.
@@ -171,9 +232,9 @@ export function ServerRoomIsoView({
   }
 
   // The canvas is the projected bounding box of the interactive grid plus
-  // headroom, grown to fill the scroll viewport. The drawn floor then adds a
-  // decorative ring of cells around the interactive block until the plane's
-  // projection covers that canvas (the viewport clips the overhang).
+  // headroom, grown to fill the scroll viewport. The drawn floor then adds
+  // decorative cells beyond the room origin until the plane's projection
+  // covers that canvas (the viewport clips the overhang).
   // cols+rows fixes the projected diagonal — a view rotation only swaps them
   // — so the ring size is angle-independent.
   const contentDiag = (gridCols + gridRows) * CELL * Math.SQRT1_2;
@@ -183,16 +244,59 @@ export function ServerRoomIsoView({
     (viewport?.h ?? 0) / zoom,
   );
   const floorDiag = Math.max(viewW - 48, (viewH - Math.ceil(maxTop) - 84) / ISO_TILT_COS);
-  const ring = Math.max(0, Math.ceil(floorDiag / (CELL * Math.SQRT1_2)) - (gridCols + gridRows));
-  const ringCols = Math.ceil(ring / 2);
-  const floorCols = gridCols + ringCols;
-  const floorRows = gridRows + (ring - ringCols);
-  // Center the interactive block on the drawn floor.
-  const offX = Math.floor((floorCols - gridCols) / 2);
-  const offY = Math.floor((floorRows - gridRows) / 2);
+  const { floorCols, floorRows, offX, offY } = expandIsoFloorFrame(
+    gridCols,
+    gridRows,
+    floorDiag,
+    CELL,
+  );
   const dims = viewGridSize(floorCols, floorRows, angle);
   const toDisplay = (cell: IsoCell) =>
     rotateCellForView({ x: cell.x + offX, y: cell.y + offY }, angle, floorCols, floorRows);
+  const objectDisplayRect = (object: RoomObject): CellRect => {
+    const fp = objectFootprint(object.kind, object.rot, object.corner);
+    return rotateRectForView(
+      { x: object.x + offX + fp.x, y: object.y + offY + fp.y, w: fp.w, d: fp.d },
+      angle,
+      floorCols,
+      floorRows,
+    );
+  };
+  // An elevated billboard sprite anchored near the camera-far edge of a
+  // cabinet top rises against empty air and reads as floating, because the
+  // artwork is drawn much larger than its physical footprint. Keep the
+  // sprite's base at least this far into its cell span from the two far
+  // edges so it always visually stands on its support surface; the stored
+  // position, footprint, and collision math stay exact.
+  const PLANT_NEAR_FRAC = 0.4;
+  const plantAnchor = (
+    point: { x: number; y: number },
+    cell: IsoCell,
+    span: { w: number; h: number },
+    z: number,
+  ): { x: number; y: number } => {
+    if (z <= 0) return point;
+    const rect = rotateRectForView(
+      { x: cell.x + offX, y: cell.y + offY, w: span.w, d: span.h },
+      angle,
+      floorCols,
+      floorRows,
+    );
+    return {
+      x: Math.max(point.x, rect.x + rect.w * PLANT_NEAR_FRAC),
+      y: Math.max(point.y, rect.y + rect.d * PLANT_NEAR_FRAC),
+    };
+  };
+  const objectDisplayAnchor = (object: RoomObject): { x: number; y: number } => {
+    const anchor = objectSurfaceAnchor(object.kind, object.rot, object.corner);
+    const point = rotatePointForView(
+      { x: object.x + offX + anchor.x, y: object.y + offY + anchor.y },
+      angle,
+      floorCols,
+      floorRows,
+    );
+    return plantAnchor(point, object, objectCellSpan(object.kind, object.rot), object.z);
+  };
   const planeW = dims.cols * CELL;
   const planeH = dims.rows * CELL;
 
@@ -207,13 +311,14 @@ export function ServerRoomIsoView({
     id: string,
     origin: IsoCell,
   ) {
-    if (!editMode || tool != null) return;
+    if (!editMode || armed) return;
     // Left button only — the middle button pans the viewport (useRoomPan).
     if (event.button !== 0) return;
     if (kind === "rack" && !onPlacementChange) return;
     if (kind === "object" && !onObjectsChange) return;
     const target = event.target as HTMLElement;
     if (target.closest(".rm-iso-ctl")) return;
+    setSelectedItem({ kind, id });
     event.preventDefault();
     event.currentTarget.setPointerCapture(event.pointerId);
     dragRef.current = { kind, id, startX: event.clientX, startY: event.clientY, origin, target: origin, moved: false };
@@ -260,7 +365,17 @@ export function ServerRoomIsoView({
   function dropObject(id: string, target: IsoCell) {
     const object = objects.find((entry) => entry.id === id);
     if (!object || !onObjectsChange) return;
-    const spans = cellSpans(target, racks, layout.cells, objects, id);
+    const spans = footprintSpans(
+      target,
+      object.kind,
+      object.rot,
+      racks,
+      layout.cells,
+      objects,
+      id,
+      object.corner,
+      facing,
+    );
     const z = resolveDropZ(spans, object.kind, object.z);
     if (z == null) {
       onObjectBlocked?.();
@@ -273,7 +388,7 @@ export function ServerRoomIsoView({
 
   function placeObjectAt(cell: IsoCell) {
     if (tool == null || !onObjectsChange) return;
-    const spans = cellSpans(cell, racks, layout.cells, objects);
+    const spans = footprintSpans(cell, tool, 0, racks, layout.cells, objects, undefined, 0, facing);
     const z = resolveDropZ(spans, tool);
     if (z == null) {
       onObjectBlocked?.();
@@ -281,8 +396,17 @@ export function ServerRoomIsoView({
     }
     onObjectsChange([
       ...objects,
-      { id: crypto.randomUUID(), kind: tool, x: cell.x, y: cell.y, z, rot: 0 },
+      { id: crypto.randomUUID(), kind: tool, x: cell.x, y: cell.y, z, rot: 0, corner: 0 },
     ]);
+  }
+
+  // Drop the picker's just-created rack on a cell (swapping with an occupant).
+  function placeRackAt(cell: IsoCell) {
+    if (placeRackId == null) return;
+    if (layout.cells[placeRackId]) {
+      onPlacementChange?.(moveIsoRack(grid, placeRackId, cell));
+      onRackPlaced?.();
+    }
   }
 
   function selectRack(rack: Rack) {
@@ -290,11 +414,57 @@ export function ServerRoomIsoView({
       suppressClickRef.current = false;
       return;
     }
+    if (placeRackId != null) {
+      placeRackAt(layout.cells[rack.id]);
+      return;
+    }
     if (tool != null) {
       placeObjectAt(layout.cells[rack.id]);
       return;
     }
+    if (editMode) {
+      setSelectedItem({ kind: "rack", id: rack.id });
+      return;
+    }
     onSelectRack(rack.id);
+  }
+
+  function selectObject(id: string) {
+    if (suppressClickRef.current) {
+      suppressClickRef.current = false;
+      return;
+    }
+    if (editMode && !armed) setSelectedItem({ kind: "object", id });
+  }
+
+  function handleRoomPointerDown(event: ReactPointerEvent<HTMLDivElement>) {
+    if (!editMode || event.button !== 0) return;
+    const target = event.target as HTMLElement;
+    if (target.closest(".rm-iso-cab, .rm-iso-obj, .rm-iso-corner")) return;
+    setSelectedItem(null);
+  }
+
+  async function handleRoomContextMenu(event: ReactMouseEvent<HTMLDivElement>) {
+    if (placing) {
+      event.preventDefault();
+      setHover(null);
+      onCancelPlacement?.();
+      return;
+    }
+    if (!onOpenBackground) return;
+    const target = event.target as HTMLElement;
+    if (target.closest(".rm-iso-cab, .rm-iso-obj, .rm-iso-corner")) return;
+    event.preventDefault();
+    await showNativeContextMenu(
+      [
+        {
+          kind: "item",
+          label: t("itops.racks.changeBackground"),
+          action: onOpenBackground,
+        },
+      ],
+      { x: event.clientX, y: event.clientY },
+    );
   }
 
   function rotateRack(rack: Rack) {
@@ -311,19 +481,38 @@ export function ServerRoomIsoView({
     );
   }
 
+  // Walk a quarter-block fixture to the next cell corner (NW→NE→SE→SW).
+  function cycleCorner(object: RoomObject) {
+    onObjectsChange?.(
+      objects.map((entry) =>
+        entry.id === object.id ? { ...entry, corner: ((entry.corner + 1) % 4) as Corner } : entry,
+      ),
+    );
+  }
+
   function nudgeObject(object: RoomObject, dir: 1 | -1) {
-    const spans = cellSpans(object, racks, layout.cells, objects, object.id);
+    const spans = footprintSpans(
+      object,
+      object.kind,
+      object.rot,
+      racks,
+      layout.cells,
+      objects,
+      object.id,
+      object.corner,
+      facing,
+    );
     const z = nudgeZ(spans, object.kind, object.z, dir);
     if (z === object.z) return;
     onObjectsChange?.(objects.map((entry) => (entry.id === object.id ? { ...entry, z } : entry)));
   }
 
   // Edit-mode click targets: empty tiles add a rack (no tool) or take an
-  // armed object; cells holding only objects still get a tile while a tool is
-  // armed so a second fixture can stack in the same cell.
+  // armed rack/object; cells holding only objects still get a tile while a
+  // tool is armed so a second fixture can stack in the same cell.
   const rackCells = new Set(Object.values(layout.cells).map((cell) => `${cell.x},${cell.y}`));
   const editableTiles: IsoCell[] = [];
-  if (editMode && (onAddRack || tool != null)) {
+  if (editMode && (onAddRack || armed)) {
     for (let y = 0; y < gridRows; y += 1) {
       for (let x = 0; x < gridCols; x += 1) {
         if (!rackCells.has(`${x},${y}`)) editableTiles.push({ x, y });
@@ -333,18 +522,283 @@ export function ServerRoomIsoView({
 
   return (
     <div className="rm-iso">
-      <div className="rm-iso-topbar">
-        {editMode ? <RoomObjectPalette tool={tool} onToolChange={setTool} /> : <span />}
-        <div className="rm-iso-topctls">
-          <RoomZoomControl zoom={zoom} onZoomChange={setZoom} />
-          <div className="rm-iso-angles" role="group" aria-label={t("itops.floorPlan.viewAngleLabel")}>
+      <div className="rm-view-body">
+        {/* tabIndex: clicking the room focuses the viewport so arrow keys pan. */}
+        <div
+          className="rm-iso-scroll"
+          ref={scrollRef}
+          tabIndex={0}
+          onPointerDown={handleRoomPointerDown}
+          onContextMenu={placing || onOpenBackground ? handleRoomContextMenu : undefined}
+        >
+          <div className="rm-iso-zoom" style={{ width: viewW * zoom, height: viewH * zoom }}>
+            <div
+              className="rm-iso-viewport"
+              style={{
+                width: viewW,
+                height: viewH,
+                transform: zoom !== 1 ? `scale(${zoom})` : undefined,
+              }}
+            >
+              <div
+                className={`rm-iso-plane${placing ? " placing" : ""}`}
+                data-floor={floorColor !== "default" ? floorColor : undefined}
+                style={{
+                  width: planeW,
+                  height: planeH,
+                  backgroundSize: `${CELL}px ${CELL}px, ${CELL}px ${CELL}px, auto`,
+                  top: `calc(50% + ${Math.round(maxTop * 0.38)}px)`,
+                }}
+                onPointerLeave={placing ? () => setHover(null) : undefined}
+              >
+                {editableTiles.map((cell) => {
+                  const at = toDisplay(cell);
+                  return (
+                    <button
+                      key={`t-${cell.x}-${cell.y}`}
+                      type="button"
+                      className="rm-iso-tile"
+                      style={{ left: at.x * CELL, top: at.y * CELL, width: CELL, height: CELL }}
+                      title={
+                        placeRackId != null
+                          ? t("itops.floorPlan.pickerRack")
+                          : tool != null
+                            ? t(`itops.floorPlan.object.${tool}`)
+                            : t("itops.floorPlan.isoAddHere")
+                      }
+                      onPointerEnter={placing ? () => setHoverCell(cell) : undefined}
+                      onClick={() =>
+                        placeRackId != null
+                          ? placeRackAt(cell)
+                          : tool != null
+                            ? placeObjectAt(cell)
+                            : onAddRack?.()
+                      }
+                    >
+                      <ItIcon name="plus" size={13} />
+                    </button>
+                  );
+                })}
+                {drag ? (
+                  <div
+                    className="rm-iso-drop"
+                    style={{
+                      left: toDisplay(drag.target).x * CELL,
+                      top: toDisplay(drag.target).y * CELL,
+                      width: CELL,
+                      height: CELL,
+                    }}
+                  />
+                ) : null}
+                {racks.map((rack) => (
+                  <IsoCabinet
+                    key={rack.id}
+                    rack={rack}
+                    cell={toDisplay(layout.cells[rack.id])}
+                    facing={rotateFacingForView(sanitizeFacing(facing[rack.id]), angle)}
+                    drag={drag?.kind === "rack" && drag.id === rack.id ? drag : null}
+                    editMode={!!editMode}
+                    selected={selectedItem?.kind === "rack" && selectedItem.id === rack.id}
+                    onPointerDown={(event) => startDrag(event, "rack", rack.id, layout.cells[rack.id])}
+                    onPointerMove={moveDrag}
+                    onPointerUp={endDrag}
+                    onPointerCancel={endDrag}
+                    onHoverCell={placing ? () => setHoverCell(layout.cells[rack.id]) : undefined}
+                    onSelect={() => selectRack(rack)}
+                    onRotate={editMode && onFacingChange ? () => rotateRack(rack) : undefined}
+                    onDelete={
+                      editMode && onDeleteRack
+                        ? () => {
+                            setSelectedItem(null);
+                            onDeleteRack(rack);
+                          }
+                        : undefined
+                    }
+                  />
+                ))}
+                {objects.map((object) => (
+                  <IsoObject
+                    key={object.id}
+                    object={object}
+                    rect={objectDisplayRect(object)}
+                    anchor={objectDisplayAnchor(object)}
+                    drag={drag?.kind === "object" && drag.id === object.id ? drag : null}
+                    editMode={!!editMode}
+                    selected={selectedItem?.kind === "object" && selectedItem.id === object.id}
+                    onPointerDown={(event) =>
+                      startDrag(event, "object", object.id, { x: object.x, y: object.y })
+                    }
+                    onPointerMove={moveDrag}
+                    onPointerUp={endDrag}
+                    onPointerCancel={endDrag}
+                    onSelect={() => selectObject(object.id)}
+                    onRotate={() => rotateObject(object)}
+                    onCorner={
+                      objectSpec(object.kind).quarter ? () => cycleCorner(object) : undefined
+                    }
+                    onRaise={() => nudgeObject(object, 1)}
+                    onLower={() => nudgeObject(object, -1)}
+                    onDelete={
+                      onObjectsChange
+                        ? () => {
+                            setSelectedItem(null);
+                            onObjectsChange(objects.filter((entry) => entry.id !== object.id));
+                          }
+                        : undefined
+                    }
+                  />
+                ))}
+                {placing && hover
+                  ? (() => {
+                      // Realtime placement preview on the hovered cell: the
+                      // armed fixture's 2.5D artwork at its resolved level
+                      // over its covered cell span (red tile when the cell
+                      // has no free vertical span), or a translucent cabinet
+                      // for the pending rack at its depth, front flush.
+                      if (tool != null) {
+                        const z = resolveDropZ(
+                          footprintSpans(hover, tool, 0, racks, layout.cells, objects, undefined, 0, facing),
+                          tool,
+                        );
+                        const span = objectCellSpan(tool, 0);
+                        const tileRect = rotateRectForView(
+                          { x: hover.x + offX, y: hover.y + offY, w: span.w, d: span.h },
+                          angle,
+                          floorCols,
+                          floorRows,
+                        );
+                        const tile = {
+                          left: tileRect.x * CELL,
+                          top: tileRect.y * CELL,
+                          width: tileRect.w * CELL,
+                          height: tileRect.d * CELL,
+                        };
+                        // A fresh object drops with grid rot/corner 0. Rotate
+                        // the exact fractional footprint so quarter fixtures
+                        // keep their floor-plan corner in every view angle.
+                        const fp = objectFootprint(tool, 0, 0);
+                        const anchor = objectSurfaceAnchor(tool, 0, 0);
+                        const displayRect = rotateRectForView(
+                          { x: hover.x + offX + fp.x, y: hover.y + offY + fp.y, w: fp.w, d: fp.d },
+                          angle,
+                          floorCols,
+                          floorRows,
+                        );
+                        const displayAnchor = plantAnchor(
+                          rotatePointForView(
+                            { x: hover.x + offX + anchor.x, y: hover.y + offY + anchor.y },
+                            angle,
+                            floorCols,
+                            floorRows,
+                          ),
+                          hover,
+                          span,
+                          z ?? 0,
+                        );
+                        return (
+                          <>
+                            <div
+                              className={`rm-iso-drop${z == null ? " blocked" : ""}`}
+                              style={tile}
+                            />
+                            {z != null ? (
+                              <div
+                                className={`rm-iso-obj ghost${z === 0 ? " grounded" : ""}`}
+                                data-kind={tool}
+                                style={
+                                  {
+                                    left: displayRect.x * CELL,
+                                    top: displayRect.y * CELL,
+                                    width: displayRect.w * CELL,
+                                    height: displayRect.d * CELL,
+                                    "--obj": OBJECT_ACCENTS[tool],
+                                    "--tile": OBJECT_ACCENTS[tool],
+                                  } as React.CSSProperties
+                                }
+                              >
+                                <span
+                                  className="rm-iso-obj-model"
+                                  data-kind={tool}
+                                  style={{
+                                    left: (displayAnchor.x - displayRect.x) * CELL,
+                                    top: (displayAnchor.y - displayRect.y) * CELL,
+                                    transform: billboard(zPx(z), "-50%, -100%"),
+                                  }}
+                                >
+                                  <RoomObjectIsoArtwork kind={tool} />
+                                </span>
+                              </div>
+                            ) : null}
+                          </>
+                        );
+                      }
+                      const at = toDisplay(hover);
+                      const pending = racks.find((entry) => entry.id === placeRackId);
+                      const gh = cabHeight(pending?.heightU ?? 42);
+                      // A fresh rack lands with grid facing 0.
+                      const fp = rackFootprint(
+                        rotateFacingForView(0, angle),
+                        rackDepthFrac(pending?.depthMm ?? 1000),
+                      );
+                      const w = fp.w * CELL;
+                      const d = fp.d * CELL;
+                      return (
+                        <>
+                          <div
+                            className="rm-iso-drop"
+                            style={{ left: at.x * CELL, top: at.y * CELL, width: CELL, height: CELL }}
+                          />
+                          <div
+                            className="rm-iso-cab ghost"
+                            data-shell={
+                              pending?.shell && pending.shell !== "black"
+                                ? pending.shell
+                                : undefined
+                            }
+                            style={{
+                              left: (at.x + fp.x) * CELL,
+                              top: (at.y + fp.y) * CELL,
+                              width: w,
+                              height: d,
+                            }}
+                          >
+                            <span
+                              className="rm-iso-face rm-iso-top"
+                              style={{ transform: `translateZ(${gh}px)` }}
+                            />
+                            <span
+                              className="rm-iso-face rm-iso-front side"
+                              style={{ width: w, height: gh, top: d - gh }}
+                            />
+                            <span
+                              className="rm-iso-face rm-iso-side side"
+                              style={{ width: gh, height: d, left: w - gh }}
+                            />
+                          </div>
+                        </>
+                      );
+                    })()
+                  : null}
+              </div>
+            </div>
+          </div>
+        </div>
+        {/* Floating control column over the room's top-right corner. Floor
+            finish now belongs to Server Room Properties. */}
+        <div className="rm-iso-corner">
+          <RoomZoomRuler zoom={zoom} onZoomChange={setZoom} />
+          <div
+            className="rm-iso-angles"
+            role="group"
+            aria-label={t("itops.floorPlan.viewAngleLabel")}
+          >
             <button
               type="button"
               title={t("itops.floorPlan.rotateViewLeft")}
               aria-label={t("itops.floorPlan.rotateViewLeft")}
               onClick={() => setAngle(((angle + 3) % 4) as IsoViewAngle)}
             >
-              <ItIcon name="chevL" size={13} />
+              <ItIcon name="rotateL" size={13} />
             </button>
             <button
               type="button"
@@ -352,103 +806,8 @@ export function ServerRoomIsoView({
               aria-label={t("itops.floorPlan.rotateViewRight")}
               onClick={() => setAngle(((angle + 1) % 4) as IsoViewAngle)}
             >
-              <ItIcon name="chevR" size={13} />
+              <ItIcon name="rotateR" size={13} />
             </button>
-          </div>
-        </div>
-      </div>
-      {/* tabIndex: clicking the room focuses the viewport so arrow keys pan. */}
-      <div className="rm-iso-scroll" ref={scrollRef} tabIndex={0}>
-        <div className="rm-iso-zoom" style={{ width: viewW * zoom, height: viewH * zoom }}>
-          <div
-            className="rm-iso-viewport"
-            style={{
-              width: viewW,
-              height: viewH,
-              transform: zoom !== 1 ? `scale(${zoom})` : undefined,
-            }}
-          >
-            <div
-              className="rm-iso-plane"
-              style={{
-                width: planeW,
-                height: planeH,
-                backgroundSize: `${CELL}px ${CELL}px, ${CELL}px ${CELL}px, auto`,
-                top: `calc(50% + ${Math.round(maxTop * 0.38)}px)`,
-              }}
-            >
-              {editableTiles.map((cell) => {
-                const at = toDisplay(cell);
-                return (
-                  <button
-                    key={`t-${cell.x}-${cell.y}`}
-                    type="button"
-                    className="rm-iso-tile"
-                    style={{ left: at.x * CELL, top: at.y * CELL, width: CELL, height: CELL }}
-                    title={
-                      tool != null
-                        ? t(`itops.floorPlan.object.${tool}`)
-                        : t("itops.floorPlan.isoAddHere")
-                    }
-                    onClick={() => (tool != null ? placeObjectAt(cell) : onAddRack?.())}
-                  >
-                    <ItIcon name="plus" size={13} />
-                  </button>
-                );
-              })}
-              {drag ? (
-                <div
-                  className="rm-iso-drop"
-                  style={{
-                    left: toDisplay(drag.target).x * CELL,
-                    top: toDisplay(drag.target).y * CELL,
-                    width: CELL,
-                    height: CELL,
-                  }}
-                />
-              ) : null}
-              {racks.map((rack) => (
-                <IsoCabinet
-                  key={rack.id}
-                  rack={rack}
-                  cell={toDisplay(layout.cells[rack.id])}
-                  facing={rotateFacingForView(sanitizeFacing(facing[rack.id]), angle)}
-                  drag={drag?.kind === "rack" && drag.id === rack.id ? drag : null}
-                  editMode={!!editMode}
-                  onPointerDown={(event) => startDrag(event, "rack", rack.id, layout.cells[rack.id])}
-                  onPointerMove={moveDrag}
-                  onPointerUp={endDrag}
-                  onPointerCancel={endDrag}
-                  onSelect={() => selectRack(rack)}
-                  onRotate={editMode && onFacingChange ? () => rotateRack(rack) : undefined}
-                  onDelete={editMode && onDeleteRack ? () => onDeleteRack(rack) : undefined}
-                />
-              ))}
-              {objects.map((object) => (
-                <IsoObject
-                  key={object.id}
-                  object={object}
-                  cell={toDisplay(object)}
-                  rot={rotateFacingForView(object.rot, angle)}
-                  drag={drag?.kind === "object" && drag.id === object.id ? drag : null}
-                  editMode={!!editMode}
-                  onPointerDown={(event) =>
-                    startDrag(event, "object", object.id, { x: object.x, y: object.y })
-                  }
-                  onPointerMove={moveDrag}
-                  onPointerUp={endDrag}
-                  onPointerCancel={endDrag}
-                  onRotate={() => rotateObject(object)}
-                  onRaise={() => nudgeObject(object, 1)}
-                  onLower={() => nudgeObject(object, -1)}
-                  onDelete={
-                    onObjectsChange
-                      ? () => onObjectsChange(objects.filter((entry) => entry.id !== object.id))
-                      : undefined
-                  }
-                />
-              ))}
-            </div>
           </div>
         </div>
       </div>
@@ -498,10 +857,12 @@ function IsoCabinet({
   facing,
   drag,
   editMode,
+  selected,
   onPointerDown,
   onPointerMove,
   onPointerUp,
   onPointerCancel,
+  onHoverCell,
   onSelect,
   onRotate,
   onDelete,
@@ -513,10 +874,13 @@ function IsoCabinet({
   facing: Facing;
   drag: DragState | null;
   editMode: boolean;
+  selected: boolean;
   onPointerDown: (event: ReactPointerEvent<HTMLDivElement>) => void;
   onPointerMove: (event: ReactPointerEvent<HTMLDivElement>) => void;
   onPointerUp: (event: ReactPointerEvent<HTMLDivElement>) => void;
   onPointerCancel: (event: ReactPointerEvent<HTMLDivElement>) => void;
+  /** Armed placement hover: previews the drop on this cabinet's cell. */
+  onHoverCell?: () => void;
   onSelect: () => void;
   onRotate?: () => void;
   onDelete?: () => void;
@@ -524,13 +888,14 @@ function IsoCabinet({
   const { t } = useTranslation();
   const m = rackFloorMetrics(rack);
   const h = cabHeight(rack.heightU);
-  // Full cell along the side axis so adjacent cabinets connect; inset along
-  // the front/back axis. Facing 0/2 = front toward ±y → sides run along x.
-  const horizontal = facing === 0 || facing === 2;
-  const w = horizontal ? CELL : CAB;
-  const d = horizontal ? CAB : CELL;
-  const left = cell.x * CELL + (CELL - w) / 2;
-  const top = cell.y * CELL + (CELL - d) / 2;
+  // Full cell along the side axis so adjacent cabinets connect; the depth
+  // axis tracks the cabinet's physical depth, front face flush on the tile
+  // borderline the facing points at.
+  const fp = rackFootprint(facing, rackDepthFrac(rack.depthMm));
+  const w = fp.w * CELL;
+  const d = fp.d * CELL;
+  const left = (cell.x + fp.x) * CELL;
+  const top = (cell.y + fp.y) * CELL;
   // Which visible face (south = +y, east = +x) carries the device skin; the
   // other reads as a plain side, or as the cable rear when the front is
   // turned away from the camera.
@@ -540,7 +905,7 @@ function IsoCabinet({
 
   return (
     <div
-      className={`rm-iso-cab${drag ? " dragging" : ""}${editMode ? " editing" : ""}`}
+      className={`rm-iso-cab${drag ? " dragging" : ""}${editMode ? " editing" : ""}${selected ? " selected" : ""}`}
       data-shell={rack.shell && rack.shell !== "black" ? rack.shell : undefined}
       style={{
         left,
@@ -553,6 +918,7 @@ function IsoCabinet({
       onPointerMove={editMode ? onPointerMove : undefined}
       onPointerUp={editMode ? onPointerUp : undefined}
       onPointerCancel={editMode ? onPointerCancel : undefined}
+      onPointerEnter={onHoverCell}
     >
       <button
         type="button"
@@ -560,7 +926,14 @@ function IsoCabinet({
         title={t("itops.floorPlan.tileTitle", { name: rack.name, detail: health })}
         onClick={onSelect}
       >
-        <span className="rm-iso-face rm-iso-top" style={{ transform: `translateZ(${h}px)` }} />
+        <span className="rm-iso-face rm-iso-top" style={{ transform: `translateZ(${h}px)` }}>
+          <span
+            className="rm-iso-nameplate"
+            style={{ transform: `translate(-50%, -50%) rotate(${facing * 90}deg)` }}
+          >
+            {rack.name}
+          </span>
+        </span>
         <span
           className={`rm-iso-face rm-iso-front ${southRole}`}
           style={{ width: w, height: h, top: d - h }}
@@ -574,48 +947,10 @@ function IsoCabinet({
           {eastRole === "front" ? <IsoRackSkin rack={rack} axis="x" /> : null}
         </span>
       </button>
-      <span className="rm-iso-badge" style={{ transform: billboard(h + 6, "-50%, -100%") }}>
-        {rack.name}
-      </span>
       <span className="rm-iso-tip" style={{ transform: billboard(h + 10, "-50%, -112%") }}>
-        <span className="rm-iso-tip-name">{rack.name}</span>
-        <span className="rm-iso-tip-detail">
-          {health} · {t("itops.floorPlan.utilizationValue", { percent: Math.round(m.utilization * 100) })}
-          {m.powerW > 0
-            ? ` · ${
-                m.powerCapacityW != null
-                  ? t("itops.floorPlan.powerValue", { used: m.powerW, capacity: m.powerCapacityW })
-                  : t("itops.floorPlan.powerDrawOnly", { watts: m.powerW })
-              }`
-            : ""}
-        </span>
-        <span className="rm-iso-tip-cap">
-          {t("itops.racks.unitCount", { count: m.usedU })} /{" "}
-          {t("itops.racks.unitCount", { count: m.capacityU })} ·{" "}
-          {t("itops.racks.deviceCount", { count: m.deviceCount })}
-        </span>
-        {m.deviceCount > 0 ? (
-          <span className="rm-tile-dots">
-            <span className="rm-dot on">
-              <i />
-              {m.online}
-            </span>
-            {m.warning > 0 ? (
-              <span className="rm-dot warn">
-                <i />
-                {m.warning}
-              </span>
-            ) : null}
-            {m.offline > 0 ? (
-              <span className="rm-dot off">
-                <i />
-                {m.offline}
-              </span>
-            ) : null}
-          </span>
-        ) : null}
+        <RackTipContent rack={rack} />
       </span>
-      {editMode && (onRotate || onDelete) ? (
+      {editMode && selected && (onRotate || onDelete) ? (
         <span className="rm-iso-ctl-wrap" style={{ transform: billboard(h + 6, "40%, -170%") }}>
           <span className="rm-iso-ctl">
             {onRotate ? (
@@ -654,49 +989,55 @@ function IsoCabinet({
 
 function IsoObject({
   object,
-  cell,
-  rot,
+  rect,
+  anchor,
   drag,
   editMode,
+  selected,
   onPointerDown,
   onPointerMove,
   onPointerUp,
   onPointerCancel,
+  onSelect,
   onRotate,
+  onCorner,
   onRaise,
   onLower,
   onDelete,
 }: {
   object: RoomObject;
-  /** Display cell (already view-rotated). */
-  cell: IsoCell;
-  /** Display rotation (already view-rotated). */
-  rot: Facing;
+  /** Display footprint rectangle, already view-rotated. */
+  rect: CellRect;
+  /** Display point where the sprite touches the surface, already view-rotated. */
+  anchor: { x: number; y: number };
   drag: DragState | null;
   editMode: boolean;
+  selected: boolean;
   onPointerDown: (event: ReactPointerEvent<HTMLDivElement>) => void;
   onPointerMove: (event: ReactPointerEvent<HTMLDivElement>) => void;
   onPointerUp: (event: ReactPointerEvent<HTMLDivElement>) => void;
   onPointerCancel: (event: ReactPointerEvent<HTMLDivElement>) => void;
+  onSelect: () => void;
   onRotate: () => void;
+  /** Quarter-block fixtures only: walk to the next cell corner. */
+  onCorner?: () => void;
   onRaise: () => void;
   onLower: () => void;
   onDelete?: () => void;
 }) {
   const { t } = useTranslation();
   const spec = objectSpec(object.kind);
-  const across = rot % 2 === 1;
-  const w = Math.round((across ? spec.deep : spec.wide) * CELL);
-  const d = Math.round((across ? spec.wide : spec.deep) * CELL);
-  const left = cell.x * CELL + (CELL - w) / 2;
-  const top = cell.y * CELL + (CELL - d) / 2;
+  const w = rect.w * CELL;
+  const d = rect.d * CELL;
+  const left = rect.x * CELL;
+  const top = rect.y * CELL;
   const h = Math.max(3, zPx(spec.heightU));
   const bottom = zPx(Math.min(object.z, ROOM_CEILING_U));
   const name = t(`itops.floorPlan.object.${object.kind}`);
 
   return (
     <div
-      className={`rm-iso-obj${drag ? " dragging" : ""}${editMode ? " editing" : ""}${object.z === 0 ? " grounded" : ""}`}
+      className={`rm-iso-obj${drag ? " dragging" : ""}${editMode ? " editing" : ""}${selected ? " selected" : ""}${object.z === 0 ? " grounded" : ""}`}
       data-kind={object.kind}
       style={
         {
@@ -714,22 +1055,20 @@ function IsoObject({
       onPointerMove={editMode ? onPointerMove : undefined}
       onPointerUp={editMode ? onPointerUp : undefined}
       onPointerCancel={editMode ? onPointerCancel : undefined}
+      onClick={editMode ? onSelect : undefined}
     >
       <span
         className="rm-iso-obj-model"
         data-kind={object.kind}
-        style={{ transform: billboard(bottom, "-50%, -100%") }}
+        style={{
+          left: (anchor.x - rect.x) * CELL,
+          top: (anchor.y - rect.y) * CELL,
+          transform: billboard(bottom, "-50%, -100%"),
+        }}
       >
         <RoomObjectIsoArtwork kind={object.kind} />
       </span>
-      <span
-        className="rm-iso-obj-badge"
-        style={{ transform: billboard(bottom + h + 5, "-50%, -100%") }}
-      >
-        <ObjectGlyph kind={object.kind} size={12} />
-        {object.z > 0 ? <em>{object.z}U</em> : null}
-      </span>
-      {editMode ? (
+      {editMode && selected ? (
         <span
           className="rm-iso-ctl-wrap"
           style={{ transform: billboard(bottom + h + 5, "-50%, -240%") }}
@@ -746,6 +1085,19 @@ function IsoObject({
             >
               <ItIcon name="rerun" size={11} />
             </button>
+            {onCorner ? (
+              <button
+                type="button"
+                title={t("itops.floorPlan.cornerTitle")}
+                aria-label={t("itops.floorPlan.cornerTitle")}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onCorner();
+                }}
+              >
+                <ItIcon name="grid" size={11} />
+              </button>
+            ) : null}
             <button
               type="button"
               title={t("itops.floorPlan.raiseTitle")}

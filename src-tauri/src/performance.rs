@@ -69,16 +69,37 @@ struct TerminalReadyMeasurement {
     recorded_at_unix_seconds: u64,
 }
 
+// macOS and Linux share the sysinfo-based sampling; Windows uses hand-rolled
+// Win32 calls.
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+const SYSINFO_SOURCE: &str = if cfg!(target_os = "macos") {
+    "macos-sysinfo"
+} else {
+    "linux-sysinfo"
+};
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+const SYSINFO_SOURCE_STATELESS: &str = if cfg!(target_os = "macos") {
+    "macos-sysinfo-stateless"
+} else {
+    "linux-sysinfo-stateless"
+};
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+const SYSINFO_SOURCE_UNAVAILABLE: &str = if cfg!(target_os = "macos") {
+    "macos-sysinfo-unavailable"
+} else {
+    "linux-sysinfo-unavailable"
+};
+
 #[derive(Default)]
 struct HostUsageState {
     previous_cpu: Option<SystemCpuTimes>,
     previous_network: Option<NetworkSample>,
-    #[cfg(target_os = "macos")]
-    macos_system: Option<sysinfo::System>,
-    #[cfg(target_os = "macos")]
-    macos_networks: Option<sysinfo::Networks>,
-    #[cfg(target_os = "macos")]
-    macos_net_sampled_at: Option<Instant>,
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    sysinfo_system: Option<sysinfo::System>,
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    sysinfo_networks: Option<sysinfo::Networks>,
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    sysinfo_net_sampled_at: Option<Instant>,
 }
 
 #[derive(Default)]
@@ -86,14 +107,14 @@ struct SystemPerformanceCountersState {
     previous_cpu: Option<SystemCpuTimes>,
     previous_network: Option<NetworkSample>,
     previous_process_io: Option<ProcessIoSample>,
-    #[cfg(target_os = "macos")]
-    macos_system: Option<sysinfo::System>,
-    #[cfg(target_os = "macos")]
-    macos_networks: Option<sysinfo::Networks>,
-    #[cfg(target_os = "macos")]
-    macos_net_sampled_at: Option<Instant>,
-    #[cfg(target_os = "macos")]
-    macos_disks: Option<sysinfo::Disks>,
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    sysinfo_system: Option<sysinfo::System>,
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    sysinfo_networks: Option<sysinfo::Networks>,
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    sysinfo_net_sampled_at: Option<Instant>,
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    sysinfo_disks: Option<sysinfo::Disks>,
 }
 
 #[derive(Clone, Copy)]
@@ -270,7 +291,7 @@ fn host_usage_counters(
     )
 }
 
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "linux"))]
 fn host_usage_counters(
     state: Option<&mut HostUsageState>,
 ) -> (
@@ -280,12 +301,14 @@ fn host_usage_counters(
     &'static str,
 ) {
     let Some(state) = state else {
-        return (None, None, None, "macos-sysinfo-stateless");
+        return (None, None, None, SYSINFO_SOURCE_STATELESS);
     };
 
     // CPU usage needs a previous sample; the first call returns None.
-    let had_system = state.macos_system.is_some();
-    let system = state.macos_system.get_or_insert_with(sysinfo::System::new);
+    let had_system = state.sysinfo_system.is_some();
+    let system = state
+        .sysinfo_system
+        .get_or_insert_with(sysinfo::System::new);
     system.refresh_cpu_usage();
     system.refresh_memory();
 
@@ -304,18 +327,20 @@ fn host_usage_counters(
         }
     };
 
-    let network_transfer_rates =
-        macos_network_rates(&mut state.macos_networks, &mut state.macos_net_sampled_at);
+    let network_transfer_rates = sysinfo_network_rates(
+        &mut state.sysinfo_networks,
+        &mut state.sysinfo_net_sampled_at,
+    );
 
     (
         cpu_percent,
         ram_percent,
         network_transfer_rates,
-        "macos-sysinfo",
+        SYSINFO_SOURCE,
     )
 }
 
-#[cfg(not(any(target_os = "windows", target_os = "macos")))]
+#[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
 fn host_usage_counters(
     _state: Option<&mut HostUsageState>,
 ) -> (
@@ -327,8 +352,8 @@ fn host_usage_counters(
     (None, None, None, "unsupported-platform")
 }
 
-#[cfg(target_os = "macos")]
-fn macos_network_rates(
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+fn sysinfo_network_rates(
     networks: &mut Option<sysinfo::Networks>,
     sampled_at: &mut Option<Instant>,
 ) -> Option<NetworkTransferRates> {
@@ -504,7 +529,7 @@ fn system_performance_counters_snapshot(
     }
 }
 
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "linux"))]
 fn system_performance_counters_snapshot(
     state: Option<&mut SystemPerformanceCountersState>,
 ) -> SystemPerformanceCountersSnapshot {
@@ -520,8 +545,8 @@ fn system_performance_counters_snapshot(
     let mut system_drive = DiskSpaceCounters::default();
 
     if let Some(state) = state {
-        let had_system = state.macos_system.is_some();
-        let system = state.macos_system.get_or_insert_with(System::new);
+        let had_system = state.sysinfo_system.is_some();
+        let system = state.sysinfo_system.get_or_insert_with(System::new);
         system.refresh_cpu_usage();
         system.refresh_memory();
         system.refresh_processes(ProcessesToUpdate::All, true);
@@ -543,11 +568,13 @@ fn system_performance_counters_snapshot(
             .and_then(|pid| system.process(pid))
             .map(|process| process.memory());
 
-        network_transfer_rates =
-            macos_network_rates(&mut state.macos_networks, &mut state.macos_net_sampled_at);
+        network_transfer_rates = sysinfo_network_rates(
+            &mut state.sysinfo_networks,
+            &mut state.sysinfo_net_sampled_at,
+        );
 
         let disks = state
-            .macos_disks
+            .sysinfo_disks
             .get_or_insert_with(sysinfo::Disks::new_with_refreshed_list);
         disks.refresh(true);
         if let Some(root) = disks
@@ -596,11 +623,11 @@ fn system_performance_counters_snapshot(
         system_drive_free_bytes: system_drive.free_bytes,
         system_drive_free_percent: clamp_percent(system_drive.free_percent),
         sampled_at_unix_seconds: unix_seconds(),
-        source: "macos-sysinfo",
+        source: SYSINFO_SOURCE,
     }
 }
 
-#[cfg(not(any(target_os = "windows", target_os = "macos")))]
+#[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
 fn system_performance_counters_snapshot(
     _state: Option<&mut SystemPerformanceCountersState>,
 ) -> SystemPerformanceCountersSnapshot {
@@ -910,24 +937,24 @@ fn process_working_set_bytes() -> (Option<u64>, &'static str) {
     }
 }
 
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "linux"))]
 fn process_working_set_bytes() -> (Option<u64>, &'static str) {
     use sysinfo::{ProcessesToUpdate, System, get_current_pid};
 
     let Ok(pid) = get_current_pid() else {
-        return (None, "macos-sysinfo-unavailable");
+        return (None, SYSINFO_SOURCE_UNAVAILABLE);
     };
 
     let mut system = System::new();
     system.refresh_processes(ProcessesToUpdate::Some(&[pid]), true);
 
     match system.process(pid) {
-        Some(process) => (Some(process.memory()), "macos-sysinfo"),
-        None => (None, "macos-sysinfo-unavailable"),
+        Some(process) => (Some(process.memory()), SYSINFO_SOURCE),
+        None => (None, SYSINFO_SOURCE_UNAVAILABLE),
     }
 }
 
-#[cfg(not(any(target_os = "windows", target_os = "macos")))]
+#[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
 fn process_working_set_bytes() -> (Option<u64>, &'static str) {
     (None, "unsupported-platform")
 }
@@ -1055,32 +1082,32 @@ mod tests {
         assert_eq!(snapshot.memory_source, "windows-working-set");
     }
 
-    #[cfg(target_os = "macos")]
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
     #[test]
-    fn macos_snapshot_reports_working_set() {
+    fn sysinfo_snapshot_reports_working_set() {
         let snapshot = PerformanceMonitor::new().snapshot();
 
         assert!(snapshot.working_set_bytes.unwrap_or_default() > 0);
-        assert_eq!(snapshot.memory_source, "macos-sysinfo");
+        assert_eq!(snapshot.memory_source, SYSINFO_SOURCE);
     }
 
-    #[cfg(target_os = "macos")]
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
     #[test]
-    fn macos_host_usage_reports_source_and_ram() {
+    fn sysinfo_host_usage_reports_source_and_ram() {
         let snapshot = PerformanceMonitor::new().host_usage_snapshot();
 
-        assert_eq!(snapshot.source, "macos-sysinfo");
+        assert_eq!(snapshot.source, SYSINFO_SOURCE);
         // RAM percent does not need a previous sample, so it is available on the
         // first call even though CPU/network deltas are not.
         assert!(snapshot.ram_percent.is_some());
     }
 
-    #[cfg(target_os = "macos")]
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
     #[test]
-    fn macos_detailed_snapshot_reports_source_and_uptime() {
+    fn sysinfo_detailed_snapshot_reports_source_and_uptime() {
         let snapshot = PerformanceMonitor::new().system_performance_counters_snapshot();
 
-        assert_eq!(snapshot.source, "macos-sysinfo");
+        assert_eq!(snapshot.source, SYSINFO_SOURCE);
         assert!(snapshot.system_uptime_seconds.unwrap_or_default() > 0);
         assert!(snapshot.ram_total_bytes.unwrap_or_default() > 0);
     }

@@ -4,7 +4,7 @@
 // modal from a terminal pane or the File Explorer toolbar.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { X } from "lucide-react";
+import { X } from "../../lib/reicon";
 import { ConfirmSheet, type ConfirmTone } from "../../app/ui/dialog";
 import { useWorkspaceStore } from "../../store";
 import type {

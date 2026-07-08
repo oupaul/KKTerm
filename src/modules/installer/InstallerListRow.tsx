@@ -4,7 +4,7 @@
 // tiles use (info, or stepper while an install is in flight). Status/version
 // derivation is shared with the tile via useToolStatus.
 
-import { CircleArrowUp, CircleCheck, CircleX } from "lucide-react";
+import { CircleArrowUp, CircleCheck, CircleX } from "../../lib/reicon";
 import type { MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { isTauriRuntime, openExternalUrl } from "../../lib/tauri";

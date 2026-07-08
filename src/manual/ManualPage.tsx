@@ -1,5 +1,5 @@
 import DOMPurify from "dompurify";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft } from "../lib/reicon";
 import { marked } from "marked";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";

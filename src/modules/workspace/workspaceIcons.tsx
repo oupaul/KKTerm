@@ -1,17 +1,19 @@
-// Curated lucide icon set for Workspaces, plus a renderer with a letter-avatar
+// Curated line icon set for Workspaces, plus a renderer with a letter-avatar
 // fallback. Kept small and deliberately distinct from the larger Dashboard icon
 // catalog so the New Workspace picker stays scannable.
 
 import type { CSSProperties, ReactNode } from "react";
-import * as Icons from "lucide-react";
 import { brandIconRefToUrl } from "../../lib/brandIconUrls";
 import { materialIconRefToUrl } from "../../lib/iconCatalogUrls";
+import { getReiconIconComponent } from "../../lib/reiconCatalog";
+import type { IconComponent } from "../../lib/reicon";
 
 export const WORKSPACE_ICON_NAMES = [
   "Folder",
   "FolderOpen",
   "Server",
-  "ShelvingUnit",
+  "ServerSquare",
+  "Cabinet",
   "Terminal",
   "Command",
   "Globe",
@@ -44,7 +46,7 @@ export const WORKSPACE_ICON_NAMES = [
   "Braces",
   "Wrench",
   "Settings",
-  "Building2",
+  "Buildings2",
   "Factory",
   "Warehouse",
   "Landmark",
@@ -54,23 +56,17 @@ export const WORKSPACE_ICON_NAMES = [
 
 export type WorkspaceIconName = (typeof WORKSPACE_ICON_NAMES)[number];
 
-type LucideIcon = React.ComponentType<{ size?: number; style?: CSSProperties }>;
-
 /**
  * Whether a Workspace icon can be recolored by the foreground palette. Brand
  * and Material artwork render as `<img>` and ignore `--workspace-icon-color`;
- * Lucide glyphs and the letter-avatar fallback honor it.
+ * Reicon/Lucide fallback glyphs and the letter-avatar fallback honor it.
  */
 export function workspaceIconSupportsForegroundColor(icon?: string | null) {
   return !brandIconRefToUrl(icon) && !materialIconRefToUrl(icon);
 }
 
-function resolveIcon(name?: string | null): LucideIcon | null {
-  if (!name) {
-    return null;
-  }
-  const lookup = Icons as unknown as Record<string, LucideIcon | undefined>;
-  return lookup[name] ?? null;
+function resolveIcon(name?: string | null): IconComponent | null {
+  return getReiconIconComponent(name);
 }
 
 function iconForegroundForBackground(color?: string | null) {
@@ -85,7 +81,7 @@ function iconForegroundForBackground(color?: string | null) {
 }
 
 /**
- * Render a Workspace's icon by lucide name, falling back to a letter avatar
+ * Render a Workspace's icon by Reicon-compatible name, falling back to a letter avatar
  * (the Workspace name's first character) when no icon is set or the name is
  * unknown.
  */

@@ -59,16 +59,18 @@ the `generate_handler!` registry is annotated with 27 domain section headers
 and only the pure, command-free media/font helpers were extracted to `media.rs`.
 A full command move remains available if `lib.rs` growth ever justifies it.
 
-### 3. Test runner auto-discovers; stale guards are quarantined, not hidden
+### 3. Test runner auto-discovers; stale guards stay visible
 
 `npm run check` runs `tests/run-all.mjs`, which discovers every
 `tests/*.test.{mjs,ts}` automatically — adding a test never requires editing a
-list. The ~12 failing stale tests were triaged:
+list. The stale source-grep guards from the original runner migration were
+triaged:
 
 - Tests importing **removed modules** were deleted as obsolete.
-- The rest are listed in a single, commented `QUARANTINE` set in the runner —
-  an explicit, visible exclusion, the opposite of the old chain's silent
-  omission — pending behavioral replacement.
+- The rest were either realigned with the live source or replaced by behavioral
+  coverage. The runner still keeps a visible `QUARANTINE` set for emergencies,
+  but it is currently empty and new entries should be avoided in favor of fixing
+  the test.
 
 ### 4. ESLint gate: correctness errors, pre-existing noise as warnings
 
@@ -111,8 +113,8 @@ is an advisory hint. The real safety boundary remains mandatory user approval
 - `pub(crate)` surface widened slightly at the new seams (crate-internal only).
 - The decomposition is partial: `ai.rs` and `storage.rs` still exceed a
   2,500-line target; finishing them is follow-up work.
-- The `QUARANTINE` set still holds 9 stale source-grep guards that need
-  behavioral replacements before deletion.
+- The `QUARANTINE` mechanism remains as an explicit escape hatch, but using it
+  again would reintroduce manual follow-up work.
 
 **Neutral**
 
@@ -124,4 +126,4 @@ is an advisory hint. The real safety boundary remains mandatory user approval
 
 - If `lib.rs` keeps growing, revisit the deferred full command move (item 2).
 - When component-level frontend coverage is needed, stand up the jsdom/RTL
-  harness and retire the `QUARANTINE` guards it supersedes (items 3, 5).
+  harness so UI behavior can be tested directly (item 5).

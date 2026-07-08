@@ -1,4 +1,4 @@
-import { Edit3, Gauge, Plus } from "lucide-react";
+import { Edit3, Gauge, Plus } from "../../lib/reicon";
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent } from "react";
 import { useTranslation } from "react-i18next";
 import type { AssistantPageContext } from "../../ai/AssistantPanel";

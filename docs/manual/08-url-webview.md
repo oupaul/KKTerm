@@ -6,17 +6,17 @@
 - Topics: URL Connection, embedded WebView2, HTTP proxy, HTTPS proxy, SOCKS5 proxy, direct connection, proxy override, address bar, back/forward/reload, auto-refresh, save form data, restore form data, credential fill, password capture, external open, saved Pane layout, Shift-click link, downloads, URL Connection debug log, tutorial targets `webview.toolbar`, `webview.address`, `webview.openExternally`, `webview.autoRefresh`, `webview.savePassword`, `webview.fillCredential`, `webview.sendToAi`, `webview.surface`
 - Synonyms: "open a webpage", "embed a site", "browser tab", "internal web tool", "fill in saved password", "save form data", "restore form fields", "remember what I typed", "open link in browser", "external browser", "url.connection.debug.log", "URL debug log"
 
-> **Term:** a **URL Connection** is a Connection of kind `url` storing one http(s) URL, an optional `dataPartition` label, and a proxy routing choice. The `dataPartition` field is persisted but currently a no-op. Settings -> URL can provide the global default shard, and the add/edit Connection dialog's right-column `connections.urlOptions` can override it per URL Connection. On Windows, proxied Sessions use an internal data directory per effective proxy so WebView2 Environments with different proxy arguments can coexist; this isolation is an implementation requirement, not the user-facing `dataPartition` feature.
+> **Term:** a **URL Connection** is a Connection of kind `url` storing one http(s) URL, an optional `dataPartition` label, and a proxy routing choice. The `dataPartition` field is persisted but currently a no-op. Settings -> URL can provide the global default shard and user agent, and the add/edit Connection dialog's right-column `connections.urlOptions` can override them per URL Connection. On Windows, proxied Sessions use an internal data directory per effective proxy so WebView2 Environments with different proxy arguments can coexist; this isolation is an implementation requirement, not the user-facing `dataPartition` feature.
 
 ## Proxy routing
 
 URL Tabs that inherit defaults follow the global app proxy in Settings → Proxy (`settings.proxy`): `settings.proxyModeSystem` uses the operating system proxy, `settings.proxyModeNone` forces a direct connection, and `settings.proxyModeManual` applies an `settings.proxyHttp`, `settings.proxyHttps`, or `settings.proxySocks5` endpoint. An HTTP/HTTPS proxy carries both HTTP and HTTPS destination traffic. Proxy authentication and bypass/PAC rules are not supported by Tauri's per-WebView proxy API.
 
-Each URL Connection can use `connections.inheritSettingsDefaults` (follow the global app proxy), force `settings.urlProxyDirect`, or persist its own HTTP/SOCKS5 endpoint that wins over the global value. The same right-column options group controls the URL data shard: inheriting uses the Settings -> URL default, while turning inheritance off stores a per-Connection value. The effective proxy and data shard are fixed when the URL Session opens; close and reopen an existing Tab after changing proxy or shard settings. Windows applies the endpoint to WebView2 and isolates WebView2 user data by effective proxy, Linux applies it to WebKitGTK, and macOS applies it to WKWebView through Network.framework. macOS requires version 14 or later for per-WebView proxy support.
+Each URL Connection can use `connections.inheritSettingsDefaults` (follow the global app proxy), force `settings.urlProxyDirect`, or persist its own HTTP/SOCKS5 endpoint that wins over the global value. The same right-column options group controls the URL data shard: inheriting uses the Settings -> URL default, while turning inheritance off stores a per-Connection value. The effective proxy, data shard, and user agent are fixed when the URL Session opens; close and reopen an existing Tab after changing proxy or shard settings. Windows applies the endpoint to WebView2 and isolates WebView2 user data by effective proxy, Linux applies it to WebKitGTK, and macOS applies it to WKWebView through Network.framework. macOS requires version 14 or later for per-WebView proxy support.
 
 When Settings -> URL enables `settings.ignoreCertificateErrors`, newly opened URL Sessions accept invalid HTTPS server certificates, including self-signed certificates. Windows handles this through WebView2's certificate error callback; macOS marks the WKWebView and answers its server-trust authentication challenge with a trust credential. WKWebView does not expose Safari's manual "continue to this website" certificate-warning page to embedded apps, so this delegate challenge path is the macOS equivalent. Keep this scoped to URL Sessions that opt into the setting; do not make the main app WebView trust invalid certificates globally.
 
-On macOS, when certificate validation remains enabled and WKWebView rejects an invalid HTTPS certificate, the URL Session emits a `webview.invalidCertificateWarning` warning through the Status Bar popup. The warning directs the user to Settings -> URL if they choose to disable certificate validation for newly opened URL Sessions.
+On macOS, when certificate validation remains enabled and WKWebView rejects an invalid HTTPS certificate, the URL Session emits a `webview.invalidCertificateWarning` warning through the Status Bar popup, including for the first URL Session opened in an app run. The backend installs the server-trust and provisional/final navigation-failure callbacks on Wry's navigation delegate, then detaches and reattaches that retained delegate so WebKit recognizes the runtime-added callbacks on the first WKWebView. The warning still appears when WebKit leaves the URL Pane blank and directs the user to Settings -> URL if they choose to disable certificate validation for newly opened URL Sessions.
 
 ## Surface
 
@@ -38,7 +38,7 @@ The URL Pane chrome follows the File Explorer (SFTP) Apple-esque design language
 - Back: `webview.goBack` (`webview.back`)
 - Forward: `webview.goForward` (`webview.forward`)
 - Reload: `webview.reload`
-- Address bar: `webview.address`, placeholder `webview.urlPlaceholder`. The bar accepts hosts without a scheme; the backend assumes `https://` when no scheme is present. A leading lock/globe glyph reflects whether the current address is `https://` (secure) or not.
+- Address bar: `webview.address`, placeholder `webview.urlPlaceholder`. The bar accepts hosts without a scheme; the backend assumes `https://` when no scheme is present. A leading glyph reflects the current transport state: HTTPS uses a lock, plain HTTP uses a red unlocked glyph and address text, and non-http(s) drafts use the neutral globe.
 - The address bar disables OS autocorrect, autocapitalization, and spellcheck in the KKTerm WebView on Windows and macOS so URLs and hostnames are not rewritten while typing. Keyboard/IME suggestions outside the WebView may still appear.
 - Auto-refresh: `webview.autoRefresh` / `webview.autoRefreshOff`. Interval label `webview.autoRefreshSeconds`.
 - Open externally: toolbar button `webview.openExternally` (opens the current URL in the OS default browser).
@@ -87,11 +87,20 @@ The automatic post-load restore is conservative: it only fills fields that are s
 empty and leaves checkbox/radio/`select` state untouched so it never clobbers what a
 page (or the user) has already set.
 
-The primary password is the only saved value kept in the OS keychain; each saved
-page step uses its own secret owner so password pages do not overwrite username
-pages. All other field values are stored alongside the URL Connection in SQLite
-and are never secrets.
-Manage saved entries from Settings → Credentials ([15-settings.md](15-settings.md)).
+The primary password is the only captured value kept in the selected secret
+store; each saved page step uses its own secret owner so password pages do not
+overwrite username pages. All other field values are stored alongside the URL
+Connection in SQLite and are never secrets.
+Manage saved entries from either Settings → URL or Settings → Credentials
+([15-settings.md](15-settings.md)). Both surfaces show the same single-row record
+controls. Edit opens a compact dialog where each captured field is labelled by
+its exact selector and matching-element occurrence. The primary password is
+masked and can be revealed with its eye control. Other captured values are
+visible by default; their lock control persists a masked presentation for the
+next editor opening, and a masked value has a separate eye control for temporary
+reveal. This mask flag is presentation metadata only: non-password values remain
+in SQLite and are not moved into the credential backend. Delete removes both the
+page metadata and its secret-store password.
 
 ## Downloads
 

@@ -82,7 +82,7 @@
 - **能自动 attach 回远程 `claude` / `codex` session 的 SSH pane**，这样每次 Wi-Fi 闹脾气，你那个跑了六小时的任务也不会阵亡。
 - **工作区（Workspaces）**，把你的 homelab、正职工作、还有那个客户的服务器分别关在可以一键切换的独立容器里。
 - 一个 **Install Helper**，帮你找到、安装、更新并启动那些平常得翻十个浏览器标签页才找得到的 Windows 开发工具。
-- Dashboard *和你的终端*用的**二十六种 canvas 动画背景**（对，包括 `matrix`），因为我们也没在客气。
+- Dashboard *和你的终端*用的**36 种 canvas 动画背景**（对，包括 `matrix`），因为我们也没在客气。
 
 而最棒的部分：AI 助理可以把一句话变成一个你真的会继续使用的小型 Dashboard 工具。
 
@@ -220,14 +220,14 @@ Dashboard 是一个可拖拽、可缩放的 widget 网格。它不是给你做 P
 
 #### Dashboard／终端动画背景（因为我们就是想要）
 
-可以挑一种心情 — 给每个 Dashboard view，*或是放在任何终端后面* — 从**二十六种** canvas 动画背景里选：
+可以挑一种心情 — 给每个 Dashboard view，*或是放在任何终端后面* — 从 **36 种** canvas 动画背景里选：
 
 | 心情 | 背景 |
 | --- | --- |
-| 平静 | `aurora`、`clouds`、`ocean`、`raindrops`、`rainywindow`、`frostedWindow`、`snow`、`sakura`、`fireflies`、`bubbles`、`aquarium`、`ricefield`、`lanterns` |
-| 太空 | `starfield`、`nebula` |
-| 温暖 | `embers`、`lava` |
-| 极客 | `matrix`、`topo`、`synthwave` |
+| 平静 | `fuji`、`aurora`、`halftone`、`clouds`、`ocean`、`raindrops`、`rainywindow`、`frostedWindow`、`snow`、`sakura`、`fireflies`、`bubbles`、`aquarium`、`jellyfish`、`lighthouse`、`balloons`、`ricefield`、`lanterns` |
+| 太空 | `starfield`、`nebula`、`orbitals` |
+| 温暖 | `embers`、`lava`、`ink`、`dunes`、`savanna` |
+| 极客 | `matrix`、`topo`、`synthwave`、`circuit`、`crystals` |
 | 躁动 | `cyberpunk`、`taipei101`、`thunderstorm`、`confetti`、`particleCursor` |
 
 同一个选择器也支持你的终端 pane，所以你可以把 `matrix` 放在一个正在跑的 SSH session 后面。你切走的时候它们会暂停，所以几乎不耗资源。把 `matrix` 配上你的 AI 助理，气氛瞬间变成「我极度有生产力，而且大概人在沃卓斯基的电影里」。或者选 `ocean`，看起来像个正经人。两种选择我们都不评判。

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Maximize2, RotateCw, Scan, ZoomIn, ZoomOut } from "lucide-react";
+import { Maximize2, RotateCw, Scan, ZoomIn, ZoomOut } from "../../../../../lib/reicon";
 import type { DashboardBackground } from "../../../../dashboard/types";
 import { FileViewerBackgroundLayer } from "../FileViewerBackgroundLayer";
 import { fileExtension } from "../fileViewerModel";
