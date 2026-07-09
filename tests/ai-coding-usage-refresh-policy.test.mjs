@@ -94,7 +94,7 @@ test("AI coding usage background refresh only treats connected stale providers a
     lastRefreshAt: new Date(nowMs - 60 * 1000).toISOString(),
   });
   const exactlyFiveMinutes = connectedProvider({
-    provider: "claudeCode",
+    provider: "codex",
     lastRefreshAt: new Date(nowMs - AI_CODING_USAGE_REFRESH_INTERVAL_MS).toISOString(),
   });
   const stale = connectedProvider({
@@ -108,5 +108,38 @@ test("AI coding usage background refresh only treats connected stale providers a
       nowMs,
     ).map((provider) => provider.lastRefreshAt),
     [stale.lastRefreshAt],
+  );
+});
+
+test("AI coding usage background refresh uses the longer Claude Code interval", async () => {
+  const {
+    AI_CODING_USAGE_REFRESH_INTERVAL_MS,
+    CLAUDE_USAGE_REFRESH_INTERVAL_MS,
+    providersDueForAiCodingUsageBackgroundRefresh,
+  } = await loadRefreshPolicyModule();
+  assert.ok(CLAUDE_USAGE_REFRESH_INTERVAL_MS > AI_CODING_USAGE_REFRESH_INTERVAL_MS);
+  const nowMs = Date.parse("2026-05-20T01:00:00.000Z");
+  const claudeWithinInterval = connectedProvider({
+    provider: "claudeCode",
+    lastRefreshAt: new Date(nowMs - CLAUDE_USAGE_REFRESH_INTERVAL_MS).toISOString(),
+  });
+  const claudeStale = connectedProvider({
+    provider: "claudeCode",
+    lastRefreshAt: new Date(nowMs - CLAUDE_USAGE_REFRESH_INTERVAL_MS - 1).toISOString(),
+  });
+  const codexSameAge = connectedProvider({
+    provider: "codex",
+    lastRefreshAt: claudeWithinInterval.lastRefreshAt,
+  });
+
+  assert.deepEqual(
+    providersDueForAiCodingUsageBackgroundRefresh(
+      [claudeWithinInterval, claudeStale, codexSameAge],
+      nowMs,
+    ).map((provider) => [provider.provider, provider.lastRefreshAt]),
+    [
+      ["claudeCode", claudeStale.lastRefreshAt],
+      ["codex", codexSameAge.lastRefreshAt],
+    ],
   );
 });
