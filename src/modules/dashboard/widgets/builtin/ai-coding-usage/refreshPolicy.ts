@@ -1,6 +1,10 @@
 import type { AiCodingUsageProviderState } from "./types";
 
 export const AI_CODING_USAGE_REFRESH_INTERVAL_MS = 5 * 60 * 1000;
+// The Claude usage endpoint rate-limits aggressively and does not recover
+// quickly once tripped, so background polling stays well below the reported
+// safe cadence. Manual refresh is still allowed outside 429 cooldowns.
+export const CLAUDE_USAGE_REFRESH_INTERVAL_MS = 15 * 60 * 1000;
 export const CLAUDE_USAGE_RATE_LIMIT_COOLDOWN_MS = 30 * 60 * 1000;
 
 export function providersDueForAiCodingUsageRefresh(
@@ -51,7 +55,7 @@ export function nextAiCodingUsageRefreshAt(
 function claudeUsageRateLimitCooldownMs(message?: string | null) {
   const retryAfterSeconds = retryAfterSecondsFromError(message);
   if (retryAfterSeconds !== null && retryAfterSeconds > 0) {
-    return Math.max(retryAfterSeconds * 1000, AI_CODING_USAGE_REFRESH_INTERVAL_MS);
+    return Math.max(retryAfterSeconds * 1000, CLAUDE_USAGE_REFRESH_INTERVAL_MS);
   }
   return CLAUDE_USAGE_RATE_LIMIT_COOLDOWN_MS;
 }
@@ -76,8 +80,14 @@ function isAiCodingUsageRefreshStale(
   const lastRefreshMs = parseTimestampMs(provider.lastRefreshAt);
   return (
     lastRefreshMs === null ||
-    nowMs - lastRefreshMs > AI_CODING_USAGE_REFRESH_INTERVAL_MS
+    nowMs - lastRefreshMs > aiCodingUsageRefreshIntervalMs(provider)
   );
+}
+
+function aiCodingUsageRefreshIntervalMs(provider: AiCodingUsageProviderState) {
+  return provider.provider === "claudeCode"
+    ? CLAUDE_USAGE_REFRESH_INTERVAL_MS
+    : AI_CODING_USAGE_REFRESH_INTERVAL_MS;
 }
 
 function parseTimestampMs(value?: string | null) {
