@@ -55,6 +55,7 @@ test("Site tree state persists width, collapse state, and clamps like a panel", 
 
 test("Site tree add menu opens distinct Site, Server Room, and Rack dialogs", async () => {
   const sites = await read("src/modules/itops/SitesTab.tsx");
+  const css = await read("src/modules/itops/itops.css");
   const siteDialog = await read("src/modules/itops/SiteDialog.tsx");
   const rackDialog = await read("src/modules/itops/RackDialog.tsx");
   const serverRoomDialog = await read("src/modules/itops/ServerRoomDialog.tsx");
@@ -68,6 +69,9 @@ test("Site tree add menu opens distinct Site, Server Room, and Rack dialogs", as
   assert.match(sites, /className="icon-button"[\s\S]*aria-label=\{t\("itops\.racks\.addNode"\)\}/);
   assert.match(sites, /ft-head-title[\s\S]*itops\.sites\.heading[\s\S]*connections\.collapseAll[\s\S]*connections\.expandAll/);
   assert.doesNotMatch(sites, /<span className="ft-head-title">\{t\("itops\.sites\.heading"\)\}<\/span>[\s\S]{0,120}ft-add-wrap/);
+  assert.match(css, /\.itops-page \.it-side-head \{[\s\S]*overflow:\s*visible;/);
+  assert.match(css, /\.itops-page \.ft-add-wrap \{[\s\S]*z-index:\s*45;/);
+  assert.match(css, /\.itops-page \.ft-add-menu \{[\s\S]*position:\s*absolute;/);
   assert.match(sites, /customIcon=\{site\}/);
   assert.match(sites, /customIcon=\{site\.roomIcons\?\.\[room\.key\]\}/);
   assert.match(sites, /<ConnectionIcon\b/);

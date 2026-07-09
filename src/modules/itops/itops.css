@@ -118,6 +118,7 @@
   min-height: 44px;
   border-bottom: 1px solid var(--hairline);
   flex: 0 0 auto;
+  overflow: visible;
 }
 .itops-page .it-side-head .it-head-txt {
   flex: 1 1 auto;
@@ -3156,6 +3157,7 @@
 .itops-page .ft-add-wrap {
   position: relative;
   flex: 0 0 auto;
+  z-index: 45;
 }
 .itops-page .ft-add-backdrop {
   position: fixed;
