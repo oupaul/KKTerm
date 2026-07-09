@@ -1306,11 +1306,23 @@ type CommandMap = {
     result: Automation[];
   };
   itops_create_automation: {
-    args: { name: string; config: WatchdogConfig; actions: AutomationAction[]; enabled: boolean };
+    args: {
+      name: string;
+      config: WatchdogConfig;
+      actions: AutomationAction[];
+      enabled: boolean;
+      siteId: string | null;
+    };
     result: Automation;
   };
   itops_update_automation: {
-    args: { id: string; name: string; config: WatchdogConfig; actions: AutomationAction[] };
+    args: {
+      id: string;
+      name: string;
+      config: WatchdogConfig;
+      actions: AutomationAction[];
+      siteId: string | null;
+    };
     result: Automation;
   };
   itops_set_automation_enabled: {

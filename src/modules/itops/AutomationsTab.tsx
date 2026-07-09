@@ -104,14 +104,19 @@ const ACTION_COLOR: Record<AutomationAction["kind"], string> = {
   runBatch: IT_ACCENTS.orange,
 };
 
-// An Automation is bound to a Site when a runBatch action targets it, or when
-// its host-addressed trigger (ping / TCP reachable) watches one of the Site's
-// resolved member hosts. Metric/session/schedule triggers carry no host.
+// An Automation is bound to a Site by its durable siteId. Legacy rows saved
+// before that column exist with no binding; for those only, fall back to
+// inference — a runBatch action targeting the Site, or a host-addressed
+// trigger (ping / TCP reachable) watching one of the Site's resolved member
+// hosts. Metric/session/schedule triggers carry no host.
 function automationBoundToSite(
   automation: Automation,
   siteId: string,
   siteHosts: ReadonlySet<string>,
 ): boolean {
+  if (automation.siteId != null) {
+    return automation.siteId === siteId;
+  }
   if (
     automation.actions.some((action) => action.kind === "runBatch" && action.siteId === siteId)
   ) {
@@ -185,7 +190,11 @@ export function AutomationsTab({
 
   const editorOverlay =
     editor !== undefined ? (
-      <AutomationEditor automation={editor} onClose={() => setEditor(undefined)} />
+      <AutomationEditor
+        automation={editor}
+        defaultSiteId={siteId}
+        onClose={() => setEditor(undefined)}
+      />
     ) : null;
 
   if (loaded && automations.length === 0) {

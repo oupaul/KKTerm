@@ -26,6 +26,10 @@ pub struct Automation {
     /// Ordered IT Ops actions run on each trigger fire by the action executor.
     #[serde(default)]
     pub actions: Vec<AutomationAction>,
+    /// Optional durable Site binding (soft reference): which Site's
+    /// Automations segment lists this rule. `None` = unbound (legacy rows).
+    #[serde(default)]
+    pub site_id: Option<String>,
 }
 
 /// How a `Notify` action surfaces.

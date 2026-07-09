@@ -12,7 +12,7 @@ use std::{
 use time::{OffsetDateTime, format_description::well_known::Rfc3339};
 use zip::{ZipArchive, ZipWriter, write::SimpleFileOptions};
 
-const SCHEMA_USER_VERSION: i32 = 42;
+const SCHEMA_USER_VERSION: i32 = 43;
 
 const DEFAULT_TERMINAL_OPACITY: u8 = 50;
 
@@ -353,6 +353,9 @@ CREATE TABLE IF NOT EXISTS itops_automations (
     config_json  TEXT NOT NULL,
     -- Ordered IT Ops action catalog run on each trigger fire (Phase 4). v32.
     actions_json TEXT NOT NULL DEFAULT '[]',
+    -- Optional durable Site binding (soft reference, like itops_run_history's
+    -- site_id): which Site's Automations segment lists this rule. v43.
+    site_id      TEXT,
     created_at   TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at   TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -2037,6 +2040,8 @@ impl Storage {
             "actions_json",
             "TEXT NOT NULL DEFAULT '[]'",
         )?;
+        // v43: Automations gain an optional durable Site binding.
+        ensure_column(&connection, "itops_automations", "site_id", "TEXT")?;
         // Rack View topology is Site → Server Room → Rack, plus a cabinet shell
         // colour. Legacy region/datacenter/area columns are retired in place.
         ensure_column(

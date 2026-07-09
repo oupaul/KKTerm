@@ -62,13 +62,21 @@ fn parse_actions(raw: &str) -> Vec<AutomationAction> {
     serde_json::from_str(raw).unwrap_or_default()
 }
 
-type AutomationRow = (String, String, i64, i64, String, String);
+/// Normalize a Site binding: a blank id means "unbound" and stores as NULL.
+fn normalize_site_id(site_id: Option<&str>) -> Option<String> {
+    site_id
+        .map(str::trim)
+        .filter(|trimmed| !trimmed.is_empty())
+        .map(str::to_string)
+}
+
+type AutomationRow = (String, String, i64, i64, String, String, Option<String>);
 
 const SELECT_COLUMNS: &str =
-    "id, name, sort_order, enabled, config_json, actions_json FROM itops_automations";
+    "id, name, sort_order, enabled, config_json, actions_json, site_id FROM itops_automations";
 
 fn row_to_automation(row: AutomationRow) -> Result<Automation> {
-    let (id, name, sort_order, enabled, config_json, actions_json) = row;
+    let (id, name, sort_order, enabled, config_json, actions_json, site_id) = row;
     Ok(Automation {
         id,
         name,
@@ -76,6 +84,7 @@ fn row_to_automation(row: AutomationRow) -> Result<Automation> {
         enabled: enabled != 0,
         config: parse_config(&config_json)?,
         actions: parse_actions(&actions_json),
+        site_id,
     })
 }
 
@@ -87,6 +96,7 @@ fn read_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<AutomationRow> {
         row.get::<_, i64>(3)?,
         row.get::<_, String>(4)?,
         row.get::<_, String>(5)?,
+        row.get::<_, Option<String>>(6)?,
     ))
 }
 
@@ -116,8 +126,10 @@ pub fn create_automation(
     config: &WatchdogConfig,
     actions: &[AutomationAction],
     enabled: bool,
+    site_id: Option<&str>,
 ) -> Result<Automation> {
     let name = validate_name(name)?;
+    let site_id = normalize_site_id(site_id);
     let next_sort: i64 = conn.query_row(
         "SELECT COALESCE(MAX(sort_order), -1) + 1 FROM itops_automations",
         [],
@@ -126,9 +138,9 @@ pub fn create_automation(
     let config_json = config_to_json(config)?;
     let actions_json = actions_to_json(actions)?;
     conn.execute(
-        "INSERT INTO itops_automations (id, name, sort_order, enabled, config_json, actions_json)
-         VALUES (?, ?, ?, ?, ?, ?)",
-        params![id, name, next_sort, i64::from(enabled), config_json, actions_json],
+        "INSERT INTO itops_automations (id, name, sort_order, enabled, config_json, actions_json, site_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?)",
+        params![id, name, next_sort, i64::from(enabled), config_json, actions_json, site_id],
     )?;
     Ok(Automation {
         id: id.to_string(),
@@ -137,6 +149,7 @@ pub fn create_automation(
         enabled,
         config: config.clone(),
         actions: actions.to_vec(),
+        site_id,
     })
 }
 
@@ -146,16 +159,18 @@ pub fn update_automation(
     name: &str,
     config: &WatchdogConfig,
     actions: &[AutomationAction],
+    site_id: Option<&str>,
 ) -> Result<Automation> {
     let name = validate_name(name)?;
+    let site_id = normalize_site_id(site_id);
     let existing = get_automation(conn, id)?.ok_or(AutomationStorageError::NotFound)?;
     let config_json = config_to_json(config)?;
     let actions_json = actions_to_json(actions)?;
     conn.execute(
         "UPDATE itops_automations
-         SET name = ?, config_json = ?, actions_json = ?, updated_at = CURRENT_TIMESTAMP
+         SET name = ?, config_json = ?, actions_json = ?, site_id = ?, updated_at = CURRENT_TIMESTAMP
          WHERE id = ?",
-        params![name, config_json, actions_json, id],
+        params![name, config_json, actions_json, site_id, id],
     )?;
     Ok(Automation {
         id: id.to_string(),
@@ -164,6 +179,7 @@ pub fn update_automation(
         enabled: existing.enabled,
         config: config.clone(),
         actions: actions.to_vec(),
+        site_id,
     })
 }
 
@@ -209,6 +225,7 @@ mod tests {
                 enabled INTEGER NOT NULL DEFAULT 1,
                 config_json TEXT NOT NULL,
                 actions_json TEXT NOT NULL DEFAULT '[]',
+                site_id TEXT,
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
@@ -248,17 +265,20 @@ mod tests {
             &sample_config("Disk > 85%", 85.0),
             &actions,
             true,
+            Some("site-1"),
         )
         .unwrap();
         assert_eq!(created.name, "Disk > 85%"); // trimmed
         assert_eq!(created.sort_order, 0);
         assert!(created.enabled);
         assert_eq!(created.actions.len(), 1);
+        assert_eq!(created.site_id.as_deref(), Some("site-1"));
 
         let listed = list_automations(&conn).unwrap();
         assert_eq!(listed.len(), 1);
         assert_eq!(listed[0].config.poll_ms, 60_000);
         assert_eq!(listed[0].actions.len(), 1);
+        assert_eq!(listed[0].site_id.as_deref(), Some("site-1"));
 
         let updated = update_automation(
             &conn,
@@ -266,12 +286,14 @@ mod tests {
             "Disk > 90%",
             &sample_config("Disk > 90%", 90.0),
             &[],
+            Some("  "), // blank binding clears to NULL
         )
         .unwrap();
         assert!(updated.actions.is_empty()); // actions replaced
         assert_eq!(updated.name, "Disk > 90%");
         assert_eq!(updated.sort_order, 0); // preserved
         assert!(updated.enabled); // preserved
+        assert_eq!(updated.site_id, None); // blank binding cleared
 
         let disabled = set_automation_enabled(&conn, "a-1", false).unwrap();
         assert!(!disabled.enabled);
@@ -288,7 +310,7 @@ mod tests {
     fn empty_name_is_rejected() {
         let conn = open_test_db();
         assert!(matches!(
-            create_automation(&conn, "a-x", "  ", &sample_config("x", 1.0), &[], true),
+            create_automation(&conn, "a-x", "  ", &sample_config("x", 1.0), &[], true, None),
             Err(AutomationStorageError::Validation(_))
         ));
     }
@@ -296,9 +318,11 @@ mod tests {
     #[test]
     fn config_survives_roundtrip() {
         let conn = open_test_db();
-        create_automation(&conn, "a-2", "CPU", &sample_config("CPU", 90.0), &[], false).unwrap();
+        create_automation(&conn, "a-2", "CPU", &sample_config("CPU", 90.0), &[], false, None)
+            .unwrap();
         let loaded = &list_automations(&conn).unwrap()[0];
         assert!(!loaded.enabled);
+        assert_eq!(loaded.site_id, None);
         assert!(matches!(
             loaded.config.target,
             WatchdogTarget::PerformanceCounter {

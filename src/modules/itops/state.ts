@@ -291,12 +291,14 @@ interface ItOpsState {
     config: WatchdogConfig,
     actions: AutomationAction[],
     enabled: boolean,
+    siteId: string | null,
   ) => Promise<Automation>;
   updateAutomation: (
     id: string,
     name: string,
     config: WatchdogConfig,
     actions: AutomationAction[],
+    siteId: string | null,
   ) => Promise<Automation>;
   setAutomationEnabled: (id: string, enabled: boolean) => Promise<void>;
   removeAutomation: (id: string) => Promise<void>;
@@ -599,19 +601,26 @@ export const useItOpsStore = create<ItOpsState>((set, get) => ({
     set({ automations, automationsLoaded: true });
   },
 
-  async createAutomation(name, config, actions, enabled) {
+  async createAutomation(name, config, actions, enabled, siteId) {
     const created = await invokeCommand("itops_create_automation", {
       name,
       config,
       actions,
       enabled,
+      siteId,
     });
     set({ automations: [...get().automations, created] });
     return created;
   },
 
-  async updateAutomation(id, name, config, actions) {
-    const updated = await invokeCommand("itops_update_automation", { id, name, config, actions });
+  async updateAutomation(id, name, config, actions, siteId) {
+    const updated = await invokeCommand("itops_update_automation", {
+      id,
+      name,
+      config,
+      actions,
+      siteId,
+    });
     set({
       automations: get().automations.map((automation) =>
         automation.id === id ? updated : automation,

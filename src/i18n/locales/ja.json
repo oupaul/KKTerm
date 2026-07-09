@@ -1408,6 +1408,8 @@
       "testResult": "テスト結果",
       "unset": "未設定",
       "hostLabel": "ホスト",
+      "siteLabel": "サイト",
+      "siteNone": "サイトなし",
       "sessionIdLabel": "セッション ID",
       "silenceSecondsLabel": "サイレント期間 (秒)",
       "portLabel": "ポート",

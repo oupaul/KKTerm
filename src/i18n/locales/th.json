@@ -1408,6 +1408,8 @@
       "testResult": "ผลการทดสอบ",
       "unset": "ยังไม่ได้ตั้ง",
       "hostLabel": "โฮสต์",
+      "siteLabel": "ไซต์",
+      "siteNone": "ไม่มีไซต์",
       "sessionIdLabel": "รหัสเซสชัน",
       "silenceSecondsLabel": "ระยะเวลาเงียบ (วินาที)",
       "portLabel": "พอร์ต",

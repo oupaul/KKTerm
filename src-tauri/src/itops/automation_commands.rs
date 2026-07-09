@@ -115,11 +115,20 @@ pub fn itops_create_automation(
     config: WatchdogConfig,
     actions: Vec<AutomationAction>,
     enabled: bool,
+    site_id: Option<String>,
 ) -> Result<Automation, String> {
     let id = new_itops_id("auto");
     let automation = storage(&app).with_connection_infallible(|conn| {
-        auto_store::create_automation(conn, &id, &name, &config, &actions, enabled)
-            .map_err(|error| error.to_string())
+        auto_store::create_automation(
+            conn,
+            &id,
+            &name,
+            &config,
+            &actions,
+            enabled,
+            site_id.as_deref(),
+        )
+        .map_err(|error| error.to_string())
     })?;
     if automation.enabled {
         runtime.arm(&app, &registry, &automation)?;
@@ -136,9 +145,10 @@ pub fn itops_update_automation(
     name: String,
     config: WatchdogConfig,
     actions: Vec<AutomationAction>,
+    site_id: Option<String>,
 ) -> Result<Automation, String> {
     let automation = storage(&app).with_connection_infallible(|conn| {
-        auto_store::update_automation(conn, &id, &name, &config, &actions)
+        auto_store::update_automation(conn, &id, &name, &config, &actions, site_id.as_deref())
             .map_err(|error| error.to_string())
     })?;
     if automation.enabled {

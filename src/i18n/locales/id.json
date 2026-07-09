@@ -1408,6 +1408,8 @@
       "testResult": "Hasil uji",
       "unset": "belum diatur",
       "hostLabel": "Host",
+      "siteLabel": "Situs",
+      "siteNone": "Tanpa situs",
       "sessionIdLabel": "ID sesi",
       "silenceSecondsLabel": "Durasi senyap (detik)",
       "portLabel": "Port",

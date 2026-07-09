@@ -1408,6 +1408,8 @@
       "testResult": "测试结果",
       "unset": "未设置",
       "hostLabel": "主机",
+      "siteLabel": "站点",
+      "siteNone": "无站点",
       "sessionIdLabel": "会话 ID",
       "silenceSecondsLabel": "静默持续时间（秒）",
       "portLabel": "端口",

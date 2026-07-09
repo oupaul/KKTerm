@@ -53,9 +53,14 @@ test("Batch Runs and Automations tabs accept a Site scope", async () => {
   assert.match(runs, /allRunHistory\.filter\(\(entry\) => entry\.siteId === siteId\)/);
   assert.match(runs, /activeRun && \(!siteId \|\| activeRun\.siteId === siteId\)/);
 
-  // Automations: bound to the Site via a runBatch action or a host-addressed
-  // trigger watching one of the Site's resolved member hosts.
+  // Automations: the durable siteId binding wins; legacy rows without one
+  // fall back to inference (runBatch action target, or a host-addressed
+  // trigger watching one of the Site's resolved member hosts).
   assert.match(autos, /function automationBoundToSite\(/);
+  assert.match(
+    autos,
+    /if \(automation\.siteId != null\) \{\s*return automation\.siteId === siteId;/,
+  );
   assert.match(autos, /action\.kind === "runBatch" && action\.siteId === siteId/);
   assert.match(autos, /target\.kind === "ping" \|\| target\.kind === "tcpReachable"/);
   assert.match(autos, /siteHosts\?: string\[\];/);
@@ -63,4 +68,22 @@ test("Batch Runs and Automations tabs accept a Site scope", async () => {
     autos,
     /allAutomations\.filter\(\(automation\) => automationBoundToSite\(automation, siteId, hostSet\)\)/,
   );
+});
+
+test("Automation editor owns the durable Site binding", async () => {
+  const autos = await read("src/modules/itops/AutomationsTab.tsx");
+  const editor = await read("src/modules/itops/AutomationEditor.tsx");
+  const state = await read("src/modules/itops/state.ts");
+
+  // The Site segment's editor preselects that Site for new Automations.
+  assert.match(autos, /defaultSiteId=\{siteId\}/);
+  assert.match(editor, /defaultState\(defaultSiteId\)/);
+  // The header Site select edits the binding; a blank choice saves as null.
+  assert.match(editor, /className="au-editor-site"/);
+  assert.match(editor, /aria-label=\{t\("itops\.editor\.siteLabel"\)\}/);
+  assert.match(editor, /\{ value: "", label: t\("itops\.editor\.siteNone"\) \}/);
+  assert.match(editor, /const siteId = state\.siteId \|\| null;/);
+  // The store forwards the binding to both persistence commands.
+  assert.match(state, /createAutomation\(name, config, actions, enabled, siteId\)/);
+  assert.match(state, /updateAutomation\(id, name, config, actions, siteId\)/);
 });

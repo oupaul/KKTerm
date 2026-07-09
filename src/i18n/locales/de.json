@@ -1408,6 +1408,8 @@
       "testResult": "Testergebnis",
       "unset": "nicht festgelegt",
       "hostLabel": "Host",
+      "siteLabel": "Site",
+      "siteNone": "Keine Site",
       "sessionIdLabel": "Sitzungs-ID",
       "silenceSecondsLabel": "Stummschaltdauer (Sekunden)",
       "portLabel": "Port",

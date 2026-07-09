@@ -97,6 +97,8 @@ const ACTION_COLOR: Record<ActionKind, string> = {
 
 interface EditorState {
   name: string;
+  /** Durable Site binding; "" = unbound. */
+  siteId: string;
   triggerType: TriggerType;
   metric: PerformanceMetric;
   mockStep: string;
@@ -114,9 +116,10 @@ interface EditorState {
   actions: AutomationAction[];
 }
 
-function defaultState(): EditorState {
+function defaultState(defaultSiteId = ""): EditorState {
   return {
     name: "",
+    siteId: defaultSiteId,
     triggerType: "performanceCounter",
     metric: "diskUsedPercent",
     mockStep: "1",
@@ -139,6 +142,7 @@ function defaultState(): EditorState {
 function fromAutomation(automation: Automation): EditorState {
   const base = defaultState();
   base.name = automation.name;
+  base.siteId = automation.siteId ?? "";
   base.actions = automation.actions.length > 0 ? automation.actions : [];
   base.pollSeconds = String(Math.max(1, Math.round(automation.config.pollMs / 1000)));
   const target = automation.config.target;
@@ -419,9 +423,12 @@ const nodeTypes = { card: NodeCard };
 
 export function AutomationEditor({
   automation,
+  defaultSiteId,
   onClose,
 }: {
   automation: Automation | null;
+  /** Site binding preselected for a new Automation (Site View segment). */
+  defaultSiteId?: string;
   onClose: () => void;
 }) {
   const { t } = useTranslation();
@@ -433,7 +440,7 @@ export function AutomationEditor({
   const firstGroupId = sites[0]?.id ?? "";
 
   const [state, setState] = useState<EditorState>(() =>
-    automation ? fromAutomation(automation) : defaultState(),
+    automation ? fromAutomation(automation) : defaultState(defaultSiteId),
   );
   const [selectedId, setSelectedId] = useState<string>("trigger");
   const [positions, setPositions] = useState<Record<string, { x: number; y: number }>>({});
@@ -582,10 +589,11 @@ export function AutomationEditor({
     setBusy(true);
     const config = buildConfig(state, automation?.config);
     try {
+      const siteId = state.siteId || null;
       if (automation) {
-        await updateAutomation(automation.id, state.name.trim(), config, state.actions);
+        await updateAutomation(automation.id, state.name.trim(), config, state.actions, siteId);
       } else {
-        await createAutomation(state.name.trim(), config, state.actions, true);
+        await createAutomation(state.name.trim(), config, state.actions, true, siteId);
       }
       showStatusBarNotice(t("itops.automations.savedNotice", { name: state.name.trim() }), {
         tone: "success",
@@ -613,6 +621,17 @@ export function AutomationEditor({
             placeholder={t("itops.automations.namePlaceholder")}
             onChange={(event) => update({ name: event.currentTarget.value })}
             aria-label={t("itops.automations.nameLabel")}
+          />
+          <Select
+            className="au-editor-site"
+            value={state.siteId}
+            aria-label={t("itops.editor.siteLabel")}
+            title={t("itops.editor.siteLabel")}
+            onChange={(event) => update({ siteId: event.currentTarget.value })}
+            options={[
+              { value: "", label: t("itops.editor.siteNone") },
+              ...sites.map((site) => ({ value: site.id, label: site.name })),
+            ]}
           />
           <span className="au-editor-sp" />
           <Btn onClick={() => void handleTest()} disabled={!isValid(state) || testing}>

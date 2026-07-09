@@ -157,7 +157,9 @@ Three SQLite tables (new schema version):
   Devices. Pure metadata; Connection ids are soft references.
 - `itops_automations` — id, name, enabled flag, trigger config, optional
   condition, ordered actions, poll/stop/suppression settings (the durable
-  superset of `WatchdogConfig`).
+  superset of `WatchdogConfig`), plus an optional Site binding (`site_id`,
+  a soft reference like `itops_run_history`'s) that scopes the rule to one
+  Site's Automations segment.
 - `itops_run_history` — id, source (manual run or automation id), task
   summary, started/finished, per-host outcome summary, consolidated
   report blob. Local-first; no telemetry.
@@ -210,8 +212,11 @@ Run and Automation editors/runtime remain in this source area; instead of
 top-level tab chrome, Site View carries a segmented control (Overview /
 Batch Runs / Automations) that swaps the topology surface for that Site's
 Batch Runs or Automations — runs filtered to the Site, Automations filtered
-to rules bound to it (a runBatch action targeting the Site, or a
-host-addressed trigger watching one of its resolved member hosts). The
+to rules bound to it by their durable `site_id` (set in the node editor's
+header Site select and defaulted from the segment that opened it; legacy
+rows without a binding fall back to inference — a runBatch action targeting
+the Site, or a host-addressed trigger watching one of its resolved member
+hosts). The
 drill-down views own an icon-only Edit / New / Export toolbar: edit mode gates free
 placement, Rack Device drag/drop, and destructive controls; normal mode remains
 an inspect/open surface. Site and Server Room exports save PDF, while Rack View
@@ -316,6 +321,8 @@ CREATE TABLE IF NOT EXISTS itops_automations (
     condition_json TEXT,
     -- JSON array of typed actions, executed in order.
     actions_json  TEXT NOT NULL DEFAULT '[]',
+    -- Optional durable Site binding (soft reference; NULL = unbound).
+    site_id       TEXT,
     -- Loop settings (poll_ms, stop, sustained_for_ms, suppression_ms): JSON object.
     runtime_json  TEXT NOT NULL DEFAULT '{}',
     created_at    TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,

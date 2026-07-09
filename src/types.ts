@@ -420,6 +420,9 @@ export interface Automation {
   enabled: boolean;
   config: WatchdogConfig;
   actions: AutomationAction[];
+  // Durable Site binding (soft reference): which Site's Automations segment
+  // lists this rule. null/undefined = unbound (legacy rows).
+  siteId?: string | null;
 }
 
 // Result of a one-shot Automation test (docs/ITOPS.md): samples the trigger now

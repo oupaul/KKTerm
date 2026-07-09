@@ -1866,6 +1866,11 @@
 .au-editor-sp {
   flex: 1 1 auto;
 }
+/* Header Site binding select: fixed-width so the name input keeps the room. */
+.au-editor-site {
+  flex: 0 0 auto;
+  width: 180px;
+}
 .au-editor-head .au-btn-ic {
   display: inline-flex;
   margin-right: 5px;

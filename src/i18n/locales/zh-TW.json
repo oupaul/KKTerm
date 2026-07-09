@@ -1408,6 +1408,8 @@
       "testResult": "測試結果",
       "unset": "未設定",
       "hostLabel": "主機",
+      "siteLabel": "站台",
+      "siteNone": "無站台",
       "sessionIdLabel": "工作階段 ID",
       "silenceSecondsLabel": "靜默持續時間（秒）",
       "portLabel": "連接埠",
