@@ -1059,6 +1059,8 @@
       "viewToggleLabel": "Tampilan situs",
       "viewMembers": "Anggota",
       "viewRacks": "Rak",
+      "viewLabel": "Mode tampilan situs",
+      "viewOverview": "Ikhtisar",
       "autoOrganize": "Atur Otomatis"
     },
     "racks": {

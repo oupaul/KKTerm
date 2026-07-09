@@ -1059,6 +1059,8 @@
       "viewToggleLabel": "站点视图",
       "viewMembers": "成员",
       "viewRacks": "机架",
+      "viewLabel": "站点视图模式",
+      "viewOverview": "概览",
       "autoOrganize": "自动排列"
     },
     "racks": {

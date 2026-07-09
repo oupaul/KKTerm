@@ -1059,6 +1059,8 @@
       "viewToggleLabel": "사이트 보기",
       "viewMembers": "멤버",
       "viewRacks": "랙",
+      "viewLabel": "사이트 보기 모드",
+      "viewOverview": "개요",
       "autoOrganize": "자동 정렬"
     },
     "racks": {

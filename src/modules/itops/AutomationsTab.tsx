@@ -104,11 +104,43 @@ const ACTION_COLOR: Record<AutomationAction["kind"], string> = {
   runBatch: IT_ACCENTS.orange,
 };
 
-export function AutomationsTab() {
+// An Automation is bound to a Site when a runBatch action targets it, or when
+// its host-addressed trigger (ping / TCP reachable) watches one of the Site's
+// resolved member hosts. Metric/session/schedule triggers carry no host.
+function automationBoundToSite(
+  automation: Automation,
+  siteId: string,
+  siteHosts: ReadonlySet<string>,
+): boolean {
+  if (
+    automation.actions.some((action) => action.kind === "runBatch" && action.siteId === siteId)
+  ) {
+    return true;
+  }
+  const target = automation.config.target;
+  if (target.kind === "ping" || target.kind === "tcpReachable") {
+    return siteHosts.has(target.host.trim().toLowerCase());
+  }
+  return false;
+}
+
+export function AutomationsTab({
+  siteId,
+  siteHosts,
+}: {
+  /** When set, only Automations bound to this Site are shown (Site View segment). */
+  siteId?: string;
+  /** The Site's resolved member hosts, for matching host-addressed triggers. */
+  siteHosts?: string[];
+} = {}) {
   const { t } = useTranslation();
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
-  const automations = useItOpsStore((state) => state.automations);
+  const allAutomations = useItOpsStore((state) => state.automations);
   const loaded = useItOpsStore((state) => state.automationsLoaded);
+  const hostSet = new Set((siteHosts ?? []).map((host) => host.trim().toLowerCase()));
+  const automations = siteId
+    ? allAutomations.filter((automation) => automationBoundToSite(automation, siteId, hostSet))
+    : allAutomations;
   const setAutomationEnabled = useItOpsStore((state) => state.setAutomationEnabled);
   const removeAutomation = useItOpsStore((state) => state.removeAutomation);
   const newAutomationRequest = useItOpsStore((state) => state.newAutomationRequest);

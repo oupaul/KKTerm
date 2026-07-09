@@ -1059,6 +1059,8 @@
       "viewToggleLabel": "มุมมองไซต์",
       "viewMembers": "สมาชิก",
       "viewRacks": "แร็ค",
+      "viewLabel": "โหมดมุมมองไซต์",
+      "viewOverview": "ภาพรวม",
       "autoOrganize": "จัดเรียงอัตโนมัติ"
     },
     "racks": {

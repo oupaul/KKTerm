@@ -388,13 +388,23 @@ function RunReportView({ entry, onBack }: { entry: RunHistoryEntry; onBack: () =
   );
 }
 
-export function BatchRunsTab({ onNewBatchRun }: { onNewBatchRun: () => void }) {
+export function BatchRunsTab({
+  onNewBatchRun,
+  siteId,
+}: {
+  onNewBatchRun: () => void;
+  /** When set, only runs targeting this Site are shown (Site View segment). */
+  siteId?: string;
+}) {
   const { t } = useTranslation();
   const activeRun = useItOpsStore((state) => state.activeRun);
-  const runHistory = useItOpsStore((state) => state.runHistory);
+  const allRunHistory = useItOpsStore((state) => state.runHistory);
+  const runHistory = siteId
+    ? allRunHistory.filter((entry) => entry.siteId === siteId)
+    : allRunHistory;
   const [openReport, setOpenReport] = useState<RunHistoryEntry | null>(null);
 
-  if (activeRun) {
+  if (activeRun && (!siteId || activeRun.siteId === siteId)) {
     return <LiveRunView run={activeRun} />;
   }
 

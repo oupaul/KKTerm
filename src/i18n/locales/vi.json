@@ -1059,6 +1059,8 @@
       "viewToggleLabel": "Xem site",
       "viewMembers": "Thành viên",
       "viewRacks": "Rack",
+      "viewLabel": "Chế độ xem site",
+      "viewOverview": "Tổng quan",
       "autoOrganize": "Tự động sắp xếp"
     },
     "racks": {

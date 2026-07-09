@@ -206,9 +206,13 @@ UI/native thread (`docs/ARCHITECTURE.md` command-runtime boundaries).
 `src/modules/itops/` owns the Module shell. The current visible shell opens
 directly into the Site topology surface: a resizable/collapsible left Sites
 tree and a right Site View / Server Room View / Rack View drill-down. Batch
-Run and Automation editors/runtime remain in this source area, but their
-top-level tab chrome is hidden while the Site-only UI is active. The drill-down
-views own an icon-only Edit / New / Export toolbar: edit mode gates free
+Run and Automation editors/runtime remain in this source area; instead of
+top-level tab chrome, Site View carries a segmented control (Overview /
+Batch Runs / Automations) that swaps the topology surface for that Site's
+Batch Runs or Automations — runs filtered to the Site, Automations filtered
+to rules bound to it (a runBatch action targeting the Site, or a
+host-addressed trigger watching one of its resolved member hosts). The
+drill-down views own an icon-only Edit / New / Export toolbar: edit mode gates free
 placement, Rack Device drag/drop, and destructive controls; normal mode remains
 an inspect/open surface. Site and Server Room exports save PDF, while Rack View
 also saves an Excel-readable inventory table. The live

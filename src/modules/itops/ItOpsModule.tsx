@@ -1,6 +1,7 @@
 // IT Ops Module shell. The visible module is Site-first; Batch Run and
-// Automation runtime plumbing stays mounted so existing backend events and
-// programmatic run requests keep working while the tab UI is hidden.
+// Automation runtime plumbing stays mounted here so backend events and
+// programmatic run requests keep working regardless of which Site View
+// segment (Overview / Batch Runs / Automations) is showing.
 
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";

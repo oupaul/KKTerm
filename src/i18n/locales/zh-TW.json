@@ -1059,6 +1059,8 @@
       "viewToggleLabel": "站台檢視",
       "viewMembers": "成員",
       "viewRacks": "機架",
+      "viewLabel": "站台檢視模式",
+      "viewOverview": "總覽",
       "autoOrganize": "自動排列"
     },
     "racks": {

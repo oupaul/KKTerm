@@ -1059,6 +1059,8 @@
       "viewToggleLabel": "サイト表示",
       "viewMembers": "メンバー",
       "viewRacks": "ラック",
+      "viewLabel": "サイト表示モード",
+      "viewOverview": "概要",
       "autoOrganize": "自動整列"
     },
     "racks": {

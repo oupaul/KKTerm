@@ -25,6 +25,8 @@ import type { Site, Rack, RackItem, ResolvedHost, ServerRoom } from "../../types
 import { ConnectionIcon } from "../workspace/connections/ConnectionIcon";
 import { ItIcon, IT_ACCENTS, type ItIconName } from "./icons";
 import { SiteDialog } from "./SiteDialog";
+import { BatchRunsTab } from "./BatchRunsTab";
+import { AutomationsTab } from "./AutomationsTab";
 import { RackElevation } from "./RackElevation";
 import { RackDialog } from "./RackDialog";
 import { ServerRoomDialog } from "./ServerRoomDialog";
@@ -109,6 +111,10 @@ type PendingDelete =
 
 const FREE_CARD_WIDTH = 240;
 const FREE_CARD_HEIGHT = 74;
+
+// Site View segments: the Server Room card overview, or the Batch Runs /
+// Automations surfaces scoped to the selected Site's Connections.
+type SiteViewMode = "overview" | "batchRuns" | "automations";
 
 // A stable per-group tile colour (Sites don't store one); hashing the id
 // keeps a group's colour steady across reloads without a durable field.
@@ -701,6 +707,7 @@ export function SitesTab({
             topology={topology}
             racks={racks}
             site={activeGroup}
+            members={members}
             drill={drill}
             setDrill={setDrill}
             viewBackground={viewBackground}
@@ -947,6 +954,7 @@ function RackDrill({
   topology,
   racks,
   site,
+  members,
   drill,
   setDrill,
   viewBackground,
@@ -969,6 +977,8 @@ function RackDrill({
   topology: ReturnType<typeof groupRackTopology>;
   racks: Rack[];
   site: Site;
+  /** The Site's resolved member Connections (for scoping the site segments). */
+  members: ResolvedHost[];
   drill: DrillPath;
   setDrill: (next: DrillPath) => void;
   viewBackground: DashboardBackground | null | undefined;
@@ -1005,6 +1015,12 @@ function RackDrill({
   const [roomView, setRoomView] = useState<RoomViewMode>(loadRoomViewMode);
   useEffect(() => saveRoomViewMode(roomView), [roomView]);
 
+  // Site View segment: the Server Room card overview (default), or the Batch
+  // Runs / Automations surfaces scoped to this Site's Connections.
+  const [siteView, setSiteView] = useState<SiteViewMode>("overview");
+  const requestNewBatchRun = useItOpsStore((state) => state.requestNewBatchRun);
+  const requestNewAutomation = useItOpsStore((state) => state.requestNewAutomation);
+
   // Picker column state shared by the two spatial layouts: the armed room
   // object kind, and a just-created rack awaiting its placement click.
   const [roomTool, setRoomTool] = useState<RoomTool>(null);
@@ -1024,6 +1040,7 @@ function RackDrill({
     setEditMode(false);
     setExportMenuOpen(false);
     setBackgroundOpen(false);
+    setSiteView("overview");
   }, [viewKey]);
   useEffect(() => {
     setRoomTool(null);
@@ -1238,6 +1255,14 @@ function RackDrill({
       onAddRack(serverRoom.key);
       return;
     }
+    if (siteView === "batchRuns") {
+      requestNewBatchRun(site.id);
+      return;
+    }
+    if (siteView === "automations") {
+      requestNewAutomation();
+      return;
+    }
     onAddServerRoom();
   }
 
@@ -1333,11 +1358,56 @@ function RackDrill({
     scheduleDurableSave("grid", next);
   }
 
+  // A non-overview Site View segment replaces the topology surface, so the
+  // topology-only toolbar actions (edit / export / auto-organize) hide with it.
+  const siteSegmentActive = !serverRoom && !rack && siteView !== "overview";
+  const addLabel = rack
+    ? t("itops.racks.addItemTitle")
+    : serverRoom
+      ? t("itops.racks.addRack")
+      : siteView === "batchRuns"
+        ? t("itops.actions.newBatchRun")
+        : siteView === "automations"
+          ? t("itops.actions.newAutomation")
+          : t("itops.racks.addServerRoom");
+
   return (
     <div className="ft-drill">
       <ItOpsBackground background={viewBackground} className="ft-drill-bg">
         <div className="it-drill-toolbar">
           <div className="it-drill-spacer" />
+          {!serverRoom && !rack ? (
+            <div
+              className="rm-segmented"
+              role="group"
+              aria-label={t("itops.sites.viewLabel")}
+            >
+              <button
+                type="button"
+                data-active={siteView === "overview"}
+                onClick={() => setSiteView("overview")}
+              >
+                <ItIcon name="room" size={13} />
+                {t("itops.sites.viewOverview")}
+              </button>
+              <button
+                type="button"
+                data-active={siteView === "batchRuns"}
+                onClick={() => setSiteView("batchRuns")}
+              >
+                <ItIcon name="run" size={13} />
+                {t("itops.tabs.runs")}
+              </button>
+              <button
+                type="button"
+                data-active={siteView === "automations"}
+                onClick={() => setSiteView("automations")}
+              >
+                <ItIcon name="auto" size={13} />
+                {t("itops.tabs.autos")}
+              </button>
+            </div>
+          ) : null}
           {serverRoom && !rack ? (
             <div
               className="rm-segmented"
@@ -1371,7 +1441,7 @@ function RackDrill({
             </div>
           ) : null}
           <div className="it-drill-actions" aria-label={t("itops.actions.viewActions")}>
-            {!rack && !serverRoom && topology.length > 0 ? (
+            {!rack && !serverRoom && !siteSegmentActive && topology.length > 0 ? (
               <button
                 type="button"
                 className="it-drill-action"
@@ -1382,70 +1452,66 @@ function RackDrill({
                 <ItIcon name="grid" size={15} />
               </button>
             ) : null}
-            <button
-              type="button"
-              className={`it-drill-action${editMode ? " active" : ""}`}
-              title={editMode ? t("itops.actions.editDone") : t("itops.actions.edit")}
-              aria-label={editMode ? t("itops.actions.editDone") : t("itops.actions.edit")}
-              aria-pressed={editMode}
-              onClick={() => setEditMode((value) => !value)}
-            >
-              <ItIcon name={editMode ? "check" : "edit"} size={15} />
-            </button>
+            {!siteSegmentActive ? (
+              <button
+                type="button"
+                className={`it-drill-action${editMode ? " active" : ""}`}
+                title={editMode ? t("itops.actions.editDone") : t("itops.actions.edit")}
+                aria-label={editMode ? t("itops.actions.editDone") : t("itops.actions.edit")}
+                aria-pressed={editMode}
+                onClick={() => setEditMode((value) => !value)}
+              >
+                <ItIcon name={editMode ? "check" : "edit"} size={15} />
+              </button>
+            ) : null}
             <button
               type="button"
               className="it-drill-action"
-              title={
-                rack
-                  ? t("itops.racks.addItemTitle")
-                  : serverRoom
-                    ? t("itops.racks.addRack")
-                    : t("itops.racks.addServerRoom")
-              }
-              aria-label={
-                rack
-                  ? t("itops.racks.addItemTitle")
-                  : serverRoom
-                    ? t("itops.racks.addRack")
-                    : t("itops.racks.addServerRoom")
-              }
+              title={addLabel}
+              aria-label={addLabel}
               onClick={handleAdd}
             >
               <ItIcon name="plus" size={15} />
             </button>
-            <div className="it-drill-export">
-              <button
-                type="button"
-                className="it-drill-action"
-                title={t("itops.actions.export")}
-                aria-label={t("itops.actions.export")}
-                aria-haspopup="menu"
-                aria-expanded={exportMenuOpen}
-                onClick={() => setExportMenuOpen((open) => !open)}
-              >
-                <ItIcon name="download" size={15} />
-              </button>
-              {exportMenuOpen ? (
-                <>
-                  <div className="it-drill-menu-backdrop" onClick={() => setExportMenuOpen(false)} />
-                  <div className="it-drill-menu" role="menu">
-                    <button type="button" role="menuitem" onClick={() => void handleExport("pdf")}>
-                      <ItIcon name="book" size={14} />
-                      {t("itops.export.pdf")}
-                    </button>
-                    {rack ? (
-                      <button type="button" role="menuitem" onClick={() => void handleExport("excel")}>
-                        <ItIcon name="table" size={14} />
-                        {t("itops.export.excel")}
+            {!siteSegmentActive ? (
+              <div className="it-drill-export">
+                <button
+                  type="button"
+                  className="it-drill-action"
+                  title={t("itops.actions.export")}
+                  aria-label={t("itops.actions.export")}
+                  aria-haspopup="menu"
+                  aria-expanded={exportMenuOpen}
+                  onClick={() => setExportMenuOpen((open) => !open)}
+                >
+                  <ItIcon name="download" size={15} />
+                </button>
+                {exportMenuOpen ? (
+                  <>
+                    <div className="it-drill-menu-backdrop" onClick={() => setExportMenuOpen(false)} />
+                    <div className="it-drill-menu" role="menu">
+                      <button type="button" role="menuitem" onClick={() => void handleExport("pdf")}>
+                        <ItIcon name="book" size={14} />
+                        {t("itops.export.pdf")}
                       </button>
-                    ) : null}
-                  </div>
-                </>
-              ) : null}
-            </div>
+                      {rack ? (
+                        <button type="button" role="menuitem" onClick={() => void handleExport("excel")}>
+                          <ItIcon name="table" size={14} />
+                          {t("itops.export.excel")}
+                        </button>
+                      ) : null}
+                    </div>
+                  </>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         </div>
-        {racks.length === 0 ? (
+        {siteSegmentActive && siteView === "batchRuns" ? (
+          <BatchRunsTab siteId={site.id} onNewBatchRun={() => requestNewBatchRun(site.id)} />
+        ) : siteSegmentActive && siteView === "automations" ? (
+          <AutomationsTab siteId={site.id} siteHosts={members.map((member) => member.host)} />
+        ) : racks.length === 0 ? (
           <div className="card">
             <div className="hg-dlg-empty">{t("itops.racks.empty")}</div>
           </div>

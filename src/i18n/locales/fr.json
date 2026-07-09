@@ -1059,6 +1059,8 @@
       "viewToggleLabel": "Vue du site",
       "viewMembers": "Membres",
       "viewRacks": "Racks",
+      "viewLabel": "Mode d'affichage du site",
+      "viewOverview": "Vue d'ensemble",
       "autoOrganize": "Organiser automatiquement"
     },
     "racks": {
