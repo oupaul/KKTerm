@@ -3043,7 +3043,7 @@
     "colorSchemeGlobalDefault": "Dùng mặc định chung",
     "colorSchemeSaveFailed": "Lưu bảng màu thất bại: {{message}}",
     "quickSelect": "Chọn nhanh",
-    "quickSelectHint": "Gõ nhãn để sao chép. Nhấn Esc để hủy.",
+    "quickSelectHint": "Nhấp hoặc gõ nhãn để sao chép. Ctrl-nhấp hoặc Shift-nhấp URL để mở. Nhấn Esc để hủy.",
     "quickSelectNoMatches": "Không có văn bản nào sao chép được trên màn hình.",
     "quickSelectCopied": "Đã sao chép {{text}}",
     "previousPrompt": "Dấu nhắc trước",

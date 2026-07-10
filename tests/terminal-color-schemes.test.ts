@@ -10,7 +10,17 @@ import {
 test("scheme ids are unique and include the built-in default", () => {
   const ids = TERMINAL_COLOR_SCHEMES.map((scheme) => scheme.id);
   assert.equal(new Set(ids).size, ids.length, "duplicate scheme id");
+  assert.equal(ids.length, 117, "expected 22 original schemes plus 95 new TerminalColors variants");
   assert.ok(ids.includes(DEFAULT_TERMINAL_COLOR_SCHEME_ID));
+  for (const importedId of [
+    "apprentice",
+    "ayu-mirage",
+    "github-light-colorblind",
+    "noctis-viola",
+    "zenbones-kanagawabones",
+  ]) {
+    assert.ok(ids.includes(importedId), `missing TerminalColors scheme ${importedId}`);
+  }
 });
 
 test("every palette entry is a six-digit hex color", () => {

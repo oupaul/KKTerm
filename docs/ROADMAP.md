@@ -55,7 +55,7 @@ For operational measurement records see `docs/PERFORMANCE.md`. For packaging and
 - [x] Inline images via Sixel and the iTerm2 image protocol (toggle in Terminal Settings).
 - [x] OSC 9 / OSC 777 terminal notifications surfaced through the Status Bar (toggle in Terminal Settings).
 - [x] User-defined hyperlink rules turning matching terminal text into Ctrl+click links.
-- [x] Curated terminal color schemes (iTerm2-Color-Schemes selection): global default in Terminal Settings with per-Connection override in the Pane actions menu.
+- [x] Bundled 117-scheme terminal catalog (original KKTerm set plus the deduplicated TerminalColors catalog): palette-preview listbox in Terminal Settings with per-Connection override and hover preview in the Pane actions menu.
 
 ### SSH
 

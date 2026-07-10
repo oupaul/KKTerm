@@ -15,7 +15,7 @@ import { useTranslation } from "react-i18next";
 import i18next from "../../../../i18n/config";
 import { ariaInvalid, dialogButtonAria, menuButtonAria } from "../../../../lib/aria";
 import { fileBrowserCommandsFor } from "../../../../lib/fileBrowserCommands";
-import { focusCurrentWebview, invokeCommand, isTauriRuntime, logUiDebug, saveTextFile, type TerminalOutput, type TerminalRecordingEntry, type TerminalRecordingInfo, type TmuxSession } from "../../../../lib/tauri";
+import { focusCurrentWebview, invokeCommand, isTauriRuntime, logUiDebug, openExternalUrl, saveTextFile, type TerminalOutput, type TerminalRecordingEntry, type TerminalRecordingInfo, type TmuxSession } from "../../../../lib/tauri";
 import { markOsIconAutoDetectDone, osIconIdForDetection, osIconRefForId, shouldAutoDetectOsIcon } from "../../../../lib/osIcons";
 import { notifyConnectionTreeInvalidated } from "../connectionSidebarState";
 import { defaultTerminalSettings } from "../../../../app-defaults";
@@ -24,7 +24,7 @@ import { GitIcon } from "../../../git/GitIcon";
 import { useGitRepoDetection } from "../../../git/useGitRepoDetection";
 import { createTerminalRenderer, logTerminalFontAtlasState, scheduleTerminalFontAtlasRefresh, type TerminalDimensions, type TerminalRenderer } from "./renderer";
 import { resolveTerminalColorScheme, TERMINAL_COLOR_SCHEMES } from "./colorSchemes";
-import { findQuickSelectMatches, labelQuickSelectMatches, type LabeledQuickSelectMatch } from "./quickSelect";
+import { findQuickSelectMatches, labelQuickSelectMatches, quickSelectPointerAction, type LabeledQuickSelectMatch } from "./quickSelect";
 import { ensureLayout } from "../../layout";
 import {
   broadcastInputToOtherPanes,
@@ -2606,6 +2606,29 @@ function TerminalPaneView({
     focusTerminalRenderer();
   }
 
+  function copyQuickSelectMatch(match: LabeledQuickSelectMatch) {
+    void writeToClipboard(match.text);
+    showStatusBarNotice(t("terminal.quickSelectCopied", { text: truncateForNotice(match.text) }), { tone: "success" });
+    closeQuickSelect();
+  }
+
+  function handleQuickSelectClick(
+    event: ReactMouseEvent<HTMLButtonElement>,
+    match: LabeledQuickSelectMatch,
+  ) {
+    event.preventDefault();
+    event.stopPropagation();
+    const action = quickSelectPointerAction(match.text, event.shiftKey || event.ctrlKey);
+    if (action.kind === "open") {
+      closeQuickSelect();
+      void openExternalUrl(action.url).catch((error) => {
+        console.warn("Quick Select external link open failed.", error);
+      });
+      return;
+    }
+    copyQuickSelectMatch(match);
+  }
+
   function handleQuickSelectKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     if (!quickSelect) {
       return;
@@ -2630,9 +2653,7 @@ function TerminalPaneView({
     }
     const selected = remaining.find((match) => match.label === input);
     if (selected) {
-      void writeToClipboard(selected.text);
-      showStatusBarNotice(t("terminal.quickSelectCopied", { text: truncateForNotice(selected.text) }), { tone: "success" });
-      closeQuickSelect();
+      copyQuickSelectMatch(selected);
       return;
     }
     setQuickSelect({ ...quickSelect, input });
@@ -3380,7 +3401,11 @@ function TerminalPaneView({
           aria-label={t("terminal.quickSelect")}
           className="terminal-quick-select-overlay"
           onKeyDown={handleQuickSelectKeyDown}
-          onPointerDown={closeQuickSelect}
+          onPointerDown={(event) => {
+            if (event.target === event.currentTarget) {
+              closeQuickSelect();
+            }
+          }}
           ref={quickSelectOverlayRef}
           role="dialog"
           tabIndex={-1}
@@ -3388,9 +3413,11 @@ function TerminalPaneView({
           {quickSelect.matches
             .filter((match) => match.label.startsWith(quickSelect.input))
             .map((match) => (
-              <span
+              <button
+                aria-label={match.text}
                 className="terminal-quick-select-hint"
                 key={match.label}
+                onClick={(event) => handleQuickSelectClick(event, match)}
                 style={{
                   left: quickSelect.offsetLeft + match.column * quickSelect.cellWidth,
                   top: quickSelect.offsetTop + match.row * quickSelect.cellHeight,
@@ -3398,7 +3425,7 @@ function TerminalPaneView({
               >
                 <strong>{match.label.slice(quickSelect.input.length)}</strong>
                 <span className="terminal-quick-select-hint-text">{match.text}</span>
-              </span>
+              </button>
             ))}
           <div className="terminal-quick-select-help">{t("terminal.quickSelectHint")}</div>
         </div>

@@ -15,6 +15,10 @@ export interface LabeledQuickSelectMatch extends QuickSelectMatch {
   label: string;
 }
 
+export type QuickSelectPointerAction =
+  | { kind: "copy" }
+  | { kind: "open"; url: string };
+
 // Ordered by specificity: an earlier pattern claims its span before a more
 // general one (e.g. a URL wins over the bare IP inside it).
 const QUICK_SELECT_PATTERNS: readonly RegExp[] = [
@@ -88,4 +92,18 @@ export function findQuickSelectMatches(lines: readonly string[]): QuickSelectMat
 export function labelQuickSelectMatches(matches: readonly QuickSelectMatch[]): LabeledQuickSelectMatch[] {
   const labels = quickSelectLabels(matches.length);
   return matches.map((match, index) => ({ ...match, label: labels[index] }));
+}
+
+export function quickSelectPointerAction(text: string, openModifier: boolean): QuickSelectPointerAction {
+  if (!openModifier) {
+    return { kind: "copy" };
+  }
+  try {
+    const url = new URL(text);
+    return url.protocol === "http:" || url.protocol === "https:"
+      ? { kind: "open", url: url.href }
+      : { kind: "copy" };
+  } catch {
+    return { kind: "copy" };
+  }
 }

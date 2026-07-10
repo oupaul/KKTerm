@@ -1809,7 +1809,7 @@
   background: transparent;
 }
 
-/* Quick Select mode: keyboard-driven copy of visible tokens via hint labels. */
+/* Quick Select mode: keyboard or pointer-driven actions on visible tokens. */
 .terminal-quick-select-overlay {
   position: absolute;
   inset: 0;
@@ -1832,8 +1832,16 @@
   font-family: inherit;
   font-size: 11px;
   line-height: 16px;
+  text-align: left;
   white-space: nowrap;
-  pointer-events: none;
+  cursor: pointer;
+}
+
+.terminal-quick-select-hint:hover,
+.terminal-quick-select-hint:focus-visible {
+  background: var(--surface-muted);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+  outline: none;
 }
 
 .terminal-quick-select-hint strong {

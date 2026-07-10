@@ -3043,7 +3043,7 @@
     "colorSchemeGlobalDefault": "Use global default",
     "colorSchemeSaveFailed": "Saving the color scheme failed: {{message}}",
     "quickSelect": "Quick select",
-    "quickSelectHint": "Type a label to copy it. Esc to cancel.",
+    "quickSelectHint": "Click or type a label to copy. Ctrl-click or Shift-click a URL to open it. Esc to cancel.",
     "quickSelectNoMatches": "No copyable text is visible on the screen.",
     "quickSelectCopied": "Copied {{text}}",
     "previousPrompt": "Previous prompt",

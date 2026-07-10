@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { FolderOpen, Link, Plus, RefreshCw, Terminal, Trash2 } from "../../lib/reicon";
+import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { Check, ChevronDown, FolderOpen, Link, Plus, RefreshCw, Terminal, Trash2 } from "../../lib/reicon";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { invokeCommand, isTauriRuntime } from "../../lib/tauri";
@@ -20,6 +20,7 @@ import { currentPlatform } from "../../lib/platform";
 import { useWorkspaceStore } from "../../store";
 import {
   DEFAULT_TERMINAL_COLOR_SCHEME_ID,
+  resolveTerminalColorScheme,
   TERMINAL_COLOR_SCHEMES,
 } from "../workspace/connections/terminal/colorSchemes";
 import type { TerminalCursorStyle, TerminalSettings as TerminalSettingsType } from "../../types";
@@ -121,6 +122,121 @@ function makeHyperlinkRuleId() {
     return `hyperlink-rule-${crypto.randomUUID()}`;
   }
   return `hyperlink-rule-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+function TerminalColorSchemePicker({
+  label,
+  onChange,
+  value,
+}: {
+  label: string;
+  onChange: (value: string) => void;
+  value: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
+  const selectedOptionRef = useRef<HTMLButtonElement | null>(null);
+  const selectedScheme = resolveTerminalColorScheme(value);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    const frame = window.requestAnimationFrame(() => selectedOptionRef.current?.focus());
+    const closeFromOutside = (event: PointerEvent) => {
+      const target = event.target instanceof Node ? event.target : null;
+      if (target && !rootRef.current?.contains(target)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("pointerdown", closeFromOutside);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      document.removeEventListener("pointerdown", closeFromOutside);
+    };
+  }, [open]);
+
+  function handleOptionKeyDown(event: ReactKeyboardEvent<HTMLButtonElement>) {
+    const options = [...(rootRef.current?.querySelectorAll<HTMLButtonElement>("[role='option']") ?? [])];
+    const currentIndex = options.indexOf(event.currentTarget);
+    let nextIndex: number | null = null;
+    if (event.key === "ArrowDown") {
+      nextIndex = Math.min(currentIndex + 1, options.length - 1);
+    } else if (event.key === "ArrowUp") {
+      nextIndex = Math.max(currentIndex - 1, 0);
+    } else if (event.key === "Home") {
+      nextIndex = 0;
+    } else if (event.key === "End") {
+      nextIndex = options.length - 1;
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      setOpen(false);
+      buttonRef.current?.focus();
+      return;
+    }
+    if (nextIndex !== null) {
+      event.preventDefault();
+      options[nextIndex]?.focus();
+    }
+  }
+
+  return (
+    <div className={`terminal-scheme-picker${open ? " open" : ""}`} ref={rootRef}>
+      <button
+        aria-controls="settings-terminal-scheme-listbox"
+        aria-expanded={open}
+        aria-haspopup="listbox"
+        aria-label={label}
+        className="terminal-scheme-picker-trigger"
+        onClick={() => setOpen((current) => !current)}
+        ref={buttonRef}
+        style={{
+          backgroundColor: selectedScheme.palette.background,
+          color: selectedScheme.palette.foreground,
+        }}
+        type="button"
+      >
+        <span>{selectedScheme.name}</span>
+        <ChevronDown aria-hidden size={14} />
+      </button>
+      {open ? (
+        <div
+          aria-label={label}
+          className="terminal-scheme-picker-list"
+          id="settings-terminal-scheme-listbox"
+          role="listbox"
+        >
+          {TERMINAL_COLOR_SCHEMES.map((scheme) => {
+            const selected = scheme.id === value;
+            return (
+              <button
+                aria-selected={selected}
+                className="terminal-scheme-picker-option"
+                key={scheme.id}
+                onClick={() => {
+                  onChange(scheme.id);
+                  setOpen(false);
+                  buttonRef.current?.focus();
+                }}
+                onKeyDown={handleOptionKeyDown}
+                ref={selected ? selectedOptionRef : undefined}
+                role="option"
+                style={{
+                  backgroundColor: scheme.palette.background,
+                  color: scheme.palette.foreground,
+                }}
+                type="button"
+              >
+                <span>{scheme.name}</span>
+                {selected ? <Check aria-hidden size={14} /> : null}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 export function TerminalSettings() {
@@ -452,24 +568,18 @@ export function TerminalSettings() {
               <option value="underline">{t("settings.underline")}</option>
             </select>
           </label>
-          <label>
+          <label className="terminal-color-scheme-setting">
             <span>{t("settings.terminalColorScheme")}</span>
-            <select
-              onChange={(event) => {
-                const colorScheme = event.currentTarget.value;
+            <TerminalColorSchemePicker
+              label={t("settings.terminalColorScheme")}
+              onChange={(colorScheme) => {
                 setDraft((settings) => ({
                   ...settings,
                   colorScheme,
                 }));
               }}
               value={draft.colorScheme}
-            >
-              {TERMINAL_COLOR_SCHEMES.map((scheme) => (
-                <option key={scheme.id} value={scheme.id}>
-                  {scheme.name}
-                </option>
-              ))}
-            </select>
+            />
             <small className="field-hint">{t("settings.terminalColorSchemeHint")}</small>
           </label>
         </div>

@@ -3043,7 +3043,7 @@
     "colorSchemeGlobalDefault": "Usar o padrão global",
     "colorSchemeSaveFailed": "Falha ao salvar o esquema de cores: {{message}}",
     "quickSelect": "Seleção rápida",
-    "quickSelectHint": "Digite um rótulo para copiar. Esc para cancelar.",
+    "quickSelectHint": "Clique ou digite um rótulo para copiar. Ctrl-clique ou Shift-clique em uma URL para abri-la. Esc para cancelar.",
     "quickSelectNoMatches": "Nenhum texto copiável visível na tela.",
     "quickSelectCopied": "{{text}} copiado",
     "previousPrompt": "Prompt anterior",

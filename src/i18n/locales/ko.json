@@ -3043,7 +3043,7 @@
     "colorSchemeGlobalDefault": "전역 기본값 사용",
     "colorSchemeSaveFailed": "색상 구성 저장 실패: {{message}}",
     "quickSelect": "빠른 선택",
-    "quickSelectHint": "라벨을 입력하면 복사됩니다. Esc로 취소합니다.",
+    "quickSelectHint": "클릭하거나 라벨을 입력하여 복사합니다. URL을 Ctrl-클릭 또는 Shift-클릭하여 엽니다. Esc로 취소합니다.",
     "quickSelectNoMatches": "화면에 복사할 수 있는 텍스트가 없습니다.",
     "quickSelectCopied": "{{text}} 복사됨",
     "previousPrompt": "이전 프롬프트",

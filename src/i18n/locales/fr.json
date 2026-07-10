@@ -3043,7 +3043,7 @@
     "colorSchemeGlobalDefault": "Utiliser la valeur globale",
     "colorSchemeSaveFailed": "Échec de l'enregistrement du jeu de couleurs : {{message}}",
     "quickSelect": "Sélection rapide",
-    "quickSelectHint": "Saisissez une étiquette pour copier. Échap pour annuler.",
+    "quickSelectHint": "Cliquez ou saisissez une étiquette pour copier. Ctrl-clic ou Maj-clic sur une URL pour l’ouvrir. Échap pour annuler.",
     "quickSelectNoMatches": "Aucun texte copiable n'est visible à l'écran.",
     "quickSelectCopied": "{{text}} copié",
     "previousPrompt": "Invite précédente",

@@ -1,9 +1,11 @@
-// Curated terminal color schemes, adapted from the iTerm2-Color-Schemes
-// collection (MIT). The scheme applies per Pane renderer: the global default
+// Terminal color schemes: KKTerm's original curated set plus the generated
+// TerminalColors catalog. The scheme applies per Pane renderer: the global default
 // lives in Terminal Settings (`terminalSettings.colorScheme`) and each
 // terminal-type Connection may override it (`connection.terminalColorScheme`,
 // set from the Pane actions menu). Scheme names are proper nouns and are not
 // translated.
+
+import { TERMINAL_COLORS_CATALOG_SCHEMES } from "./terminalColorsCatalog.generated";
 
 export interface TerminalColorSchemePalette {
   background: string;
@@ -592,6 +594,7 @@ export const TERMINAL_COLOR_SCHEMES: readonly TerminalColorScheme[] = [
       brightWhite: "#ffffff",
     },
   },
+  ...TERMINAL_COLORS_CATALOG_SCHEMES,
 ];
 
 export function resolveTerminalColorScheme(schemeId: string | null | undefined): TerminalColorScheme {

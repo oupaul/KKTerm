@@ -3043,7 +3043,7 @@
     "colorSchemeGlobalDefault": "Globalen Standard verwenden",
     "colorSchemeSaveFailed": "Speichern des Farbschemas fehlgeschlagen: {{message}}",
     "quickSelect": "Schnellauswahl",
-    "quickSelectHint": "Label eingeben zum Kopieren. Esc zum Abbrechen.",
+    "quickSelectHint": "Klicken oder Label eingeben zum Kopieren. URL mit Strg- oder Umschalt-Klick öffnen. Esc zum Abbrechen.",
     "quickSelectNoMatches": "Kein kopierbarer Text auf dem Bildschirm sichtbar.",
     "quickSelectCopied": "{{text}} kopiert",
     "previousPrompt": "Vorheriger Prompt",

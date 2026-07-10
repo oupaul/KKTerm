@@ -4,6 +4,7 @@ import {
   MAX_QUICK_SELECT_MATCHES,
   findQuickSelectMatches,
   labelQuickSelectMatches,
+  quickSelectPointerAction,
   quickSelectLabels,
 } from "../src/modules/workspace/connections/terminal/quickSelect";
 
@@ -52,4 +53,18 @@ test("labelQuickSelectMatches pairs each match with a label", () => {
 
 test("plain prose produces no matches", () => {
   assert.equal(findQuickSelectMatches(["the quick brown fox jumps over the lazy dog"]).length, 0);
+});
+
+test("Quick Select clicks copy while modifier-click opens only web URLs", () => {
+  assert.deepEqual(quickSelectPointerAction("https://example.com/docs", false), { kind: "copy" });
+  assert.deepEqual(quickSelectPointerAction("https://example.com/docs", true), {
+    kind: "open",
+    url: "https://example.com/docs",
+  });
+  assert.deepEqual(quickSelectPointerAction("http://example.com", true), {
+    kind: "open",
+    url: "http://example.com/",
+  });
+  assert.deepEqual(quickSelectPointerAction("C:\\logs\\app.log", true), { kind: "copy" });
+  assert.deepEqual(quickSelectPointerAction("mailto:user@example.com", true), { kind: "copy" });
 });

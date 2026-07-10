@@ -3043,7 +3043,7 @@
     "colorSchemeGlobalDefault": "Usar el valor global",
     "colorSchemeSaveFailed": "No se pudo guardar el esquema de color: {{message}}",
     "quickSelect": "Selección rápida",
-    "quickSelectHint": "Escribe una etiqueta para copiar. Esc para cancelar.",
+    "quickSelectHint": "Haz clic o escribe una etiqueta para copiar. Ctrl-clic o Mayús-clic en una URL para abrirla. Esc para cancelar.",
     "quickSelectNoMatches": "No hay texto copiable visible en la pantalla.",
     "quickSelectCopied": "{{text}} copiado",
     "previousPrompt": "Prompt anterior",

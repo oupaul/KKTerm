@@ -3043,7 +3043,7 @@
     "colorSchemeGlobalDefault": "Gunakan default global",
     "colorSchemeSaveFailed": "Gagal menyimpan skema warna: {{message}}",
     "quickSelect": "Pilih cepat",
-    "quickSelectHint": "Ketik label untuk menyalin. Esc untuk membatalkan.",
+    "quickSelectHint": "Klik atau ketik label untuk menyalin. Ctrl-klik atau Shift-klik URL untuk membukanya. Esc untuk membatalkan.",
     "quickSelectNoMatches": "Tidak ada teks yang dapat disalin di layar.",
     "quickSelectCopied": "{{text}} disalin",
     "previousPrompt": "Prompt sebelumnya",

@@ -3043,7 +3043,7 @@
     "colorSchemeGlobalDefault": "使用全域預設",
     "colorSchemeSaveFailed": "儲存色彩配置失敗：{{message}}",
     "quickSelect": "快速選取",
-    "quickSelectHint": "輸入標籤即可複製，按 Esc 取消。",
+    "quickSelectHint": "按一下或輸入標籤即可複製；按住 Ctrl 或 Shift 並按一下 URL 即可開啟；按 Esc 取消。",
     "quickSelectNoMatches": "畫面上沒有可複製的文字。",
     "quickSelectCopied": "已複製 {{text}}",
     "previousPrompt": "上一個提示符號",

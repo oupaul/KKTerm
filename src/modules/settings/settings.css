@@ -1518,6 +1518,12 @@
   grid-column: 2;
 }
 
+.settings-section label.terminal-color-scheme-setting > .terminal-scheme-picker {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+}
+
 .settings-section label.ssh-key-path-setting {
   grid-template-columns: minmax(140px, 200px) minmax(360px, 1fr);
 }
@@ -1763,6 +1769,87 @@
 .settings-section select:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.terminal-scheme-picker {
+  position: relative;
+  min-width: 0;
+}
+
+.terminal-scheme-picker-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: var(--app-ui-font-family);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.terminal-scheme-picker-trigger:focus-visible {
+  border-color: currentColor;
+  box-shadow: 0 0 0 3px var(--accent-soft);
+  outline: none;
+}
+
+.terminal-scheme-picker-trigger svg {
+  flex: 0 0 auto;
+  transition: transform 120ms ease;
+}
+
+.terminal-scheme-picker.open .terminal-scheme-picker-trigger svg {
+  transform: rotate(180deg);
+}
+
+.terminal-scheme-picker-list {
+  position: absolute;
+  top: calc(100% + 5px);
+  right: 0;
+  left: 0;
+  z-index: 80;
+  display: grid;
+  max-height: min(420px, 60vh);
+  padding: 4px;
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+}
+
+.terminal-scheme-picker-option {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 32px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: var(--app-ui-font-family);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.terminal-scheme-picker-option:hover,
+.terminal-scheme-picker-option:focus-visible {
+  filter: brightness(1.14);
+  box-shadow: inset 0 0 0 2px currentColor;
+  outline: none;
+}
+
+.terminal-scheme-picker-option svg {
+  flex: 0 0 auto;
 }
 
 .input-with-button,

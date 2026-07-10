@@ -3043,7 +3043,7 @@
     "colorSchemeGlobalDefault": "グローバル既定を使用",
     "colorSchemeSaveFailed": "カラースキームの保存に失敗しました: {{message}}",
     "quickSelect": "クイック選択",
-    "quickSelectHint": "ラベルを入力するとコピーします。Esc でキャンセル。",
+    "quickSelectHint": "クリックまたはラベル入力でコピー。URL は Ctrl+クリックまたは Shift+クリックで開きます。Esc でキャンセル。",
     "quickSelectNoMatches": "画面にコピーできるテキストがありません。",
     "quickSelectCopied": "{{text}} をコピーしました",
     "previousPrompt": "前のプロンプト",

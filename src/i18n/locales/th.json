@@ -3043,7 +3043,7 @@
     "colorSchemeGlobalDefault": "ใช้ค่าเริ่มต้นส่วนกลาง",
     "colorSchemeSaveFailed": "บันทึกชุดสีไม่สำเร็จ: {{message}}",
     "quickSelect": "เลือกด่วน",
-    "quickSelectHint": "พิมพ์ป้ายกำกับเพื่อคัดลอก กด Esc เพื่อยกเลิก",
+    "quickSelectHint": "คลิกหรือพิมพ์ป้ายกำกับเพื่อคัดลอก Ctrl-คลิกหรือ Shift-คลิก URL เพื่อเปิด กด Esc เพื่อยกเลิก",
     "quickSelectNoMatches": "ไม่มีข้อความที่คัดลอกได้บนหน้าจอ",
     "quickSelectCopied": "คัดลอก {{text}} แล้ว",
     "previousPrompt": "พรอมต์ก่อนหน้า",
