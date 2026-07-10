@@ -80,6 +80,39 @@ pub fn validate_placement(
     Ok(())
 }
 
+/// Rack-top placement is deliberately narrow: only a Kuai Kuai package may
+/// occupy the virtual position immediately above the cabinet. Everything else
+/// continues through the ordinary in-cabinet U-span validator.
+fn validate_item_placement(
+    kind: RackItemKind,
+    rack_height_u: u32,
+    existing: &[(String, Span)],
+    ignore_id: Option<&str>,
+    candidate: Span,
+) -> Result<()> {
+    if candidate.start_u != rack_height_u + 1 {
+        return validate_placement(rack_height_u, existing, ignore_id, candidate);
+    }
+    if kind != RackItemKind::Kuaiguai {
+        return Err(ItopsStorageError::Validation(
+            "only a Kuai Kuai package may be placed on top of a rack".to_string(),
+        ));
+    }
+    if candidate.height_u < 1 {
+        return Err(ItopsStorageError::Validation(
+            "a rack-top Kuai Kuai package must be at least 1U tall".to_string(),
+        ));
+    }
+    if existing.iter().any(|(id, span)| {
+        ignore_id != Some(id.as_str()) && span.start_u == rack_height_u + 1
+    }) {
+        return Err(ItopsStorageError::Validation(
+            "the rack top already holds a Kuai Kuai package".to_string(),
+        ));
+    }
+    Ok(())
+}
+
 // ── Serialization helpers ───────────────────────────────────────────────────
 
 fn validate_name(name: &str) -> Result<String> {
@@ -547,16 +580,19 @@ pub fn update_rack(
     let power_capacity_w = validate_power_capacity(power_capacity_w)?;
     let shell = normalize_shell(shell);
     // Existence check (returns NotFound early before the height-shrink scan).
-    let (site_id, _sort_order): (String, i64) = conn
+    let (site_id, _sort_order, old_height_u): (String, i64, u32) = conn
         .query_row(
-            "SELECT site_id, sort_order FROM itops_site_racks WHERE id = ?",
+            "SELECT site_id, sort_order, height_u FROM itops_site_racks WHERE id = ?",
             params![id],
-            |row| Ok((row.get(0)?, row.get(1)?)),
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
         )
         .optional()?
         .ok_or(ItopsStorageError::NotFound)?;
     let server_room = validate_server_room(conn, &site_id, server_room)?;
     for item in list_items_for_rack(conn, id)? {
+        if item.kind == RackItemKind::Kuaiguai && item.start_u == old_height_u + 1 {
+            continue;
+        }
         if item.start_u + item.height_u - 1 > height_u {
             return Err(ItopsStorageError::Validation(format!(
                 "cannot shrink to {height_u}U: an item occupies U{}",
@@ -580,6 +616,14 @@ pub fn update_rack(
             id
         ],
     )?;
+    if old_height_u != height_u {
+        conn.execute(
+            "UPDATE itops_site_rack_items
+             SET start_u = ?, updated_at = CURRENT_TIMESTAMP
+             WHERE rack_id = ? AND kind = 'kuaiguai' AND start_u = ?",
+            params![height_u + 1, id, old_height_u + 1],
+        )?;
+    }
     fetch_rack(conn, id)
 }
 
@@ -881,7 +925,13 @@ pub fn place_rack_item(
     let connection_id = normalize_item_connection(kind, connection_id)?;
     let rack_height = fetch_rack_height(conn, rack_id)?;
     let existing = existing_spans(conn, rack_id)?;
-    validate_placement(rack_height, &existing, None, Span { start_u, height_u })?;
+    validate_item_placement(
+        kind,
+        rack_height,
+        &existing,
+        None,
+        Span { start_u, height_u },
+    )?;
     let metadata_json = metadata_to_json(&metadata)?;
     conn.execute(
         "INSERT INTO itops_site_rack_items
@@ -920,6 +970,14 @@ pub fn update_rack_item(
     label: &str,
     metadata: RackItemMetadata,
 ) -> Result<RackItem> {
+    let current = fetch_item(conn, id)?;
+    let rack_height = fetch_rack_height(conn, &current.rack_id)?;
+    if current.start_u == rack_height + 1 && kind != RackItemKind::Kuaiguai {
+        return Err(ItopsStorageError::Validation(
+            "move a rack-top Kuai Kuai package inside the cabinet before changing its type"
+                .to_string(),
+        ));
+    }
     let connection_id = normalize_item_connection(kind, connection_id)?;
     let metadata_json = metadata_to_json(&metadata)?;
     let affected = conn.execute(
@@ -943,9 +1001,16 @@ pub fn move_rack_item(
     start_u: u32,
     height_u: u32,
 ) -> Result<RackItem> {
+    let current = fetch_item(conn, id)?;
     let rack_height = fetch_rack_height(conn, rack_id)?;
     let existing = existing_spans(conn, rack_id)?;
-    validate_placement(rack_height, &existing, Some(id), Span { start_u, height_u })?;
+    validate_item_placement(
+        current.kind,
+        rack_height,
+        &existing,
+        Some(id),
+        Span { start_u, height_u },
+    )?;
     let affected = conn.execute(
         "UPDATE itops_site_rack_items
          SET rack_id = ?, start_u = ?, height_u = ?, updated_at = CURRENT_TIMESTAMP
@@ -1090,6 +1155,27 @@ mod tests {
         assert!(validate_placement(42, &[], None, span(0, 1)).is_err());
         // A move can ignore its own current span.
         assert!(validate_placement(42, &existing, Some("a"), span(10, 2)).is_ok());
+    }
+
+    #[test]
+    fn only_one_kuaiguai_package_may_occupy_the_rack_top() {
+        let top = span(43, 4);
+        assert!(
+            validate_item_placement(RackItemKind::Kuaiguai, 42, &[], None, top).is_ok()
+        );
+        assert!(
+            validate_item_placement(RackItemKind::Server, 42, &[], None, top).is_err()
+        );
+        assert!(
+            validate_item_placement(
+                RackItemKind::Kuaiguai,
+                42,
+                &[("kk".to_string(), top)],
+                None,
+                span(43, 1),
+            )
+            .is_err()
+        );
     }
 
     #[test]
@@ -1452,6 +1538,28 @@ mod tests {
             update_rack(&conn, "r1", "A12", "Room B", "", None, 24, 1000, None),
             Err(ItopsStorageError::Validation(_))
         ));
+    }
+
+    #[test]
+    fn rack_top_kuaiguai_follows_a_rack_height_change() {
+        let conn = open_test_db();
+        create_rack(&conn, "r1", "f1", "A12", "Room B", "", None, 42, 1000, None).unwrap();
+        place_rack_item(
+            &conn,
+            "kk1",
+            "r1",
+            None,
+            RackItemKind::Kuaiguai,
+            "",
+            43,
+            4,
+            RackItemMetadata::default(),
+        )
+        .unwrap();
+
+        let updated =
+            update_rack(&conn, "r1", "A12", "Room B", "", None, 48, 1000, None).unwrap();
+        assert_eq!(updated.items[0].start_u, 49);
     }
 
     #[test]

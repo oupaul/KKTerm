@@ -51,6 +51,7 @@ import { ServerRoomFloorPlan } from "./ServerRoomFloorPlan";
 import { ServerRoomIsoView } from "./ServerRoomIsoView";
 import { RoomObjectPicker, type RoomTool } from "./roomViewParts";
 import { collectBoundConnectionIds } from "./rackInventory";
+import { isRackTopItem } from "./rackPlacement";
 import type { DashboardBackground } from "../dashboard/types";
 import { SharedBackgroundPopover } from "../dashboard/edit/SharedBackgroundPopover";
 import { loadBackgroundImage } from "../dashboard/state/persistence";
@@ -1483,6 +1484,18 @@ function RackDrill({
               </button>
             </div>
           ) : null}
+          {rack ? (
+            <div className="it-rack-toolbar-meta">
+              <strong>{rack.name}</strong>
+              <span>
+                {t("itops.racks.unitCount", { count: rack.heightU })}
+                {` · ${rack.depthMm} mm`}
+                {rack.items.length > 0
+                  ? ` · ${t("itops.racks.deviceCount", { count: rack.items.length })}`
+                  : ""}
+              </span>
+            </div>
+          ) : null}
           <div className="it-drill-actions" aria-label={t("itops.actions.viewActions")}>
             {!rack && !serverRoom && !siteSegmentActive && topology.length > 0 ? (
               <button
@@ -1870,6 +1883,7 @@ function RackObjectPicker({
   const [query, setQuery] = useState("");
   const q = query.trim().toLowerCase();
   const startU = firstAvailableRackUnit(rack);
+  const rackTopAvailable = !rack.items.some((item) => isRackTopItem(item, rack.heightU));
   const kinds = RACK_ITEM_KINDS.filter(
     (kind) => !q || t(`itops.racks.kind.${kind}`).toLowerCase().includes(q),
   );
@@ -1898,6 +1912,7 @@ function RackObjectPicker({
       <div className="rm-picker-grid">
         {kinds.map((kind) => {
           const label = t(`itops.racks.kind.${kind}`);
+          const available = startU != null || (kind === "kuaiguai" && rackTopAvailable);
           return (
             <button
               key={kind}
@@ -1905,15 +1920,15 @@ function RackObjectPicker({
               className="rm-picker-card"
               title={label}
               data-active={armedKind === kind || undefined}
-              disabled={startU == null}
-              onClick={() => startU != null && onPickDevice(kind)}
+              disabled={!available}
+              onClick={() => available && onPickDevice(kind)}
             >
               <span className="rm-picker-thumb device">
                 <RackDevice
                   kind={kind}
                   label={label}
                   status="online"
-                  heightU={1}
+                  heightU={kind === "kuaiguai" ? 4 : 1}
                   shell="black"
                   seed={`picker-${kind}`}
                 />

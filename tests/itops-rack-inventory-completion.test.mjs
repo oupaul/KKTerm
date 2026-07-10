@@ -2,15 +2,19 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-test("Rack Device dialog has live graphical preview and 乖乖 size control", async () => {
+test("Rack Device dialog has live graphical preview and 乖乖 size/style controls", async () => {
   const dialog = await readFile(new URL("../src/modules/itops/RackItemDialog.tsx", import.meta.url), "utf8");
   const device = await readFile(new URL("../src/modules/itops/RackDevice.tsx", import.meta.url), "utf8");
 
   assert.match(dialog, /rack-item-preview/);
   assert.match(dialog, /kuaiguaiSize/);
   assert.match(dialog, /itops\.racks\.kuaiguaiSizeLabel/);
+  assert.match(dialog, /kuaiguaiStyle/);
+  assert.match(dialog, /itops\.racks\.kuaiguaiStyleLabel/);
   assert.match(device, /kuaiguaiSize\?:/);
+  assert.match(device, /kuaiguaiStyle\?:/);
   assert.match(device, /data-kuaiguai-size/);
+  assert.match(device, /data-kuaiguai-style/);
 });
 
 test("Rack Device property dialog omits removed relationship metadata", async () => {

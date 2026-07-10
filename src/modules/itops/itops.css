@@ -2319,6 +2319,59 @@
     0 18px 30px -30px rgba(0, 0, 0, 0.85),
     inset 0 0.5px 0 rgba(255, 255, 255, 0.05);
 }
+.itops-page .rk-cabinet {
+  position: relative;
+  margin-top: var(--rk-top-clearance, 0px);
+}
+.itops-page .rk-top-area {
+  position: absolute;
+  left: 22px;
+  right: 22px;
+  bottom: calc(100% - 2px);
+  height: var(--rk-top-clearance, 0px);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  pointer-events: none;
+}
+.itops-page .rk-top-item {
+  position: relative;
+  width: min(150px, 100%);
+  pointer-events: auto;
+}
+.itops-page .rk-top-area > .rk-place-ghost {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+}
+.itops-page .rk-top-item-main {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.itops-page .rk-top-item-delete {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0.5px solid color-mix(in srgb, var(--red) 44%, var(--border));
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--surface) 90%, transparent);
+  color: var(--red);
+  cursor: pointer;
+}
 .itops-page .rk-rail {
   height: 7px;
   border-radius: 5px;
@@ -2486,6 +2539,17 @@
 .itops-page .rk-place-ghost.blocked {
   opacity: 0.4;
   outline-color: var(--red);
+}
+.rk-cursor-ghost {
+  position: fixed;
+  z-index: 120;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  opacity: 0.78;
+  border-radius: 5px;
+  outline: 1.5px dashed var(--accent);
+  outline-offset: 2px;
+  filter: drop-shadow(0 10px 18px rgb(0 0 0 / 28%));
 }
 
 /* ── Rack item open/edit affordances + ghost ─────────────────────────────── */
@@ -3480,6 +3544,32 @@
 .itops-page .it-drill-spacer {
   flex: 1 1 auto;
 }
+.itops-page .it-rack-toolbar-meta {
+  position: absolute;
+  left: 50%;
+  top: 4px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  max-width: calc(100% - 160px);
+  min-width: 0;
+  pointer-events: auto;
+  white-space: nowrap;
+}
+.itops-page .it-rack-toolbar-meta strong {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 680;
+  letter-spacing: -0.01em;
+  text-overflow: ellipsis;
+}
+.itops-page .it-rack-toolbar-meta span {
+  color: var(--text-faint);
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+}
 .itops-page .it-drill-actions {
   display: inline-flex;
   align-items: center;
@@ -3889,7 +3979,7 @@
   position: relative;
   display: flex;
   justify-content: center;
-  padding: 8px 28px 30px;
+  padding: 4px 28px 4px;
   min-height: 0;
 }
 .itops-page .rk-stage-rack {
@@ -4233,6 +4323,21 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.itops-page .rm-bp-top-kuaiguai {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 54%;
+  height: 46%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+.itops-page .rm-bp-top-kuaiguai .kk-bag {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  filter: drop-shadow(0 2px 2px rgb(0 0 0 / 32%));
 }
 
 /* Compact always-on status tags (device count · watts); rack-unit figures
@@ -5095,6 +5200,21 @@
   transform-origin: center;
   pointer-events: none;
 }
+.itops-page .rm-iso-top-kuaiguai {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 58%;
+  height: 52%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+.itops-page .rm-iso-top-kuaiguai .kk-bag {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  filter: drop-shadow(0 2px 2px rgb(0 0 0 / 38%));
+}
 .itops-page .rm-iso-cab .rm-iso-front {
   border: 1px solid var(--cab-edge);
   background: linear-gradient(180deg, var(--cab-a), var(--cab-b));
@@ -5909,86 +6029,34 @@
 }
 
 
-.itops-page .rkd-kuaiguai {
-  display: flex;
+.itops-page .rkd.rkd-kuaiguai-only {
+  min-height: 0;
   align-items: center;
   justify-content: center;
+  overflow: visible;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.itops-page .rkd-kuaiguai-only .kk-bag {
   width: 100%;
-  min-width: 88px;
-  perspective: 280px;
-}
-
-.itops-page .rkd-kk-pack {
-  position: relative;
-  display: grid;
-  place-items: center;
-  min-width: 76px;
-  height: 34px;
-  border-radius: 8px 13px 8px 13px;
-  color: #063b1a;
-  background:
-    radial-gradient(circle at 78% 28%, rgba(255, 255, 255, .68), transparent 20%),
-    linear-gradient(135deg, #c9ff70 0%, #34c759 52%, #188a34 100%);
-  border: 1px solid rgba(255, 255, 255, .55);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.66), 0 6px 12px rgba(0,0,0,.28);
+  height: 100%;
+  overflow: visible;
   transform: rotate(var(--rkd-rotate, -2deg)) rotateY(var(--rkd-yaw, 0deg));
-  transform-style: preserve-3d;
-  overflow: hidden;
+  transform-origin: center;
+  filter: drop-shadow(0 5px 6px rgb(0 0 0 / 32%));
 }
-
-.itops-page .rkd[data-kuaiguai-size="small"] .rkd-kk-pack {
-  min-width: 60px;
-  height: 28px;
+.itops-page .rkd-kuaiguai-only[data-kuaiguai-style="full"] .kk-bag {
+  max-width: 92px;
 }
-
-.itops-page .rkd[data-kuaiguai-size="large"] .rkd-kk-pack {
-  min-width: 92px;
-  height: 38px;
+.itops-page .rkd-kuaiguai-only[data-kuaiguai-style="laidDown"] .kk-bag {
+  max-width: 170px;
 }
-
-.itops-page .rkd-kk-pack::before,
-.itops-page .rkd-kk-pack::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 9px;
-  background: repeating-linear-gradient(180deg, rgba(255,255,255,.72) 0 3px, rgba(255,255,255,.18) 3px 6px);
+.itops-page .rkd-kuaiguai-only[data-kuaiguai-size="small"] .kk-bag {
+  transform: rotate(var(--rkd-rotate, -2deg)) rotateY(var(--rkd-yaw, 0deg)) scale(.82);
 }
-
-.itops-page .rkd-kk-pack::before { left: 0; }
-.itops-page .rkd-kk-pack::after { right: 0; }
-
-.itops-page .rkd-kk-brand {
-  position: absolute;
-  top: 3px;
-  left: 13px;
-  font-size: 10px;
-  font-weight: 900;
-  letter-spacing: .05em;
-}
-
-.itops-page .rkd-kk-name {
-  font-size: 16px;
-  font-weight: 900;
-  line-height: 1;
-}
-
-.itops-page .rkd-kk-art {
-  position: absolute;
-  right: 12px;
-  bottom: 4px;
-  font-size: 9px;
-  font-weight: 800;
-}
-
-.itops-page .rkd-kk-exp {
-  position: absolute;
-  left: 13px;
-  bottom: 4px;
-  font-size: 6px;
-  font-weight: 800;
-  opacity: .82;
+.itops-page .rkd-kuaiguai-only[data-kuaiguai-size="large"] .kk-bag {
+  transform: rotate(var(--rkd-rotate, -2deg)) rotateY(var(--rkd-yaw, 0deg)) scale(1.08);
 }
 
 /* ── Rack-device connect popover (RackItemConnectPopover) ──

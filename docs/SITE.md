@@ -119,7 +119,7 @@ Replaces the **Host Group** entry in `CONTEXT.md`; adds the rest. Follows the
 - **Rack Device Properties** — non-secret presentation metadata for a Rack
   Device: label, status, accent, notes, tags, additional Connection bindings,
   typed port rows, SNMP target/OID hints for user-triggered refresh, shell/model
-  preview data, 乖乖 package expiry/size/rotation/yaw, ports, disks, battery,
+  preview data, 乖乖 package expiry/size/style/rotation/yaw, ports, disks, battery,
   load, icon, and placement. Never store credentials, secrets, or live Session
   state here. SNMP refresh is manual rather than a background polling service.
 
@@ -206,11 +206,12 @@ flat Site target.
 ### Overlap / validation rule
 
 A rack item must not overlap another item's U span in the same rack, and must
-fit within `1..=height_u`. Validate in `itops/site_storage.rs` on
-insert/update (pure helper, unit-tested) and re-check in the UI before a
-drag-drop commit. This is the one new non-trivial invariant; keep it in a small
-pure function (`fn overlaps(existing: &[Span], candidate: Span) -> bool`) so it
-is testable without a DB.
+fit within `1..=height_u`. The sole exception is one 乖乖 package on the rack
+top, stored at the virtual position `height_u + 1`; changing the Rack height
+moves that package's virtual position with the top. Validate in
+`itops/site_storage.rs` on insert/update (pure helper, unit-tested) and
+re-check in the UI before a drag-drop commit. Keep the overlap and special
+placement rules in small pure functions so they remain testable without a DB.
 
 ### Rust types (`src-tauri/src/itops/types.rs`)
 
@@ -341,7 +342,13 @@ The visible IT Ops Module opens directly into the Site topology surface:
   opens the shared Dashboard background picker; the room floor finish is a
   durable Server Room property rather than an always-visible canvas palette.
 - **Rack View** — selecting a Rack centers its front elevation and Rack Device
-  properties/placement interactions.
+  properties/placement interactions. The Rack name/specifications live in the
+  top-middle toolbar. An armed Rack Device remains under the pointer outside the
+  cabinet, magnetically snaps to a nearby U, and cancels on right-click, Escape,
+  picker disarm, or navigation. 乖乖 alone can also snap to the rack top (the
+  durable virtual position `start_u = height_u + 1`): `full` stands at 4U and
+  `laidDown` faces upward at 1U. Floor views hide 乖乖 stored inside the cabinet
+  and show only a rack-top package.
 
 Batch Runs and Automations remain part of IT Ops, but their top-level
 management tab chrome is hidden while the Site-only UI is active.

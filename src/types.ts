@@ -313,6 +313,8 @@ export interface RackItemMetadata {
   snmp?: RackSnmpHint | string | null;
   /** 乖乖 package size variant. */
   kuaiguaiSize?: "small" | "regular" | "large" | null;
+  /** Standing package (4U) or package laid face-up (1U). */
+  kuaiguaiStyle?: "full" | "laidDown" | null;
   /** Hardware model used for the graphical device preview, e.g. Dell 740XD. */
   vendor?: string | null;
 }

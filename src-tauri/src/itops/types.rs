@@ -605,6 +605,9 @@ pub struct RackItemMetadata {
     pub snmp: Option<RackSnmpHint>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub kuaiguai_size: Option<String>,
+    /// Standing package ("full", 4U) or package laid face-up ("laidDown", 1U).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub kuaiguai_style: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub vendor: Option<String>,
 }

@@ -1253,6 +1253,11 @@
         "regular": "Normal",
         "large": "Groß"
       },
+      "kuaiguaiStyleLabel": "Packungsstil",
+      "kuaiguaiStyle": {
+        "full": "Aufrecht",
+        "laidDown": "Liegend (Vorderseite oben)"
+      },
       "portState": {
         "unknown": "Unbekannt",
         "up": "Aktiv",
@@ -4080,7 +4085,7 @@
   "workspace": {
     "tabs": "Arbeitsbereich-Tabs",
     "noActiveSession": "Keine aktive Sitzung",
-    "openFromTree": "Eine Verbindung aus dem Baum öffnen.",
+    "openFromTree": "Eine Verbindung aus dem Baum öffnen oder eine neue Verbindung erstellen:",
     "syncInput": "Eingabe an alle Terminals synchronisieren",
     "syncInputEnabledNotice": "Die Eingabe wird nun an jedes geöffnete Terminal gespiegelt.",
     "newTab": "Neuer Tab",

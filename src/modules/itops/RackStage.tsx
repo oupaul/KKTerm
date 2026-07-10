@@ -140,6 +140,7 @@ export function RackStage({
       <div className="rk-stage-rack">
         <RackElevation
           rack={rack}
+          hideHeader
           hostFor={hostFor}
           isGhost={isGhost}
           editMode={editMode}

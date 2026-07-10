@@ -1253,6 +1253,11 @@
         "regular": "Normale",
         "large": "Grande"
       },
+      "kuaiguaiStyleLabel": "Stile confezione",
+      "kuaiguaiStyle": {
+        "full": "In piedi",
+        "laidDown": "Sdraiato (fronte verso l’alto)"
+      },
       "portState": {
         "unknown": "Sconosciuto",
         "up": "Attivo",
@@ -4080,7 +4085,7 @@
   "workspace": {
     "tabs": "Schede spazio di lavoro",
     "noActiveSession": "Nessuna sessione attiva",
-    "openFromTree": "Apri una connessione dall'albero.",
+    "openFromTree": "Apri una connessione dall'albero, oppure crea una nuova connessione:",
     "syncInput": "Sincronizza l'input su tutti i terminali",
     "syncInputEnabledNotice": "L'input viene ora mirrorato su ogni terminale aperto.",
     "newTab": "Nuova scheda",

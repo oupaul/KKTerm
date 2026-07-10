@@ -11,6 +11,7 @@
 // reads the shared theme tokens.
 
 import type { RackItemKind, RackItemStatus, RackShell } from "../../types";
+import { KuaiKuaiBag, type KuaiKuaiStyle } from "./KuaiKuaiBag";
 
 export interface RackDeviceProps {
   kind: RackItemKind;
@@ -26,6 +27,7 @@ export interface RackDeviceProps {
   rotation?: number | null;
   yaw?: number | null;
   kuaiguaiSize?: "small" | "regular" | "large" | null;
+  kuaiguaiStyle?: KuaiKuaiStyle | null;
   heightU: number;
   /** User accent override; falls back to the per-kind device colour. */
   accent?: string | null;
@@ -98,6 +100,7 @@ export function RackDevice({
   rotation,
   yaw,
   kuaiguaiSize,
+  kuaiguaiStyle,
   heightU,
   accent,
   shell,
@@ -119,6 +122,22 @@ export function RackDevice({
   const isPdu = kind === "pdu";
   const isUps = kind === "ups";
   const isKvm = kind === "kvm";
+
+  if (isKuaiguai) {
+    return (
+      <div
+        className="rkd rkd-kuaiguai-only"
+        data-kuaiguai-size={kuaiguaiSize ?? "regular"}
+        data-kuaiguai-style={kuaiguaiStyle ?? "full"}
+        style={{
+          ["--rkd-rotate" as string]: `${rotation ?? -2}deg`,
+          ["--rkd-yaw" as string]: `${yaw ?? 0}deg`,
+        }}
+      >
+        <KuaiKuaiBag style={kuaiguaiStyle ?? "full"} expiry={expiry} />
+      </div>
+    );
+  }
 
   const statusLed = STATUS_LED[status];
   const statusGlow = STATUS_GLOW[status];
@@ -218,18 +237,6 @@ export function RackDevice({
         ) : null}
 
         <div className="rkd-visual">
-
-          {/* 乖乖 novelty keep-good-luck package */}
-          {isKuaiguai ? (
-            <div className="rkd-kuaiguai" title={expiry ? `Expires ${expiry}` : undefined}>
-              <div className="rkd-kk-pack">
-                <span className="rkd-kk-brand">KK</span>
-                <span className="rkd-kk-name">乖乖</span>
-                <span className="rkd-kk-art">◕‿◕</span>
-                {expiry ? <span className="rkd-kk-exp">EXP {expiry}</span> : null}
-              </div>
-            </div>
-          ) : null}
 
           {/* SWITCH */}
           {isSwitch ? (

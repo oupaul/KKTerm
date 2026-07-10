@@ -1253,6 +1253,11 @@
         "regular": "标准",
         "large": "大"
       },
+      "kuaiguaiStyleLabel": "包装样式",
+      "kuaiguaiStyle": {
+        "full": "直立",
+        "laidDown": "平放（正面朝上）"
+      },
       "portState": {
         "unknown": "未知",
         "up": "已连接",
@@ -4080,7 +4085,7 @@
   "workspace": {
     "tabs": "工作区标签页",
     "noActiveSession": "无活动会话",
-    "openFromTree": "从连接树打开一个连接。",
+    "openFromTree": "从连接树打开一个连接，或创建新连接：",
     "syncInput": "同步输入到所有终端",
     "syncInputEnabledNotice": "输入现在会镜像到所有打开的终端。",
     "newTab": "新建标签页",

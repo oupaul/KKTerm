@@ -1253,6 +1253,11 @@
         "regular": "보통",
         "large": "대"
       },
+      "kuaiguaiStyleLabel": "패키지 형태",
+      "kuaiguaiStyle": {
+        "full": "세워 놓기",
+        "laidDown": "눕혀 놓기(앞면 위)"
+      },
       "portState": {
         "unknown": "알 수 없음",
         "up": "연결됨",
@@ -4080,7 +4085,7 @@
   "workspace": {
     "tabs": "워크스페이스 탭",
     "noActiveSession": "활성 세션 없음",
-    "openFromTree": "트리에서 연결을 열어주세요.",
+    "openFromTree": "트리에서 연결을 열거나 새 연결을 만드세요:",
     "syncInput": "모든 터미널에 입력 동기화",
     "syncInputEnabledNotice": "입력이 현재 열려 있는 모든 터미널에 미러링됩니다.",
     "newTab": "새 탭",

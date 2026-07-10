@@ -41,6 +41,8 @@ import {
 import { rackFloorMetrics } from "./roomFloorPlan";
 import { ItIcon } from "./icons";
 import { RoomObjectPlanArtwork } from "./RoomObjectArtwork";
+import { KuaiKuaiBag } from "./KuaiKuaiBag";
+import { isRackTopItem } from "./rackPlacement";
 import {
   OBJECT_ACCENTS,
   RackTagChips,
@@ -556,6 +558,7 @@ function BlueprintRack({
   const left = (cell.x + fp.x) * cellW;
   const top = (cell.y + fp.y) * cellH;
   const front = (["s", "w", "n", "e"] as const)[facing];
+  const topKuaiguai = rack.items.find((item) => isRackTopItem(item, rack.heightU));
 
   return (
     <div
@@ -584,6 +587,11 @@ function BlueprintRack({
         onClick={onSelect}
       >
         <span className="rm-bp-rack-name">{rack.name}</span>
+        {topKuaiguai ? (
+          <span className="rm-bp-top-kuaiguai">
+            <KuaiKuaiBag style="laidDown" expiry={topKuaiguai.metadata?.expiry} />
+          </span>
+        ) : null}
         <RackTagChips rack={rack} />
       </button>
       <span className="rm-bp-tip">

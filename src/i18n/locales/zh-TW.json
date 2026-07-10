@@ -1253,6 +1253,11 @@
         "regular": "標準",
         "large": "大"
       },
+      "kuaiguaiStyleLabel": "包裝樣式",
+      "kuaiguaiStyle": {
+        "full": "直立",
+        "laidDown": "平放（正面朝上）"
+      },
       "portState": {
         "unknown": "未知",
         "up": "已連線",
@@ -4080,7 +4085,7 @@
   "workspace": {
     "tabs": "工作區分頁",
     "noActiveSession": "無使用中的工作階段",
-    "openFromTree": "從連線樹開啟一個連線。",
+    "openFromTree": "從連線樹開啟一個連線，或建立新的連線：",
     "syncInput": "同步輸入到所有終端機",
     "syncInputEnabledNotice": "輸入現在會鏡像到所有開啟的終端機。",
     "newTab": "新增分頁",

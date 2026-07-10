@@ -28,6 +28,7 @@ import type {
   ResolvedHost,
 } from "../../types";
 import { hostDisplayName } from "./hostTree";
+import type { KuaiKuaiStyle } from "./KuaiKuaiBag";
 import { normalizeRackItemMetadata } from "./rackInventory";
 import { RackDevice } from "./RackDevice";
 import { useItOpsStore } from "./state";
@@ -115,6 +116,9 @@ export function RackItemDialog({
   const { t } = useTranslation();
   const isEdit = !!item;
   const initialMetadata = normalizeRackItemMetadata(item?.metadata ?? {});
+  const initialKind = item?.kind ?? defaultKind ?? "server";
+  const initialKuaiguaiStyle: KuaiKuaiStyle =
+    initialMetadata.kuaiguaiStyle ?? (item?.kind === "kuaiguai" && item.heightU === 1 ? "laidDown" : "full");
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
   const placeRackItem = useItOpsStore((state) => state.placeRackItem);
   const updateRackItem = useItOpsStore((state) => state.updateRackItem);
@@ -122,13 +126,15 @@ export function RackItemDialog({
   const removeRackItem = useItOpsStore((state) => state.removeRackItem);
   const refreshRackItemSnmp = useItOpsStore((state) => state.refreshRackItemSnmp);
 
-  const [kind, setKind] = useState<RackItemKind>(item?.kind ?? defaultKind ?? "server");
+  const [kind, setKind] = useState<RackItemKind>(initialKind);
   const [connectionId, setConnectionId] = useState<string>(
     item?.connectionId ?? members[0]?.connectionId ?? "",
   );
   const [label, setLabel] = useState(item?.label ?? "");
   const [startU, setStartU] = useState(item?.startU ?? defaultStartU ?? 1);
-  const [heightU, setHeightU] = useState(item?.heightU ?? 1);
+  const [heightU, setHeightU] = useState(
+    initialKind === "kuaiguai" ? (initialKuaiguaiStyle === "laidDown" ? 1 : 4) : item?.heightU ?? 1,
+  );
   const [accent, setAccent] = useState(item?.metadata?.accent ?? "none");
   const [status, setStatus] = useState<RackItemStatus>(item?.metadata?.status ?? "online");
   const [ports, setPorts] = useState(item?.metadata?.ports ?? 24);
@@ -142,6 +148,7 @@ export function RackItemDialog({
   const [kuaiguaiSize, setKuaiguaiSize] = useState<"small" | "regular" | "large">(
     initialMetadata.kuaiguaiSize ?? "regular",
   );
+  const [kuaiguaiStyle, setKuaiguaiStyle] = useState<KuaiKuaiStyle>(initialKuaiguaiStyle);
   const [notes, setNotes] = useState(item?.metadata?.notes ?? "");
   const [tags, setTags] = useState(joinValues(item?.metadata?.tags));
   // The IT Ops Host this device is (docs/ITOPS.md Hosts); its child Hosts show
@@ -160,7 +167,10 @@ export function RackItemDialog({
   );
   const [busy, setBusy] = useState(false);
   const maxDisks = Math.max(1, heightU) * DISKS_PER_U;
-  const placedStartU = clampStartUForHeight(startU, heightU, rack.heightU);
+  const placedStartU =
+    kind === "kuaiguai" && startU === rack.heightU + 1
+      ? startU
+      : clampStartUForHeight(startU, heightU, rack.heightU);
   const previewLabel = label.trim() || t(`itops.racks.kind.${kind}`);
   const parsedDraw = Number.parseInt(powerDraw, 10);
   const parsedPowerDraw = Number.isFinite(parsedDraw) && parsedDraw > 0 ? parsedDraw : null;
@@ -186,7 +196,9 @@ export function RackItemDialog({
       : null,
     vendor: vendor.trim() || null,
     powerW: parsedPowerDraw,
-    ...(kind === "kuaiguai" ? { expiry: expiry.trim() || null, rotation, yaw, kuaiguaiSize } : {}),
+    ...(kind === "kuaiguai"
+      ? { expiry: expiry.trim() || null, rotation, yaw, kuaiguaiSize, kuaiguaiStyle }
+      : {}),
     ...(showsPorts(kind) ? { ports } : {}),
     ...(showsDisks(kind) ? { disks } : {}),
     ...(kind === "ups" ? { battery } : {}),
@@ -208,6 +220,25 @@ export function RackItemDialog({
     setNetworkPortRows((rows) => [...rows, newNetworkPort(rows.length)]);
   }
 
+  function selectKind(next: RackItemKind) {
+    setKind(next);
+    if (next === "kuaiguai") {
+      setHeightU(kuaiguaiStyle === "laidDown" ? 1 : 4);
+    } else if (kind === "kuaiguai") {
+      setHeightU(1);
+      setStartU((current) => clampStartUForHeight(current, 1, rack.heightU));
+    }
+  }
+
+  function selectKuaiguaiStyle(next: KuaiKuaiStyle) {
+    const nextHeight = next === "laidDown" ? 1 : 4;
+    setKuaiguaiStyle(next);
+    setHeightU(nextHeight);
+    if (startU <= rack.heightU) {
+      setStartU((current) => clampStartUForHeight(current, nextHeight, rack.heightU));
+    }
+  }
+
   async function handleSave() {
     if (!canSave) return;
     const resolvedConnectionId = needsConnection ? connectionId : null;
@@ -225,6 +256,16 @@ export function RackItemDialog({
     setBusy(true);
     try {
       if (isEdit) {
+        const movingRackTopPackageInside =
+          item!.kind === "kuaiguai" && item!.startU === rack.heightU + 1 && kind !== "kuaiguai";
+        if (movingRackTopPackageInside) {
+          await moveRackItem(siteId, {
+            id: item!.id,
+            rackId: rack.id,
+            startU: placedStartU,
+            heightU,
+          });
+        }
         await updateRackItem(siteId, {
           id: item!.id,
           kind,
@@ -232,7 +273,10 @@ export function RackItemDialog({
           label: label.trim(),
           metadata,
         });
-        if (placedStartU !== item!.startU || heightU !== item!.heightU) {
+        if (
+          !movingRackTopPackageInside &&
+          (placedStartU !== item!.startU || heightU !== item!.heightU)
+        ) {
           await moveRackItem(siteId, { id: item!.id, rackId: rack.id, startU: placedStartU, heightU });
         }
       } else {
@@ -332,6 +376,7 @@ export function RackItemDialog({
                         rotation={kind === "kuaiguai" ? rotation : null}
                         yaw={kind === "kuaiguai" ? yaw : null}
                         kuaiguaiSize={kind === "kuaiguai" ? kuaiguaiSize : null}
+                        kuaiguaiStyle={kind === "kuaiguai" ? kuaiguaiStyle : null}
                         heightU={heightU}
                         accent={accent === "none" ? null : accent}
                         shell={shell}
@@ -367,7 +412,7 @@ export function RackItemDialog({
                     type="button"
                     className={`rack-kind-preview${kind === value ? " selected" : ""}`}
                     aria-pressed={kind === value}
-                    onClick={() => setKind(value)}
+                    onClick={() => selectKind(value)}
                   >
                     <span className="rack-kind-preview-face">
                       <RackDevice
@@ -383,6 +428,7 @@ export function RackItemDialog({
                         rotation={value === "kuaiguai" ? rotation : null}
                         yaw={value === "kuaiguai" ? yaw : null}
                         kuaiguaiSize={value === "kuaiguai" ? kuaiguaiSize : null}
+                        kuaiguaiStyle={value === "kuaiguai" ? kuaiguaiStyle : null}
                         heightU={1}
                         accent={accent === "none" ? null : accent}
                         shell={shell}
@@ -479,6 +525,7 @@ export function RackItemDialog({
                         rotation={kind === "kuaiguai" ? rotation : null}
                         yaw={kind === "kuaiguai" ? yaw : null}
                         kuaiguaiSize={kind === "kuaiguai" ? kuaiguaiSize : null}
+                        kuaiguaiStyle={kind === "kuaiguai" ? kuaiguaiStyle : null}
                         heightU={1}
                         accent={accent === "none" ? null : accent}
                         shell={value}
@@ -526,9 +573,11 @@ export function RackItemDialog({
                   <Stepper value={startU} min={1} onChange={(next) => setStartU(clampStartUForHeight(next, heightU, rack.heightU))} ariaDecrease={t("itops.racks.startUDecrease")} ariaIncrease={t("itops.racks.startUIncrease")} />
                 </Field>
               )}
-              <Field label={t("itops.racks.itemHeightLabel")} req>
-                <Stepper value={heightU} min={1} onChange={(next) => { const clampedHeight = Math.max(1, Math.min(rack.heightU, next)); setHeightU(clampedHeight); setStartU((current) => clampStartUForHeight(current, clampedHeight, rack.heightU)); setDisks((current) => Math.min(current, clampedHeight * DISKS_PER_U)); }} ariaDecrease={t("itops.racks.itemHeightDecrease")} ariaIncrease={t("itops.racks.itemHeightIncrease")} />
-              </Field>
+              {kind === "kuaiguai" ? null : (
+                <Field label={t("itops.racks.itemHeightLabel")} req>
+                  <Stepper value={heightU} min={1} onChange={(next) => { const clampedHeight = Math.max(1, Math.min(rack.heightU, next)); setHeightU(clampedHeight); setStartU((current) => clampStartUForHeight(current, clampedHeight, rack.heightU)); setDisks((current) => Math.min(current, clampedHeight * DISKS_PER_U)); }} ariaDecrease={t("itops.racks.itemHeightDecrease")} ariaIncrease={t("itops.racks.itemHeightIncrease")} />
+                </Field>
+              )}
             </div>
 
             <Field label={t("itops.racks.powerDrawLabel")} hint={t("itops.racks.powerDrawHint")}>
@@ -585,6 +634,16 @@ export function RackItemDialog({
 
         {kind === "kuaiguai" ? (
           <div className="rack-form-grid four">
+            <Field label={t("itops.racks.kuaiguaiStyleLabel")}>
+              <Select
+                value={kuaiguaiStyle}
+                onChange={(event) => selectKuaiguaiStyle(event.currentTarget.value as KuaiKuaiStyle)}
+                options={["full", "laidDown"].map((value) => ({
+                  value,
+                  label: t(`itops.racks.kuaiguaiStyle.${value}`),
+                }))}
+              />
+            </Field>
             <Field label={t("itops.racks.expiryLabel")}>
               <TextInput value={expiry} placeholder="2026-12-31" onChange={(event) => setExpiry(event.currentTarget.value)} />
             </Field>

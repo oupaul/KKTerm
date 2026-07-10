@@ -1253,6 +1253,11 @@
         "regular": "Reguler",
         "large": "Besar"
       },
+      "kuaiguaiStyleLabel": "Gaya kemasan",
+      "kuaiguaiStyle": {
+        "full": "Tegak",
+        "laidDown": "Dibaringkan (bagian depan menghadap atas)"
+      },
       "portState": {
         "unknown": "Tidak diketahui",
         "up": "Aktif",
@@ -4080,7 +4085,7 @@
   "workspace": {
     "tabs": "Tab ruang kerja",
     "noActiveSession": "Tidak ada sesi aktif",
-    "openFromTree": "Buka Koneksi dari pohon.",
+    "openFromTree": "Buka Koneksi dari pohon, atau buat Koneksi baru:",
     "syncInput": "Sinkronkan input ke semua terminal",
     "syncInputEnabledNotice": "Input kini dicerminkan ke setiap terminal yang terbuka.",
     "newTab": "Tab baru",

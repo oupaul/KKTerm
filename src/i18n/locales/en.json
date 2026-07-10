@@ -1253,6 +1253,11 @@
         "regular": "Regular",
         "large": "Large"
       },
+      "kuaiguaiStyleLabel": "Package style",
+      "kuaiguaiStyle": {
+        "full": "Full (standing)",
+        "laidDown": "Laid down (face up)"
+      },
       "portState": {
         "unknown": "Unknown",
         "up": "Up",

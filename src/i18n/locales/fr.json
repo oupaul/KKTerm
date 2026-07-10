@@ -1253,6 +1253,11 @@
         "regular": "Standard",
         "large": "Grand"
       },
+      "kuaiguaiStyleLabel": "Style du paquet",
+      "kuaiguaiStyle": {
+        "full": "Debout",
+        "laidDown": "Couché (face vers le haut)"
+      },
       "portState": {
         "unknown": "Inconnu",
         "up": "Actif",
@@ -4080,7 +4085,7 @@
   "workspace": {
     "tabs": "Onglets de l'espace de travail",
     "noActiveSession": "Aucune session active",
-    "openFromTree": "Ouvrez une connexion depuis l'arborescence.",
+    "openFromTree": "Ouvrez une connexion depuis l'arborescence, ou créez une nouvelle connexion :",
     "syncInput": "Synchroniser la saisie vers tous les terminaux",
     "syncInputEnabledNotice": "La saisie est maintenant dupliquée vers chaque terminal ouvert.",
     "newTab": "Nouvel onglet",

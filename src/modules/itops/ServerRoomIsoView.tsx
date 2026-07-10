@@ -26,6 +26,8 @@ import { showNativeContextMenu } from "../../lib/nativeContextMenu";
 import type { Rack, RackItem, RackItemStatus } from "../../types";
 import { rackFloorMetrics } from "./roomFloorPlan";
 import { RoomObjectIsoArtwork } from "./RoomObjectArtwork";
+import { KuaiKuaiBag } from "./KuaiKuaiBag";
+import { isRackTopItem } from "./rackPlacement";
 import {
   ISO_ROT_DEG,
   ISO_TILT_COS,
@@ -829,7 +831,7 @@ function IsoRackSkin({ rack, axis }: { rack: Rack; axis: "y" | "x" }) {
       className={`rm-iso-skin axis-${axis}`}
       data-shell={rack.shell && rack.shell !== "black" ? rack.shell : undefined}
     >
-      {rack.items.map((item) => {
+      {rack.items.filter((item) => item.kind !== "kuaiguai").map((item) => {
         const topU = item.startU + item.heightU - 1;
         const offset = ((capacity - topU) / capacity) * 100;
         const size = (Math.max(1, item.heightU) / capacity) * 100;
@@ -902,6 +904,7 @@ function IsoCabinet({
   const southRole = facing === 0 ? "front" : facing === 2 ? "rear" : "side";
   const eastRole = facing === 3 ? "front" : facing === 1 ? "rear" : "side";
   const health = t(`itops.floorPlan.health.${m.health}`);
+  const topKuaiguai = rack.items.find((item) => isRackTopItem(item, rack.heightU));
 
   return (
     <div
@@ -933,6 +936,11 @@ function IsoCabinet({
           >
             {rack.name}
           </span>
+          {topKuaiguai ? (
+            <span className="rm-iso-top-kuaiguai">
+              <KuaiKuaiBag style="laidDown" expiry={topKuaiguai.metadata?.expiry} />
+            </span>
+          ) : null}
         </span>
         <span
           className={`rm-iso-face rm-iso-front ${southRole}`}

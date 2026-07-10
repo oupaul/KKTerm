@@ -1253,6 +1253,11 @@
         "regular": "Normal",
         "large": "Grande"
       },
+      "kuaiguaiStyleLabel": "Estilo da embalagem",
+      "kuaiguaiStyle": {
+        "full": "Em pé",
+        "laidDown": "Deitada (frente para cima)"
+      },
       "portState": {
         "unknown": "Desconhecido",
         "up": "Ativo",
@@ -4080,7 +4085,7 @@
   "workspace": {
     "tabs": "Abas da área de trabalho",
     "noActiveSession": "Nenhuma sessão ativa",
-    "openFromTree": "Abra uma Conexão da árvore.",
+    "openFromTree": "Abra uma Conexão da árvore, ou crie uma nova Conexão:",
     "syncInput": "Sincronizar entrada para todos os terminais",
     "syncInputEnabledNotice": "A entrada agora é espelhada em cada terminal aberto.",
     "newTab": "Nova aba",

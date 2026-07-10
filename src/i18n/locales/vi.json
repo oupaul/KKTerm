@@ -1253,6 +1253,11 @@
         "regular": "Thường",
         "large": "Lớn"
       },
+      "kuaiguaiStyleLabel": "Kiểu gói",
+      "kuaiguaiStyle": {
+        "full": "Đặt đứng",
+        "laidDown": "Đặt nằm (mặt trước hướng lên)"
+      },
       "portState": {
         "unknown": "Không xác định",
         "up": "Hoạt động",
@@ -4080,7 +4085,7 @@
   "workspace": {
     "tabs": "Workspace tabs",
     "noActiveSession": "No active session",
-    "openFromTree": "Open a Connection from the tree.",
+    "openFromTree": "Mở một kết nối từ cây, hoặc tạo kết nối mới:",
     "syncInput": "Đồng bộ đầu vào tới tất cả terminal",
     "syncInputEnabledNotice": "Đầu vào hiện được nhân bản tới mọi terminal đang mở.",
     "newTab": "New tab",
