@@ -160,6 +160,7 @@ This is the central manager for secrets stored in the selected credential backen
 Section header `settings.sectionAiAssistant`. Owned by `src/modules/settings/AiSettings.tsx`. Per-provider configuration lives in `src/ai/providerRegistry/`.
 
 - Provider picker; known-model picker is a real `<select>` showing every model — not an `<input list>`/`datalist` (Chromium hides non-matching options behind a `datalist`).
+- OpenAI's curated recommendations replace GPT-5.5 with GPT-5.6 Luna, Terra, and Sol; Luna is the default. GPT-5.6 access is a limited preview and requires an approved OpenAI API organization. Grok's curated recommendations include `grok-4.5`.
 - GitHub Copilot model refresh uses the signed-in account's Copilot CLI model catalog. The `settings.navigation.auto` model option leaves model choice to the Copilot runtime instead of sending a fixed model id; after a successful refresh, the picker shows `settings.navigation.auto` plus curated Copilot models that are also available to the signed-in account.
 - Custom model ID is a separate text input.
 - OpenAI Compatible providers can choose API request mode with `settings.apiMode`: `settings.apiModeChatCompletions` uses `/chat/completions`, and `settings.apiModeResponses` uses `/responses`.

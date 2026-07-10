@@ -5234,7 +5234,7 @@ fn default_ai_provider_kind() -> String {
 }
 
 fn default_ai_model() -> String {
-    "gpt-5.4-mini".to_string()
+    "gpt-5.6-luna".to_string()
 }
 
 fn default_ai_reasoning_effort() -> String {

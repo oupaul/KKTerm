@@ -5694,6 +5694,9 @@ fn model_context_limit_tokens(provider_kind: &str, model: &str) -> (usize, bool)
     if model.starts_with("deepseek") || provider == "deepseek" {
         return (64_000, true);
     }
+    if model.starts_with("grok-4.5") {
+        return (500_000, false);
+    }
     if model.starts_with("grok-") || provider == "grok" {
         return (128_000, true);
     }

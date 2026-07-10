@@ -2,6 +2,7 @@ import {
   selectModelOptionsForProvider,
   sortModelOptionsForProvider,
 } from "./providerModelOptions";
+import { defaultAiProviderSettings } from "../app-defaults";
 import { getAiProviderDefinition } from "./providers";
 
 const sorted = sortModelOptionsForProvider("openai", [
@@ -28,6 +29,30 @@ if (result === source) {
 }
 
 const openAiDefinition = getAiProviderDefinition("openai");
+if (openAiDefinition.defaultModel !== "gpt-5.6-luna") {
+  throw new Error(`OpenAI should default to GPT-5.6 Luna, got: ${openAiDefinition.defaultModel}`);
+}
+if (defaultAiProviderSettings.model !== openAiDefinition.defaultModel) {
+  throw new Error("Fresh-install and OpenAI provider defaults should stay aligned.");
+}
+
+const recommendedOpenAiModelIds = openAiDefinition.modelOptions
+  .filter((model) => model.recommended)
+  .map((model) => model.id);
+for (const modelId of ["gpt-5.6-luna", "gpt-5.6-terra", "gpt-5.6-sol"]) {
+  if (!recommendedOpenAiModelIds.includes(modelId)) {
+    throw new Error(`OpenAI curated models should include ${modelId}.`);
+  }
+}
+if (recommendedOpenAiModelIds.some((modelId) => modelId.startsWith("gpt-5.5"))) {
+  throw new Error("OpenAI curated models should no longer include GPT-5.5 models.");
+}
+
+const grokDefinition = getAiProviderDefinition("grok");
+if (!grokDefinition.modelOptions.some((model) => model.id === "grok-4.5" && model.recommended)) {
+  throw new Error("Grok curated models should include Grok 4.5.");
+}
+
 const curatedOpenAiModels = selectModelOptionsForProvider({
   customModel: "",
   provider: openAiDefinition,

@@ -1432,6 +1432,10 @@ fn model_context_limit_tracks_current_large_context_families() {
         (200_000, false)
     );
     assert_eq!(
+        model_context_limit_tokens("grok", "grok-4.5"),
+        (500_000, false)
+    );
+    assert_eq!(
         model_context_limit_tokens("openai-compatible", "custom-local-model"),
         (32_000, true)
     );

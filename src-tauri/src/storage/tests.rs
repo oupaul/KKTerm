@@ -3286,7 +3286,7 @@ fn ai_provider_settings_round_trip_through_settings_table() {
     assert!(!defaults.enabled);
     assert_eq!(defaults.provider_kind, "openai");
     assert_eq!(defaults.base_url, "https://api.openai.com/v1");
-    assert_eq!(defaults.model, "gpt-5.4-mini");
+    assert_eq!(defaults.model, "gpt-5.6-luna");
     assert_eq!(defaults.reasoning_effort, "medium");
     assert_eq!(defaults.custom_instructions, "");
     assert_eq!(defaults.api_mode, "chatCompletions");

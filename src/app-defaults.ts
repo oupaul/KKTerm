@@ -172,7 +172,7 @@ export const defaultAiAssistantToolSettings = {
 export const defaultAiProviderSettings: AiProviderSettings = {
   providerKind: "openai",
   baseUrl: "https://api.openai.com/v1",
-  model: "gpt-5.4-mini",
+  model: "gpt-5.6-luna",
   reasoningEffort: "medium",
   outputLanguage: "",
   customInstructions: "",
