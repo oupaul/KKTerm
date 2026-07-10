@@ -75,8 +75,10 @@ import { ItIcon } from "./icons";
 import {
   OBJECT_ACCENTS,
   RackTipContent,
+  RoomPlacementCursorGhost,
   RoomZoomRuler,
   useRoomPan,
+  useRoomPlacementPointer,
   useRoomViewportSize,
   useWheelZoom,
   type RoomTool,
@@ -127,6 +129,7 @@ export function ServerRoomIsoView({
   tool = null,
   placeRackId = null,
   onRackPlaced,
+  onObjectPlaced,
   placement,
   onPlacementChange,
   facing,
@@ -148,6 +151,8 @@ export function ServerRoomIsoView({
   /** A just-created rack awaiting its placement click. */
   placeRackId?: string | null;
   onRackPlaced?: () => void;
+  /** A room fixture was successfully placed; consume the armed picker item. */
+  onObjectPlaced?: () => void;
   placement: FreePlacementMap;
   onPlacementChange?: (next: FreePlacementMap) => void;
   facing: RackFacingMap;
@@ -177,6 +182,7 @@ export function ServerRoomIsoView({
   useRoomPan(scrollRef);
   const armed = tool != null || placeRackId != null;
   const placing = !!editMode && armed;
+  const placementPointer = useRoomPlacementPointer(placing, onCancelPlacement);
   // Cursor-tracked placement preview: hovering a tile (or a cabinet) while a
   // picker card is armed snaps the armed object's ghost to that grid cell.
   const [hover, setHover] = useState<IsoCell | null>(null);
@@ -185,6 +191,10 @@ export function ServerRoomIsoView({
   }, [placing]);
   const setHoverCell = (cell: IsoCell) =>
     setHover((prev) => (prev && prev.x === cell.x && prev.y === cell.y ? prev : cell));
+  const clearHoverOutsideTarget = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const target = event.target as HTMLElement;
+    if (!target.closest(".rm-iso-tile, .rm-iso-cab")) setHover(null);
+  };
   const [drag, setDrag] = useState<DragState | null>(null);
   const [selectedItem, setSelectedItem] = useState<{
     kind: "rack" | "object";
@@ -400,6 +410,7 @@ export function ServerRoomIsoView({
       ...objects,
       { id: crypto.randomUUID(), kind: tool, x: cell.x, y: cell.y, z, rot: 0, corner: 0 },
     ]);
+    onObjectPlaced?.();
   }
 
   // Drop the picker's just-created rack on a cell (swapping with an occupant).
@@ -551,6 +562,7 @@ export function ServerRoomIsoView({
                   backgroundSize: `${CELL}px ${CELL}px, ${CELL}px ${CELL}px, auto`,
                   top: `calc(50% + ${Math.round(maxTop * 0.38)}px)`,
                 }}
+                onPointerMove={placing ? clearHoverOutsideTarget : undefined}
                 onPointerLeave={placing ? () => setHover(null) : undefined}
               >
                 {editableTiles.map((cell) => {
@@ -814,6 +826,13 @@ export function ServerRoomIsoView({
         </div>
       </div>
       {editMode ? <div className="rm-iso-hint">{t("itops.floorPlan.isoEditHint")}</div> : null}
+      <RoomPlacementCursorGhost
+        pointer={placementPointer}
+        tool={tool}
+        rackArmed={placeRackId != null}
+        variant="iso"
+        snapped={hover != null}
+      />
     </div>
   );
 }

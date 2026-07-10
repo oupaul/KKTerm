@@ -47,8 +47,10 @@ import {
   OBJECT_ACCENTS,
   RackTagChips,
   RackTipContent,
+  RoomPlacementCursorGhost,
   RoomZoomRuler,
   useRoomPan,
+  useRoomPlacementPointer,
   useRoomViewportSize,
   useWheelZoom,
   type RoomTool,
@@ -79,6 +81,7 @@ export function ServerRoomFloorPlan({
   tool = null,
   placeRackId = null,
   onRackPlaced,
+  onObjectPlaced,
   placement,
   onPlacementChange,
   facing,
@@ -97,6 +100,8 @@ export function ServerRoomFloorPlan({
   /** A just-created rack awaiting its placement click. */
   placeRackId?: string | null;
   onRackPlaced?: () => void;
+  /** A room fixture was successfully placed; consume the armed picker item. */
+  onObjectPlaced?: () => void;
   placement: FreePlacementMap;
   onPlacementChange?: (next: FreePlacementMap) => void;
   facing: RackFacingMap;
@@ -142,6 +147,7 @@ export function ServerRoomFloorPlan({
   // the pointer) so the grid shows the drop before the click commits.
   const [hover, setHover] = useState<(IsoCell & { corner: Corner }) | null>(null);
   const placing = !!editMode && armed;
+  const placementPointer = useRoomPlacementPointer(placing, onCancelPlacement);
   useEffect(() => {
     if (!placing) setHover(null);
   }, [placing]);
@@ -308,6 +314,7 @@ export function ServerRoomFloorPlan({
       ...objects,
       { id: crypto.randomUUID(), kind: tool, x: cell.x, y: cell.y, z, rot: 0, corner },
     ]);
+    onObjectPlaced?.();
   }
 
   function selectRack(rackId: string) {
@@ -513,6 +520,13 @@ export function ServerRoomFloorPlan({
         <RoomZoomRuler zoom={zoom} onZoomChange={setZoom} />
       </div>
       {editMode ? <div className="rm-iso-hint">{t("itops.floorPlan.blueprintEditHint")}</div> : null}
+      <RoomPlacementCursorGhost
+        pointer={placementPointer}
+        tool={tool}
+        rackArmed={placeRackId != null}
+        variant="floor"
+        snapped={hover != null}
+      />
     </div>
   );
 }

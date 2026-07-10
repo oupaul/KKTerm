@@ -156,7 +156,10 @@ test("IT Ops page-root layout stays off dialog backdrops and edit-mode dot grids
   // `.itops-page` rides on Sheet backdrops (zClassName) and the armed
   // placement cursor ghost for module tokens; the page-root positioning must
   // not demote those fixed overlays or they render below the viewport.
-  assert.match(css, /\.itops-page:not\(\.kk-dlg-backdrop\):not\(\.rk-cursor-ghost\) \{/);
+  assert.match(
+    css,
+    /\.itops-page:not\(\.kk-dlg-backdrop\):not\(\.rk-cursor-ghost\):not\(\.rm-cursor-ghost\) \{/,
+  );
   // The Site View dot grid is an edit-mode affordance even over a custom
   // background (the `.has-bg` rule is more specific than the generic reset).
   assert.match(
@@ -169,15 +172,26 @@ test("Armed placement previews a cursor-snapped ghost and cancels on right-click
   const sites = await read("src/modules/itops/SitesTab.tsx");
   const floorPlan = await read("src/modules/itops/ServerRoomFloorPlan.tsx");
   const isoView = await read("src/modules/itops/ServerRoomIsoView.tsx");
+  const roomParts = await read("src/modules/itops/roomViewParts.tsx");
   const css = await read("src/modules/itops/itops.css");
 
-  // SitesTab disarms both the object tool and the pending rack on cancel.
-  assert.match(sites, /onCancelPlacement=\{\(\) => \{\s*setRoomTool\(null\);\s*setPlaceRackId\(null\);/);
+  // SitesTab disarms fixtures and discards a just-created, still-unplaced Rack.
+  assert.match(sites, /function cancelRoomPlacement\(\)/);
+  assert.match(sites, /discardPendingRackRef\.current\(pendingRackId\)/);
+  assert.match(sites, /onCancelPlacement=\{cancelRoomPlacement\}/g);
   for (const view of [floorPlan, isoView]) {
     assert.match(view, /onCancelPlacement\?: \(\) => void/);
+    assert.match(view, /onObjectPlaced\?: \(\) => void/);
+    assert.match(view, /onObjectPlaced\?\.\(\)/);
+    assert.match(view, /useRoomPlacementPointer\(placing, onCancelPlacement\)/);
+    assert.match(view, /<RoomPlacementCursorGhost/);
     assert.match(view, /onContextMenu=\{/);
     assert.match(view, /resolveDropZ\(\s*footprintSpans\(hover, tool, 0/);
   }
+  assert.match(sites, /onObjectPlaced=\{\(\) => setRoomTool\(null\)\}/g);
+  assert.match(roomParts, /document\.addEventListener\("pointermove", updatePointer, true\)/);
+  assert.match(roomParts, /event\.key !== "Escape"/);
+  assert.match(roomParts, /document\.addEventListener\("contextmenu", cancelFromContextMenu, true\)/);
   // The floor plan tracks the hovered cell and renders the plan-artwork ghost.
   assert.match(floorPlan, /className=\{`rm-bp-ghost\$\{blocked \? " blocked" : ""\}`\}/);
   assert.match(floorPlan, /onPointerMove=\{placing \? trackPlacement : undefined\}/);
@@ -188,6 +202,7 @@ test("Armed placement previews a cursor-snapped ghost and cancels on right-click
   assert.match(isoView, /className="rm-iso-cab ghost"/);
   assert.match(css, /\.rm-bp-ghost/);
   assert.match(css, /\.rm-iso-drop\.blocked/);
+  assert.match(css, /\.rm-cursor-ghost \{/);
 });
 
 test("Rack drag/drop and direct delete are gated behind edit mode", async () => {

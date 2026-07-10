@@ -352,6 +352,14 @@ The visible IT Ops Module opens directly into the Site topology surface:
   so a rack-top package fits without shifting the rack. Floor views hide 乖乖
   stored inside the cabinet and show only a rack-top package.
 
+  Server Room floor-plan and 2.5D pickers use the same single-item placement
+  contract: choosing a fixture arms one ghost immediately, while a Rack first
+  collects its properties; the armed object stays under the pointer outside
+  the floor, snaps to a valid cell inside it, and is consumed by one successful
+  placement. Right-click, Escape, picker disarm, edit-mode exit, layout change,
+  or navigation cancels it (discarding a configured but unplaced Rack); a
+  blocked cell keeps it armed for another target.
+
 Batch Runs and Automations remain part of IT Ops, but their top-level
 management tab chrome is hidden while the Site-only UI is active.
 

@@ -12,12 +12,13 @@ import {
   type ReactNode,
   type RefObject,
 } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import type { Rack } from "../../types";
 import { rackFloorMetrics } from "./roomFloorPlan";
 import { ROOM_OBJECT_KINDS, type RoomObjectKind } from "./roomObjects";
 import { ROOM_ZOOM_LEVELS, sanitizeRoomZoom } from "./siteTreeState";
-import { RoomObjectPlanArtwork } from "./RoomObjectArtwork";
+import { RoomObjectIsoArtwork, RoomObjectPlanArtwork } from "./RoomObjectArtwork";
 import { IT_ACCENTS, ItIcon } from "./icons";
 
 /** Accent colour per object kind (乖乖 is green — it has a job to do). Fed to
@@ -33,6 +34,94 @@ export const OBJECT_ACCENTS: Record<RoomObjectKind, string> = {
   crashCart: IT_ACCENTS.pink,
   kuaikuai: IT_ACCENTS.green,
 };
+
+// ── Armed placement cursor ──
+
+export interface RoomPlacementPointer {
+  x: number;
+  y: number;
+}
+
+/** Match Rack View's armed-placement contract: keep tracking outside the
+ *  room canvas, cancel from anywhere with right-click or Escape, and let each
+ *  view replace the floating preview with its snapped in-canvas ghost. */
+export function useRoomPlacementPointer(
+  active: boolean,
+  onCancel?: () => void,
+): RoomPlacementPointer | null {
+  const [pointer, setPointer] = useState<RoomPlacementPointer | null>(null);
+  const cancelRef = useRef(onCancel);
+  cancelRef.current = onCancel;
+
+  useEffect(() => {
+    if (!active) {
+      setPointer(null);
+      return;
+    }
+
+    const updatePointer = (event: PointerEvent) => {
+      setPointer({ x: event.clientX, y: event.clientY });
+    };
+    const cancelFromContextMenu = (event: MouseEvent) => {
+      event.preventDefault();
+      cancelRef.current?.();
+    };
+    const cancelFromKeyboard = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      cancelRef.current?.();
+    };
+
+    document.addEventListener("pointermove", updatePointer, true);
+    document.addEventListener("contextmenu", cancelFromContextMenu, true);
+    document.addEventListener("keydown", cancelFromKeyboard, true);
+    return () => {
+      document.removeEventListener("pointermove", updatePointer, true);
+      document.removeEventListener("contextmenu", cancelFromContextMenu, true);
+      document.removeEventListener("keydown", cancelFromKeyboard, true);
+    };
+  }, [active]);
+
+  return pointer;
+}
+
+/** Floating preview shown while an armed fixture is between the picker and a
+ *  valid floor target. Inside the room, the richer snapped preview takes over. */
+export function RoomPlacementCursorGhost({
+  pointer,
+  tool,
+  rackArmed,
+  variant,
+  snapped,
+}: {
+  pointer: RoomPlacementPointer | null;
+  tool: RoomTool;
+  rackArmed: boolean;
+  variant: "floor" | "iso";
+  snapped: boolean;
+}) {
+  if (!pointer || snapped || (!tool && !rackArmed)) return null;
+  return createPortal(
+    <div
+      className={`itops-page rm-cursor-ghost ${variant}`}
+      aria-hidden="true"
+      style={{
+        left: pointer.x,
+        top: pointer.y,
+        ...(tool ? { "--obj": OBJECT_ACCENTS[tool] } : {}),
+      } as CSSProperties}
+    >
+      {rackArmed ? (
+        <span className="rm-cursor-ghost-rack">
+          <ItIcon name="rack" size={32} sw={1.3} />
+        </span>
+      ) : tool ? (
+        variant === "iso" ? <RoomObjectIsoArtwork kind={tool} /> : <RoomObjectPlanArtwork kind={tool} />
+      ) : null}
+    </div>,
+    document.body,
+  );
+}
 
 // ── Viewport-filling grids ──
 

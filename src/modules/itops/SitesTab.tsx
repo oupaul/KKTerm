@@ -1056,6 +1056,7 @@ function RackDrill({
   const [backgroundOpen, setBackgroundOpen] = useState(false);
   const setServerRoomBackground = useItOpsStore((state) => state.setServerRoomBackground);
   const setSiteBackground = useItOpsStore((state) => state.setSiteBackground);
+  const discardRack = useItOpsStore((state) => state.deleteRack);
 
   // Server Room View layout: rack elevations (default), the blueprint floor
   // plan, or the 2.5D room. Persists app-wide.
@@ -1080,6 +1081,28 @@ function RackDrill({
   // object kind, and a just-created rack awaiting its placement click.
   const [roomTool, setRoomTool] = useState<RoomTool>(null);
   const [placeRackId, setPlaceRackId] = useState<string | null>(null);
+  const placeRackIdRef = useRef(placeRackId);
+  placeRackIdRef.current = placeRackId;
+  const discardPendingRackRef = useRef<(rackId: string) => void>(() => undefined);
+  discardPendingRackRef.current = (rackId) => {
+    void discardRack(site.id, rackId).catch((error: unknown) => {
+      const message = error instanceof Error ? error.message : String(error);
+      showStatusBarNotice(t("itops.errorNotice", { message }), { tone: "error" });
+    });
+  };
+
+  function cancelRoomPlacement() {
+    const pendingRackId = placeRackIdRef.current;
+    placeRackIdRef.current = null;
+    setRoomTool(null);
+    setPlaceRackId(null);
+    if (pendingRackId) discardPendingRackRef.current(pendingRackId);
+  }
+
+  function completeRackPlacement() {
+    placeRackIdRef.current = null;
+    setPlaceRackId(null);
+  }
   // Rack View picker: a configured Rack Device awaiting its placement click.
   const [placeDevice, setPlaceDevice] = useState<RackItemDraft | null>(null);
 
@@ -1100,9 +1123,12 @@ function RackDrill({
     setSiteView("overview");
   }, [viewKey]);
   useEffect(() => {
+    const pendingRackId = placeRackIdRef.current;
+    placeRackIdRef.current = null;
     setRoomTool(null);
     setPlaceRackId(null);
     setPlaceDevice(null);
+    if (pendingRackId) discardPendingRackRef.current(pendingRackId);
   }, [viewKey, editMode, roomView]);
 
   const sitePlacementScope = siteLayoutScope(site.id);
@@ -1628,7 +1654,8 @@ function RackDrill({
                   floorColor={sanitizeIsoFloor(serverRoom.room?.floorColor)}
                   tool={roomTool}
                   placeRackId={placeRackId}
-                  onRackPlaced={() => setPlaceRackId(null)}
+                  onRackPlaced={completeRackPlacement}
+                  onObjectPlaced={() => setRoomTool(null)}
                   placement={isoPlacements}
                   onPlacementChange={saveIsoPlacements}
                   facing={roomFacing}
@@ -1640,10 +1667,7 @@ function RackDrill({
                   onAddRack={editMode ? () => onAddRack(serverRoom.key) : undefined}
                   onObjectBlocked={notifyObjectBlocked}
                   onOpenBackground={() => setBackgroundOpen(true)}
-                  onCancelPlacement={() => {
-                    setRoomTool(null);
-                    setPlaceRackId(null);
-                  }}
+                  onCancelPlacement={cancelRoomPlacement}
                 />
               ) : (
                 <ServerRoomFloorPlan
@@ -1651,7 +1675,8 @@ function RackDrill({
                   editMode={editMode}
                   tool={roomTool}
                   placeRackId={placeRackId}
-                  onRackPlaced={() => setPlaceRackId(null)}
+                  onRackPlaced={completeRackPlacement}
+                  onObjectPlaced={() => setRoomTool(null)}
                   placement={isoPlacements}
                   onPlacementChange={saveIsoPlacements}
                   facing={roomFacing}
@@ -1661,24 +1686,21 @@ function RackDrill({
                   onDeleteRack={editMode ? onDeleteRack : undefined}
                   onSelectRack={(rackId) => setDrill({ serverRoom: serverRoom.key, rackId })}
                   onObjectBlocked={notifyObjectBlocked}
-                  onCancelPlacement={() => {
-                    setRoomTool(null);
-                    setPlaceRackId(null);
-                  }}
+                  onCancelPlacement={cancelRoomPlacement}
                 />
               )}
               {editMode ? (
                 <RoomObjectPicker
                   tool={roomTool}
                   onToolChange={(tool) => {
-                    setPlaceRackId(null);
+                    if (placeRackId != null) cancelRoomPlacement();
                     setRoomTool(tool);
                   }}
                   rackArmed={placeRackId != null}
                   onPickRack={() => {
                     setRoomTool(null);
                     if (placeRackId != null) {
-                      setPlaceRackId(null);
+                      cancelRoomPlacement();
                       return;
                     }
                     onAddRackForPlacement(serverRoom.key, (saved) => setPlaceRackId(saved.id));
