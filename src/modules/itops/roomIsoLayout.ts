@@ -153,6 +153,25 @@ export function expandIsoFloorFrame(
   };
 }
 
+/** Build edit-mode targets for the whole rendered floor. The viewport expands
+ * beyond the rack-derived minimum grid, and those extra cells are real room
+ * space rather than decorative padding: users must be able to place fixtures
+ * anywhere the floor grid is visible. Rack cells are handled by their cabinet
+ * click targets, so they are omitted here. */
+export function isoPlacementCells(
+  floorCols: number,
+  floorRows: number,
+  rackCells: ReadonlySet<string>,
+): IsoCell[] {
+  const cells: IsoCell[] = [];
+  for (let y = 0; y < floorRows; y += 1) {
+    for (let x = 0; x < floorCols; x += 1) {
+      if (!rackCells.has(`${x},${y}`)) cells.push({ x, y });
+    }
+  }
+  return cells;
+}
+
 // Convert a pointer drag delta (screen px) into floor-plane px by inverting
 // the axonometric projection: un-squash the vertical axis by cos(tilt), then
 // rotate by −ISO_ROT_DEG back into plane axes.

@@ -85,9 +85,10 @@ test("Edit mode arms placement through the shared object picker column", async (
   assert.match(sites, /setPlaceRackId\(saved\.id\)/);
   for (const view of [floorPlan, isoView]) {
     assert.match(view, /placeRackId/);
-    assert.match(view, /moveIsoRack\(grid, placeRackId/);
     assert.match(view, /onRackPlaced/);
   }
+  assert.match(floorPlan, /moveIsoRack\(grid, placeRackId/);
+  assert.match(isoView, /moveIsoRack\(placementGrid, placeRackId/);
 });
 
 test("Site edit mode uses the same object-picker column for creating Server Rooms", async () => {

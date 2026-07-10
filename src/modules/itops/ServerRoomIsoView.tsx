@@ -25,7 +25,7 @@ import { useTranslation } from "react-i18next";
 import { showNativeContextMenu } from "../../lib/nativeContextMenu";
 import type { Rack, RackItem, RackItemStatus } from "../../types";
 import { rackFloorMetrics } from "./roomFloorPlan";
-import { RoomObjectIsoArtwork } from "./RoomObjectArtwork";
+import { RoomObjectIsoArtwork } from "./RoomObjectIsoReference";
 import { KuaiKuaiBag } from "./KuaiKuaiBag";
 import { isRackTopItem } from "./rackPlacement";
 import {
@@ -33,6 +33,7 @@ import {
   ISO_TILT_COS,
   ISO_TILT_DEG,
   expandIsoFloorFrame,
+  isoPlacementCells,
   moveIsoRack,
   rackDepthFrac,
   rackFootprint,
@@ -106,6 +107,13 @@ function zPx(u: number): number {
 // (`shift` is a CSS translate() argument list, e.g. "-50%, -100%").
 function billboard(z: number, shift: string): string {
   return `translateZ(${z}px) rotateZ(-${ISO_ROT_DEG}deg) rotateX(-${ISO_TILT_DEG}deg) translate(${shift})`;
+}
+
+// Room-object reference models are genuine CSS 3D constructions. Keep them in
+// the floor plane's coordinate system so the plane supplies the one and only
+// axonometric projection; only labels/controls need billboard cancellation.
+function surfaceModel(z: number, shift: string): string {
+  return `translateZ(${z}px) translate(${shift})`;
 }
 
 function itemStatus(item: RackItem): RackItemStatus {
@@ -235,8 +243,6 @@ export function ServerRoomIsoView({
     layout.rows,
     ...objects.map((object) => object.y + objectCellSpan(object.kind, object.rot).h),
   );
-  const grid: IsoLayout = { cols: gridCols, rows: gridRows, cells: layout.cells };
-
   // Headroom for the tallest cabinet or elevated object.
   let maxTop = racks.reduce((max, rack) => Math.max(max, cabHeight(rack.heightU)), 0);
   for (const object of objects) {
@@ -262,6 +268,7 @@ export function ServerRoomIsoView({
     floorDiag,
     CELL,
   );
+  const placementGrid: IsoLayout = { cols: floorCols, rows: floorRows, cells: layout.cells };
   const dims = viewGridSize(floorCols, floorRows, angle);
   const toDisplay = (cell: IsoCell) =>
     rotateCellForView({ x: cell.x + offX, y: cell.y + offY }, angle, floorCols, floorRows);
@@ -274,47 +281,21 @@ export function ServerRoomIsoView({
       floorRows,
     );
   };
-  // An elevated billboard sprite anchored near the camera-far edge of a
-  // cabinet top rises against empty air and reads as floating, because the
-  // artwork is drawn much larger than its physical footprint. Keep the
-  // sprite's base at least this far into its cell span from the two far
-  // edges so it always visually stands on its support surface; the stored
-  // position, footprint, and collision math stay exact.
-  const PLANT_NEAR_FRAC = 0.4;
-  const plantAnchor = (
-    point: { x: number; y: number },
-    cell: IsoCell,
-    span: { w: number; h: number },
-    z: number,
-  ): { x: number; y: number } => {
-    if (z <= 0) return point;
-    const rect = rotateRectForView(
-      { x: cell.x + offX, y: cell.y + offY, w: span.w, d: span.h },
-      angle,
-      floorCols,
-      floorRows,
-    );
-    return {
-      x: Math.max(point.x, rect.x + rect.w * PLANT_NEAR_FRAC),
-      y: Math.max(point.y, rect.y + rect.d * PLANT_NEAR_FRAC),
-    };
-  };
   const objectDisplayAnchor = (object: RoomObject): { x: number; y: number } => {
     const anchor = objectSurfaceAnchor(object.kind, object.rot, object.corner);
-    const point = rotatePointForView(
+    return rotatePointForView(
       { x: object.x + offX + anchor.x, y: object.y + offY + anchor.y },
       angle,
       floorCols,
       floorRows,
     );
-    return plantAnchor(point, object, objectCellSpan(object.kind, object.rot), object.z);
   };
   const planeW = dims.cols * CELL;
   const planeH = dims.rows * CELL;
 
   const clampCell = (cell: IsoCell): IsoCell => ({
-    x: Math.min(gridCols - 1, Math.max(0, Math.round(cell.x))),
-    y: Math.min(gridRows - 1, Math.max(0, Math.round(cell.y))),
+    x: Math.min(floorCols - 1, Math.max(0, Math.round(cell.x))),
+    y: Math.min(floorRows - 1, Math.max(0, Math.round(cell.y))),
   });
 
   function startDrag(
@@ -364,7 +345,7 @@ export function ServerRoomIsoView({
           suppressClickRef.current = false;
         }, 0);
         if (state.kind === "rack") {
-          onPlacementChange?.(moveIsoRack(grid, state.id, state.target));
+          onPlacementChange?.(moveIsoRack(placementGrid, state.id, state.target));
         } else {
           dropObject(state.id, state.target);
         }
@@ -417,7 +398,7 @@ export function ServerRoomIsoView({
   function placeRackAt(cell: IsoCell) {
     if (placeRackId == null) return;
     if (layout.cells[placeRackId]) {
-      onPlacementChange?.(moveIsoRack(grid, placeRackId, cell));
+      onPlacementChange?.(moveIsoRack(placementGrid, placeRackId, cell));
       onRackPlaced?.();
     }
   }
@@ -524,14 +505,9 @@ export function ServerRoomIsoView({
   // armed rack/object; cells holding only objects still get a tile while a
   // tool is armed so a second fixture can stack in the same cell.
   const rackCells = new Set(Object.values(layout.cells).map((cell) => `${cell.x},${cell.y}`));
-  const editableTiles: IsoCell[] = [];
-  if (editMode && (onAddRack || armed)) {
-    for (let y = 0; y < gridRows; y += 1) {
-      for (let x = 0; x < gridCols; x += 1) {
-        if (!rackCells.has(`${x},${y}`)) editableTiles.push({ x, y });
-      }
-    }
-  }
+  const editableTiles = editMode && (onAddRack || armed)
+    ? isoPlacementCells(floorCols, floorRows, rackCells)
+    : [];
 
   return (
     <div className="rm-iso">
@@ -698,16 +674,11 @@ export function ServerRoomIsoView({
                           floorCols,
                           floorRows,
                         );
-                        const displayAnchor = plantAnchor(
-                          rotatePointForView(
-                            { x: hover.x + offX + anchor.x, y: hover.y + offY + anchor.y },
-                            angle,
-                            floorCols,
-                            floorRows,
-                          ),
-                          hover,
-                          span,
-                          z ?? 0,
+                        const displayAnchor = rotatePointForView(
+                          { x: hover.x + offX + anchor.x, y: hover.y + offY + anchor.y },
+                          angle,
+                          floorCols,
+                          floorRows,
                         );
                         return (
                           <>
@@ -736,7 +707,7 @@ export function ServerRoomIsoView({
                                   style={{
                                     left: (displayAnchor.x - displayRect.x) * CELL,
                                     top: (displayAnchor.y - displayRect.y) * CELL,
-                                    transform: billboard(zPx(z), "-50%, -100%"),
+                                    transform: surfaceModel(zPx(z), "-50%, -100%"),
                                   }}
                                 >
                                   <RoomObjectIsoArtwork kind={tool} />
@@ -1090,7 +1061,7 @@ function IsoObject({
         style={{
           left: (anchor.x - rect.x) * CELL,
           top: (anchor.y - rect.y) * CELL,
-          transform: billboard(bottom, "-50%, -100%"),
+          transform: surfaceModel(bottom, "-50%, -100%"),
         }}
       >
         <RoomObjectIsoArtwork kind={object.kind} />

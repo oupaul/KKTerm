@@ -256,33 +256,47 @@ test("quarter-block billboard anchors use the chosen footprint center", () => {
 });
 
 test("large fixtures span whole cells and rotate their span", () => {
-  // A CRAC unit is one and a half cells wide → it occupies a 2×1 cell span
-  // and draws centred over it; rotating a quarter turn swaps the span.
-  assert.deepEqual(objectCellSpan("aircon", 0), { w: 2, h: 1 });
-  assert.deepEqual(objectCellSpan("aircon", 1), { w: 1, h: 2 });
+  // Reference fixture footprints fit one floor cell and rotate in place.
+  assert.deepEqual(objectCellSpan("aircon", 0), { w: 1, h: 1 });
+  assert.deepEqual(objectCellSpan("aircon", 1), { w: 1, h: 1 });
   const fp = objectFootprint("aircon", 0, 0);
   assert.equal(fp.w, objectSpec("aircon").wide);
-  assert.equal(fp.x, (2 - fp.w) / 2);
-  // A cable tray section runs two cells long.
-  assert.deepEqual(objectCellSpan("cableTray", 0), { w: 2, h: 1 });
+  assert.equal(fp.x, (1 - fp.w) / 2);
+  assert.deepEqual(objectCellSpan("cableTray", 0), { w: 1, h: 1 });
 });
 
-test("cellSpans blocks every cell a multi-cell fixture covers", () => {
+test("fixture footprints match Server Room Objects.dc.html", () => {
+  assert.deepEqual(
+    Object.fromEntries(
+      (["aircon", "ups", "crashCart", "camera", "sensor", "smokeDetector", "fireExtinguisher", "cableTray", "kuaikuai"] as const)
+        .map((kind) => [kind, [objectSpec(kind).wide, objectSpec(kind).deep]]),
+    ),
+    {
+      aircon: [0.94, 0.62],
+      ups: [0.6, 0.6],
+      crashCart: [0.56, 0.44],
+      camera: [0.34, 0.34],
+      sensor: [0.24, 0.24],
+      smokeDetector: [0.3, 0.3],
+      fireExtinguisher: [0.28, 0.28],
+      cableTray: [1, 0.3],
+      kuaikuai: [0.36, 0.28],
+    },
+  );
+});
+
+test("cellSpans blocks the snapped cell covered by a reference fixture", () => {
   const crac = obj("crac", "aircon", 1, 0, 0);
-  // Both the anchor cell and the spanned neighbour are occupied…
+  // The reference CRAC is 0.94 cells wide, so only its snapped cell is occupied.
   assert.equal(cellSpans({ x: 1, y: 0 }, [], {}, [crac]).length, 1);
-  assert.equal(cellSpans({ x: 2, y: 0 }, [], {}, [crac]).length, 1);
-  // …but the next cell over is free.
+  assert.equal(cellSpans({ x: 2, y: 0 }, [], {}, [crac]).length, 0);
   assert.equal(cellSpans({ x: 3, y: 0 }, [], {}, [crac]).length, 0);
 });
 
-test("footprintSpans collision-checks a multi-cell fixture's whole span", () => {
-  // A rack on the CRAC's second cell blocks the placement even though the
-  // anchor cell itself is empty.
-  const spans = footprintSpans({ x: 0, y: 0 }, "aircon", 0, [rack("a")], { a: { x: 1, y: 0 } }, []);
+test("footprintSpans collision-checks the fixture's snapped cell", () => {
+  const spans = footprintSpans({ x: 0, y: 0 }, "aircon", 0, [rack("a")], { a: { x: 0, y: 0 } }, []);
   assert.equal(resolveDropZ(spans, "aircon"), null);
-  // With the neighbour clear, the CRAC lands on the floor.
-  const clear = footprintSpans({ x: 0, y: 0 }, "aircon", 0, [rack("a")], { a: { x: 3, y: 0 } }, []);
+  const clear = footprintSpans({ x: 0, y: 0 }, "aircon", 0, [rack("a")], { a: { x: 1, y: 0 } }, []);
   assert.equal(resolveDropZ(clear, "aircon"), 0);
 });
 

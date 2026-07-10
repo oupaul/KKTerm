@@ -92,9 +92,10 @@ Replaces the **Host Group** entry in `CONTEXT.md`; adds the rest. Follows the
   overhead placement. Footprints follow real-world size against the 1200 mm
   floor cell: small hand-sized fixtures (camera, fire extinguisher, sensor,
   smoke detector, 乖乖) occupy one cell quadrant chosen by a durable
-  `corner` property (clockwise 0=NW..3=SW), while large fixtures may span
-  several cells (a CRAC unit covers a 2×1-cell span, a cable-tray section
-  runs two cells) and block every covered cell for stacking. Durable in
+  `corner` property (clockwise 0=NW..3=SW). Larger fixtures use the exact
+  one-cell proportions from `Server Room Objects.dc.html` (for example CRAC
+  0.94×0.62, UPS 0.6×0.6, and cable tray 1.0×0.3) and block their snapped
+  cell for stacking. Durable in
   `itops_room_objects`, scoped by Site + Server Room name like racks (the
   pure model lives in `roomObjects.ts`; the pre-durable localStorage scope
   remains a legacy fallback). Rack facing is a durable `facing` column on
@@ -355,7 +356,8 @@ The visible IT Ops Module opens directly into the Site topology surface:
   Server Room floor-plan and 2.5D pickers use the same single-item placement
   contract: choosing a fixture arms one ghost immediately, while a Rack first
   collects its properties; the armed object stays under the pointer outside
-  the floor, snaps to a valid cell inside it, and is consumed by one successful
+  the floor, snaps to every visible grid cell inside it (including cells added
+  when the floor grows to fill the viewport), and is consumed by one successful
   placement. Right-click, Escape, picker disarm, edit-mode exit, layout change,
   or navigation cancels it (discarding a configured but unplaced Rack); a
   blocked cell keeps it armed for another target.

@@ -18,7 +18,8 @@ import type { Rack } from "../../types";
 import { rackFloorMetrics } from "./roomFloorPlan";
 import { ROOM_OBJECT_KINDS, type RoomObjectKind } from "./roomObjects";
 import { ROOM_ZOOM_LEVELS, sanitizeRoomZoom } from "./siteTreeState";
-import { RoomObjectIsoArtwork, RoomObjectPlanArtwork } from "./RoomObjectArtwork";
+import { RoomObjectPlanArtwork } from "./RoomObjectArtwork";
+import { RoomObjectIsoArtwork } from "./RoomObjectIsoReference";
 import { IT_ACCENTS, ItIcon } from "./icons";
 
 /** Accent colour per object kind (乖乖 is green — it has a job to do). Fed to

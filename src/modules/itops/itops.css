@@ -2572,8 +2572,14 @@
   filter: drop-shadow(0 10px 18px rgb(0 0 0 / 28%));
 }
 .rm-cursor-ghost.iso {
-  width: 72px;
-  height: 72px;
+  width: 96px;
+  height: 112px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  opacity: 1;
+  filter: none;
 }
 .rm-cursor-ghost .rm-object-art,
 .rm-cursor-ghost-rack {
@@ -4840,8 +4846,8 @@
   font-family: var(--app-mono-font-family, monospace);
   font-size: 9px;
 }
-/* Screen-aligned 2.5D object illustrations. The plane still owns the floor
-   coordinates and z-level; this layer replaces the old one-size-fits-all box. */
+/* Reference CSS-3D object constructions. In the live room they remain inside
+   the floor plane; the detached cursor preview supplies its own projection. */
 .itops-page .rm-iso-obj-model {
   position: absolute;
   left: 50%;
@@ -4851,7 +4857,7 @@
   height: 48px;
   pointer-events: none;
   transform-origin: 0 0;
-  filter: drop-shadow(0 5px 5px color-mix(in srgb, var(--text) 24%, transparent));
+  transform-style: preserve-3d;
 }
 .itops-page .rm-iso-obj-model[data-kind="aircon"] { width: 62px; height: 96px; }
 .itops-page .rm-iso-obj-model[data-kind="ups"] { width: 48px; height: 58px; }
@@ -4862,53 +4868,35 @@
 .itops-page .rm-iso-obj-model[data-kind="fireExtinguisher"] { width: 38px; height: 54px; }
 .itops-page .rm-iso-obj-model[data-kind="cableTray"] { width: 78px; height: 42px; }
 .itops-page .rm-iso-obj-model[data-kind="kuaikuai"] { width: 42px; height: 56px; }
-.itops-page .rm-art-iso-top,
-.itops-page .rm-art-smoke-top {
-  fill: color-mix(in srgb, var(--surface) 84%, var(--obj));
-  stroke: color-mix(in srgb, var(--border-strong) 72%, var(--obj));
+.itops-page .rm-object-art-iso {
+  position: relative;
+  overflow: visible;
+  transform-style: preserve-3d;
+  --font-mono: var(--app-mono-font-family, monospace);
 }
-.itops-page .rm-art-iso-front {
-  fill: color-mix(in srgb, var(--surface-muted) 90%, var(--obj));
-  stroke: color-mix(in srgb, var(--border-strong) 74%, var(--obj));
+.itops-page .rm-ref-iso-stage {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 0;
+  height: 0;
+  transform-origin: 0 0;
+  transform: scale(0.78);
+  transform-style: preserve-3d;
 }
-.itops-page .rm-art-iso-side,
-.itops-page .rm-art-smoke-side {
-  fill: color-mix(in srgb, var(--border) 70%, var(--obj));
-  stroke: color-mix(in srgb, var(--border-strong) 78%, var(--obj));
+.itops-page .rm-object-art-iso[data-kind="aircon"] .rm-ref-iso-stage { transform: scale(0.72); }
+.itops-page .rm-object-art-iso[data-kind="ups"] .rm-ref-iso-stage { transform: scale(0.78); }
+.itops-page .rm-object-art-iso[data-kind="crashCart"] .rm-ref-iso-stage { transform: scale(0.82); }
+.itops-page .rm-object-art-iso[data-kind="camera"] .rm-ref-iso-stage { transform: scale(0.68); }
+.itops-page .rm-object-art-iso[data-kind="sensor"] .rm-ref-iso-stage { transform: scale(0.82); }
+.itops-page .rm-object-art-iso[data-kind="smokeDetector"] .rm-ref-iso-stage { transform: scale(0.86); }
+.itops-page .rm-object-art-iso[data-kind="fireExtinguisher"] .rm-ref-iso-stage { transform: scale(0.88); }
+.itops-page .rm-object-art-iso[data-kind="cableTray"] .rm-ref-iso-stage { transform: scale(0.72); }
+.itops-page .rm-object-art-iso[data-kind="kuaikuai"] .rm-ref-iso-stage { transform: scale(0.9); }
+.itops-page .rm-iso-plane .rm-ref-iso-stage > div {
+  /* The live room plane already owns rotateX(55deg) rotateZ(45deg). */
+  transform: none !important;
 }
-.itops-page .rm-art-vent,
-.itops-page .rm-art-led-bars,
-.itops-page .rm-art-terminal,
-.itops-page .rm-art-tray-rungs {
-  fill: none;
-  stroke: var(--obj);
-  stroke-width: 1.4;
-}
-.itops-page .rm-art-ups-top { fill: color-mix(in srgb, var(--obj) 30%, var(--text)); stroke: var(--obj); }
-.itops-page .rm-art-ups-front { fill: color-mix(in srgb, var(--obj) 18%, var(--text)); stroke: var(--obj); }
-.itops-page .rm-art-ups-side { fill: color-mix(in srgb, var(--obj) 28%, var(--text)); stroke: var(--obj); }
-.itops-page .rm-art-charge { fill: var(--obj); stroke: none; }
-.itops-page .rm-art-led-bars { stroke: var(--green); stroke-width: 2.5; }
-.itops-page .rm-art-shadow { fill: color-mix(in srgb, var(--text) 20%, transparent); stroke: none; }
-.itops-page .rm-art-cart { fill: color-mix(in srgb, var(--surface-muted) 80%, var(--obj)); stroke: var(--obj); }
-.itops-page .rm-art-cart-leg,
-.itops-page .rm-art-stand,
-.itops-page .rm-art-mast,
-.itops-page .rm-art-support { fill: none; stroke: color-mix(in srgb, var(--text-muted) 78%, var(--obj)); stroke-width: 3; }
-.itops-page .rm-art-wheel { fill: var(--text); stroke: var(--border-strong); }
-.itops-page .rm-art-screen { fill: color-mix(in srgb, var(--text) 92%, var(--surface)); stroke: var(--border-strong); }
-.itops-page .rm-art-terminal { stroke: var(--green); }
-.itops-page .rm-art-camera-cap { fill: color-mix(in srgb, var(--text-muted) 55%, var(--surface)); stroke: var(--border-strong); }
-.itops-page .rm-art-camera-dome { fill: color-mix(in srgb, var(--text) 88%, var(--obj)); stroke: var(--obj); }
-.itops-page .rm-art-camera-lens { fill: color-mix(in srgb, var(--obj) 52%, var(--text)); stroke: var(--obj); }
-.itops-page .rm-art-sensor { fill: color-mix(in srgb, var(--surface) 88%, var(--obj)); stroke: color-mix(in srgb, var(--border-strong) 72%, var(--obj)); }
-.itops-page .rm-art-reading { fill: var(--text-muted); stroke: none; font-family: var(--app-mono-font-family, monospace); font-size: 10px; }
-.itops-page .rm-art-extinguisher { fill: var(--red); stroke: color-mix(in srgb, var(--red) 68%, var(--text)); }
-.itops-page .rm-art-ext-top { fill: color-mix(in srgb, var(--red) 76%, var(--surface)); stroke: color-mix(in srgb, var(--red) 68%, var(--text)); }
-.itops-page .rm-art-ext-label { fill: var(--surface); stroke: color-mix(in srgb, var(--red) 55%, var(--border)); }
-.itops-page .rm-art-hose { fill: none; stroke: var(--text); stroke-width: 3; }
-.itops-page .rm-art-tray { fill: color-mix(in srgb, var(--surface-muted) 70%, var(--text-muted)); stroke: var(--text-muted); }
-
 @keyframes rm-object-fan { to { transform: rotate(360deg); } }
 @keyframes rm-object-breathe { 50% { opacity: 0.45; transform: scale(0.88); } }
 @keyframes rm-object-blink { 48% { opacity: 1; } 50%, 58% { opacity: 0.25; } 60% { opacity: 1; } }
@@ -4916,6 +4904,20 @@
 @keyframes rm-object-ring { from { opacity: 0.55; transform: scale(0.4); } to { opacity: 0; transform: scale(1.35); } }
 @keyframes rm-object-aura { 50% { opacity: 0.85; transform: scale(1.12); } }
 @keyframes rm-object-signal { from { transform: translateX(0); } to { transform: translateX(62px); } }
+
+/* Animation names/timings are copied from Server Room Objects.dc.html because
+   the reference 2.5D constructions carry these names in their inline styles. */
+@keyframes kkBreathe { 0%, 100% { opacity: 1; } 50% { opacity: 0.38; } }
+@keyframes kkBlink { 0%, 44% { opacity: 1; } 56%, 100% { opacity: 0.12; } }
+@keyframes kkRec { 0%, 48% { opacity: 1; } 52%, 100% { opacity: 0.08; } }
+@keyframes kkAir { 0% { opacity: 0; transform: translateY(4px) scaleY(0.5); } 35% { opacity: 0.85; } 100% { opacity: 0; transform: translateY(-20px) scaleY(1); } }
+@keyframes kkRing { 0% { opacity: 0.7; transform: scale(0.18); } 100% { opacity: 0; transform: scale(1.7); } }
+@keyframes kkPulse { 0% { opacity: 0; transform: translateX(0); } 12% { opacity: 1; } 88% { opacity: 1; } 100% { opacity: 0; transform: translateX(52px); } }
+@keyframes kkSweep { 0%, 100% { transform: rotate(-30deg); } 50% { transform: rotate(30deg); } }
+@keyframes kkAura { 0%, 100% { opacity: 0.4; transform: scale(0.94); } 50% { opacity: 0.92; transform: scale(1.08); } }
+@keyframes kkCharge { 0%, 100% { opacity: 0.45; } 50% { opacity: 1; } }
+@keyframes kkScroll { to { transform: translateY(-50%); } }
+@keyframes kkBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
 
 @media (prefers-reduced-motion: reduce) {
   .itops-page .rm-object-art * {
@@ -5379,9 +5381,14 @@
 .itops-page .rm-iso-plane.placing .rm-iso-tile:hover {
   color: transparent;
 }
-.itops-page .rm-iso-cab.ghost,
-.itops-page .rm-iso-obj.ghost {
+.itops-page .rm-iso-cab.ghost {
   opacity: 0.65;
+  pointer-events: none;
+}
+.itops-page .rm-iso-obj.ghost {
+  /* Parent opacity flattens preserve-3d descendants and collapses every
+     vertical face into the floor. The blue snap tile already distinguishes
+     the preview, so keep the reference model fully 3D and fully legible. */
   pointer-events: none;
 }
 
@@ -5730,9 +5737,10 @@
   cursor: grabbing;
 }
 .itops-page .rm-iso-obj.selected .rm-iso-obj-model {
-  filter:
-    drop-shadow(0 0 4px var(--accent))
-    drop-shadow(0 5px 5px color-mix(in srgb, var(--text) 24%, transparent));
+  filter: none;
+}
+.itops-page .rm-iso-obj.selected {
+  box-shadow: inset 0 0 0 2px var(--accent);
 }
 /* Floor shadow only for objects actually standing on the floor. */
 .itops-page .rm-iso-obj.grounded::before {

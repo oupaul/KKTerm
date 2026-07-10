@@ -6,6 +6,7 @@ import {
   ISO_MIN_ROWS,
   ISO_TILT_COS,
   expandIsoFloorFrame,
+  isoPlacementCells,
   moveIsoRack,
   rackDepthFrac,
   rackFootprint,
@@ -88,6 +89,16 @@ test("decorative 2.5D floor expansion keeps the room grid origin aligned", () =>
   assert.ok(frame.floorRows > 4);
   assert.equal(frame.offX, 0);
   assert.equal(frame.offY, 0);
+});
+
+test("every visible 2.5D floor cell can receive an edit-mode placement", () => {
+  const cells = isoPlacementCells(9, 7, new Set(["1,2", "4,5"]));
+
+  assert.equal(cells.length, 9 * 7 - 2);
+  assert.deepEqual(cells[0], { x: 0, y: 0 });
+  assert.ok(cells.some((cell) => cell.x === 8 && cell.y === 6));
+  assert.ok(!cells.some((cell) => cell.x === 1 && cell.y === 2));
+  assert.ok(!cells.some((cell) => cell.x === 4 && cell.y === 5));
 });
 
 test("rackDepthFrac scales displayed depth by the 1200 mm cell", () => {
