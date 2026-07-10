@@ -5658,7 +5658,7 @@
 }
 .rack-item-dialog-grid {
   display: grid;
-  grid-template-columns: minmax(0, 310px) minmax(0, 280px) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 310px) minmax(0, 1fr);
   gap: 18px;
   align-items: start;
 }
@@ -5876,14 +5876,6 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.itops-page .rack-form-grid.four {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-
-.rack-item-dialog .metadata-column .rack-form-grid.four {
-  grid-template-columns: 1fr;
-}
-
 .itops-page .rack-port-list {
   display: grid;
   gap: 8px;
@@ -6004,23 +5996,12 @@
   background: var(--surface);
 }
 
-@media (max-width: 900px) {
-  .rack-item-dialog-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .rack-item-dialog .metadata-column {
-    grid-column: 1 / -1;
-  }
-}
-
 @media (max-width: 760px) {
   .rack-item-dialog {
     max-width: calc(100vw - 24px);
   }
   .rack-item-dialog-grid { grid-template-columns: 1fr; }
-  .rack-item-dialog .metadata-column { grid-column: auto; }
   .itops-page .rack-form-grid.two,
-  .itops-page .rack-form-grid.four,
   .itops-page .connection-binding-list,
   .itops-page .rack-port-row {
     grid-template-columns: 1fr;

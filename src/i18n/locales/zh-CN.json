@@ -1227,9 +1227,6 @@
       "rotationLabel": "旋转",
       "rotationDecrease": "向左旋转",
       "rotationIncrease": "向右旋转",
-      "yawLabel": "偏航",
-      "yawDecrease": "向左偏航",
-      "yawIncrease": "向右偏航",
       "kind": {
         "connection": "主机",
         "switch": "交换机",
@@ -1247,7 +1244,6 @@
         "general": "通用",
         "kuaiguai": "乖乖"
       },
-      "kuaiguaiSizeLabel": "包装尺寸",
       "kuaiguaiSize": {
         "small": "小",
         "regular": "标准",

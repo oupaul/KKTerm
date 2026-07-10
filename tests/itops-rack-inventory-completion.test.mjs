@@ -8,9 +8,10 @@ test("Rack Device dialog has live graphical preview and 乖乖 size/style contro
 
   assert.match(dialog, /rack-item-preview/);
   assert.match(dialog, /kuaiguaiSize/);
-  assert.match(dialog, /itops\.racks\.kuaiguaiSizeLabel/);
   assert.match(dialog, /kuaiguaiStyle/);
+  // Pose and size merge into the single Package style select.
   assert.match(dialog, /itops\.racks\.kuaiguaiStyleLabel/);
+  assert.doesNotMatch(dialog, /itops\.racks\.kuaiguaiSizeLabel/);
   assert.match(device, /kuaiguaiSize\?:/);
   assert.match(device, /kuaiguaiStyle\?:/);
   assert.match(device, /data-kuaiguai-size/);

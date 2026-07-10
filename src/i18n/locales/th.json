@@ -1227,9 +1227,6 @@
       "rotationLabel": "การหมุน",
       "rotationDecrease": "หมุนซ้าย",
       "rotationIncrease": "หมุนขวา",
-      "yawLabel": "การหันเห",
-      "yawDecrease": "หันเหซ้าย",
-      "yawIncrease": "หันเหขวา",
       "kind": {
         "connection": "โฮสต์",
         "switch": "สวิตช์",
@@ -1245,9 +1242,8 @@
         "kvm": "สวิตช์ KVM",
         "equipment": "อุปกรณ์",
         "general": "ทั่วไป",
-        "kuaiguai": "乖乖"
+        "kuaiguai": "Kuai Kuai"
       },
-      "kuaiguaiSizeLabel": "ขนาดบรรจุภัณฑ์",
       "kuaiguaiSize": {
         "small": "เล็ก",
         "regular": "ปกติ",

@@ -1227,9 +1227,6 @@
       "rotationLabel": "회전",
       "rotationDecrease": "왼쪽으로 회전",
       "rotationIncrease": "오른쪽으로 회전",
-      "yawLabel": "요(yaw)",
-      "yawDecrease": "왼쪽으로 요",
-      "yawIncrease": "오른쪽으로 요",
       "kind": {
         "connection": "호스트",
         "switch": "스위치",
@@ -1245,9 +1242,8 @@
         "kvm": "KVM 스위치",
         "equipment": "장비",
         "general": "일반",
-        "kuaiguai": "乖乖"
+        "kuaiguai": "콰이콰이"
       },
-      "kuaiguaiSizeLabel": "패키지 크기",
       "kuaiguaiSize": {
         "small": "소",
         "regular": "보통",

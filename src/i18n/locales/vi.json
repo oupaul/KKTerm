@@ -1227,9 +1227,6 @@
       "rotationLabel": "Xoay",
       "rotationDecrease": "Xoay trái",
       "rotationIncrease": "Xoay phải",
-      "yawLabel": "Xoay ngang",
-      "yawDecrease": "Xoay ngang trái",
-      "yawIncrease": "Xoay ngang phải",
       "kind": {
         "connection": "Máy chủ",
         "switch": "Bộ chuyển mạch",
@@ -1245,9 +1242,8 @@
         "kvm": "Bộ chuyển mạch KVM",
         "equipment": "Thiết bị",
         "general": "Chung",
-        "kuaiguai": "乖乖"
+        "kuaiguai": "Kuai Kuai"
       },
-      "kuaiguaiSizeLabel": "Kích thước gói",
       "kuaiguaiSize": {
         "small": "Nhỏ",
         "regular": "Thường",

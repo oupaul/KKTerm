@@ -1227,9 +1227,6 @@
       "rotationLabel": "Rotasi",
       "rotationDecrease": "Putar ke kiri",
       "rotationIncrease": "Putar ke kanan",
-      "yawLabel": "Yaw",
-      "yawDecrease": "Yaw ke kiri",
-      "yawIncrease": "Yaw ke kanan",
       "kind": {
         "connection": "Host",
         "switch": "Sakelar",
@@ -1245,9 +1242,8 @@
         "kvm": "Sakelar KVM",
         "equipment": "Peralatan",
         "general": "Umum",
-        "kuaiguai": "乖乖"
+        "kuaiguai": "Kuai Kuai"
       },
-      "kuaiguaiSizeLabel": "Ukuran kemasan",
       "kuaiguaiSize": {
         "small": "Kecil",
         "regular": "Reguler",

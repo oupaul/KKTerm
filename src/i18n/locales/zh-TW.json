@@ -1227,9 +1227,6 @@
       "rotationLabel": "旋轉",
       "rotationDecrease": "向左旋轉",
       "rotationIncrease": "向右旋轉",
-      "yawLabel": "偏航",
-      "yawDecrease": "向左偏航",
-      "yawIncrease": "向右偏航",
       "kind": {
         "connection": "主機",
         "switch": "交換器",
@@ -1247,7 +1244,6 @@
         "general": "一般",
         "kuaiguai": "乖乖"
       },
-      "kuaiguaiSizeLabel": "包裝尺寸",
       "kuaiguaiSize": {
         "small": "小",
         "regular": "標準",

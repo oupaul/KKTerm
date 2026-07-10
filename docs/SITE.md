@@ -119,7 +119,7 @@ Replaces the **Host Group** entry in `CONTEXT.md`; adds the rest. Follows the
 - **Rack Device Properties** — non-secret presentation metadata for a Rack
   Device: label, status, accent, notes, tags, additional Connection bindings,
   typed port rows, SNMP target/OID hints for user-triggered refresh, shell/model
-  preview data, 乖乖 package expiry/size/style/rotation/yaw, ports, disks, battery,
+  preview data, 乖乖 package expiry/size/style/rotation, ports, disks, battery,
   load, icon, and placement. Never store credentials, secrets, or live Session
   state here. SNMP refresh is manual rather than a background polling service.
 
@@ -347,8 +347,10 @@ The visible IT Ops Module opens directly into the Site topology surface:
   cabinet, magnetically snaps to a nearby U, and cancels on right-click, Escape,
   picker disarm, or navigation. 乖乖 alone can also snap to the rack top (the
   durable virtual position `start_u = height_u + 1`): `full` stands at 4U and
-  `laidDown` faces upward at 1U. Floor views hide 乖乖 stored inside the cabinet
-  and show only a rack-top package.
+  `laidDown` faces upward at 1U. Rack View and the Server Room elevation rows
+  always reserve 4U of headroom above the cabinet (`KUAIGUAI_TOP_CLEARANCE_U`)
+  so a rack-top package fits without shifting the rack. Floor views hide 乖乖
+  stored inside the cabinet and show only a rack-top package.
 
 Batch Runs and Automations remain part of IT Ops, but their top-level
 management tab chrome is hidden while the Site-only UI is active.

@@ -48,6 +48,7 @@ export function RackElevation({
   detailed,
   hideHeader = false,
   editMode = false,
+  reserveTopU = 0,
   placeSpec,
   onPlaceAt,
   onCancelPlacement,
@@ -73,6 +74,9 @@ export function RackElevation({
   /** Rack View moves this identity/spec line into the drill toolbar. */
   hideHeader?: boolean;
   editMode?: boolean;
+  /** Always keep at least this much headroom (in U) above the cabinet so a
+   *  rack-top 乖乖 has room and the rack doesn't shift when one is placed. */
+  reserveTopU?: number;
   /** Armed picker placement: the configured device ghosts under the cursor,
    *  snapped to the hovered U slot, and a slot click places it there. */
   placeSpec?: RackItemDraft | null;
@@ -205,6 +209,7 @@ export function RackElevation({
   const cabinetItems = rack.items.filter((item) => !isRackTopItem(item, rack.heightU));
   const topClearanceU = Math.max(
     0,
+    reserveTopU,
     ...topItems.map((item) => item.heightU),
     placing && placeSpec?.kind === "kuaiguai" ? placeSpec.heightU : 0,
   );

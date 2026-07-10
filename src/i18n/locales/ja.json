@@ -1227,9 +1227,6 @@
       "rotationLabel": "回転",
       "rotationDecrease": "左に回転",
       "rotationIncrease": "右に回転",
-      "yawLabel": "ヨー",
-      "yawDecrease": "左にヨー",
-      "yawIncrease": "右にヨー",
       "kind": {
         "connection": "ホスト",
         "switch": "スイッチ",
@@ -1245,9 +1242,8 @@
         "kvm": "KVMスイッチ",
         "equipment": "機器",
         "general": "一般",
-        "kuaiguai": "乖乖"
+        "kuaiguai": "乖乖（クァイクァイ）"
       },
-      "kuaiguaiSizeLabel": "パッケージサイズ",
       "kuaiguaiSize": {
         "small": "小",
         "regular": "標準",

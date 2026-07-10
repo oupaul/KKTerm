@@ -51,7 +51,7 @@ import { ServerRoomFloorPlan } from "./ServerRoomFloorPlan";
 import { ServerRoomIsoView } from "./ServerRoomIsoView";
 import { RoomObjectPicker, type RoomTool } from "./roomViewParts";
 import { collectBoundConnectionIds } from "./rackInventory";
-import { isRackTopItem } from "./rackPlacement";
+import { isRackTopItem, KUAIGUAI_TOP_CLEARANCE_U } from "./rackPlacement";
 import type { DashboardBackground } from "../dashboard/types";
 import { SharedBackgroundPopover } from "../dashboard/edit/SharedBackgroundPopover";
 import { loadBackgroundImage } from "../dashboard/state/persistence";
@@ -1278,6 +1278,7 @@ function RackDrill({
         key={r.id}
         rack={r}
         hostFor={hostForItem}
+        reserveTopU={KUAIGUAI_TOP_CLEARANCE_U}
         editMode={editMode}
         onSlotClick={editMode ? (startU) => onSlotClick(r, startU) : undefined}
         onOpenItem={onOpenItem}

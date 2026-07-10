@@ -1227,9 +1227,6 @@
       "rotationLabel": "Rotazione",
       "rotationDecrease": "Ruota a sinistra",
       "rotationIncrease": "Ruota a destra",
-      "yawLabel": "Imbardata",
-      "yawDecrease": "Imbarda a sinistra",
-      "yawIncrease": "Imbarda a destra",
       "kind": {
         "connection": "Host",
         "switch": "Switch",
@@ -1245,9 +1242,8 @@
         "kvm": "Switch KVM",
         "equipment": "Apparecchiatura",
         "general": "Generale",
-        "kuaiguai": "乖乖"
+        "kuaiguai": "Kuai Kuai"
       },
-      "kuaiguaiSizeLabel": "Dimensione confezione",
       "kuaiguaiSize": {
         "small": "Piccolo",
         "regular": "Normale",

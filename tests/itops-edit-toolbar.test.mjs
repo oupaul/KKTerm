@@ -132,8 +132,8 @@ test("Rack device picker arms a configure-then-place flow with a cursor-snapped 
   assert.match(dialog, /export interface RackItemDraft/);
   assert.match(dialog, /onConfigured\?: \(draft: RackItemDraft\) => void/);
   assert.match(dialog, /const placementMode = !isEdit && !!onConfigured/);
-  assert.match(dialog, /\{placementMode \? null : \(/);
-  assert.match(dialog, /placementMode \? null : \(\s*<div\s*className="rack-kind-preview-grid"/);
+  assert.match(dialog, /\{placementMode \|\| isEdit \? null : \(/);
+  assert.match(dialog, /placementMode \|\| isEdit \? null : \(\s*<div\s*className="rack-kind-preview-grid"/);
   // SitesTab arms the configured draft and places it on the elevation click.
   assert.match(sites, /useState<RackItemDraft \| null>\(null\)/);
   assert.match(sites, /onConfigureDevice/);

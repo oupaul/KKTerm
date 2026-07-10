@@ -1227,9 +1227,6 @@
       "rotationLabel": "Drehung",
       "rotationDecrease": "Nach links drehen",
       "rotationIncrease": "Nach rechts drehen",
-      "yawLabel": "Gierung",
-      "yawDecrease": "Nach links gieren",
-      "yawIncrease": "Nach rechts gieren",
       "kind": {
         "connection": "Host",
         "switch": "Switch",
@@ -1245,9 +1242,8 @@
         "kvm": "KVM-Switch",
         "equipment": "Gerät",
         "general": "Allgemein",
-        "kuaiguai": "乖乖"
+        "kuaiguai": "Kuai Kuai"
       },
-      "kuaiguaiSizeLabel": "Packungsgröße",
       "kuaiguaiSize": {
         "small": "Klein",
         "regular": "Normal",

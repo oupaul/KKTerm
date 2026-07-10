@@ -1227,9 +1227,6 @@
       "rotationLabel": "Rotation",
       "rotationDecrease": "Pivoter à gauche",
       "rotationIncrease": "Pivoter à droite",
-      "yawLabel": "Lacet",
-      "yawDecrease": "Lacet à gauche",
-      "yawIncrease": "Lacet à droite",
       "kind": {
         "connection": "Hôte",
         "switch": "Commutateur",
@@ -1245,9 +1242,8 @@
         "kvm": "Commutateur KVM",
         "equipment": "Équipement",
         "general": "Général",
-        "kuaiguai": "乖乖"
+        "kuaiguai": "Kuai Kuai"
       },
-      "kuaiguaiSizeLabel": "Taille du paquet",
       "kuaiguaiSize": {
         "small": "Petit",
         "regular": "Standard",

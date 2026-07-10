@@ -10,6 +10,7 @@ import type { Rack, RackItem, RackItemStatus, SiteHost } from "../../types";
 import { childHostsOf, hostDisplayName } from "./hostTree";
 import { selectRandomRackCallouts, summarizeRackDeviceMetadata } from "./rackInventory";
 import { RackElevation } from "./RackElevation";
+import { KUAIGUAI_TOP_CLEARANCE_U } from "./rackPlacement";
 import type { RackItemDraft } from "./RackItemDialog";
 
 /** Child-host names for a device balloon: first two, then a "+N" overflow. */
@@ -141,6 +142,7 @@ export function RackStage({
         <RackElevation
           rack={rack}
           hideHeader
+          reserveTopU={KUAIGUAI_TOP_CLEARANCE_U}
           hostFor={hostFor}
           isGhost={isGhost}
           editMode={editMode}

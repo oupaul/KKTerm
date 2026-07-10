@@ -1227,9 +1227,6 @@
       "rotationLabel": "Rotação",
       "rotationDecrease": "Girar à esquerda",
       "rotationIncrease": "Girar à direita",
-      "yawLabel": "Guinada",
-      "yawDecrease": "Guinar à esquerda",
-      "yawIncrease": "Guinar à direita",
       "kind": {
         "connection": "Host",
         "switch": "Comutador",
@@ -1245,9 +1242,8 @@
         "kvm": "Comutador KVM",
         "equipment": "Equipamento",
         "general": "Geral",
-        "kuaiguai": "乖乖"
+        "kuaiguai": "Kuai Kuai"
       },
-      "kuaiguaiSizeLabel": "Tamanho da embalagem",
       "kuaiguaiSize": {
         "small": "Pequeno",
         "regular": "Normal",

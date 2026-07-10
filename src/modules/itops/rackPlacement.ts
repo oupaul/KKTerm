@@ -19,6 +19,11 @@ export function isRackTopItem(item: RackItem, rackHeightU: number): boolean {
   return item.kind === "kuaiguai" && item.startU === rackHeightU + 1;
 }
 
+/** Headroom (in U) the Rack View and Server Room elevation views always keep
+ *  above the cabinet — a standing (`full`) 乖乖 package is 4U tall, so a
+ *  rack-top placement fits without shifting the rack down. */
+export const KUAIGUAI_TOP_CLEARANCE_U = 4;
+
 function horizontalDistance(x: number, rect: ClientRectLike): number {
   return x < rect.left ? rect.left - x : x > rect.right ? x - rect.right : 0;
 }

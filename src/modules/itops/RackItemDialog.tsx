@@ -144,7 +144,6 @@ export function RackItemDialog({
   const [shell, setShell] = useState<RackShell>(item?.metadata?.shell ?? "black");
   const [expiry, setExpiry] = useState(item?.metadata?.expiry ?? "");
   const [rotation, setRotation] = useState(item?.metadata?.rotation ?? -2);
-  const [yaw, setYaw] = useState(item?.metadata?.yaw ?? 0);
   const [kuaiguaiSize, setKuaiguaiSize] = useState<"small" | "regular" | "large">(
     initialMetadata.kuaiguaiSize ?? "regular",
   );
@@ -174,11 +173,13 @@ export function RackItemDialog({
   const previewLabel = label.trim() || t(`itops.racks.kind.${kind}`);
   const parsedDraw = Number.parseInt(powerDraw, 10);
   const parsedPowerDraw = Number.isFinite(parsedDraw) && parsedDraw > 0 ? parsedDraw : null;
+  // A 乖乖 package is decor: no status/shell/accent/power semantics.
+  const isKuaiguai = kind === "kuaiguai";
 
   const metadata: RackItemMetadata = {
-    accent: accent === "none" ? null : accent,
-    status,
-    shell: shell === "black" ? null : shell,
+    accent: isKuaiguai || accent === "none" ? null : accent,
+    status: isKuaiguai ? "online" : status,
+    shell: isKuaiguai || shell === "black" ? null : shell,
     notes: notes.trim() || null,
     tags: splitLines(tags),
     connectionIds: initialMetadata.connectionIds,
@@ -195,9 +196,9 @@ export function RackItemDialog({
       ? { target: snmpTarget.trim(), oid: snmpOid.trim() || null }
       : null,
     vendor: vendor.trim() || null,
-    powerW: parsedPowerDraw,
-    ...(kind === "kuaiguai"
-      ? { expiry: expiry.trim() || null, rotation, yaw, kuaiguaiSize, kuaiguaiStyle }
+    powerW: isKuaiguai ? null : parsedPowerDraw,
+    ...(isKuaiguai
+      ? { expiry: expiry.trim() || null, rotation, kuaiguaiSize, kuaiguaiStyle }
       : {}),
     ...(showsPorts(kind) ? { ports } : {}),
     ...(showsDisks(kind) ? { disks } : {}),
@@ -256,16 +257,6 @@ export function RackItemDialog({
     setBusy(true);
     try {
       if (isEdit) {
-        const movingRackTopPackageInside =
-          item!.kind === "kuaiguai" && item!.startU === rack.heightU + 1 && kind !== "kuaiguai";
-        if (movingRackTopPackageInside) {
-          await moveRackItem(siteId, {
-            id: item!.id,
-            rackId: rack.id,
-            startU: placedStartU,
-            heightU,
-          });
-        }
         await updateRackItem(siteId, {
           id: item!.id,
           kind,
@@ -273,10 +264,7 @@ export function RackItemDialog({
           label: label.trim(),
           metadata,
         });
-        if (
-          !movingRackTopPackageInside &&
-          (placedStartU !== item!.startU || heightU !== item!.heightU)
-        ) {
+        if (placedStartU !== item!.startU || heightU !== item!.heightU) {
           await moveRackItem(siteId, { id: item!.id, rackId: rack.id, startU: placedStartU, heightU });
         }
       } else {
@@ -328,7 +316,7 @@ export function RackItemDialog({
   return (
     <DialogShell onBackdrop={onClose} zClassName="itops-page">
       <Sheet
-        width={900}
+        width={760}
         className="rack-item-dialog"
         title={isEdit ? t("itops.racks.editItemTitle") : t("itops.racks.addItemTitle")}
         ariaLabel={isEdit ? t("itops.racks.editItemTitle") : t("itops.racks.addItemTitle")}
@@ -374,7 +362,6 @@ export function RackItemDialog({
                         load={kind === "pdu" ? load : null}
                         expiry={kind === "kuaiguai" ? expiry : null}
                         rotation={kind === "kuaiguai" ? rotation : null}
-                        yaw={kind === "kuaiguai" ? yaw : null}
                         kuaiguaiSize={kind === "kuaiguai" ? kuaiguaiSize : null}
                         kuaiguaiStyle={kind === "kuaiguai" ? kuaiguaiStyle : null}
                         heightU={heightU}
@@ -398,9 +385,10 @@ export function RackItemDialog({
               </div>
             </div>
 
-            {/* Picker placement flow already chose the type: show only the
-                chosen device's properties, no type switcher. */}
-            {placementMode ? null : (
+            {/* The picker placement flow already chose the type and an
+                existing device keeps its type: the switcher grid only shows
+                for the empty-slot add flow. */}
+            {placementMode || isEdit ? null : (
               <div
                 className="rack-kind-preview-grid"
                 role="group"
@@ -426,7 +414,6 @@ export function RackItemDialog({
                         load={value === "pdu" ? load : null}
                         expiry={value === "kuaiguai" ? expiry : null}
                         rotation={value === "kuaiguai" ? rotation : null}
-                        yaw={value === "kuaiguai" ? yaw : null}
                         kuaiguaiSize={value === "kuaiguai" ? kuaiguaiSize : null}
                         kuaiguaiStyle={value === "kuaiguai" ? kuaiguaiStyle : null}
                         heightU={1}
@@ -441,25 +428,6 @@ export function RackItemDialog({
               </div>
             )}
 
-            {needsConnection ? (
-              <Field label={t("itops.racks.connectionLabel")} req>
-                {members.length === 0 ? (
-                  <div className="hg-dlg-empty">{t("itops.racks.noMembers")}</div>
-                ) : (
-                  <Select
-                    value={connectionId}
-                    onChange={(event) => setConnectionId(event.currentTarget.value)}
-                    options={members.map((member) => ({
-                      value: member.connectionId,
-                      label: `${member.name} (${member.host})`,
-                    }))}
-                  />
-                )}
-              </Field>
-            ) : null}
-          </section>
-
-          <section className="rack-item-dialog-column appearance-column">
             <Field label={t("itops.racks.labelLabel")} hint={t("itops.racks.labelHint")}>
               <TextInput
                 value={label}
@@ -490,57 +458,75 @@ export function RackItemDialog({
               </Field>
             ) : null}
 
-            <Field label={t("itops.racks.statusLabel")}>
-              <Select
-                value={status}
-                onChange={(event) => setStatus(event.currentTarget.value as RackItemStatus)}
-                options={STATUS_OPTIONS.map((value) => ({
-                  value,
-                  label: t(`itops.racks.status.${value}`),
-                }))}
-              />
-            </Field>
+            {needsConnection ? (
+              <Field label={t("itops.racks.connectionLabel")} req>
+                {members.length === 0 ? (
+                  <div className="hg-dlg-empty">{t("itops.racks.noMembers")}</div>
+                ) : (
+                  <Select
+                    value={connectionId}
+                    onChange={(event) => setConnectionId(event.currentTarget.value)}
+                    options={members.map((member) => ({
+                      value: member.connectionId,
+                      label: `${member.name} (${member.host})`,
+                    }))}
+                  />
+                )}
+              </Field>
+            ) : null}
+          </section>
 
-            <Field label={t("itops.racks.shellLabel")}>
-              <div className="rack-item-shell-grid">
-                {SHELL_OPTIONS.map((value) => (
-                  <button
-                    key={value}
-                    type="button"
-                    className={`rack-item-shell-tile${shell === value ? " selected" : ""}`}
-                    aria-pressed={shell === value}
-                    onClick={() => setShell(value)}
-                  >
-                    <span className="rack-item-shell-face">
-                      <RackDevice
-                        kind={kind}
-                        label=""
-                        subLabel={null}
-                        status={status}
-                        ports={showsPorts(kind) ? ports : null}
-                        disks={showsDisks(kind) ? disks : null}
-                        battery={kind === "ups" ? battery : null}
-                        load={kind === "pdu" ? load : null}
-                        expiry={kind === "kuaiguai" ? expiry : null}
-                        rotation={kind === "kuaiguai" ? rotation : null}
-                        yaw={kind === "kuaiguai" ? yaw : null}
-                        kuaiguaiSize={kind === "kuaiguai" ? kuaiguaiSize : null}
-                        kuaiguaiStyle={kind === "kuaiguai" ? kuaiguaiStyle : null}
-                        heightU={1}
-                        accent={accent === "none" ? null : accent}
-                        shell={value}
-                        seed={`shell-${value}-${kind}`}
-                      />
-                    </span>
-                    <span>{t(`itops.racks.shell.${value}`)}</span>
-                  </button>
-                ))}
-              </div>
-            </Field>
+          <section className="rack-item-dialog-column form-column">
+            {isKuaiguai ? null : (
+              <>
+                <Field label={t("itops.racks.statusLabel")}>
+                  <Select
+                    value={status}
+                    onChange={(event) => setStatus(event.currentTarget.value as RackItemStatus)}
+                    options={STATUS_OPTIONS.map((value) => ({
+                      value,
+                      label: t(`itops.racks.status.${value}`),
+                    }))}
+                  />
+                </Field>
 
-            <Field label={t("itops.racks.accentLabel")}>
-              <Swatches value={accent} onChange={setAccent} allowNone noneLabel={t("itops.racks.accentNone")} />
-            </Field>
+                <Field label={t("itops.racks.shellLabel")}>
+                  <div className="rack-item-shell-grid">
+                    {SHELL_OPTIONS.map((value) => (
+                      <button
+                        key={value}
+                        type="button"
+                        className={`rack-item-shell-tile${shell === value ? " selected" : ""}`}
+                        aria-pressed={shell === value}
+                        onClick={() => setShell(value)}
+                      >
+                        <span className="rack-item-shell-face">
+                          <RackDevice
+                            kind={kind}
+                            label=""
+                            subLabel={null}
+                            status={status}
+                            ports={showsPorts(kind) ? ports : null}
+                            disks={showsDisks(kind) ? disks : null}
+                            battery={kind === "ups" ? battery : null}
+                            load={kind === "pdu" ? load : null}
+                            heightU={1}
+                            accent={accent === "none" ? null : accent}
+                            shell={value}
+                            seed={`shell-${value}-${kind}`}
+                          />
+                        </span>
+                        <span>{t(`itops.racks.shell.${value}`)}</span>
+                      </button>
+                    ))}
+                  </div>
+                </Field>
+
+                <Field label={t("itops.racks.accentLabel")}>
+                  <Swatches value={accent} onChange={setAccent} allowNone noneLabel={t("itops.racks.accentNone")} />
+                </Field>
+              </>
+            )}
 
             {showsPorts(kind) || showsDisks(kind) || kind === "ups" || kind === "pdu" ? (
               <div className="rack-form-grid two">
@@ -580,18 +566,48 @@ export function RackItemDialog({
               )}
             </div>
 
-            <Field label={t("itops.racks.powerDrawLabel")} hint={t("itops.racks.powerDrawHint")}>
-              <TextInput
-                type="number"
-                mono
-                min={0}
-                value={powerDraw}
-                onChange={(event) => setPowerDraw(event.currentTarget.value)}
-              />
-            </Field>
-          </section>
+            {isKuaiguai ? null : (
+              <Field label={t("itops.racks.powerDrawLabel")} hint={t("itops.racks.powerDrawHint")}>
+                <TextInput
+                  type="number"
+                  mono
+                  min={0}
+                  value={powerDraw}
+                  onChange={(event) => setPowerDraw(event.currentTarget.value)}
+                />
+              </Field>
+            )}
 
-          <section className="rack-item-dialog-column metadata-column">
+            {kind === "kuaiguai" ? (
+              <div className="rack-form-grid two">
+                <Field label={t("itops.racks.kuaiguaiStyleLabel")}>
+                  <Select
+                    value={`${kuaiguaiStyle}:${kuaiguaiSize}`}
+                    onChange={(event) => {
+                      const [nextStyle, nextSize] = event.currentTarget.value.split(":") as [
+                        KuaiKuaiStyle,
+                        "small" | "regular" | "large",
+                      ];
+                      selectKuaiguaiStyle(nextStyle);
+                      setKuaiguaiSize(nextSize);
+                    }}
+                    options={(["full", "laidDown"] as const).flatMap((styleValue) =>
+                      (["small", "regular", "large"] as const).map((sizeValue) => ({
+                        value: `${styleValue}:${sizeValue}`,
+                        label: `${t(`itops.racks.kuaiguaiStyle.${styleValue}`)} · ${t(`itops.racks.kuaiguaiSize.${sizeValue}`)}`,
+                      })),
+                    )}
+                  />
+                </Field>
+                <Field label={t("itops.racks.expiryLabel")}>
+                  <TextInput value={expiry} placeholder="2026-12-31" onChange={(event) => setExpiry(event.currentTarget.value)} />
+                </Field>
+                <Field label={t("itops.racks.rotationLabel")}>
+                  <Stepper value={rotation} min={-45} onChange={(next) => setRotation(Math.max(-45, Math.min(45, next)))} ariaDecrease={t("itops.racks.rotationDecrease")} ariaIncrease={t("itops.racks.rotationIncrease")} />
+                </Field>
+              </div>
+            ) : null}
+
             <Field label={t("itops.racks.notesLabel")} hint={t("itops.racks.notesHint")}>
               <TextArea rows={8} value={notes} onChange={(event) => setNotes(event.currentTarget.value)} />
             </Field>
@@ -630,40 +646,6 @@ export function RackItemDialog({
               </Btn>
             ) : null}
           </>
-        ) : null}
-
-        {kind === "kuaiguai" ? (
-          <div className="rack-form-grid four">
-            <Field label={t("itops.racks.kuaiguaiStyleLabel")}>
-              <Select
-                value={kuaiguaiStyle}
-                onChange={(event) => selectKuaiguaiStyle(event.currentTarget.value as KuaiKuaiStyle)}
-                options={["full", "laidDown"].map((value) => ({
-                  value,
-                  label: t(`itops.racks.kuaiguaiStyle.${value}`),
-                }))}
-              />
-            </Field>
-            <Field label={t("itops.racks.expiryLabel")}>
-              <TextInput value={expiry} placeholder="2026-12-31" onChange={(event) => setExpiry(event.currentTarget.value)} />
-            </Field>
-            <Field label={t("itops.racks.kuaiguaiSizeLabel")}>
-              <Select
-                value={kuaiguaiSize}
-                onChange={(event) => setKuaiguaiSize(event.currentTarget.value as "small" | "regular" | "large")}
-                options={["small", "regular", "large"].map((value) => ({
-                  value,
-                  label: t(`itops.racks.kuaiguaiSize.${value}`),
-                }))}
-              />
-            </Field>
-            <Field label={t("itops.racks.rotationLabel")}>
-              <Stepper value={rotation} min={-45} onChange={(next) => setRotation(Math.max(-45, Math.min(45, next)))} ariaDecrease={t("itops.racks.rotationDecrease")} ariaIncrease={t("itops.racks.rotationIncrease")} />
-            </Field>
-            <Field label={t("itops.racks.yawLabel")}>
-              <Stepper value={yaw} min={-45} onChange={(next) => setYaw(Math.max(-45, Math.min(45, next)))} ariaDecrease={t("itops.racks.yawDecrease")} ariaIncrease={t("itops.racks.yawIncrease")} />
-            </Field>
-          </div>
         ) : null}
 
           </section>
