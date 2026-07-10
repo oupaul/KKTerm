@@ -229,6 +229,40 @@ export function footprintSpans(
   return spans;
 }
 
+/** The rack whose cabinet top an object with bottom `z` would rest on: its
+ *  drawn footprint overlaps the object's and its top surface is exactly `z`.
+ *  Rack-top 乖乖 drops use this to become rack items (the object the Rack View
+ *  shows center-top) instead of separate room objects. */
+export function rackTopSupport(
+  cell: IsoCell,
+  kind: RoomObjectKind,
+  rot: Facing,
+  corner: Corner,
+  z: number,
+  racks: Rack[],
+  rackCells: Record<string, IsoCell>,
+  rackFacing: Record<string, Facing | undefined> = {},
+): Rack | null {
+  if (z <= 0) return null;
+  const span = objectCellSpan(kind, rot);
+  const rect = objectFootprint(kind, rot, corner);
+  for (let dy = 0; dy < span.h; dy += 1) {
+    for (let dx = 0; dx < span.w; dx += 1) {
+      const objectRect = { ...rect, x: rect.x - dx, y: rect.y - dy };
+      for (const rack of racks) {
+        const at = rackCells[rack.id];
+        if (!at || at.x !== cell.x + dx || at.y !== cell.y + dy) continue;
+        if (Math.min(ROOM_CEILING_U, Math.max(1, rack.heightU)) !== z) continue;
+        const facing = sanitizeFacing(rackFacing[rack.id]);
+        if (rectsOverlap(objectRect, rackFootprint(facing, rackDepthFrac(rack.depthMm)))) {
+          return rack;
+        }
+      }
+    }
+  }
+  return null;
+}
+
 function fits(spans: ZSpan[], z: number, heightU: number): boolean {
   if (z < 0 || z + heightU > ROOM_CEILING_U) return false;
   return spans.every((span) => z + heightU <= span.z0 || z >= span.z1);

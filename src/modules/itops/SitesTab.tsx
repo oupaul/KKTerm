@@ -76,7 +76,7 @@ import {
   type RackFacingMap,
   type RoomViewMode,
 } from "./siteTreeState";
-import { settleRoomObjects, type RoomObject } from "./roomObjects";
+import { rackTopSupport, settleRoomObjects, type RoomObject } from "./roomObjects";
 import {
   createItOpsPdfBytes,
   excelFilename,
@@ -1235,6 +1235,40 @@ function RackDrill({
     }, 500);
   }, [isoPlacementScope, roomName, saveDurableRoomObjects, showStatusBarNotice, site.id, t]);
 
+  // A 乖乖 pack resting on a cabinet top lives as the rack's single rack-top
+  // Rack Device — the same object the Rack View shows center top — never as a
+  // room object. Both room views hand rack-top drops here; the settle effect
+  // below migrates packs from older saves the same way.
+  const placeRackItemAction = useItOpsStore((state) => state.placeRackItem);
+  const kuaiguaiPlacingRef = useRef<Set<string>>(new Set());
+  const placeKuaiguaiOnRack = useCallback(
+    (target: Rack): boolean => {
+      if (
+        kuaiguaiPlacingRef.current.has(target.id) ||
+        target.items.some((item) => isRackTopItem(item, target.heightU))
+      ) {
+        return false;
+      }
+      kuaiguaiPlacingRef.current.add(target.id);
+      placeRackItemAction(site.id, {
+        rackId: target.id,
+        connectionId: null,
+        kind: "kuaiguai",
+        label: "",
+        startU: target.heightU + 1,
+        heightU: KUAIGUAI_TOP_CLEARANCE_U,
+        metadata: { kuaiguaiSize: "regular", kuaiguaiStyle: "full" },
+      })
+        .catch((error: unknown) => {
+          const message = error instanceof Error ? error.message : String(error);
+          showStatusBarNotice(t("itops.errorNotice", { message }), { tone: "error" });
+        })
+        .finally(() => kuaiguaiPlacingRef.current.delete(target.id));
+      return true;
+    },
+    [placeRackItemAction, showStatusBarNotice, site.id, t],
+  );
+
   useEffect(() => {
     if (!isoPlacementScope || roomRacks == null || roomObjects.length === 0) return;
     // Settle against the same resolved cells the room views draw (stored
@@ -1243,8 +1277,28 @@ function RackDrill({
     // would be yanked to the floor.
     const rackCells = resolveIsoLayout(roomRacks, isoPlacements).cells;
     const settled = settleRoomObjects(roomObjects, roomRacks, rackCells, roomFacing);
-    if (!sameRoomObjects(roomObjects, settled)) saveRoomObjectsState(settled);
-  }, [isoPlacementScope, roomObjects, roomRacks, isoPlacements, roomFacing, saveRoomObjectsState]);
+    // Rack-top 乖乖 packs from older saves become rack items; a pack whose
+    // cabinet top is already taken merges away instead of double-stacking.
+    const kept = settled.filter((object) => {
+      if (object.kind !== "kuaikuai") return true;
+      const support = rackTopSupport(
+        { x: object.x, y: object.y },
+        object.kind,
+        object.rot,
+        object.corner,
+        object.z,
+        roomRacks,
+        rackCells,
+        roomFacing,
+      );
+      if (!support) return true;
+      placeKuaiguaiOnRack(support);
+      return false;
+    });
+    if (kept.length !== settled.length || !sameRoomObjects(roomObjects, settled)) {
+      saveRoomObjectsState(kept);
+    }
+  }, [isoPlacementScope, roomObjects, roomRacks, isoPlacements, roomFacing, placeKuaiguaiOnRack, saveRoomObjectsState]);
 
   function notifyObjectBlocked() {
     showStatusBarNotice(t("itops.floorPlan.objectNoSpace"), { tone: "warning" });
@@ -1662,6 +1716,7 @@ function RackDrill({
                   onFacingChange={editMode ? saveRoomFacingState : undefined}
                   objects={roomObjects}
                   onObjectsChange={editMode ? saveRoomObjectsState : undefined}
+                  onPlaceKuaiguai={editMode ? placeKuaiguaiOnRack : undefined}
                   onDeleteRack={editMode ? onDeleteRack : undefined}
                   onSelectRack={(rackId) => setDrill({ serverRoom: serverRoom.key, rackId })}
                   onAddRack={editMode ? () => onAddRack(serverRoom.key) : undefined}
@@ -1683,6 +1738,7 @@ function RackDrill({
                   onFacingChange={editMode ? saveRoomFacingState : undefined}
                   objects={roomObjects}
                   onObjectsChange={editMode ? saveRoomObjectsState : undefined}
+                  onPlaceKuaiguai={editMode ? placeKuaiguaiOnRack : undefined}
                   onDeleteRack={editMode ? onDeleteRack : undefined}
                   onSelectRack={(rackId) => setDrill({ serverRoom: serverRoom.key, rackId })}
                   onObjectBlocked={notifyObjectBlocked}
