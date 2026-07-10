@@ -1946,19 +1946,8 @@ function TerminalPaneView({
       }
 
       const key = event.key.toLowerCase();
-      // OSC 133 shell-integration navigation and Quick Select (WezTerm parity):
-      // Ctrl+Shift+Up/Down jump between prompts, Ctrl+Shift+Space copies a
-      // visible token by hint label.
-      if (event.shiftKey && key === "arrowup") {
-        event.preventDefault();
-        terminal.scrollToPreviousPrompt();
-        return false;
-      }
-      if (event.shiftKey && key === "arrowdown") {
-        event.preventDefault();
-        terminal.scrollToNextPrompt();
-        return false;
-      }
+      // Quick Select (WezTerm parity): Ctrl+Shift+Space copies a visible
+      // token by hint label.
       if (event.shiftKey && event.code === "Space") {
         event.preventDefault();
         startQuickSelect();
@@ -2659,15 +2648,6 @@ function TerminalPaneView({
     setQuickSelect({ ...quickSelect, input });
   }
 
-  function handleCopyLastCommandOutput() {
-    const output = terminalRendererRef.current?.getLastCommandOutput();
-    if (output) {
-      void writeToClipboard(output);
-    }
-    setContextMenu(null);
-    terminalRendererRef.current?.focus();
-  }
-
   function handleCopyTerminalSelection() {
     const text = terminalRendererRef.current?.getSelection() || selectedTerminalText;
     if (text) {
@@ -3117,38 +3097,6 @@ function TerminalPaneView({
                   <Search size={13} />
                   {t("terminal.findInScrollback")}
                 </button>
-                {!pane.tmuxSessionId ? (
-                  <>
-                    <button
-                      className="terminal-menu-item"
-                      onClick={() => {
-                        setActionsMenuOpen(false);
-                        terminalRendererRef.current?.scrollToPreviousPrompt();
-                        focusTerminalRenderer();
-                      }}
-                      role="menuitem"
-                      type="button"
-                    >
-                      <ArrowUp size={13} />
-                      {t("terminal.previousPrompt")}
-                      <kbd className="terminal-menu-shortcut">{t("terminal.previousPromptShortcut")}</kbd>
-                    </button>
-                    <button
-                      className="terminal-menu-item"
-                      onClick={() => {
-                        setActionsMenuOpen(false);
-                        terminalRendererRef.current?.scrollToNextPrompt();
-                        focusTerminalRenderer();
-                      }}
-                      role="menuitem"
-                      type="button"
-                    >
-                      <ArrowDown size={13} />
-                      {t("terminal.nextPrompt")}
-                      <kbd className="terminal-menu-shortcut">{t("terminal.nextPromptShortcut")}</kbd>
-                    </button>
-                  </>
-                ) : null}
                 <button
                   className="terminal-menu-item"
                   onClick={handleSaveBuffer}
@@ -3432,11 +3380,9 @@ function TerminalPaneView({
       ) : null}
       {contextMenu ? (
         <TerminalContextMenu
-          hasLastCommandOutput={Boolean(terminalRendererRef.current?.getLastCommandOutput())}
           menu={contextMenu}
           onClose={() => setContextMenu(null)}
           onCopy={handleCopyTerminalSelection}
-          onCopyLastCommandOutput={handleCopyLastCommandOutput}
           onPaste={() => void handlePasteIntoTerminal()}
         />
       ) : null}
@@ -3462,18 +3408,14 @@ function TerminalPaneView({
 }
 
 function TerminalContextMenu({
-  hasLastCommandOutput,
   menu,
   onClose,
   onCopy,
-  onCopyLastCommandOutput,
   onPaste,
 }: {
-  hasLastCommandOutput: boolean;
   menu: TerminalContextMenuState;
   onClose: () => void;
   onCopy: () => void;
-  onCopyLastCommandOutput: () => void;
   onPaste: () => void;
 }) {
   const menuRef = useRef<HTMLDivElement>(null);
@@ -3529,20 +3471,6 @@ function TerminalContextMenu({
         <span className="menu-item-label">
           <ClipboardPaste size={14} />
           <span>{t("terminal.paste")}</span>
-        </span>
-      </button>
-      <button
-        disabled={!hasLastCommandOutput}
-        onClick={() => {
-          onCopyLastCommandOutput();
-          onClose();
-        }}
-        role="menuitem"
-        type="button"
-      >
-        <span className="menu-item-label">
-          <FileText size={14} />
-          <span>{t("terminal.copyLastCommandOutput")}</span>
         </span>
       </button>
     </div>,

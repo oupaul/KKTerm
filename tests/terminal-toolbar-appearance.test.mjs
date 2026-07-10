@@ -57,22 +57,15 @@ test("terminal color scheme rows use each palette's background and foreground", 
   assert.doesNotMatch(workspaceSource, /terminal-color-scheme-swatch/);
 });
 
-test("terminal prompt navigation menu items show their keyboard shortcuts", () => {
-  assert.match(
-    workspaceSource,
-    /terminal\.previousPromptShortcut[\s\S]*?terminal\.nextPromptShortcut/,
-  );
-  assert.match(
-    terminalCss,
-    /\.terminal-menu-shortcut\s*\{[^}]*margin-left:\s*auto;[^}]*white-space:\s*nowrap;/s,
-  );
+test("prompt navigation and copy-last-command-output surfaces stay removed", () => {
+  // Removed until KKTerm can inject OSC 133 shell integration itself (see
+  // docs/ROADMAP.md) — without injected marks they were dead UI.
+  assert.doesNotMatch(workspaceSource, /previousPrompt|nextPrompt/);
+  assert.doesNotMatch(workspaceSource, /copyLastCommandOutput|hasLastCommandOutput/);
+  assert.doesNotMatch(terminalCss, /\.terminal-menu-shortcut/);
 });
 
-test("tmux panes hide prompt navigation and Quick Select sits before Copy Selection", () => {
-  assert.match(
-    workspaceSource,
-    /\{!pane\.tmuxSessionId \? \([\s\S]*?terminal\.previousPrompt[\s\S]*?terminal\.nextPrompt[\s\S]*?\) : null\}/,
-  );
+test("Quick Select sits before Copy Selection on the pane toolbar", () => {
   assert.match(
     workspaceSource,
     /aria-label=\{t\("terminal\.quickSelect"\)\}[\s\S]*?<Scan size=\{13\} \/>[\s\S]*?aria-label=\{t\("terminal\.copySelection"\)\}/,

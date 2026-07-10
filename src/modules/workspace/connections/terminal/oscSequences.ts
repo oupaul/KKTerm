@@ -7,31 +7,6 @@ export interface TerminalNotification {
   body: string;
 }
 
-export type PromptNavigationDirection = "previous" | "next";
-
-/** Pick the adjacent prompt marker relative to the current navigation anchor. */
-export function findPromptNavigationTarget(
-  promptLines: readonly number[],
-  anchorLine: number,
-  direction: PromptNavigationDirection,
-): number | null {
-  if (direction === "previous") {
-    for (let index = promptLines.length - 1; index >= 0; index -= 1) {
-      if (promptLines[index] < anchorLine) {
-        return promptLines[index];
-      }
-    }
-    return null;
-  }
-
-  for (const line of promptLines) {
-    if (line > anchorLine) {
-      return line;
-    }
-  }
-  return null;
-}
-
 /** OSC 133 shell-integration sequences: `A` prompt start, `B` command start,
  * `C` command output start, `D[;exitCode]` command finished. */
 export function parseOsc133Sequence(data: string): { kind: "A" | "B" | "C" | "D"; exitCode?: number } | null {

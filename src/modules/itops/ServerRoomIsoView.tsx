@@ -61,6 +61,7 @@ import {
   objectFootprint,
   objectSurfaceAnchor,
   objectSpec,
+  rackTopSupport,
   resolveDropZ,
   type RoomObject,
 } from "./roomObjects";
@@ -144,6 +145,7 @@ export function ServerRoomIsoView({
   onFacingChange,
   objects,
   onObjectsChange,
+  onPlaceKuaiguai,
   onDeleteRack,
   onSelectRack,
   onAddRack,
@@ -167,6 +169,10 @@ export function ServerRoomIsoView({
   onFacingChange?: (next: RackFacingMap) => void;
   objects: RoomObject[];
   onObjectsChange?: (next: RoomObject[]) => void;
+  /** A 乖乖 pack landed on a cabinet top: it becomes a rack-top Rack Device
+   *  (shared with the Rack View) instead of a room object. Returns false when
+   *  the rack top is already taken. */
+  onPlaceKuaiguai?: (rack: Rack) => boolean;
   onDeleteRack?: (rack: Rack) => void;
   onSelectRack: (rackId: string) => void;
   onAddRack?: () => void;
@@ -374,6 +380,17 @@ export function ServerRoomIsoView({
       onObjectBlocked?.();
       return;
     }
+    if (object.kind === "kuaikuai" && onPlaceKuaiguai) {
+      const support = rackTopSupport(target, object.kind, object.rot, object.corner, z, racks, layout.cells, facing);
+      if (support) {
+        if (onPlaceKuaiguai(support)) {
+          onObjectsChange(objects.filter((entry) => entry.id !== id));
+        } else {
+          onObjectBlocked?.();
+        }
+        return;
+      }
+    }
     onObjectsChange(
       objects.map((entry) => (entry.id === id ? { ...entry, x: target.x, y: target.y, z } : entry)),
     );
@@ -386,6 +403,14 @@ export function ServerRoomIsoView({
     if (z == null) {
       onObjectBlocked?.();
       return;
+    }
+    if (tool === "kuaikuai" && onPlaceKuaiguai) {
+      const support = rackTopSupport(cell, tool, 0, 0, z, racks, layout.cells, facing);
+      if (support) {
+        if (onPlaceKuaiguai(support)) onObjectPlaced?.();
+        else onObjectBlocked?.();
+        return;
+      }
     }
     onObjectsChange([
       ...objects,
@@ -646,10 +671,18 @@ export function ServerRoomIsoView({
                       // has no free vertical span), or a translucent cabinet
                       // for the pending rack at its depth, front flush.
                       if (tool != null) {
-                        const z = resolveDropZ(
+                        const dropZ = resolveDropZ(
                           footprintSpans(hover, tool, 0, racks, layout.cells, objects, undefined, 0, facing),
                           tool,
                         );
+                        // A rack-top 乖乖 drop becomes the rack's single top
+                        // item, so an occupied cabinet top reads as blocked.
+                        const topTaken = (() => {
+                          if (dropZ == null || tool !== "kuaikuai") return false;
+                          const support = rackTopSupport(hover, tool, 0, 0, dropZ, racks, layout.cells, facing);
+                          return !!support && support.items.some((item) => isRackTopItem(item, support.heightU));
+                        })();
+                        const z = topTaken ? null : dropZ;
                         const span = objectCellSpan(tool, 0);
                         const tileRect = rotateRectForView(
                           { x: hover.x + offX, y: hover.y + offY, w: span.w, d: span.h },

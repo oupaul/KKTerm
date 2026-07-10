@@ -87,9 +87,12 @@ Replaces the **Host Group** entry in `CONTEXT.md`; adds the rest. Follows the
   environment sensor, smoke detector, crash cart, 乖乖). A Room Object has a
   facing and a vertical position in rack units, so occupants can share a
   floor cell while their vertical spans don't intersect. Resting objects
-  settle on the lowest fitting support surface (a 乖乖 pack sits on a cabinet
-  top), while top-hung fixtures such as cameras and detectors keep their
-  overhead placement. Footprints follow real-world size against the 1200 mm
+  settle on the lowest fitting support surface, while top-hung fixtures such
+  as cameras and detectors keep their overhead placement. A 乖乖 pack is never
+  a Room Object while on a cabinet top: a rack-top drop (or a legacy rack-top
+  Room Object found on load) becomes that Rack's single rack-top 乖乖 Rack
+  Device, so the Rack View and the room views share one object; only a
+  floor-standing pack remains a Room Object. Footprints follow real-world size against the 1200 mm
   floor cell: small hand-sized fixtures (camera, fire extinguisher, sensor,
   smoke detector, 乖乖) occupy one cell quadrant chosen by a durable
   `corner` property (clockwise 0=NW..3=SW). Larger fixtures use the exact
@@ -351,7 +354,13 @@ The visible IT Ops Module opens directly into the Site topology surface:
   `laidDown` faces upward at 1U. Rack View and the Server Room elevation rows
   always reserve 4U of headroom above the cabinet (`KUAIGUAI_TOP_CLEARANCE_U`)
   so a rack-top package fits without shifting the rack. Floor views hide 乖乖
-  stored inside the cabinet and show only a rack-top package.
+  stored inside the cabinet and show only a rack-top package. The floor plan
+  and 2.5D views place the same rack-top Rack Device when their picker's 乖乖
+  is dropped on a cabinet top (the elevation always draws it center top,
+  regardless of where on the footprint the drop landed), and a package with an
+  expiry date desaturates linearly over the last 30 days before the date,
+  rendering fully black and white on and after it (`kuaiKuaiGrayscale` in
+  `KuaiKuaiBag.tsx`, applied in every view through the shared bag artwork).
 
   Server Room floor-plan and 2.5D pickers use the same single-item placement
   contract: choosing a fixture arms one ghost immediately, while a Rack first

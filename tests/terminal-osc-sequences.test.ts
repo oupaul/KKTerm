@@ -3,7 +3,6 @@ import test from "node:test";
 import {
   buildHyperlinkRuleUrl,
   decodeOsc777Notification,
-  findPromptNavigationTarget,
   parseOsc133Sequence,
 } from "../src/modules/workspace/connections/terminal/oscSequences";
 
@@ -17,17 +16,6 @@ test("OSC 133 prompt/command sequences parse with exit codes", () => {
   assert.deepEqual(parseOsc133Sequence("A;special_key=1"), { kind: "A" });
   assert.equal(parseOsc133Sequence("Z"), null);
   assert.equal(parseOsc133Sequence(""), null);
-});
-
-test("prompt navigation uses the adjacent marker around its current anchor", () => {
-  const promptLines = [5, 20, 42, 55];
-
-  // The latest prompt can be below the viewport's top row. Previous must use
-  // the cursor anchor so it does not skip prompts that are already visible.
-  assert.equal(findPromptNavigationTarget(promptLines, 61, "previous"), 55);
-  assert.equal(findPromptNavigationTarget(promptLines, 55, "previous"), 42);
-  assert.equal(findPromptNavigationTarget(promptLines, 42, "next"), 55);
-  assert.equal(findPromptNavigationTarget(promptLines, 55, "next"), null);
 });
 
 test("OSC 777 notify payloads decode title and body", () => {

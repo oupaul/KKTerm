@@ -3058,11 +3058,6 @@
     "quickSelectHint": "Click or type a label to copy. Ctrl-click or Shift-click a URL to open it. Esc to cancel.",
     "quickSelectNoMatches": "No copyable text is visible on the screen.",
     "quickSelectCopied": "Copied {{text}}",
-    "previousPrompt": "Previous prompt",
-    "previousPromptShortcut": "Ctrl+Shift+↑",
-    "nextPrompt": "Next prompt",
-    "nextPromptShortcut": "Ctrl+Shift+↓",
-    "copyLastCommandOutput": "Copy last command output",
     "notification": "Notification from {{name}}: {{message}}",
     "notificationWithTitle": "Notification from {{name}}: {{title}} — {{message}}"
   },

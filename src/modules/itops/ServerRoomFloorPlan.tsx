@@ -28,6 +28,7 @@ import {
   objectCellSpan,
   objectFootprint,
   objectSpec,
+  rackTopSupport,
   resolveDropZ,
   type RoomObject,
 } from "./roomObjects";
@@ -88,6 +89,7 @@ export function ServerRoomFloorPlan({
   onFacingChange,
   objects,
   onObjectsChange,
+  onPlaceKuaiguai,
   onDeleteRack,
   onSelectRack,
   onObjectBlocked,
@@ -108,6 +110,10 @@ export function ServerRoomFloorPlan({
   onFacingChange?: (next: RackFacingMap) => void;
   objects: RoomObject[];
   onObjectsChange?: (next: RoomObject[]) => void;
+  /** A 乖乖 pack landed on a cabinet top: it becomes a rack-top Rack Device
+   *  (shared with the Rack View) instead of a room object. Returns false when
+   *  the rack top is already taken. */
+  onPlaceKuaiguai?: (rack: Rack) => boolean;
   onDeleteRack?: (rack: Rack) => void;
   onSelectRack: (rackId: string) => void;
   /** A placement click found no free vertical span in the cell. */
@@ -241,6 +247,17 @@ export function ServerRoomFloorPlan({
       onObjectBlocked?.();
       return;
     }
+    if (object.kind === "kuaikuai" && onPlaceKuaiguai) {
+      const support = rackTopSupport(target, object.kind, object.rot, object.corner, z, racks, layout.cells, facing);
+      if (support) {
+        if (onPlaceKuaiguai(support)) {
+          onObjectsChange(objects.filter((entry) => entry.id !== id));
+        } else {
+          onObjectBlocked?.();
+        }
+        return;
+      }
+    }
     onObjectsChange(
       objects.map((entry) => (entry.id === id ? { ...entry, x: target.x, y: target.y, z } : entry)),
     );
@@ -309,6 +326,14 @@ export function ServerRoomFloorPlan({
     if (z == null) {
       onObjectBlocked?.();
       return;
+    }
+    if (tool === "kuaikuai" && onPlaceKuaiguai) {
+      const support = rackTopSupport(cell, tool, 0, corner, z, racks, layout.cells, facing);
+      if (support) {
+        if (onPlaceKuaiguai(support)) onObjectPlaced?.();
+        else onObjectBlocked?.();
+        return;
+      }
     }
     onObjectsChange([
       ...objects,
@@ -457,10 +482,17 @@ export function ServerRoomFloorPlan({
                     const spec = tool != null ? objectSpec(tool) : null;
                     const blocked =
                       tool != null &&
-                      resolveDropZ(
-                        footprintSpans(hover, tool, 0, racks, layout.cells, objects, undefined, hover.corner, facing),
-                        tool,
-                      ) == null;
+                      (() => {
+                        const z = resolveDropZ(
+                          footprintSpans(hover, tool, 0, racks, layout.cells, objects, undefined, hover.corner, facing),
+                          tool,
+                        );
+                        if (z == null) return true;
+                        if (tool !== "kuaikuai") return false;
+                        // A rack-top drop becomes the rack's single top item.
+                        const support = rackTopSupport(hover, tool, 0, hover.corner, z, racks, layout.cells, facing);
+                        return !!support && support.items.some((item) => isRackTopItem(item, support.heightU));
+                      })();
                     const span = tool != null ? objectCellSpan(tool, 0) : { w: 1, h: 1 };
                     const slot = spec?.quarter
                       ? {

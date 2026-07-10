@@ -1896,16 +1896,6 @@
   color: inherit;
 }
 
-.terminal-menu-shortcut {
-  margin-left: auto;
-  color: var(--text-muted);
-  background: transparent;
-  border: 0;
-  font-family: inherit;
-  font-size: 10px;
-  font-weight: 500;
-  white-space: nowrap;
-}
 
 /* OSC 133 exit-status gutter mark on failed commands. */
 .terminal-command-failed-mark {

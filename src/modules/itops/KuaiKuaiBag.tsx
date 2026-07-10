@@ -2,6 +2,24 @@ import { useId } from "react";
 
 export type KuaiKuaiStyle = "full" | "laidDown";
 
+/** Days before the expiry date over which the bag's colors drain away. */
+export const KUAIKUAI_FADE_DAYS = 30;
+
+/** Grayscale amount for a bag with the given expiry date: 0 (fresh colors)
+ *  until KUAIKUAI_FADE_DAYS days out, then ramping linearly to 1 (fully black
+ *  and white) on and after the expiry date. Unset or unparsable dates never
+ *  fade. Dates compare calendar-day to calendar-day in local time. */
+export function kuaiKuaiGrayscale(expiry?: string | null, now = new Date()): number {
+  const match = expiry ? /^\s*(\d{4})-(\d{1,2})-(\d{1,2})/.exec(expiry) : null;
+  if (!match) return 0;
+  const due = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const daysLeft = Math.round((due.getTime() - today.getTime()) / 86_400_000);
+  if (daysLeft <= 0) return 1;
+  if (daysLeft >= KUAIKUAI_FADE_DAYS) return 0;
+  return (KUAIKUAI_FADE_DAYS - daysLeft) / KUAIKUAI_FADE_DAYS;
+}
+
 export function KuaiKuaiBag({
   style = "full",
   expiry,
@@ -13,11 +31,14 @@ export function KuaiKuaiBag({
   const bag = `${id}-bag`;
   const sheen = `${id}-sheen`;
   const transform = style === "laidDown" ? "translate(0 112) rotate(-90) scale(.33 1.05)" : undefined;
+  const grayscale = kuaiKuaiGrayscale(expiry);
 
   return (
     <svg
       className="kk-bag"
       data-style={style}
+      data-expired={grayscale >= 1 || undefined}
+      style={grayscale > 0 ? { filter: `grayscale(${Math.round(grayscale * 100)}%)` } : undefined}
       viewBox={style === "laidDown" ? "0 0 360 120" : "0 0 280 340"}
       preserveAspectRatio="xMidYMid meet"
       aria-hidden="true"

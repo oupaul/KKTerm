@@ -10,6 +10,7 @@ import {
   objectFootprint,
   objectSurfaceAnchor,
   objectSpec,
+  rackTopSupport,
   resolveDropZ,
   sanitizeRoomObjects,
   settleRoomObjects,
@@ -166,6 +167,28 @@ test("settleRoomObjects preserves intentional same-corner stacks", () => {
       { id: "top", z: 44, corner: 3 },
     ],
   );
+});
+
+test("rackTopSupport identifies the rack a pack's bottom rests on", () => {
+  const racks = [rack("a")];
+  const cells = { a: { x: 0, y: 0 } };
+  // A 乖乖 dropped at the rack's top surface is supported by that rack…
+  assert.equal(rackTopSupport({ x: 0, y: 0 }, "kuaikuai", 0, 0, 42, racks, cells)?.id, "a");
+  // …but not on the floor, at another level, or over an empty cell.
+  assert.equal(rackTopSupport({ x: 0, y: 0 }, "kuaikuai", 0, 0, 0, racks, cells), null);
+  assert.equal(rackTopSupport({ x: 0, y: 0 }, "kuaikuai", 0, 0, 44, racks, cells), null);
+  assert.equal(rackTopSupport({ x: 1, y: 0 }, "kuaikuai", 0, 0, 42, racks, cells), null);
+});
+
+test("rackTopSupport honors the rack's drawn footprint under its facing", () => {
+  // A 600 mm network rack fills half the cell, front flush south (facing 0):
+  // the south quadrants sit on the cabinet, the north strip hangs off it.
+  const racks = [{ ...rack("a"), depthMm: 600 }];
+  const cells = { a: { x: 0, y: 0 } };
+  const nw = rackTopSupport({ x: 0, y: 0 }, "kuaikuai", 0, 0, 42, racks, cells, { a: 0 });
+  const sw = rackTopSupport({ x: 0, y: 0 }, "kuaikuai", 0, 3, 42, racks, cells, { a: 0 });
+  assert.equal(nw, null);
+  assert.equal(sw?.id, "a");
 });
 
 test("gravity objects land on the lowest fitting surface", () => {

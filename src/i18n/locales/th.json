@@ -3058,11 +3058,6 @@
     "quickSelectHint": "คลิกหรือพิมพ์ป้ายกำกับเพื่อคัดลอก Ctrl-คลิกหรือ Shift-คลิก URL เพื่อเปิด กด Esc เพื่อยกเลิก",
     "quickSelectNoMatches": "ไม่มีข้อความที่คัดลอกได้บนหน้าจอ",
     "quickSelectCopied": "คัดลอก {{text}} แล้ว",
-    "previousPrompt": "พรอมต์ก่อนหน้า",
-    "previousPromptShortcut": "Ctrl+Shift+↑",
-    "nextPrompt": "พรอมต์ถัดไป",
-    "nextPromptShortcut": "Ctrl+Shift+↓",
-    "copyLastCommandOutput": "คัดลอกผลลัพธ์ของคำสั่งล่าสุด",
     "notification": "การแจ้งเตือนจาก {{name}}: {{message}}",
     "notificationWithTitle": "การแจ้งเตือนจาก {{name}}: {{title}} — {{message}}"
   },

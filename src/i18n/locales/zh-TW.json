@@ -3058,11 +3058,6 @@
     "quickSelectHint": "按一下或輸入標籤即可複製；按住 Ctrl 或 Shift 並按一下 URL 即可開啟；按 Esc 取消。",
     "quickSelectNoMatches": "畫面上沒有可複製的文字。",
     "quickSelectCopied": "已複製 {{text}}",
-    "previousPrompt": "上一個提示符號",
-    "previousPromptShortcut": "Ctrl+Shift+↑",
-    "nextPrompt": "下一個提示符號",
-    "nextPromptShortcut": "Ctrl+Shift+↓",
-    "copyLastCommandOutput": "複製上一個指令的輸出",
     "notification": "來自 {{name}} 的通知：{{message}}",
     "notificationWithTitle": "來自 {{name}} 的通知：{{title}} — {{message}}"
   },

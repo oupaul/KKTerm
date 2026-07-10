@@ -3058,11 +3058,6 @@
     "quickSelectHint": "Klik atau ketik label untuk menyalin. Ctrl-klik atau Shift-klik URL untuk membukanya. Esc untuk membatalkan.",
     "quickSelectNoMatches": "Tidak ada teks yang dapat disalin di layar.",
     "quickSelectCopied": "{{text}} disalin",
-    "previousPrompt": "Prompt sebelumnya",
-    "previousPromptShortcut": "Ctrl+Shift+↑",
-    "nextPrompt": "Prompt berikutnya",
-    "nextPromptShortcut": "Ctrl+Shift+↓",
-    "copyLastCommandOutput": "Salin keluaran perintah terakhir",
     "notification": "Notifikasi dari {{name}}: {{message}}",
     "notificationWithTitle": "Notifikasi dari {{name}}: {{title}} — {{message}}"
   },

@@ -27,7 +27,6 @@ import {
 import {
   buildHyperlinkRuleUrl,
   decodeOsc777Notification,
-  findPromptNavigationTarget,
   parseOsc133Sequence,
   type TerminalNotification,
 } from "./oscSequences";
@@ -81,8 +80,6 @@ export interface TerminalRenderer {
   onCwdChange: (handler: (cwd: string) => void) => IDisposable;
   onNotification: (handler: (notification: TerminalNotification) => void) => IDisposable;
   onData: (handler: (data: string) => void) => IDisposable;
-  scrollToPreviousPrompt: () => boolean;
-  scrollToNextPrompt: () => boolean;
   getLastCommandOutput: () => string | null;
   getViewportLines: () => string[];
   getScreenGeometry: () => TerminalScreenGeometry | null;
@@ -185,14 +182,12 @@ class XtermTerminalRenderer implements TerminalRenderer, TerminalFontAtlasRefres
   private webglContextLossDisposable: IDisposable | null = null;
   private wheelScrollbackHandler: ((lines: number) => void) | null = null;
   private wheelScrollbackOverride = false;
-  // OSC 133 shell-integration zones: prompt markers for scrollback navigation
-  // plus the last command's output span for "copy last command output".
-  private promptMarkers: IMarker[] = [];
+  // OSC 133 shell-integration zones: the last command's output span and exit
+  // status, kept for the failed-command gutter mark (and so the copy-last-
+  // command-output surface can return once shell integration is injectable).
   private lastOutputStartMarker: IMarker | null = null;
   private lastOutputEndMarker: IMarker | null = null;
   private runningOutputStartMarker: IMarker | null = null;
-  private promptNavigationLine: number | null = null;
-  private promptNavigationScrollInProgress = false;
 
   constructor(settings: TerminalSettings, backgroundOpacity: number) {
     this.backgroundOpacity = backgroundOpacity;
@@ -240,11 +235,6 @@ class XtermTerminalRenderer implements TerminalRenderer, TerminalFontAtlasRefres
         return true;
       }),
     );
-    this.terminal.onScroll(() => {
-      if (!this.promptNavigationScrollInProgress) {
-        this.promptNavigationLine = null;
-      }
-    });
     if (settings.allowOsc52Clipboard) {
       this.osc52Disposable = this.terminal.parser.registerOscHandler(52, (data) =>
         handleOsc52ClipboardSequence(data),
@@ -274,7 +264,6 @@ class XtermTerminalRenderer implements TerminalRenderer, TerminalFontAtlasRefres
     }
     this.oscSequenceDisposables.length = 0;
     this.notificationListeners.clear();
-    this.promptMarkers = [];
     this.disposeWebglAddon();
     this.terminal.dispose();
   }
@@ -351,27 +340,6 @@ class XtermTerminalRenderer implements TerminalRenderer, TerminalFontAtlasRefres
     };
   }
 
-  scrollToPreviousPrompt() {
-    const lines = this.livePromptLines();
-    const buffer = this.terminal.buffer.active;
-    const anchor = this.promptNavigationLine ?? buffer.baseY + buffer.cursorY + 1;
-    const target = findPromptNavigationTarget(lines, anchor, "previous");
-    if (target === null) {
-      return false;
-    }
-    return this.scrollToPromptLine(target);
-  }
-
-  scrollToNextPrompt() {
-    const buffer = this.terminal.buffer.active;
-    const anchor = this.promptNavigationLine ?? buffer.viewportY;
-    const target = findPromptNavigationTarget(this.livePromptLines(), anchor, "next");
-    if (target === null) {
-      return false;
-    }
-    return this.scrollToPromptLine(target);
-  }
-
   getLastCommandOutput() {
     const start = this.lastOutputStartMarker;
     const end = this.lastOutputEndMarker;
@@ -440,37 +408,12 @@ class XtermTerminalRenderer implements TerminalRenderer, TerminalFontAtlasRefres
     }
   }
 
-  private livePromptLines() {
-    this.promptMarkers = this.promptMarkers.filter((marker) => !marker.isDisposed);
-    return this.promptMarkers.map((marker) => marker.line).sort((a, b) => a - b);
-  }
-
-  private scrollToPromptLine(line: number) {
-    this.promptNavigationLine = line;
-    this.promptNavigationScrollInProgress = true;
-    try {
-      this.terminal.scrollToLine(line);
-    } finally {
-      this.promptNavigationScrollInProgress = false;
-    }
-    return true;
-  }
-
   private handleOsc133Sequence(data: string) {
     const sequence = parseOsc133Sequence(data);
     if (!sequence) {
       return true;
     }
-    if (sequence.kind === "A") {
-      this.promptNavigationLine = null;
-      const marker = this.terminal.registerMarker(0);
-      if (marker) {
-        this.promptMarkers.push(marker);
-        if (this.promptMarkers.length > MAX_PROMPT_MARKERS) {
-          this.promptMarkers.shift()?.dispose();
-        }
-      }
-    } else if (sequence.kind === "C") {
+    if (sequence.kind === "C") {
       this.runningOutputStartMarker = this.terminal.registerMarker(0) ?? null;
     } else if (sequence.kind === "D") {
       const start = this.runningOutputStartMarker;
@@ -833,8 +776,6 @@ export function wheelScrollLinesForEvent(event: WheelEvent, rows: number, cellHe
   return Math.sign(event.deltaY) * magnitude;
 }
 
-
-const MAX_PROMPT_MARKERS = 500;
 
 function schemeBackgroundColor(scheme: TerminalColorScheme, opacity: number) {
   const alpha = Math.min(Math.max(Math.round(opacity), 0), 100) / 100;

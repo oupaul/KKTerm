@@ -3058,11 +3058,6 @@
     "quickSelectHint": "Cliquez ou saisissez une étiquette pour copier. Ctrl-clic ou Maj-clic sur une URL pour l’ouvrir. Échap pour annuler.",
     "quickSelectNoMatches": "Aucun texte copiable n'est visible à l'écran.",
     "quickSelectCopied": "{{text}} copié",
-    "previousPrompt": "Invite précédente",
-    "previousPromptShortcut": "Ctrl+Shift+↑",
-    "nextPrompt": "Invite suivante",
-    "nextPromptShortcut": "Ctrl+Shift+↓",
-    "copyLastCommandOutput": "Copier la sortie de la dernière commande",
     "notification": "Notification de {{name}} : {{message}}",
     "notificationWithTitle": "Notification de {{name}} : {{title}} — {{message}}"
   },

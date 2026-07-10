@@ -50,7 +50,7 @@ For operational measurement records see `docs/PERFORMANCE.md`. For packaging and
 - [x] Custom shell presets/profiles for local terminals with command-line validation.
 - [x] WSL distribution selection for local terminal connections.
 - [x] Shared font catalog with system-font refresh, custom font support with metadata, monospace detection/normalization, and font-atlas refresh/diagnostics across renderers.
-- [x] OSC 133 shell integration: prompt-to-prompt scrollback navigation, failed-command gutter marks, and copy-last-command-output.
+- [x] OSC 133 shell integration: failed-command gutter marks; the renderer also tracks command-output zones. The prompt-to-prompt navigation and copy-last-command-output menu surfaces were removed/hidden — too few shells emit the marks unaided; see the backlog item on injecting shell integration.
 - [x] Quick Select mode: hint-labeled keyboard copying of visible URLs, paths, IPs, hashes, and UUIDs (Ctrl+Shift+Space).
 - [x] Inline images via Sixel and the iTerm2 image protocol (toggle in Terminal Settings).
 - [x] OSC 9 / OSC 777 terminal notifications surfaced through the Status Bar (toggle in Terminal Settings).
@@ -199,6 +199,7 @@ For operational measurement records see `docs/PERFORMANCE.md`. For packaging and
 
 Second-tier follow-ups to the shipped OSC 133 / Quick Select / inline images / notifications / hyperlink rules / color schemes batch:
 
+- [ ] KKTerm-injected shell integration (Warp/Kitty-style): opt-in per Connection, reuse the existing startup-script plumbing to emit OSC 133 (+ OSC 7) marks in bash/zsh/fish/PowerShell without user dotfile edits; this is the prerequisite for reinstating prompt-to-prompt scrollback navigation and the copy-last-command-output menu surface.
 - [ ] Copy Mode: keyboard-driven (vim-style) scrollback navigation and selection.
 - [ ] Global command palette spanning app actions (open Connection, split Pane, switch Workspace); generalize the existing Git Browser palette.
 - [ ] Pane zoom (temporarily maximize one Pane in a split) and directional keyboard Pane focus/resize.
