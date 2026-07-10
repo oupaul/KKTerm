@@ -81,6 +81,16 @@ function clampStartUForHeight(startU: number, heightU: number, rackHeightU: numb
 
 const DISKS_PER_U = 24;
 
+/** A configured-but-unplaced Rack Device: everything `placeRackItem` needs
+ *  except the rack position, which the armed placement click supplies. */
+export interface RackItemDraft {
+  kind: RackItemKind;
+  connectionId: string | null;
+  label: string;
+  heightU: number;
+  metadata: RackItemMetadata;
+}
+
 export function RackItemDialog({
   siteId,
   rack,
@@ -89,6 +99,7 @@ export function RackItemDialog({
   defaultStartU,
   members,
   onClose,
+  onConfigured,
 }: {
   siteId: string;
   rack: Rack;
@@ -97,6 +108,9 @@ export function RackItemDialog({
   defaultStartU?: number;
   members: ResolvedHost[];
   onClose: () => void;
+  /** Picker placement flow: instead of placing on save, hand the configured
+   *  draft back so the caller can arm a cursor-tracked placement click. */
+  onConfigured?: (draft: RackItemDraft) => void;
 }) {
   const { t } = useTranslation();
   const isEdit = !!item;
@@ -182,6 +196,9 @@ export function RackItemDialog({
   const needsConnection = kind === "connection";
   const hasConnection = !needsConnection || connectionId.length > 0;
   const canSave = hasConnection && !busy && heightU >= 1 && startU >= 1;
+  // Picker flow: the dialog only configures the device; the rack position
+  // comes from the armed placement click afterwards.
+  const placementMode = !isEdit && !!onConfigured;
 
   function updateNetworkPort(index: number, patch: Partial<RackNetworkPort>) {
     setNetworkPortRows((rows) => rows.map((row, i) => (i === index ? { ...row, ...patch } : row)));
@@ -193,8 +210,19 @@ export function RackItemDialog({
 
   async function handleSave() {
     if (!canSave) return;
-    setBusy(true);
     const resolvedConnectionId = needsConnection ? connectionId : null;
+    if (placementMode) {
+      onConfigured!({
+        kind,
+        connectionId: resolvedConnectionId,
+        label: label.trim(),
+        heightU,
+        metadata,
+      });
+      onClose();
+      return;
+    }
+    setBusy(true);
     try {
       if (isEdit) {
         await updateRackItem(siteId, {
@@ -325,43 +353,47 @@ export function RackItemDialog({
               </div>
             </div>
 
-            <div
-              className="rack-kind-preview-grid"
-              role="group"
-              aria-label={t("itops.racks.kindPreviewLabel")}
-            >
-              {RACK_ITEM_KINDS.map((value) => (
-                <button
-                  key={value}
-                  type="button"
-                  className={`rack-kind-preview${kind === value ? " selected" : ""}`}
-                  aria-pressed={kind === value}
-                  onClick={() => setKind(value)}
-                >
-                  <span className="rack-kind-preview-face">
-                    <RackDevice
-                      kind={value}
-                      label={t(`itops.racks.kind.${value}`)}
-                      subLabel={null}
-                      status={status}
-                      ports={showsPorts(value) ? ports : null}
-                      disks={showsDisks(value) ? disks : null}
-                      battery={value === "ups" ? battery : null}
-                      load={value === "pdu" ? load : null}
-                      expiry={value === "kuaiguai" ? expiry : null}
-                      rotation={value === "kuaiguai" ? rotation : null}
-                      yaw={value === "kuaiguai" ? yaw : null}
-                      kuaiguaiSize={value === "kuaiguai" ? kuaiguaiSize : null}
-                      heightU={1}
-                      accent={accent === "none" ? null : accent}
-                      shell={shell}
-                      seed={`preview-${value}`}
-                    />
-                  </span>
-                  <span className="rack-kind-preview-label">{t(`itops.racks.kind.${value}`)}</span>
-                </button>
-              ))}
-            </div>
+            {/* Picker placement flow already chose the type: show only the
+                chosen device's properties, no type switcher. */}
+            {placementMode ? null : (
+              <div
+                className="rack-kind-preview-grid"
+                role="group"
+                aria-label={t("itops.racks.kindPreviewLabel")}
+              >
+                {RACK_ITEM_KINDS.map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    className={`rack-kind-preview${kind === value ? " selected" : ""}`}
+                    aria-pressed={kind === value}
+                    onClick={() => setKind(value)}
+                  >
+                    <span className="rack-kind-preview-face">
+                      <RackDevice
+                        kind={value}
+                        label={t(`itops.racks.kind.${value}`)}
+                        subLabel={null}
+                        status={status}
+                        ports={showsPorts(value) ? ports : null}
+                        disks={showsDisks(value) ? disks : null}
+                        battery={value === "ups" ? battery : null}
+                        load={value === "pdu" ? load : null}
+                        expiry={value === "kuaiguai" ? expiry : null}
+                        rotation={value === "kuaiguai" ? rotation : null}
+                        yaw={value === "kuaiguai" ? yaw : null}
+                        kuaiguaiSize={value === "kuaiguai" ? kuaiguaiSize : null}
+                        heightU={1}
+                        accent={accent === "none" ? null : accent}
+                        shell={shell}
+                        seed={`preview-${value}`}
+                      />
+                    </span>
+                    <span className="rack-kind-preview-label">{t(`itops.racks.kind.${value}`)}</span>
+                  </button>
+                ))}
+              </div>
+            )}
 
             {needsConnection ? (
               <Field label={t("itops.racks.connectionLabel")} req>
@@ -489,9 +521,11 @@ export function RackItemDialog({
             ) : null}
 
             <div className="rack-form-grid two">
-              <Field label={t("itops.racks.startULabel")} req>
-                <Stepper value={startU} min={1} onChange={(next) => setStartU(clampStartUForHeight(next, heightU, rack.heightU))} ariaDecrease={t("itops.racks.startUDecrease")} ariaIncrease={t("itops.racks.startUIncrease")} />
-              </Field>
+              {placementMode ? null : (
+                <Field label={t("itops.racks.startULabel")} req>
+                  <Stepper value={startU} min={1} onChange={(next) => setStartU(clampStartUForHeight(next, heightU, rack.heightU))} ariaDecrease={t("itops.racks.startUDecrease")} ariaIncrease={t("itops.racks.startUIncrease")} />
+                </Field>
+              )}
               <Field label={t("itops.racks.itemHeightLabel")} req>
                 <Stepper value={heightU} min={1} onChange={(next) => { const clampedHeight = Math.max(1, Math.min(rack.heightU, next)); setHeightU(clampedHeight); setStartU((current) => clampStartUForHeight(current, clampedHeight, rack.heightU)); setDisks((current) => Math.min(current, clampedHeight * DISKS_PER_U)); }} ariaDecrease={t("itops.racks.itemHeightDecrease")} ariaIncrease={t("itops.racks.itemHeightIncrease")} />
               </Field>

@@ -10,8 +10,12 @@
   box-sizing: border-box;
 }
 
-/* fills the workspace content area, mirroring the Installer/Dashboard modules */
-.itops-page {
+/* fills the workspace content area, mirroring the Installer/Dashboard modules.
+   `.itops-page` also rides on portaled dialog backdrops (Sheet `zClassName`)
+   so the module tokens below reach IT Ops dialogs — the page-root layout half
+   must not apply there or it demotes the backdrop's fixed overlay positioning
+   and pushes the dialog below the viewport. */
+.itops-page:not(.kk-dlg-backdrop) {
   position: relative;
   grid-column: 2 / 5;
   grid-row: 1;
@@ -21,6 +25,9 @@
   min-width: 0;
   overflow: hidden;
   background: var(--app-bg);
+}
+
+.itops-page {
   color: var(--text);
   font-size: 13px;
   line-height: 1.4;
@@ -2398,6 +2405,20 @@
   border-color: color-mix(in srgb, var(--accent) 70%, transparent);
   background: color-mix(in srgb, var(--accent) 14%, transparent);
 }
+/* Rack View slots outside an armed placement: drop targets only — no add
+   affordance (adding goes through the picker column), so hover keeps the
+   resting slot look. */
+.itops-page .rk-slot-btn.passive {
+  cursor: default;
+}
+.itops-page .rk-slot-btn.passive:hover {
+  border-color: rgba(255, 255, 255, 0.07);
+  background: repeating-linear-gradient(
+    45deg,
+    transparent 0 5px,
+    rgba(255, 255, 255, 0.03) 5px 6px
+  );
+}
 .itops-page .rk-slot-callout {
   position: absolute;
   left: calc(100% + 10px);
@@ -2438,6 +2459,33 @@
   opacity: 1;
   transform: translate(0, -50%);
   border-color: var(--border-strong);
+}
+
+/* ── Armed device placement (Rack View picker) ──
+   The configured faceplate ghosts under the cursor snapped to the hovered U;
+   placed items stop intercepting the pointer so the whole column stays a
+   live drop surface, and the span turns red where it would overlap. */
+.itops-page .rk-grid.placing .rk-item-row {
+  pointer-events: none;
+}
+.itops-page .rk-grid.placing .rk-slot-btn {
+  cursor: copy;
+}
+.itops-page .rk-grid.placing .rk-slot-callout {
+  display: none;
+}
+.itops-page .rk-place-ghost {
+  pointer-events: none;
+  position: relative;
+  z-index: 21;
+  opacity: 0.8;
+  border-radius: 4px;
+  outline: 1.5px dashed var(--accent);
+  outline-offset: 1px;
+}
+.itops-page .rk-place-ghost.blocked {
+  opacity: 0.4;
+  outline-color: var(--red);
 }
 
 /* ── Rack item open/edit affordances + ghost ─────────────────────────────── */
@@ -3591,6 +3639,13 @@
 .itops-page .it-free-surface.site:not(.editing) {
   background-image: none;
 }
+/* The dot grid is an edit-mode affordance only; outside edit mode a custom
+   background shows through a fully transparent surface. Must outrank the
+   `.has-bg` rule above (it is one class more specific than the generic
+   `:not(.editing)` reset). */
+.itops-page .ft-drill-bg.has-bg .it-free-surface.site:not(.editing) {
+  background: none;
+}
 .itops-page .it-free-card {
   position: absolute;
   top: 0;
@@ -4623,6 +4678,24 @@
 .itops-page .rm-picker-thumb.device {
   width: 82px;
   height: 28px;
+  flex: 0 0 auto;
+}
+/* Rack View device picker: a single-column list, one device type per row,
+   with the faceplate thumb beside a left-aligned name. */
+.itops-page .rm-picker-devices .rm-picker-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+.itops-page .rm-picker-devices .rm-picker-card {
+  flex-direction: row;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 5px 8px;
+}
+.itops-page .rm-picker-devices .rm-picker-name {
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .itops-page .rm-picker-name {
   max-width: 100%;

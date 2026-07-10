@@ -8,11 +8,13 @@
 // A Connection-backed item whose Connection is gone renders as a dimmed
 // "ghost". Items are drag-to-restacked onto any U slot (possibly across racks).
 
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Rack, RackItem, RackItemStatus } from "../../types";
 import { ItIcon } from "./icons";
 import { collectBoundConnectionIds, summarizeRackDeviceMetadata } from "./rackInventory";
 import { RackDevice } from "./RackDevice";
+import type { RackItemDraft } from "./RackItemDialog";
 
 // Pixel height of one rack unit (U) row. Kept in sync with `--rk-u` in CSS.
 export const U_PX = 26;
@@ -43,6 +45,9 @@ export function RackElevation({
   isGhost,
   detailed,
   editMode = false,
+  placeSpec,
+  onPlaceAt,
+  onCancelPlacement,
 }: {
   rack: Rack;
   /** Resolve a placed Connection's host/ip for the faceplate sub-line. */
@@ -63,10 +68,30 @@ export function RackElevation({
   /** Single-rack detail view: wider cabinet + a placed-device summary list. */
   detailed?: boolean;
   editMode?: boolean;
+  /** Armed picker placement: the configured device ghosts under the cursor,
+   *  snapped to the hovered U slot, and a slot click places it there. */
+  placeSpec?: RackItemDraft | null;
+  onPlaceAt?: (startU: number) => void;
+  /** Right-click while placing disarms (mirrors the room-view pickers). */
+  onCancelPlacement?: () => void;
 }) {
   const { t } = useTranslation();
   const editable = !!onEditItem;
   const canMove = editMode && !!onMoveItem;
+  const placing = editMode && !!placeSpec && !!onPlaceAt;
+  const [hoverU, setHoverU] = useState<number | null>(null);
+
+  // Snap the armed device's span to a hovered U: the hovered unit is the
+  // bottom-most U, clamped so the span stays inside the rack.
+  function snapPlacement(u: number): { startU: number; blocked: boolean } {
+    const heightU = Math.max(1, Math.min(placeSpec?.heightU ?? 1, rack.heightU));
+    const startU = Math.max(1, Math.min(u, rack.heightU - heightU + 1));
+    const blocked = rack.items.some(
+      (item) => startU < item.startU + item.heightU && item.startU < startU + heightU,
+    );
+    return { startU, blocked };
+  }
+  const placeGhost = placing && hoverU != null ? snapPlacement(hoverU) : null;
   // Top-to-bottom U numbers: heightU … 1.
   const unitNumbers = Array.from({ length: rack.heightU }, (_, i) => rack.heightU - i);
 
@@ -162,8 +187,18 @@ export function RackElevation({
         <div className="rk-rail" />
         <div className="rk-bay">
           <div
-            className="rk-grid"
+            className={`rk-grid${placing ? " placing" : ""}`}
             style={{ gridTemplateRows: `repeat(${rack.heightU}, var(--rk-u, ${U_PX}px))` }}
+            onMouseLeave={placing ? () => setHoverU(null) : undefined}
+            onContextMenu={
+              placing
+                ? (event) => {
+                    event.preventDefault();
+                    setHoverU(null);
+                    onCancelPlacement?.();
+                  }
+                : undefined
+            }
           >
             {/* U-number gutter. */}
             {unitNumbers.map((u) => (
@@ -171,16 +206,25 @@ export function RackElevation({
                 {u}
               </div>
             ))}
-            {/* Empty slots — clickable to add a device when editing; drop targets. */}
+            {/* Empty slots — armed-placement targets, add-dialog openers (only
+                when the view wires onSlotClick), and drag/drop targets. */}
             {unitNumbers.map((u) =>
-              editMode && onSlotClick ? (
+              editMode && (placing || onSlotClick || canMove) ? (
                 <button
                   type="button"
-                  className="rk-slot rk-slot-btn"
+                  className={`rk-slot rk-slot-btn${placing || onSlotClick ? "" : " passive"}`}
                   key={`s-${u}`}
                   style={{ gridColumn: 2, gridRow: rack.heightU - u + 1 }}
                   aria-label={t("itops.racks.addAtUnit", { unit: u })}
-                  onClick={() => onSlotClick(u)}
+                  onClick={() => {
+                    if (!placing) {
+                      onSlotClick?.(u);
+                      return;
+                    }
+                    const snap = snapPlacement(u);
+                    if (!snap.blocked) onPlaceAt!(snap.startU);
+                  }}
+                  onMouseEnter={placing ? () => setHoverU(u) : undefined}
                   onDragOver={
                     canMove
                       ? (event) => {
@@ -199,9 +243,11 @@ export function RackElevation({
                       : undefined
                   }
                 >
-                  <span className="rk-slot-callout" aria-hidden="true">
-                    {t("itops.racks.addDeviceCallout")}
-                  </span>
+                  {onSlotClick && !placing ? (
+                    <span className="rk-slot-callout" aria-hidden="true">
+                      {t("itops.racks.addDeviceCallout")}
+                    </span>
+                  ) : null}
                 </button>
               ) : (
                 <div
@@ -321,6 +367,37 @@ export function RackElevation({
                 </div>
               );
             })}
+            {/* Armed placement preview: the configured faceplate tracks the
+                hovered slot in realtime; red when the span overlaps a device. */}
+            {placing && placeGhost && placeSpec ? (
+              <div
+                className={`rk-item rk-place-ghost${placeGhost.blocked ? " blocked" : ""}`}
+                aria-hidden="true"
+                style={{
+                  gridColumn: 2,
+                  gridRow: `${rack.heightU - (placeGhost.startU + Math.min(placeSpec.heightU, rack.heightU) - 1) + 1} / span ${Math.min(placeSpec.heightU, rack.heightU)}`,
+                }}
+              >
+                <RackDevice
+                  kind={placeSpec.kind}
+                  label={placeSpec.label || t(`itops.racks.kind.${placeSpec.kind}`)}
+                  subLabel={placeSpec.metadata?.vendor ?? null}
+                  status={placeSpec.metadata?.status ?? "online"}
+                  ports={placeSpec.metadata?.ports ?? null}
+                  disks={placeSpec.metadata?.disks ?? null}
+                  battery={placeSpec.metadata?.battery ?? null}
+                  load={placeSpec.metadata?.load ?? null}
+                  expiry={placeSpec.metadata?.expiry ?? null}
+                  rotation={placeSpec.metadata?.rotation ?? null}
+                  yaw={placeSpec.metadata?.yaw ?? null}
+                  kuaiguaiSize={placeSpec.metadata?.kuaiguaiSize ?? null}
+                  heightU={Math.min(placeSpec.heightU, rack.heightU)}
+                  accent={placeSpec.metadata?.accent ?? null}
+                  shell={placeSpec.metadata?.shell ?? null}
+                  seed="place-ghost"
+                />
+              </div>
+            ) : null}
           </div>
         </div>
         <div className="rk-rail" />

@@ -31,7 +31,7 @@ import { HostsPanel } from "./HostsPanel";
 import { RackElevation } from "./RackElevation";
 import { RackDialog } from "./RackDialog";
 import { ServerRoomDialog } from "./ServerRoomDialog";
-import { RackItemDialog, RACK_ITEM_KINDS } from "./RackItemDialog";
+import { RackItemDialog, RACK_ITEM_KINDS, type RackItemDraft } from "./RackItemDialog";
 import { RackDevice } from "./RackDevice";
 import { RackItemBindingsDialog } from "./RackItemBindingsDialog";
 import { RackItemConnectPopover, type ConnectPopoverAnchor } from "./RackItemConnectPopover";
@@ -186,6 +186,8 @@ export function SitesTab({
     item: RackItem | null;
     kind?: RackItemKind;
     startU?: number;
+    /** Picker placement flow: arm the configured draft instead of placing. */
+    onConfigured?: (draft: RackItemDraft) => void;
   } | null>(null);
   const [bindingsDialog, setBindingsDialog] = useState<RackItem | null>(null);
   const [connectPopover, setConnectPopover] = useState<{
@@ -193,6 +195,7 @@ export function SitesTab({
     anchor: ConnectPopoverAnchor;
   } | null>(null);
   const moveRackItem = useItOpsStore((state) => state.moveRackItem);
+  const placeRackItem = useItOpsStore((state) => state.placeRackItem);
   const deleteRack = useItOpsStore((state) => state.deleteRack);
   const removeRackItem = useItOpsStore((state) => state.removeRackItem);
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
@@ -387,6 +390,25 @@ export function SitesTab({
       ],
       { x: event.clientX, y: event.clientY },
     );
+  }
+
+  // Armed picker placement: the configured Rack Device lands on the clicked U.
+  async function placeConfiguredDevice(rack: Rack, draft: RackItemDraft, startU: number) {
+    if (!activeGroup) return;
+    try {
+      await placeRackItem(activeGroup.id, {
+        rackId: rack.id,
+        connectionId: draft.connectionId,
+        kind: draft.kind,
+        label: draft.label,
+        startU,
+        heightU: draft.heightU,
+        metadata: draft.metadata,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      showStatusBarNotice(t("itops.errorNotice", { message }), { tone: "error" });
+    }
   }
 
   async function moveItem(itemId: string, targetRackId: string, startU: number) {
@@ -724,7 +746,11 @@ export function SitesTab({
             roomIcons={activeGroup.roomIcons}
             hostForItem={hostForItem}
             isGhostItem={isGhostItem}
-            onSlotClick={(rack, startU, kind) => setItemDialog({ rack, item: null, kind, startU })}
+            onSlotClick={(rack, startU) => setItemDialog({ rack, item: null, startU })}
+            onConfigureDevice={(rack, kind, arm) =>
+              setItemDialog({ rack, item: null, kind, onConfigured: arm })
+            }
+            onPlaceDevice={(rack, draft, startU) => void placeConfiguredDevice(rack, draft, startU)}
             onOpenItem={openRackItem}
             onEditItem={(rack, item) => setItemDialog({ rack, item })}
             onBindItem={setBindingsDialog}
@@ -809,6 +835,7 @@ export function SitesTab({
           defaultStartU={itemDialog.startU}
           members={members}
           onClose={() => setItemDialog(null)}
+          onConfigured={itemDialog.onConfigured}
         />
       ) : null}
       {bindingsDialog && activeGroup ? (
@@ -973,6 +1000,8 @@ function RackDrill({
   hostForItem,
   isGhostItem,
   onSlotClick,
+  onConfigureDevice,
+  onPlaceDevice,
   onOpenItem,
   onEditItem,
   onBindItem,
@@ -996,7 +1025,14 @@ function RackDrill({
   roomIcons?: Record<string, ItOpsCustomIcon>;
   hostForItem: (item: RackItem) => string | null;
   isGhostItem: (item: RackItem) => boolean;
-  onSlotClick: (rack: Rack, startU: number, kind?: RackItemKind) => void;
+  /** Server Room elevation only: an empty-slot click opens the add dialog at
+   *  that U. Rack View adds devices through the picker's armed flow instead. */
+  onSlotClick: (rack: Rack, startU: number) => void;
+  /** Picker flow: open the device dialog in configure mode; `arm` receives the
+   *  configured draft so the drill can start the cursor-tracked placement. */
+  onConfigureDevice: (rack: Rack, kind: RackItemKind, arm: (draft: RackItemDraft) => void) => void;
+  /** Armed placement click landed on `startU`: place the configured device. */
+  onPlaceDevice: (rack: Rack, draft: RackItemDraft, startU: number) => void;
   onOpenItem: (item: RackItem, anchor: HTMLElement) => void;
   onEditItem: (rack: Rack, item: RackItem) => void;
   onBindItem: (item: RackItem) => void;
@@ -1043,6 +1079,8 @@ function RackDrill({
   // object kind, and a just-created rack awaiting its placement click.
   const [roomTool, setRoomTool] = useState<RoomTool>(null);
   const [placeRackId, setPlaceRackId] = useState<string | null>(null);
+  // Rack View picker: a configured Rack Device awaiting its placement click.
+  const [placeDevice, setPlaceDevice] = useState<RackItemDraft | null>(null);
 
   const serverRoom =
     drill.serverRoom != null
@@ -1063,6 +1101,7 @@ function RackDrill({
   useEffect(() => {
     setRoomTool(null);
     setPlaceRackId(null);
+    setPlaceDevice(null);
   }, [viewKey, editMode, roomView]);
 
   const sitePlacementScope = siteLayoutScope(site.id);
@@ -1527,17 +1566,32 @@ function RackDrill({
               hostFor={hostForItem}
               isGhost={isGhostItem}
               editMode={editMode}
-              onSlotClick={editMode ? (startU) => onSlotClick(rack, startU) : undefined}
               onOpenItem={onOpenItem}
               onEditItem={(item) => onEditItem(rack, item)}
               onBindItem={onBindItem}
               onMoveItem={editMode ? onMoveItem : undefined}
               onDeleteItem={editMode ? (item) => onDeleteItem(rack, item) : undefined}
+              placeSpec={editMode ? placeDevice : null}
+              onPlaceAt={(startU) => {
+                if (!placeDevice) return;
+                onPlaceDevice(rack, placeDevice, startU);
+                setPlaceDevice(null);
+              }}
+              onCancelPlacement={() => setPlaceDevice(null)}
             />
             {editMode ? (
               <RackObjectPicker
                 rack={rack}
-                onPickDevice={(kind, startU) => onSlotClick(rack, startU, kind)}
+                armedKind={placeDevice?.kind ?? null}
+                onPickDevice={(kind) => {
+                  // Clicking the armed card again disarms; any card re-opens
+                  // the configure dialog and re-arms with the new draft.
+                  if (placeDevice?.kind === kind) {
+                    setPlaceDevice(null);
+                    return;
+                  }
+                  onConfigureDevice(rack, kind, setPlaceDevice);
+                }}
               />
             ) : null}
           </div>
@@ -1804,10 +1858,13 @@ function firstAvailableRackUnit(rack: Rack): number | null {
 
 function RackObjectPicker({
   rack,
+  armedKind,
   onPickDevice,
 }: {
   rack: Rack;
-  onPickDevice: (kind: RackItemKind, startU: number) => void;
+  /** The configured draft's kind while a placement click is armed. */
+  armedKind: RackItemKind | null;
+  onPickDevice: (kind: RackItemKind) => void;
 }) {
   const { t } = useTranslation();
   const [query, setQuery] = useState("");
@@ -1818,7 +1875,11 @@ function RackObjectPicker({
   );
 
   return (
-    <div className="rm-picker" role="group" aria-label={t("itops.floorPlan.pickerTitle")}>
+    <div
+      className="rm-picker rm-picker-devices"
+      role="group"
+      aria-label={t("itops.floorPlan.pickerTitle")}
+    >
       <div className="rm-picker-h">{t("itops.floorPlan.pickerTitle")}</div>
       <div className="rm-picker-search">
         <ItIcon name="search" size={13} />
@@ -1843,8 +1904,9 @@ function RackObjectPicker({
               type="button"
               className="rm-picker-card"
               title={label}
+              data-active={armedKind === kind || undefined}
               disabled={startU == null}
-              onClick={() => startU != null && onPickDevice(kind, startU)}
+              onClick={() => startU != null && onPickDevice(kind)}
             >
               <span className="rm-picker-thumb device">
                 <RackDevice
