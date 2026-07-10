@@ -153,10 +153,10 @@ test("Rack device picker arms a configure-then-place flow with a cursor-snapped 
 test("IT Ops page-root layout stays off dialog backdrops and edit-mode dot grids", async () => {
   const css = await read("src/modules/itops/itops.css");
 
-  // `.itops-page` rides on Sheet backdrops (zClassName) for module tokens;
-  // the page-root positioning must not demote the fixed overlay or the
-  // dialog renders below the viewport.
-  assert.match(css, /\.itops-page:not\(\.kk-dlg-backdrop\) \{/);
+  // `.itops-page` rides on Sheet backdrops (zClassName) and the armed
+  // placement cursor ghost for module tokens; the page-root positioning must
+  // not demote those fixed overlays or they render below the viewport.
+  assert.match(css, /\.itops-page:not\(\.kk-dlg-backdrop\):not\(\.rk-cursor-ghost\) \{/);
   // The Site View dot grid is an edit-mode affordance even over a custom
   // background (the `.has-bg` rule is more specific than the generic reset).
   assert.match(
