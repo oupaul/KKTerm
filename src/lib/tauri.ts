@@ -1300,6 +1300,7 @@ type CommandMap = {
       label: string;
       kind: HostKind;
       parentHostId: string | null;
+      notes: string;
     };
     result: SiteHost;
   };

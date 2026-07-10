@@ -12,21 +12,16 @@ export interface HostTreeRow {
 
 /**
  * Parse a pasted hostname list: one hostname per line (commas also separate),
- * trimmed, comment lines (#) dropped, case-insensitive duplicates removed
- * while preserving first-seen order and casing.
+ * trimmed and comment lines (#) dropped. Duplicate and blank entries are kept
+ * so the backend can include them in the import result's skipped count.
  */
 export function parseHostnameList(text: string): string[] {
-  const seen = new Set<string>();
-  const hostnames: string[] = [];
-  for (const line of text.split(/[\n,]/)) {
-    const value = line.trim();
-    if (!value || value.startsWith("#")) continue;
-    const key = value.toLowerCase();
-    if (seen.has(key)) continue;
-    seen.add(key);
-    hostnames.push(value);
-  }
-  return hostnames;
+  const trimmed = text.trim();
+  if (!trimmed) return [];
+  return trimmed
+    .split(/[\n,]/)
+    .map((line) => line.trim())
+    .filter((value) => !value.startsWith("#"));
 }
 
 /** A Host's display name: its label when set, otherwise the hostname. */

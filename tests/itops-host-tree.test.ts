@@ -24,11 +24,11 @@ function host(id: string, hostname: string, parentHostId: string | null = null):
   };
 }
 
-test("parseHostnameList trims, splits, and dedupes a pasted import list", () => {
+test("parseHostnameList preserves skipped entries for the backend import result", () => {
   const parsed = parseHostnameList(
     "web-01\n  web-02  \n\n# comment line\nWEB-01\nweb-03,web-04\n",
   );
-  assert.deepEqual(parsed, ["web-01", "web-02", "web-03", "web-04"]);
+  assert.deepEqual(parsed, ["web-01", "web-02", "", "WEB-01", "web-03", "web-04"]);
   assert.deepEqual(parseHostnameList("   \n# only comments\n"), []);
 });
 

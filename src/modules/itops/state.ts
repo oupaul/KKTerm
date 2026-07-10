@@ -89,6 +89,7 @@ export interface HostInput {
   label: string;
   kind: HostKind;
   parentHostId: string | null;
+  notes: string;
 }
 
 export type LiveRunHostStatus = "pending" | "running" | "ok" | "failed";
@@ -286,7 +287,7 @@ interface ItOpsState {
   updateHost: (
     siteId: string,
     id: string,
-    input: HostInput & { connectionIds: string[]; notes: string },
+    input: HostInput & { connectionIds: string[] },
   ) => Promise<SiteHost>;
   deleteHost: (siteId: string, id: string) => Promise<void>;
   /** Import a parsed hostname list, then start a connectivity scan over the

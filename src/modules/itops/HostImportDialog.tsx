@@ -17,6 +17,7 @@ export function HostImportDialog({ siteId, onClose }: { siteId: string; onClose:
   const [busy, setBusy] = useState(false);
 
   const hostnames = parseHostnameList(text);
+  const importCount = hostnames.filter(Boolean).length;
 
   async function submit() {
     setBusy(true);
@@ -49,10 +50,10 @@ export function HostImportDialog({ siteId, onClose }: { siteId: string; onClose:
             primary={
               <Btn
                 kind="primary"
-                disabled={busy || hostnames.length === 0}
+                disabled={busy || importCount === 0}
                 onClick={() => void submit()}
               >
-                {t("itops.hosts.importSubmit", { count: hostnames.length })}
+                {t("itops.hosts.importSubmit", { count: importCount })}
               </Btn>
             }
           />

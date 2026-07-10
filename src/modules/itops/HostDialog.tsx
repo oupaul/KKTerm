@@ -71,6 +71,7 @@ export function HostDialog({
           label,
           kind,
           parentHostId: parentId || null,
+          notes,
         });
       }
       onClose();
@@ -135,11 +136,9 @@ export function HostDialog({
             ]}
           />
         </Field>
-        {isEdit ? (
-          <Field label={t("itops.hosts.notesLabel")}>
-            <TextArea rows={3} value={notes} onChange={(event) => setNotes(event.target.value)} />
-          </Field>
-        ) : null}
+        <Field label={t("itops.hosts.notesLabel")}>
+          <TextArea rows={3} value={notes} onChange={(event) => setNotes(event.target.value)} />
+        </Field>
       </Sheet>
     </DialogShell>
   );

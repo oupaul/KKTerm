@@ -679,6 +679,7 @@ pub fn itops_create_host(
     label: String,
     kind: HostKind,
     parent_host_id: Option<String>,
+    notes: String,
 ) -> Result<SiteHost, String> {
     let id = new_itops_id("host");
     storage(&app).with_connection_infallible(|conn| {
@@ -690,6 +691,7 @@ pub fn itops_create_host(
             &label,
             kind,
             parent_host_id.as_deref(),
+            &notes,
         )
         .map_err(|error| error.to_string())
     })

@@ -21,7 +21,6 @@ export function HostBindingsDialog({
   onClose: () => void;
 }) {
   const { t } = useTranslation();
-  const activeWorkspaceId = useWorkspaceStore((state) => state.activeWorkspaceId);
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
   const updateHost = useItOpsStore((state) => state.updateHost);
   const [connections, setConnections] = useState<Connection[]>([]);
@@ -30,10 +29,12 @@ export function HostBindingsDialog({
 
   useEffect(() => {
     if (!isTauriRuntime()) return;
-    void invokeCommand("list_connection_tree", { workspaceId: activeWorkspaceId })
+    // A Site can reference Connections from any Workspace, so Host bindings
+    // must use the full tree rather than the active Workspace's sidebar tree.
+    void invokeCommand("list_connection_tree")
       .then((tree) => setConnections(flattenConnections(tree)))
       .catch(() => setConnections([]));
-  }, [activeWorkspaceId]);
+  }, []);
 
   function toggle(id: string) {
     setSelected((current) => {
