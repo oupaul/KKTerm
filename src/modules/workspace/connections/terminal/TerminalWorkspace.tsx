@@ -1675,6 +1675,15 @@ function TerminalPaneView({
   }
 
   function handleTerminalSurfacePointerDown(event: ReactPointerEvent<HTMLDivElement>) {
+    // MobaXterm-style middle-click paste. macOS has no X11 primary selection, so
+    // paste the clipboard (matching MobaXterm on Windows and most terminals on
+    // macOS). preventDefault stops the WebView's middle-click autoscroll cursor.
+    if (event.button === 1) {
+      event.preventDefault();
+      focusTerminalRendererFromSurface();
+      void handlePasteIntoTerminal();
+      return;
+    }
     if (event.button !== 0) {
       return;
     }

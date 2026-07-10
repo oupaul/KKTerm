@@ -1688,6 +1688,25 @@
   height: 0;
 }
 
+/* Single selection model, MobaXterm-style: xterm's own cell-accurate selection
+   (the blue highlight, read via getSelection()) must be the ONLY selection the
+   mouse can make. xterm's base `.xterm` rule already sets `user-select: none`,
+   but when screen-reader mode is enabled xterm mounts an accessibility tree — a
+   full-viewport, absolutely-positioned screen-reader text layer at z-index 10 —
+   and overrides it back to `user-select: text`. A drag would then natively
+   select THAT layer (the grey macOS system highlight), whose text does not line
+   up with the character cells, so you could not select the exact range you want
+   and getSelection() would miss it. Force those layers non-selectable so the
+   invariant holds even with screen-reader mode on; screen readers still read the
+   tree via DOM text + ARIA, which `user-select` does not affect. Harmless no-op
+   when the tree is absent (the default, screen-reader mode off). */
+.xterm-host .xterm .xterm-accessibility,
+.xterm-host .xterm .xterm-accessibility-tree,
+.xterm-host .xterm .xterm-accessibility-tree * {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
+
 .sftp-popup-dialog-backdrop {
   padding: 24px;
 }

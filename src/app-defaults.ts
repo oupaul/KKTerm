@@ -88,7 +88,8 @@ export const defaultTerminalSettings: TerminalSettings = {
   scrollbackLines: 5000,
   defaultTransparency: 50,
   useRandomDynamicBackground: false,
-  copyOnSelect: false,
+  // MobaXterm-style: selecting text copies it to the clipboard immediately.
+  copyOnSelect: true,
   allowOsc52Clipboard: true,
   confirmMultilinePaste: true,
   defaultShell: defaultLocalShell(),
