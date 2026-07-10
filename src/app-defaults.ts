@@ -111,7 +111,10 @@ export const defaultSshSettings: SshSettings = {
   defaultSshCompression: "fast",
   bufferLines: 5000,
   defaultTransparency: 50,
-  defaultUseTmuxSessions: true,
+  // MobaXterm-style default: SSH runs as a plain scrollback terminal so drags
+  // can select any range across the whole buffer. tmux (server-side screen,
+  // session persistence) is opt-in per connection or via SSH settings.
+  defaultUseTmuxSessions: false,
   useRandomDynamicBackground: false,
   allowOsc52Clipboard: true,
   managedXServerEnabled: false,

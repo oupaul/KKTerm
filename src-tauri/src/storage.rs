@@ -4936,7 +4936,9 @@ fn default_terminal_transparency() -> u8 {
 }
 
 fn default_use_tmux_sessions() -> bool {
-    true
+    // MobaXterm-style default: SSH runs as a plain scrollback terminal so text
+    // selection can span the whole buffer. tmux is opt-in.
+    false
 }
 
 fn default_hide_common_port_redirects() -> bool {

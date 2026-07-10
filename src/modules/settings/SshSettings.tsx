@@ -43,7 +43,7 @@ function normalizeSshSettingsDraft(settings: SshSettingsType, t: TFunction): Ssh
     defaultSshCompression: settings.defaultSshCompression ?? "fast",
     bufferLines,
     defaultTransparency,
-    defaultUseTmuxSessions: settings.defaultUseTmuxSessions ?? true,
+    defaultUseTmuxSessions: settings.defaultUseTmuxSessions ?? false,
     useRandomDynamicBackground: settings.useRandomDynamicBackground ?? false,
     allowOsc52Clipboard: settings.allowOsc52Clipboard ?? true,
     managedXServerEnabled: settings.managedXServerEnabled ?? false,
@@ -344,7 +344,7 @@ export function SshSettings() {
         <div className="settings-toggle-list">
           <label className="settings-toggle-row">
             <ToggleSwitch
-              checked={sshDraft.defaultUseTmuxSessions ?? true}
+              checked={sshDraft.defaultUseTmuxSessions ?? false}
               onChange={(checked) =>
                 setSshDraft((settings) => ({ ...settings, defaultUseTmuxSessions: checked }))
               }

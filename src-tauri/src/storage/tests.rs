@@ -2853,7 +2853,7 @@ fn ssh_settings_round_trip_through_settings_table() {
     assert_eq!(defaults.default_port, 22);
     assert_eq!(defaults.buffer_lines, 5_000);
     assert_eq!(defaults.default_transparency, 50);
-    assert!(defaults.default_use_tmux_sessions);
+    assert!(!defaults.default_use_tmux_sessions);
     assert!(!defaults.use_random_dynamic_background);
     assert!(defaults.hide_common_port_redirects);
     assert!(defaults.allow_osc52_clipboard);
