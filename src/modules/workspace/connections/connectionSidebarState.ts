@@ -1,5 +1,12 @@
+import type { ConnectionType } from "../../../types";
+
 const RECENT_CONNECTION_STORAGE_KEY = "kkterm.recentConnectionIds";
 const COLLAPSED_FOLDER_IDS_KEY = "kkterm.collapsedFolderIds";
+export const NEW_CONNECTION_REQUEST_EVENT = "kkterm:new-connection-request";
+
+export type NewConnectionRequestDetail = {
+  connectionType: ConnectionType;
+};
 
 export const RECENT_CONNECTION_LIMIT = 50;
 
@@ -59,4 +66,12 @@ export function saveCollapsedFolderIds(ids: Set<string>) {
 
 export function notifyConnectionTreeInvalidated() {
   window.dispatchEvent(new CustomEvent("kkterm:connection-tree-invalidated"));
+}
+
+export function requestNewConnection(connectionType: ConnectionType) {
+  window.dispatchEvent(
+    new CustomEvent<NewConnectionRequestDetail>(NEW_CONNECTION_REQUEST_EVENT, {
+      detail: { connectionType },
+    }),
+  );
 }

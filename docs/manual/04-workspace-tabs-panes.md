@@ -17,7 +17,7 @@ A new tab opens via:
 - Quick Connect.
 - "Open in pane" from the rail (`app.openConnectedConnection`).
 
-Empty state (no Tabs open) shows `workspace.noActiveSession` over the Default Launch State.
+Empty state (no Tabs open) shows `workspace.noActiveSession` over the Default Launch State. Below `workspace.openFromTree`, direct creation links open the existing add flow for every supported Connection type: Local Terminal, SSH, Telnet, Serial, URL, RDP, VNC, FTP/FTPS, File Explorer, and Document. Document uses its existing file picker before creating the Connection.
 
 Tutorial targets: `workspace.tabStrip`, `workspace.canvas`, `workspace.emptyState`.
 

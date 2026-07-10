@@ -246,6 +246,46 @@
   font-size: 13px;
 }
 
+.empty-workspace-connection-links {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(132px, 1fr));
+  gap: 3px 18px;
+  width: min(320px, calc(100vw - 48px));
+  margin-top: 4px;
+}
+
+.empty-workspace-connection-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  padding: 4px 2px;
+  color: var(--accent);
+  background: transparent;
+  border: 0;
+  border-radius: 5px;
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.empty-workspace-connection-link:hover {
+  color: var(--accent-press);
+  background: var(--hover);
+}
+
+.empty-workspace-connection-link:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 1px;
+}
+
+.empty-workspace-connection-link span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .status-bar {
   display: grid;
   position: relative;

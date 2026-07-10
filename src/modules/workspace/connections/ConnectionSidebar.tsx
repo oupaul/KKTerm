@@ -2,7 +2,7 @@ import { ConnectionGlyph, connectionSubtitle, connectionTypeSubtitle } from "./C
 import { ConnectionIconBackgroundPicker } from "./ConnectionIconBackgroundPicker";
 import { ConnectionIconPicker } from "./ConnectionIconPicker";
 import { ConnectionIcon, connectionIconSrcForConnection } from "./ConnectionIcon";
-import { AddConnectionMenu } from "./ConnectionMenus";
+import { AddConnectionMenu, CONNECTION_CREATION_OPTIONS } from "./ConnectionMenus";
 import { FtpConnectionFields, FtpConnectionOptions } from "./connection-dialog/FtpConnectionFields";
 import { LocalConnectionFields } from "./connection-dialog/LocalConnectionFields";
 import { defaultWslConnectionName, distroFromWslShell } from "./connection-dialog/wslLocalShell";
@@ -42,7 +42,7 @@ import {
   shouldDeleteSshSocksProxySecret,
 } from "./credentialUnlockPreflight";
 import { confirmTrustedSshHostKey, connectionPasswordOwnerId, connectionSshSocksProxyPasswordOwnerId, defaultPortForConnectionType, connectionTypeLabel, ftpPortForProtocolSelection, isRemoteDesktopConnectionType, localShellOptionsForPlatform, resolveSshCompression, resolveSshSocksProxyRequest, uniqueRuntimeId, type LocalShellOption } from "./utils";
-import { RECENT_CONNECTION_LIMIT, loadCollapsedFolderIds, loadRecentConnectionIds, notifyConnectionTreeInvalidated, saveCollapsedFolderIds, saveRecentConnectionIds } from "./connectionSidebarState";
+import { NEW_CONNECTION_REQUEST_EVENT, RECENT_CONNECTION_LIMIT, loadCollapsedFolderIds, loadRecentConnectionIds, notifyConnectionTreeInvalidated, saveCollapsedFolderIds, saveRecentConnectionIds, type NewConnectionRequestDetail } from "./connectionSidebarState";
 import { collectConnectionFolderIds, countConnections, countFolders, filterConnectedConnections, filterConnectionTree, findConnectionInTree, flattenConnections, flattenFolders, visibleFlatConnections as flattenVisibleConnections, withLiveConnectionStatuses } from "./treeUtils";
 import { WorkspaceIcon } from "../workspaceIcons";
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Check, ChevronDown, ChevronRight, CircleDot, Folder, FolderPlus, KeyRound, LayoutDashboard, List, Maximize2, Minimize2, PanelsTopLeft, PanelRight, Pencil, Pin, PinOff, Play, Plus, Radio, RotateCcw, Save, Search, Settings, SquarePlus, Trash2, X } from "../../../lib/reicon";
@@ -610,6 +610,18 @@ export function ConnectionSidebar({
     setNewConnectionType(connectionType);
     setFormMode("save");
   }
+
+  useEffect(() => {
+    function handleNewConnectionRequest(event: Event) {
+      const { connectionType } = (event as CustomEvent<NewConnectionRequestDetail>).detail;
+      handleNewConnectionTypeSelected(connectionType);
+    }
+
+    window.addEventListener(NEW_CONNECTION_REQUEST_EVENT, handleNewConnectionRequest);
+    return () => {
+      window.removeEventListener(NEW_CONNECTION_REQUEST_EVENT, handleNewConnectionRequest);
+    };
+  });
 
   async function handleNewFileViewConnectionSelected() {
     setAddConnectionMenuOpen(false);
@@ -1764,22 +1776,10 @@ export function ConnectionSidebar({
   }
 
   function buildAddConnectionMenuItems(): NativeContextMenuItem[] {
-    const connectionTypes: ConnectionType[] = [
-      "local",
-      "ssh",
-      "telnet",
-      "serial",
-      "url",
-      "rdp",
-      "vnc",
-      "ftp",
-      "localFiles",
-      "fileView",
-    ];
     return [
-      ...connectionTypes.map((connectionType) => ({
+      ...CONNECTION_CREATION_OPTIONS.map(({ labelKey, type: connectionType }) => ({
         kind: "item" as const,
-        label: connectionType === "ssh" ? t("connections.ssh") : connectionTypeLabel(connectionType),
+        label: t(labelKey),
         iconSrc: connectionIconSrcForConnection({ type: connectionType }),
         action:
           connectionType === "fileView"

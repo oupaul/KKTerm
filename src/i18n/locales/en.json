@@ -4080,7 +4080,7 @@
   "workspace": {
     "tabs": "Workspace tabs",
     "noActiveSession": "No active session",
-    "openFromTree": "Open a Connection from the tree.",
+    "openFromTree": "Open a Connection from the tree, or create a new Connection:",
     "syncInput": "Sync input to all terminals",
     "syncInputEnabledNotice": "Input is now mirrored to every open terminal.",
     "newTab": "New tab",

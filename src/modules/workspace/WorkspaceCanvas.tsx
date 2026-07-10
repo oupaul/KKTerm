@@ -6,6 +6,9 @@ import {
 import { ftpBrowserCommands, localBrowserCommands } from "../../lib/fileBrowserCommands";
 import { TerminalWorkspace } from "./connections/terminal/TerminalWorkspace";
 import { ConnectionIcon } from "./connections/ConnectionIcon";
+import { ConnectionTypeGlyph } from "./connections/ConnectionGlyph";
+import { CONNECTION_CREATION_OPTIONS } from "./connections/ConnectionMenus";
+import { requestNewConnection } from "./connections/connectionSidebarState";
 import { ChevronLeft, ChevronRight, Terminal, X } from "../../lib/reicon";
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -61,6 +64,31 @@ function tabDisplayTitle(tab: WorkspaceTab) {
 
 function tabWorkspaceId(tab: WorkspaceTab) {
   return tab.workspaceId ?? DEFAULT_WORKSPACE_ID;
+}
+
+function WorkspaceEmptyState() {
+  const { t } = useTranslation();
+
+  return (
+    <section className="empty-workspace" data-tutorial-id="workspace.emptyState">
+      <Terminal size={28} />
+      <h2>{t("workspace.noActiveSession")}</h2>
+      <p>{t("workspace.openFromTree")}</p>
+      <div className="empty-workspace-connection-links">
+        {CONNECTION_CREATION_OPTIONS.map(({ labelKey, type }) => (
+          <button
+            className="empty-workspace-connection-link"
+            key={type}
+            onClick={() => requestNewConnection(type)}
+            type="button"
+          >
+            <ConnectionTypeGlyph size={15} type={type} />
+            <span>{t(labelKey)}</span>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
 }
 
 function DockableWorkspaceTab({
@@ -324,7 +352,6 @@ export function WorkspaceCanvas({
   onOpenAssistant?: () => void;
   workspaceActive?: boolean;
 } = {}) {
-  const { t } = useTranslation();
   const tabs = useWorkspaceStore((state) => state.tabs);
   const activeWorkspaceId = useWorkspaceStore((state) => state.activeWorkspaceId);
   const activeTabId = useWorkspaceStore((state) => state.activeTabId);
@@ -421,11 +448,7 @@ export function WorkspaceCanvas({
     return (
       <>
         <div className="workspace-canvas" data-dock-empty-canvas data-tutorial-id="workspace.canvas">
-          <section className="empty-workspace" data-tutorial-id="workspace.emptyState">
-            <Terminal size={28} />
-            <h2>{t("workspace.noActiveSession")}</h2>
-            <p>{t("workspace.openFromTree")}</p>
-          </section>
+          <WorkspaceEmptyState />
         </div>
         {terminalPopup}
         {gitBrowserOverlay}
@@ -443,11 +466,7 @@ export function WorkspaceCanvas({
         data-tutorial-id="workspace.canvas"
       >
       {showEmptyState ? (
-        <section className="empty-workspace" data-tutorial-id="workspace.emptyState">
-          <Terminal size={28} />
-          <h2>{t("workspace.noActiveSession")}</h2>
-          <p>{t("workspace.openFromTree")}</p>
-        </section>
+        <WorkspaceEmptyState />
       ) : null}
       {tabs.map((tab) => {
         const tabIsActive = workspaceActive && tab.id === activeTabId;
