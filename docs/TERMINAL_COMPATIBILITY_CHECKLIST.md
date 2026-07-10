@@ -163,6 +163,10 @@ Simple Workspace command menus must be native Tauri context menus in the desktop
 
 Native context menu icons should appear beside command items. Connection items should match the original Connection Tree/Rail PNG or URL favicon image; command-only actions should use app-owned line-icon-style SVG strings from `src/lib/nativeMenuIcons.ts`. Image sources are rasterized to 16px PNG bytes by `src/lib/nativeContextMenu.ts`, converted with Tauri `Image.fromBytes`, and attached through explicit Tauri `IconMenuItem`s. On macOS, every command-only `nativeMenuIcons` entry must map to a Tauri `NativeIcon` template image through `macosTemplateNativeIconsBySvg` so the icon follows the native menu text color when selected or disabled; use the closest alternative template icon when AppKit has no exact match. Keep `tests/native-context-menu-tauri-shape.test.mjs` updated so new command icons cannot silently fall back to fixed-color PNGs. Keep `image-png` enabled in `src-tauri/Cargo.toml`; missing icons should be fixed through that shared adapter/model and Cargo feature path, not by replacing native menus with DOM flyouts.
 
+## Known Protocol Gaps
+
+- **Kitty keyboard protocol (progressive keyboard enhancement / CSI u)**: xterm.js does not implement it, so TUIs that probe for it (Helix, newer Neovim configurations, kitty-native tools) fall back to legacy key encoding. Expect degraded modifier-combination support in those apps; this is an upstream renderer limitation tracked on the roadmap alongside the WGPU renderer evaluation, not a KKTerm regression.
+
 ## Notes for Failures
 
 For each failure, record:

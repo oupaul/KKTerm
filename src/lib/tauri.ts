@@ -1405,6 +1405,10 @@ type CommandMap = {
     args: { connectionId: string; terminalOpacity?: number | null; terminalBackground?: DashboardBackground | null };
     result: Connection | null;
   };
+  update_connection_terminal_color_scheme: {
+    args: { connectionId: string; terminalColorScheme?: string | null };
+    result: Connection | null;
+  };
   update_connection_file_browser_view_options: {
     args: { connectionId: string; viewOptions?: FileBrowserViewOptions | null };
     result: Connection | null;

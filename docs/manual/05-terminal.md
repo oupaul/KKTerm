@@ -3,8 +3,9 @@
 ## AI grep hints
 
 - Keys: `terminal.actions`, `terminal.copy`, `terminal.copyShortcut`, `terminal.paste`, `terminal.pasteMultilineConfirm`, `terminal.find`, `terminal.findInScrollback`, `terminal.noResults`, `terminal.closeSearch`, `terminal.previousSearch`, `terminal.nextSearch`, `terminal.font`, `terminal.increaseSize`, `terminal.decreaseSize`, `terminal.resetSize`, `terminal.opacity`, `terminal.opacityValue`, `terminal.background`, `terminal.backgroundDefaultHint`, `terminal.appearanceSaveFailed`, `terminal.save`, `terminal.saveBuffer`, `terminal.bufferSaveFailed`, `terminal.startRecording`, `terminal.stopRecording`, `terminal.recording`, `terminal.openRecordings`, `terminal.recordingsTitle`, `terminal.openRecordingsFolder`, `terminal.noRecordings`, `terminal.logFiles`, `terminal.textFiles`, `terminal.quickCommandsShow`, `terminal.quickCommandsHide`, `terminal.quickCommandsManage`, `terminal.quickCommandsLibrary`, `terminal.quickCommandLibrary`, `terminal.quickCommandsCustomCommand`, `terminal.quickCommandsGenerateWithAi`, `terminal.quickCommandsAiPromptLabel`, `terminal.quickCommandsAiPromptPlaceholder`, `terminal.quickCommandsNoPane`, `terminal.starting`, `terminal.sessionFor`, `terminal.startingSessionFor`, `terminal.failedToStart`, `terminal.failedToStartDetail`, `terminal.desktopRuntimeRequired`, `terminal.tauriRequired`, `terminal.noSaveDialog`, `terminal.saveDialog`, `terminal.connectLabel`, `terminal.targetLabel`, `workspace.takeScreenshot`, `settings.submitAiAttachmentsDirectly`, `connections.wslDistribution`
-- Topics: terminal external links, copy/paste, multiline paste confirmation, find in scrollback, font size, Quick Command Bar, quick commands, save buffer to file, recording terminal output, starting state, tutorial targets `terminal.pane`, `terminal.startRecording`, `terminal.openSftp`, `terminal.copySelection`, `terminal.sendToAi`, `terminal.actions`, `terminal.searchBar`, `terminal.surface`
-- Synonyms: "open link in browser", "external browser", "highlight text", "search terminal", "zoom terminal", "shrink font", "terminal opacity", "transparent terminal", "terminal wallpaper", "terminal background", "quick command bar", "quick command", "command shortcut", "export log", "record session", "terminal recording", "transcript"
+- Keys (WezTerm-inspired batch): `terminal.colorScheme`, `terminal.colorSchemeGlobalDefault`, `terminal.colorSchemeSaveFailed`, `terminal.quickSelect`, `terminal.quickSelectHint`, `terminal.quickSelectNoMatches`, `terminal.quickSelectCopied`, `terminal.previousPrompt`, `terminal.nextPrompt`, `terminal.copyLastCommandOutput`, `terminal.notification`, `terminal.notificationWithTitle`
+- Topics: terminal external links, copy/paste, multiline paste confirmation, find in scrollback, font size, Quick Command Bar, quick commands, save buffer to file, recording terminal output, starting state, quick select, prompt navigation, shell integration, inline images, terminal notifications, color schemes, tutorial targets `terminal.pane`, `terminal.startRecording`, `terminal.openSftp`, `terminal.copySelection`, `terminal.sendToAi`, `terminal.actions`, `terminal.searchBar`, `terminal.surface`
+- Synonyms: "open link in browser", "external browser", "highlight text", "search terminal", "zoom terminal", "shrink font", "terminal opacity", "transparent terminal", "terminal wallpaper", "terminal background", "quick command bar", "quick command", "command shortcut", "export log", "record session", "terminal recording", "transcript", "copy url without mouse", "hint labels", "jump to previous command", "OSC 133", "sixel", "imgcat", "terminal theme", "dracula", "solarized"
 
 ## Rendering
 
@@ -42,6 +43,28 @@ Ctrl-click an `http` or `https` link rendered in any terminal Pane to open it in
 
 Do not use `window.prompt` / `window.confirm` for paste confirmation; the implementation is an app-owned dialog with translated strings.
 
+## Quick Select
+
+`terminal.quickSelect` (Actions menu, or Ctrl+Shift+Space) scans the visible terminal screen for copyable tokens — URLs, file paths, IPv4 addresses, MAC addresses, git hashes, UUIDs, and email addresses — and overlays a two-letter hint label on each match. Typing a label copies that token to the clipboard and reports `terminal.quickSelectCopied` through the Status Bar; Esc or a click cancels (`terminal.quickSelectHint` is shown while active). If nothing on screen matches, the Status Bar shows `terminal.quickSelectNoMatches`. Matches are labelled bottom-up so the most recent output gets the shortest reachable labels.
+
+## Shell integration (OSC 133)
+
+When the shell emits OSC 133 prompt marks (as the WezTerm/VS Code shell-integration snippets for bash, zsh, fish, and PowerShell do), KKTerm tracks prompt and command-output zones:
+
+- `terminal.previousPrompt` / `terminal.nextPrompt` (Actions menu, or Ctrl+Shift+Up / Ctrl+Shift+Down) jump the scrollback between shell prompts.
+- Right-click → `terminal.copyLastCommandOutput` copies the output of the most recently completed command; it is disabled until a command has completed inside marked zones.
+- A command that exits non-zero gets a small red mark in the left gutter at the line where it finished.
+
+Without shell integration these controls are simply inert — no configuration is required.
+
+## Inline images
+
+When `settings.enableInlineImages` is on (default), programs can draw images directly into the terminal using the Sixel or iTerm2 inline image protocols (e.g. `imgcat photo.png` over SSH). Turning the toggle off applies to newly opened terminal Panes.
+
+## Terminal notifications
+
+When `settings.allowTerminalNotifications` is on (default), a program that raises an OSC 9 or OSC 777 notification (for example a long build signalling completion) surfaces it as a Status Bar notice using `terminal.notification` or `terminal.notificationWithTitle`, prefixed with the Connection name. Turning the toggle off silences already-open terminals immediately.
+
 ## Sync input to all terminals
 
 Each terminal Pane toolbar has a `workspace.syncInput` toggle, immediately left of the Quick Command Bar toggle. When on, keystrokes typed into the focused terminal Pane are mirrored to every other open terminal Pane, for running the same command across many Sessions at once. Only real keyboard, IME, and paste text is mirrored — mouse and focus control sequences (clicks, drags, scroll, focus reports) are filtered out so they do not arrive as garbled coordinates in other Panes or in shells that never enabled mouse mode. Mirrored input goes straight to each target Pane's PTY, so multi-line paste confirmation still applies once on the Pane the user types in. Because input also reaches terminal Panes on Tabs that are not currently visible, enabling the toggle shows the warning popup `workspace.syncInputEnabledNotice`, the toggle pulses green on every terminal Pane, each receiving Pane shows a pulsing green outline, and connected terminal Connections in the Connection Tree replace their green status dot with a pulsing radio indicator. Activating either the sync-input toggle or the Quick Command Bar toggle returns text focus to the terminal Pane. Closing any participating terminal Pane turns the mode off immediately; closing a non-terminal Pane does not. The mode is runtime-only and off by default after launch.
@@ -78,6 +101,8 @@ The Pane hamburger menu (`terminal.actions`) includes per-Connection appearance 
 
 - `terminal.opacity` opens a Transparency slider labelled by `terminal.opacityValue`. New terminal Connections default to 50% transparency; Settings - SSH and Settings - Terminal expose `settings.defaultTransparency` to change the starting value for newly-created SSH or local/Telnet/Serial terminal surfaces.
 - `terminal.background` opens the same shared background picker used by Dashboard Views. It reuses the Dashboard background modes, shared background picker datasource, media picker (PNG/JPEG/WebP/GIF/BMP/SVG images and MP4/WebM/MOV/M4V/OGV videos), fit, dim labels, dynamic-background registry, and Dynamic-tab live preview dialog (`dashboard.backgroundLivePreview` / `dashboard.backgroundLivePreviewTitle`). `terminal.backgroundDefaultHint` describes returning to the default terminal background.
+
+- `terminal.colorScheme` opens a submenu of curated terminal color schemes (adapted from the iTerm2-Color-Schemes collection; scheme names are proper nouns and stay untranslated). `terminal.colorSchemeGlobalDefault` clears the per-Connection override so the global default from Settings → Terminal (`settings.terminalColorScheme`) applies. Picking a scheme applies it live to every open Pane of the Connection and saves the override on the durable Connection record; save failures surface as `terminal.colorSchemeSaveFailed`. The scheme's background respects the Pane's transparency setting.
 
 Transparency and the default shared background are saved on the durable Connection record and are restored when that Connection opens again. Child Connection Tabs save terminal font size, transparency, and background separately from their parent Connection, so a child row can relaunch with its own appearance. By default, one background is painted once behind the terminal workspace content area for the active Connection Tab, so split terminal Panes share a continuous backdrop. In Settings > Workspace, `settings.separateSplitTerminalBackgrounds` enables per-Pane terminal backgrounds for split layouts; single-terminal Tabs behave the same as the default shared mode. Per-Pane terminal backgrounds are stored with the saved terminal layout and are restored with that layout after app launch. Settings - SSH and Settings - Terminal also expose `settings.randomDynamicBackgroundOnCreate`; when on, new terminal Connections, top-strip new Tabs, and new Child Connection Tabs start with a random dynamic background from the shared registry. Save failures are reported through the Status Bar with `terminal.appearanceSaveFailed`.
 

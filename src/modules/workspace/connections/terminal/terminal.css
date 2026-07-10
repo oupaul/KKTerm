@@ -1807,3 +1807,92 @@
 .terminal-connection-background .dw-canvas-bg::after {
   background: transparent;
 }
+
+/* Quick Select mode: keyboard-driven copy of visible tokens via hint labels. */
+.terminal-quick-select-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 240;
+  outline: none;
+  cursor: default;
+}
+
+.terminal-quick-select-hint {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transform: translateY(-2px);
+  padding: 0 4px;
+  border-radius: 4px;
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 11px;
+  line-height: 16px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.terminal-quick-select-hint strong {
+  color: var(--accent);
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
+.terminal-quick-select-hint-text {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-muted);
+}
+
+.terminal-quick-select-help {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 11px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* Color scheme submenu: long curated list needs its own scroll. */
+.terminal-color-scheme-panel {
+  max-height: min(420px, 60vh);
+  overflow-y: auto;
+}
+
+.terminal-color-scheme-swatch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.terminal-color-scheme-check {
+  margin-left: auto;
+  color: var(--accent);
+}
+
+/* OSC 133 exit-status gutter mark on failed commands. */
+.terminal-command-failed-mark {
+  width: 4px !important;
+  border-radius: 2px;
+  background: var(--terminal-failed-mark-color, var(--red));
+  opacity: 0.85;
+  pointer-events: none;
+}

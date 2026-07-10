@@ -79,6 +79,7 @@ CREATE TABLE IF NOT EXISTS connections (
     icon_background_color TEXT,
     terminal_opacity INTEGER,
     terminal_background_json TEXT,
+    terminal_color_scheme TEXT,
     file_browser_view_options_json TEXT,
     ssh_port_forwardings_json TEXT,
     file_view_open_external INTEGER NOT NULL DEFAULT 0,
@@ -622,6 +623,14 @@ pub struct TerminalSettings {
     default_shell: String,
     #[serde(default)]
     custom_shells: Vec<TerminalCustomShell>,
+    #[serde(default = "default_terminal_color_scheme")]
+    color_scheme: String,
+    #[serde(default = "default_true")]
+    enable_inline_images: bool,
+    #[serde(default = "default_true")]
+    allow_terminal_notifications: bool,
+    #[serde(default)]
+    hyperlink_rules: Vec<TerminalHyperlinkRule>,
 }
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -630,6 +639,14 @@ pub struct TerminalCustomShell {
     id: String,
     name: String,
     command_line: String,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TerminalHyperlinkRule {
+    id: String,
+    pattern: String,
+    url_template: String,
 }
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -1252,6 +1269,8 @@ pub struct SavedConnection {
     icon_background_color: Option<String>,
     terminal_opacity: Option<u8>,
     terminal_background: Option<crate::dashboard_storage::DashboardBackground>,
+    #[serde(default)]
+    terminal_color_scheme: Option<String>,
     file_browser_view_options: Option<FileBrowserViewOptions>,
     ssh_port_forwardings: Option<Vec<SshPortForwarding>>,
     file_view_open_external: bool,
@@ -2428,6 +2447,10 @@ impl Storage {
         // fresh install (still at user_version 0 when v25 runs) loses it. NULL
         // inherits the global SSH default; 'off'/'fast' force a choice.
         ensure_column(&connection, "connections", "ssh_compression", "TEXT")?;
+        // Per-connection terminal color scheme override. NULL inherits the
+        // global Terminal Settings default. Ensured past every
+        // connections-table rebuild, like ssh_compression above.
+        ensure_column(&connection, "connections", "terminal_color_scheme", "TEXT")?;
         ensure_column(&connection, "connections", "url_user_agent", "TEXT")?;
         ensure_column(&connection, "connections", "url_proxy", "TEXT")?;
         ensure_column(
@@ -3347,7 +3370,7 @@ fn list_root_connections_for_workspace(
     let mut statement = connection
         .prepare(
             "SELECT connections.id, name, tab_title, host, connections.username, port, key_path, proxy_jump, ssh_socks_proxy, ssh_socks_proxy_username, ssh_socks_proxy_inherit_defaults, auth_method, local_shell, local_startup_directory, local_startup_script, url, data_partition, use_tmux_sessions, tmux_connection_id, connection_type, serial_line, serial_speed, rdp_options, vnc_options, ftp_options, icon_color, icon_data_url, icon_background_color, terminal_opacity, terminal_background_json, password_credential_id,
-                    (SELECT username FROM url_credentials WHERE url_credentials.connection_id = connections.id ORDER BY updated_at DESC LIMIT 1), file_browser_view_options_json, file_view_open_external, ssh_port_forwardings_json, use_psmux_sessions, ssh_compression, url_proxy, url_proxy_inherit_defaults, url_user_agent
+                    (SELECT username FROM url_credentials WHERE url_credentials.connection_id = connections.id ORDER BY updated_at DESC LIMIT 1), file_browser_view_options_json, file_view_open_external, ssh_port_forwardings_json, use_psmux_sessions, ssh_compression, url_proxy, url_proxy_inherit_defaults, url_user_agent, terminal_color_scheme
              FROM connections
              WHERE folder_id IS NULL AND workspace_id = ?1
              ORDER BY sort_order, name",
@@ -3409,7 +3432,7 @@ fn list_connections_for_folder(
     let mut statement = connection
         .prepare(&format!(
             "SELECT connections.id, name, tab_title, host, connections.username, port, key_path, proxy_jump, ssh_socks_proxy, ssh_socks_proxy_username, ssh_socks_proxy_inherit_defaults, auth_method, local_shell, local_startup_directory, local_startup_script, url, data_partition, use_tmux_sessions, tmux_connection_id, connection_type, serial_line, serial_speed, rdp_options, vnc_options, ftp_options, icon_color, icon_data_url, icon_background_color, terminal_opacity, terminal_background_json, password_credential_id,
-                    (SELECT username FROM url_credentials WHERE url_credentials.connection_id = connections.id ORDER BY updated_at DESC LIMIT 1), file_browser_view_options_json, file_view_open_external, ssh_port_forwardings_json, use_psmux_sessions, ssh_compression, url_proxy, url_proxy_inherit_defaults, url_user_agent
+                    (SELECT username FROM url_credentials WHERE url_credentials.connection_id = connections.id ORDER BY updated_at DESC LIMIT 1), file_browser_view_options_json, file_view_open_external, ssh_port_forwardings_json, use_psmux_sessions, ssh_compression, url_proxy, url_proxy_inherit_defaults, url_user_agent, terminal_color_scheme
              FROM connections
              WHERE {where_clause}
              ORDER BY sort_order, name",
@@ -3784,7 +3807,7 @@ fn get_connection_by_id(
     let saved_connection = connection
         .query_row(
             "SELECT connections.id, name, tab_title, host, connections.username, port, key_path, proxy_jump, ssh_socks_proxy, ssh_socks_proxy_username, ssh_socks_proxy_inherit_defaults, auth_method, local_shell, local_startup_directory, local_startup_script, url, data_partition, use_tmux_sessions, tmux_connection_id, connection_type, serial_line, serial_speed, rdp_options, vnc_options, ftp_options, icon_color, icon_data_url, icon_background_color, terminal_opacity, terminal_background_json, password_credential_id,
-                    (SELECT username FROM url_credentials WHERE url_credentials.connection_id = connections.id ORDER BY updated_at DESC LIMIT 1), file_browser_view_options_json, file_view_open_external, ssh_port_forwardings_json, use_psmux_sessions, ssh_compression, url_proxy, url_proxy_inherit_defaults, url_user_agent
+                    (SELECT username FROM url_credentials WHERE url_credentials.connection_id = connections.id ORDER BY updated_at DESC LIMIT 1), file_browser_view_options_json, file_view_open_external, ssh_port_forwardings_json, use_psmux_sessions, ssh_compression, url_proxy, url_proxy_inherit_defaults, url_user_agent, terminal_color_scheme
              FROM connections
              WHERE connections.id = ?1",
             params![connection_id],
@@ -3827,6 +3850,7 @@ fn get_connection_by_id(
                     icon_background_color: row.get(27)?,
                     terminal_opacity: normalize_loaded_terminal_opacity(row.get(28)?),
                     terminal_background: terminal_background_from_json(row.get(29)?),
+                    terminal_color_scheme: row.get(40)?,
                     file_browser_view_options: file_browser_view_options_from_json(row.get(32)?),
                     file_view_open_external: row.get(33)?,
                     ssh_port_forwardings: ssh_port_forwardings_from_json(row.get(34)?),
@@ -3888,6 +3912,7 @@ fn saved_connection_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<SavedC
         icon_background_color: row.get(27)?,
         terminal_opacity: normalize_loaded_terminal_opacity(row.get(28)?),
         terminal_background: terminal_background_from_json(row.get(29)?),
+        terminal_color_scheme: row.get(40)?,
         file_browser_view_options: file_browser_view_options_from_json(row.get(32)?),
         file_view_open_external: row.get(33)?,
         ssh_port_forwardings: ssh_port_forwardings_from_json(row.get(34)?),
@@ -4890,10 +4915,22 @@ fn default_terminal_settings() -> TerminalSettings {
             std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".to_string())
         },
         custom_shells: Vec::new(),
+        color_scheme: default_terminal_color_scheme(),
+        enable_inline_images: true,
+        allow_terminal_notifications: true,
+        hyperlink_rules: Vec::new(),
     }
 }
 
 fn default_allow_osc52_clipboard() -> bool {
+    true
+}
+
+fn default_terminal_color_scheme() -> String {
+    "kkterm".to_string()
+}
+
+fn default_true() -> bool {
     true
 }
 
@@ -5479,7 +5516,48 @@ fn validate_terminal_settings(mut settings: TerminalSettings) -> Result<Terminal
         return Err("terminal default transparency must be between 0 and 100".to_string());
     }
 
+    settings.color_scheme = {
+        let scheme = settings.color_scheme.trim().to_string();
+        if scheme.is_empty() {
+            default_terminal_color_scheme()
+        } else {
+            scheme
+        }
+    };
+    settings.hyperlink_rules = validate_terminal_hyperlink_rules(settings.hyperlink_rules)?;
+
     Ok(settings)
+}
+
+fn validate_terminal_hyperlink_rules(
+    rules: Vec<TerminalHyperlinkRule>,
+) -> Result<Vec<TerminalHyperlinkRule>, String> {
+    const MAX_HYPERLINK_RULES: usize = 50;
+    let mut normalized = Vec::new();
+    let mut seen_ids = Vec::new();
+    for rule in rules {
+        let id = required_field("hyperlink rule id", rule.id)?;
+        let pattern = required_field("hyperlink rule pattern", rule.pattern)?;
+        let url_template = required_field("hyperlink rule URL", rule.url_template)?;
+        if !url_template.starts_with("http://") && !url_template.starts_with("https://") {
+            return Err("hyperlink rule URLs must start with http:// or https://".to_string());
+        }
+        if seen_ids.contains(&id) {
+            continue;
+        }
+        seen_ids.push(id.clone());
+        normalized.push(TerminalHyperlinkRule {
+            id,
+            pattern,
+            url_template,
+        });
+    }
+    if normalized.len() > MAX_HYPERLINK_RULES {
+        return Err(format!(
+            "at most {MAX_HYPERLINK_RULES} hyperlink rules are supported"
+        ));
+    }
+    Ok(normalized)
 }
 
 fn validate_terminal_custom_shells(

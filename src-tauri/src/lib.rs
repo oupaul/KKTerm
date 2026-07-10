@@ -625,6 +625,15 @@ fn update_connection_terminal_appearance(
 }
 
 #[tauri::command]
+fn update_connection_terminal_color_scheme(
+    storage: tauri::State<'_, storage::Storage>,
+    connection_id: String,
+    terminal_color_scheme: Option<String>,
+) -> Result<Option<storage::SavedConnection>, String> {
+    storage.update_connection_terminal_color_scheme(connection_id, terminal_color_scheme)
+}
+
+#[tauri::command]
 fn update_connection_tab_title(
     storage: tauri::State<'_, storage::Storage>,
     connection_id: String,
@@ -3714,6 +3723,7 @@ pub fn run() {
             update_connection_icon_color,
             update_connection_icon_background_color,
             update_connection_terminal_appearance,
+            update_connection_terminal_color_scheme,
             update_connection_file_browser_view_options,
             update_connection_ssh_port_forwardings,
             update_connection_tab_title,

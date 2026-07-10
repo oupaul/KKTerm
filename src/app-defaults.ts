@@ -93,6 +93,10 @@ export const defaultTerminalSettings: TerminalSettings = {
   confirmMultilinePaste: true,
   defaultShell: defaultLocalShell(),
   customShells: [],
+  colorScheme: "kkterm",
+  enableInlineImages: true,
+  allowTerminalNotifications: true,
+  hyperlinkRules: [],
 };
 
 export const defaultAppearanceSettings: AppearanceSettings = {

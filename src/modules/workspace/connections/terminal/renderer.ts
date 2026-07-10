@@ -1,4 +1,5 @@
 import { FitAddon } from "@xterm/addon-fit";
+import { ImageAddon } from "@xterm/addon-image";
 import {
   SearchAddon,
   type ISearchOptions,
@@ -10,12 +11,29 @@ import { WebglAddon } from "@xterm/addon-webgl";
 import {
   Terminal as XtermTerminal,
   type IDisposable,
+  type ILink,
+  type IMarker,
   type ITerminalOptions,
+  type ITheme,
 } from "@xterm/xterm";
 import { writeToClipboard } from "../../../../lib/clipboard";
 import { logUiDebug, openExternalUrl } from "../../../../lib/tauri";
-import type { TerminalSettings } from "../../../../types";
+import type { TerminalHyperlinkRule, TerminalSettings } from "../../../../types";
+import {
+  hexColorWithAlpha,
+  resolveTerminalColorScheme,
+  type TerminalColorScheme,
+} from "./colorSchemes";
+import {
+  buildHyperlinkRuleUrl,
+  decodeOsc777Notification,
+  findPromptNavigationTarget,
+  parseOsc133Sequence,
+  type TerminalNotification,
+} from "./oscSequences";
 import { refreshTerminalFontAtlases, type TerminalFontAtlasRefreshTarget } from "./fontAtlasRefresh";
+
+export type { TerminalNotification } from "./oscSequences";
 
 export type TerminalRendererBackend = "xterm";
 
@@ -37,6 +55,16 @@ export interface TerminalDimensions {
   rows: number;
 }
 
+/** Screen geometry for overlays (Quick Select hints), relative to the host element. */
+export interface TerminalScreenGeometry {
+  left: number;
+  top: number;
+  cellWidth: number;
+  cellHeight: number;
+  cols: number;
+  rows: number;
+}
+
 export interface TerminalRenderer {
   readonly backend: TerminalRendererBackend;
   readonly capabilities: readonly TerminalRendererCapability[];
@@ -51,7 +79,14 @@ export interface TerminalRenderer {
   attachCustomKeyEventHandler: (handler: (event: KeyboardEvent) => boolean) => void;
   getSelection: () => string;
   onCwdChange: (handler: (cwd: string) => void) => IDisposable;
+  onNotification: (handler: (notification: TerminalNotification) => void) => IDisposable;
   onData: (handler: (data: string) => void) => IDisposable;
+  scrollToPreviousPrompt: () => boolean;
+  scrollToNextPrompt: () => boolean;
+  getLastCommandOutput: () => string | null;
+  getViewportLines: () => string[];
+  getScreenGeometry: () => TerminalScreenGeometry | null;
+  setColorScheme: (schemeId: string) => void;
   onSearchResultsChange: (handler: (result: ISearchResultChangeEvent) => void) => IDisposable;
   onSelectionChange: (handler: () => void) => IDisposable;
   open: (element: HTMLElement) => void;
@@ -140,17 +175,31 @@ class XtermTerminalRenderer implements TerminalRenderer, TerminalFontAtlasRefres
   private readonly searchAddon = new SearchAddon({ highlightLimit: 500 });
   private readonly osc52Disposable: IDisposable | null = null;
   private readonly cwdListeners = new Set<(cwd: string) => void>();
+  private readonly notificationListeners = new Set<(notification: TerminalNotification) => void>();
   private readonly osc7Disposable: IDisposable | null = null;
+  private readonly oscSequenceDisposables: IDisposable[] = [];
   private readonly terminal: XtermTerminal;
   private backgroundOpacity: number;
+  private colorScheme: TerminalColorScheme;
   private webglAddon: WebglAddon | null = null;
   private webglContextLossDisposable: IDisposable | null = null;
   private wheelScrollbackHandler: ((lines: number) => void) | null = null;
   private wheelScrollbackOverride = false;
+  // OSC 133 shell-integration zones: prompt markers for scrollback navigation
+  // plus the last command's output span for "copy last command output".
+  private promptMarkers: IMarker[] = [];
+  private lastOutputStartMarker: IMarker | null = null;
+  private lastOutputEndMarker: IMarker | null = null;
+  private runningOutputStartMarker: IMarker | null = null;
+  private promptNavigationLine: number | null = null;
+  private promptNavigationScrollInProgress = false;
 
   constructor(settings: TerminalSettings, backgroundOpacity: number) {
     this.backgroundOpacity = backgroundOpacity;
-    this.terminal = new XtermTerminal(terminalOptionsFor(settings, backgroundOpacity));
+    this.colorScheme = resolveTerminalColorScheme(settings.colorScheme);
+    this.terminal = new XtermTerminal(
+      terminalOptionsFor(settings, this.colorScheme, backgroundOpacity),
+    );
     this.terminal.attachCustomWheelEventHandler((event) => this.handleWheelEvent(event));
     // xterm defaults to its built-in Unicode v6 width tables, where emoji are
     // still 1 cell wide. Modern shells emit emoji that fonts paint two cells
@@ -162,9 +211,40 @@ class XtermTerminalRenderer implements TerminalRenderer, TerminalFontAtlasRefres
     this.terminal.loadAddon(this.fitAddon);
     this.terminal.loadAddon(this.searchAddon);
     this.terminal.loadAddon(new WebLinksAddon(handleTerminalLink));
+    if (settings.enableInlineImages) {
+      // Sixel + iTerm2 inline image protocol (imgcat and friends). The addon
+      // enforces its own memory limits, so no extra bookkeeping is needed.
+      this.terminal.loadAddon(new ImageAddon());
+    }
+    this.registerHyperlinkRuleProvider(settings.hyperlinkRules);
     this.osc7Disposable = this.terminal.parser.registerOscHandler(7, (data) =>
       this.handleOsc7CwdSequence(data),
     );
+    this.oscSequenceDisposables.push(
+      this.terminal.parser.registerOscHandler(133, (data) =>
+        this.handleOsc133Sequence(data),
+      ),
+      this.terminal.parser.registerOscHandler(9, (data) => {
+        // OSC 9;4;… is the ConEmu/Windows Terminal progress protocol, not a
+        // notification — shells emit it constantly, so it must not notify.
+        if (data && !data.startsWith("4;")) {
+          this.emitNotification({ title: null, body: data });
+        }
+        return true;
+      }),
+      this.terminal.parser.registerOscHandler(777, (data) => {
+        const notification = decodeOsc777Notification(data);
+        if (notification) {
+          this.emitNotification(notification);
+        }
+        return true;
+      }),
+    );
+    this.terminal.onScroll(() => {
+      if (!this.promptNavigationScrollInProgress) {
+        this.promptNavigationLine = null;
+      }
+    });
     if (settings.allowOsc52Clipboard) {
       this.osc52Disposable = this.terminal.parser.registerOscHandler(52, (data) =>
         handleOsc52ClipboardSequence(data),
@@ -189,6 +269,12 @@ class XtermTerminalRenderer implements TerminalRenderer, TerminalFontAtlasRefres
     this.hostElement = null;
     this.osc52Disposable?.dispose();
     this.osc7Disposable?.dispose();
+    for (const disposable of this.oscSequenceDisposables) {
+      disposable.dispose();
+    }
+    this.oscSequenceDisposables.length = 0;
+    this.notificationListeners.clear();
+    this.promptMarkers = [];
     this.disposeWebglAddon();
     this.terminal.dispose();
   }
@@ -256,6 +342,196 @@ class XtermTerminalRenderer implements TerminalRenderer, TerminalFontAtlasRefres
     };
   }
 
+  onNotification(handler: (notification: TerminalNotification) => void) {
+    this.notificationListeners.add(handler);
+    return {
+      dispose: () => {
+        this.notificationListeners.delete(handler);
+      },
+    };
+  }
+
+  scrollToPreviousPrompt() {
+    const lines = this.livePromptLines();
+    const buffer = this.terminal.buffer.active;
+    const anchor = this.promptNavigationLine ?? buffer.baseY + buffer.cursorY + 1;
+    const target = findPromptNavigationTarget(lines, anchor, "previous");
+    if (target === null) {
+      return false;
+    }
+    return this.scrollToPromptLine(target);
+  }
+
+  scrollToNextPrompt() {
+    const buffer = this.terminal.buffer.active;
+    const anchor = this.promptNavigationLine ?? buffer.viewportY;
+    const target = findPromptNavigationTarget(this.livePromptLines(), anchor, "next");
+    if (target === null) {
+      return false;
+    }
+    return this.scrollToPromptLine(target);
+  }
+
+  getLastCommandOutput() {
+    const start = this.lastOutputStartMarker;
+    const end = this.lastOutputEndMarker;
+    if (!start || !end || start.isDisposed || end.isDisposed || end.line <= start.line) {
+      return null;
+    }
+    const buffer = this.terminal.buffer.active;
+    const lines: string[] = [];
+    for (let line = start.line; line < end.line; line += 1) {
+      const bufferLine = buffer.getLine(line);
+      if (bufferLine) {
+        lines.push(bufferLine.translateToString(true));
+      }
+    }
+    while (lines.length > 0 && lines[lines.length - 1] === "") {
+      lines.pop();
+    }
+    return lines.length > 0 ? lines.join("\n") : null;
+  }
+
+  getViewportLines() {
+    const buffer = this.terminal.buffer.active;
+    const lines: string[] = [];
+    for (let row = 0; row < this.terminal.rows; row += 1) {
+      const line = buffer.getLine(buffer.viewportY + row);
+      lines.push(line ? line.translateToString(true) : "");
+    }
+    return lines;
+  }
+
+  getScreenGeometry(): TerminalScreenGeometry | null {
+    const host = this.hostElement;
+    const screen = this.terminal.element?.querySelector<HTMLElement>(".xterm-screen");
+    if (!host || !screen || this.terminal.cols <= 0 || this.terminal.rows <= 0) {
+      return null;
+    }
+    const hostRect = host.getBoundingClientRect();
+    const screenRect = screen.getBoundingClientRect();
+    if (screenRect.width <= 0 || screenRect.height <= 0) {
+      return null;
+    }
+    return {
+      left: screenRect.left - hostRect.left,
+      top: screenRect.top - hostRect.top,
+      cellWidth: screenRect.width / this.terminal.cols,
+      cellHeight: screenRect.height / this.terminal.rows,
+      cols: this.terminal.cols,
+      rows: this.terminal.rows,
+    };
+  }
+
+  setColorScheme(schemeId: string) {
+    const scheme = resolveTerminalColorScheme(schemeId);
+    if (scheme.id === this.colorScheme.id) {
+      return;
+    }
+    this.colorScheme = scheme;
+    this.terminal.options.theme = themeForScheme(scheme, this.backgroundOpacity);
+    this.applyHostBackground(this.backgroundOpacity);
+  }
+
+  private emitNotification(notification: TerminalNotification) {
+    const body = notification.body.slice(0, 512);
+    for (const listener of this.notificationListeners) {
+      listener({ title: notification.title, body });
+    }
+  }
+
+  private livePromptLines() {
+    this.promptMarkers = this.promptMarkers.filter((marker) => !marker.isDisposed);
+    return this.promptMarkers.map((marker) => marker.line).sort((a, b) => a - b);
+  }
+
+  private scrollToPromptLine(line: number) {
+    this.promptNavigationLine = line;
+    this.promptNavigationScrollInProgress = true;
+    try {
+      this.terminal.scrollToLine(line);
+    } finally {
+      this.promptNavigationScrollInProgress = false;
+    }
+    return true;
+  }
+
+  private handleOsc133Sequence(data: string) {
+    const sequence = parseOsc133Sequence(data);
+    if (!sequence) {
+      return true;
+    }
+    if (sequence.kind === "A") {
+      this.promptNavigationLine = null;
+      const marker = this.terminal.registerMarker(0);
+      if (marker) {
+        this.promptMarkers.push(marker);
+        if (this.promptMarkers.length > MAX_PROMPT_MARKERS) {
+          this.promptMarkers.shift()?.dispose();
+        }
+      }
+    } else if (sequence.kind === "C") {
+      this.runningOutputStartMarker = this.terminal.registerMarker(0) ?? null;
+    } else if (sequence.kind === "D") {
+      const start = this.runningOutputStartMarker;
+      this.runningOutputStartMarker = null;
+      const end = this.terminal.registerMarker(0);
+      if (start && !start.isDisposed && end) {
+        this.lastOutputStartMarker = start;
+        this.lastOutputEndMarker = end;
+        if (typeof sequence.exitCode === "number" && sequence.exitCode !== 0) {
+          this.markFailedCommand(end);
+        }
+      }
+    }
+    return true;
+  }
+
+  private markFailedCommand(marker: IMarker) {
+    const decoration = this.terminal.registerDecoration({ marker, width: 1 });
+    decoration?.onRender((element) => {
+      element.classList.add("terminal-command-failed-mark");
+      element.style.setProperty("--terminal-failed-mark-color", this.colorScheme.palette.red);
+    });
+  }
+
+  private registerHyperlinkRuleProvider(rules: TerminalHyperlinkRule[] | undefined) {
+    const compiled = compileHyperlinkRules(rules);
+    if (compiled.length === 0) {
+      return;
+    }
+    this.terminal.registerLinkProvider({
+      provideLinks: (bufferLineNumber, callback) => {
+        const line = this.terminal.buffer.active.getLine(bufferLineNumber - 1);
+        if (!line) {
+          callback(undefined);
+          return;
+        }
+        const text = line.translateToString(true);
+        const links: ILink[] = [];
+        for (const rule of compiled) {
+          rule.pattern.lastIndex = 0;
+          for (const match of text.matchAll(rule.pattern)) {
+            const url = buildHyperlinkRuleUrl(rule.urlTemplate, match);
+            if (!url) {
+              continue;
+            }
+            const start = match.index ?? 0;
+            links.push({
+              range: {
+                start: { x: start + 1, y: bufferLineNumber },
+                end: { x: start + match[0].length, y: bufferLineNumber },
+              },
+              text: match[0],
+              activate: (event) => handleTerminalLink(event, url),
+            });
+          }
+        }
+        callback(links.length > 0 ? links : undefined);
+      },
+    });
+  }
+
   onSearchResultsChange(handler: (result: ISearchResultChangeEvent) => void) {
     return this.searchAddon.onDidChangeResults(handler);
   }
@@ -273,7 +549,7 @@ class XtermTerminalRenderer implements TerminalRenderer, TerminalFontAtlasRefres
     this.backgroundOpacity = opacity;
     this.terminal.options.theme = {
       ...this.terminal.options.theme,
-      background: terminalBackgroundColor(opacity),
+      background: schemeBackgroundColor(this.colorScheme, opacity),
     };
     this.applyHostBackground(opacity);
   }
@@ -307,7 +583,10 @@ class XtermTerminalRenderer implements TerminalRenderer, TerminalFontAtlasRefres
     if (!this.hostElement) {
       return;
     }
-    this.hostElement.style.setProperty("--terminal-surface-background", terminalBackgroundColor(opacity));
+    this.hostElement.style.setProperty(
+      "--terminal-surface-background",
+      schemeBackgroundColor(this.colorScheme, opacity),
+    );
   }
 
   private tryEnableWebglRenderer() {
@@ -555,12 +834,49 @@ export function wheelScrollLinesForEvent(event: WheelEvent, rows: number, cellHe
 }
 
 
-function terminalBackgroundColor(opacity: number) {
+const MAX_PROMPT_MARKERS = 500;
+
+function schemeBackgroundColor(scheme: TerminalColorScheme, opacity: number) {
   const alpha = Math.min(Math.max(Math.round(opacity), 0), 100) / 100;
-  return `rgba(12, 18, 25, ${alpha})`;
+  return hexColorWithAlpha(scheme.palette.background, alpha);
 }
 
-function terminalOptionsFor(settings: TerminalSettings, backgroundOpacity: number): ITerminalOptions {
+export function themeForScheme(scheme: TerminalColorScheme, backgroundOpacity: number): ITheme {
+  const palette = scheme.palette;
+  const selection = palette.selectionBackground ?? "#305f95";
+  return {
+    background: schemeBackgroundColor(scheme, backgroundOpacity),
+    foreground: palette.foreground,
+    cursor: palette.cursor ?? palette.foreground,
+    selectionBackground: selection,
+    selectionInactiveBackground: hexColorWithAlpha(selection, 0.55),
+    black: palette.black,
+    red: palette.red,
+    green: palette.green,
+    yellow: palette.yellow,
+    blue: palette.blue,
+    magenta: palette.magenta,
+    cyan: palette.cyan,
+    white: palette.white,
+    brightBlack: palette.brightBlack,
+    brightRed: palette.brightRed,
+    brightGreen: palette.brightGreen,
+    brightYellow: palette.brightYellow,
+    brightBlue: palette.brightBlue,
+    brightMagenta: palette.brightMagenta,
+    brightCyan: palette.brightCyan,
+    brightWhite: palette.brightWhite,
+    scrollbarSliderBackground: "rgba(149, 167, 187, 0.48)",
+    scrollbarSliderHoverBackground: "rgba(185, 202, 224, 0.72)",
+    scrollbarSliderActiveBackground: "rgba(217, 226, 239, 0.86)",
+  };
+}
+
+function terminalOptionsFor(
+  settings: TerminalSettings,
+  scheme: TerminalColorScheme,
+  backgroundOpacity: number,
+): ITerminalOptions {
   return {
     altClickMovesCursor: false,
     // @xterm/addon-search renders match decorations through xterm's proposed
@@ -587,17 +903,30 @@ function terminalOptionsFor(settings: TerminalSettings, backgroundOpacity: numbe
     scrollOnUserInput: true,
     scrollback: clampScrollback(settings.scrollbackLines),
     smoothScrollDuration: 0,
-    theme: {
-      background: terminalBackgroundColor(backgroundOpacity),
-      foreground: "#d9e2ef",
-      cursor: "#d9e2ef",
-      selectionBackground: "#305f95",
-      selectionInactiveBackground: "#1e3a5f",
-      scrollbarSliderBackground: "rgba(149, 167, 187, 0.48)",
-      scrollbarSliderHoverBackground: "rgba(185, 202, 224, 0.72)",
-      scrollbarSliderActiveBackground: "rgba(217, 226, 239, 0.86)",
-    },
+    theme: themeForScheme(scheme, backgroundOpacity),
   };
+}
+
+interface CompiledHyperlinkRule {
+  pattern: RegExp;
+  urlTemplate: string;
+}
+
+function compileHyperlinkRules(rules: TerminalHyperlinkRule[] | undefined): CompiledHyperlinkRule[] {
+  const compiled: CompiledHyperlinkRule[] = [];
+  for (const rule of rules ?? []) {
+    const pattern = rule.pattern.trim();
+    const urlTemplate = rule.urlTemplate.trim();
+    if (!pattern || !/^https?:\/\//.test(urlTemplate)) {
+      continue;
+    }
+    try {
+      compiled.push({ pattern: new RegExp(pattern, "g"), urlTemplate });
+    } catch {
+      // Invalid user regex — skip the rule instead of breaking the terminal.
+    }
+  }
+  return compiled;
 }
 
 async function handleOsc52ClipboardSequence(data: string) {
