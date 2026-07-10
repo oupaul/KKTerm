@@ -2778,6 +2778,14 @@ fn terminal_settings_round_trip_through_settings_table() {
                 name: " Git Bash ".to_string(),
                 command_line: r#" "C:\Program Files\Git\bin\bash.exe" --login -i "#.to_string(),
             }],
+            color_scheme: "dracula".to_string(),
+            enable_inline_images: true,
+            allow_terminal_notifications: true,
+            hyperlink_rules: vec![TerminalHyperlinkRule {
+                id: "rule-1".to_string(),
+                pattern: r"[A-Z]+-\d+".to_string(),
+                url_template: "https://tracker.example.com/browse/$0".to_string(),
+            }],
         })
         .expect("terminal settings update");
 
@@ -2785,6 +2793,12 @@ fn terminal_settings_round_trip_through_settings_table() {
     assert_eq!(updated.default_transparency, 35);
     assert!(updated.use_random_dynamic_background);
     assert!(updated.copy_on_select);
+    assert_eq!(updated.color_scheme, "dracula");
+    assert_eq!(updated.hyperlink_rules.len(), 1);
+    assert_eq!(
+        updated.hyperlink_rules[0].url_template,
+        "https://tracker.example.com/browse/$0"
+    );
 
     let reloaded = storage
         .terminal_settings()

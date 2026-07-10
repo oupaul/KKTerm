@@ -117,6 +117,9 @@ export interface Connection {
   iconBackgroundColor?: string | null;
   terminalOpacity?: number | null;
   terminalBackground?: DashboardBackground | null;
+  /** Per-Connection terminal color scheme override; null inherits the global
+   * Terminal Settings default. Set from the terminal Pane actions menu. */
+  terminalColorScheme?: string | null;
   fileBrowserViewOptions?: FileBrowserViewOptions | null;
   sshPortForwardings?: SshPortForwarding[] | null;
   fileViewOpenExternal?: boolean;
@@ -833,6 +836,21 @@ export interface TerminalSettings {
   confirmMultilinePaste: boolean;
   defaultShell: string;
   customShells: TerminalCustomShell[];
+  /** Global default terminal color scheme id; each terminal-type Connection
+   * may override it from the Pane actions menu. */
+  colorScheme: string;
+  enableInlineImages: boolean;
+  allowTerminalNotifications: boolean;
+  hyperlinkRules: TerminalHyperlinkRule[];
+}
+
+/** User-defined regex → URL rule that turns matching terminal text into a
+ * Ctrl+click hyperlink. `$0`…`$9` in the URL template substitute capture
+ * groups from the match. */
+export interface TerminalHyperlinkRule {
+  id: string;
+  pattern: string;
+  urlTemplate: string;
 }
 
 export type ColorScheme =

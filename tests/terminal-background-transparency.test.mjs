@@ -27,7 +27,7 @@ test("terminal renderer allows connection background transparency", () => {
   );
   assert.match(
     rendererSource,
-    /background:\s*terminalBackgroundColor\(backgroundOpacity\)/,
+    /background:\s*schemeBackgroundColor\(scheme,\s*backgroundOpacity\)/,
     "terminal opacity should continue to drive the xterm rgba theme background",
   );
 });
@@ -48,7 +48,7 @@ test("terminal host paints the terminal surface behind xterm padding", () => {
   );
   assert.match(
     rendererSource,
-    /hostElement\.style\.setProperty\("--terminal-surface-background",\s*terminalBackgroundColor\(opacity\)\)/,
+    /"--terminal-surface-background",\s*schemeBackgroundColor\(this\.colorScheme,\s*opacity\)/,
     "the host background must follow the same opacity as the xterm theme background",
   );
 });
