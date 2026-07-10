@@ -2400,6 +2400,9 @@
       "detection": {
         "displayNames": [
           "Krita"
+        ],
+        "displayNamePrefixes": [
+          "Krita (x64)"
         ]
       },
       "provider": {

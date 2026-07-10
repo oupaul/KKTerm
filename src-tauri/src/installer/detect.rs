@@ -1459,6 +1459,34 @@ mod tests {
     }
 
     #[test]
+    fn krita_detection_accepts_versioned_machine_display_name() {
+        let catalog = crate::installer::catalog::load_bundled_catalog().unwrap();
+        let recipe = catalog
+            .recipes
+            .iter()
+            .find(|recipe| recipe.id == "krita")
+            .expect("catalog should include Krita");
+        let snapshot = InstalledSoftwareSnapshot {
+            entries: vec![InstalledSoftwareEntry {
+                registry_key: "ARP\\Machine\\X64\\Krita_x64".into(),
+                display_name: Some("Krita (x64) 5.3.2.1 (git 0619060)".into()),
+                display_version: Some("5.3.2.1".into()),
+                install_location: Some("C:\\Program Files\\Krita (x64)".into()),
+            }],
+        };
+
+        let state = detect_installed_software(recipe, &snapshot);
+
+        assert!(state.installed);
+        assert_eq!(state.installed_version.as_deref(), Some("5.3.2.1"));
+        assert_eq!(state.install_scope, Some(InstallScope::Machine));
+        assert_eq!(
+            state.install_location.as_deref(),
+            Some("C:\\Program Files\\Krita (x64)")
+        );
+    }
+
+    #[test]
     fn powershell_7_detection_accepts_versioned_display_name_prefix() {
         let catalog = crate::installer::catalog::load_bundled_catalog().unwrap();
         let recipe = catalog
