@@ -28,6 +28,36 @@ regional terminology rules, runs the checks below, and removes the matching todo
 file as part of that verified translation work. Otherwise, keep the todo file so
 the key remains visible for localization review.
 
+### When translations already exist while a todo file remains
+
+A todo file may outlive the moment translations were first written into the
+non-English locale files (for example because a feature branch added best-effort
+translations but never ran the verification pass, or because the English value
+later changed and the todo file was re-created). In that case the existing
+translations are not automatically correct — treat them as a starting point,
+not a finished result.
+
+Before deleting the todo file, perform a verification pass against the todo
+file's **Context/meaning**, **Domain notes**, and **Placeholders** fields for
+every locale:
+
+1. Open `src/i18n/locales/<locale>.json` and read the current translated value
+   for the key.
+2. Confirm it matches the specific sense documented in the todo file, not a
+   different meaning of the same English word. Re-read the English value and
+   the todo file's **Context/meaning** before judging; a literal earlier
+   translation may have fit a previous sense that no longer applies.
+3. Confirm every placeholder (such as `{{count}}`, `{{host}}`) survives
+   verbatim and in the same number; placeholders are part of the string
+   contract, not optional decoration.
+4. Confirm regional terminology and script rules — especially the zh-TW rule
+   below — and that the value was not copied from a sibling locale.
+5. Fix any value that does not fit the context, then run `npm run i18n:check`.
+6. Only after every locale passes the checks above, **delete** the todo file.
+
+If you cannot verify a locale (for example you are not confident in the
+regional terminology), keep the todo file rather than deleting it on trust.
+
 When you add or change an English key in `src/i18n/locales/en.json` and do **not** translate it into the other 13 locales in the same change:
 
 1. Copy `_TEMPLATE.md` to `<namespace>.<keyPath>.md`.
