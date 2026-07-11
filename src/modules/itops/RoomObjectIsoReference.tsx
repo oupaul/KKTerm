@@ -1,19 +1,30 @@
 import type { Facing } from "./roomIsoLayout";
 import type { RoomObjectKind } from "./roomObjects";
+import { kuaiKuaiGrayscale } from "./KuaiKuaiBag";
 
 export function RoomObjectIsoArtwork({
   kind,
   facing = 0,
+  expiry,
 }: {
   kind: RoomObjectKind;
   facing?: Facing;
+  expiry?: string | null;
 }) {
   const rotation = 45 + facing * 90;
+  const grayscale = kind === "kuaikuai" ? kuaiKuaiGrayscale(expiry) : 0;
   const artwork = ARTWORK[kind]
     .split("rotateZ(45deg)").join(`rotateZ(${rotation}deg)`)
     .split("rotateZ(-45deg)").join(`rotateZ(-${rotation}deg)`);
   return (
-    <div className="rm-object-art rm-object-art-iso" data-kind={kind} data-facing={facing} aria-hidden="true">
+    <div
+      className="rm-object-art rm-object-art-iso"
+      data-kind={kind}
+      data-facing={facing}
+      data-expired={grayscale >= 1 || undefined}
+      style={grayscale > 0 ? { filter: `grayscale(${Math.round(grayscale * 100)}%)` } : undefined}
+      aria-hidden="true"
+    >
       <div className="rm-ref-iso-stage" dangerouslySetInnerHTML={{ __html: artwork }} />
     </div>
   );

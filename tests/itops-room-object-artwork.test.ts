@@ -73,3 +73,36 @@ test("snapped 2.5D previews do not flatten the reference model", async () => {
   assert.doesNotMatch(css, /\.rm-iso-obj\.ghost \{[^}]*opacity:/s);
   assert.doesNotMatch(css, /\.itops-page \.rm-iso-obj-model \{[^}]*filter:/s);
 });
+
+test("quarter-cell fire extinguisher and floor 乖乖 artwork stay within their footprints", async () => {
+  const css = await readFile(
+    new URL("../src/modules/itops/itops.css", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(css, /data-kind="fireExtinguisher"[^}]*rm-ref-iso-stage \{ transform: scale3d\(0\.27, 0\.27, 0\.5\); \}/);
+  assert.match(css, /data-kind="kuaikuai"[^}]*rm-ref-iso-stage \{ transform: scale3d\(0\.33, 0\.33, 0\.25\); \}/);
+});
+
+test("rack-top 乖乖 uses the same erected artwork as the standalone pack", async () => {
+  const isoView = await readFile(
+    new URL("../src/modules/itops/ServerRoomIsoView.tsx", import.meta.url),
+    "utf8",
+  );
+  const floorPlan = await readFile(
+    new URL("../src/modules/itops/ServerRoomFloorPlan.tsx", import.meta.url),
+    "utf8",
+  );
+  const rackView = await readFile(
+    new URL("../src/modules/itops/RackElevation.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(isoView, /className="rm-iso-rack-top-kuaiguai"[\s\S]*<RoomObjectIsoArtwork[\s\S]*kind="kuaikuai"/);
+  assert.doesNotMatch(isoView, /rm-iso-top-kuaiguai[\s\S]*style="laidDown"/);
+  assert.match(floorPlan, /className="rm-bp-top-kuaiguai"[\s\S]*<RoomObjectPlanArtwork kind="kuaikuai"/);
+  assert.doesNotMatch(floorPlan, /rm-bp-top-kuaiguai[\s\S]*style="laidDown"/);
+  assert.match(floorPlan, /rackTopCornerPoint\(topKuaiguai\?\.metadata\?\.rackTopCorner\)/);
+  assert.match(isoView, /rackTopCornerPoint\([\s\S]*rackTopCorner[\s\S]*viewAngle/);
+  assert.doesNotMatch(rackView, /rackTopCorner/);
+});

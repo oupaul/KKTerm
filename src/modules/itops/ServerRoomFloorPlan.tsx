@@ -16,6 +16,7 @@ import {
   moveIsoRack,
   rackDepthFrac,
   rackFootprint,
+  rackTopCornerPoint,
   resolveIsoLayout,
   sanitizeFacing,
   type Corner,
@@ -42,7 +43,6 @@ import {
 import { rackFloorMetrics } from "./roomFloorPlan";
 import { ItIcon } from "./icons";
 import { RoomObjectPlanArtwork } from "./RoomObjectArtwork";
-import { KuaiKuaiBag } from "./KuaiKuaiBag";
 import { isRackTopItem } from "./rackPlacement";
 import {
   OBJECT_ACCENTS,
@@ -113,7 +113,7 @@ export function ServerRoomFloorPlan({
   /** A 乖乖 pack landed on a cabinet top: it becomes a rack-top Rack Device
    *  (shared with the Rack View) instead of a room object. Returns false when
    *  the rack top is already taken. */
-  onPlaceKuaiguai?: (rack: Rack) => boolean;
+  onPlaceKuaiguai?: (rack: Rack, corner?: Corner) => boolean;
   onDeleteRack?: (rack: Rack) => void;
   onSelectRack: (rackId: string) => void;
   /** A placement click found no free vertical span in the cell. */
@@ -250,7 +250,7 @@ export function ServerRoomFloorPlan({
     if (object.kind === "kuaikuai" && onPlaceKuaiguai) {
       const support = rackTopSupport(target, object.kind, object.rot, object.corner, z, racks, layout.cells, facing);
       if (support) {
-        if (onPlaceKuaiguai(support)) {
+        if (onPlaceKuaiguai(support, object.corner)) {
           onObjectsChange(objects.filter((entry) => entry.id !== id));
         } else {
           onObjectBlocked?.();
@@ -330,7 +330,7 @@ export function ServerRoomFloorPlan({
     if (tool === "kuaikuai" && onPlaceKuaiguai) {
       const support = rackTopSupport(cell, tool, 0, corner, z, racks, layout.cells, facing);
       if (support) {
-        if (onPlaceKuaiguai(support)) onObjectPlaced?.();
+        if (onPlaceKuaiguai(support, corner)) onObjectPlaced?.();
         else onObjectBlocked?.();
         return;
       }
@@ -605,6 +605,7 @@ function BlueprintRack({
   const top = (cell.y + fp.y) * cellH;
   const front = (["s", "w", "n", "e"] as const)[facing];
   const topKuaiguai = rack.items.find((item) => isRackTopItem(item, rack.heightU));
+  const topKuaiguaiPoint = rackTopCornerPoint(topKuaiguai?.metadata?.rackTopCorner);
 
   return (
     <div
@@ -634,8 +635,17 @@ function BlueprintRack({
       >
         <span className="rm-bp-rack-name">{rack.name}</span>
         {topKuaiguai ? (
-          <span className="rm-bp-top-kuaiguai">
-            <KuaiKuaiBag style="laidDown" expiry={topKuaiguai.metadata?.expiry} />
+          <span
+            className="rm-bp-top-kuaiguai"
+            style={
+              {
+                left: `${topKuaiguaiPoint.x * 100}%`,
+                top: `${topKuaiguaiPoint.y * 100}%`,
+                "--obj": OBJECT_ACCENTS.kuaikuai,
+              } as React.CSSProperties
+            }
+          >
+            <RoomObjectPlanArtwork kind="kuaikuai" />
           </span>
         ) : null}
         <RackTagChips rack={rack} />

@@ -108,7 +108,6 @@ export function RackDevice({
   expiry,
   rotation,
   yaw,
-  kuaiguaiSize,
   kuaiguaiStyle,
   formFactor,
   serverPanelStyle,
@@ -144,7 +143,7 @@ export function RackDevice({
     return (
       <div
         className="rkd rkd-kuaiguai-only"
-        data-kuaiguai-size={kuaiguaiSize ?? "regular"}
+        data-kuaiguai-size="large"
         data-kuaiguai-style={kuaiguaiStyle ?? "full"}
         style={{
           ["--rkd-rotate" as string]: `${rotation ?? -2}deg`,
@@ -225,7 +224,7 @@ export function RackDevice({
       data-form-factor={isServer ? formFactor ?? "rack" : undefined}
       data-server-panel-style={kind === "server" ? panelStyle : undefined}
       data-server-height-band={kind === "server" ? serverHeightBand : undefined}
-      data-kuaiguai-size={isKuaiguai ? kuaiguaiSize ?? "regular" : undefined}
+      data-kuaiguai-size={isKuaiguai ? "large" : undefined}
       style={{
         ["--rkd-accent" as string]: devAccent,
         ["--rkd-rotate" as string]: `${rotation ?? -2}deg`,

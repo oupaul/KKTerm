@@ -134,9 +134,9 @@ where
                                 }
                             }
                         } else {
-                            let msg =
-                                "Security type apart from Vnc Auth has not been implemented";
-                            return Err(VncError::General(msg.to_owned()));
+                            return Err(VncError::General(format!(
+                                "No supported security type: the server offered {security_types:?}"
+                            )));
                         }
                     }
                     info!("auth done, client connected");

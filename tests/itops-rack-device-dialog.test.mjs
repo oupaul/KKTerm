@@ -92,6 +92,18 @@ test("Kuai Kuai properties expose only the two large poses with date and rotatio
   assert.match(dialog, /placementMode \|\| isEdit \? null : \(/);
 });
 
+test("Server Room spatial placement creates the same large rack-top Kuai Kuai", async () => {
+  const sites = await read("src/modules/itops/SitesTab.tsx");
+  const device = await read("src/modules/itops/RackDevice.tsx");
+  const start = sites.indexOf("const placeKuaiguaiOnRack");
+  const end = sites.indexOf("useEffect(() =>", start);
+  const placement = sites.slice(start, end);
+
+  assert.match(placement, /kuaiguaiSize: "large"/);
+  assert.doesNotMatch(placement, /kuaiguaiSize: "regular"/);
+  assert.match(device, /data-kuaiguai-size="large"/);
+});
+
 test("Rack Device Connection bindings use a separate dialog and device action", async () => {
   const bindings = await read("src/modules/itops/RackItemBindingsDialog.tsx");
   const elevation = await read("src/modules/itops/RackElevation.tsx");

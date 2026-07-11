@@ -196,7 +196,7 @@ test("Armed placement previews a cursor-snapped ghost and cancels on right-click
     assert.match(view, /useRoomPlacementPointer\(placing, onCancelPlacement\)/);
     assert.match(view, /<RoomPlacementCursorGhost/);
     assert.match(view, /onContextMenu=\{/);
-    assert.match(view, /resolveDropZ\(\s*footprintSpans\(hover, tool, 0/);
+    assert.match(view, /resolveDropZ\(\s*footprintSpans\(\s*hover,\s*tool,\s*0/);
   }
   assert.match(sites, /onObjectPlaced=\{\(\) => setRoomTool\(null\)\}/g);
   assert.match(roomParts, /document\.addEventListener\("pointermove", updatePointer, true\)/);
