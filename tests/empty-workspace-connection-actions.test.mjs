@@ -18,8 +18,11 @@ test("empty Workspace creation actions reveal the tree and open the created Conn
   assert.match(appSource, /onRevealPanel=\{expandConnectionPanel\}/);
 });
 
-test("empty Workspace actions include import and center their grid items", () => {
+test("empty Workspace actions include a centered import action", () => {
   assert.match(canvasSource, /requestImportConnections/);
   assert.match(canvasSource, /t\("workspace\.importConnections"\)/);
-  assert.match(stylesSource, /\.empty-workspace-connection-links\s*\{[^}]*justify-items: center;/s);
+  assert.match(
+    stylesSource,
+    /\.empty-workspace-connection-link--import\s*\{[^}]*justify-self: center;/s,
+  );
 });

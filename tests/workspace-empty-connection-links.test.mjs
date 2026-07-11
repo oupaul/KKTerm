@@ -38,7 +38,7 @@ test("Workspace empty state offers every supported Connection creation flow", as
   assert.deepEqual(actualTypes, expectedTypes, "creation options should cover the ConnectionType union");
   assert.match(
     canvasSource,
-    /CONNECTION_CREATION_OPTIONS\.map\(\(\{ labelKey, type \}\) =>[\s\S]*requestNewConnection\(type\)/,
+    /CONNECTION_CREATION_OPTIONS\.map\(\(\{ labelKey, type \}\) =>[\s\S]*requestNewConnection\(type, \{ openAfterCreate: true \}\)/,
     "the empty state should render each shared option as a direct creation action",
   );
   assert.match(
