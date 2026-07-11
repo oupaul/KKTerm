@@ -1038,6 +1038,7 @@
       "heading": "Sites",
       "emptyTitle": "Ainda não há sites",
       "emptyBody": "Um site é uma seleção nomeada de conexões existentes usada como destino para execuções em lote e automações.",
+      "emptyHint": "Ainda não há Sites. <newSite>Crie um novo Site</newSite> para organizar a infraestrutura.",
       "createHelp": "Um site é o contêiner principal de Salas de servidores, Racks e Conexões. Use um para uma região, localização, cliente, projeto ou qualquer outra forma de organizar sua infraestrutura.",
       "dynamicBadge": "DIN",
       "connectionsCount": "{{count}} conexões",
@@ -1067,10 +1068,11 @@
       "viewRacks": "Racks",
       "viewLabel": "Modo de exibição do site",
       "viewOverview": "Visão geral",
-      "autoOrganize": "Organizar automaticamente"
+      "autoOrganize": "Organizar automaticamente",
+      "emptyServerRoomsHint": "Este Site não tem salas de servidores. <addServerRoom>Crie uma nova sala de servidores</addServerRoom>."
     },
     "hosts": {
-      "empty": "Ainda não há hosts. Importe uma lista de nomes de host para montar o inventário deste site.",
+      "empty": "Ainda não há Hosts. <importHosts>Importe Hosts</importHosts> para montar o inventário deste Site.",
       "pageDescription": "Selecione Hosts com Conexões SSH vinculadas e execute uma Tarefa apenas nesses destinos.",
       "selectedCount": "{{count}} selecionados",
       "selectAll": "Selecionar todos os Hosts executáveis",
@@ -1422,6 +1424,7 @@
       "historyHeading": "Execuções recentes",
       "historyDescription": "Progresso ao vivo e relatórios de Tarefa concluídos para este Site.",
       "historyEmptyBody": "Execuções iniciadas na página de Hosts ou por uma automação aparecerão aqui.",
+      "historyEmptyHint": "Ainda não há histórico de execuções. Execuções iniciadas na página de Hosts ou por uma automação aparecerão aqui.",
       "historySummary": "{{ok}}/{{total}} ok",
       "waitingOutput": "Aguardando saída…",
       "noOutput": "Nenhuma saída capturada",
@@ -1447,6 +1450,7 @@
     "automations": {
       "emptyTitle": "Ainda não há automações",
       "emptyBody": "Uma regra durável — um gatilho, uma condição opcional e ações ordenadas — que se rearma toda vez que o KKTerm é iniciado. O watchdog evoluído.",
+      "emptyHint": "Ainda não há automações. <newAutomation>Crie uma nova automação</newAutomation> para este Site.",
       "pageDescription": "Gerenciar as regras duradouras vinculadas a este Site.",
       "armed": "Armado",
       "disabled": "Desativado",

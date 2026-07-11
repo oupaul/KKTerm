@@ -1038,6 +1038,7 @@
       "heading": "Site",
       "emptyTitle": "Chưa có site nào",
       "emptyBody": "Site là tập hợp có tên của các kết nối hiện có được dùng làm mục tiêu cho chạy hàng loạt và tự động hóa.",
+      "emptyHint": "Chưa có Site. <newSite>Tạo Site mới</newSite> để tổ chức hạ tầng.",
       "createHelp": "Một site là container cấp cao nhất cho Phòng máy chủ, Rack và Connections. Dùng một site cho một khu vực, vị trí, khách hàng, dự án hoặc bất kỳ cách nào bạn tổ chức hạ tầng.",
       "dynamicBadge": "DYN",
       "connectionsCount": "{{count}} kết nối",
@@ -1067,10 +1068,11 @@
       "viewRacks": "Rack",
       "viewLabel": "Chế độ xem site",
       "viewOverview": "Tổng quan",
-      "autoOrganize": "Tự động sắp xếp"
+      "autoOrganize": "Tự động sắp xếp",
+      "emptyServerRoomsHint": "Site này chưa có phòng máy chủ. <addServerRoom>Tạo phòng máy chủ mới</addServerRoom>."
     },
     "hosts": {
-      "empty": "Chưa có máy chủ nào. Nhập danh sách tên máy chủ để xây dựng kho thiết bị của site này.",
+      "empty": "Chưa có Máy chủ nào. <importHosts>Nhập Máy chủ</importHosts> để xây dựng kho thiết bị của Site này.",
       "pageDescription": "Chọn Máy chủ có Kết nối SSH đã liên kết, sau đó chạy một Tác vụ chỉ trên các đích đó.",
       "selectedCount": "Đã chọn {{count}}",
       "selectAll": "Chọn tất cả Máy chủ có thể chạy",
@@ -1422,6 +1424,7 @@
       "historyHeading": "Lần chạy gần đây",
       "historyDescription": "Tiến trình trực tiếp và các báo cáo Tác vụ đã hoàn thành cho Site này.",
       "historyEmptyBody": "Các lần chạy bắt đầu từ trang Máy chủ hoặc từ một tự động hóa sẽ xuất hiện tại đây.",
+      "historyEmptyHint": "Chưa có Lịch sử chạy. Các lần chạy bắt đầu từ trang Máy chủ hoặc từ một tự động hóa sẽ xuất hiện tại đây.",
       "historySummary": "{{ok}}/{{total}} ok",
       "waitingOutput": "Đang chờ đầu ra…",
       "noOutput": "Không có đầu ra được ghi lại",
@@ -1447,6 +1450,7 @@
     "automations": {
       "emptyTitle": "Chưa có tự động hóa nào",
       "emptyBody": "Quy tắc bền vững — một trình kích hoạt, một điều kiện tùy chọn, và các hành động có thứ tự — được sẵn sàng lại mỗi lần KKTerm khởi động. Watchdog đã tiến hóa.",
+      "emptyHint": "Chưa có tự động hóa. <newAutomation>Tạo tự động hóa mới</newAutomation> cho Site này.",
       "pageDescription": "Quản lý các quy tắc bền vững được liên kết với Site này.",
       "armed": "Sẵn sàng",
       "disabled": "Đã tắt",

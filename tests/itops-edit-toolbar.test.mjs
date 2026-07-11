@@ -53,8 +53,7 @@ test("Empty Server Rooms and Racks use linked explanatory guidance", async () =>
   assert.match(sites, /addRack:[\s\S]*onAddRack\(serverRoom\.key\)/);
   assert.match(sites, /i18nKey="itops\.racks\.emptyRackHint"/);
   assert.match(sites, /editMode:[\s\S]*setEditMode\(true\)/);
-  assert.match(css, /\.it-topology-empty\.guidance/);
-  assert.match(css, /\.it-inline-empty-hint button:focus-visible/);
+  assert.match(css, /\.it-empty-hint button:focus-visible/);
 });
 
 test("Server Room view switcher sits in the drill toolbar with line icons", async () => {

@@ -1038,6 +1038,7 @@
       "heading": "Sites",
       "emptyTitle": "Aucun site pour le moment",
       "emptyBody": "Un site est une sélection nommée de connexions existantes utilisée comme cible pour les exécutions par lot et les automatisations.",
+      "emptyHint": "Aucun Site pour l'instant. <newSite>Créer un Site</newSite> pour organiser l'infrastructure.",
       "createHelp": "Un site est le conteneur de premier niveau des Salles de serveurs, Racks et Connexions. Utilisez-en un pour une région, un emplacement, un client, un projet ou toute autre façon d'organiser votre infrastructure.",
       "dynamicBadge": "DYN",
       "connectionsCount": "{{count}} connexions",
@@ -1067,10 +1068,11 @@
       "viewRacks": "Racks",
       "viewLabel": "Mode d'affichage du site",
       "viewOverview": "Vue d'ensemble",
-      "autoOrganize": "Organiser automatiquement"
+      "autoOrganize": "Organiser automatiquement",
+      "emptyServerRoomsHint": "Ce Site ne contient aucune salle serveur. <addServerRoom>Créer une salle serveur</addServerRoom>."
     },
     "hosts": {
-      "empty": "Aucun hôte pour l'instant. Importez une liste de noms d'hôte pour constituer l'inventaire de ce site.",
+      "empty": "Aucun Hôte pour l'instant. <importHosts>Importer des Hôtes</importHosts> pour constituer l'inventaire de ce Site.",
       "pageDescription": "Sélectionnez des Hôtes avec des Connexions SSH liées, puis exécutez une Tâche uniquement sur ces cibles.",
       "selectedCount": "{{count}} sélectionnés",
       "selectAll": "Sélectionner tous les Hôtes exécutables",
@@ -1422,6 +1424,7 @@
       "historyHeading": "Exécutions récentes",
       "historyDescription": "Progression en direct et rapports de Tâche terminés pour ce Site.",
       "historyEmptyBody": "Les exécutions démarrées depuis la page Hôtes ou depuis une automatisation apparaîtront ici.",
+      "historyEmptyHint": "Aucun historique d'exécution pour l'instant. Les exécutions démarrées depuis la page Hôtes ou depuis une automatisation apparaîtront ici.",
       "historySummary": "{{ok}}/{{total}} ok",
       "waitingOutput": "En attente de sortie…",
       "noOutput": "Aucune sortie capturée",
@@ -1447,6 +1450,7 @@
     "automations": {
       "emptyTitle": "Aucune automatisation pour le moment",
       "emptyBody": "Une règle durable — un déclencheur, une condition facultative et des actions ordonnées — qui se réarme à chaque lancement de KKTerm. Le chien de garde évolué.",
+      "emptyHint": "Aucune automatisation pour l'instant. <newAutomation>Créer une automatisation</newAutomation> pour ce Site.",
       "pageDescription": "Gérer les règles durables liées à ce Site.",
       "armed": "Armé",
       "disabled": "Désactivé",

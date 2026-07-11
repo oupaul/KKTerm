@@ -1038,6 +1038,7 @@
       "heading": "사이트",
       "emptyTitle": "아직 사이트가 없습니다",
       "emptyBody": "사이트는 일괄 실행과 자동화의 대상으로 사용되는 기존 연결의 명명된 선택입니다.",
+      "emptyHint": "아직 사이트가 없습니다. 인프라를 구성하려면 <newSite>새 사이트를 만드세요</newSite>.",
       "createHelp": "사이트는 서버실, 랙, 연결의 최상위 컨테이너입니다. 지역, 위치, 고객, 프로젝트 또는 인프라를 구성하는 다른 방식에 따라 하나를 사용하세요.",
       "dynamicBadge": "DYN",
       "connectionsCount": "{{count}}개 연결",
@@ -1067,10 +1068,11 @@
       "viewRacks": "랙",
       "viewLabel": "사이트 보기 모드",
       "viewOverview": "개요",
-      "autoOrganize": "자동 정렬"
+      "autoOrganize": "자동 정렬",
+      "emptyServerRoomsHint": "이 사이트에는 서버실이 없습니다. <addServerRoom>새 서버실을 만드세요</addServerRoom>."
     },
     "hosts": {
-      "empty": "아직 호스트가 없습니다. 호스트 이름 목록을 가져와 이 사이트의 인벤토리를 만드세요.",
+      "empty": "아직 호스트가 없습니다. <importHosts>호스트 가져오기</importHosts>로 이 사이트의 인벤토리를 만드세요.",
       "pageDescription": "SSH 연결이 바인딩된 호스트를 선택한 다음, 해당 대상에만 작업을 실행하세요.",
       "selectedCount": "{{count}}개 선택됨",
       "selectAll": "실행 가능한 모든 호스트 선택",
@@ -1422,6 +1424,7 @@
       "historyHeading": "최근 실행",
       "historyDescription": "이 사이트의 실시간 진행 상태와 완료된 작업 보고서입니다.",
       "historyEmptyBody": "호스트 페이지나 자동화에서 시작된 실행은 여기에 표시됩니다.",
+      "historyEmptyHint": "아직 실행 기록이 없습니다. 호스트 페이지나 자동화에서 시작된 실행은 여기에 표시됩니다.",
       "historySummary": "{{ok}}/{{total}} 성공",
       "waitingOutput": "출력 대기 중…",
       "noOutput": "캡처된 출력 없음",
@@ -1447,6 +1450,7 @@
     "automations": {
       "emptyTitle": "아직 자동화가 없습니다",
       "emptyBody": "하나의 트리거, 선택적 조건, 순서가 있는 동작으로 구성된 영구 규칙 — KKTerm이 시작될 때마다 재활성화됩니다. 진화한 와치독입니다.",
+      "emptyHint": "아직 자동화가 없습니다. 이 사이트에 사용할 <newAutomation>새 자동화를 만드세요</newAutomation>.",
       "pageDescription": "이 사이트에 바인딩된 영구 규칙을 관리합니다.",
       "armed": "활성화됨",
       "disabled": "비활성화됨",

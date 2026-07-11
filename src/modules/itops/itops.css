@@ -1608,47 +1608,6 @@
 }
 
 /* ====================================================================== */
-/* EMPTY STATE                                                            */
-/* ====================================================================== */
-.itops-page .it-empty {
-  height: 100%;
-  min-height: 360px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 15px;
-  text-align: center;
-  padding: 40px;
-}
-.itops-page .it-empty .glyph {
-  width: 66px;
-  height: 66px;
-  border-radius: 18px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  background: linear-gradient(160deg, #3a3d45, #1d1f24);
-  box-shadow: 0 8px 22px -8px rgba(0, 0, 0, 0.5), inset 0 0 0 0.5px rgba(255, 255, 255, 0.12);
-}
-.itops-page .it-empty h2 {
-  margin: 0;
-  font-size: 19px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-}
-.itops-page .it-empty p {
-  margin: -5px 0 0;
-  font-size: 13px;
-  color: var(--text-2);
-  max-width: 44ch;
-}
-.itops-page .it-empty .it-btn {
-  margin-top: 6px;
-}
-
-/* ====================================================================== */
 /* HOST GROUP DIALOG (portaled to body — not scoped under .itops-page)    */
 /* ====================================================================== */
 .hg-dlg-seg {
@@ -3812,30 +3771,18 @@
 .itops-page .ft-drill .itops-bg-content > .card {
   margin: 0 14px 14px;
 }
-.itops-page .it-topology-empty {
+.itops-page .it-empty-hint {
   align-self: center;
+  max-width: 48ch;
   margin: auto;
-  padding: 14px;
-  border: 0.5px solid var(--border);
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--surface) 92%, transparent);
-  box-shadow: var(--shadow-control);
-}
-
-.itops-page .it-topology-empty.guidance {
-  border: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-.itops-page .it-inline-empty-hint {
-  margin: 0;
+  padding: 24px;
   color: var(--text-muted);
   font-size: 13px;
+  line-height: 1.5;
   text-align: center;
 }
 
-.itops-page .it-inline-empty-hint button {
+.itops-page .it-empty-hint button {
   padding: 3px 2px;
   border: 0;
   border-radius: 5px;
@@ -3845,17 +3792,17 @@
   cursor: pointer;
 }
 
-.itops-page .it-inline-empty-hint button:hover {
+.itops-page .it-empty-hint button:hover {
   background: var(--hover);
   color: var(--accent-press);
 }
 
-.itops-page .it-inline-empty-hint button:focus-visible {
+.itops-page .it-empty-hint button:focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 1px;
 }
 
-.itops-page .it-rack-layout > .it-inline-empty-hint {
+.itops-page .it-rack-layout > .it-empty-hint {
   position: absolute;
   left: 50%;
   bottom: 18px;
@@ -6622,6 +6569,8 @@
 }
 
 .itops-page .it-destination-surface {
+  display: flex;
+  flex-direction: column;
   min-height: 100%;
   box-sizing: border-box;
   padding: var(--pad);
@@ -6741,7 +6690,7 @@
 .itops-page .it-task-row strong { font-size: 12px; }
 .itops-page .it-task-row small { margin-top: 2px; color: var(--text-muted); font-size: 10px; }
 
-.itops-page .it-task-detail { min-width: 0; overflow: auto; padding: 18px 22px; }
+.itops-page .it-task-detail { display: flex; min-width: 0; overflow: auto; padding: 18px 22px; flex-direction: column; }
 .itops-page .it-task-detail-head { padding-bottom: 18px; border-bottom: 1px solid var(--hairline); }
 .itops-page .it-task-detail-icon { width: 40px; height: 40px; }
 .itops-page .it-task-detail-head h2 { margin: 0; color: var(--text); font-size: 17px; }

@@ -1038,6 +1038,7 @@
       "heading": "站点",
       "emptyTitle": "暂无站点",
       "emptyBody": "站点是现有连接的命名选择，作为批量运行和自动化的目标。",
+      "emptyHint": "还没有站点。<newSite>新建站点</newSite>以组织基础设施。",
       "createHelp": "站点是机房、机架和连接的顶级容器。可用它对应一个地区、地点、客户、项目，或任何其他组织基础设施的方式。",
       "dynamicBadge": "DYN",
       "connectionsCount": "{{count}} 个连接",
@@ -1067,10 +1068,11 @@
       "viewRacks": "机架",
       "viewLabel": "站点视图模式",
       "viewOverview": "概览",
-      "autoOrganize": "自动排列"
+      "autoOrganize": "自动排列",
+      "emptyServerRoomsHint": "此站点没有服务器机房。<addServerRoom>新建服务器机房</addServerRoom>。"
     },
     "hosts": {
-      "empty": "还没有主机。导入主机名列表以建立此站点的清单。",
+      "empty": "还没有主机。<importHosts>导入主机</importHosts>以建立此站点的清单。",
       "pageDescription": "选择已绑定 SSH 连接的主机，然后仅对这些目标运行任务。",
       "selectedCount": "已选 {{count}} 个",
       "selectAll": "选择所有可运行的主机",
@@ -1422,6 +1424,7 @@
       "historyHeading": "近期运行",
       "historyDescription": "此站点的实时进度与已完成的任务报告。",
       "historyEmptyBody": "从主机页面或某个自动化启动的运行将显示在这里。",
+      "historyEmptyHint": "暂无运行历史。从主机页面或某个自动化启动的运行将显示在这里。",
       "historySummary": "{{ok}}/{{total}} 成功",
       "waitingOutput": "等待输出中…",
       "noOutput": "未捕获输出",
@@ -1447,6 +1450,7 @@
     "automations": {
       "emptyTitle": "暂无自动化",
       "emptyBody": "一条持久规则 — 一个触发、一个可选条件和有序动作 — 每次 KKTerm 启动时重新启用。进化的看门狗。",
+      "emptyHint": "还没有自动化。为此站点<newAutomation>新建自动化</newAutomation>。",
       "pageDescription": "管理绑定到此站点的持久规则。",
       "armed": "已启用",
       "disabled": "已禁用",

@@ -1038,6 +1038,7 @@
       "heading": "Sitios",
       "emptyTitle": "Aún no hay sitios",
       "emptyBody": "Un sitio es una selección con nombre de conexiones existentes usada como objetivo para ejecuciones por lotes y automatizaciones.",
+      "emptyHint": "Aún no hay Sitios. <newSite>Cree un nuevo Sitio</newSite> para organizar la infraestructura.",
       "createHelp": "Un sitio es el contenedor principal de Salas de servidores, Racks y Conexiones. Usa uno para una región, una ubicación, un cliente, un proyecto o cualquier otra forma en la que organices la infraestructura.",
       "dynamicBadge": "DIN",
       "connectionsCount": "{{count}} conexiones",
@@ -1067,10 +1068,11 @@
       "viewRacks": "Racks",
       "viewLabel": "Modo de vista del sitio",
       "viewOverview": "Vista general",
-      "autoOrganize": "Organizar automáticamente"
+      "autoOrganize": "Organizar automáticamente",
+      "emptyServerRoomsHint": "Este Sitio no tiene salas de servidores. <addServerRoom>Cree una nueva sala de servidores</addServerRoom>."
     },
     "hosts": {
-      "empty": "Aún no hay hosts. Importa una lista de nombres de host para crear el inventario de este sitio.",
+      "empty": "Aún no hay Hosts. <importHosts>Importe Hosts</importHosts> para crear el inventario de este Sitio.",
       "pageDescription": "Selecciona Hosts con Conexiones SSH vinculadas y ejecuta una Tarea solo en esos destinos.",
       "selectedCount": "{{count}} seleccionados",
       "selectAll": "Seleccionar todos los Hosts ejecutables",
@@ -1422,6 +1424,7 @@
       "historyHeading": "Ejecuciones recientes",
       "historyDescription": "Progreso en vivo e informes de Tarea completados para este Sitio.",
       "historyEmptyBody": "Las ejecuciones iniciadas desde la página de Hosts o una automatización aparecerán aquí.",
+      "historyEmptyHint": "Aún no hay historial de ejecuciones. Las ejecuciones iniciadas desde la página de Hosts o una automatización aparecerán aquí.",
       "historySummary": "{{ok}}/{{total}} correctas",
       "waitingOutput": "Esperando salida…",
       "noOutput": "Sin salida capturada",
@@ -1447,6 +1450,7 @@
     "automations": {
       "emptyTitle": "Aún no hay automatizaciones",
       "emptyBody": "Una regla duradera — un disparador, una condición opcional y acciones ordenadas — que se rearma cada vez que se inicia KKTerm. El watchdog evolucionado.",
+      "emptyHint": "Aún no hay automatizaciones. <newAutomation>Cree una nueva automatización</newAutomation> para este Sitio.",
       "pageDescription": "Gestionar las reglas duraderas vinculadas a este Sitio.",
       "armed": "Armado",
       "disabled": "Desactivado",

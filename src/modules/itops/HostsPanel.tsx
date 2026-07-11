@@ -5,7 +5,7 @@
 // delete). Import accepts a pasted hostname list and auto-scans the new rows.
 
 import { useEffect, useMemo, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import { listen } from "@tauri-apps/api/event";
 import { ConfirmSheet } from "../../app/ui/dialog";
 import { invokeCommand, isTauriRuntime } from "../../lib/tauri";
@@ -16,6 +16,7 @@ import { ItIcon, type ItIconName } from "./icons";
 import { HostDialog } from "./HostDialog";
 import { HostImportDialog } from "./HostImportDialog";
 import { HostBindingsDialog } from "./HostBindingsDialog";
+import { ItOpsEmptyHint } from "./ItOpsEmptyHint";
 import { buildHostTreeRows, childHostsOf, hostDisplayName } from "./hostTree";
 import { useItOpsStore } from "./state";
 
@@ -219,7 +220,14 @@ export function HostsPanel({ siteId }: { siteId: string }) {
         </button>
       </div>
       {rows.length === 0 ? (
-        <div className="hg-dlg-empty">{t("itops.hosts.empty")}</div>
+        <ItOpsEmptyHint>
+          <Trans
+            i18nKey="itops.hosts.empty"
+            components={{
+              importHosts: <button type="button" onClick={() => setImportOpen(true)} />,
+            }}
+          />
+        </ItOpsEmptyHint>
       ) : (
         <div className="it-hosts-list" role="tree" aria-label={t("itops.tabs.hosts")}>
           {rows.map(({ host, depth }) => {

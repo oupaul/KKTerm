@@ -4,6 +4,7 @@ import { ConfirmSheet, Actions, Btn, DialogShell, Field, Sheet, TextArea, TextIn
 import { useWorkspaceStore } from "../../store";
 import type { BatchTask, ItopsTask } from "../../types";
 import { ItIcon } from "./icons";
+import { ItOpsEmptyHint } from "./ItOpsEmptyHint";
 import { useItOpsStore } from "./state";
 
 function TaskDialog({ task, onClose }: { task: ItopsTask | null; onClose: () => void }) {
@@ -153,7 +154,7 @@ export function TaskLibrary() {
               </section>
             </>
           ) : loaded ? (
-            <div className="it-empty"><span className="glyph"><ItIcon name="code" size={28} /></span><h2>{t("itops.tasks.emptyTitle")}</h2><p>{t("itops.tasks.emptyBody")}</p></div>
+            <ItOpsEmptyHint>{t("itops.tasks.emptyBody")}</ItOpsEmptyHint>
           ) : null}
         </main>
       </div>

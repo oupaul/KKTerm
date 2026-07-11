@@ -1038,6 +1038,7 @@
       "heading": "サイト",
       "emptyTitle": "サイトはまだありません",
       "emptyBody": "サイトは、バッチ実行やオートメーションのターゲットとして使用される、既存の接続の名前付き選択です。",
+      "emptyHint": "サイトはまだありません。インフラストラクチャを整理するために<newSite>新しいサイトを作成</newSite>します。",
       "createHelp": "サイトは、サーバールーム、ラック、接続の最上位コンテナーです。リージョン、拠点、顧客、プロジェクトなど、インフラを整理する任意の方法に合わせて使用してください。",
       "dynamicBadge": "DYN",
       "connectionsCount": "{{count}} 件の接続",
@@ -1067,10 +1068,11 @@
       "viewRacks": "ラック",
       "viewLabel": "サイト表示モード",
       "viewOverview": "概要",
-      "autoOrganize": "自動整列"
+      "autoOrganize": "自動整列",
+      "emptyServerRoomsHint": "このサイトにはサーバールームがありません。<addServerRoom>新しいサーバールームを作成</addServerRoom>します。"
     },
     "hosts": {
-      "empty": "ホストはまだありません。ホスト名リストをインポートしてこのサイトのインベントリを作成します。",
+      "empty": "ホストはまだありません。<importHosts>ホストをインポート</importHosts>してこのサイトのインベントリを作成します。",
       "pageDescription": "SSH 接続が紐付けられたホストを選択し、それらの対象のみに対してタスクを実行します。",
       "selectedCount": "{{count}} 件選択",
       "selectAll": "実行可能なホストをすべて選択",
@@ -1422,6 +1424,7 @@
       "historyHeading": "最近の実行",
       "historyDescription": "このサイトのライブ進捗と完了したタスクレポート。",
       "historyEmptyBody": "ホストページまたはオートメーションから開始された実行はここに表示されます。",
+      "historyEmptyHint": "実行履歴はまだありません。ホストページまたはオートメーションから開始された実行はここに表示されます。",
       "historySummary": "{{ok}}/{{total}} 成功",
       "waitingOutput": "出力を待っています…",
       "noOutput": "出力がキャプチャされませんでした",
@@ -1447,6 +1450,7 @@
     "automations": {
       "emptyTitle": "オートメーションはまだありません",
       "emptyBody": "1つのトリガー、オプションの条件、順序付きアクションからなる永続的なルール — KKTerm の起動ごとに再アームされます。進化したウォッチドッグです。",
+      "emptyHint": "オートメーションはまだありません。このサイト用の<newAutomation>新しいオートメーションを作成</newAutomation>します。",
       "pageDescription": "このサイトに紐付けられた永続的なルールを管理します。",
       "armed": "アーム済み",
       "disabled": "無効",

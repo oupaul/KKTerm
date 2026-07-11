@@ -9,6 +9,7 @@ import { useTranslation } from "react-i18next";
 import type { HostReport, RunHistoryEntry } from "../../types";
 import { ItIcon, type ItIconName } from "./icons";
 import { TransportChip } from "./TransportChip";
+import { ItOpsEmptyHint } from "./ItOpsEmptyHint";
 import { useItOpsStore, type LiveRun, type LiveRunHost, type LiveRunHostStatus } from "./state";
 
 const DEFAULT_CONCURRENCY = 8;
@@ -412,13 +413,7 @@ export function BatchRunsTab({ siteId }: {
     <div className="br it-destination-surface">
       <RunHistoryHeader />
       {runHistory.length === 0 ? (
-        <div className="it-empty" style={{ minHeight: 240 }}>
-          <span className="glyph">
-            <ItIcon name="history" size={28} sw={1.6} />
-          </span>
-          <h2>{t("itops.batchRuns.emptyTitle")}</h2>
-          <p>{t("itops.batchRuns.historyEmptyBody")}</p>
-        </div>
+        <ItOpsEmptyHint>{t("itops.batchRuns.historyEmptyHint")}</ItOpsEmptyHint>
       ) : null}
 
       {runHistory.length > 0 ? (

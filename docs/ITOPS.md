@@ -277,6 +277,87 @@ header, right-aligned primary actions, divider, and bordered-row rhythm. The
 Task Library keeps its master-detail body inside that frame rather than owning
 a separate full-height chrome layout.
 
+### IT Ops destination-page UI contract
+
+This section is normative for future IT Ops frontend work. It applies to
+Hosts, Automations, Run History, Task Library, and any later non-spatial
+destination opened from the IT Ops navigator. Do not give a new destination an
+independent page shell or visual language.
+
+**Required page anatomy**
+
+1. The navigator's detail host uses `it-destination-page`; the destination root
+   uses `it-destination-surface`. The root owns the shared `var(--pad)` inset.
+   Do not add a second page-level inset inside an individual destination.
+2. The first element is `it-destination-page-head`. It contains one compact
+   title and, when useful, one single-line description on the left. Page-level
+   metadata and actions stay on the right.
+3. Use at most one emphasized page-level primary action. Put it at the far
+   right and keep its placement stable across empty and populated states. A
+   read-only destination such as Run History may omit it; do not invent an
+   action merely to fill the space.
+4. An optional compact toolbar follows the header divider. Use it for filters,
+   selection controls, search, counts, and secondary actions. It must not
+   become a second competing page header.
+5. The content begins on the same left edge as the header and toolbar. Lists use
+   one bordered container with themed surface rows and hairline separators.
+   Avoid unrelated floating cards, per-row shadows, and different corner radii
+   for each destination.
+
+**Master-detail and specialized content**
+
+- Task Library may keep its master-detail body, but the split view is one
+  bordered content region below the shared page header. Its create action stays
+  in the page header; do not restore a separate mini-header in the list pane.
+- Run reports and live-run progress may use status-specific summaries inside
+  the shared frame. Navigating from history list to report detail must not move
+  or restyle the destination header.
+- Automation's node editor is a full-canvas workflow entered from the
+  destination. Its specialized canvas does not license a different layout for
+  the Automations list page.
+- Site View, Server Room View, and Rack View are spatial drill-down canvases,
+  not destination pages. They keep their centered view controls and icon-only
+  Edit/Export toolbar described below.
+
+**Empty and setup states**
+
+- Keep the page header and its action positions unchanged when data is empty.
+  Do not replace the entire destination with a one-off landing page.
+- Every destination and topology setup state renders through
+  `ItOpsEmptyHint`. It is one short neutral centered sentence, without a glyph,
+  secondary heading, promotional card, or large primary button.
+- When a meaningful setup action exists, keep it as an inline accent-colored
+  phrase inside the sentence. The action looks and behaves
+  like the Workspace empty-state links: transparent background, compact hover
+  treatment, visible focus ring, and no surrounding promotional card.
+- A missing Site collection uses `itops.sites.emptyHint`; an empty Site uses
+  `itops.sites.emptyServerRoomsHint`; an empty Server Room uses
+  `itops.racks.emptyServerRoomHint`; an empty Rack uses
+  `itops.racks.emptyRackHint`; Hosts uses `itops.hosts.empty`; Automations uses
+  `itops.automations.emptyHint`; and Run History uses
+  `itops.batchRuns.historyEmptyHint`. Keep actionable phrases inside their full
+  translated sentences with `Trans` component markers. Do not concatenate text
+  fragments or replace a hint with a lone button.
+
+**Implementation and review gates**
+
+- Reuse the existing `it-destination-*`, `it-task-library-*`, list-row, and
+  `it-empty-hint` rules in `src/modules/itops/itops.css`. Extend these
+  shared rules when the whole family needs to change; do not add page-specific
+  copies with slightly different spacing or colors.
+- Read colors, borders, hover states, radii, and typography from app tokens.
+  IT Ops hardware artwork may use its documented physical-equipment palette,
+  but destination chrome must not hard-code colors.
+- Route all text through `itops.*` i18n keys and follow the localization backlog
+  workflow. Inline action markers such as `<addRack>` and `<editMode>` are part
+  of the translation contract.
+- Update this section when intentionally changing the shared pattern. Add or
+  adjust a focused frontend regression test so Task Library and every Site
+  destination cannot silently drift back into separate page shells.
+- Review the four destinations together at the same window size in Default and
+  Dark before handing off an IT Ops UI change. Also check the affected topology
+  empty state when changing Rack or Server Room flows.
+
 Site View is now overview-only and has no segmented content switcher. Hosts,
 Automations, and Run History each own a separate Site-scoped page selected from
 the navigator. The Hosts page owns Host selection and the manual **Run Task**

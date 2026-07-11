@@ -102,10 +102,10 @@ test("empty Site and Server Room views expose their contextual create actions", 
   const sites = await read("src/modules/itops/SitesTab.tsx");
   const css = await read("src/modules/itops/itops.css");
 
-  assert.match(sites, /topology\.length === 0[\s\S]*itops\.racks\.addServerRoom/);
-  assert.match(sites, /serverRoom\.racks\.length === 0[\s\S]*itops\.racks\.addRack/);
-  assert.match(sites, /className="it-topology-empty"/);
-  assert.match(css, /\.itops-page \.it-topology-empty \{/);
+  assert.match(sites, /topology\.length === 0[\s\S]*itops\.sites\.emptyServerRoomsHint/);
+  assert.match(sites, /serverRoom\.racks\.length === 0[\s\S]*itops\.racks\.emptyServerRoomHint/);
+  assert.match(sites, /<ItOpsEmptyHint>/);
+  assert.match(css, /\.itops-page \.it-empty-hint \{/);
   assert.doesNotMatch(sites, /\) : racks\.length === 0 \? \(/);
   assert.match(sites, /hasChildren=\{siteTopo\.length > 0\}/);
 });

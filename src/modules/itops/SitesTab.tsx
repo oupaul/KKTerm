@@ -48,6 +48,7 @@ import {
 } from "./rackTopology";
 import { resolveIsoLayout, sanitizeFacing, type Corner } from "./roomIsoLayout";
 import { ItOpsBackground } from "./ItOpsBackground";
+import { ItOpsEmptyHint } from "./ItOpsEmptyHint";
 import { RackStage } from "./RackStage";
 import { ServerRoomFloorPlan } from "./ServerRoomFloorPlan";
 import { ServerRoomIsoView } from "./ServerRoomIsoView";
@@ -484,19 +485,14 @@ export function SitesTab({
   if (loaded && sites.length === 0) {
     return (
       <>
-        <div className="it-empty">
-          <span className="glyph">
-            <ItIcon name="site" size={30} sw={1.5} />
-          </span>
-          <h2>{t("itops.sites.emptyTitle")}</h2>
-          <p>{t("itops.sites.emptyBody")}</p>
-          <button type="button" className="it-btn primary" onClick={() => setDialog({ group: null })}>
-            <span className="it-btn-ic">
-              <ItIcon name="plus" size={15} />
-            </span>
-            {t("itops.actions.newSite")}
-          </button>
-        </div>
+        <ItOpsEmptyHint>
+          <Trans
+            i18nKey="itops.sites.emptyHint"
+            components={{
+              newSite: <button type="button" onClick={() => setDialog({ group: null })} />,
+            }}
+          />
+        </ItOpsEmptyHint>
         {dialog ? (
           <SiteDialog
             group={dialog.group}
@@ -1639,7 +1635,7 @@ function RackDrill({
               onCancelPlacement={() => setPlaceDevice(null)}
             />
             {rack.items.length === 0 && !editMode ? (
-              <p className="it-inline-empty-hint">
+              <ItOpsEmptyHint>
                 <Trans
                   i18nKey="itops.racks.emptyRackHint"
                   components={{
@@ -1648,7 +1644,7 @@ function RackDrill({
                     ),
                   }}
                 />
-              </p>
+              </ItOpsEmptyHint>
             ) : null}
             {editMode ? (
               <RackObjectPicker
@@ -1668,18 +1664,16 @@ function RackDrill({
           </div>
         ) : serverRoom ? (
           serverRoom.racks.length === 0 ? (
-            <div className="it-topology-empty guidance">
-              <p className="it-inline-empty-hint">
-                <Trans
-                  i18nKey="itops.racks.emptyServerRoomHint"
-                  components={{
-                    addRack: (
-                      <button type="button" onClick={() => onAddRack(serverRoom.key)} />
-                    ),
-                  }}
-                />
-              </p>
-            </div>
+            <ItOpsEmptyHint>
+              <Trans
+                i18nKey="itops.racks.emptyServerRoomHint"
+                components={{
+                  addRack: (
+                    <button type="button" onClick={() => onAddRack(serverRoom.key)} />
+                  ),
+                }}
+              />
+            </ItOpsEmptyHint>
           ) : roomView === "iso" || roomView === "floor" ? (
             <div className="rm-spatial">
               {roomView === "iso" ? (
@@ -1775,14 +1769,14 @@ function RackDrill({
             </div>
           )
         ) : topology.length === 0 && !editMode ? (
-          <div className="it-topology-empty">
-            <button type="button" className="it-btn primary" onClick={onAddServerRoom}>
-              <span className="it-btn-ic">
-                <ItIcon name="plus" size={15} />
-              </span>
-              {t("itops.racks.addServerRoom")}
-            </button>
-          </div>
+          <ItOpsEmptyHint>
+            <Trans
+              i18nKey="itops.sites.emptyServerRoomsHint"
+              components={{
+                addServerRoom: <button type="button" onClick={onAddServerRoom} />,
+              }}
+            />
+          </ItOpsEmptyHint>
         ) : (
           <div className="it-site-layout">
             <SiteRoomCards

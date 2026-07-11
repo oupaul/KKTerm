@@ -1038,6 +1038,7 @@
       "heading": "站台",
       "emptyTitle": "尚無站台",
       "emptyBody": "站台是現有連線的命名選取，作為批次執行與自動化的目標。",
+      "emptyHint": "尚無站台。<newSite>新增站台</newSite>以組織基礎架構。",
       "createHelp": "站台是機房、機架與連線的頂層容器。可用來對應某個地區、地點、客戶、專案，或任何其他您組織基礎架構的方式。",
       "dynamicBadge": "DYN",
       "connectionsCount": "{{count}} 個連線",
@@ -1067,10 +1068,11 @@
       "viewRacks": "機架",
       "viewLabel": "站台檢視模式",
       "viewOverview": "總覽",
-      "autoOrganize": "自動排列"
+      "autoOrganize": "自動排列",
+      "emptyServerRoomsHint": "此站台沒有伺服器機房。<addServerRoom>新增伺服器機房</addServerRoom>。"
     },
     "hosts": {
-      "empty": "尚無主機。匯入主機名稱清單以建立此站台的清冊。",
+      "empty": "尚無主機。<importHosts>匯入主機</importHosts>以建立此站台的清冊。",
       "pageDescription": "選取已繫結 SSH 連線的主機，接著只對這些目標執行任務。",
       "selectedCount": "已選取 {{count}} 個",
       "selectAll": "選取所有可執行的主機",
@@ -1422,6 +1424,7 @@
       "historyHeading": "近期執行",
       "historyDescription": "此站台的即時進度與已完成的任務報告。",
       "historyEmptyBody": "從主機頁面或某個自動化啟動的執行會顯示在這裡。",
+      "historyEmptyHint": "尚無執行歷程。從主機頁面或某個自動化啟動的執行會顯示在這裡。",
       "historySummary": "{{ok}}/{{total}} 成功",
       "waitingOutput": "等待輸出中…",
       "noOutput": "未擷取輸出",
@@ -1447,6 +1450,7 @@
     "automations": {
       "emptyTitle": "尚無自動化",
       "emptyBody": "一條持久規則 — 一個觸發、一個可選條件與有序動作 — 每次 KKTerm 啟動時重新待命。進化的看門狗。",
+      "emptyHint": "尚無自動化。為此站台<newAutomation>新增自動化</newAutomation>。",
       "pageDescription": "管理繫結至此站台的持久規則。",
       "armed": "待命",
       "disabled": "已停用",

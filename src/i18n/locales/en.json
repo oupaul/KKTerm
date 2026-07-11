@@ -1038,6 +1038,7 @@
       "heading": "Sites",
       "emptyTitle": "No Sites yet",
       "emptyBody": "A Site is a named selection of existing Connections used as the target for Batch Runs and Automations.",
+      "emptyHint": "No Sites yet. <newSite>Create a new Site</newSite> to organize infrastructure.",
       "createHelp": "A Site is the top-level container for Server Rooms, Racks, and Connections. Use one for a region, location, customer, project, or any other way you organize infrastructure.",
       "dynamicBadge": "DYN",
       "connectionsCount": "{{count}} connections",
@@ -1067,10 +1068,11 @@
       "viewRacks": "Racks",
       "viewLabel": "Site view mode",
       "viewOverview": "Overview",
-      "autoOrganize": "Auto Organize"
+      "autoOrganize": "Auto Organize",
+      "emptyServerRoomsHint": "This Site has no Server Rooms. <addServerRoom>Create a new Server Room</addServerRoom>."
     },
     "hosts": {
-      "empty": "No Hosts yet. Import a hostname list to build this Site's inventory.",
+      "empty": "No Hosts yet. <importHosts>Import Hosts</importHosts> to build this Site's inventory.",
       "pageDescription": "Select Hosts with bound SSH Connections, then run a Task against only those targets.",
       "selectedCount": "{{count}} selected",
       "selectAll": "Select all runnable Hosts",
@@ -1422,6 +1424,7 @@
       "historyHeading": "Recent runs",
       "historyDescription": "Live progress and completed Task reports for this Site.",
       "historyEmptyBody": "Runs started from the Hosts page or an Automation will appear here.",
+      "historyEmptyHint": "No Run History yet. Runs started from the Hosts page or an Automation will appear here.",
       "historySummary": "{{ok}}/{{total}} ok",
       "waitingOutput": "Waiting for output…",
       "noOutput": "No output captured",
@@ -1447,6 +1450,7 @@
     "automations": {
       "emptyTitle": "No Automations yet",
       "emptyBody": "A durable rule — one trigger, an optional condition, and ordered actions — that re-arms every time KKTerm launches. The evolved Watchdog.",
+      "emptyHint": "No Automations yet. <newAutomation>Create a new Automation</newAutomation> for this Site.",
       "pageDescription": "Manage the durable rules bound to this Site.",
       "armed": "Armed",
       "disabled": "Disabled",

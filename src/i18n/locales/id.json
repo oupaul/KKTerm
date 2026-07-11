@@ -1038,6 +1038,7 @@
       "heading": "Situs",
       "emptyTitle": "Belum ada situs",
       "emptyBody": "Situs adalah pilihan bernama dari koneksi yang ada yang digunakan sebagai target untuk eksekusi batch dan automasi.",
+      "emptyHint": "Belum ada Situs. <newSite>Buat Situs baru</newSite> untuk mengatur infrastruktur.",
       "createHelp": "Situs adalah wadah tingkat atas untuk Ruang server, Rak, dan Koneksi. Gunakan satu untuk wilayah, lokasi, pelanggan, proyek, atau cara lainnya Anda mengatur infrastruktur.",
       "dynamicBadge": "DYN",
       "connectionsCount": "{{count}} koneksi",
@@ -1067,10 +1068,11 @@
       "viewRacks": "Rak",
       "viewLabel": "Mode tampilan situs",
       "viewOverview": "Ikhtisar",
-      "autoOrganize": "Atur Otomatis"
+      "autoOrganize": "Atur Otomatis",
+      "emptyServerRoomsHint": "Situs ini belum memiliki ruang server. <addServerRoom>Buat ruang server baru</addServerRoom>."
     },
     "hosts": {
-      "empty": "Belum ada host. Impor daftar nama host untuk membangun inventaris situs ini.",
+      "empty": "Belum ada Host. <importHosts>Impor Host</importHosts> untuk membangun inventaris Situs ini.",
       "pageDescription": "Pilih Host dengan Koneksi SSH terikat, lalu jalankan Tugas hanya pada target tersebut.",
       "selectedCount": "{{count}} dipilih",
       "selectAll": "Pilih semua Host yang dapat dijalankan",
@@ -1422,6 +1424,7 @@
       "historyHeading": "Eksekusi terbaru",
       "historyDescription": "Kemajuan langsung dan laporan Tugas yang selesai untuk Situs ini.",
       "historyEmptyBody": "Eksekusi yang dimulai dari halaman Host atau automasi akan muncul di sini.",
+      "historyEmptyHint": "Belum ada riwayat eksekusi. Eksekusi yang dimulai dari halaman Host atau automasi akan muncul di sini.",
       "historySummary": "{{ok}}/{{total}} ok",
       "waitingOutput": "Menunggu keluaran…",
       "noOutput": "Tidak ada keluaran tertangkap",
@@ -1447,6 +1450,7 @@
     "automations": {
       "emptyTitle": "Belum ada automasi",
       "emptyBody": "Aturan tahan lama — satu pemicu, kondisi opsional, dan tindakan berurutan — yang dipasang ulang setiap kali KKTerm diluncurkan. Watchdog yang telah berkembang.",
+      "emptyHint": "Belum ada automasi. <newAutomation>Buat automasi baru</newAutomation> untuk Situs ini.",
       "pageDescription": "Kelola aturan tahan lama yang diikat ke Situs ini.",
       "armed": "Terpasang",
       "disabled": "Nonaktif",

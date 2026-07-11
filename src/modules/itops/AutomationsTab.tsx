@@ -6,13 +6,14 @@
 // performance-counter rule; richer triggers/actions land in Phases 4–5.
 
 import { useEffect, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import { ConfirmSheet } from "../../app/ui/dialog";
 import { useWorkspaceStore } from "../../store";
 import type { Automation, AutomationAction } from "../../types";
 import type { WatchdogConfig } from "../../watchdog/types";
 import { ItIcon, IT_ACCENTS, type ItIconName } from "./icons";
 import { AutomationEditor } from "./AutomationEditor";
+import { ItOpsEmptyHint } from "./ItOpsEmptyHint";
 import { useItOpsStore } from "./state";
 
 function triggerIcon(config: WatchdogConfig): ItIconName {
@@ -214,13 +215,14 @@ export function AutomationsTab({
     return (
       <div className="it-destination-surface">
         {pageHeader}
-        <div className="it-empty">
-          <span className="glyph">
-            <ItIcon name="auto" size={28} sw={1.6} />
-          </span>
-          <h2>{t("itops.automations.emptyTitle")}</h2>
-          <p>{t("itops.automations.emptyBody")}</p>
-        </div>
+        <ItOpsEmptyHint>
+          <Trans
+            i18nKey="itops.automations.emptyHint"
+            components={{
+              newAutomation: <button type="button" onClick={() => setEditor(null)} />,
+            }}
+          />
+        </ItOpsEmptyHint>
         {editorOverlay}
       </div>
     );

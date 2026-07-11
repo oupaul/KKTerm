@@ -1038,6 +1038,7 @@
       "heading": "Sites",
       "emptyTitle": "Noch keine Sites",
       "emptyBody": "Eine Site ist eine benannte Auswahl bestehender Verbindungen, die als Ziel für Batch-Ausführungen und Automationen verwendet wird.",
+      "emptyHint": "Noch keine Sites. <newSite>Neue Site erstellen</newSite>, um Infrastruktur zu organisieren.",
       "createHelp": "Eine Site ist der übergeordnete Container für Serverräume, Racks und Verbindungen. Verwenden Sie sie für eine Region, einen Standort, einen Kunden, ein Projekt oder eine andere Art, wie Sie Ihre Infrastruktur organisieren.",
       "dynamicBadge": "DYN",
       "connectionsCount": "{{count}} Verbindungen",
@@ -1067,10 +1068,11 @@
       "viewRacks": "Racks",
       "viewLabel": "Site-Ansichtsmodus",
       "viewOverview": "Übersicht",
-      "autoOrganize": "Automatisch anordnen"
+      "autoOrganize": "Automatisch anordnen",
+      "emptyServerRoomsHint": "Diese Site hat keine Serverräume. <addServerRoom>Neuen Serverraum erstellen</addServerRoom>."
     },
     "hosts": {
-      "empty": "Noch keine Hosts. Importieren Sie eine Hostnamen-Liste, um das Inventar dieser Site aufzubauen.",
+      "empty": "Noch keine Hosts. <importHosts>Hosts importieren</importHosts>, um das Inventar dieser Site aufzubauen.",
       "pageDescription": "Wählen Sie Hosts mit gebundenen SSH-Verbindungen aus und führen Sie dann einen Task nur gegen diese Ziele aus.",
       "selectedCount": "{{count}} ausgewählt",
       "selectAll": "Alle ausführbaren Hosts auswählen",
@@ -1422,6 +1424,7 @@
       "historyHeading": "Letzte Ausführungen",
       "historyDescription": "Live-Fortschritt und abgeschlossene Task-Berichte für diese Site.",
       "historyEmptyBody": "Ausführungen, die über die Hosts-Seite oder eine Automation gestartet wurden, erscheinen hier.",
+      "historyEmptyHint": "Noch kein Ausführungsverlauf. Ausführungen, die über die Hosts-Seite oder eine Automation gestartet wurden, erscheinen hier.",
       "historySummary": "{{ok}}/{{total}} ok",
       "waitingOutput": "Warte auf Ausgabe…",
       "noOutput": "Keine Ausgabe erfasst",
@@ -1447,6 +1450,7 @@
     "automations": {
       "emptyTitle": "Noch keine Automationen",
       "emptyBody": "Eine dauerhafte Regel — ein Auslöser, eine optionale Bedingung und geordnete Aktionen — die sich jedes Mal neu scharfstellt, wenn KKTerm startet. Der weiterentwickelte Watchdog.",
+      "emptyHint": "Noch keine Automationen. <newAutomation>Neue Automation erstellen</newAutomation> für diese Site.",
       "pageDescription": "Die mit dieser Site verknüpften dauerhaften Regeln verwalten.",
       "armed": "Scharf",
       "disabled": "Deaktiviert",
