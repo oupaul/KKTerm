@@ -27,6 +27,8 @@ Namespaces in this build:
   browser.
 - `kkterm.dashboard.*` — Dashboard Module: views, widget instances,
   AI-Created Widgets.
+- `kkterm.itops.*` — IT Ops Module: Sites, Server Rooms, Racks, Rack
+  Devices, and the Host inventory list.
 - `kkterm.network.*` — Network capability: read-only diagnostics (ping,
   DNS, TCP check, port scan, interfaces, Wake-on-LAN, WHOIS).
 - `kkterm.watchdog.*` — Watchdog capability: background monitors that poll
@@ -229,6 +231,31 @@ same protection without any per-Module gate code.
 | `kkterm.dashboard.dangerous.update_custom_widget` | Edit an existing AI-Created Widget body/title/etc. |
 | `kkterm.dashboard.dangerous.remove_custom_widget` | Delete an AI-Created Widget definition (use `forceDeleteInstances` to also remove placements). |
 | `kkterm.dashboard.dangerous.reset` | Wipe the entire Dashboard. Irreversible. |
+
+### IT Ops Module (`kkterm.itops.*`)
+
+Site topology and Rack Device placement for the IT Ops Module (docs/ITOPS.md).
+Backed by `crate::ai::itops_tool`, the same implementation the in-app
+assistant's `itops_*` tools use, so MCP and the assistant share one storage
+path. Mutations emit `itops-changed` so the IT Ops UI reloads. All tools are
+safe (durable data reads/writes, no executable code and no secrets); in the
+in-app assistant the mutating tools still go through the per-call approval
+prompt unless the tool permission mode is Allow-all. The topology invariant
+is Site → Server Room → Rack → Rack Device: create the parent first.
+
+| Name | Description |
+|---|---|
+| `kkterm.itops.sites.list` | List IT Ops Sites (id, name, memberIds, filter, transport). Presentation-heavy fields (backgrounds, icon images) are omitted. |
+| `kkterm.itops.sites.create` | Create a Site. Optional `memberIds` reference saved Connection ids; `transport` defaults to `auto`. |
+| `kkterm.itops.server_rooms.list` | List one Site's Server Rooms by `siteId`. |
+| `kkterm.itops.server_rooms.create` | Create a Server Room in a Site. `floorColor` defaults to `default`. |
+| `kkterm.itops.racks.list` | List one Site's Racks by `siteId`, each with its placed Rack Devices in U order. |
+| `kkterm.itops.racks.create` | Create a Rack in a Site. `serverRoom` names an existing Server Room in the same Site; `heightU` defaults to 42, `depthMm` to 1000. |
+| `kkterm.itops.rack_items.place` | Place one Rack Device at a contiguous U span (`startU` is the lowest occupied U, 1 = bottom). Placement is validated against rack bounds and overlaps. Kind `connection` requires `connectionId`. |
+| `kkterm.itops.rack_items.update` | Update one Rack Device's kind, label, Connection binding, or metadata by id. Full-value semantics: omitted metadata clears stored metadata. |
+| `kkterm.itops.rack_items.move` | Move and/or resize one Rack Device by id, possibly into a different Rack; the new span is re-validated. |
+| `kkterm.itops.rack_items.remove` | Remove one Rack Device placement by id. Bound saved Connections are untouched. |
+| `kkterm.itops.hosts.list` | List one Site's Hosts by `siteId`: hostname, kind, parent Host, bound Connection ids, and last connectivity-scan snapshot. |
 
 ### Network capability (`kkterm.network.*`)
 

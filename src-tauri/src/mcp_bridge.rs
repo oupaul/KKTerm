@@ -1108,6 +1108,43 @@ async fn dispatch_tool(app: &AppHandle, name: &str, args: Value) -> Result<Value
             let raw = crate::ai::dashboard_tool(app, "dashboard_reset", json!({}));
             parse_dashboard_json(&raw)
         }
+        // -- IT Ops: Site topology + Rack Devices ---------------------------
+        // itops_tool reads the same camelCase argument keys the catalog
+        // publishes, validates required fields itself, and reports failures
+        // as {"ok": false, "error": …}, so forward arguments unchanged.
+        "kkterm.itops.sites.list" => {
+            parse_tool_json(&crate::ai::itops_tool(app, "itops_list_sites", json!({})))
+        }
+        "kkterm.itops.sites.create" => {
+            parse_tool_json(&crate::ai::itops_tool(app, "itops_create_site", args))
+        }
+        "kkterm.itops.server_rooms.list" => {
+            parse_tool_json(&crate::ai::itops_tool(app, "itops_list_server_rooms", args))
+        }
+        "kkterm.itops.server_rooms.create" => {
+            parse_tool_json(&crate::ai::itops_tool(app, "itops_create_server_room", args))
+        }
+        "kkterm.itops.racks.list" => {
+            parse_tool_json(&crate::ai::itops_tool(app, "itops_list_racks", args))
+        }
+        "kkterm.itops.racks.create" => {
+            parse_tool_json(&crate::ai::itops_tool(app, "itops_create_rack", args))
+        }
+        "kkterm.itops.rack_items.place" => {
+            parse_tool_json(&crate::ai::itops_tool(app, "itops_place_rack_item", args))
+        }
+        "kkterm.itops.rack_items.update" => {
+            parse_tool_json(&crate::ai::itops_tool(app, "itops_update_rack_item", args))
+        }
+        "kkterm.itops.rack_items.move" => {
+            parse_tool_json(&crate::ai::itops_tool(app, "itops_move_rack_item", args))
+        }
+        "kkterm.itops.rack_items.remove" => {
+            parse_tool_json(&crate::ai::itops_tool(app, "itops_remove_rack_item", args))
+        }
+        "kkterm.itops.hosts.list" => {
+            parse_tool_json(&crate::ai::itops_tool(app, "itops_list_hosts", args))
+        }
         // -- Workspace: SFTP/FTP file browser ------------------------------
         "kkterm.workspace.file_browser.list" => {
             let raw = crate::ai::live_session_tool(
@@ -1594,6 +1631,18 @@ mod tests {
         assert!(names.contains(&"kkterm.workspace.sessions.remote_desktop_screenshot".to_string()));
         assert!(names.contains(&"kkterm.workspace.dangerous.remote_desktop_send_text".to_string()));
         assert!(names.contains(&"kkterm.workspace.dangerous.remote_desktop_keypress".to_string()));
+        // IT Ops surface
+        assert!(names.contains(&"kkterm.itops.sites.list".to_string()));
+        assert!(names.contains(&"kkterm.itops.sites.create".to_string()));
+        assert!(names.contains(&"kkterm.itops.server_rooms.list".to_string()));
+        assert!(names.contains(&"kkterm.itops.server_rooms.create".to_string()));
+        assert!(names.contains(&"kkterm.itops.racks.list".to_string()));
+        assert!(names.contains(&"kkterm.itops.racks.create".to_string()));
+        assert!(names.contains(&"kkterm.itops.rack_items.place".to_string()));
+        assert!(names.contains(&"kkterm.itops.rack_items.update".to_string()));
+        assert!(names.contains(&"kkterm.itops.rack_items.move".to_string()));
+        assert!(names.contains(&"kkterm.itops.rack_items.remove".to_string()));
+        assert!(names.contains(&"kkterm.itops.hosts.list".to_string()));
         // Network surface
         assert!(names.contains(&"kkterm.network.ping".to_string()));
         assert!(names.contains(&"kkterm.network.dns".to_string()));

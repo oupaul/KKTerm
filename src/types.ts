@@ -1138,6 +1138,7 @@ export type AiAssistantToolId =
   | "performanceCounters"
   | "email"
   | "dashboard"
+  | "itops"
   | "connections"
   | "sessions"
   | "tutorial"

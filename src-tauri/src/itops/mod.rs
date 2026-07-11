@@ -8,7 +8,7 @@ pub mod automation_commands;
 pub mod automation_storage;
 pub mod commands;
 pub mod host_storage;
-mod ids;
+pub(crate) mod ids;
 pub mod inventory;
 pub mod run_storage;
 pub mod runner;

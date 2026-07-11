@@ -899,6 +899,8 @@ pub struct AiAssistantToolSettings {
     performance_counters: bool,
     #[serde(default = "default_ai_dashboard_tool_enabled")]
     dashboard: bool,
+    #[serde(default = "default_ai_itops_tool_enabled")]
+    itops: bool,
     #[serde(default = "default_ai_connections_tool_enabled")]
     connections: bool,
     #[serde(default = "default_ai_sessions_tool_enabled")]
@@ -942,6 +944,9 @@ impl AiAssistantToolSettings {
     pub(crate) fn dashboard(&self) -> bool {
         self.dashboard
     }
+    pub(crate) fn itops(&self) -> bool {
+        self.itops
+    }
     pub(crate) fn connections(&self) -> bool {
         self.connections
     }
@@ -975,6 +980,7 @@ impl AiAssistantToolSettings {
             || self.current_time
             || self.performance_counters
             || self.dashboard
+            || self.itops
             || self.connections
             || self.sessions
             || self.tutorial
@@ -5238,6 +5244,7 @@ fn default_ai_assistant_tool_settings() -> AiAssistantToolSettings {
         current_time: default_ai_current_time_tool_enabled(),
         performance_counters: default_ai_performance_counters_tool_enabled(),
         dashboard: default_ai_dashboard_tool_enabled(),
+        itops: default_ai_itops_tool_enabled(),
         connections: default_ai_connections_tool_enabled(),
         sessions: default_ai_sessions_tool_enabled(),
         tutorial: default_ai_tutorial_tool_enabled(),
@@ -5270,6 +5277,10 @@ fn default_ai_performance_counters_tool_enabled() -> bool {
 }
 
 fn default_ai_dashboard_tool_enabled() -> bool {
+    true
+}
+
+fn default_ai_itops_tool_enabled() -> bool {
     true
 }
 

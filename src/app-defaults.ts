@@ -164,6 +164,7 @@ export const defaultAiAssistantToolSettings = {
   performanceCounters: true,
   email: false,
   dashboard: true,
+  itops: true,
   connections: true,
   sessions: true,
   tutorial: true,

@@ -33,6 +33,7 @@ import {
 import { ConnectionSidebar } from "./modules/workspace/connections/ConnectionSidebar";
 import { useDashboardStore } from "./modules/dashboard/state/dashboardStore";
 import { useDashboardBackendInvalidation } from "./modules/dashboard/state/invalidation";
+import { useItOpsBackendInvalidation } from "./modules/itops/invalidation";
 import {
   loadSiteTreeCollapsed,
   saveSiteTreeCollapsed,
@@ -218,6 +219,7 @@ function App() {
 
   const { generalSettingsReady } = useBootstrapSettings();
   useDashboardBackendInvalidation();
+  useItOpsBackendInvalidation();
   useDebugFrontendHeartbeat();
   useFrontendLaunchTimestamp();
   useHostUsagePolling();

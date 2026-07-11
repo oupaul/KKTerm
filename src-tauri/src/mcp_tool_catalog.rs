@@ -519,6 +519,128 @@ pub fn tool_descriptors() -> Vec<Value> {
             "description": "DANGEROUS: wipe the entire Dashboard — all views, instances, and AI-Created Widgets. Irreversible. Requires Allow-all.",
             "inputSchema": {"type": "object", "properties": {}, "additionalProperties": false},
         }),
+        // -- IT Ops: Site topology + Rack Devices (kkterm.itops.*) ---------
+        json!({
+            "name": "kkterm.itops.sites.list",
+            "description": "List IT Ops Sites (id, name, memberIds, filter, transport). A Site is a durable named selection of saved Connections and the top-level parent of Server Rooms, Racks, and Hosts; the topology is Site → Server Room → Rack → Rack Device. Presentation-heavy fields (backgrounds, icon images) are omitted.",
+            "inputSchema": {"type": "object", "properties": {}, "additionalProperties": false},
+        }),
+        json!({
+            "name": "kkterm.itops.sites.create",
+            "description": "Create an IT Ops Site. Optional memberIds reference existing saved Connection ids (see kkterm.workspace.connections.list); transport picks the default Batch Run transport and defaults to auto.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string", "minLength": 1},
+                    "memberIds": {"type": "array", "items": {"type": "string"}},
+                    "transport": {"type": "string", "enum": ["ssh", "winrm", "psexec", "auto"]},
+                },
+                "required": ["name"],
+                "additionalProperties": false,
+            },
+        }),
+        json!({
+            "name": "kkterm.itops.server_rooms.list",
+            "description": "List the Server Rooms of one IT Ops Site by siteId. Every Rack must belong to a Server Room in the same Site.",
+            "inputSchema": site_id_input_schema(),
+        }),
+        json!({
+            "name": "kkterm.itops.server_rooms.create",
+            "description": "Create a Server Room in an IT Ops Site. floorColor is optional and defaults to 'default'.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "siteId": {"type": "string"},
+                    "name": {"type": "string", "minLength": 1},
+                    "floorColor": {"type": "string", "enum": ["default", "concrete", "graphite", "green", "blue"]},
+                },
+                "required": ["siteId", "name"],
+                "additionalProperties": false,
+            },
+        }),
+        json!({
+            "name": "kkterm.itops.racks.list",
+            "description": "List the Racks of one IT Ops Site by siteId, each with its placed Rack Devices (items) in U order. Use this to inspect the topology and find free U spans before placing a device.",
+            "inputSchema": site_id_input_schema(),
+        }),
+        json!({
+            "name": "kkterm.itops.racks.create",
+            "description": "Create a Rack in an IT Ops Site. serverRoom is the name of an existing Server Room in the same Site (create it first with kkterm.itops.server_rooms.create). heightU defaults to 42 and depthMm to 1000; rackGroup is an optional grouping tag within the room.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "siteId": {"type": "string"},
+                    "name": {"type": "string", "minLength": 1},
+                    "serverRoom": {"type": "string", "minLength": 1},
+                    "rackGroup": {"type": "string"},
+                    "shell": {"type": "string", "enum": ["black", "white", "grey"]},
+                    "heightU": {"type": "integer", "minimum": 1, "maximum": 100},
+                    "depthMm": {"type": "integer", "minimum": 1, "maximum": 5000},
+                    "powerCapacityW": {"type": "integer", "minimum": 0},
+                },
+                "required": ["siteId", "name", "serverRoom"],
+                "additionalProperties": false,
+            },
+        }),
+        json!({
+            "name": "kkterm.itops.rack_items.place",
+            "description": "Place one Rack Device into a Rack at a contiguous U span. startU is the device's lowest occupied U (1 = bottom of the rack); the span startU..startU+heightU-1 must fit inside the rack and must not overlap existing devices — call kkterm.itops.racks.list first to find free space. kind 'connection' makes the device openable and requires connectionId (a saved Connection id); the other kinds are passive inventory/visual devices. Optional metadata carries presentation fields such as status ('online'|'warning'|'offline'), accent, notes, ports, disks, battery, load, and powerW — never secrets.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "rackId": {"type": "string"},
+                    "kind": {"type": "string", "enum": ["connection", "server", "storage", "switch", "router", "firewall", "pdu", "ups", "kvm", "patchPanel", "genericDevice"]},
+                    "label": {"type": "string"},
+                    "startU": {"type": "integer", "minimum": 1},
+                    "heightU": {"type": "integer", "minimum": 1},
+                    "connectionId": {"type": "string"},
+                    "metadata": {"type": "object"},
+                },
+                "required": ["rackId", "kind", "label", "startU", "heightU"],
+                "additionalProperties": false,
+            },
+        }),
+        json!({
+            "name": "kkterm.itops.rack_items.update",
+            "description": "Update one Rack Device's kind, label, Connection binding, or metadata by id (position changes go through kkterm.itops.rack_items.move). Submit full new values: omitted metadata clears previously stored metadata, so read the device from kkterm.itops.racks.list first and resend the fields you want to keep.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "id": {"type": "string"},
+                    "kind": {"type": "string", "enum": ["connection", "server", "storage", "switch", "router", "firewall", "pdu", "ups", "kvm", "patchPanel", "genericDevice"]},
+                    "label": {"type": "string"},
+                    "connectionId": {"type": "string"},
+                    "metadata": {"type": "object"},
+                },
+                "required": ["id", "kind", "label"],
+                "additionalProperties": false,
+            },
+        }),
+        json!({
+            "name": "kkterm.itops.rack_items.move",
+            "description": "Move and/or resize one Rack Device by id — possibly into a different Rack. The new U span is validated against the target rack (bounds and overlaps).",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "id": {"type": "string"},
+                    "rackId": {"type": "string"},
+                    "startU": {"type": "integer", "minimum": 1},
+                    "heightU": {"type": "integer", "minimum": 1},
+                },
+                "required": ["id", "rackId", "startU", "heightU"],
+                "additionalProperties": false,
+            },
+        }),
+        json!({
+            "name": "kkterm.itops.rack_items.remove",
+            "description": "Remove one Rack Device from its Rack by id. This deletes the placement only; any bound saved Connection is untouched.",
+            "inputSchema": id_input_schema("id"),
+        }),
+        json!({
+            "name": "kkterm.itops.hosts.list",
+            "description": "List the Hosts of one IT Ops Site by siteId: durable inventory entries addressed by hostname, with kind (physical|vm|container|other), optional parentHostId (the device Host carrying a VM/container), bound Connection ids, and the last connectivity-scan snapshot.",
+            "inputSchema": site_id_input_schema(),
+        }),
         // -- Network: read-only diagnostics (kkterm.network.*) -------------
         json!({
             "name": "kkterm.network.ping",
@@ -718,6 +840,15 @@ fn connection_update_input_schema() -> Value {
         required.insert(0, json!("connectionId"));
     }
     schema
+}
+
+fn site_id_input_schema() -> Value {
+    json!({
+        "type": "object",
+        "properties": {"siteId": {"type": "string"}},
+        "required": ["siteId"],
+        "additionalProperties": false,
+    })
 }
 
 fn id_input_schema(id_name: &str) -> Value {
