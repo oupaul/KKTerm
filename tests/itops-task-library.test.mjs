@@ -8,6 +8,8 @@ const hosts = await readFile(new URL("../src/modules/itops/HostsPanel.tsx", impo
 const launcher = await readFile(new URL("../src/modules/itops/BatchRunDialog.tsx", import.meta.url), "utf8");
 const schema = await readFile(new URL("../src-tauri/src/storage.rs", import.meta.url), "utf8");
 const commands = await readFile(new URL("../src-tauri/src/lib.rs", import.meta.url), "utf8");
+const runner = await readFile(new URL("../src-tauri/src/itops/runner.rs", import.meta.url), "utf8");
+const ai = await readFile(new URL("../src-tauri/src/ai.rs", import.meta.url), "utf8");
 
 test("IT Ops navigator keeps Tasks global and Site operations virtual", () => {
   assert.match(sites, /itops\.navigation\.serverRooms/);
@@ -40,6 +42,28 @@ test("Task Library manages definitions while the Hosts launcher selects saved Ta
   assert.match(launcher, /itops\.batchRuns\.taskSourceLabel/);
   assert.match(library, /const createTask = useItOpsStore/);
   assert.match(library, /const updateTask = useItOpsStore/);
+  assert.match(library, /kind: "playbook"/);
+  assert.match(library, /<ReactFlow/);
+  assert.match(library, /addStep\("sudo"\)/);
+  assert.match(library, /addStep\("ai"\)/);
+  assert.doesNotMatch(library, /playbookEditLater/);
+});
+
+test("AI nodes consume previous output through a closed non-executable decision contract", () => {
+  assert.match(library, /aiInstruction: step\.kind === "ai"/);
+  assert.match(launcher, /aiInstruction: step\.aiInstruction/);
+  assert.match(runner, /run_playbook_ai_decision/);
+  assert.match(ai, /allow_tools: false/);
+  assert.match(ai, /PlaybookAiDecisionKind/);
+  assert.match(ai, /Continue,[\s\S]*Success,[\s\S]*Fail,/);
+  assert.doesNotMatch(ai, /decision.*runCommand/);
+});
+
+test("Playbook sudo nodes persist only a vault reference and survive the launcher", () => {
+  assert.match(library, /kind: "itopsTaskSecret"/);
+  assert.match(library, /secretOwnerId: step\.kind === "sudo"/);
+  assert.match(launcher, /secretOwnerId: step\.secretOwnerId/);
+  assert.match(launcher, /step\.kind === "sudo"/);
 });
 
 test("Task Library uses the shared destination page frame", () => {

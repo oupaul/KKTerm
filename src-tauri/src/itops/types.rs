@@ -692,14 +692,17 @@ pub struct ResolvedHost {
     pub transport: Transport,
 }
 
-/// One step of an interactive Playbook. The runner types `send` into the host's
-/// PTY shell, then — when `expect` is set — waits until the streamed output
-/// contains that literal substring before moving on (the "wait for a prompt,
-/// then answer it" pattern). A step whose `expect` never appears within
-/// `timeout_seconds` fails, which stops the Playbook on that host.
+/// One ordered Playbook node. Command nodes type `send` into the host's PTY and
+/// may wait for `expect`; sudo nodes acquire cached elevation from a vault
+/// reference; AI nodes evaluate the preceding node output through a closed
+/// structured decision contract.
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct PlaybookStep {
+    #[serde(default)]
+    pub id: Option<String>,
+    #[serde(default)]
+    pub kind: PlaybookStepKind,
     /// Short label shown in the run report (e.g. "update apt cache").
     pub name: String,
     /// Text sent to the interactive shell — a command, or an answer to a prompt
@@ -712,6 +715,21 @@ pub struct PlaybookStep {
     /// Per-step wait budget for `expect`. Falls back to the run default when unset.
     #[serde(default)]
     pub timeout_seconds: Option<u64>,
+    /// Reference to the configured secret store. Never contains plaintext.
+    #[serde(default)]
+    pub secret_owner_id: Option<String>,
+    /// Instruction for an AI node. Its input is the preceding node's output.
+    #[serde(default)]
+    pub ai_instruction: Option<String>,
+}
+
+#[derive(Clone, Copy, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum PlaybookStepKind {
+    #[default]
+    Command,
+    Sudo,
+    Ai,
 }
 
 /// What a Batch Run executes on each targeted host (docs/ITOPS.md).
@@ -746,6 +764,16 @@ pub struct ItopsTask {
 }
 
 impl BatchTask {
+    pub fn secret_owner_ids(&self) -> Vec<String> {
+        match self {
+            Self::Playbook { steps, .. } => steps
+                .iter()
+                .filter_map(|step| step.secret_owner_id.clone())
+                .collect(),
+            Self::Script { .. } => Vec::new(),
+        }
+    }
+
     /// A redacted, one-line label for the run-history audit log — never the full
     /// script body, which may embed secrets.
     pub fn summary(&self) -> String {
@@ -802,6 +830,51 @@ mod tests {
             steps: vec![],
         };
         assert_eq!(blank.summary(), "playbook");
+    }
+
+    #[test]
+    fn playbook_step_defaults_old_rows_to_command_and_keeps_only_secret_reference() {
+        let old: PlaybookStep = serde_json::from_value(serde_json::json!({
+            "name": "uptime",
+            "send": "uptime",
+            "expect": null,
+            "timeoutSeconds": 10
+        }))
+        .unwrap();
+        assert_eq!(old.kind, PlaybookStepKind::Command);
+        assert_eq!(old.secret_owner_id, None);
+
+        let task = BatchTask::Playbook {
+            name: "restart".to_string(),
+            steps: vec![PlaybookStep {
+                id: Some("step-1".to_string()),
+                kind: PlaybookStepKind::Sudo,
+                name: "Acquire sudo".to_string(),
+                send: String::new(),
+                expect: Some("KKTerm sudo password: ".to_string()),
+                timeout_seconds: Some(30),
+                secret_owner_id: Some("itops-sudo-1".to_string()),
+                ai_instruction: None,
+            }],
+        };
+        assert_eq!(task.secret_owner_ids(), vec!["itops-sudo-1"]);
+        let json = serde_json::to_string(&task).unwrap();
+        assert!(json.contains("itops-sudo-1"));
+        assert!(!json.contains("password-value"));
+
+        let ai: PlaybookStep = serde_json::from_value(serde_json::json!({
+            "id": "step-ai",
+            "kind": "ai",
+            "name": "Evaluate health",
+            "send": "",
+            "aiInstruction": "Succeed only when the service is active"
+        }))
+        .unwrap();
+        assert_eq!(ai.kind, PlaybookStepKind::Ai);
+        assert_eq!(
+            ai.ai_instruction.as_deref(),
+            Some("Succeed only when the service is active")
+        );
     }
 }
 

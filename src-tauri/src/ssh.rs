@@ -14,10 +14,11 @@ use std::{
     future::Future,
     net::{Ipv4Addr, Ipv6Addr, SocketAddr, TcpListener as StdTcpListener},
     path::PathBuf,
+    pin::Pin,
     rc::Rc,
     sync::{Arc, mpsc as std_mpsc},
     thread::{self, JoinHandle},
-    time::{Duration, Instant},
+    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 use tauri::{AppHandle, Manager};
 use tokio::{
@@ -2829,7 +2830,16 @@ pub(crate) struct PlaybookStepSpec {
     pub send: String,
     pub expect: Option<String>,
     pub timeout_seconds: Option<u64>,
+    pub ai_instruction: Option<String>,
 }
+
+pub(crate) type PlaybookAiHandler = dyn Fn(
+        String,
+        String,
+    ) -> Pin<
+        Box<dyn Future<Output = Result<crate::ai::PlaybookAiDecision, String>> + Send>,
+    > + Send
+    + Sync;
 
 /// Outcome of running a Playbook over one host's interactive shell. `ok` is true
 /// only when every step's `expect` matched; `failure` describes the first step
@@ -2856,6 +2866,7 @@ const PLAYBOOK_DEFAULT_STEP_TIMEOUT_SECONDS: u64 = 120;
 pub(crate) fn run_playbook_capture_streaming(
     request: NativeSshCommandRequest,
     steps: Vec<PlaybookStepSpec>,
+    ai_handler: Option<&PlaybookAiHandler>,
     on_chunk: &(dyn Fn(&str) + Send + Sync),
 ) -> Result<PlaybookOutcome, String> {
     let runtime = tokio::runtime::Builder::new_current_thread()
@@ -2865,13 +2876,20 @@ pub(crate) fn run_playbook_capture_streaming(
     let default_timeout = request
         .timeout_seconds
         .unwrap_or(PLAYBOOK_DEFAULT_STEP_TIMEOUT_SECONDS);
-    runtime.block_on(run_playbook_async(request, steps, default_timeout, on_chunk))
+    runtime.block_on(run_playbook_async(
+        request,
+        steps,
+        default_timeout,
+        ai_handler,
+        on_chunk,
+    ))
 }
 
 async fn run_playbook_async(
     request: NativeSshCommandRequest,
     steps: Vec<PlaybookStepSpec>,
     default_timeout_seconds: u64,
+    ai_handler: Option<&PlaybookAiHandler>,
     on_chunk: &(dyn Fn(&str) + Send + Sync),
 ) -> Result<PlaybookOutcome, String> {
     let session = connect_verified_client(NativeSshConnectionRequest {
@@ -2888,8 +2906,14 @@ async fn run_playbook_async(
     })
     .await?;
 
-    let outcome =
-        run_playbook_on_session(&session, &steps, default_timeout_seconds, on_chunk).await;
+    let outcome = run_playbook_on_session(
+        &session,
+        &steps,
+        default_timeout_seconds,
+        ai_handler,
+        on_chunk,
+    )
+    .await;
     disconnect_ssh_session(&session, "playbook completed").await?;
     outcome
 }
@@ -2898,6 +2922,7 @@ async fn run_playbook_on_session(
     session: &client::Handle<VerifyingClient>,
     steps: &[PlaybookStepSpec],
     default_timeout_seconds: u64,
+    ai_handler: Option<&PlaybookAiHandler>,
     on_chunk: &(dyn Fn(&str) + Send + Sync),
 ) -> Result<PlaybookOutcome, String> {
     let mut channel = session
@@ -2914,7 +2939,129 @@ async fn run_playbook_on_session(
         .map_err(|error| format!("failed to start SSH shell: {error}"))?;
 
     let mut output = String::new();
+    let mut last_node_start = 0usize;
+    let mut last_node_output: Option<String> = None;
     for (index, step) in steps.iter().enumerate() {
+        if let Some(instruction) = step
+            .ai_instruction
+            .as_deref()
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+        {
+            let previous_output = if let Some(previous) = last_node_output.take() {
+                previous
+            } else {
+                let nonce = SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .map(|duration| duration.as_nanos())
+                    .unwrap_or_default();
+                let marker = format!("__KKTERM_AI_BOUNDARY_{index}_{nonce}__");
+                let marker_command = format!(
+                    "printf '__KKTERM_AI_BOUNDARY_%s_%s__\\n' '{index}' '{nonce}'"
+                );
+                channel
+                    .data(format!("{marker_command}\r").as_bytes())
+                    .await
+                    .map_err(|error| format!("failed to delimit AI node input: {error}"))?;
+                let timeout =
+                    Duration::from_secs(step.timeout_seconds.unwrap_or(default_timeout_seconds));
+                if !wait_for_substring(&mut channel, &marker, timeout, &mut output, on_chunk).await {
+                    return Ok(PlaybookOutcome {
+                        ok: false,
+                        failure: Some(format!(
+                            "step {} timed out collecting output for the AI node",
+                            index + 1
+                        )),
+                        output,
+                    });
+                }
+                let segment = output
+                    .get(last_node_start..)
+                    .unwrap_or_default()
+                    .split(&marker)
+                    .next()
+                    .unwrap_or_default();
+                segment
+                    .rsplit_once(&marker_command)
+                    .map(|(previous, _)| previous)
+                    .unwrap_or(segment)
+                    .to_string()
+            };
+            let Some(handler) = ai_handler else {
+                return Ok(PlaybookOutcome {
+                    ok: false,
+                    failure: Some("AI node runner is unavailable".to_string()),
+                    output,
+                });
+            };
+            let ai_timeout =
+                Duration::from_secs(step.timeout_seconds.unwrap_or(default_timeout_seconds));
+            let decision = match tokio::time::timeout(
+                ai_timeout,
+                handler(instruction.to_string(), previous_output),
+            )
+            .await
+            {
+                Ok(Ok(decision)) => decision,
+                Ok(Err(error)) => {
+                    return Ok(PlaybookOutcome {
+                        ok: false,
+                        failure: Some(format!("AI node failed: {error}")),
+                        output,
+                    });
+                }
+                Err(_) => {
+                    return Ok(PlaybookOutcome {
+                        ok: false,
+                        failure: Some(format!(
+                            "AI node timed out after {} seconds",
+                            ai_timeout.as_secs()
+                        )),
+                        output,
+                    });
+                }
+            };
+            let reason = decision.reason.trim();
+            let decision_name = match decision.decision {
+                crate::ai::PlaybookAiDecisionKind::Continue => "continue",
+                crate::ai::PlaybookAiDecisionKind::Success => "success",
+                crate::ai::PlaybookAiDecisionKind::Fail => "fail",
+            };
+            let line = if reason.is_empty() {
+                format!("\n[AI] decision: {decision_name}\n")
+            } else {
+                format!("\n[AI] decision: {decision_name} — {reason}\n")
+            };
+            on_chunk(&line);
+            output.push_str(&line);
+            last_node_output = Some(line);
+            match decision.decision {
+                crate::ai::PlaybookAiDecisionKind::Continue => continue,
+                crate::ai::PlaybookAiDecisionKind::Success => {
+                    let _ = channel.eof().await;
+                    let _ = channel.close().await;
+                    return Ok(PlaybookOutcome {
+                        ok: true,
+                        failure: None,
+                        output,
+                    });
+                }
+                crate::ai::PlaybookAiDecisionKind::Fail => {
+                    return Ok(PlaybookOutcome {
+                        ok: false,
+                        failure: Some(if reason.is_empty() {
+                            "AI node marked this host as failed".to_string()
+                        } else {
+                            reason.to_string()
+                        }),
+                        output,
+                    });
+                }
+            }
+        }
+
+        last_node_start = output.len();
+        last_node_output = None;
         if !step.send.is_empty() {
             channel
                 .data(format!("{}\r", step.send).as_bytes())
@@ -2936,6 +3083,7 @@ async fn run_playbook_on_session(
                 output,
             });
         }
+        last_node_output = Some(output.get(last_node_start..).unwrap_or_default().to_string());
     }
 
     let _ = channel.eof().await;

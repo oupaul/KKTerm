@@ -1059,6 +1059,10 @@ pub struct AiProviderSettings {
 }
 
 impl AiProviderSettings {
+    pub(crate) fn enabled(&self) -> bool {
+        self.enabled
+    }
+
     pub(crate) fn provider_kind(&self) -> &str {
         &self.provider_kind
     }

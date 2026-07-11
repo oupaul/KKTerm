@@ -145,12 +145,14 @@ the Connection, overridable per Site/run):
 
 **Task** — a durable reusable Batch Task stored in `itops_tasks`. A Task has a
 name, optional description, and one script or Playbook definition. It has no
-Site id, Host ids, credentials, or live state. The operator chooses targets at
+Site id, Host ids, plaintext credentials, or live state. A sudo node may keep
+an opaque secret-vault reference; the password itself never enters Task JSON.
+The operator chooses targets at
 launch time; an Automation references the Task and target Site separately.
 Deleting or editing a Task never rewrites completed Run History, whose report
-keeps a redacted task-summary snapshot. The first implementation slice supports
-creating and editing reusable script Tasks; reusable Playbook editing follows
-without changing the durable `BatchTask` shape.
+keeps a redacted task-summary snapshot. The Task Library editor supports both
+script Tasks and reusable Playbooks. Playbooks use the same ordered node-canvas
+language as Automations, but remain a linear chain rather than a free-form DAG.
 _Avoid_: Site task, saved Batch Run, Automation workflow
 
 **Batch Run** — one execution of a Batch Task against a resolved Host
@@ -272,6 +274,22 @@ Site. Opening a Task shows and manages its definition. Manual execution starts
 only from selected Hosts; the Host-scoped launcher offers reusable definitions
 from the Task Library alongside an ad-hoc option. This prevents duplicated
 per-Site scripts and keeps target selection explicit.
+
+Creating or editing a Playbook opens a full ordered workflow editor. Command
+nodes send text through one shared interactive shell. A sudo node runs
+`sudo -S -v`, waits for a dedicated prompt, retrieves its password from the
+configured secret vault, and validates elevation before later nodes continue.
+Only the vault owner id is durable; plaintext is resolved in memory immediately
+before the Batch Run and is never copied into SQLite or Run History. Removing a
+sudo node or deleting its Task removes the associated vault entry.
+
+An AI node evaluates the immediately preceding node output with the currently
+configured AI Assistant provider. KKTerm sends that output as explicitly
+untrusted data with tools disabled and requires one parsed JSON decision:
+`continue` runs the next ordered node, `success` ends that Host successfully,
+and `fail` stops that Host as failed. Any provider error, invalid JSON, or value
+outside this closed enum fails the Host. AI nodes never turn model text into a
+shell command or choose an arbitrary graph edge.
 
 Hosts, Automations, Run History, and the global Task Library share one
 destination-page frame: the same content inset, compact title/description
@@ -618,10 +636,14 @@ pub enum BatchTask {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PlaybookStep {
+    pub id: Option<String>,            // stable editor identity
+    pub kind: PlaybookStepKind,        // command (default) or sudo
     pub name: String,
     pub send: String,
     pub expect: Option<String>,        // literal substring; None = don't wait
     pub timeout_seconds: Option<u64>,  // falls back to the run default
+    pub secret_owner_id: Option<String>, // vault reference only; sudo nodes
+    pub ai_instruction: Option<String>, // closed decision prompt; AI nodes
 }
 
 /// Common transport interface; SSH/WinRM/PsExec each implement it.

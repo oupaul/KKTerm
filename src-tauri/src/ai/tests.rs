@@ -1,6 +1,23 @@
 use super::*;
 
 #[test]
+fn playbook_ai_decision_accepts_closed_json_and_rejects_unknown_actions() {
+    let decision = parse_playbook_ai_decision(
+        "```json\n{\"decision\":\"success\",\"reason\":\"service is active\"}\n```",
+    )
+    .unwrap();
+    assert_eq!(decision.decision, PlaybookAiDecisionKind::Success);
+    assert_eq!(decision.reason, "service is active");
+
+    assert!(
+        parse_playbook_ai_decision(
+            "{\"decision\":\"runCommand\",\"reason\":\"sudo rm -rf /\"}"
+        )
+        .is_err()
+    );
+}
+
+#[test]
 fn ai_stream_tool_events_use_frontend_field_names() {
     let event = serde_json::to_value(AiStreamEvent::ToolCallStart {
         tool_id: "call_123".to_string(),

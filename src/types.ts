@@ -383,13 +383,21 @@ export interface RunScope {
   hostIds?: string[];
 }
 
-// One step of an interactive Playbook: text sent to the host's PTY shell, then
-// an optional literal substring to wait for before the next step runs.
+// One ordered Playbook node: a PTY command/input, cached sudo acquisition, or
+// a closed AI decision over the preceding node output.
 export interface PlaybookStep {
+  /** Stable editor identity; older saved Playbooks may omit it. */
+  id?: string;
+  /** Command is the backwards-compatible default. */
+  kind?: "command" | "sudo" | "ai";
   name: string;
   send: string;
   expect?: string | null;
   timeoutSeconds?: number | null;
+  /** Vault reference only. The secret value never enters the Task JSON. */
+  secretOwnerId?: string | null;
+  /** AI-node instruction applied to the immediately preceding node output. */
+  aiInstruction?: string | null;
 }
 
 // A Batch Run task (docs/ITOPS.md): a one-shot script, or an interactive
@@ -1333,7 +1341,8 @@ export type SecretKind =
   | "tavilySearchApiKey"
   | "emailApiKey"
   | "emailSmtpPassword"
-  | "widgetSecret";
+  | "widgetSecret"
+  | "itopsTaskSecret";
 
 export interface KeychainStatus {
   available: boolean;

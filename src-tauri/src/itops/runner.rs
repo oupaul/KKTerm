@@ -11,11 +11,14 @@ use std::sync::{Mutex, mpsc};
 use std::time::Instant;
 
 use rusqlite::{Connection as SqliteConnection, OptionalExtension, params};
+use tauri::AppHandle;
 
 use crate::secrets;
 use crate::ssh::{self, NativeSshAuth, NativeSshCommandRequest};
 
-use super::types::{BatchTask, ExecOutcome, HostReport, ResolvedHost, RunEvent, RunReport};
+use super::types::{
+    BatchTask, ExecOutcome, HostReport, PlaybookStepKind, ResolvedHost, RunEvent, RunReport,
+};
 
 pub const DEFAULT_CONCURRENCY: usize = 8;
 pub const DEFAULT_TIMEOUT_SECONDS: u64 = 120;
@@ -162,13 +165,51 @@ pub struct SshExecSpec {
 /// The Phase 2 SSH transport. Holds pre-resolved per-host exec specs and runs
 /// each on a fresh authenticated exec channel via `ssh::run_remote_command_capture`.
 pub struct SshTransport {
+    app: AppHandle,
     specs: HashMap<String, SshExecSpec>,
+    task_secrets: HashMap<String, String>,
 }
 
 impl SshTransport {
-    pub fn new(specs: HashMap<String, SshExecSpec>) -> Self {
-        Self { specs }
+    pub fn new(
+        app: AppHandle,
+        specs: HashMap<String, SshExecSpec>,
+        task_secrets: HashMap<String, String>,
+    ) -> Self {
+        Self {
+            app,
+            specs,
+            task_secrets,
+        }
     }
+}
+
+/// Resolve only the vault entries referenced by sudo nodes. Plaintext stays in
+/// this in-memory transport map and never enters Task storage or Run History.
+pub fn resolve_task_secrets(
+    task: &BatchTask,
+    secrets: &secrets::Secrets,
+) -> Result<HashMap<String, String>, String> {
+    let mut resolved = HashMap::new();
+    let BatchTask::Playbook { steps, .. } = task else {
+        return Ok(resolved);
+    };
+    for step in steps
+        .iter()
+        .filter(|step| step.kind == PlaybookStepKind::Sudo)
+    {
+        let owner_id = step
+            .secret_owner_id
+            .as_deref()
+            .map(str::trim)
+            .filter(|owner_id| !owner_id.is_empty())
+            .ok_or_else(|| "sudo node has no credential reference".to_string())?;
+        let secret = secrets
+            .read_itops_task_secret(owner_id.to_string())?
+            .ok_or_else(|| "sudo credential is missing from the secret store".to_string())?;
+        resolved.insert(owner_id.to_string(), secret);
+    }
+    Ok(resolved)
 }
 
 fn outcome_from_streaming_result(
@@ -235,15 +276,91 @@ impl BatchTransport for SshTransport {
                 outcome_from_streaming_result(result, streamed_output.into_inner().unwrap())
             }
             BatchTask::Playbook { steps, .. } => {
-                let step_specs = steps
-                    .iter()
-                    .map(|step| ssh::PlaybookStepSpec {
-                        send: step.send.clone(),
-                        expect: step.expect.clone(),
-                        timeout_seconds: step.timeout_seconds,
-                    })
-                    .collect();
-                match ssh::run_playbook_capture_streaming(request, step_specs, &capture_chunk) {
+                let mut step_specs = Vec::new();
+                for step in steps {
+                    match step.kind {
+                        PlaybookStepKind::Sudo => {
+                            let owner_id = step.secret_owner_id.as_deref().unwrap_or_default();
+                            let Some(secret) = self.task_secrets.get(owner_id) else {
+                                return ExecOutcome {
+                                    ok: false,
+                                    exit_code: None,
+                                    output: streamed_output.into_inner().unwrap(),
+                                    error: Some("sudo credential is unavailable".to_string()),
+                                };
+                            };
+                            let prompt = step
+                                .expect
+                                .as_deref()
+                                .filter(|value| !value.is_empty())
+                                .unwrap_or("KKTerm sudo password: ");
+                            let quoted_prompt = prompt.replace('\'', "'\"'\"'");
+                            step_specs.push(ssh::PlaybookStepSpec {
+                                send: format!(
+                                    "sudo -S -p '{quoted_prompt}' -v && printf '\\n__KKTERM_SUDO_READY__\\n'"
+                                ),
+                                expect: Some(prompt.to_string()),
+                                timeout_seconds: step.timeout_seconds,
+                                ai_instruction: None,
+                            });
+                            step_specs.push(ssh::PlaybookStepSpec {
+                                send: secret.clone(),
+                                expect: Some("__KKTERM_SUDO_READY__".to_string()),
+                                timeout_seconds: step.timeout_seconds,
+                                ai_instruction: None,
+                            });
+                        }
+                        PlaybookStepKind::Ai => {
+                            let Some(instruction) = step
+                                .ai_instruction
+                                .as_deref()
+                                .map(str::trim)
+                                .filter(|value| !value.is_empty())
+                            else {
+                                return ExecOutcome {
+                                    ok: false,
+                                    exit_code: None,
+                                    output: streamed_output.into_inner().unwrap(),
+                                    error: Some("AI node instruction is required".to_string()),
+                                };
+                            };
+                            step_specs.push(ssh::PlaybookStepSpec {
+                                send: String::new(),
+                                expect: None,
+                                timeout_seconds: step.timeout_seconds,
+                                ai_instruction: Some(instruction.to_string()),
+                            });
+                        }
+                        PlaybookStepKind::Command => {
+                            step_specs.push(ssh::PlaybookStepSpec {
+                                send: step.send.clone(),
+                                expect: step.expect.clone(),
+                                timeout_seconds: step.timeout_seconds,
+                                ai_instruction: None,
+                            });
+                        }
+                    }
+                }
+                let app = self.app.clone();
+                let ai_callback = move |instruction, previous_output| {
+                    let app = app.clone();
+                    Box::pin(async move {
+                        crate::ai::run_playbook_ai_decision(app, instruction, previous_output).await
+                    }) as std::pin::Pin<
+                        Box<
+                            dyn std::future::Future<
+                                    Output = Result<crate::ai::PlaybookAiDecision, String>,
+                                > + Send,
+                        >,
+                    >
+                };
+                let ai_handler: &ssh::PlaybookAiHandler = &ai_callback;
+                match ssh::run_playbook_capture_streaming(
+                    request,
+                    step_specs,
+                    Some(ai_handler),
+                    &capture_chunk,
+                ) {
                     // A timed-out step is a normal completion with ok == false; the
                     // failure message becomes the host's error note. No exit code:
                     // an interactive shell has no per-step status to report.
@@ -444,10 +561,14 @@ mod tests {
         BatchTask::Playbook {
             name: "restart".to_string(),
             steps: vec![super::super::types::PlaybookStep {
+                id: None,
+                kind: super::super::types::PlaybookStepKind::Command,
                 name: "go".to_string(),
                 send: "echo hi".to_string(),
                 expect: Some("$".to_string()),
                 timeout_seconds: Some(5),
+                secret_owner_id: None,
+                ai_instruction: None,
             }],
         }
     }

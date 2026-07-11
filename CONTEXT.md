@@ -126,7 +126,7 @@ A built-in Activity Rail Module for site operations: **Sites**, **Hosts**, globa
 _Avoid_: operations center, site manager, orchestrator
 
 **Task**:
-A durable, reusable IT Ops definition of what to execute: a script or interactive Playbook stored in `itops_tasks`. Tasks are global to the IT Ops Module and own no Site, Host selection, Session, credential, or live run state. A Site/Host selection supplies targets when launched; an Automation supplies a trigger plus Task and targets. A Task is not a saved Batch Run.
+A durable, reusable IT Ops definition of what to execute: a script or interactive Playbook stored in `itops_tasks`. Tasks are global to the IT Ops Module and own no Site, Host selection, Session, plaintext credential, or live run state. A Playbook sudo node may persist an opaque reference to a value in the configured secret vault; the Task JSON never contains that value. A Playbook AI node passes the preceding node's output to the currently configured AI Assistant and accepts only a closed `continue` / `success` / `fail` routing decision; it cannot call tools or generate executable actions. A Site/Host selection supplies targets when launched; an Automation supplies a trigger plus Task and targets. A Task is not a saved Batch Run.
 _Avoid_: Site task, saved run, workflow
 
 **Task Library**:

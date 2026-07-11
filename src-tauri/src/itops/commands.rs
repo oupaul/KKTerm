@@ -186,6 +186,7 @@ pub fn start_run(
     let secrets = app.state::<secrets::Secrets>();
     let known_hosts = ssh::app_known_hosts_path(app)?;
     let scoped = scope.filter(|scope| !scope.is_empty());
+    let task_secrets = runner::resolve_task_secrets(&task, &secrets)?;
     let (hosts, specs) = storage(app).with_connection_infallible(|conn| {
         let group = ito::list_sites(conn)
             .map_err(|error| error.to_string())?
@@ -227,7 +228,7 @@ pub fn start_run(
 
     let cancel = app.state::<ItopsRunRegistry>().register(&run_id);
 
-    let transport = SshTransport::new(specs);
+    let transport = SshTransport::new(app.clone(), specs, task_secrets);
     let app_thread = app.clone();
     let run_id_thread = run_id.clone();
     std::thread::spawn(move || {

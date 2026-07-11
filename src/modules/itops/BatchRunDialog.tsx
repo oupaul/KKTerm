@@ -83,7 +83,7 @@ export function BatchRunDialog({
   // Drop only fully-blank steps. A step with an empty `send` but a set `expect`
   // is valid (e.g. wait for the initial prompt before the first command).
   const filledSteps = steps.filter(
-    (step) => step.send.trim().length > 0 || (step.expect ?? "").trim().length > 0,
+    (step) => step.kind === "sudo" || (step.kind === "ai" && !!step.aiInstruction?.trim()) || step.send.trim().length > 0 || (step.expect ?? "").trim().length > 0,
   );
   const taskReady =
     mode === "script"
@@ -118,10 +118,14 @@ export function BatchRunDialog({
       kind: "playbook",
       name: playbookName.trim(),
       steps: filledSteps.map((step) => ({
+        id: step.id,
+        kind: step.kind,
         name: step.name.trim(),
         send: step.send,
         expect: step.expect && step.expect.trim().length > 0 ? step.expect : null,
         timeoutSeconds: step.timeoutSeconds ?? null,
+        secretOwnerId: step.secretOwnerId ?? null,
+        aiInstruction: step.aiInstruction ?? null,
       })),
     };
   }
@@ -239,29 +243,37 @@ export function BatchRunDialog({
                         onChange={(event) => updateStep(index, { name: event.currentTarget.value })}
                       />
                     </Field>
-                    <Field label={t("itops.batchRuns.stepSendLabel")} req>
-                      <TextInput
-                        value={step.send}
-                        mono
-                        spellCheck={false}
-                        placeholder={t("itops.batchRuns.stepSendPlaceholder")}
-                        onChange={(event) => updateStep(index, { send: event.currentTarget.value })}
-                      />
-                    </Field>
-                    <Field
-                      label={t("itops.batchRuns.stepExpectLabel")}
-                      hint={t("itops.batchRuns.stepExpectHint")}
-                    >
-                      <TextInput
-                        value={step.expect ?? ""}
-                        mono
-                        spellCheck={false}
-                        placeholder={t("itops.batchRuns.stepExpectPlaceholder")}
-                        onChange={(event) =>
-                          updateStep(index, { expect: event.currentTarget.value })
-                        }
-                      />
-                    </Field>
+                    {step.kind === "sudo" ? (
+                      <div className="it-scope-note">{t("itops.tasks.credentialStoredDetail")}</div>
+                    ) : step.kind === "ai" ? (
+                      <div className="it-scope-note">{step.aiInstruction}</div>
+                    ) : (
+                      <Field label={t("itops.batchRuns.stepSendLabel")} req>
+                        <TextInput
+                          value={step.send}
+                          mono
+                          spellCheck={false}
+                          placeholder={t("itops.batchRuns.stepSendPlaceholder")}
+                          onChange={(event) => updateStep(index, { send: event.currentTarget.value })}
+                        />
+                      </Field>
+                    )}
+                    {step.kind !== "ai" ? (
+                      <Field
+                        label={t("itops.batchRuns.stepExpectLabel")}
+                        hint={t("itops.batchRuns.stepExpectHint")}
+                      >
+                        <TextInput
+                          value={step.expect ?? ""}
+                          mono
+                          spellCheck={false}
+                          placeholder={t("itops.batchRuns.stepExpectPlaceholder")}
+                          onChange={(event) =>
+                            updateStep(index, { expect: event.currentTarget.value })
+                          }
+                        />
+                      </Field>
+                    ) : null}
                     <Field label={t("itops.batchRuns.stepTimeoutLabel")}>
                       <TextInput
                         type="number"
