@@ -14,7 +14,7 @@ test("Rack Device editor uses identity and form columns", async () => {
   assert.match(dialog, /rack-item-preview-stage/);
   assert.match(dialog, /rack-item-shell-grid/);
   assert.match(dialog, /seed=\{`shell-\$\{value\}-\$\{kind\}`\}/);
-  assert.match(dialog, /startULabel"\)} req/);
+  assert.doesNotMatch(dialog, /startULabel"\)} req/);
   assert.match(dialog, /itemHeightLabel"\)} req/);
   // Identity fields live under the preview, ahead of the form column.
   assert.match(dialog, /labelLabel[\s\S]*vendorLabel[\s\S]*hostLabel[\s\S]*form-column[\s\S]*statusLabel/);
@@ -47,6 +47,16 @@ test("Rack Device editor keeps notes and tags in the model column and pairs capa
   assert.doesNotMatch(typeColumn, /labelHint|vendorHint|notesHint|listHint/);
   assert.doesNotMatch(formColumn, /notesLabel|tagsLabel/);
   assert.match(formColumn, /className="rack-form-grid two rack-device-dimensions"[\s\S]*disksLabel[\s\S]*itemHeightLabel/);
+  assert.match(typeColumn, /notesLabel[\s\S]*TextArea[^>]*rows=\{3\}/);
+  assert.match(typeColumn, /tagsLabel[\s\S]*TextArea[^>]*rows=\{1\}/);
+});
+
+test("Rack-top Kuai Kuai can be dragged into the cabinet and back onto the rack top", async () => {
+  const elevation = await read("src/modules/itops/RackElevation.tsx");
+
+  assert.match(elevation, /rk-top-area[\s\S]*onDragOver[\s\S]*application\/x-itops-rack-kuaiguai/);
+  assert.match(elevation, /onMoveItem\?\.\(itemId, rack\.id, rack\.heightU \+ 1\)/);
+  assert.match(elevation, /rk-top-item\$\{canMove \? " draggable"[\s\S]*draggable=\{canMove\}/);
 });
 
 test("Rack Device capacity and height steppers center all three controls", async () => {

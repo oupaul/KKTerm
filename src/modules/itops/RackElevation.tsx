@@ -294,12 +294,32 @@ export function RackElevation({
       </div> : null}
 
       <div className="rk-cabinet">
-        <div className="rk-top-area">
+        <div
+          className={`rk-top-area${canMove ? " drop-target" : ""}`}
+          onDragOver={canMove ? (event) => {
+            if (event.dataTransfer.types.includes("application/x-itops-rack-kuaiguai")) {
+              event.preventDefault();
+              event.dataTransfer.dropEffect = "move";
+            }
+          } : undefined}
+          onDrop={canMove ? (event) => {
+            event.preventDefault();
+            if (!event.dataTransfer.getData("application/x-itops-rack-kuaiguai")) return;
+            const itemId = event.dataTransfer.getData("application/x-itops-rack-item");
+            if (itemId) onMoveItem?.(itemId, rack.id, rack.heightU + 1);
+          } : undefined}
+        >
           {topItems.map((item) => (
             <div
-              className="rk-top-item"
+              className={`rk-top-item${canMove ? " draggable" : ""}`}
               key={item.id}
               style={{ height: item.heightU * unitPx }}
+              draggable={canMove}
+              onDragStart={canMove ? (event) => {
+                event.dataTransfer.setData("application/x-itops-rack-item", item.id);
+                event.dataTransfer.setData("application/x-itops-rack-kuaiguai", "true");
+                event.dataTransfer.effectAllowed = "move";
+              } : undefined}
             >
               <button type="button" className="rk-top-item-main" onClick={() => onEditItem?.(item)}>
                 <RackDevice
@@ -485,6 +505,9 @@ export function RackElevation({
                     canMove
                       ? (event) => {
                           event.dataTransfer.setData("application/x-itops-rack-item", item.id);
+                          if (item.kind === "kuaiguai") {
+                            event.dataTransfer.setData("application/x-itops-rack-kuaiguai", "true");
+                          }
                           event.dataTransfer.effectAllowed = "move";
                         }
                       : undefined

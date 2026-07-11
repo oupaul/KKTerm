@@ -270,7 +270,7 @@ export function RackItemDialog({
           label: label.trim(),
           metadata,
         });
-        if (placedStartU !== item!.startU || heightU !== item!.heightU) {
+        if (heightU !== item!.heightU) {
           await moveRackItem(siteId, { id: item!.id, rackId: rack.id, startU: placedStartU, heightU });
         }
       } else {
@@ -453,11 +453,11 @@ export function RackItemDialog({
             ) : null}
 
             <Field label={t("itops.racks.notesLabel")}>
-              <TextArea rows={8} value={notes} onChange={(event) => setNotes(event.currentTarget.value)} />
+              <TextArea className="rack-item-notes" rows={3} value={notes} onChange={(event) => setNotes(event.currentTarget.value)} />
             </Field>
 
             <Field label={t("itops.racks.tagsLabel")}>
-              <TextArea rows={2} value={tags} onChange={(event) => setTags(event.currentTarget.value)} />
+              <TextArea className="rack-item-tags" rows={1} value={tags} onChange={(event) => setTags(event.currentTarget.value)} />
             </Field>
 
             {siteHosts.length > 0 ? (
@@ -600,11 +600,6 @@ export function RackItemDialog({
               {kind === "kuaiguai" ? null : (
                 <Field label={t("itops.racks.itemHeightLabel")} req>
                   <Stepper value={heightU} min={1} onChange={(next) => { const clampedHeight = Math.max(1, Math.min(rack.heightU, next)); setHeightU(clampedHeight); setStartU((current) => clampStartUForHeight(current, clampedHeight, rack.heightU)); setDisks((current) => Math.min(current, clampedHeight * DISKS_PER_U)); }} ariaDecrease={t("itops.racks.itemHeightDecrease")} ariaIncrease={t("itops.racks.itemHeightIncrease")} />
-                </Field>
-              )}
-              {placementMode ? null : (
-                <Field label={t("itops.racks.startULabel")} req>
-                  <Stepper value={startU} min={1} onChange={(next) => setStartU(clampStartUForHeight(next, heightU, rack.heightU))} ariaDecrease={t("itops.racks.startUDecrease")} ariaIncrease={t("itops.racks.startUIncrease")} />
                 </Field>
               )}
             </div>
