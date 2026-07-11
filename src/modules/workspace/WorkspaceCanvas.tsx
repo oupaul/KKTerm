@@ -90,7 +90,7 @@ function WorkspaceEmptyState() {
           </button>
         ))}
         <button
-          className="empty-workspace-connection-link"
+          className="empty-workspace-connection-link empty-workspace-connection-link--import"
           onClick={requestImportConnections}
           type="button"
         >
