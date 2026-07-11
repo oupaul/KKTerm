@@ -73,10 +73,28 @@ impl SecurityType {
                     return Err(VncError::General(err_msg));
                 }
                 let mut sec_types = vec![];
+                let mut unknown_types = vec![];
                 for _ in 0..num {
-                    sec_types.push(reader.read_u8().await?.try_into()?);
+                    let sec_type = reader.read_u8().await?;
+                    match SecurityType::try_from(sec_type) {
+                        Ok(sec_type) => sec_types.push(sec_type),
+                        // Servers may advertise proprietary security types
+                        // (e.g. UltraVNC MS-Logon / SecureVNC plugin ids)
+                        // alongside standard ones; skip them and negotiate
+                        // with any mutually supported type.
+                        Err(_) => unknown_types.push(sec_type),
+                    }
                 }
-                tracing::trace!("Server supported security type: {:?}", sec_types);
+                if sec_types.is_empty() {
+                    return Err(VncError::General(format!(
+                        "Server offered no supported security type: {unknown_types:?}"
+                    )));
+                }
+                tracing::trace!(
+                    "Server supported security type: {:?}, skipped unknown: {:?}",
+                    sec_types,
+                    unknown_types
+                );
                 Ok(sec_types)
             }
         }
@@ -88,6 +106,30 @@ impl SecurityType {
     {
         writer.write_all(&[(*self).into()]).await?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn skips_unknown_security_types() {
+        // UltraVNC advertises proprietary types (e.g. 117) alongside VncAuth.
+        let mut stream: &[u8] = &[2, 117, 2];
+        let types = SecurityType::read(&mut stream, &VncVersion::RFB38)
+            .await
+            .unwrap();
+        assert_eq!(types, vec![SecurityType::VncAuth]);
+    }
+
+    #[tokio::test]
+    async fn errors_when_no_supported_security_type() {
+        let mut stream: &[u8] = &[2, 115, 117];
+        let err = SecurityType::read(&mut stream, &VncVersion::RFB38)
+            .await
+            .unwrap_err();
+        assert!(err.to_string().contains("[115, 117]"), "{err}");
     }
 }
 
