@@ -1119,6 +1119,7 @@
     },
     "tasks": {
       "heading": "Biblioteca de Tarefas",
+      "pageDescription": "Crie e gerencie Tarefas reutilizáveis.",
       "searchPlaceholder": "Buscar Tarefas…",
       "newTitle": "Nova Tarefa",
       "editTitle": "Editar Tarefa",
@@ -1144,6 +1145,8 @@
     "racks": {
       "heading": "Racks",
       "empty": "Ainda não há racks. Organize os hosts deste site em um datacenter virtual.",
+      "emptyServerRoomHint": "Esta sala de servidores não tem racks. <addRack>Crie um novo rack</addRack>.",
+      "emptyRackHint": "O rack está vazio. Ative o <editMode>modo de Edição</editMode> para adicionar dispositivos.",
       "rackCount": "{{count}} racks",
       "unitCount": "{{count}}U",
       "deviceCount": "{{count}} dispositivos",

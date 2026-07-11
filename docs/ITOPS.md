@@ -271,6 +271,12 @@ only from selected Hosts; the Host-scoped launcher offers reusable definitions
 from the Task Library alongside an ad-hoc option. This prevents duplicated
 per-Site scripts and keeps target selection explicit.
 
+Hosts, Automations, Run History, and the global Task Library share one
+destination-page frame: the same content inset, compact title/description
+header, right-aligned primary actions, divider, and bordered-row rhythm. The
+Task Library keeps its master-detail body inside that frame rather than owning
+a separate full-height chrome layout.
+
 Site View is now overview-only and has no segmented content switcher. Hosts,
 Automations, and Run History each own a separate Site-scoped page selected from
 the navigator. The Hosts page owns Host selection and the manual **Run Task**
@@ -291,6 +297,9 @@ drill-down views own an icon-only Edit / Export toolbar: edit mode gates free
 placement, Rack Device drag/drop, empty-slot add affordances, and destructive
 controls; normal mode remains an inspect/open surface. Site and Server Room
 exports save PDF, while Rack View also saves an Excel-readable inventory table.
+An empty Server Room uses explanatory guidance with an inline New Rack action.
+An empty Rack uses an inline Edit mode action that reveals the Rack Device
+picker.
 The live
 Batch Run view renders a per-host grid
 with status chips and **live streamed output** (each host auto-reveals its

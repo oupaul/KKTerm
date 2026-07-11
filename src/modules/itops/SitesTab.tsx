@@ -16,7 +16,7 @@ import {
   type ReactNode,
   type RefObject,
 } from "react";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import { Maximize2, Minimize2 } from "../../lib/reicon";
 import { ConfirmSheet } from "../../app/ui/dialog";
 import { showNativeContextMenu } from "../../lib/nativeContextMenu";
@@ -760,7 +760,7 @@ export function SitesTab({
 
       {/* ── Detail ── */}
       {rootSurface === "tasks" ? (
-        <div className="hg-detail">
+        <div className="hg-detail it-destination-page">
           <TaskLibrary />
         </div>
       ) : activeGroup && selectedDestination === "hosts" ? (
@@ -1638,6 +1638,18 @@ function RackDrill({
               }}
               onCancelPlacement={() => setPlaceDevice(null)}
             />
+            {rack.items.length === 0 && !editMode ? (
+              <p className="it-inline-empty-hint">
+                <Trans
+                  i18nKey="itops.racks.emptyRackHint"
+                  components={{
+                    editMode: (
+                      <button type="button" onClick={() => setEditMode(true)} />
+                    ),
+                  }}
+                />
+              </p>
+            ) : null}
             {editMode ? (
               <RackObjectPicker
                 racks={[rack]}
@@ -1656,13 +1668,17 @@ function RackDrill({
           </div>
         ) : serverRoom ? (
           serverRoom.racks.length === 0 ? (
-            <div className="it-topology-empty">
-              <button type="button" className="it-btn primary" onClick={() => onAddRack(serverRoom.key)}>
-                <span className="it-btn-ic">
-                  <ItIcon name="plus" size={15} />
-                </span>
-                {t("itops.racks.addRack")}
-              </button>
+            <div className="it-topology-empty guidance">
+              <p className="it-inline-empty-hint">
+                <Trans
+                  i18nKey="itops.racks.emptyServerRoomHint"
+                  components={{
+                    addRack: (
+                      <button type="button" onClick={() => onAddRack(serverRoom.key)} />
+                    ),
+                  }}
+                />
+              </p>
             </div>
           ) : roomView === "iso" || roomView === "floor" ? (
             <div className="rm-spatial">

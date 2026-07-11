@@ -1119,6 +1119,7 @@
     },
     "tasks": {
       "heading": "タスクライブラリ",
+      "pageDescription": "再利用可能なタスクを作成、管理します。",
       "searchPlaceholder": "タスクを検索…",
       "newTitle": "新しいタスク",
       "editTitle": "タスクを編集",
@@ -1144,6 +1145,8 @@
     "racks": {
       "heading": "ラック",
       "empty": "まだラックがありません。このサイトのホストを仮想データセンターに配置してください。",
+      "emptyServerRoomHint": "このサーバールームにはラックがありません。<addRack>新しいラックを作成</addRack>します。",
+      "emptyRackHint": "ラックは空です。デバイスを追加するには<editMode>編集モード</editMode>を有効にしてください。",
       "rackCount": "{{count}} 台のラック",
       "unitCount": "{{count}}U",
       "deviceCount": "{{count}} 台のデバイス",

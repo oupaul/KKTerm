@@ -1119,6 +1119,7 @@
     },
     "tasks": {
       "heading": "Pustaka Tugas",
+      "pageDescription": "Buat dan kelola Tugas yang dapat digunakan kembali.",
       "searchPlaceholder": "Cari Tugas…",
       "newTitle": "Tugas baru",
       "editTitle": "Edit Tugas",
@@ -1144,6 +1145,8 @@
     "racks": {
       "heading": "Rak",
       "empty": "Belum ada rak. Atur host situs ini ke dalam pusat data virtual.",
+      "emptyServerRoomHint": "Ruang server ini belum memiliki rak. <addRack>Buat rak baru</addRack>.",
+      "emptyRackHint": "Rak kosong. Aktifkan <editMode>mode Edit</editMode> untuk menambahkan perangkat.",
       "rackCount": "{{count}} rak",
       "unitCount": "{{count}}U",
       "deviceCount": "{{count}} perangkat",

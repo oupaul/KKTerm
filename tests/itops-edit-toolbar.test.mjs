@@ -45,6 +45,18 @@ test("Room elevation edit mode places devices through the shared picker column",
   assert.match(css, /\.itops-page \.rk-room-layout \{/);
 });
 
+test("Empty Server Rooms and Racks use linked explanatory guidance", async () => {
+  const sites = await read("src/modules/itops/SitesTab.tsx");
+  const css = await read("src/modules/itops/itops.css");
+
+  assert.match(sites, /i18nKey="itops\.racks\.emptyServerRoomHint"/);
+  assert.match(sites, /addRack:[\s\S]*onAddRack\(serverRoom\.key\)/);
+  assert.match(sites, /i18nKey="itops\.racks\.emptyRackHint"/);
+  assert.match(sites, /editMode:[\s\S]*setEditMode\(true\)/);
+  assert.match(css, /\.it-topology-empty\.guidance/);
+  assert.match(css, /\.it-inline-empty-hint button:focus-visible/);
+});
+
 test("Server Room view switcher sits in the drill toolbar with line icons", async () => {
   const sites = await read("src/modules/itops/SitesTab.tsx");
 

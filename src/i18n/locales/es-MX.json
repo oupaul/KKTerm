@@ -1119,6 +1119,7 @@
     },
     "tasks": {
       "heading": "Biblioteca de Tareas",
+      "pageDescription": "Crea y administra Tareas reutilizables.",
       "searchPlaceholder": "Buscar Tareas…",
       "newTitle": "Nueva Tarea",
       "editTitle": "Editar Tarea",
@@ -1144,6 +1145,8 @@
     "racks": {
       "heading": "Racks",
       "empty": "Aún no hay racks. Organiza los hosts de este sitio en un centro de datos virtual.",
+      "emptyServerRoomHint": "Esta sala de servidores no tiene racks. <addRack>Crea un rack nuevo</addRack>.",
+      "emptyRackHint": "El rack está vacío. Activa el <editMode>modo Edición</editMode> para agregar dispositivos.",
       "rackCount": "{{count}} racks",
       "unitCount": "{{count}}U",
       "deviceCount": "{{count}} dispositivos",

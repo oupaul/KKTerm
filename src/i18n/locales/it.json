@@ -1119,6 +1119,7 @@
     },
     "tasks": {
       "heading": "Libreria delle Attività",
+      "pageDescription": "Crea e gestisci Attività riutilizzabili.",
       "searchPlaceholder": "Cerca Attività…",
       "newTitle": "Nuova Attività",
       "editTitle": "Modifica Attività",
@@ -1144,6 +1145,8 @@
     "racks": {
       "heading": "Rack",
       "empty": "Nessun rack ancora. Disponi gli host di questo sito in un datacenter virtuale.",
+      "emptyServerRoomHint": "Questa sala server non contiene rack. <addRack>Crea un nuovo rack</addRack>.",
+      "emptyRackHint": "Il rack è vuoto. Abilita la <editMode>modalità Modifica</editMode> per aggiungere dispositivi.",
       "rackCount": "{{count}} rack",
       "unitCount": "{{count}}U",
       "deviceCount": "{{count}} dispositivi",

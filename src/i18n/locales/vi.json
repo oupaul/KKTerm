@@ -1119,6 +1119,7 @@
     },
     "tasks": {
       "heading": "Thư viện Tác vụ",
+      "pageDescription": "Tạo và quản lý các Tác vụ có thể tái sử dụng.",
       "searchPlaceholder": "Tìm Tác vụ…",
       "newTitle": "Tác vụ mới",
       "editTitle": "Sửa Tác vụ",
@@ -1144,6 +1145,8 @@
     "racks": {
       "heading": "Rack",
       "empty": "Chưa có rack. Sắp xếp các máy chủ của site này thành một trung tâm dữ liệu ảo.",
+      "emptyServerRoomHint": "Phòng máy chủ này chưa có rack. <addRack>Tạo rack mới</addRack>.",
+      "emptyRackHint": "Rack đang trống. Bật <editMode>chế độ Chỉnh sửa</editMode> để thêm thiết bị.",
       "rackCount": "{{count}} rack",
       "unitCount": "{{count}}U",
       "deviceCount": "{{count}} thiết bị",

@@ -1119,6 +1119,7 @@
     },
     "tasks": {
       "heading": "Bibliothèque de Tâches",
+      "pageDescription": "Créez et gérez des Tâches réutilisables.",
       "searchPlaceholder": "Rechercher des Tâches…",
       "newTitle": "Nouvelle Tâche",
       "editTitle": "Modifier la Tâche",
@@ -1144,6 +1145,8 @@
     "racks": {
       "heading": "Racks",
       "empty": "Aucun rack pour le moment. Organisez les hôtes de ce site en un centre de données virtuel.",
+      "emptyServerRoomHint": "Cette salle serveur ne contient aucun rack. <addRack>Créer un rack</addRack>.",
+      "emptyRackHint": "Le rack est vide. Activez le <editMode>mode Édition</editMode> pour ajouter des appareils.",
       "rackCount": "{{count}} racks",
       "unitCount": "{{count}}U",
       "deviceCount": "{{count}} appareils",

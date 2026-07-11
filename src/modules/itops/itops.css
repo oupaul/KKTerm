@@ -759,7 +759,6 @@
 /* BATCH RUNS (hero)                                                      */
 /* ====================================================================== */
 .itops-page .br {
-  padding: var(--pad);
   display: flex;
   flex-direction: column;
   gap: var(--gap);
@@ -1231,23 +1230,23 @@
 /* ====================================================================== */
 /* AUTOMATIONS                                                            */
 /* ====================================================================== */
-.itops-page .au {
-  padding: var(--pad);
-}
 .itops-page .au-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 9px;
 }
 .itops-page .au-row {
   display: flex;
   align-items: center;
   gap: 13px;
   padding: 13px 15px;
-  background: var(--bg);
-  border: 0.5px solid var(--border);
-  border-radius: var(--r-card);
-  box-shadow: var(--card-shadow);
+  background: var(--surface);
+  border: 0;
+  border-bottom: 1px solid var(--hairline);
+  border-radius: 0;
+  box-shadow: none;
   cursor: pointer;
   transition: background 0.12s, border-color 0.12s;
   text-align: left;
@@ -1255,8 +1254,11 @@
   font: inherit;
   color: var(--text);
 }
+.itops-page .au-row:last-child {
+  border-bottom: 0;
+}
 .itops-page .au-row:hover {
-  border-color: var(--border-strong);
+  background: var(--hover);
 }
 .itops-page .au-row.off {
   opacity: 0.62;
@@ -3819,6 +3821,46 @@
   background: color-mix(in srgb, var(--surface) 92%, transparent);
   box-shadow: var(--shadow-control);
 }
+
+.itops-page .it-topology-empty.guidance {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.itops-page .it-inline-empty-hint {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+.itops-page .it-inline-empty-hint button {
+  padding: 3px 2px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+  cursor: pointer;
+}
+
+.itops-page .it-inline-empty-hint button:hover {
+  background: var(--hover);
+  color: var(--accent-press);
+}
+
+.itops-page .it-inline-empty-hint button:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 1px;
+}
+
+.itops-page .it-rack-layout > .it-inline-empty-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+}
 .itops-page .it-drill-toolbar {
   position: sticky;
   top: 0;
@@ -3982,6 +4024,7 @@
   flex: 1 1 auto;
 }
 .itops-page .it-rack-layout {
+  position: relative;
   display: flex;
   align-items: stretch;
   flex: 1 0 auto;
@@ -6557,7 +6600,6 @@
   flex-direction: column;
   gap: 10px;
   margin: 0;
-  padding: var(--pad);
 }
 
 .itops-page .it-destination-page {
@@ -6567,6 +6609,8 @@
 
 .itops-page .it-destination-surface {
   min-height: 100%;
+  box-sizing: border-box;
+  padding: var(--pad);
 }
 
 .itops-page .it-destination-page-head {
@@ -6601,9 +6645,17 @@
 .itops-page .it-task-library {
   display: grid;
   grid-template-columns: minmax(220px, 290px) minmax(0, 1fr);
-  height: 100%;
+  flex: 1;
   min-height: 0;
-  background: var(--chrome-strong);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+}
+
+.itops-page .it-task-library-page {
+  display: flex;
+  flex-direction: column;
 }
 
 .itops-page .it-task-list {
@@ -6612,24 +6664,14 @@
   min-height: 0;
   flex-direction: column;
   border-right: 1px solid var(--hairline);
-  background: var(--chrome);
+  background: var(--surface-muted);
 }
 
-.itops-page .it-task-list-head,
 .itops-page .it-task-detail-head {
   display: flex;
   align-items: center;
   gap: 10px;
 }
-
-.itops-page .it-task-list-head {
-  min-height: 42px;
-  padding: 0 12px;
-  border-bottom: 1px solid var(--hairline);
-}
-
-.itops-page .it-task-list-head strong { font-size: 13px; }
-.itops-page .it-task-list-head .it-icon-btn { margin-left: auto; }
 
 .itops-page .it-task-search {
   display: flex;

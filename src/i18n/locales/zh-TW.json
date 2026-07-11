@@ -1119,6 +1119,7 @@
     },
     "tasks": {
       "heading": "任務庫",
+      "pageDescription": "建立及管理可重複使用的任務。",
       "searchPlaceholder": "搜尋任務……",
       "newTitle": "新增任務",
       "editTitle": "編輯任務",
@@ -1144,6 +1145,8 @@
     "racks": {
       "heading": "機架",
       "empty": "尚無機架。將此站台的主機排列為虛擬資料中心。",
+      "emptyServerRoomHint": "此伺服器機房中沒有機架。<addRack>新增機架</addRack>。",
+      "emptyRackHint": "機架是空的，請啟用<editMode>編輯模式</editMode>以新增裝置。",
       "rackCount": "{{count}} 個機架",
       "unitCount": "{{count}}U",
       "deviceCount": "{{count}} 個裝置",

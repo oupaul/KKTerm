@@ -1119,6 +1119,7 @@
     },
     "tasks": {
       "heading": "Task-Bibliothek",
+      "pageDescription": "Wiederverwendbare Tasks erstellen und verwalten.",
       "searchPlaceholder": "Tasks suchen…",
       "newTitle": "Neuer Task",
       "editTitle": "Task bearbeiten",
@@ -1144,6 +1145,8 @@
     "racks": {
       "heading": "Racks",
       "empty": "Noch keine Racks. Ordnen Sie die Hosts dieser Site in einem virtuellen Rechenzentrum an.",
+      "emptyServerRoomHint": "Dieser Serverraum enthält keine Racks. <addRack>Neues Rack erstellen</addRack>.",
+      "emptyRackHint": "Das Rack ist leer. <editMode>Bearbeitungsmodus</editMode> aktivieren, um Geräte hinzuzufügen.",
       "rackCount": "{{count}} Racks",
       "unitCount": "{{count}}U",
       "deviceCount": "{{count}} Geräte",

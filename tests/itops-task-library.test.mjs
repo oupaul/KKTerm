@@ -42,6 +42,14 @@ test("Task Library manages definitions while the Hosts launcher selects saved Ta
   assert.match(library, /const updateTask = useItOpsStore/);
 });
 
+test("Task Library uses the shared destination page frame", () => {
+  assert.match(sites, /rootSurface === "tasks"[\s\S]*className="hg-detail it-destination-page"/);
+  assert.match(library, /className="it-task-library-page it-destination-surface"/);
+  assert.match(library, /className="it-destination-page-head"/);
+  assert.match(library, /itops\.tasks\.pageDescription/);
+  assert.match(library, /className="it-btn primary"[\s\S]*itops\.tasks\.newTitle/);
+});
+
 test("Tasks are durable global rows with registered CRUD commands", () => {
   assert.match(schema, /CREATE TABLE IF NOT EXISTS itops_tasks/);
   const taskTable = schema.match(/CREATE TABLE IF NOT EXISTS itops_tasks \([\s\S]*?\n\);/)?.[0] ?? "";

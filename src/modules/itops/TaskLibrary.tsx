@@ -108,49 +108,55 @@ export function TaskLibrary() {
   }
 
   return (
-    <div className="it-task-library">
-      <aside className="it-task-list">
-        <div className="it-task-list-head">
-          <strong>{t("itops.tasks.heading")}</strong>
-          <button type="button" className="it-icon-btn sm" title={t("itops.tasks.newTitle")} onClick={() => setEditor(null)}>
-            <ItIcon name="plus" size={14} />
-          </button>
+    <div className="it-task-library-page it-destination-surface">
+      <div className="it-destination-page-head">
+        <div>
+          <h2>{t("itops.tasks.heading")}</h2>
+          <p>{t("itops.tasks.pageDescription")}</p>
         </div>
-        <label className="it-task-search">
-          <ItIcon name="search" size={13} />
-          <input value={query} placeholder={t("itops.tasks.searchPlaceholder")} onChange={(event) => setQuery(event.currentTarget.value)} />
-        </label>
-        <div className="it-task-rows">
-          {filtered.map((task) => (
-            <button key={task.id} type="button" className="it-task-row" data-active={task.id === selectedId} onClick={() => setSelectedId(task.id)}>
-              <span className="it-task-row-icon"><ItIcon name={taskKind(task) === "script" ? "code" : "book"} size={15} /></span>
-              <span><strong>{task.name}</strong><small>{t(`itops.tasks.kind.${taskKind(task)}`)}</small></span>
-            </button>
-          ))}
-        </div>
-      </aside>
+        <button type="button" className="it-btn primary" onClick={() => setEditor(null)}>
+          <ItIcon name="plus" size={14} />
+          {t("itops.tasks.newTitle")}
+        </button>
+      </div>
+      <div className="it-task-library">
+        <aside className="it-task-list">
+          <label className="it-task-search">
+            <ItIcon name="search" size={13} />
+            <input value={query} placeholder={t("itops.tasks.searchPlaceholder")} onChange={(event) => setQuery(event.currentTarget.value)} />
+          </label>
+          <div className="it-task-rows">
+            {filtered.map((task) => (
+              <button key={task.id} type="button" className="it-task-row" data-active={task.id === selectedId} onClick={() => setSelectedId(task.id)}>
+                <span className="it-task-row-icon"><ItIcon name={taskKind(task) === "script" ? "code" : "book"} size={15} /></span>
+                <span><strong>{task.name}</strong><small>{t(`itops.tasks.kind.${taskKind(task)}`)}</small></span>
+              </button>
+            ))}
+          </div>
+        </aside>
 
-      <main className="it-task-detail">
-        {selected ? (
-          <>
-            <header className="it-task-detail-head">
-              <span className="it-task-detail-icon"><ItIcon name={taskKind(selected) === "script" ? "code" : "book"} size={20} /></span>
-              <div><h2>{selected.name}</h2><p>{selected.description || t("itops.tasks.noDescription")}</p></div>
-              <span className="it-task-spacer" />
-              <button type="button" className="it-btn" onClick={() => setEditor(selected)}><ItIcon name="edit" size={14} />{t("itops.actions.edit")}</button>
-              <button type="button" className="it-btn" onClick={() => setPendingDelete(selected)}><ItIcon name="trash" size={14} />{t("itops.actions.delete")}</button>
-            </header>
-            <section className="it-task-definition">
-              <div className="it-section-label">{t("itops.tasks.definitionHeading")}</div>
-              {selected.task.kind === "script" ? <pre>{selected.task.body}</pre> : (
-                <div className="it-task-steps">{selected.task.steps.map((step, index) => <div key={index}><strong>{index + 1}. {step.name || step.send}</strong><code>{step.send}</code></div>)}</div>
-              )}
-            </section>
-          </>
-        ) : loaded ? (
-          <div className="it-empty"><span className="glyph"><ItIcon name="code" size={28} /></span><h2>{t("itops.tasks.emptyTitle")}</h2><p>{t("itops.tasks.emptyBody")}</p><button type="button" className="it-btn primary" onClick={() => setEditor(null)}><ItIcon name="plus" size={14} />{t("itops.tasks.newTitle")}</button></div>
-        ) : null}
-      </main>
+        <main className="it-task-detail">
+          {selected ? (
+            <>
+              <header className="it-task-detail-head">
+                <span className="it-task-detail-icon"><ItIcon name={taskKind(selected) === "script" ? "code" : "book"} size={20} /></span>
+                <div><h2>{selected.name}</h2><p>{selected.description || t("itops.tasks.noDescription")}</p></div>
+                <span className="it-task-spacer" />
+                <button type="button" className="it-btn" onClick={() => setEditor(selected)}><ItIcon name="edit" size={14} />{t("itops.actions.edit")}</button>
+                <button type="button" className="it-btn" onClick={() => setPendingDelete(selected)}><ItIcon name="trash" size={14} />{t("itops.actions.delete")}</button>
+              </header>
+              <section className="it-task-definition">
+                <div className="it-section-label">{t("itops.tasks.definitionHeading")}</div>
+                {selected.task.kind === "script" ? <pre>{selected.task.body}</pre> : (
+                  <div className="it-task-steps">{selected.task.steps.map((step, index) => <div key={index}><strong>{index + 1}. {step.name || step.send}</strong><code>{step.send}</code></div>)}</div>
+                )}
+              </section>
+            </>
+          ) : loaded ? (
+            <div className="it-empty"><span className="glyph"><ItIcon name="code" size={28} /></span><h2>{t("itops.tasks.emptyTitle")}</h2><p>{t("itops.tasks.emptyBody")}</p></div>
+          ) : null}
+        </main>
+      </div>
 
       {editor !== undefined ? <TaskDialog task={editor} onClose={() => setEditor(undefined)} /> : null}
       {pendingDelete ? <ConfirmSheet tone="danger" title={t("itops.tasks.deleteTitle")} message={t("itops.tasks.deleteBody", { name: pendingDelete.name })} confirmLabel={t("itops.actions.delete")} confirmIcon="trash" onConfirm={() => void confirmDelete()} onCancel={() => setPendingDelete(null)} /> : null}

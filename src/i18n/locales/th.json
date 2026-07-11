@@ -1119,6 +1119,7 @@
     },
     "tasks": {
       "heading": "คลังงาน",
+      "pageDescription": "สร้างและจัดการงานที่นำกลับมาใช้ซ้ำได้",
       "searchPlaceholder": "ค้นหางาน…",
       "newTitle": "งานใหม่",
       "editTitle": "แก้ไขงาน",
@@ -1144,6 +1145,8 @@
     "racks": {
       "heading": "แร็ค",
       "empty": "ยังไม่มีแร็ค จัดเรียงโฮสต์ของไซต์นี้ในศูนย์ข้อมูลเสมือน",
+      "emptyServerRoomHint": "ห้องเซิร์ฟเวอร์นี้ยังไม่มีแร็ค <addRack>สร้างแร็คใหม่</addRack>",
+      "emptyRackHint": "แร็คว่างอยู่ เปิดใช้<editMode>โหมดแก้ไข</editMode>เพื่อเพิ่มอุปกรณ์",
       "rackCount": "{{count}} แร็ค",
       "unitCount": "{{count}}U",
       "deviceCount": "{{count}} อุปกรณ์",

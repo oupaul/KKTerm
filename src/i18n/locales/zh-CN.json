@@ -1119,6 +1119,7 @@
     },
     "tasks": {
       "heading": "任务库",
+      "pageDescription": "创建和管理可复用的任务。",
       "searchPlaceholder": "搜索任务……",
       "newTitle": "新建任务",
       "editTitle": "编辑任务",
@@ -1144,6 +1145,8 @@
     "racks": {
       "heading": "机架",
       "empty": "暂无机架。将此站点的主机排布为虚拟数据中心。",
+      "emptyServerRoomHint": "此服务器机房中没有机架。<addRack>新建机架</addRack>。",
+      "emptyRackHint": "机架为空，请启用<editMode>编辑模式</editMode>以添加设备。",
       "rackCount": "{{count}} 个机架",
       "unitCount": "{{count}}U",
       "deviceCount": "{{count}} 个设备",

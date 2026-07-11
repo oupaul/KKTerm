@@ -1119,6 +1119,7 @@
     },
     "tasks": {
       "heading": "작업 라이브러리",
+      "pageDescription": "재사용 가능한 작업을 만들고 관리합니다.",
       "searchPlaceholder": "작업 검색…",
       "newTitle": "새 작업",
       "editTitle": "작업 편집",
@@ -1144,6 +1145,8 @@
     "racks": {
       "heading": "랙",
       "empty": "아직 랙이 없습니다. 이 사이트의 호스트를 가상 데이터 센터에 배치하세요.",
+      "emptyServerRoomHint": "이 서버실에는 랙이 없습니다. <addRack>새 랙을 만드세요</addRack>.",
+      "emptyRackHint": "랙이 비어 있습니다. 장치를 추가하려면 <editMode>편집 모드</editMode>를 활성화하세요.",
       "rackCount": "{{count}}개 랙",
       "unitCount": "{{count}}U",
       "deviceCount": "{{count}}개 장치",

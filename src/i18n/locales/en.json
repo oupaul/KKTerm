@@ -1119,6 +1119,7 @@
     },
     "tasks": {
       "heading": "Task Library",
+      "pageDescription": "Create and manage reusable Tasks.",
       "searchPlaceholder": "Search tasks…",
       "newTitle": "New Task",
       "editTitle": "Edit Task",
@@ -1144,6 +1145,8 @@
     "racks": {
       "heading": "Racks",
       "empty": "No racks yet. Arrange this Site's hosts into a virtual datacenter.",
+      "emptyServerRoomHint": "This Server Room has no Racks. <addRack>Create a new Rack</addRack>.",
+      "emptyRackHint": "Rack is empty, enable <editMode>Edit mode</editMode> to add devices.",
       "rackCount": "{{count}} racks",
       "unitCount": "{{count}}U",
       "deviceCount": "{{count}} devices",
