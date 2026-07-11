@@ -17,7 +17,8 @@ test("Rack Device editor uses identity and form columns", async () => {
   assert.doesNotMatch(dialog, /startULabel"\)} req/);
   assert.match(dialog, /itemHeightLabel"\)} req/);
   // Identity fields live under the preview, ahead of the form column.
-  assert.match(dialog, /labelLabel[\s\S]*vendorLabel[\s\S]*hostLabel[\s\S]*form-column[\s\S]*statusLabel/);
+  assert.match(dialog, /labelLabel[\s\S]*vendorLabel[\s\S]*form-column[\s\S]*statusLabel/);
+  assert.doesNotMatch(dialog, /hostLabel[\s\S]*<Select/);
   assert.doesNotMatch(dialog, /relationshipLabel|ipamLabel|auditLabel/);
   assert.doesNotMatch(dialog, /connection-binding-list/);
 });
@@ -114,4 +115,18 @@ test("Rack Device Connection bindings use a separate dialog and device action", 
   assert.match(elevation, /onBindItem/);
   assert.match(elevation, /ItIcon name="link"/);
   assert.match(sites, /<RackItemBindingsDialog/);
+});
+
+test("Rack Device Host binding uses a count link and dedicated editor", async () => {
+  const dialog = await read("src/modules/itops/RackItemDialog.tsx");
+  const bindings = await read("src/modules/itops/RackHostBindingDialog.tsx");
+  const styles = await read("src/modules/itops/itops.css");
+
+  assert.doesNotMatch(dialog, /Field label=\{t\("itops\.racks\.hostLabel"\)/);
+  assert.match(dialog, /className="rack-host-bind-link"/);
+  assert.match(dialog, /boundHostCount/);
+  assert.match(dialog, /<RackHostBindingDialog/);
+  assert.match(bindings, /role="radiogroup"/);
+  assert.match(bindings, /<HostDialog[\s\S]*onSaved=\{\(host\) => setSelectedHostId\(host\.id\)\}/);
+  assert.match(styles, /rack-host-bind-link[\s\S]*color: var\(--accent\)/);
 });

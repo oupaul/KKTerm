@@ -1002,6 +1002,11 @@
       "runs": "Eksekusi batch",
       "autos": "Automasi"
     },
+    "navigation": {
+      "serverRooms": "Ruang server",
+      "runHistory": "Riwayat eksekusi",
+      "library": "Pustaka"
+    },
     "actions": {
       "newSite": "Situs baru",
       "newBatchRun": "Eksekusi batch baru",
@@ -1066,6 +1071,11 @@
     },
     "hosts": {
       "empty": "Belum ada host. Impor daftar nama host untuk membangun inventaris situs ini.",
+      "pageDescription": "Pilih Host dengan Koneksi SSH terikat, lalu jalankan Tugas hanya pada target tersebut.",
+      "selectedCount": "{{count}} dipilih",
+      "selectAll": "Pilih semua Host yang dapat dijalankan",
+      "selectHost": "Pilih {{name}}",
+      "noRunnableConnection": "Ikat Koneksi SSH sebelum menjalankan Tugas pada Host ini.",
       "hostCount_one": "{{count}} host",
       "hostCount_other": "{{count}} host",
       "importAction": "Impor host",
@@ -1106,6 +1116,30 @@
       "bindingsHint": "Ikat satu atau beberapa koneksi ke host ini — mis. terminal SSH-nya dan koneksi URL HTTPS ke antarmuka manajemennya.",
       "deleteConfirmTitle": "Hapus host \"{{name}}\"?",
       "deleteConfirmBody": "Host anaknya tetap ada dan naik satu tingkat. Tidak ada koneksi yang dihapus."
+    },
+    "tasks": {
+      "heading": "Pustaka Tugas",
+      "searchPlaceholder": "Cari Tugas…",
+      "newTitle": "Tugas baru",
+      "editTitle": "Edit Tugas",
+      "nameLabel": "Nama",
+      "descriptionLabel": "Deskripsi",
+      "shellLabel": "Shell",
+      "shellPlaceholder": "Gunakan bawaan transport",
+      "scriptLabel": "Skrip",
+      "definitionHeading": "Definisi",
+      "noDescription": "Tidak ada deskripsi",
+      "emptyTitle": "Belum ada Tugas yang dapat digunakan kembali",
+      "emptyBody": "Simpan skrip sebagai Tugas, lalu jalankan pada Situs apa pun atau gunakan dari automasi.",
+      "savedNotice": "Tugas “{{name}}” disimpan.",
+      "deletedNotice": "Tugas “{{name}}” dihapus.",
+      "deleteTitle": "Hapus Tugas?",
+      "deleteBody": "“{{name}}” akan dihapus. Riwayat eksekusi yang ada tidak terpengaruh.",
+      "playbookEditLater": "Penyuntingan Playbook yang dapat digunakan kembali akan ditambahkan pada tahap implementasi berikutnya.",
+      "kind": {
+        "script": "Tugas Skrip",
+        "playbook": "Playbook"
+      }
     },
     "racks": {
       "heading": "Rak",
@@ -1179,6 +1213,10 @@
       "hostLabel": "Host",
       "hostHint": "Host IT Ops untuk perangkat ini; host anaknya tampil di balon rak.",
       "hostNone": "Tidak ada",
+      "hostBindingsTitle": "Ikat Host",
+      "hostBindingsHint": "Pilih Host yang diwakili perangkat rak ini, atau tambahkan Host baru.",
+      "boundHostCount_one": "{{count}} Host terikat",
+      "boundHostCount_other": "{{count}} Host terikat",
       "noMembers": "Tambah koneksi ke situs ini terlebih dahulu untuk menempatkan host.",
       "labelLabel": "Label",
       "labelHint": "Opsional. Default-nya adalah tipe perangkat atau nama koneksi.",
@@ -1344,7 +1382,7 @@
       "specs": "Spesifikasi"
     },
     "batchRuns": {
-      "emptyTitle": "Belum ada eksekusi batch",
+      "emptyTitle": "Belum ada riwayat eksekusi",
       "emptyBody": "Kirim skrip atau playbook interaktif ke setiap host dalam situs sekaligus, dengan keluaran langsung per host dan laporan tersimpan.",
       "stateRunning": "Berjalan",
       "stateCompleted": "Selesai",
@@ -1369,6 +1407,9 @@
       "siteLabel": "Situs",
       "scopeRack": "Hanya menargetkan rak {{name}}",
       "scopeServerRoom": "Hanya menargetkan ruang server {{name}}",
+      "scopeSelectedHosts": "Hanya menargetkan {{count}} Host terpilih",
+      "taskSourceLabel": "Sumber Tugas",
+      "adHocTask": "Tugas ad hoc",
       "scriptLabel": "Skrip",
       "scriptPlaceholder": "sudo apt-get update && sudo apt-get upgrade -y",
       "noGroups": "Buat situs lebih dulu untuk menjalankan eksekusi batch.",
@@ -1376,6 +1417,8 @@
       "stateCanceled": "Dibatalkan",
       "progressComplete": "{{done}} dari {{total}} selesai",
       "historyHeading": "Eksekusi terbaru",
+      "historyDescription": "Kemajuan langsung dan laporan Tugas yang selesai untuk Situs ini.",
+      "historyEmptyBody": "Eksekusi yang dimulai dari halaman Host atau automasi akan muncul di sini.",
       "historySummary": "{{ok}}/{{total}} ok",
       "waitingOutput": "Menunggu keluaran…",
       "noOutput": "Tidak ada keluaran tertangkap",
@@ -1401,6 +1444,7 @@
     "automations": {
       "emptyTitle": "Belum ada automasi",
       "emptyBody": "Aturan tahan lama — satu pemicu, kondisi opsional, dan tindakan berurutan — yang dipasang ulang setiap kali KKTerm diluncurkan. Watchdog yang telah berkembang.",
+      "pageDescription": "Kelola aturan tahan lama yang diikat ke Situs ini.",
       "armed": "Terpasang",
       "disabled": "Nonaktif",
       "builder": {

@@ -1002,6 +1002,11 @@
       "runs": "批量运行",
       "autos": "自动化"
     },
+    "navigation": {
+      "serverRooms": "服务器机房",
+      "runHistory": "运行历史",
+      "library": "库"
+    },
     "actions": {
       "newSite": "新建站点",
       "newBatchRun": "新建批量运行",
@@ -1066,6 +1071,11 @@
     },
     "hosts": {
       "empty": "还没有主机。导入主机名列表以建立此站点的清单。",
+      "pageDescription": "选择已绑定 SSH 连接的主机，然后仅对这些目标运行任务。",
+      "selectedCount": "已选 {{count}} 个",
+      "selectAll": "选择所有可运行的主机",
+      "selectHost": "选择 {{name}}",
+      "noRunnableConnection": "在此主机上运行任务前先绑定一个 SSH 连接。",
       "hostCount_one": "{{count}} 台主机",
       "hostCount_other": "{{count}} 台主机",
       "importAction": "导入主机",
@@ -1106,6 +1116,30 @@
       "bindingsHint": "将一个或多个连接绑定到此主机——例如其 SSH 终端和指向其管理界面的 HTTPS URL 连接。",
       "deleteConfirmTitle": "删除主机“{{name}}”？",
       "deleteConfirmBody": "其子主机将保留并上移一级。不会删除任何连接。"
+    },
+    "tasks": {
+      "heading": "任务库",
+      "searchPlaceholder": "搜索任务……",
+      "newTitle": "新建任务",
+      "editTitle": "编辑任务",
+      "nameLabel": "名称",
+      "descriptionLabel": "描述",
+      "shellLabel": "Shell",
+      "shellPlaceholder": "使用传输默认值",
+      "scriptLabel": "脚本",
+      "definitionHeading": "定义",
+      "noDescription": "无描述",
+      "emptyTitle": "尚无可复用的任务",
+      "emptyBody": "将一段脚本保存为任务，然后对任意站点运行它，或从自动化中使用它。",
+      "savedNotice": "已保存任务“{{name}}”。",
+      "deletedNotice": "已删除任务“{{name}}”。",
+      "deleteTitle": "删除任务？",
+      "deleteBody": "“{{name}}” 将被移除。现有的运行历史不受影响。",
+      "playbookEditLater": "可复用 Playbook 的编辑将在后续实现切片中加入。",
+      "kind": {
+        "script": "脚本任务",
+        "playbook": "Playbook"
+      }
     },
     "racks": {
       "heading": "机架",
@@ -1179,6 +1213,10 @@
       "hostLabel": "主机",
       "hostHint": "此设备对应的 IT Ops 主机；其子主机会显示在机柜标注中。",
       "hostNone": "无",
+      "hostBindingsTitle": "绑定主机",
+      "hostBindingsHint": "选择此机架设备所代表的主机，或添加新主机。",
+      "boundHostCount_one": "已绑定 {{count}} 台主机",
+      "boundHostCount_other": "已绑定 {{count}} 台主机",
       "noMembers": "请先向此站点添加连接才能放置主机。",
       "labelLabel": "标签",
       "labelHint": "可选。默认为设备类型或连接名称。",
@@ -1344,7 +1382,7 @@
       "specs": "规格"
     },
     "batchRuns": {
-      "emptyTitle": "暂无批量运行",
+      "emptyTitle": "暂无运行记录",
       "emptyBody": "一次性将脚本或交互式 Playbook 发送至站点中的每台主机，提供逐主机实时输出和已保存的报告。",
       "stateRunning": "运行中",
       "stateCompleted": "已完成",
@@ -1369,6 +1407,9 @@
       "siteLabel": "站点",
       "scopeRack": "仅针对机架 {{name}}",
       "scopeServerRoom": "仅针对服务器机房 {{name}}",
+      "scopeSelectedHosts": "仅以选定的 {{count}} 台主机为目标",
+      "taskSourceLabel": "任务来源",
+      "adHocTask": "临时任务",
       "scriptLabel": "脚本",
       "scriptPlaceholder": "sudo apt-get update && sudo apt-get upgrade -y",
       "noGroups": "请先创建站点才能运行批量运行。",
@@ -1376,6 +1417,8 @@
       "stateCanceled": "已取消",
       "progressComplete": "{{done}} / {{total}} 已完成",
       "historyHeading": "近期运行",
+      "historyDescription": "此站点的实时进度与已完成的任务报告。",
+      "historyEmptyBody": "从主机页面或某个自动化启动的运行将显示在这里。",
       "historySummary": "{{ok}}/{{total}} 成功",
       "waitingOutput": "等待输出中…",
       "noOutput": "未捕获输出",
@@ -1401,6 +1444,7 @@
     "automations": {
       "emptyTitle": "暂无自动化",
       "emptyBody": "一条持久规则 — 一个触发、一个可选条件和有序动作 — 每次 KKTerm 启动时重新启用。进化的看门狗。",
+      "pageDescription": "管理绑定到此站点的持久规则。",
       "armed": "已启用",
       "disabled": "已禁用",
       "builder": {

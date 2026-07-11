@@ -1002,6 +1002,11 @@
       "runs": "Exécutions par lot",
       "autos": "Automatisations"
     },
+    "navigation": {
+      "serverRooms": "Salles de serveurs",
+      "runHistory": "Historique d’exécutions",
+      "library": "Bibliothèque"
+    },
     "actions": {
       "newSite": "Nouveau site",
       "newBatchRun": "Nouvelle exécution par lot",
@@ -1066,6 +1071,11 @@
     },
     "hosts": {
       "empty": "Aucun hôte pour l'instant. Importez une liste de noms d'hôte pour constituer l'inventaire de ce site.",
+      "pageDescription": "Sélectionnez des Hôtes avec des Connexions SSH liées, puis exécutez une Tâche uniquement sur ces cibles.",
+      "selectedCount": "{{count}} sélectionnés",
+      "selectAll": "Sélectionner tous les Hôtes exécutables",
+      "selectHost": "Sélectionner {{name}}",
+      "noRunnableConnection": "Liez une Connexion SSH avant d’exécuter des Tâches sur cet Hôte.",
       "hostCount_one": "{{count}} hôte",
       "hostCount_other": "{{count}} hôtes",
       "importAction": "Importer des hôtes",
@@ -1106,6 +1116,30 @@
       "bindingsHint": "Liez une ou plusieurs connexions à cet hôte — p. ex. son terminal SSH et une connexion URL HTTPS vers son interface de gestion.",
       "deleteConfirmTitle": "Supprimer l'hôte « {{name}} » ?",
       "deleteConfirmBody": "Ses hôtes enfants sont conservés et remontent d'un niveau. Aucune connexion n'est supprimée."
+    },
+    "tasks": {
+      "heading": "Bibliothèque de Tâches",
+      "searchPlaceholder": "Rechercher des Tâches…",
+      "newTitle": "Nouvelle Tâche",
+      "editTitle": "Modifier la Tâche",
+      "nameLabel": "Nom",
+      "descriptionLabel": "Description",
+      "shellLabel": "Shell",
+      "shellPlaceholder": "Utiliser la valeur par défaut du transport",
+      "scriptLabel": "Script",
+      "definitionHeading": "Définition",
+      "noDescription": "Aucune description",
+      "emptyTitle": "Aucune Tâche réutilisable pour le moment",
+      "emptyBody": "Enregistrez un script en tant que Tâche, puis exécutez-le sur n’importe quel Site ou utilisez-le depuis une automatisation.",
+      "savedNotice": "Tâche « {{name}} » enregistrée.",
+      "deletedNotice": "Tâche « {{name}} » supprimée.",
+      "deleteTitle": "Supprimer la Tâche ?",
+      "deleteBody": "« {{name}} » sera supprimée. L’Historique d’exécutions existant n’est pas affecté.",
+      "playbookEditLater": "L’édition des Playbooks réutilisables sera ajoutée dans une phase d’implémentation ultérieure.",
+      "kind": {
+        "script": "Tâche de Script",
+        "playbook": "Playbook"
+      }
     },
     "racks": {
       "heading": "Racks",
@@ -1179,6 +1213,10 @@
       "hostLabel": "Hôte",
       "hostHint": "L'hôte IT Ops qu'est cet appareil ; ses hôtes enfants apparaissent dans la bulle du rack.",
       "hostNone": "Aucun",
+      "hostBindingsTitle": "Lier des hôtes",
+      "hostBindingsHint": "Choisissez l’Host représenté par ce périphérique de rack, ou ajoutez un nouvel Host.",
+      "boundHostCount_one": "{{count}} hôte lié",
+      "boundHostCount_other": "{{count}} hôtes liés",
       "noMembers": "Ajoutez d'abord des connexions à ce site pour pouvoir placer un hôte.",
       "labelLabel": "Étiquette",
       "labelHint": "Facultatif. Par défaut, le type d'appareil ou le nom de la connexion.",
@@ -1344,7 +1382,7 @@
       "specs": "Spécifications"
     },
     "batchRuns": {
-      "emptyTitle": "Aucune exécution par lot pour le moment",
+      "emptyTitle": "Aucun historique d’exécutions pour le moment",
       "emptyBody": "Envoyez un script ou un playbook interactif à chaque hôte d'un site en une fois, avec une sortie en direct par hôte et un rapport enregistré.",
       "stateRunning": "En cours d'exécution",
       "stateCompleted": "Terminé",
@@ -1369,6 +1407,9 @@
       "siteLabel": "Site",
       "scopeRack": "Cible : rack {{name}} uniquement",
       "scopeServerRoom": "Cible : salle des serveurs {{name}} uniquement",
+      "scopeSelectedHosts": "Cibler uniquement {{count}} Hôtes sélectionnés",
+      "taskSourceLabel": "Source de la Tâche",
+      "adHocTask": "Tâche ad hoc",
       "scriptLabel": "Script",
       "scriptPlaceholder": "sudo apt-get update && sudo apt-get upgrade -y",
       "noGroups": "Créez d'abord un site pour lancer une exécution par lot.",
@@ -1376,6 +1417,8 @@
       "stateCanceled": "Annulé",
       "progressComplete": "{{done}} sur {{total}} terminé",
       "historyHeading": "Exécutions récentes",
+      "historyDescription": "Progression en direct et rapports de Tâche terminés pour ce Site.",
+      "historyEmptyBody": "Les exécutions démarrées depuis la page Hôtes ou depuis une automatisation apparaîtront ici.",
       "historySummary": "{{ok}}/{{total}} ok",
       "waitingOutput": "En attente de sortie…",
       "noOutput": "Aucune sortie capturée",
@@ -1401,6 +1444,7 @@
     "automations": {
       "emptyTitle": "Aucune automatisation pour le moment",
       "emptyBody": "Une règle durable — un déclencheur, une condition facultative et des actions ordonnées — qui se réarme à chaque lancement de KKTerm. Le chien de garde évolué.",
+      "pageDescription": "Gérer les règles durables liées à ce Site.",
       "armed": "Armé",
       "disabled": "Désactivé",
       "builder": {

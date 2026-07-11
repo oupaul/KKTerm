@@ -29,10 +29,10 @@ import type {
   RackShell,
   ResolvedHost,
 } from "../../types";
-import { hostDisplayName } from "./hostTree";
 import type { KuaiKuaiStyle } from "./KuaiKuaiBag";
 import { normalizeRackItemMetadata } from "./rackInventory";
 import { RackDevice } from "./RackDevice";
+import { RackHostBindingDialog } from "./RackHostBindingDialog";
 import { useItOpsStore } from "./state";
 
 const SHELL_OPTIONS: RackShell[] = ["black", "white", "grey"];
@@ -147,8 +147,8 @@ export function RackItemDialog({
   const [tags, setTags] = useState(joinValues(item?.metadata?.tags));
   // The IT Ops Host this device is (docs/ITOPS.md Hosts); its child Hosts show
   // in the Rack View callout.
-  const siteHosts = useItOpsStore((state) => state.hostsBySite[siteId] ?? []);
   const [hostId, setHostId] = useState(item?.metadata?.hostId ?? "");
+  const [editingHostBinding, setEditingHostBinding] = useState(false);
   const [networkPortRows, setNetworkPortRows] = useState<RackNetworkPort[]>(
     initialMetadata.networkPorts ?? [],
   );
@@ -463,22 +463,6 @@ export function RackItemDialog({
               <TextArea className="rack-item-tags" rows={1} value={tags} onChange={(event) => setTags(event.currentTarget.value)} />
             </Field>
 
-            {siteHosts.length > 0 ? (
-              <Field label={t("itops.racks.hostLabel")} hint={t("itops.racks.hostHint")}>
-                <Select
-                  value={hostId}
-                  onChange={(event) => setHostId(event.currentTarget.value)}
-                  options={[
-                    { value: "", label: t("itops.racks.hostNone") },
-                    ...siteHosts.map((siteHost) => ({
-                      value: siteHost.id,
-                      label: hostDisplayName(siteHost),
-                    })),
-                  ]}
-                />
-              </Field>
-            ) : null}
-
             {needsConnection ? (
               <Field label={t("itops.racks.connectionLabel")} req>
                 {members.length === 0 ? (
@@ -677,9 +661,25 @@ export function RackItemDialog({
           </>
         ) : null}
 
+            <button
+              type="button"
+              className="rack-host-bind-link"
+              onClick={() => setEditingHostBinding(true)}
+            >
+              {t("itops.racks.boundHostCount", { count: hostId ? 1 : 0 })}
+            </button>
+
           </section>
         </div>
       </Sheet>
+      {editingHostBinding ? (
+        <RackHostBindingDialog
+          siteId={siteId}
+          hostId={hostId}
+          onApply={setHostId}
+          onClose={() => setEditingHostBinding(false)}
+        />
+      ) : null}
     </DialogShell>
   );
 }

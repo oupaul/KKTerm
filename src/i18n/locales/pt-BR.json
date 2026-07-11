@@ -1002,6 +1002,11 @@
       "runs": "Execuções em lote",
       "autos": "Automações"
     },
+    "navigation": {
+      "serverRooms": "Salas de servidores",
+      "runHistory": "Histórico de execuções",
+      "library": "Biblioteca"
+    },
     "actions": {
       "newSite": "Novo site",
       "newBatchRun": "Nova execução em lote",
@@ -1066,6 +1071,11 @@
     },
     "hosts": {
       "empty": "Ainda não há hosts. Importe uma lista de nomes de host para montar o inventário deste site.",
+      "pageDescription": "Selecione Hosts com Conexões SSH vinculadas e execute uma Tarefa apenas nesses destinos.",
+      "selectedCount": "{{count}} selecionados",
+      "selectAll": "Selecionar todos os Hosts executáveis",
+      "selectHost": "Selecionar {{name}}",
+      "noRunnableConnection": "Vincule uma Conexão SSH antes de executar Tarefas neste Host.",
       "hostCount_one": "{{count}} host",
       "hostCount_other": "{{count}} hosts",
       "importAction": "Importar hosts",
@@ -1106,6 +1116,30 @@
       "bindingsHint": "Vincule uma ou mais conexões a este host — por exemplo, seu terminal SSH e uma conexão de URL HTTPS para sua interface de gerenciamento.",
       "deleteConfirmTitle": "Excluir o host \"{{name}}\"?",
       "deleteConfirmBody": "Os hosts filhos são mantidos e sobem um nível. Nenhuma conexão é excluída."
+    },
+    "tasks": {
+      "heading": "Biblioteca de Tarefas",
+      "searchPlaceholder": "Buscar Tarefas…",
+      "newTitle": "Nova Tarefa",
+      "editTitle": "Editar Tarefa",
+      "nameLabel": "Nome",
+      "descriptionLabel": "Descrição",
+      "shellLabel": "Shell",
+      "shellPlaceholder": "Usar o padrão do transporte",
+      "scriptLabel": "Script",
+      "definitionHeading": "Definição",
+      "noDescription": "Sem descrição",
+      "emptyTitle": "Ainda não há Tarefas reutilizáveis",
+      "emptyBody": "Salve um script como Tarefa e execute-o em qualquer Site ou use-o em uma automação.",
+      "savedNotice": "Tarefa “{{name}}” salva.",
+      "deletedNotice": "Tarefa “{{name}}” excluída.",
+      "deleteTitle": "Excluir Tarefa?",
+      "deleteBody": "“{{name}}” será removida. O Histórico de execuções existente não é afetado.",
+      "playbookEditLater": "A edição de Playbooks reutilizáveis será adicionada em uma fase posterior de implementação.",
+      "kind": {
+        "script": "Tarefa de Script",
+        "playbook": "Playbook"
+      }
     },
     "racks": {
       "heading": "Racks",
@@ -1179,6 +1213,10 @@
       "hostLabel": "Host",
       "hostHint": "O host de IT Ops que este dispositivo é; seus hosts filhos aparecem no balão do rack.",
       "hostNone": "Nenhum",
+      "hostBindingsTitle": "Vincular hosts",
+      "hostBindingsHint": "Escolha o Host representado por este dispositivo de rack ou adicione um novo Host.",
+      "boundHostCount_one": "{{count}} host vinculado",
+      "boundHostCount_other": "{{count}} hosts vinculados",
       "noMembers": "Adicione conexões a este site primeiro para posicionar um host.",
       "labelLabel": "Rótulo",
       "labelHint": "Opcional. O padrão é o tipo de dispositivo ou o nome da conexão.",
@@ -1344,7 +1382,7 @@
       "specs": "Especificações"
     },
     "batchRuns": {
-      "emptyTitle": "Ainda não há execuções em lote",
+      "emptyTitle": "Ainda não há histórico de execuções",
       "emptyBody": "Envie um script ou um playbook interativo para todos os hosts de um site de uma vez, com saída ao vivo por host e um relatório salvo.",
       "stateRunning": "Em execução",
       "stateCompleted": "Concluída",
@@ -1369,6 +1407,9 @@
       "siteLabel": "Site",
       "scopeRack": "Direcionando apenas o rack {{name}}",
       "scopeServerRoom": "Direcionando apenas a sala de servidores {{name}}",
+      "scopeSelectedHosts": "Mirando apenas em {{count}} Hosts selecionados",
+      "taskSourceLabel": "Origem da Tarefa",
+      "adHocTask": "Tarefa ad hoc",
       "scriptLabel": "Script",
       "scriptPlaceholder": "sudo apt-get update && sudo apt-get upgrade -y",
       "noGroups": "Crie primeiro um site para executar uma execução em lote.",
@@ -1376,6 +1417,8 @@
       "stateCanceled": "Cancelada",
       "progressComplete": "{{done}} de {{total}} concluídas",
       "historyHeading": "Execuções recentes",
+      "historyDescription": "Progresso ao vivo e relatórios de Tarefa concluídos para este Site.",
+      "historyEmptyBody": "Execuções iniciadas na página de Hosts ou por uma automação aparecerão aqui.",
       "historySummary": "{{ok}}/{{total}} ok",
       "waitingOutput": "Aguardando saída…",
       "noOutput": "Nenhuma saída capturada",
@@ -1401,6 +1444,7 @@
     "automations": {
       "emptyTitle": "Ainda não há automações",
       "emptyBody": "Uma regra durável — um gatilho, uma condição opcional e ações ordenadas — que se rearma toda vez que o KKTerm é iniciado. O watchdog evoluído.",
+      "pageDescription": "Gerenciar as regras duradouras vinculadas a este Site.",
       "armed": "Armado",
       "disabled": "Desativado",
       "builder": {
