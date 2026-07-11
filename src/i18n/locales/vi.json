@@ -1002,6 +1002,11 @@
       "runs": "Chạy hàng loạt",
       "autos": "Tự động hóa"
     },
+    "navigation": {
+      "serverRooms": "Phòng máy",
+      "runHistory": "Lịch sử chạy",
+      "library": "Thư viện"
+    },
     "actions": {
       "newSite": "Site mới",
       "newBatchRun": "Lần chạy hàng loạt mới",
@@ -1066,6 +1071,11 @@
     },
     "hosts": {
       "empty": "Chưa có máy chủ nào. Nhập danh sách tên máy chủ để xây dựng kho thiết bị của site này.",
+      "pageDescription": "Chọn Máy chủ có Kết nối SSH đã liên kết, sau đó chạy một Tác vụ chỉ trên các đích đó.",
+      "selectedCount": "Đã chọn {{count}}",
+      "selectAll": "Chọn tất cả Máy chủ có thể chạy",
+      "selectHost": "Chọn {{name}}",
+      "noRunnableConnection": "Liên kết một Kết nối SSH trước khi chạy Tác vụ trên Máy chủ này.",
       "hostCount_one": "{{count}} máy chủ",
       "hostCount_other": "{{count}} máy chủ",
       "importAction": "Nhập máy chủ",
@@ -1106,6 +1116,30 @@
       "bindingsHint": "Liên kết một hoặc nhiều kết nối với máy chủ này — ví dụ: terminal SSH và kết nối URL HTTPS tới giao diện quản trị.",
       "deleteConfirmTitle": "Xóa máy chủ \"{{name}}\"?",
       "deleteConfirmBody": "Các máy chủ con được giữ lại và chuyển lên một cấp. Không kết nối nào bị xóa."
+    },
+    "tasks": {
+      "heading": "Thư viện Tác vụ",
+      "searchPlaceholder": "Tìm Tác vụ…",
+      "newTitle": "Tác vụ mới",
+      "editTitle": "Sửa Tác vụ",
+      "nameLabel": "Tên",
+      "descriptionLabel": "Mô tả",
+      "shellLabel": "Shell",
+      "shellPlaceholder": "Dùng mặc định của transport",
+      "scriptLabel": "Tập lệnh",
+      "definitionHeading": "Định nghĩa",
+      "noDescription": "Không có mô tả",
+      "emptyTitle": "Chưa có Tác vụ tái sử dụng nào",
+      "emptyBody": "Lưu tập lệnh làm Tác vụ, sau đó chạy trên Site bất kỳ hoặc dùng từ một tự động hóa.",
+      "savedNotice": "Đã lưu Tác vụ “{{name}}”.",
+      "deletedNotice": "Đã xóa Tác vụ “{{name}}”.",
+      "deleteTitle": "Xóa Tác vụ?",
+      "deleteBody": "“{{name}}” sẽ bị xóa. Lịch sử chạy hiện có không bị ảnh hưởng.",
+      "playbookEditLater": "Việc chỉnh sửa Playbook tái sử dụng sẽ được thêm vào một giai đoạn triển khai sau.",
+      "kind": {
+        "script": "Tác vụ Tập lệnh",
+        "playbook": "Playbook"
+      }
     },
     "racks": {
       "heading": "Rack",
@@ -1349,7 +1383,7 @@
       "specs": "Thông số"
     },
     "batchRuns": {
-      "emptyTitle": "Chưa có lần chạy hàng loạt nào",
+      "emptyTitle": "Chưa có lịch sử chạy nào",
       "emptyBody": "Gửi tập lệnh hoặc playbook tương tác đến từng máy chủ trong một site cùng lúc, với đầu ra trực tiếp theo từng máy chủ và báo cáo đã lưu.",
       "stateRunning": "Đang chạy",
       "stateCompleted": "Đã hoàn tất",
@@ -1374,6 +1408,9 @@
       "siteLabel": "Site",
       "scopeRack": "Chỉ nhắm tới rack {{name}}",
       "scopeServerRoom": "Chỉ nhắm tới phòng máy chủ {{name}}",
+      "scopeSelectedHosts": "Chỉ nhắm {{count}} Máy chủ đã chọn",
+      "taskSourceLabel": "Nguồn Tác vụ",
+      "adHocTask": "Tác vụ tùy cơ",
       "scriptLabel": "Tập lệnh",
       "scriptPlaceholder": "sudo apt-get update && sudo apt-get upgrade -y",
       "noGroups": "Tạo site trước để chạy hàng loạt.",
@@ -1381,6 +1418,8 @@
       "stateCanceled": "Đã hủy",
       "progressComplete": "{{done}} trên {{total}} hoàn tất",
       "historyHeading": "Lần chạy gần đây",
+      "historyDescription": "Tiến trình trực tiếp và các báo cáo Tác vụ đã hoàn thành cho Site này.",
+      "historyEmptyBody": "Các lần chạy bắt đầu từ trang Máy chủ hoặc từ một tự động hóa sẽ xuất hiện tại đây.",
       "historySummary": "{{ok}}/{{total}} ok",
       "waitingOutput": "Đang chờ đầu ra…",
       "noOutput": "Không có đầu ra được ghi lại",
@@ -1406,6 +1445,7 @@
     "automations": {
       "emptyTitle": "Chưa có tự động hóa nào",
       "emptyBody": "Quy tắc bền vững — một trình kích hoạt, một điều kiện tùy chọn, và các hành động có thứ tự — được sẵn sàng lại mỗi lần KKTerm khởi động. Watchdog đã tiến hóa.",
+      "pageDescription": "Quản lý các quy tắc bền vững được liên kết với Site này.",
       "armed": "Sẵn sàng",
       "disabled": "Đã tắt",
       "builder": {

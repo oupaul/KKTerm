@@ -1002,6 +1002,11 @@
       "runs": "일괄 실행",
       "autos": "자동화"
     },
+    "navigation": {
+      "serverRooms": "서버실",
+      "runHistory": "실행 기록",
+      "library": "라이브러리"
+    },
     "actions": {
       "newSite": "새 사이트",
       "newBatchRun": "새 일괄 실행",
@@ -1066,6 +1071,11 @@
     },
     "hosts": {
       "empty": "아직 호스트가 없습니다. 호스트 이름 목록을 가져와 이 사이트의 인벤토리를 만드세요.",
+      "pageDescription": "SSH 연결이 바인딩된 호스트를 선택한 다음, 해당 대상에만 작업을 실행하세요.",
+      "selectedCount": "{{count}}개 선택됨",
+      "selectAll": "실행 가능한 모든 호스트 선택",
+      "selectHost": "{{name}} 선택",
+      "noRunnableConnection": "이 호스트에서 작업을 실행하려면 먼저 SSH 연결을 바인딩하세요.",
       "hostCount_one": "호스트 {{count}}개",
       "hostCount_other": "호스트 {{count}}개",
       "importAction": "호스트 가져오기",
@@ -1106,6 +1116,30 @@
       "bindingsHint": "이 호스트에 하나 이상의 연결을 바인딩하세요. 예: SSH 터미널과 관리 인터페이스로 연결되는 HTTPS URL 연결.",
       "deleteConfirmTitle": "호스트 \"{{name}}\"을(를) 삭제할까요?",
       "deleteConfirmBody": "하위 호스트는 유지되며 한 단계 위로 이동합니다. 연결은 삭제되지 않습니다."
+    },
+    "tasks": {
+      "heading": "작업 라이브러리",
+      "searchPlaceholder": "작업 검색…",
+      "newTitle": "새 작업",
+      "editTitle": "작업 편집",
+      "nameLabel": "이름",
+      "descriptionLabel": "설명",
+      "shellLabel": "셸",
+      "shellPlaceholder": "전송 기본값 사용",
+      "scriptLabel": "스크립트",
+      "definitionHeading": "정의",
+      "noDescription": "설명 없음",
+      "emptyTitle": "재사용 가능한 작업이 아직 없습니다",
+      "emptyBody": "스크립트를 작업으로 저장한 다음, 임의의 사이트에서 실행하거나 자동화에서 사용하세요.",
+      "savedNotice": "작업 “{{name}}”을(를) 저장했습니다.",
+      "deletedNotice": "작업 “{{name}}”을(를) 삭제했습니다.",
+      "deleteTitle": "작업을 삭제하시겠습니까?",
+      "deleteBody": "“{{name}}”이(가) 제거됩니다. 기존 실행 기록은 영향을 받지 않습니다.",
+      "playbookEditLater": "재사용 가능한 Playbook 편집은 이후 구현 단계에서 추가될 예정입니다.",
+      "kind": {
+        "script": "스크립트 작업",
+        "playbook": "Playbook"
+      }
     },
     "racks": {
       "heading": "랙",
@@ -1349,7 +1383,7 @@
       "specs": "사양"
     },
     "batchRuns": {
-      "emptyTitle": "아직 일괄 실행이 없습니다",
+      "emptyTitle": "아직 실행 기록이 없습니다",
       "emptyBody": "스크립트 또는 대화형 플레이북을 사이트의 모든 호스트에 한 번에 전송하고, 호스트별 실시간 출력과 저장된 보고서를 제공합니다.",
       "stateRunning": "실행 중",
       "stateCompleted": "완료됨",
@@ -1374,6 +1408,9 @@
       "siteLabel": "사이트",
       "scopeRack": "랙 {{name}}만 대상으로 지정",
       "scopeServerRoom": "서버실 {{name}}만 대상으로 지정",
+      "scopeSelectedHosts": "선택된 호스트 {{count}}개만 대상으로 지정",
+      "taskSourceLabel": "작업 소스",
+      "adHocTask": "임의 작업",
       "scriptLabel": "스크립트",
       "scriptPlaceholder": "sudo apt-get update && sudo apt-get upgrade -y",
       "noGroups": "일괄 실행을 하려면 먼저 사이트를 만드세요.",
@@ -1381,6 +1418,8 @@
       "stateCanceled": "취소됨",
       "progressComplete": "{{total}}개 중 {{done}}개 완료",
       "historyHeading": "최근 실행",
+      "historyDescription": "이 사이트의 실시간 진행 상태와 완료된 작업 보고서입니다.",
+      "historyEmptyBody": "호스트 페이지나 자동화에서 시작된 실행은 여기에 표시됩니다.",
       "historySummary": "{{ok}}/{{total}} 성공",
       "waitingOutput": "출력 대기 중…",
       "noOutput": "캡처된 출력 없음",
@@ -1406,6 +1445,7 @@
     "automations": {
       "emptyTitle": "아직 자동화가 없습니다",
       "emptyBody": "하나의 트리거, 선택적 조건, 순서가 있는 동작으로 구성된 영구 규칙 — KKTerm이 시작될 때마다 재활성화됩니다. 진화한 와치독입니다.",
+      "pageDescription": "이 사이트에 바인딩된 영구 규칙을 관리합니다.",
       "armed": "활성화됨",
       "disabled": "비활성화됨",
       "builder": {

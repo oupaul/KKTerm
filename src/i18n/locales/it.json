@@ -1002,6 +1002,11 @@
       "runs": "Esecuzioni batch",
       "autos": "Automazioni"
     },
+    "navigation": {
+      "serverRooms": "Sale server",
+      "runHistory": "Storico delle esecuzioni",
+      "library": "Libreria"
+    },
     "actions": {
       "newSite": "Nuovo sito",
       "newBatchRun": "Nuova esecuzione batch",
@@ -1066,6 +1071,11 @@
     },
     "hosts": {
       "empty": "Ancora nessun host. Importa un elenco di nomi host per creare l'inventario di questo sito.",
+      "pageDescription": "Seleziona Host con Connessioni SSH associate, poi esegui un’Attività solo su quelle destinazioni.",
+      "selectedCount": "{{count}} selezionati",
+      "selectAll": "Seleziona tutti gli Host eseguibili",
+      "selectHost": "Seleziona {{name}}",
+      "noRunnableConnection": "Associa una Connessione SSH prima di eseguire Attività su questo Host.",
       "hostCount_one": "{{count}} host",
       "hostCount_other": "{{count}} host",
       "importAction": "Importa host",
@@ -1106,6 +1116,30 @@
       "bindingsHint": "Associa una o più connessioni a questo host — ad es. il suo terminale SSH e una connessione URL HTTPS alla sua interfaccia di gestione.",
       "deleteConfirmTitle": "Eliminare l'host \"{{name}}\"?",
       "deleteConfirmBody": "Gli host figli vengono conservati e salgono di un livello. Nessuna connessione viene eliminata."
+    },
+    "tasks": {
+      "heading": "Libreria delle Attività",
+      "searchPlaceholder": "Cerca Attività…",
+      "newTitle": "Nuova Attività",
+      "editTitle": "Modifica Attività",
+      "nameLabel": "Nome",
+      "descriptionLabel": "Descrizione",
+      "shellLabel": "Shell",
+      "shellPlaceholder": "Usa il valore predefinito del trasporto",
+      "scriptLabel": "Script",
+      "definitionHeading": "Definizione",
+      "noDescription": "Nessuna descrizione",
+      "emptyTitle": "Ancora nessuna Attività riutilizzabile",
+      "emptyBody": "Salva uno script come Attività, poi eseguilo su qualsiasi Sito o usalo da un’automazione.",
+      "savedNotice": "Attività «{{name}}» salvata.",
+      "deletedNotice": "Attività «{{name}}» eliminata.",
+      "deleteTitle": "Eliminare l’Attività?",
+      "deleteBody": "«{{name}}» sarà rimosso. Lo Storico delle esecuzioni esistente non è interessato.",
+      "playbookEditLater": "La modifica dei Playbook riutilizzabili sarà aggiunta in una successiva fase di implementazione.",
+      "kind": {
+        "script": "Attività di Script",
+        "playbook": "Playbook"
+      }
     },
     "racks": {
       "heading": "Rack",
@@ -1349,7 +1383,7 @@
       "specs": "Specifiche"
     },
     "batchRuns": {
-      "emptyTitle": "Nessuna esecuzione batch ancora",
+      "emptyTitle": "Nessuno storico delle esecuzioni ancora",
       "emptyBody": "Invia uno script o un playbook interattivo a ogni host in un sito in una sola volta, con output in diretta per host e un report salvato.",
       "stateRunning": "In esecuzione",
       "stateCompleted": "Completato",
@@ -1374,6 +1408,9 @@
       "siteLabel": "Sito",
       "scopeRack": "Destinazione: solo rack {{name}}",
       "scopeServerRoom": "Destinazione: solo sala server {{name}}",
+      "scopeSelectedHosts": "Solo {{count}} Host selezionati come destinazione",
+      "taskSourceLabel": "Sorgente dell’Attività",
+      "adHocTask": "Attività ad hoc",
       "scriptLabel": "Script",
       "scriptPlaceholder": "sudo apt-get update && sudo apt-get upgrade -y",
       "noGroups": "Crea prima un sito per avviare un'esecuzione batch.",
@@ -1381,6 +1418,8 @@
       "stateCanceled": "Annullato",
       "progressComplete": "{{done}} su {{total}} completati",
       "historyHeading": "Esecuzioni recenti",
+      "historyDescription": "Avanzamento in tempo reale e report di Attività completati per questo Sito.",
+      "historyEmptyBody": "Le esecuzioni avviate dalla pagina Hosts o da un’automazione appariranno qui.",
       "historySummary": "{{ok}}/{{total}} ok",
       "waitingOutput": "In attesa di output…",
       "noOutput": "Nessun output acquisito",
@@ -1406,6 +1445,7 @@
     "automations": {
       "emptyTitle": "Nessuna automazione ancora",
       "emptyBody": "Una regola duratura — un trigger, una condizione facoltativa e azioni ordinate — che si riarma ogni volta che KKTerm si avvia. Il Watchdog evoluto.",
+      "pageDescription": "Gestisci le regole durevoli associate a questo Sito.",
       "armed": "Armato",
       "disabled": "Disattivato",
       "builder": {

@@ -1002,6 +1002,11 @@
       "runs": "バッチ実行",
       "autos": "オートメーション"
     },
+    "navigation": {
+      "serverRooms": "サーバールーム",
+      "runHistory": "実行履歴",
+      "library": "ライブラリ"
+    },
     "actions": {
       "newSite": "新規サイト",
       "newBatchRun": "新規バッチ実行",
@@ -1066,6 +1071,11 @@
     },
     "hosts": {
       "empty": "ホストはまだありません。ホスト名リストをインポートしてこのサイトのインベントリを作成します。",
+      "pageDescription": "SSH 接続が紐付けられたホストを選択し、それらの対象のみに対してタスクを実行します。",
+      "selectedCount": "{{count}} 件選択",
+      "selectAll": "実行可能なホストをすべて選択",
+      "selectHost": "{{name}} を選択",
+      "noRunnableConnection": "このホストでタスクを実行する前に、SSH 接続を紐付けてください。",
       "hostCount_one": "{{count}} 台のホスト",
       "hostCount_other": "{{count}} 台のホスト",
       "importAction": "ホストをインポート",
@@ -1106,6 +1116,30 @@
       "bindingsHint": "このホストに 1 つ以上の接続をバインドします。例: SSH ターミナルと、管理インターフェイスへの HTTPS URL 接続。",
       "deleteConfirmTitle": "ホスト「{{name}}」を削除しますか？",
       "deleteConfirmBody": "子ホストは保持され、1 つ上の階層に移動します。接続は削除されません。"
+    },
+    "tasks": {
+      "heading": "タスクライブラリ",
+      "searchPlaceholder": "タスクを検索…",
+      "newTitle": "新しいタスク",
+      "editTitle": "タスクを編集",
+      "nameLabel": "名前",
+      "descriptionLabel": "説明",
+      "shellLabel": "シェル",
+      "shellPlaceholder": "トランスポートの既定値を使用",
+      "scriptLabel": "スクリプト",
+      "definitionHeading": "定義",
+      "noDescription": "説明なし",
+      "emptyTitle": "再利用可能なタスクはまだありません",
+      "emptyBody": "スクリプトをタスクとして保存し、任意のサイトに対して実行するか、オートメーションから使用します。",
+      "savedNotice": "タスク “{{name}}” を保存しました。",
+      "deletedNotice": "タスク “{{name}}” を削除しました。",
+      "deleteTitle": "タスクを削除しますか？",
+      "deleteBody": "“{{name}}” は削除されます。既存の実行履歴には影響しません。",
+      "playbookEditLater": "再利用可能な Playbook の編集は、今後の実装スライスで追加される予定です。",
+      "kind": {
+        "script": "スクリプトタスク",
+        "playbook": "Playbook"
+      }
     },
     "racks": {
       "heading": "ラック",
@@ -1349,7 +1383,7 @@
       "specs": "仕様"
     },
     "batchRuns": {
-      "emptyTitle": "バッチ実行はまだありません",
+      "emptyTitle": "実行履歴はまだありません",
       "emptyBody": "スクリプトまたはインタラクティブなプレイブックをサイト内のすべてのホストに一括で送信し、ホストごとのライブ出力と保存されたレポートを取得します。",
       "stateRunning": "実行中",
       "stateCompleted": "完了",
@@ -1374,6 +1408,9 @@
       "siteLabel": "サイト",
       "scopeRack": "ラック {{name}} のみを対象",
       "scopeServerRoom": "サーバールーム {{name}} のみを対象",
+      "scopeSelectedHosts": "選択中のホスト {{count}} 件のみを対象にします",
+      "taskSourceLabel": "タスクのソース",
+      "adHocTask": "アドホックタスク",
       "scriptLabel": "スクリプト",
       "scriptPlaceholder": "sudo apt-get update && sudo apt-get upgrade -y",
       "noGroups": "バッチ実行を行うには、まずサイトを作成してください。",
@@ -1381,6 +1418,8 @@
       "stateCanceled": "キャンセル済み",
       "progressComplete": "{{total}} 件中 {{done}} 件完了",
       "historyHeading": "最近の実行",
+      "historyDescription": "このサイトのライブ進捗と完了したタスクレポート。",
+      "historyEmptyBody": "ホストページまたはオートメーションから開始された実行はここに表示されます。",
       "historySummary": "{{ok}}/{{total}} 成功",
       "waitingOutput": "出力を待っています…",
       "noOutput": "出力がキャプチャされませんでした",
@@ -1406,6 +1445,7 @@
     "automations": {
       "emptyTitle": "オートメーションはまだありません",
       "emptyBody": "1つのトリガー、オプションの条件、順序付きアクションからなる永続的なルール — KKTerm の起動ごとに再アームされます。進化したウォッチドッグです。",
+      "pageDescription": "このサイトに紐付けられた永続的なルールを管理します。",
       "armed": "アーム済み",
       "disabled": "無効",
       "builder": {

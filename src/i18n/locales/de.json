@@ -1002,6 +1002,11 @@
       "runs": "Batch-Ausführungen",
       "autos": "Automationen"
     },
+    "navigation": {
+      "serverRooms": "Serverräume",
+      "runHistory": "Ausführungsverlauf",
+      "library": "Bibliothek"
+    },
     "actions": {
       "newSite": "Neue Site",
       "newBatchRun": "Neue Batch-Ausführung",
@@ -1066,6 +1071,11 @@
     },
     "hosts": {
       "empty": "Noch keine Hosts. Importieren Sie eine Hostnamen-Liste, um das Inventar dieser Site aufzubauen.",
+      "pageDescription": "Wählen Sie Hosts mit gebundenen SSH-Verbindungen aus und führen Sie dann einen Task nur gegen diese Ziele aus.",
+      "selectedCount": "{{count}} ausgewählt",
+      "selectAll": "Alle ausführbaren Hosts auswählen",
+      "selectHost": "{{name}} auswählen",
+      "noRunnableConnection": "Verknüpfen Sie eine SSH-Verbindung, bevor Sie Tasks auf diesem Host ausführen.",
       "hostCount_one": "{{count}} Host",
       "hostCount_other": "{{count}} Hosts",
       "importAction": "Hosts importieren",
@@ -1106,6 +1116,30 @@
       "bindingsHint": "Ordnen Sie diesem Host eine oder mehrere Verbindungen zu — z. B. sein SSH-Terminal und eine HTTPS-URL-Verbindung zu seiner Verwaltungsoberfläche.",
       "deleteConfirmTitle": "Host \"{{name}}\" löschen?",
       "deleteConfirmBody": "Untergeordnete Hosts bleiben erhalten und rücken eine Ebene nach oben. Es wird keine Verbindung gelöscht."
+    },
+    "tasks": {
+      "heading": "Task-Bibliothek",
+      "searchPlaceholder": "Tasks suchen…",
+      "newTitle": "Neuer Task",
+      "editTitle": "Task bearbeiten",
+      "nameLabel": "Name",
+      "descriptionLabel": "Beschreibung",
+      "shellLabel": "Shell",
+      "shellPlaceholder": "Transport-Standard verwenden",
+      "scriptLabel": "Skript",
+      "definitionHeading": "Definition",
+      "noDescription": "Keine Beschreibung",
+      "emptyTitle": "Noch keine wiederverwendbaren Tasks",
+      "emptyBody": "Speichern Sie ein Skript als Task und führen Sie es gegen eine beliebige Site aus oder verwenden Sie es aus einer Automation.",
+      "savedNotice": "Task „{{name}}“ gespeichert.",
+      "deletedNotice": "Task „{{name}}“ gelöscht.",
+      "deleteTitle": "Task löschen?",
+      "deleteBody": "„{{name}}“ wird entfernt. Der bestehende Ausführungsverlauf bleibt unberührt.",
+      "playbookEditLater": "Die Bearbeitung wiederverwendbarer Playbooks wird in einem späteren Implementierungsabschnitt ergänzt.",
+      "kind": {
+        "script": "Skript-Task",
+        "playbook": "Playbook"
+      }
     },
     "racks": {
       "heading": "Racks",
@@ -1349,7 +1383,7 @@
       "specs": "Spezifikationen"
     },
     "batchRuns": {
-      "emptyTitle": "Noch keine Batch-Ausführungen",
+      "emptyTitle": "Noch kein Ausführungsverlauf",
       "emptyBody": "Senden Sie ein Script oder ein interaktives Playbook gleichzeitig an jeden Host in einer Site, mit Live-Ausgabe pro Host und einem gespeicherten Bericht.",
       "stateRunning": "Wird ausgeführt",
       "stateCompleted": "Abgeschlossen",
@@ -1374,6 +1408,9 @@
       "siteLabel": "Site",
       "scopeRack": "Nur Rack {{name}} als Ziel",
       "scopeServerRoom": "Nur Serverraum {{name}} als Ziel",
+      "scopeSelectedHosts": "Nur {{count}} ausgewählte Hosts als Ziel",
+      "taskSourceLabel": "Task-Quelle",
+      "adHocTask": "Ad-hoc-Task",
       "scriptLabel": "Script",
       "scriptPlaceholder": "sudo apt-get update && sudo apt-get upgrade -y",
       "noGroups": "Erstellen Sie zuerst eine Site, um eine Batch-Ausführung zu starten.",
@@ -1381,6 +1418,8 @@
       "stateCanceled": "Abgebrochen",
       "progressComplete": "{{done}} von {{total}} abgeschlossen",
       "historyHeading": "Letzte Ausführungen",
+      "historyDescription": "Live-Fortschritt und abgeschlossene Task-Berichte für diese Site.",
+      "historyEmptyBody": "Ausführungen, die über die Hosts-Seite oder eine Automation gestartet wurden, erscheinen hier.",
       "historySummary": "{{ok}}/{{total}} ok",
       "waitingOutput": "Warte auf Ausgabe…",
       "noOutput": "Keine Ausgabe erfasst",
@@ -1406,6 +1445,7 @@
     "automations": {
       "emptyTitle": "Noch keine Automationen",
       "emptyBody": "Eine dauerhafte Regel — ein Auslöser, eine optionale Bedingung und geordnete Aktionen — die sich jedes Mal neu scharfstellt, wenn KKTerm startet. Der weiterentwickelte Watchdog.",
+      "pageDescription": "Die mit dieser Site verknüpften dauerhaften Regeln verwalten.",
       "armed": "Scharf",
       "disabled": "Deaktiviert",
       "builder": {

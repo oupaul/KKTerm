@@ -1002,6 +1002,11 @@
       "runs": "การทำงานเป็นชุด",
       "autos": "การทำงานอัตโนมัติ"
     },
+    "navigation": {
+      "serverRooms": "ห้องเซิร์ฟเวอร์",
+      "runHistory": "ประวัติการทำงาน",
+      "library": "คลัง"
+    },
     "actions": {
       "newSite": "ไซต์ใหม่",
       "newBatchRun": "การทำงานเป็นชุดใหม่",
@@ -1066,6 +1071,11 @@
     },
     "hosts": {
       "empty": "ยังไม่มีโฮสต์ นำเข้ารายการชื่อโฮสต์เพื่อสร้างคลังอุปกรณ์ของไซต์นี้",
+      "pageDescription": "เลือกโฮสต์ที่มีการเชื่อมต่อ SSH ผูกไว้ แล้วรันงานเฉพาะโฮสต์ที่เลือกเท่านั้น",
+      "selectedCount": "เลือกแล้ว {{count}}",
+      "selectAll": "เลือกโฮสต์ที่รันได้ทั้งหมด",
+      "selectHost": "เลือก {{name}}",
+      "noRunnableConnection": "ผูกการเชื่อมต่อ SSH ก่อนรันงานบนโฮสต์นี้",
       "hostCount_one": "{{count}} โฮสต์",
       "hostCount_other": "{{count}} โฮสต์",
       "importAction": "นำเข้าโฮสต์",
@@ -1106,6 +1116,30 @@
       "bindingsHint": "ผูกการเชื่อมต่อหนึ่งรายการขึ้นไปกับโฮสต์นี้ เช่น เทอร์มินัล SSH และการเชื่อมต่อ URL แบบ HTTPS ไปยังหน้าจัดการ",
       "deleteConfirmTitle": "ลบโฮสต์ \"{{name}}\" หรือไม่",
       "deleteConfirmBody": "โฮสต์ย่อยจะยังอยู่และเลื่อนขึ้นหนึ่งระดับ ไม่มีการลบการเชื่อมต่อ"
+    },
+    "tasks": {
+      "heading": "คลังงาน",
+      "searchPlaceholder": "ค้นหางาน…",
+      "newTitle": "งานใหม่",
+      "editTitle": "แก้ไขงาน",
+      "nameLabel": "ชื่อ",
+      "descriptionLabel": "รายละเอียด",
+      "shellLabel": "เชลล์",
+      "shellPlaceholder": "ใช้ค่าเริ่มต้นของการขนส่ง",
+      "scriptLabel": "สคริปต์",
+      "definitionHeading": "นิยาม",
+      "noDescription": "ไม่มีรายละเอียด",
+      "emptyTitle": "ยังไม่มีงานที่ใช้ซ้ำได้",
+      "emptyBody": "บันทึกสคริปต์เป็นงาน แล้วรันบนไซต์ใดก็ได้ หรือใช้จากการทำงานอัตโนมัติ",
+      "savedNotice": "บันทึกงาน “{{name}}” แล้ว",
+      "deletedNotice": "ลบงาน “{{name}}” แล้ว",
+      "deleteTitle": "ลบงาน?",
+      "deleteBody": "“{{name}}” จะถูกลบ ประวัติการทำงานที่มีอยู่จะไม่กระทบ",
+      "playbookEditLater": "การแก้ไข Playbook ที่ใช้ซ้ำได้จะถูกเพิ่มในขั้นตอนการพัฒนาในภายหลัง",
+      "kind": {
+        "script": "งานสคริปต์",
+        "playbook": "Playbook"
+      }
     },
     "racks": {
       "heading": "แร็ค",
@@ -1349,7 +1383,7 @@
       "specs": "สเปค"
     },
     "batchRuns": {
-      "emptyTitle": "ยังไม่มีการทำงานเป็นชุด",
+      "emptyTitle": "ยังไม่มีประวัติการทำงาน",
       "emptyBody": "ส่งสคริปต์หรือ Playbook แบบโต้ตอบไปยังทุกโฮสต์ในไซต์พร้อมกัน พร้อมเอาต์พุตสดต่อโฮสต์และรายงานที่บันทึกไว้",
       "stateRunning": "กำลังทำงาน",
       "stateCompleted": "เสร็จสิ้นแล้ว",
@@ -1374,6 +1408,9 @@
       "siteLabel": "ไซต์",
       "scopeRack": "กำหนดเป้าหมายเฉพาะแร็ค {{name}}",
       "scopeServerRoom": "กำหนดเป้าหมายเฉพาะห้องเซิร์ฟเวอร์ {{name}}",
+      "scopeSelectedHosts": "กำหนดเป้าหมายเฉพาะโฮสต์ที่เลือก {{count}} รายการ",
+      "taskSourceLabel": "แหล่งที่มาของงาน",
+      "adHocTask": "งานเฉพาะกิจ",
       "scriptLabel": "สคริปต์",
       "scriptPlaceholder": "sudo apt-get update && sudo apt-get upgrade -y",
       "noGroups": "สร้างไซต์ก่อนเพื่อทำการทำงานเป็นชุด",
@@ -1381,6 +1418,8 @@
       "stateCanceled": "ยกเลิกแล้ว",
       "progressComplete": "{{done}} จาก {{total}} เสร็จสมบูรณ์",
       "historyHeading": "การทำงานล่าสุด",
+      "historyDescription": "ความคืบหน้าแบบสดและรายงานงานที่เสร็จสมบูรณ์สำหรับไซต์นี้",
+      "historyEmptyBody": "การทำงานที่เริ่มจากหน้าโฮสต์หรือการทำงานอัตโนมัติจะปรากฏที่นี่",
       "historySummary": "{{ok}}/{{total}} สำเร็จ",
       "waitingOutput": "กำลังรอเอาต์พุต…",
       "noOutput": "ไม่มีเอาต์พุตที่บันทึกไว้",
@@ -1406,6 +1445,7 @@
     "automations": {
       "emptyTitle": "ยังไม่มีการทำงานอัตโนมัติ",
       "emptyBody": "กฎที่คงอยู่ — ทริกเกอร์หนึ่งตัว เงื่อนไขเสริม และการกระทำตามลำดับ — ที่ตั้งพร้อมใหม่ทุกครั้งที่ KKTerm เปิดใช้งาน วอตช์ด็อกที่พัฒนาแล้ว",
+      "pageDescription": "จัดการกฎถาวรที่ผูกกับไซต์นี้",
       "armed": "พร้อมทำงาน",
       "disabled": "ปิดใช้งาน",
       "builder": {

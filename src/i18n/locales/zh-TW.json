@@ -1002,6 +1002,11 @@
       "runs": "批次執行",
       "autos": "自動化"
     },
+    "navigation": {
+      "serverRooms": "伺服器機房",
+      "runHistory": "執行記錄",
+      "library": "任務庫"
+    },
     "actions": {
       "newSite": "新增站台",
       "newBatchRun": "新增批次執行",
@@ -1066,6 +1071,11 @@
     },
     "hosts": {
       "empty": "尚無主機。匯入主機名稱清單以建立此站台的清冊。",
+      "pageDescription": "選取已繫結 SSH 連線的主機，接著只對這些目標執行任務。",
+      "selectedCount": "已選取 {{count}} 個",
+      "selectAll": "選取所有可執行的主機",
+      "selectHost": "選取 {{name}}",
+      "noRunnableConnection": "在此主機執行任務前，先繫結一個 SSH 連線。",
       "hostCount_one": "{{count}} 台主機",
       "hostCount_other": "{{count}} 台主機",
       "importAction": "匯入主機",
@@ -1106,6 +1116,30 @@
       "bindingsHint": "將一個或多個連線繫結到此主機——例如其 SSH 終端機與指向其管理介面的 HTTPS URL 連線。",
       "deleteConfirmTitle": "刪除主機「{{name}}」？",
       "deleteConfirmBody": "其子主機會保留並上移一層。不會刪除任何連線。"
+    },
+    "tasks": {
+      "heading": "任務庫",
+      "searchPlaceholder": "搜尋任務……",
+      "newTitle": "新增任務",
+      "editTitle": "編輯任務",
+      "nameLabel": "名稱",
+      "descriptionLabel": "描述",
+      "shellLabel": "Shell",
+      "shellPlaceholder": "使用傳輸預設值",
+      "scriptLabel": "指令碼",
+      "definitionHeading": "定義",
+      "noDescription": "無描述",
+      "emptyTitle": "尚無可重複使用的任務",
+      "emptyBody": "將一段指令碼儲存為任務，接著對任意站台執行它，或從自動化中使用它。",
+      "savedNotice": "已儲存任務「{{name}}」。",
+      "deletedNotice": "已刪除任務「{{name}}」。",
+      "deleteTitle": "刪除任務？",
+      "deleteBody": "「{{name}}」將被移除。現有的執行記錄不受影響。",
+      "playbookEditLater": "可重複使用 Playbook 的編輯將於後續實作切片中加入。",
+      "kind": {
+        "script": "指令碼任務",
+        "playbook": "Playbook"
+      }
     },
     "racks": {
       "heading": "機架",
@@ -1180,10 +1214,10 @@
       "hostLabel": "主機",
       "hostHint": "此裝置對應的 IT Ops 主機；其子主機會顯示在機櫃標註中。",
       "hostNone": "無",
-      "hostBindingsTitle": "綁定主機",
+      "hostBindingsTitle": "繫結主機",
       "hostBindingsHint": "選擇此機架裝置所代表的主機，或新增主機。",
-      "boundHostCount_one": "已綁定 {{count}} 台主機",
-      "boundHostCount_other": "已綁定 {{count}} 台主機",
+      "boundHostCount_one": "已繫結 {{count}} 台主機",
+      "boundHostCount_other": "已繫結 {{count}} 台主機",
       "noMembers": "請先向此站台新增連線才能放置主機。",
       "labelLabel": "標籤",
       "labelHint": "選用。預設為裝置類型或連線名稱。",
@@ -1349,7 +1383,7 @@
       "specs": "規格"
     },
     "batchRuns": {
-      "emptyTitle": "尚無批次執行",
+      "emptyTitle": "尚無執行記錄",
       "emptyBody": "一次將指令碼或互動式 Playbook 傳送至站台中的每台主機，提供逐主機即時輸出與已儲存的報告。",
       "stateRunning": "執行中",
       "stateCompleted": "已完成",
@@ -1374,6 +1408,9 @@
       "siteLabel": "站台",
       "scopeRack": "僅以機架 {{name}} 為目標",
       "scopeServerRoom": "僅以伺服器機房 {{name}} 為目標",
+      "scopeSelectedHosts": "僅以選取的 {{count}} 台主機為目標",
+      "taskSourceLabel": "任務來源",
+      "adHocTask": "臨時任務",
       "scriptLabel": "指令碼",
       "scriptPlaceholder": "sudo apt-get update && sudo apt-get upgrade -y",
       "noGroups": "請先建立站台才能執行批次執行。",
@@ -1381,6 +1418,8 @@
       "stateCanceled": "已取消",
       "progressComplete": "{{done}} / {{total}} 已完成",
       "historyHeading": "近期執行",
+      "historyDescription": "此站台的即時進度與已完成的任務報告。",
+      "historyEmptyBody": "從主機頁面或某個自動化啟動的執行會顯示在這裡。",
       "historySummary": "{{ok}}/{{total}} 成功",
       "waitingOutput": "等待輸出中…",
       "noOutput": "未擷取輸出",
@@ -1406,6 +1445,7 @@
     "automations": {
       "emptyTitle": "尚無自動化",
       "emptyBody": "一條持久規則 — 一個觸發、一個可選條件與有序動作 — 每次 KKTerm 啟動時重新待命。進化的看門狗。",
+      "pageDescription": "管理繫結至此站台的持久規則。",
       "armed": "待命",
       "disabled": "已停用",
       "builder": {

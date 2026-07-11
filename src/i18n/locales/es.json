@@ -1002,6 +1002,11 @@
       "runs": "Ejecuciones por lotes",
       "autos": "Automatizaciones"
     },
+    "navigation": {
+      "serverRooms": "Salas de servidores",
+      "runHistory": "Historial de ejecuciones",
+      "library": "Biblioteca"
+    },
     "actions": {
       "newSite": "Nuevo sitio",
       "newBatchRun": "Nueva ejecución por lotes",
@@ -1066,6 +1071,11 @@
     },
     "hosts": {
       "empty": "Aún no hay hosts. Importa una lista de nombres de host para crear el inventario de este sitio.",
+      "pageDescription": "Selecciona Hosts con Conexiones SSH vinculadas y ejecuta una Tarea solo en esos destinos.",
+      "selectedCount": "{{count}} seleccionados",
+      "selectAll": "Seleccionar todos los Hosts ejecutables",
+      "selectHost": "Seleccionar {{name}}",
+      "noRunnableConnection": "Vincula una Conexión SSH antes de ejecutar Tareas en este Host.",
       "hostCount_one": "{{count}} host",
       "hostCount_other": "{{count}} hosts",
       "importAction": "Importar hosts",
@@ -1106,6 +1116,30 @@
       "bindingsHint": "Vincula una o más conexiones a este host, p. ej., su terminal SSH y una conexión URL HTTPS a su interfaz de administración.",
       "deleteConfirmTitle": "¿Eliminar el host \"{{name}}\"?",
       "deleteConfirmBody": "Sus hosts secundarios se conservan y suben un nivel. No se elimina ninguna conexión."
+    },
+    "tasks": {
+      "heading": "Biblioteca de Tareas",
+      "searchPlaceholder": "Buscar Tareas…",
+      "newTitle": "Nueva Tarea",
+      "editTitle": "Editar Tarea",
+      "nameLabel": "Nombre",
+      "descriptionLabel": "Descripción",
+      "shellLabel": "Shell",
+      "shellPlaceholder": "Usar el valor predeterminado del transporte",
+      "scriptLabel": "Script",
+      "definitionHeading": "Definición",
+      "noDescription": "Sin descripción",
+      "emptyTitle": "Aún no hay Tareas reutilizables",
+      "emptyBody": "Guarda un script como Tarea y ejecútala en cualquier Sitio o úsala desde una automatización.",
+      "savedNotice": "Tarea “{{name}}” guardada.",
+      "deletedNotice": "Tarea “{{name}}” eliminada.",
+      "deleteTitle": "¿Eliminar Tarea?",
+      "deleteBody": "“{{name}}” se eliminará. El Historial de ejecuciones existente no se ve afectado.",
+      "playbookEditLater": "La edición de Playbooks reutilizables se añadirá en una sección de implementación posterior.",
+      "kind": {
+        "script": "Tarea de Script",
+        "playbook": "Playbook"
+      }
     },
     "racks": {
       "heading": "Racks",
@@ -1349,7 +1383,7 @@
       "specs": "Especificaciones"
     },
     "batchRuns": {
-      "emptyTitle": "Aún no hay ejecuciones por lotes",
+      "emptyTitle": "Aún no hay historial de ejecuciones",
       "emptyBody": "Envía un script o un playbook interactivo a todos los hosts de un sitio a la vez, con salida en vivo por host y un informe guardado.",
       "stateRunning": "En ejecución",
       "stateCompleted": "Completada",
@@ -1374,6 +1408,9 @@
       "siteLabel": "Sitio",
       "scopeRack": "Apuntando solo al rack {{name}}",
       "scopeServerRoom": "Apuntando solo a la sala de servidores {{name}}",
+      "scopeSelectedHosts": "Dirigiendo solo a {{count}} Hosts seleccionados",
+      "taskSourceLabel": "Origen de la Tarea",
+      "adHocTask": "Tarea ad hoc",
       "scriptLabel": "Script",
       "scriptPlaceholder": "sudo apt-get update && sudo apt-get upgrade -y",
       "noGroups": "Crea primero un sitio para ejecutar una ejecución por lotes.",
@@ -1381,6 +1418,8 @@
       "stateCanceled": "Cancelada",
       "progressComplete": "{{done}} de {{total}} completadas",
       "historyHeading": "Ejecuciones recientes",
+      "historyDescription": "Progreso en vivo e informes de Tarea completados para este Sitio.",
+      "historyEmptyBody": "Las ejecuciones iniciadas desde la página de Hosts o una automatización aparecerán aquí.",
       "historySummary": "{{ok}}/{{total}} correctas",
       "waitingOutput": "Esperando salida…",
       "noOutput": "Sin salida capturada",
@@ -1406,6 +1445,7 @@
     "automations": {
       "emptyTitle": "Aún no hay automatizaciones",
       "emptyBody": "Una regla duradera — un disparador, una condición opcional y acciones ordenadas — que se rearma cada vez que se inicia KKTerm. El watchdog evolucionado.",
+      "pageDescription": "Gestionar las reglas duraderas vinculadas a este Sitio.",
       "armed": "Armado",
       "disabled": "Desactivado",
       "builder": {
