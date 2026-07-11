@@ -47,13 +47,21 @@ impl SecurityType {
         match version {
             VncVersion::RFB33 => {
                 let security_type = reader.read_u32().await?;
-                let security_type = (security_type as u8).try_into()?;
-                if let SecurityType::Invalid = security_type {
+                if security_type == SecurityType::Invalid as u32 {
                     let _ = reader.read_u32().await?;
                     let mut err_msg = String::new();
                     reader.read_to_string(&mut err_msg).await?;
                     return Err(VncError::General(err_msg));
                 }
+                // In RFB 3.3 the server dictates a single u32 security type.
+                // Report out-of-range values (e.g. legacy UltraVNC MS-Logon
+                // 0xfffffffa) instead of truncating them to a bogus u8 id.
+                if security_type > u8::MAX as u32 {
+                    return Err(VncError::General(format!(
+                        "Server requires an unsupported security type: {security_type}"
+                    )));
+                }
+                let security_type = (security_type as u8).try_into()?;
                 Ok(vec![security_type])
             }
             _ => {
@@ -130,6 +138,26 @@ mod tests {
             .await
             .unwrap_err();
         assert!(err.to_string().contains("[115, 117]"), "{err}");
+    }
+
+    #[tokio::test]
+    async fn rfb33_reports_out_of_range_security_type() {
+        // Legacy UltraVNC MS-Logon (pre-RFB3.8) sends 0xfffffffa; it must not
+        // be truncated to a bogus u8 id.
+        let mut stream: &[u8] = &0xfffffffa_u32.to_be_bytes();
+        let err = SecurityType::read(&mut stream, &VncVersion::RFB33)
+            .await
+            .unwrap_err();
+        assert!(err.to_string().contains("4294967290"), "{err}");
+    }
+
+    #[tokio::test]
+    async fn rfb33_accepts_vnc_auth() {
+        let mut stream: &[u8] = &2_u32.to_be_bytes();
+        let types = SecurityType::read(&mut stream, &VncVersion::RFB33)
+            .await
+            .unwrap();
+        assert_eq!(types, vec![SecurityType::VncAuth]);
     }
 }
 

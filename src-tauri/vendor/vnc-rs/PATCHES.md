@@ -9,8 +9,15 @@ Vendored from crates.io 0.5.3. Divergence from upstream:
 5. `Cargo.toml` — added `num-bigint`, `md-5`, `aes`, `rand` for the Apple handshake.
 6. `src/client/auth.rs` — `SecurityType::read` (RFB 3.7/3.8) skips unknown
    security types instead of failing the handshake, so servers that advertise
-   proprietary types (e.g. UltraVNC MS-Logon/SecureVNC plugin ids like 117)
+   proprietary types (e.g. UltraVNC ids 0x68–0x76: SCPrompt, SessionSelect,
+   MS-Logon I/II/III, SecureVNC plugin, ClientInit extra msg — 117 = 0x75)
    alongside standard VNC Auth still connect. Errors only if no advertised
-   type is supported (KKTerm issue #569).
+   type is supported. Matches RFC 6143 §7.1.2 (client picks one supported
+   type) and noVNC behavior (KKTerm issue #569).
+7. `src/client/auth.rs` — RFB 3.3 branch reports out-of-range u32 security
+   types (e.g. legacy UltraVNC MS-Logon 0xfffffffa) instead of truncating
+   them to a meaningless u8 id.
+8. `src/client/connector.rs` — the no-matching-security-type error now lists
+   the types the server offered.
 
 To upgrade: re-apply these changes onto the new upstream version, or upstream type-30 support and drop the vendor copy.
