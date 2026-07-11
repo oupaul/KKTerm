@@ -1200,7 +1200,6 @@
       "heightDecrease": "Fewer rack units",
       "heightIncrease": "More rack units",
       "addItemTitle": "Add device",
-      "addDeviceCallout": "Add Device",
       "editItemTitle": "Edit device",
       "placeAction": "Place",
       "addAtUnit": "Add a device at U{{unit}}",

@@ -2,9 +2,10 @@
 // skeuomorphic metal frame — rail caps, a U-number gutter, and a slatted device
 // column — with each Rack Device drawn as an animated <RackDevice> faceplate at
 // its U position (ported from the "IT Ops Racks" design comp). With callbacks
-// wired it is the editor: click an empty U to add a device; a device with bound
-// Connections opens the connect popover on click with a pencil to edit; items
-// without bindings open the edit dialog on click.
+// wired it is the editor: devices are added through the picker column's armed
+// placement flow; a device with bound Connections opens the connect popover on
+// click with a pencil to edit; items without bindings open the edit dialog on
+// click.
 // A Connection-backed item whose Connection is gone renders as a dimmed
 // "ghost". Items are drag-to-restacked onto any U slot (possibly across racks).
 
@@ -35,7 +36,6 @@ function itemRowStart(rackHeightU: number, item: RackItem): number {
 export function RackElevation({
   rack,
   hostFor,
-  onSlotClick,
   onOpenItem,
   onEditItem,
   onBindItem,
@@ -57,7 +57,6 @@ export function RackElevation({
   rack: Rack;
   /** Resolve a placed Connection's host/ip for the faceplate sub-line. */
   hostFor?: (item: RackItem) => string | null;
-  onSlotClick?: (startU: number) => void;
   /** Open the connect popover for a device with bound Connections; the anchor
    *  is the clicked faceplate element. */
   onOpenItem?: (item: RackItem, anchor: HTMLElement) => void;
@@ -225,6 +224,7 @@ export function RackElevation({
     <div
       className={`rk${detailed ? " rk-detailed" : ""}${topClearanceU > 0 ? " has-top-item" : ""}`}
       data-shell={cabShell}
+      data-rack-id={rack.id}
       ref={rackRef}
       style={{
         ["--rk-u" as string]: `${unitPx}px`,
@@ -394,21 +394,17 @@ export function RackElevation({
                 {u}
               </div>
             ))}
-            {/* Empty slots — armed-placement targets, add-dialog openers (only
-                when the view wires onSlotClick), and drag/drop targets. */}
+            {/* Empty slots — armed-placement targets and drag/drop targets. */}
             {unitNumbers.map((u) =>
-              editMode && (placing || onSlotClick || canMove) ? (
+              editMode && (placing || canMove) ? (
                 <button
                   type="button"
-                  className={`rk-slot rk-slot-btn${placing || onSlotClick ? "" : " passive"}`}
+                  className={`rk-slot rk-slot-btn${placing ? "" : " passive"}`}
                   key={`s-${u}`}
                   style={{ gridColumn: 2, gridRow: rack.heightU - u + 1 }}
                   aria-label={t("itops.racks.addAtUnit", { unit: u })}
                   onClick={() => {
-                    if (!placing) {
-                      onSlotClick?.(u);
-                      return;
-                    }
+                    if (!placing) return;
                     const snap = snapPlacement(u);
                     if (!snap.blocked) onPlaceAt!(snap.startU);
                   }}
@@ -429,13 +425,7 @@ export function RackElevation({
                         }
                       : undefined
                   }
-                >
-                  {onSlotClick && !placing ? (
-                    <span className="rk-slot-callout" aria-hidden="true">
-                      {t("itops.racks.addDeviceCallout")}
-                    </span>
-                  ) : null}
-                </button>
+                />
               ) : (
                 <div
                   className="rk-slot"

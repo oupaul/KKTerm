@@ -14,6 +14,7 @@ import {
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
+  type RefObject,
 } from "react";
 import { useTranslation } from "react-i18next";
 import { Maximize2, Minimize2 } from "../../lib/reicon";
@@ -188,7 +189,6 @@ export function SitesTab({
     rack: Rack;
     item: RackItem | null;
     kind?: RackItemKind;
-    startU?: number;
     /** Picker placement flow: arm the configured draft instead of placing. */
     onConfigured?: (draft: RackItemDraft) => void;
   } | null>(null);
@@ -788,7 +788,6 @@ export function SitesTab({
             roomIcons={activeGroup.roomIcons}
             hostForItem={hostForItem}
             isGhostItem={isGhostItem}
-            onSlotClick={(rack, startU) => setItemDialog({ rack, item: null, startU })}
             onConfigureDevice={(rack, kind, arm) =>
               setItemDialog({ rack, item: null, kind, onConfigured: arm })
             }
@@ -874,7 +873,6 @@ export function SitesTab({
           rack={itemDialog.rack}
           item={itemDialog.item}
           defaultKind={itemDialog.kind}
-          defaultStartU={itemDialog.startU}
           members={members}
           onClose={() => setItemDialog(null)}
           onConfigured={itemDialog.onConfigured}
@@ -1040,7 +1038,6 @@ function RackDrill({
   roomIcons,
   hostForItem,
   isGhostItem,
-  onSlotClick,
   onConfigureDevice,
   onPlaceDevice,
   onOpenItem,
@@ -1064,9 +1061,6 @@ function RackDrill({
   roomIcons?: Record<string, ItOpsCustomIcon>;
   hostForItem: (item: RackItem) => string | null;
   isGhostItem: (item: RackItem) => boolean;
-  /** Server Room elevation only: an empty-slot click opens the add dialog at
-   *  that U. Rack View adds devices through the picker's armed flow instead. */
-  onSlotClick: (rack: Rack, startU: number) => void;
   /** Picker flow: open the device dialog in configure mode; `arm` receives the
    *  configured draft so the drill can start the cursor-tracked placement. */
   onConfigureDevice: (rack: Rack, kind: RackItemKind, arm: (draft: RackItemDraft) => void) => void;
@@ -1134,7 +1128,8 @@ function RackDrill({
     placeRackIdRef.current = null;
     setPlaceRackId(null);
   }
-  // Rack View picker: a configured Rack Device awaiting its placement click.
+  // Rack View and Server Room elevation picker: a configured Rack Device
+  // awaiting its placement click.
   const [placeDevice, setPlaceDevice] = useState<RackItemDraft | null>(null);
 
   const serverRoom =
@@ -1160,6 +1155,21 @@ function RackDrill({
     setPlaceDevice(null);
     if (pendingRackId) discardPendingRackRef.current(pendingRackId);
   }, [viewKey, editMode, roomView]);
+
+  // Server Room elevation placement: every cabinet listens document-wide while
+  // armed, so only the cabinet nearest the pointer carries the armed spec —
+  // otherwise a click landing between two adjacent cabinets would place the
+  // device into both. The room's tallest cabinet bounds the configure dialog.
+  const roomElevationsRef = useRef<HTMLDivElement | null>(null);
+  const roomPlaceRackId = useNearestPlacementRack(
+    editMode && roomView === "elevation" && serverRoom != null && rack == null && placeDevice != null,
+    roomElevationsRef,
+    () => setPlaceDevice(null),
+  );
+  const roomPickerRack = (serverRoom?.racks ?? []).reduce<Rack | null>(
+    (tallest, entry) => (tallest == null || entry.heightU > tallest.heightU ? entry : tallest),
+    null,
+  );
 
   const sitePlacementScope = siteLayoutScope(site.id);
   const [sitePlacements, setSitePlacements] = useState<FreePlacementMap>(() =>
@@ -1394,7 +1404,13 @@ function RackDrill({
         hostFor={hostForItem}
         reserveTopU={KUAIGUAI_TOP_CLEARANCE_U}
         editMode={editMode}
-        onSlotClick={editMode ? (startU) => onSlotClick(r, startU) : undefined}
+        placeSpec={roomPlaceRackId === r.id ? placeDevice : null}
+        onPlaceAt={(startU) => {
+          if (!placeDevice) return;
+          onPlaceDevice(r, placeDevice, startU);
+          setPlaceDevice(null);
+        }}
+        onCancelPlacement={() => setPlaceDevice(null)}
         onOpenItem={onOpenItem}
         onEditItem={(item) => onEditItem(r, item)}
         onBindItem={onBindItem}
@@ -1624,7 +1640,7 @@ function RackDrill({
             />
             {editMode ? (
               <RackObjectPicker
-                rack={rack}
+                racks={[rack]}
                 armedKind={placeDevice?.kind ?? null}
                 onPickDevice={(kind) => {
                   // Clicking the armed card again disarms; any card re-opens
@@ -1714,14 +1730,33 @@ function RackDrill({
               ) : null}
             </div>
           ) : (
-            groupRacksByGroup(serverRoom.racks).map((g) => (
-              <div className="rk-group" key={g.key}>
-                {groupRacksByGroup(serverRoom.racks).length > 1 || g.key ? (
-                  <div className="rk-group-h">{g.key || ungrouped}</div>
-                ) : null}
-                <div className="rk-row">{g.racks.map((r) => elevation(r))}</div>
+            <div className="rk-room-layout">
+              <div className="rk-elevations" ref={roomElevationsRef}>
+                {groupRacksByGroup(serverRoom.racks).map((g) => (
+                  <div className="rk-group" key={g.key}>
+                    {groupRacksByGroup(serverRoom.racks).length > 1 || g.key ? (
+                      <div className="rk-group-h">{g.key || ungrouped}</div>
+                    ) : null}
+                    <div className="rk-row">{g.racks.map((r) => elevation(r))}</div>
+                  </div>
+                ))}
               </div>
-            ))
+              {editMode ? (
+                <RackObjectPicker
+                  racks={serverRoom.racks}
+                  armedKind={placeDevice?.kind ?? null}
+                  onPickDevice={(kind) => {
+                    // Clicking the armed card again disarms; any card re-opens
+                    // the configure dialog and re-arms with the new draft.
+                    if (placeDevice?.kind === kind) {
+                      setPlaceDevice(null);
+                      return;
+                    }
+                    if (roomPickerRack) onConfigureDevice(roomPickerRack, kind, setPlaceDevice);
+                  }}
+                />
+              ) : null}
+            </div>
           )
         ) : topology.length === 0 && !editMode ? (
           <div className="it-topology-empty">
@@ -1887,6 +1922,63 @@ function SiteObjectPicker({ onPickServerRoom }: { onPickServerRoom: () => void }
   );
 }
 
+/** While a Rack Device placement is armed over the Server Room elevation
+ *  rows, resolve which cabinet is nearest the pointer. Every armed
+ *  <RackElevation> listens document-wide, so the room arms only this one —
+ *  adjacent cabinets sit flush, and a click between two would otherwise place
+ *  the device into both. Escape / right-click disarm here too, covering the
+ *  moment before the first pointer move has picked a target cabinet. */
+function useNearestPlacementRack(
+  active: boolean,
+  containerRef: RefObject<HTMLDivElement | null>,
+  onCancel: () => void,
+): string | null {
+  const [rackId, setRackId] = useState<string | null>(null);
+  const cancelRef = useRef(onCancel);
+  cancelRef.current = onCancel;
+  useEffect(() => {
+    if (!active) {
+      setRackId(null);
+      return;
+    }
+    const track = (event: PointerEvent) => {
+      const container = containerRef.current;
+      if (!container) return;
+      let bestId: string | null = null;
+      let bestDistance = Infinity;
+      for (const node of container.querySelectorAll<HTMLElement>(".rk[data-rack-id]")) {
+        const rect = node.getBoundingClientRect();
+        const dx = Math.max(rect.left - event.clientX, event.clientX - rect.right, 0);
+        const dy = Math.max(rect.top - event.clientY, event.clientY - rect.bottom, 0);
+        const distance = Math.hypot(dx, dy);
+        if (distance < bestDistance) {
+          bestDistance = distance;
+          bestId = node.dataset.rackId ?? null;
+        }
+      }
+      setRackId(bestId);
+    };
+    const cancelFromContextMenu = (event: MouseEvent) => {
+      event.preventDefault();
+      cancelRef.current();
+    };
+    const cancelFromKeyboard = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      cancelRef.current();
+    };
+    document.addEventListener("pointermove", track, true);
+    document.addEventListener("contextmenu", cancelFromContextMenu, true);
+    document.addEventListener("keydown", cancelFromKeyboard, true);
+    return () => {
+      document.removeEventListener("pointermove", track, true);
+      document.removeEventListener("contextmenu", cancelFromContextMenu, true);
+      document.removeEventListener("keydown", cancelFromKeyboard, true);
+    };
+  }, [active, containerRef]);
+  return rackId;
+}
+
 function firstAvailableRackUnit(rack: Rack): number | null {
   for (let unit = 1; unit <= rack.heightU; unit += 1) {
     const occupied = rack.items.some(
@@ -1898,11 +1990,13 @@ function firstAvailableRackUnit(rack: Rack): number | null {
 }
 
 function RackObjectPicker({
-  rack,
+  racks,
   armedKind,
   onPickDevice,
 }: {
-  rack: Rack;
+  /** Rack View passes its single Rack; the Server Room elevation layout passes
+   *  the whole room, and a card stays enabled while any cabinet has space. */
+  racks: Rack[];
   /** The configured draft's kind while a placement click is armed. */
   armedKind: RackItemKind | null;
   onPickDevice: (kind: RackItemKind) => void;
@@ -1910,8 +2004,10 @@ function RackObjectPicker({
   const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const q = query.trim().toLowerCase();
-  const startU = firstAvailableRackUnit(rack);
-  const rackTopAvailable = !rack.items.some((item) => isRackTopItem(item, rack.heightU));
+  const hasFreeUnit = racks.some((rack) => firstAvailableRackUnit(rack) != null);
+  const rackTopAvailable = racks.some(
+    (rack) => !rack.items.some((item) => isRackTopItem(item, rack.heightU)),
+  );
   const kinds = RACK_ITEM_KINDS.filter(
     (kind) => !q || t(`itops.racks.kind.${kind}`).toLowerCase().includes(q),
   );
@@ -1940,7 +2036,7 @@ function RackObjectPicker({
       <div className="rm-picker-grid">
         {kinds.map((kind) => {
           const label = t(`itops.racks.kind.${kind}`);
-          const available = startU != null || (kind === "kuaiguai" && rackTopAvailable);
+          const available = hasFreeUnit || (kind === "kuaiguai" && rackTopAvailable);
           return (
             <button
               key={kind}

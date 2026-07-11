@@ -2471,9 +2471,9 @@
   border-color: color-mix(in srgb, var(--accent) 70%, transparent);
   background: color-mix(in srgb, var(--accent) 14%, transparent);
 }
-/* Rack View slots outside an armed placement: drop targets only — no add
-   affordance (adding goes through the picker column), so hover keeps the
-   resting slot look. */
+/* Slots outside an armed placement: drop targets only — no add affordance
+   (adding goes through the picker column), so hover keeps the resting slot
+   look. */
 .itops-page .rk-slot-btn.passive {
   cursor: default;
 }
@@ -2485,49 +2485,8 @@
     rgba(255, 255, 255, 0.03) 5px 6px
   );
 }
-.itops-page .rk-slot-callout {
-  position: absolute;
-  left: calc(100% + 10px);
-  top: 50%;
-  z-index: 20;
-  transform: translate(4px, -50%);
-  opacity: 0;
-  pointer-events: none;
-  white-space: nowrap;
-  padding: 5px 9px;
-  border-radius: 8px;
-  background: var(--surface);
-  border: 0.5px solid var(--border);
-  box-shadow: var(--shadow-control);
-  color: var(--text);
-  font-size: 12px;
-  font-weight: 650;
-  line-height: 1;
-  transition:
-    opacity 0.12s,
-    transform 0.12s,
-    border-color 0.12s;
-}
-.itops-page .rk-slot-callout::before {
-  content: "";
-  position: absolute;
-  left: -5px;
-  top: 50%;
-  width: 8px;
-  height: 8px;
-  transform: translateY(-50%) rotate(45deg);
-  background: var(--surface);
-  border-left: 0.5px solid var(--border);
-  border-bottom: 0.5px solid var(--border);
-}
-.itops-page .rk-slot-btn:hover .rk-slot-callout,
-.itops-page .rk-slot-btn:focus-visible .rk-slot-callout {
-  opacity: 1;
-  transform: translate(0, -50%);
-  border-color: var(--border-strong);
-}
 
-/* ── Armed device placement (Rack View picker) ──
+/* ── Armed device placement (shared picker column) ──
    The configured faceplate ghosts under the cursor snapped to the hovered U;
    placed items stop intercepting the pointer so the whole column stays a
    live drop surface, and the span turns red where it would overlap. */
@@ -2536,9 +2495,6 @@
 }
 .itops-page .rk-grid.placing .rk-slot-btn {
   cursor: copy;
-}
-.itops-page .rk-grid.placing .rk-slot-callout {
-  display: none;
 }
 .itops-page .rk-place-ghost {
   pointer-events: none;
@@ -4035,6 +3991,24 @@
 .itops-page .it-rack-layout > .rk-stage {
   flex: 1 1 auto;
   min-width: 0;
+}
+/* Server Room elevation rows with the shared device picker column riding on
+   the right. The rows can grow far taller than the drill viewport, so the
+   picker sticks to the scrollport top instead of stretching with them. */
+.itops-page .rk-room-layout {
+  display: flex;
+  align-items: flex-start;
+  flex: 1 0 auto;
+  gap: 10px;
+  min-height: 0;
+}
+.itops-page .rk-room-layout > .rk-elevations {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.itops-page .rk-room-layout > .rm-picker {
+  position: sticky;
+  top: 8px;
 }
 .itops-page .it-free-surface {
   position: relative;

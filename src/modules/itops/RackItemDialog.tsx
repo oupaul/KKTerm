@@ -96,7 +96,6 @@ export function RackItemDialog({
   rack,
   item,
   defaultKind,
-  defaultStartU,
   members,
   onClose,
   onConfigured,
@@ -105,7 +104,6 @@ export function RackItemDialog({
   rack: Rack;
   item?: RackItem | null;
   defaultKind?: RackItemKind;
-  defaultStartU?: number;
   members: ResolvedHost[];
   onClose: () => void;
   /** Picker placement flow: instead of placing on save, hand the configured
@@ -130,7 +128,7 @@ export function RackItemDialog({
     item?.connectionId ?? members[0]?.connectionId ?? "",
   );
   const [label, setLabel] = useState(item?.label ?? "");
-  const [startU, setStartU] = useState(item?.startU ?? defaultStartU ?? 1);
+  const [startU, setStartU] = useState(item?.startU ?? 1);
   const [heightU, setHeightU] = useState(
     initialKind === "kuaiguai" ? (initialKuaiguaiStyle === "laidDown" ? 1 : 4) : item?.heightU ?? 1,
   );

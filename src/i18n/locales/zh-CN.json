@@ -1200,7 +1200,6 @@
       "heightDecrease": "减少机架单元",
       "heightIncrease": "增加机架单元",
       "addItemTitle": "添加设备",
-      "addDeviceCallout": "添加设备",
       "editItemTitle": "编辑设备",
       "placeAction": "放置",
       "addAtUnit": "在 U{{unit}} 处添加设备",

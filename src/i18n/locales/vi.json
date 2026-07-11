@@ -1200,7 +1200,6 @@
       "heightDecrease": "Ít đơn vị rack hơn",
       "heightIncrease": "Nhiều đơn vị rack hơn",
       "addItemTitle": "Thêm thiết bị",
-      "addDeviceCallout": "Thêm thiết bị",
       "editItemTitle": "Chỉnh sửa thiết bị",
       "placeAction": "Đặt",
       "addAtUnit": "Thêm thiết bị tại U{{unit}}",

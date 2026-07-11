@@ -18,22 +18,31 @@ test("IT Ops drill views expose icon-only edit and share-export actions", async 
   assert.match(sites, /rack \? \([\s\S]*handleExport\("excel"\)/);
 });
 
-test("Room elevation empty slots show an Add Device callout and open the item dialog", async () => {
+test("Room elevation edit mode places devices through the shared picker column", async () => {
   const rackElevation = await read("src/modules/itops/RackElevation.tsx");
   const stage = await read("src/modules/itops/RackStage.tsx");
+  const sites = await read("src/modules/itops/SitesTab.tsx");
   const css = await read("src/modules/itops/itops.css");
 
-  assert.match(rackElevation, /editMode && \(placing \|\| onSlotClick \|\| canMove\)/);
+  assert.match(rackElevation, /editMode && \(placing \|\| canMove\)/);
   assert.match(rackElevation, /aria-label=\{t\("itops\.racks\.addAtUnit"/);
-  // The callout add flow only exists where the view wires onSlotClick (the
-  // Server Room elevation); Rack View slots are placement/drop targets only.
-  assert.match(rackElevation, /onSlotClick && !placing \? \(\s*<span className="rk-slot-callout"/);
-  assert.match(rackElevation, /t\("itops\.racks\.addDeviceCallout"\)/);
-  assert.match(rackElevation, /onSlotClick\?\.\(u\);/);
+  // The empty-slot add-dialog flow is gone everywhere: slots are placement /
+  // drop targets only, and adds go through the picker column's armed flow.
+  assert.doesNotMatch(rackElevation, /onSlotClick|rk-slot-callout/);
   assert.doesNotMatch(stage, /onSlotClick/);
-  assert.match(css, /\.rk-slot-callout/);
-  assert.match(css, /\.rk-slot-btn:hover \.rk-slot-callout/);
+  assert.doesNotMatch(sites, /onSlotClick/);
+  assert.doesNotMatch(css, /rk-slot-callout/);
   assert.match(css, /\.rk-slot-btn\.passive/);
+  // The elevation rows host the shared device picker, and only the cabinet
+  // nearest the pointer carries the armed spec so a click between two
+  // side-by-side cabinets cannot place the device into both.
+  assert.match(sites, /className="rk-room-layout"/);
+  assert.match(sites, /function useNearestPlacementRack/);
+  assert.match(sites, /roomPlaceRackId === r\.id \? placeDevice : null/);
+  assert.match(sites, /racks=\{serverRoom\.racks\}/);
+  assert.match(sites, /racks=\{\[rack\]\}/);
+  assert.match(rackElevation, /data-rack-id=\{rack\.id\}/);
+  assert.match(css, /\.itops-page \.rk-room-layout \{/);
 });
 
 test("Server Room view switcher sits in the drill toolbar with line icons", async () => {
@@ -187,7 +196,7 @@ test("Armed placement previews a cursor-snapped ghost and cancels on right-click
     assert.match(view, /useRoomPlacementPointer\(placing, onCancelPlacement\)/);
     assert.match(view, /<RoomPlacementCursorGhost/);
     assert.match(view, /onContextMenu=\{/);
-    assert.match(view, /resolveDropZ\(\s*footprintSpans\(hover, tool, 0/);
+    assert.match(view, /resolveDropZ\(\s*footprintSpans\(\s*hover,\s*tool,\s*0/);
   }
   assert.match(sites, /onObjectPlaced=\{\(\) => setRoomTool\(null\)\}/g);
   assert.match(roomParts, /document\.addEventListener\("pointermove", updatePointer, true\)/);
@@ -211,7 +220,7 @@ test("Rack drag/drop and direct delete are gated behind edit mode", async () => 
   const sites = await read("src/modules/itops/SitesTab.tsx");
 
   assert.match(rackElevation, /const canMove = editMode && !!onMoveItem/);
-  assert.match(rackElevation, /editMode && \(placing \|\| onSlotClick \|\| canMove\)/);
+  assert.match(rackElevation, /editMode && \(placing \|\| canMove\)/);
   assert.match(rackElevation, /draggable=\{canMove\}/);
   assert.match(rackElevation, /editMode && onDeleteItem/);
   assert.match(rackElevation, /className="rk-item-delete"/);

@@ -1200,7 +1200,6 @@
       "heightDecrease": "ลดหน่วยแร็ค",
       "heightIncrease": "เพิ่มหน่วยแร็ค",
       "addItemTitle": "เพิ่มอุปกรณ์",
-      "addDeviceCallout": "เพิ่มอุปกรณ์",
       "editItemTitle": "แก้ไขอุปกรณ์",
       "placeAction": "วาง",
       "addAtUnit": "เพิ่มอุปกรณ์ที่ U{{unit}}",

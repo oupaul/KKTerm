@@ -1200,7 +1200,6 @@
       "heightDecrease": "ラックユニットを減らす",
       "heightIncrease": "ラックユニットを増やす",
       "addItemTitle": "デバイスを追加",
-      "addDeviceCallout": "デバイスを追加",
       "editItemTitle": "デバイスを編集",
       "placeAction": "配置",
       "addAtUnit": "U{{unit}} にデバイスを追加",
