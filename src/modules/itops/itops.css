@@ -6008,6 +6008,53 @@
   gap: 10px;
   min-width: 0;
 }
+.rack-host-bind-link {
+  align-self: flex-end;
+  margin-top: auto;
+  padding: 3px 0;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.rack-host-bind-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.rack-host-bind-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 3px;
+}
+.rack-host-binding-dialog .kk-dlg-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.rack-host-binding-list {
+  max-height: 360px;
+}
+.rack-host-radio {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 50%;
+  color: var(--surface);
+}
+.hg-dlg-row.checked .rack-host-radio {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+.rack-host-binding-list .hg-dlg-row.checked {
+  background: var(--accent-soft);
+}
 .rack-item-dialog-column .kk-field:first-child { margin-top: 0; }
 .rack-item-dialog textarea.rack-item-notes {
   min-height: calc(3lh + 18px);

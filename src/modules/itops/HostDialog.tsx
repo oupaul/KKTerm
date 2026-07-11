@@ -26,11 +26,13 @@ export function HostDialog({
   host,
   defaultParentId,
   onClose,
+  onSaved,
 }: {
   siteId: string;
   host?: SiteHost | null;
   defaultParentId?: string | null;
   onClose: () => void;
+  onSaved?: (host: SiteHost) => void;
 }) {
   const { t } = useTranslation();
   const isEdit = !!host;
@@ -56,8 +58,9 @@ export function HostDialog({
   async function save() {
     setBusy(true);
     try {
+      let savedHost: SiteHost;
       if (isEdit && host) {
-        await updateHost(siteId, host.id, {
+        savedHost = await updateHost(siteId, host.id, {
           hostname,
           label,
           kind,
@@ -66,7 +69,7 @@ export function HostDialog({
           notes,
         });
       } else {
-        await createHost(siteId, {
+        savedHost = await createHost(siteId, {
           hostname,
           label,
           kind,
@@ -74,6 +77,7 @@ export function HostDialog({
           notes,
         });
       }
+      onSaved?.(savedHost);
       onClose();
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
