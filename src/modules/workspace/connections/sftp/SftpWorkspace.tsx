@@ -2556,16 +2556,27 @@ function TransferArea({
           {transfers.length === 0 ? (
             <div className="sftp-xfer-empty">{t("sftp.transferHint")}</div>
           ) : null}
-          {transfers.map((transfer) => (
-            <div className="sftp-xfer-row" key={transfer.id}>
+          {transfers.map((transfer) => {
+            // Show the running progress bar only while a transfer is live. Once
+            // it settles, the `detail` field carries the meaningful text — the
+            // success summary for done, and (crucially) the actual error reason
+            // for failed/canceled. Rendering it here means a failed upload shows
+            // *why* (e.g. "No space left on device") instead of a bare "failed".
+            const showTrack = transfer.state === "active" || transfer.state === "queued";
+            return (
+            <div className="sftp-xfer-row" key={transfer.id} title={transfer.detail || transfer.name}>
               <span className="dir">
                 <DIcon name={transfer.direction === "upload" ? "upload" : "download"} size={16} />
               </span>
               <div className="meta">
                 <div className="nm">{transfer.name}</div>
-                <div className="track">
-                  <div className={`fill ${transfer.state}`} style={{ width: `${transfer.progress}%` }} />
-                </div>
+                {showTrack ? (
+                  <div className="track">
+                    <div className={`fill ${transfer.state}`} style={{ width: `${transfer.progress}%` }} />
+                  </div>
+                ) : transfer.detail ? (
+                  <div className={`xfer-detail ${transfer.state}`}>{transfer.detail}</div>
+                ) : null}
               </div>
               <span className={`st ${transfer.state}`}>
                 {transfer.state === "active"
@@ -2586,7 +2597,8 @@ function TransferArea({
                 <span />
               )}
             </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>
