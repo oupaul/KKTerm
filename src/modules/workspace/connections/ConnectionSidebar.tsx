@@ -42,7 +42,7 @@ import {
   shouldDeleteSshSocksProxySecret,
 } from "./credentialUnlockPreflight";
 import { confirmTrustedSshHostKey, connectionPasswordOwnerId, connectionSshSocksProxyPasswordOwnerId, defaultPortForConnectionType, connectionTypeLabel, ftpPortForProtocolSelection, isRemoteDesktopConnectionType, localShellOptionsForPlatform, resolveSshCompression, resolveSshSocksProxyRequest, uniqueRuntimeId, type LocalShellOption } from "./utils";
-import { NEW_CONNECTION_REQUEST_EVENT, RECENT_CONNECTION_LIMIT, loadCollapsedFolderIds, loadRecentConnectionIds, notifyConnectionTreeInvalidated, saveCollapsedFolderIds, saveRecentConnectionIds, type NewConnectionRequestDetail } from "./connectionSidebarState";
+import { IMPORT_CONNECTIONS_REQUEST_EVENT, NEW_CONNECTION_REQUEST_EVENT, RECENT_CONNECTION_LIMIT, loadCollapsedFolderIds, loadRecentConnectionIds, notifyConnectionTreeInvalidated, saveCollapsedFolderIds, saveRecentConnectionIds, type NewConnectionRequestDetail } from "./connectionSidebarState";
 import { collectConnectionFolderIds, countConnections, countFolders, filterConnectedConnections, filterConnectionTree, findConnectionInTree, flattenConnections, flattenFolders, visibleFlatConnections as flattenVisibleConnections, withLiveConnectionStatuses } from "./treeUtils";
 import { WorkspaceIcon } from "../workspaceIcons";
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Check, ChevronDown, ChevronRight, CircleDot, Folder, FolderPlus, KeyRound, LayoutDashboard, List, Maximize2, Minimize2, PanelsTopLeft, PanelRight, Pencil, Pin, PinOff, Play, Plus, Radio, RotateCcw, Save, Search, Settings, SquarePlus, Trash2, X } from "../../../lib/reicon";
@@ -246,9 +246,11 @@ const QUICK_CONNECT_RECENT_SUBMENU_LIMIT = 20;
 
 export function ConnectionSidebar({
   onExternalOpenConnection,
+  onRevealPanel,
   onTogglePanel,
 }: {
   onExternalOpenConnection?: () => void;
+  onRevealPanel?: () => void;
   onTogglePanel?: () => void;
 }) {
   const { i18n, t } = useTranslation();
@@ -360,6 +362,7 @@ export function ConnectionSidebar({
     stop: (event: PointerEvent) => void;
   } | null>(null);
   const suppressTreeClickRef = useRef(false);
+  const openNextCreatedConnectionRef = useRef(false);
 
   useEffect(() => {
     const handleTreeInvalidated = () => {
@@ -495,13 +498,17 @@ export function ConnectionSidebar({
     }
   }
 
-  async function handleConnectionSaved() {
+  async function handleConnectionSaved(connection?: Connection) {
     await reloadConnectionGroups();
     notifyConnectionTreeInvalidated();
     setFormMode(null);
     setNewConnectionType(null);
     setFormError("");
     setTreeError("");
+    if (connection && openNextCreatedConnectionRef.current) {
+      openNextCreatedConnectionRef.current = false;
+      handleOpenConnection(connection);
+    }
   }
 
   function showConnectionSuccessStatus(message: string) {
@@ -613,13 +620,24 @@ export function ConnectionSidebar({
 
   useEffect(() => {
     function handleNewConnectionRequest(event: Event) {
-      const { connectionType } = (event as CustomEvent<NewConnectionRequestDetail>).detail;
+      const { connectionType, openAfterCreate } = (event as CustomEvent<NewConnectionRequestDetail>).detail;
+      openNextCreatedConnectionRef.current = Boolean(openAfterCreate);
+      if (openAfterCreate) {
+        onRevealPanel?.();
+      }
       handleNewConnectionTypeSelected(connectionType);
     }
 
+    function handleImportConnectionsRequest() {
+      onRevealPanel?.();
+      handleImportRequested();
+    }
+
     window.addEventListener(NEW_CONNECTION_REQUEST_EVENT, handleNewConnectionRequest);
+    window.addEventListener(IMPORT_CONNECTIONS_REQUEST_EVENT, handleImportConnectionsRequest);
     return () => {
       window.removeEventListener(NEW_CONNECTION_REQUEST_EVENT, handleNewConnectionRequest);
+      window.removeEventListener(IMPORT_CONNECTIONS_REQUEST_EVENT, handleImportConnectionsRequest);
     };
   });
 
@@ -630,6 +648,7 @@ export function ConnectionSidebar({
       title: t("connections.fileViewPickerTitle"),
     });
     if (!selectedPath) {
+      openNextCreatedConnectionRef.current = false;
       return;
     }
 
@@ -641,7 +660,7 @@ export function ConnectionSidebar({
         request,
       });
       await saveConnectionIconPresentation(connection, iconDataUrl, null, null);
-      await handleConnectionSaved();
+      await handleConnectionSaved(connection);
     } catch (error) {
       setTreeError(error instanceof Error ? error.message : String(error));
     }
@@ -1318,7 +1337,7 @@ export function ConnectionSidebar({
         if (connection.type === "ssh") {
           writeSshApplyStartupToExistingTmux(connection.id, Boolean(sshStartupScriptApplyToExistingTmux));
         }
-        await handleConnectionSaved();
+        await handleConnectionSaved(connection);
       } catch (error) {
         showConnectionFormError(error);
       }
@@ -3118,6 +3137,7 @@ export function ConnectionSidebar({
             )
           }
           onCancel={() => {
+            openNextCreatedConnectionRef.current = false;
             setFormMode(null);
             setNewConnectionType(null);
             setFormError("");

@@ -8,8 +8,11 @@ import { TerminalWorkspace } from "./connections/terminal/TerminalWorkspace";
 import { ConnectionIcon } from "./connections/ConnectionIcon";
 import { ConnectionTypeGlyph } from "./connections/ConnectionGlyph";
 import { CONNECTION_CREATION_OPTIONS } from "./connections/ConnectionMenus";
-import { requestNewConnection } from "./connections/connectionSidebarState";
-import { ChevronLeft, ChevronRight, Terminal, X } from "../../lib/reicon";
+import {
+  requestImportConnections,
+  requestNewConnection,
+} from "./connections/connectionSidebarState";
+import { ChevronLeft, ChevronRight, Download, Terminal, X } from "../../lib/reicon";
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type {
@@ -79,13 +82,21 @@ function WorkspaceEmptyState() {
           <button
             className="empty-workspace-connection-link"
             key={type}
-            onClick={() => requestNewConnection(type)}
+            onClick={() => requestNewConnection(type, { openAfterCreate: true })}
             type="button"
           >
             <ConnectionTypeGlyph size={15} type={type} />
             <span>{t(labelKey)}</span>
           </button>
         ))}
+        <button
+          className="empty-workspace-connection-link"
+          onClick={requestImportConnections}
+          type="button"
+        >
+          <Download size={15} />
+          <span>{t("workspace.importConnections")}</span>
+        </button>
       </div>
     </section>
   );

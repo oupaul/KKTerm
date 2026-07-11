@@ -3,9 +3,11 @@ import type { ConnectionType } from "../../../types";
 const RECENT_CONNECTION_STORAGE_KEY = "kkterm.recentConnectionIds";
 const COLLAPSED_FOLDER_IDS_KEY = "kkterm.collapsedFolderIds";
 export const NEW_CONNECTION_REQUEST_EVENT = "kkterm:new-connection-request";
+export const IMPORT_CONNECTIONS_REQUEST_EVENT = "kkterm:import-connections-request";
 
 export type NewConnectionRequestDetail = {
   connectionType: ConnectionType;
+  openAfterCreate?: boolean;
 };
 
 export const RECENT_CONNECTION_LIMIT = 50;
@@ -68,10 +70,17 @@ export function notifyConnectionTreeInvalidated() {
   window.dispatchEvent(new CustomEvent("kkterm:connection-tree-invalidated"));
 }
 
-export function requestNewConnection(connectionType: ConnectionType) {
+export function requestNewConnection(
+  connectionType: ConnectionType,
+  options?: { openAfterCreate?: boolean },
+) {
   window.dispatchEvent(
     new CustomEvent<NewConnectionRequestDetail>(NEW_CONNECTION_REQUEST_EVENT, {
-      detail: { connectionType },
+      detail: { connectionType, openAfterCreate: options?.openAfterCreate },
     }),
   );
+}
+
+export function requestImportConnections() {
+  window.dispatchEvent(new CustomEvent(IMPORT_CONNECTIONS_REQUEST_EVENT));
 }

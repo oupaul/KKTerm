@@ -249,6 +249,7 @@
 .empty-workspace-connection-links {
   display: grid;
   grid-template-columns: repeat(2, minmax(132px, 1fr));
+  justify-items: center;
   gap: 3px 18px;
   width: min(320px, calc(100vw - 48px));
   margin-top: 4px;

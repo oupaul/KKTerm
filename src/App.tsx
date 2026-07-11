@@ -386,6 +386,7 @@ function App() {
         <div className="connection-panel-slot">
           <ConnectionSidebar
             onExternalOpenConnection={() => navigateToPage("workspace")}
+            onRevealPanel={expandConnectionPanel}
             onTogglePanel={toggleConnectionPanel}
           />
         </div>
