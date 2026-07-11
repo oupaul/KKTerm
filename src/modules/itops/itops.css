@@ -3994,7 +3994,10 @@
 }
 /* Server Room elevation rows with the shared device picker column riding on
    the right. The rows can grow far taller than the drill viewport, so the
-   picker sticks to the scrollport top instead of stretching with them. */
+   picker sticks to the scrollport top instead of stretching with them. The
+   content-sized (flex-start) column would collapse the grid's stretch-only
+   `flex: 1 1 0` height to zero, so here the grid sizes to its cards and the
+   viewport-capped picker scrolls them internally. */
 .itops-page .rk-room-layout {
   display: flex;
   align-items: flex-start;
@@ -4007,8 +4010,19 @@
   min-width: 0;
 }
 .itops-page .rk-room-layout > .rm-picker {
+  /* Pins below the sticky drill toolbar while the elevation rows scroll. */
   position: sticky;
-  top: 8px;
+  top: 40px;
+  max-height: calc(100vh - 164px);
+}
+.itops-page .rk-room-layout > .rm-picker .rm-picker-grid {
+  flex: 0 1 auto;
+}
+/* The drill column's overflow:auto never actually scrolls (it grows with its
+   content while .hg-detail does the scrolling), but it would still capture
+   the picker's sticky scrollport. Release it while hosting the room rows. */
+.itops-page .ft-drill:has(.rk-room-layout) {
+  overflow: visible;
 }
 .itops-page .it-free-surface {
   position: relative;
