@@ -356,8 +356,9 @@ The visible IT Ops Module opens directly into the Site topology surface:
   so a rack-top package fits without shifting the rack. Floor views hide 乖乖
   stored inside the cabinet and show only a rack-top package. The floor plan
   and 2.5D views place the same rack-top Rack Device when their picker's 乖乖
-  is dropped on a cabinet top (the elevation always draws it center top,
-  regardless of where on the footprint the drop landed), and a package with an
+  is dropped on a cabinet top. Those spatial views preserve the selected one
+  of four rack-top corners in Rack Device metadata, while Rack View and the
+  elevation always draw it center top. A package with an
   expiry date desaturates linearly over the last 30 days before the date,
   rendering fully black and white on and after it (`kuaiKuaiGrayscale` in
   `KuaiKuaiBag.tsx`, applied in every view through the shared bag artwork).

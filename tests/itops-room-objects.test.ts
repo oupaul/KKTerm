@@ -18,6 +18,7 @@ import {
 } from "../src/modules/itops/roomObjects";
 import {
   cornerFromDisplayPoint,
+  rackTopCornerPoint,
   rotateCellForView,
   rotateFacingForView,
   sanitizeFacing,
@@ -161,6 +162,14 @@ test("2.5D pointer quadrants map back to durable corners at every view angle", (
       );
     }
   }
+});
+
+test("rack-top corner metadata rotates in spatial views while legacy items stay centered", () => {
+  assert.deepEqual(rackTopCornerPoint(undefined), { x: 0.5, y: 0.5 });
+  assert.deepEqual(rackTopCornerPoint(0, 0), { x: 0.25, y: 0.25 });
+  assert.deepEqual(rackTopCornerPoint(0, 1), { x: 0.75, y: 0.25 });
+  assert.deepEqual(rackTopCornerPoint(0, 2), { x: 0.75, y: 0.75 });
+  assert.deepEqual(rackTopCornerPoint(0, 3), { x: 0.25, y: 0.75 });
 });
 
 test("settleRoomObjects repairs stale raised rack-top corner placements", () => {

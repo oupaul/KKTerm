@@ -45,7 +45,7 @@ import {
   topologyGroupKey,
   type DrillPath,
 } from "./rackTopology";
-import { resolveIsoLayout, sanitizeFacing } from "./roomIsoLayout";
+import { resolveIsoLayout, sanitizeFacing, type Corner } from "./roomIsoLayout";
 import { ItOpsBackground } from "./ItOpsBackground";
 import { RackStage } from "./RackStage";
 import { ServerRoomFloorPlan } from "./ServerRoomFloorPlan";
@@ -1272,7 +1272,7 @@ function RackDrill({
   const placeRackItemAction = useItOpsStore((state) => state.placeRackItem);
   const kuaiguaiPlacingRef = useRef<Set<string>>(new Set());
   const placeKuaiguaiOnRack = useCallback(
-    (target: Rack): boolean => {
+    (target: Rack, corner?: Corner): boolean => {
       if (
         kuaiguaiPlacingRef.current.has(target.id) ||
         target.items.some((item) => isRackTopItem(item, target.heightU))
@@ -1287,7 +1287,11 @@ function RackDrill({
         label: "",
         startU: target.heightU + 1,
         heightU: KUAIGUAI_TOP_CLEARANCE_U,
-        metadata: { kuaiguaiSize: "regular", kuaiguaiStyle: "full" },
+        metadata: {
+          kuaiguaiSize: "regular",
+          kuaiguaiStyle: "full",
+          rackTopCorner: corner,
+        },
       })
         .catch((error: unknown) => {
           const message = error instanceof Error ? error.message : String(error);
@@ -1322,7 +1326,7 @@ function RackDrill({
         roomFacing,
       );
       if (!support) return true;
-      placeKuaiguaiOnRack(support);
+      placeKuaiguaiOnRack(support, object.corner);
       return false;
     });
     if (kept.length !== settled.length || !sameRoomObjects(roomObjects, settled)) {

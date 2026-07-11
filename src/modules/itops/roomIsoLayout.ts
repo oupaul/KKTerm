@@ -216,6 +216,22 @@ export function cornerFromDisplayPoint(
   return ((displayed - angle + 4) % 4) as Corner;
 }
 
+/** Position a rack-top item at a selected corner. Missing legacy metadata
+ * remains centered; spatial views rotate stored room corners with the view. */
+export function rackTopCornerPoint(
+  value: unknown,
+  angle: IsoViewAngle = 0,
+): { x: number; y: number } {
+  if (value !== 0 && value !== 1 && value !== 2 && value !== 3) {
+    return { x: 0.5, y: 0.5 };
+  }
+  const corner = rotateFacingForView(value, angle);
+  return {
+    x: corner === 0 || corner === 3 ? 0.25 : 0.75,
+    y: corner === 0 || corner === 1 ? 0.25 : 0.75,
+  };
+}
+
 export function sanitizeCorner(value: unknown): Corner {
   return value === 1 || value === 2 || value === 3 ? value : 0;
 }

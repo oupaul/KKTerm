@@ -622,6 +622,9 @@ pub struct RackItemMetadata {
     /// Standing package ("full", 4U) or package laid face-up ("laidDown", 1U).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub kuaiguai_style: Option<String>,
+    /// Optional Server Room rack-top corner (clockwise 0=NW..3=SW).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rack_top_corner: Option<u8>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub vendor: Option<String>,
     /// Server chassis presentation ("rack" | "tower").

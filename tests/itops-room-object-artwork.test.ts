@@ -93,9 +93,16 @@ test("rack-top 乖乖 uses the same erected artwork as the standalone pack", asy
     new URL("../src/modules/itops/ServerRoomFloorPlan.tsx", import.meta.url),
     "utf8",
   );
+  const rackView = await readFile(
+    new URL("../src/modules/itops/RackElevation.tsx", import.meta.url),
+    "utf8",
+  );
 
   assert.match(isoView, /className="rm-iso-rack-top-kuaiguai"[\s\S]*<RoomObjectIsoArtwork[\s\S]*kind="kuaikuai"/);
   assert.doesNotMatch(isoView, /rm-iso-top-kuaiguai[\s\S]*style="laidDown"/);
   assert.match(floorPlan, /className="rm-bp-top-kuaiguai"[\s\S]*<RoomObjectPlanArtwork kind="kuaikuai"/);
   assert.doesNotMatch(floorPlan, /rm-bp-top-kuaiguai[\s\S]*style="laidDown"/);
+  assert.match(floorPlan, /rackTopCornerPoint\(topKuaiguai\?\.metadata\?\.rackTopCorner\)/);
+  assert.match(isoView, /rackTopCornerPoint\([\s\S]*rackTopCorner[\s\S]*viewAngle/);
+  assert.doesNotMatch(rackView, /rackTopCorner/);
 });

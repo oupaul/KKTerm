@@ -5405,6 +5405,9 @@
 .itops-page .rm-iso-plane.placing .rm-iso-tile:hover {
   color: transparent;
 }
+.itops-page .rm-iso-plane.placing .rm-iso-body > * {
+  pointer-events: none;
+}
 .itops-page .rm-iso-cab.ghost {
   opacity: 0.65;
   pointer-events: none;

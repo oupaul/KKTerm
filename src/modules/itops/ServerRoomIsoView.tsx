@@ -37,6 +37,7 @@ import {
   moveIsoRack,
   rackDepthFrac,
   rackFootprint,
+  rackTopCornerPoint,
   resolveIsoLayout,
   rotateCellForView,
   rotatePointForView,
@@ -172,7 +173,7 @@ export function ServerRoomIsoView({
   /** A 乖乖 pack landed on a cabinet top: it becomes a rack-top Rack Device
    *  (shared with the Rack View) instead of a room object. Returns false when
    *  the rack top is already taken. */
-  onPlaceKuaiguai?: (rack: Rack) => boolean;
+  onPlaceKuaiguai?: (rack: Rack, corner?: Corner) => boolean;
   onDeleteRack?: (rack: Rack) => void;
   onSelectRack: (rackId: string) => void;
   onAddRack?: () => void;
@@ -399,7 +400,7 @@ export function ServerRoomIsoView({
     if (object.kind === "kuaikuai" && onPlaceKuaiguai) {
       const support = rackTopSupport(target, object.kind, object.rot, object.corner, z, racks, layout.cells, facing);
       if (support) {
-        if (onPlaceKuaiguai(support)) {
+        if (onPlaceKuaiguai(support, object.corner)) {
           onObjectsChange(objects.filter((entry) => entry.id !== id));
         } else {
           onObjectBlocked?.();
@@ -433,7 +434,7 @@ export function ServerRoomIsoView({
     if (tool === "kuaikuai" && onPlaceKuaiguai) {
       const support = rackTopSupport(cell, tool, 0, corner, z, racks, layout.cells, facing);
       if (support) {
-        if (onPlaceKuaiguai(support)) onObjectPlaced?.();
+        if (onPlaceKuaiguai(support, corner)) onObjectPlaced?.();
         else onObjectBlocked?.();
         return;
       }
@@ -454,7 +455,7 @@ export function ServerRoomIsoView({
     }
   }
 
-  function selectRack(rack: Rack) {
+  function selectRack(rack: Rack, event: ReactMouseEvent<HTMLButtonElement>) {
     if (suppressClickRef.current) {
       suppressClickRef.current = false;
       return;
@@ -464,7 +465,7 @@ export function ServerRoomIsoView({
       return;
     }
     if (tool != null) {
-      placeObjectAt(layout.cells[rack.id]);
+      placeObjectAt(layout.cells[rack.id], cornerFromTileEvent(event));
       return;
     }
     if (editMode) {
@@ -646,6 +647,7 @@ export function ServerRoomIsoView({
                     rack={rack}
                     cell={toDisplay(layout.cells[rack.id])}
                     facing={rotateFacingForView(sanitizeFacing(facing[rack.id]), angle)}
+                    viewAngle={angle}
                     drag={drag?.kind === "rack" && drag.id === rack.id ? drag : null}
                     editMode={!!editMode}
                     selected={selectedItem?.kind === "rack" && selectedItem.id === rack.id}
@@ -653,8 +655,13 @@ export function ServerRoomIsoView({
                     onPointerMove={moveDrag}
                     onPointerUp={endDrag}
                     onPointerCancel={endDrag}
-                    onHoverCell={placing ? () => setHoverCell(layout.cells[rack.id]) : undefined}
-                    onSelect={() => selectRack(rack)}
+                    onHoverCell={
+                      placing
+                        ? (event) =>
+                            setHoverCell(layout.cells[rack.id], cornerFromTileEvent(event))
+                        : undefined
+                    }
+                    onSelect={(event) => selectRack(rack, event)}
                     onRotate={editMode && onFacingChange ? () => rotateRack(rack) : undefined}
                     onDelete={
                       editMode && onDeleteRack
@@ -942,6 +949,7 @@ function IsoCabinet({
   rack,
   cell,
   facing,
+  viewAngle,
   drag,
   editMode,
   selected,
@@ -959,6 +967,7 @@ function IsoCabinet({
   cell: IsoCell;
   /** Display facing (already view-rotated). */
   facing: Facing;
+  viewAngle: IsoViewAngle;
   drag: DragState | null;
   editMode: boolean;
   selected: boolean;
@@ -966,9 +975,9 @@ function IsoCabinet({
   onPointerMove: (event: ReactPointerEvent<HTMLDivElement>) => void;
   onPointerUp: (event: ReactPointerEvent<HTMLDivElement>) => void;
   onPointerCancel: (event: ReactPointerEvent<HTMLDivElement>) => void;
-  /** Armed placement hover: previews the drop on this cabinet's cell. */
-  onHoverCell?: () => void;
-  onSelect: () => void;
+  /** Armed placement hover: previews the selected quarter of this cabinet top. */
+  onHoverCell?: (event: ReactPointerEvent<HTMLButtonElement>) => void;
+  onSelect: (event: ReactMouseEvent<HTMLButtonElement>) => void;
   onRotate?: () => void;
   onDelete?: () => void;
 }) {
@@ -990,6 +999,10 @@ function IsoCabinet({
   const eastRole = facing === 3 ? "front" : facing === 1 ? "rear" : "side";
   const health = t(`itops.floorPlan.health.${m.health}`);
   const topKuaiguai = rack.items.find((item) => isRackTopItem(item, rack.heightU));
+  const topKuaiguaiPoint = rackTopCornerPoint(
+    topKuaiguai?.metadata?.rackTopCorner,
+    viewAngle,
+  );
 
   return (
     <div
@@ -1006,13 +1019,14 @@ function IsoCabinet({
       onPointerMove={editMode ? onPointerMove : undefined}
       onPointerUp={editMode ? onPointerUp : undefined}
       onPointerCancel={editMode ? onPointerCancel : undefined}
-      onPointerEnter={onHoverCell}
     >
       <button
         type="button"
         className="rm-iso-body"
         title={t("itops.floorPlan.tileTitle", { name: rack.name, detail: health })}
         onClick={onSelect}
+        onPointerEnter={onHoverCell}
+        onPointerMove={onHoverCell}
       >
         <span className="rm-iso-face rm-iso-top" style={{ transform: `translateZ(${h}px)` }}>
           <span
@@ -1026,7 +1040,11 @@ function IsoCabinet({
           <span
             className="rm-iso-rack-top-kuaiguai"
             data-kind="kuaikuai"
-            style={{ transform: surfaceModel(h, "-50%, -100%") }}
+            style={{
+              left: `${topKuaiguaiPoint.x * 100}%`,
+              top: `${topKuaiguaiPoint.y * 100}%`,
+              transform: surfaceModel(h, "-50%, -100%"),
+            }}
           >
             <RoomObjectIsoArtwork
               kind="kuaikuai"

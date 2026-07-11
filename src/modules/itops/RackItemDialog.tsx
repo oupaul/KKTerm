@@ -203,7 +203,13 @@ export function RackItemDialog({
     serverPanelStyle: kind === "server" ? serverPanelStyle : null,
     powerW: isKuaiguai ? null : parsedPowerDraw,
     ...(isKuaiguai
-      ? { expiry: expiry.trim() || null, rotation, kuaiguaiSize, kuaiguaiStyle }
+      ? {
+          expiry: expiry.trim() || null,
+          rotation,
+          kuaiguaiSize,
+          kuaiguaiStyle,
+          rackTopCorner: initialMetadata.rackTopCorner,
+        }
       : {}),
     ...(showsPorts(kind) ? { ports } : {}),
     ...(showsDisks(kind) ? { disks } : {}),
