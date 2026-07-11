@@ -1015,14 +1015,34 @@ async fn upload_file_chunks(
     summary: &mut TransferSummary,
     progress: &mut TransferProgress,
 ) -> Result<(), String> {
-    let mut local_file = fs::File::open(local_path)
+    // Read the local file asynchronously (tokio::fs, backed by the blocking
+    // pool). This is critical on the current-thread SFTP runtime: russh's SSH
+    // session I/O loop, the SFTP channel stream, and the SFTP request-processing
+    // task are all tasks on this one runtime. A synchronous std::fs read plus a
+    // tight write loop that never yields would starve them — russh_sftp's writes
+    // (queued into an unbounded channel via write_nowait) would never actually
+    // reach the socket and the acks would never be processed, so a large upload
+    // stalls and then fails with a "session closed" once the processing task is
+    // starved out. Awaiting the read hands the runtime a scheduling point every
+    // chunk so those tasks keep draining, matching how a native client (scp)
+    // streams. See russh_sftp client::fs::File::poll_write.
+    let mut local_file = tokio::fs::File::open(local_path)
+        .await
         .map_err(|error| format!("failed to read local file: {error}"))?;
     let mut buffer = vec![0; TRANSFER_CHUNK_SIZE];
     let mut wrote_first_chunk = false;
+    // russh_sftp pipelines up to max_concurrent_writes (8) writes before it
+    // blocks. Flush at that cadence so we fully use the pipeline, then drain it:
+    // draining forces the session loop to run, bounds in-flight memory, and
+    // surfaces a server-side write error (or a dead session) right away instead
+    // of hundreds of KB later when the internal queue is finally awaited.
+    const FLUSH_EVERY_CHUNKS: u32 = 8;
+    let mut chunks_since_flush: u32 = 0;
     loop {
         progress.check_cancelled()?;
         let read = local_file
             .read(&mut buffer)
+            .await
             .map_err(|error| format!("failed to read local file: {error}"))?;
         if read == 0 {
             break;
@@ -1034,6 +1054,17 @@ async fn upload_file_chunks(
                 .map_err(|error| format!("failed to upload remote file: {error}"))
         })
         .await?;
+        chunks_since_flush += 1;
+        if chunks_since_flush >= FLUSH_EVERY_CHUNKS {
+            chunks_since_flush = 0;
+            with_sftp_io_timeout("flushing remote upload", async {
+                remote_file
+                    .flush()
+                    .await
+                    .map_err(|error| format!("failed to upload remote file: {error}"))
+            })
+            .await?;
+        }
         if !wrote_first_chunk {
             wrote_first_chunk = true;
             sftp_debug(
