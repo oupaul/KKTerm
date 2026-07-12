@@ -5,6 +5,7 @@ import {
   bindingFromKeyboardEvent,
   conflictingWorkspaceShortcutAction,
   effectiveWorkspaceShortcutBindings,
+  fixedTerminalShortcutFromKeyboardEvent,
   workspaceShortcutFromKeyboardEvent,
 } from "../src/modules/workspace/keymap";
 
@@ -88,6 +89,21 @@ test("conflict detection finds the action already using a binding", () => {
   assert.equal(conflict?.id, "copy");
   // No conflict against an unused combination.
   assert.equal(conflictingWorkspaceShortcutAction("Ctrl+Shift+J", {}, "find"), null);
+});
+
+test("fixed terminal aliases cannot be stolen by other configurable actions", () => {
+  assert.equal(
+    fixedTerminalShortcutFromKeyboardEvent(keyEvent("Insert", { ctrlKey: true })),
+    "copy",
+  );
+  assert.equal(
+    fixedTerminalShortcutFromKeyboardEvent(keyEvent("v", { ctrlKey: true, shiftKey: true })),
+    "paste",
+  );
+  assert.equal(conflictingWorkspaceShortcutAction("Ctrl+Insert", {}, "find")?.id, "copy");
+  assert.equal(conflictingWorkspaceShortcutAction("Ctrl+Shift+V", {}, "find")?.id, "paste");
+  assert.equal(conflictingWorkspaceShortcutAction("Ctrl+Insert", {}, "copy"), null);
+  assert.equal(conflictingWorkspaceShortcutAction("Ctrl+Shift+V", {}, "paste"), null);
 });
 
 test("every action has a unique default binding or is unbound", () => {

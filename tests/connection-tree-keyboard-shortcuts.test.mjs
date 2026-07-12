@@ -12,6 +12,7 @@ test("Connection Tree handles F2 rename and Delete on the focused connection row
   // (not a terminal or text field) has keyboard focus.
   assert.match(source, /className=\{`tree-list [\s\S]*?onKeyDown=\{handleTreeKeyDown\}/);
   assert.match(source, /function handleTreeKeyDown\(event: ReactKeyboardEvent<HTMLDivElement>\)/);
+  assert.match(source, /if \(event\.repeat\) \{\s*event\.preventDefault\(\);\s*return;/);
   // F2 renames on every platform; delete is the Delete key everywhere plus
   // Backspace / Cmd+Backspace on macOS (Finder convention).
   assert.match(source, /const isRename = event\.key === "F2";/);

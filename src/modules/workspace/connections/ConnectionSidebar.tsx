@@ -2262,6 +2262,10 @@ export function ConnectionSidebar({
     if (!isRename && !isDelete) {
       return;
     }
+    if (event.repeat) {
+      event.preventDefault();
+      return;
+    }
     const target = event.target as HTMLElement;
     // Never hijack typing in the rename input, search field, or any editable.
     if (target.closest("input, textarea, [contenteditable='true']")) {

@@ -25,7 +25,10 @@ import { useGitRepoDetection } from "../../../git/useGitRepoDetection";
 import { createTerminalRenderer, logTerminalFontAtlasState, scheduleTerminalFontAtlasRefresh, type TerminalDimensions, type TerminalRenderer } from "./renderer";
 import { resolveTerminalColorScheme, TERMINAL_COLOR_SCHEMES } from "./colorSchemes";
 import { findQuickSelectMatches, labelQuickSelectMatches, quickSelectPointerAction, type LabeledQuickSelectMatch } from "./quickSelect";
-import { workspaceShortcutFromKeyboardEvent } from "../../keymap";
+import {
+  fixedTerminalShortcutFromKeyboardEvent,
+  workspaceShortcutFromKeyboardEvent,
+} from "../../keymap";
 import { ensureLayout } from "../../layout";
 import {
   broadcastInputToOtherPanes,
@@ -1955,11 +1958,12 @@ function TerminalPaneView({
       // Terminal-scope Workspace shortcuts, rebindable in Settings →
       // Shortcuts. Workspace-scope shortcuts (Tab management) are handled by
       // the window capture listener before xterm ever sees the key.
-      const action = workspaceShortcutFromKeyboardEvent(
-        event,
-        useWorkspaceStore.getState().generalSettings.workspaceShortcuts,
-        "terminal",
-      );
+      const action = fixedTerminalShortcutFromKeyboardEvent(event)
+        ?? workspaceShortcutFromKeyboardEvent(
+          event,
+          useWorkspaceStore.getState().generalSettings.workspaceShortcuts,
+          "terminal",
+        );
       switch (action) {
         case "copy": {
           const selection = terminal.getSelection();
@@ -2019,24 +2023,6 @@ function TerminalPaneView({
         }
         default:
           break;
-      }
-
-      // Fixed conventional aliases kept alongside the rebindable bindings:
-      // Ctrl+Insert copies and Ctrl+Shift+V pastes in most terminals.
-      if (event.ctrlKey && event.key === "Insert") {
-        const selection = terminal.getSelection();
-        if (selection) {
-          void writeToClipboard(selection);
-          setSelectedTerminalText(selection);
-          setContextMenu(null);
-          return false;
-        }
-        return true;
-      }
-      if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === "v") {
-        event.preventDefault();
-        void handlePasteIntoTerminal();
-        return false;
       }
 
       return true;

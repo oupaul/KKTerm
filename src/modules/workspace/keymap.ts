@@ -58,6 +58,14 @@ export const WORKSPACE_SHORTCUT_ACTIONS: readonly WorkspaceShortcutAction[] = [
   { id: "splitUp", scope: "terminal", labelKey: "terminal.splitUp", defaultBinding: null },
 ];
 
+const FIXED_TERMINAL_SHORTCUT_ALIASES: ReadonlyArray<{
+  actionId: WorkspaceShortcutActionId;
+  binding: string;
+}> = [
+  { actionId: "copy", binding: "Ctrl+Insert" },
+  { actionId: "paste", binding: "Ctrl+Shift+V" },
+];
+
 const MODIFIER_KEYS = new Set(["Control", "Shift", "Alt", "Meta"]);
 
 /**
@@ -141,6 +149,20 @@ export function workspaceShortcutFromKeyboardEvent(
 }
 
 /**
+ * Resolve conventional terminal aliases that remain active independently of
+ * the user's configurable primary bindings.
+ */
+export function fixedTerminalShortcutFromKeyboardEvent(
+  event: KeyboardEvent,
+): WorkspaceShortcutActionId | null {
+  const binding = bindingFromKeyboardEvent(event);
+  if (!binding) {
+    return null;
+  }
+  return FIXED_TERMINAL_SHORTCUT_ALIASES.find((alias) => alias.binding === binding)?.actionId ?? null;
+}
+
+/**
  * Find the other action already using `binding`, for conflict rejection in
  * the Settings recorder. Shortcuts share one namespace across both scopes
  * because terminal-focused keys reach the window listener too.
@@ -150,6 +172,12 @@ export function conflictingWorkspaceShortcutAction(
   overrides: WorkspaceShortcutOverrides | undefined,
   exceptActionId: WorkspaceShortcutActionId,
 ): WorkspaceShortcutAction | null {
+  const fixedAlias = FIXED_TERMINAL_SHORTCUT_ALIASES.find(
+    (alias) => alias.actionId !== exceptActionId && alias.binding === binding,
+  );
+  if (fixedAlias) {
+    return WORKSPACE_SHORTCUT_ACTIONS.find((action) => action.id === fixedAlias.actionId) ?? null;
+  }
   const bindings = effectiveWorkspaceShortcutBindings(overrides);
   for (const action of WORKSPACE_SHORTCUT_ACTIONS) {
     if (action.id !== exceptActionId && bindings.get(action.id) === binding) {

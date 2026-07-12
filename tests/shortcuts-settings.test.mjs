@@ -13,6 +13,10 @@ const keymapSource = await readFile(
   new URL("../src/modules/workspace/keymap.ts", import.meta.url),
   "utf8",
 );
+const workspaceCanvasSource = await readFile(
+  new URL("../src/modules/workspace/WorkspaceCanvas.tsx", import.meta.url),
+  "utf8",
+);
 
 test("Shortcuts settings section is wired and listed above Proxy", () => {
   assert.equal(localeEn.settings.sectionShortcuts, "Shortcuts");
@@ -46,4 +50,11 @@ test("keymap ships predefined defaults for common actions and leaves splits unbo
       new RegExp(`id: "${unbound}"[\\s\\S]*?defaultBinding: null`),
     );
   }
+});
+
+test("workspace shortcuts stay inactive behind both legacy and shared dialogs", () => {
+  assert.match(
+    workspaceCanvasSource,
+    /document\.querySelector\("\.settings-backdrop, \.dialog-backdrop, \.kk-dlg-backdrop"\)/,
+  );
 });

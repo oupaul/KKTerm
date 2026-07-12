@@ -403,9 +403,13 @@ export function WorkspaceCanvas({
     // surfaces; stopPropagation keeps the handled key out of the terminal.
     const handleShortcutKeyDown = (event: globalThis.KeyboardEvent) => {
       const target = event.target instanceof Element ? event.target : null;
-      // Remote Desktop surfaces forward raw keys to the remote host, and the
-      // Settings overlay hosts the shortcut recorder; leave their input alone.
-      if (target?.closest(".rdp-canvas-view, .vnc-display, .settings-backdrop, .dialog-backdrop")) {
+      // Remote Desktop surfaces forward raw keys to the remote host. Block
+      // shortcuts whenever a Settings or dialog backdrop is mounted as focus
+      // can still be parked on a Workspace control behind a modal.
+      if (target?.closest(".rdp-canvas-view, .vnc-display")) {
+        return;
+      }
+      if (document.querySelector(".settings-backdrop, .dialog-backdrop, .kk-dlg-backdrop")) {
         return;
       }
       const state = useWorkspaceStore.getState();
