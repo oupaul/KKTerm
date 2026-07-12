@@ -62,49 +62,15 @@
 
 ## Pitch dalam 45 detik
 
-Kamu seorang sysadmin / DevOps / penggemar homelab / vibe-coder. Saat ini kamu punya:
+KKTerm menyatukan terminal lokal, SSH/SFTP, FTP/FTPS, Telnet, serial, RDP/VNC, halaman web tertanam, berkas lokal, dan dokumen dalam satu workspace desktop. Tab dapat mencampur berbagai jenis Pane agar terminal, penjelajah berkas, dan layar jarak jauh untuk satu pekerjaan tetap berdampingan.
 
-- Sebuah emulator terminal
-- Klien SSH terpisah (dengan daftar profil yang butuh satu akhir pekan untuk dirakit)
-- Klien SFTP dari 2007 yang entah bagaimana masih ada
-- Remote Desktop di jendela yang selalu kamu kehilangan di monitor yang salah
-- Sebuah viewer VNC hanya demi satu mesin Linux itu
-- Satu tab browser untuk halaman admin router
-- Sebuah file manager untuk mengulik disk lokal, dan satu editor teks hanya demi satu log yang terus kamu `tail`
-- Sebuah sesi `claude` / `codex` di mesin remote yang putus setiap kali Wi-Fi bersin
-- Secarik sticky note berisi kata sandi *(tenang, kami tak akan bilang)*
-
-**KKTerm adalah satu jendela untuk semua itu.** Native di Windows — *sengaja, sementara dunia dev tools lainnya merilis mac dulu dan memperlakukan OS-mu seperti catatan kaki* — dalam satu installer yang menolak menelepon pulang.
-
-Ditambah beberapa hal yang kamu tak tahu kamu inginkan:
-
-- Sebuah **Dashboard** tempat kamu menyuruh AI *"buatkan widget yang ping router-ku tiap 30 detik"* lalu ia muncul, dalam sandbox-nya sendiri, di grid-mu.
-- **Panel SSH yang menyambung kembali ke sesi remote `claude` / `codex`-mu** setelah setiap amukan Wi-Fi, agar kerja enam jam selamat dari putusnya koneksi.
-- **Workspaces** yang menjaga homelab, pekerjaan kantor, dan server klien itu dalam wadah-wadah terpisah yang bisa kamu tukar dengan sekali klik.
-- Sebuah **Install Helper** yang menemukan, memasang, memperbarui, dan menjalankan alat dev Windows yang biasanya kamu kejar lewat sepuluh tab browser.
-- **36 latar animasi** untuk dashboard *dan terminalmu* (ya, termasuk `matrix`), karena kami tak terlalu jaim untuk itu.
-
-Dan bagian terbaiknya: asisten AI bisa mengubah satu kalimat menjadi alat dashboard kecil yang benar-benar terus kamu pakai.
-
-> ⭐ **Kalau ini terdengar seperti aplikasi yang sudah enam tahun ingin kamu bangun — beri bintang ke repo-nya agar kami tahu ada yang memperhatikan. Ini sungguh membantu.**
-
-Punya pendapat tentang apa yang sebaiknya datang berikutnya? Gabung ke thread umpan balik publik:
-**[Apa yang sebaiknya diprioritaskan KKTerm untuk alur kerja admin lintas platform?](https://github.com/ryantsai/KKTerm/discussions/141)**
+KKTerm berjalan di Windows, macOS, dan Linux dengan penyimpanan lokal serta tanpa telemetri. AI dengan persetujuan pengguna, widget Dashboard yang dapat disesuaikan, Workspace, IT Ops, dan Install Helper untuk Windows sudah tersedia.
 
 ---
 
 ## Kenapa "KKTerm"?
 
 Masuklah ke data center Taiwan mana pun dan lihat bagian atas rak. Melewati pabrik TSMC, ruang kendali Metro Taipei, ruang server bank Cathay, perangkat switching Chunghwa Telecom — kamu akan melihat kantong hijau kecil 乖乖 (Kuāi Kuāi), camilan jagung rasa kelapa dari era 1960-an.
-
-Namanya secara harfiah berarti **"jadilah baik"**, **"berperilakulah"**. Tradisi IT-nya sederhana dan sungguh-sungguh serius:
-
-- **Harus hijau (kelapa).** Kuning (kari) berarti *hari ini di rumah saja*; merah (pedas) membuat server marah. Hanya hijau.
-- **Tidak boleh kedaluwarsa.** Kuai Kuai basi justru merugikanmu. Para insinyur rajin menggantinya.
-- **Harus terlihat.** Server harus tahu ia ada di sana.
-- **Jangan dimakan.** Kantong itu sedang bertugas.
-
-Beberapa sistem terbesar, paling membosankan, dan paling terobsesi pada uptime di Asia berjalan dengan sekantong jagung yang ditempel di sasis. Itu berhasil karena orang-orang yang merawatnya percaya itu berhasil, yang merupakan deskripsi luar biasa jujur tentang sebagian besar budaya IT.
 
 **KKTerm** adalah **Kuai Kuai Term** — ruang kerja admin yang mengincar pekerjaan yang sama dengan camilan itu: duduk diam di samping mesin-mesin pentingmu dan membantu mereka berperilaku baik. Local-first. Tanpa telemetri. AI dengan persetujuan. Jenis perangkat lunak yang membosankan tapi bisa diandalkan.
 
@@ -125,8 +91,6 @@ Kami belum berhasil menyertakan sekantong Kuai Kuai sungguhan bersama installer-
 </p>
 
 <p align="center"><sub><em>(GIF demo. Satu gambar bernilai seribu poin, dan poin kami sudah habis.)</em></sub></p>
-
-
 
 ---
 
@@ -153,7 +117,6 @@ Aplikasi yang sama. Jendela yang sama. Pintasan yang sama. Tema yang sama, yang 
   <img src="docs/assets/screenshots/connections-grid.png" alt="Satu Tab berisi SSH, SFTP, dan UI web tertanam berdampingan" width="720" />
 </p>
 
-
 ---
 
 ## Kenapa orang membiarkannya terbuka seharian
@@ -162,98 +125,43 @@ Aplikasi yang sama. Jendela yang sama. Pintasan yang sama. Tema yang sama, yang 
 
 KKTerm dibuat agar terasa seperti utilitas, bukan platform. Build desktop saat ini di bawah 20 MB, cepat dipasang, dan meluncur cukup cepat sehingga membuka workspace admin-mu tidak terasa seperti menyalakan sistem operasi kedua.
 
-Jejak kecil ini penting di jump box, laptop lama, dan VM, tempat setiap layanan latar belakang tambahan adalah satu hal lagi yang patut dicurigai. KKTerm terbuka, memulihkan workspace-mu, lalu menyingkir.
-
 ### Grid multi-Pane, campur sesuai cara kerjamu
 
 Sebuah Tab bisa berisi grid Panes, dan Panes itu tidak harus sejenis. Taruh SSH di sebelah SFTP, PowerShell lokal di bawah RDP Session, VNC di sebelah UI web router, atau file browser di samping terminal yang sedang memindahkan file.
-
-Ini satu workspace untuk bentuk nyata pekerjaan admin yang berantakan: campur jenis Connection, ubah ukuran grid, biarkan live Sessions tetap hidup, dan berhenti Alt-Tab melewati tumpukan jendela.
 
 <p align="center">
   <img src="docs/assets/screenshots/multi-pane.png" alt="Sebuah Tab terbagi menjadi empat panel dengan jenis koneksi berbeda" width="720" />
 </p>
 
-
 ### Asisten AI yang mengomandoi terminalmu untukmu
 
 Kebanyakan demo "AI di terminalmu" berhenti di obrolan. Asisten KKTerm bekerja *di dalam* sesimu: kamu menyerahkan konteks dari apa yang sudah ada di layar, dan ia bertindak pada mesin-mesin yang sedang kamu sambungkan — dengan manusia di dalam lingkar persetujuan.
-
-**Serahkan konteksnya, langsung.** Tanpa relai salin-tempel:
-
-- **Tambahkan terminal buffer ke konteks** menarik scrollback sebuah sesi lokal atau remote yang sedang berjalan langsung ke percakapan, sehingga "kenapa build ini gagal?" menjadi sesuatu yang benar-benar bisa ia baca.
-- **Menu tangkapan layar** menangkap sebuah area atau seluruh Pane dan menjatuhkan gambarnya ke obrolan, sehingga "kenapa dialog ini terlihat aneh?" menjadi pertanyaan yang bisa ia jawab.
-- **Lampirkan berkas** dan **konteks halaman Dashboard / IT Ops** saat ini, sehingga ia menalar tentang apa yang benar-benar kamu lihat, bukan deskripsi yang samar.
-
-**Biarkan ia bertindak — di balik persetujuan.** Asisten bisa menjalankan perintah di terminalmu, membuka Connections, dan menempatkan widget di dashboard, tapi bagian yang berisiko tetap terkunci:
-
-- **Tentukan apa yang boleh ia sentuh** — nyalakan atau matikan seluruh keluarga alat (Dashboard / Connections / Live Sessions).
-- **Tentukan bagaimana ia bertanya** — `Prompt` (default, bertanya setiap kali) atau `Allow All` (kamu sudah dewasa, kamu menandatangani pernyataannya).
-- Apa pun yang terlihat seperti `rm -rf` ditandai berbahaya — dengan alasannya ditampilkan di kartu persetujuan — dan menunggu kata "ya" eksplisit dari manusia. AI tidak bisa diam-diam menjalankan perintah merusak hanya karena ada yang berbuat licik dengan prompt injection di sebuah halaman man.
-
-**Bawa otakmu sendiri.** Ia bicara dengan OpenAI, Anthropic, OpenRouter, DeepSeek, Grok, Azure OpenAI, LiteLLM, GitHub Copilot, Ollama, NVIDIA, atau endpoint apa pun yang kompatibel OpenAI — dan bisa berjalan di atas **Claude Code CLI** atau **Codex CLI** sebagai backend, memakai login dan langganan `claude` / `codex`-mu yang sudah ada alih-alih kunci API terpisah. Kunci API-mu masuk ke keychain OS.
 
 <p align="center">
   <img src="docs/assets/screenshots/ai-assistant.png" alt="Panel asisten AI dengan sakelar akses alat dan mode persetujuan" width="720" />
 </p>
 
-
 ### Dashboard yang tidak berpura-pura jadi Grafana
 
 Dashboard adalah grid widget yang bisa kamu seret dan ubah ukurannya. Ini bukan untuk observability skala petabyte — ini untuk "aku mau satu tombol untuk meluncurkan lima aplikasi favoritku dan satu panel yang menampilkan uptime host SSH-ku, *di samping* obrolanku".
-
-#### Widget buatan AI — jelaskan, langsung jadi
-
-Ini bagian yang benar-benar membuat kami bersemangat. Kamu tidak memilih dari marketplace dan tidak menulis JavaScript. Kamu **memberi tahu asisten AI apa yang kamu mau**, lalu ia membangun widget-nya langsung di dashboard-mu:
-
-> *"Tambahkan widget yang menampilkan 5 commit terakhir repo utamaku sebagai daftar."*
-> *"Buatkan aku widget sticky-note untuk contekan jaga on-call-ku."*
-> *"Bangun widget yang ping router rumahku tiap 30 detik dan menampilkan hijau/merah."*
-> *"Aku butuh stopwatch. Kejutkan aku soal gayanya."*
-
-Sebagian adalah panel tampilan sederhana (markdown, checklist, satu angka besar); sebagian menjalankan kode langsung di sandbox terisolasi yang kamu setujui. Setiap widget yang kamu simpan jadi milikmu — tersimpan dengan warna, ikon, dan judulnya sendiri, dan kamu bisa punya beberapa salinan dengan ukuran berbeda. Hapus satu dengan klik kanan saat keajaibannya memudar.
 
 <p align="center">
   <img src="docs/assets/screenshots/ai-widgets.png" alt="Grid dashboard penuh widget buatan AI" width="720" />
 </p>
 
+### IT Ops untuk Site, Host, dan pekerjaan berulang
 
-#### Latar animasi dashboard/terminal (karena kami mau saja)
+Module **IT Ops** mengelompokkan Connection ke dalam Site, memetakan Server Room dan Rack, menginventarisasi Host, serta menjalankan Task yang dapat digunakan kembali pada mesin terpilih. Batch Run menyimpan hasil per Host, sedangkan Automation mengubah pemicu dan kondisi menjadi notifikasi, webhook, atau Task.
 
-Pilih satu suasana — per tampilan dashboard, *atau di belakang terminal mana pun* — dari **36** latar animasi canvas:
-
-| Suasana | Latar |
-| --- | --- |
-| Tenang | `fuji`, `aurora`, `halftone`, `clouds`, `ocean`, `raindrops`, `rainywindow`, `frostedWindow`, `snow`, `sakura`, `fireflies`, `bubbles`, `aquarium`, `jellyfish`, `lighthouse`, `balloons`, `ricefield`, `lanterns` |
-| Antariksa | `starfield`, `nebula`, `orbitals` |
-| Hangat | `embers`, `lava`, `ink`, `dunes`, `savanna` |
-| Geek | `matrix`, `topo`, `synthwave`, `circuit`, `crystals` |
-| Gelisah | `cyberpunk`, `taipei101`, `thunderstorm`, `confetti`, `particleCursor` |
-
-Pemilih yang sama juga menopang panel terminalmu, jadi kamu bisa menaruh `matrix` di belakang sesi SSH yang sedang berjalan. Mereka berhenti saat kamu di tempat lain, jadi nyaris tak memakan sumber daya. Padukan `matrix` dengan asisten AI-mu untuk suasana yang berkata "aku sangat produktif dan mungkin sedang berada di film Wachowski". Atau pilih `ocean` dan tampak seperti orang serius. Kami tidak menghakimi kedua pilihan itu.
-
-<p align="center">
-  <img src="docs/assets/screenshots/backgrounds.png" alt="Beberapa latar animasi berdampingan" width="720" />
-</p>
-
+> 🖼️ **Placeholder tangkapan layar IT Ops — gambar segera hadir.**
 
 ### Jaga agar agen AI-mu tetap hidup
 
-Ini fitur kedua yang membuat orang jatuh cinta. Terminal SSH KKTerm bisa langsung menjatuhkanmu ke sebuah **sesi tmux bernama** di host remote yang selamat dari penyambungan ulang:
-
-- Buka koneksi SSH dengan tmux aktif lalu jalankan `claude`, `codex`, `gemini-cli`, `cursor-agent`, atau agen jangka panjang apa pun yang kamu suka.
-- Tutup laptop. Buka lagi. Panel menyambung kembali diam-diam — agennya masih berjalan, masih punya scrollback-nya, masih di tengah apa pun yang sedang dikerjakannya.
-- Jaringan tersendat? KKTerm menyambung kembali diam-diam ke sesi yang sama tanpa mengganggumu.
-- Mau bantuan asisten? "Tambahkan terminal buffer ke konteks" menarik seluruh sesi remote ke dalam percakapan, agar AI lokalmu bisa menalar apa yang sedang dikerjakan agen remote-mu.
-
-Kalau kamu pernah kehilangan sesi `claude` atau `codex` enam jam gara-gara Wi-Fi hotel yang labil, fitur satu ini saja sudah menebus harga aplikasinya. (Aplikasinya gratis. Fiturnya tetap layak.)
-
-Shell lokal mendapat trik yang sama di Windows: panel PowerShell bisa berjalan di dalam **psmux**, klon tmux native, agar proses lokal berdurasi panjang selamat dari Pane yang ditutup, persis seperti yang remote.
+Ini fitur kedua yang membuat orang jatuh cinta. Terminal SSH KKTerm bisa langsung menjatuhkanmu ke sebuah **sesi tmux bernama** di host remote yang selamat dari penyambungan ulang.
 
 <p align="center">
   <img src="docs/assets/screenshots/tmux-reattach.png" alt="Sebuah panel SSH menyambung kembali ke sesi tmux bernama setelah reconnect" width="720" />
 </p>
-
 
 ### Pisahkan dunia-duniamu dengan Workspaces
 
@@ -263,44 +171,21 @@ Homelab, pekerjaan kantor, dan server klien itu tidak pantas berada di daftar ya
   <img src="docs/assets/screenshots/workspaces.png" alt="Pengalih workspace di activity rail" width="720" />
 </p>
 
-
 ### Dandani sesukamu: tema warna
 
-Latar adalah bagian serunya; **tema warna** adalah yang benar-benar kamu pandangi seharian. KKTerm membawa **dua puluh enam** skema warna yang mendandani ulang seluruh chrome aplikasi — Activity Rail, pohon koneksi, tab, dialog — dengan pratinjau mini langsung untuk masing-masing di Pengaturan ▸ Tampilan:
-
-| Suasana | Skema |
-| --- | --- |
-| Netral | `Default`, `Dark`, `Light`, `Match OS` (mengikuti terang/gelap sistem), `Mac` |
-| Penuh warna | `Orange`, `Purple`, `Pink`, `Confetti`, `Bubble Tea` |
-| Cita rasa lokal | `Green Kuai Kuai` (ya, camilan itu), `Blue See`, `Blue, Green and White`, `Semiconductor` |
-
-Terminal mempertahankan palet gelapnya sendiri apa pun skema yang kamu pilih, agar shell-mu tetap terbaca sementara sisa aplikasi menyesuaikan suasana hatimu.
+Latar adalah bagian serunya; **tema warna** adalah yang benar-benar kamu pandangi seharian. KKTerm membawa **dua puluh enam** skema warna yang mendandani ulang seluruh chrome aplikasi — Activity Rail, pohon koneksi, tab, dialog — dengan pratinjau mini langsung untuk masing-masing di Pengaturan ▸ Tampilan.
 
 <p align="center">
   <img src="docs/assets/screenshots/color-themes.png" alt="Grid skema warna di Pengaturan dengan pratinjau langsung" width="720" />
 </p>
 
-
 ### Install Helper (khusus Windows)
 
-Menyiapkan mesin Windows baru untuk kerja dev biasanya berarti sepuluh tab browser dan banyak "berikutnya, berikutnya, selesai". **Install Helper** adalah katalog bawaan yang menemukan, memasang, memperbarui, dan mencopot alat yang kalau tidak harus kamu kejar manual — tanpa keluar dari KKTerm:
-
-- **Essentials** — winget, Node (via nvm-windows), Python (via uv), Git.
-- **AI Agents** — Claude Code, Codex, Antigravity, OpenCode, serta CLI dan aplikasi desktop agen coding lainnya.
-- **AI Platforms** — stack lokal / self-hosted seperti Ollama, n8n, Open WebUI, Flowise, dan Langflow, dijalankan dan dikelola untukmu.
-- **Development** — editor, kontainer, alat API, WSL dan distribusinya, Rustup.
-- **Windows Power User** — PowerToys, PowerShell 7, psmux, Sysinternals, Everything, Ditto.
-- **Remote Access** — Tailscale, RustDesk.
-- **Utilities** — Notepad++, ripgrep, jq, fzf, 7-Zip, Oh My Posh, FFmpeg, dan lainnya.
-
-Ia mendeteksi apa yang sudah terpasang, menandai mana yang punya pembaruan, dan **Perbarui semua** menelusuri antrean untukmu. Prompt UAC tetap eksplisit, tak ada yang terpasang diam-diam, dan seluruh katalog ikut di dalam aplikasi — tanpa akun tambahan, tanpa telemetri latar belakang.
-
-> macOS dan Linux sudah punya manajer paket yang kamu sukai, jadi Install Helper adalah kemudahan khusus Windows dan bukan bagian dari build-build itu.
+Menyiapkan mesin Windows baru untuk kerja dev biasanya berarti sepuluh tab browser dan banyak "berikutnya, berikutnya, selesai". **Install Helper** adalah katalog bawaan yang menemukan, memasang, memperbarui, dan mencopot alat yang kalau tidak harus kamu kejar manual — tanpa keluar dari KKTerm.
 
 <p align="center">
   <img src="docs/assets/screenshots/install-helper.png" alt="Katalog Install Helper dengan alat yang terpasang dan tersedia" width="720" />
 </p>
-
 
 ---
 
@@ -341,12 +226,7 @@ Versi lengkap dan sering diperbarui: [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 ## Berkontribusi
 
-Kami akan senang sekali dibantu. Sungguh. Hal kecil pun penting:
-
-- **Coba build dev** dan buka issue saat ada yang terasa janggal. "Rasanya janggal" adalah laporan bug yang sah; kami akan menggali bersamamu.
-- **Terjemahkan satu bahasa.** Bahasa Inggris adalah sumber kebenaran; tiga belas bahasa lain tinggal di sebelahnya.
-- **Tambahkan widget dashboard.** Ambil satu ide kecil, rilis, pelajari polanya.
-- **Perbaiki manual.** Kalau kamu memakai sebuah fitur dan dokumentasinya tak membantu, PR yang memperbaikinya berharga emas.
+Kami akan senang sekali dibantu. Sungguh. Hal kecil pun penting.
 
 Penyiapan lengkap, struktur proyek, dan checklist PR ada di [`CONTRIBUTING.md`](CONTRIBUTING.md). Mencari titik masuk? Saring issue terbuka dengan [`good first issue`](https://github.com/ryantsai/KKTerm/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) atau [`help wanted`](https://github.com/ryantsai/KKTerm/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22).
 
@@ -373,10 +253,6 @@ Penyiapan lengkap, struktur proyek, dan checklist PR ada di [`CONTRIBUTING.md`](
     <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=ryantsai/KKTerm&type=Date" />
   </picture>
 </a>
-
-Kalau kamu sudah sampai sejauh ini dan belum memberi bintang — tunggu apa lagi, undangan pribadi? Anggap ini undangan pribadinya.
-
-⭐ **[Beri bintang KKTerm di GitHub](https://github.com/ryantsai/KKTerm)** — cukup satu klik dan membuat sepekan penuh sang maintainer cerah. Anggap saja 乖乖 digital di rak.
 
 ---
 

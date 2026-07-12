@@ -62,49 +62,15 @@
 
 ## Der Pitch in 45 Sekunden
 
-Du bist Sysadmin / DevOps / Homelab-Bastler / Vibe-Coder. Gerade hast du:
+KKTerm vereint lokale Terminals, SSH/SFTP, FTP/FTPS, Telnet, serielle Verbindungen, RDP/VNC, eingebettete Webseiten, lokale Dateien und Dokumente in einem Desktop-Arbeitsbereich. Tabs können verschiedene Pane-Typen mischen, damit Terminal, Dateibrowser und Remote-Bildschirm für eine Aufgabe zusammenbleiben.
 
-- Einen Terminal-Emulator
-- Einen separaten SSH-Client (mit einer Profilliste, an der du ein Wochenende gebaut hast)
-- Einen SFTP-Client von 2007, den es irgendwie noch gibt
-- Remotedesktop in einem Fenster, das du ständig auf dem falschen Monitor verlierst
-- Einen VNC-Viewer für diese eine Linux-Kiste
-- Einen Browser-Tab für die Admin-Oberfläche des Routers
-- Einen Dateimanager, um auf der lokalen Platte zu stöbern, und einen Texteditor für das eine Log, das du ständig per `tail` verfolgst
-- Eine `claude` / `codex`-Session auf einer entfernten Maschine, die abbricht, sobald dein WLAN niest
-- Einen Klebezettel mit Passwörtern *(keine Sorge, wir sagen nichts)*
-
-**KKTerm ist ein Fenster für all das.** Nativ unter Windows — *mit Absicht, während der Rest der Dev-Tool-Welt mac-first ausliefert und dein OS als Fußnote behandelt* — in einem einzigen Installer, der sich weigert, nach Hause zu telefonieren.
-
-Dazu ein paar Dinge, von denen du nicht wusstest, dass du sie wolltest:
-
-- Ein **Dashboard**, in dem du einer KI sagst *„bau mir ein Widget, das meinen Router alle 30 Sekunden anpingt"*, und es erscheint, in seiner eigenen Sandbox, auf deinem Raster.
-- **SSH-Panes, die sich nach jedem WLAN-Anfall wieder an deine entfernte `claude` / `codex`-Session anhängen**, damit ein Sechs-Stunden-Job eine Verbindungsunterbrechung überlebt.
-- **Workspaces**, die dein Homelab, den Hauptjob und die Server dieses einen Kunden in getrennten, umschaltbaren Containern halten.
-- Ein **Install Helper**, der die Windows-Dev-Tools, die du sonst durch zehn Browser-Tabs jagst, findet, installiert, aktualisiert und startet.
-- **36 animierte Hintergründe** fürs Dashboard *und deine Terminals* (ja, inklusive `matrix`), weil wir nicht zu erhaben dafür sind.
-
-Und das Beste: Der KI-Assistent kann aus einem einzigen Satz ein winziges Dashboard-Tool machen, das du tatsächlich behältst.
-
-> ⭐ **Wenn das nach der App klingt, die du seit sechs Jahren bauen wolltest — gib dem Repo einen Stern, damit wir wissen, dass jemand zuschaut. Das hilft wirklich.**
-
-Eine Meinung, was als Nächstes kommen sollte? Mach im öffentlichen Feedback-Thread mit:
-**[Was sollte KKTerm für plattformübergreifende Admin-Workflows priorisieren?](https://github.com/ryantsai/KKTerm/discussions/141)**
+Es läuft unter Windows, macOS und Linux, speichert lokal und nutzt keine Telemetrie. Freigabepflichtige KI, anpassbare Dashboard-Widgets, Workspaces, IT Ops und der Windows Install Helper sind integriert.
 
 ---
 
 ## Warum „KKTerm"?
 
 Geh in irgendein taiwanisches Rechenzentrum und schau oben auf die Racks. Vorbei an TSMC-Fabs, Leitständen der Taipei-Metro, Serverhallen der Cathay-Bank, Vermittlungstechnik von Chunghwa Telecom — du wirst ein kleines grünes Tütchen 乖乖 (Kuāi Kuāi) entdecken, einen Mais-Snack mit Kokosgeschmack aus den 1960ern.
-
-Der Name bedeutet wörtlich **„sei brav"**, **„benimm dich"**. Die IT-Tradition ist schlicht und absolut ernst gemeint:
-
-- **Muss grün sein (Kokos).** Gelb (Curry) heißt *bleib heute zu Hause*; Rot (scharf) macht den Server wütend. Nur Grün.
-- **Darf nicht abgelaufen sein.** Ein altes Kuai Kuai arbeitet gegen dich. Ingenieure tauschen sie gewissenhaft aus.
-- **Muss sichtbar sein.** Der Server muss wissen, dass es da ist.
-- **Iss es nicht.** Das Tütchen ist im Dienst.
-
-Einige der größten, langweiligsten, am stärksten auf Uptime versessenen Systeme Asiens laufen mit einem Tütchen Maisflips am Gehäuse. Es funktioniert, weil die Leute, die sie warten, glauben, dass es funktioniert — was eine bemerkenswert ehrliche Beschreibung der meisten IT-Kultur ist.
 
 **KKTerm** ist **Kuai Kuai Term** — ein Admin-Workspace, der dasselbe anstrebt wie der Snack: still neben deinen wichtigen Maschinen zu sitzen und ihnen zu helfen, sich zu benehmen. Local-first. Keine Telemetrie. KI mit Freigabe. Die langweilige, verlässliche Sorte Software.
 
@@ -125,8 +91,6 @@ Ein echtes Tütchen Kuai Kuai mit dem Installer auszuliefern, haben wir noch nic
 </p>
 
 <p align="center"><sub><em>(Das Demo-GIF. Ein Bild sagt mehr als tausend Aufzählungspunkte, und uns gehen die Aufzählungspunkte aus.)</em></sub></p>
-
-
 
 ---
 
@@ -153,7 +117,6 @@ Dieselbe App. Dasselbe Fenster. Dieselben Hotkeys. Dasselbe, hoffentlich nicht a
   <img src="docs/assets/screenshots/connections-grid.png" alt="Ein einzelner Tab mit SSH, SFTP und einer eingebetteten Web-UI nebeneinander" width="720" />
 </p>
 
-
 ---
 
 ## Warum Leute es den ganzen Tag offen lassen
@@ -162,98 +125,43 @@ Dieselbe App. Dasselbe Fenster. Dieselben Hotkeys. Dasselbe, hoffentlich nicht a
 
 KKTerm soll sich wie ein Werkzeug anfühlen, nicht wie eine Plattform. Aktuelle Desktop-Builds liegen unter 20 MB, installieren schnell und starten so flott, dass sich das Öffnen deines Admin-Workspace nicht wie das Starten eines zweiten Betriebssystems anfühlt.
 
-Der kleine Footprint zählt auf Jump-Hosts, alten Laptops und VMs, wo jeder zusätzliche Hintergrunddienst eine weitere Sache ist, der man misstraut. KKTerm öffnet sich, stellt deinen Workspace wieder her und bleibt aus dem Weg.
-
 ### Multi-Pane-Grids, gemischt wie du arbeitest
 
 Ein Tab kann ein Grid aus Panes enthalten, und diese Panes müssen nicht dieselbe Art haben. Lege SSH neben SFTP, eine lokale PowerShell unter eine RDP Session, VNC neben das Web-UI des Routers oder einen Dateibrowser neben das Terminal, das gerade Dateien verschiebt.
-
-Es ist ein Workspace für die unordentliche echte Form von Admin-Arbeit: Connection-Typen mischen, das Grid vergrößern oder verkleinern, live Sessions am Leben halten und nicht mehr durch einen Stapel Fenster alt-tabben.
 
 <p align="center">
   <img src="docs/assets/screenshots/multi-pane.png" alt="Ein Tab, geteilt in vier Panes verschiedener Verbindungsarten" width="720" />
 </p>
 
-
 ### Ein KI-Assistent, der deine Terminals für dich steuert
 
 Die meisten „KI im Terminal"-Demos hören beim Chat auf. Der Assistent von KKTerm arbeitet *in* deiner Session: Du gibst ihm Kontext aus dem, was schon auf dem Bildschirm ist, und er handelt an den Maschinen, mit denen du verbunden bist — mit einem Menschen in der Freigabeschleife.
-
-**Gib ihm Kontext, direkt.** Kein Copy-Paste-Hin-und-Her:
-
-- **Terminal-Puffer zum Kontext hinzufügen** zieht den Scrollback einer laufenden lokalen oder entfernten Session direkt in die Konversation, damit „warum ist dieser Build fehlgeschlagen?" zu etwas wird, das er tatsächlich lesen kann.
-- Das **Screenshot-Menü** schnappt sich einen Bereich oder ein ganzes Pane und legt das Bild in den Chat, damit „warum sieht dieser Dialog falsch aus?" eine Frage ist, die er beantworten kann.
-- **Hänge Dateien an** und den aktuellen **Dashboard- / IT-Ops-Seitenkontext**, damit er über das nachdenkt, was du wirklich ansiehst, statt über eine vage Beschreibung davon.
-
-**Lass ihn handeln — hinter Freigabe.** Der Assistent kann Befehle in deinen Terminals ausführen, Connections öffnen und Widgets aufs Dashboard setzen, aber das Riskante bleibt abgesichert:
-
-- **Bestimme, was er anfassen darf** — ganze Tool-Familien (Dashboard / Connections / Live Sessions) an- oder ausschalten.
-- **Bestimme, wie er fragt** — `Prompt` (Standard, fragt jedes Mal) oder `Allow All` (du bist erwachsen, du hast den Haftungsausschluss unterschrieben).
-- Alles, was nach `rm -rf` aussieht, wird als gefährlich markiert — mit dem Grund auf der Freigabekarte — und wartet auf ein ausdrückliches menschliches Ja. Die KI kann keinen zerstörerischen Befehl heimlich ausführen, nur weil jemand eine Prompt-Injection in einer Man-Page schlau platziert hat.
-
-**Bring dein eigenes Gehirn mit.** Sie spricht mit OpenAI, Anthropic, OpenRouter, DeepSeek, Grok, Azure OpenAI, LiteLLM, GitHub Copilot, Ollama, NVIDIA oder allem OpenAI-Kompatiblen — und sie kann auf der **Claude Code CLI** oder der **Codex CLI** als Backend laufen, getrieben von deinem vorhandenen `claude`- / `codex`-Login und -Abo statt von einem separaten API-Schlüssel. Deine API-Schlüssel landen im OS-Schlüsselbund.
 
 <p align="center">
   <img src="docs/assets/screenshots/ai-assistant.png" alt="Das Panel des KI-Assistenten mit den Schaltern für Tool-Zugriff und Freigabemodus" width="720" />
 </p>
 
-
 ### Ein Dashboard, das nicht so tut, als wäre es Grafana
 
 Das Dashboard ist ein Raster aus Widgets, die man zieht und in der Größe ändert. Es ist nicht für Petabyte-Observability — es ist für „ich will einen Knopf, der meine fünf Lieblings-Apps startet, und ein Panel, das die Uptime meines SSH-Hosts zeigt, *neben* meinem Chat".
-
-#### KI-erstellte Widgets — beschreib es, krieg es
-
-Das ist der Teil, der uns wirklich begeistert. Du wählst nichts aus einem Marktplatz und schreibst kein JavaScript. Du **sagst dem KI-Assistenten, was du willst**, und er baut das Widget direkt auf deinem Dashboard:
-
-> *„Füg ein Widget hinzu, das die letzten 5 Commits meines Haupt-Repos als Liste zeigt."*
-> *„Bau mir ein Notizzettel-Widget für meinen Bereitschafts-Spickzettel."*
-> *„Bau ein Widget, das meinen Heimrouter alle 30 Sekunden anpingt und grün/rot zeigt."*
-> *„Ich brauche eine Stoppuhr. Überrasch mich beim Stil."*
-
-Manche sind schlichte Anzeige-Panels (Markdown, Checklisten, eine große Zahl); andere führen Live-Code in einer isolierten Sandbox aus, die du freigibst. Jedes Widget, das du behältst, gehört dir — es bleibt erhalten, mit eigener Farbe, eigenem Icon und Titel, und du kannst mehrere Kopien in verschiedenen Größen haben. Lösch eins per Rechtsklick, wenn der Zauber vergeht.
 
 <p align="center">
   <img src="docs/assets/screenshots/ai-widgets.png" alt="Ein Dashboard-Raster voller KI-erstellter Widgets" width="720" />
 </p>
 
+### IT Ops für Standorte, Hosts und wiederholbare Arbeit
 
-#### Animierte Dashboard-/Terminal-Hintergründe (weil wir wollten)
+Das **IT-Ops**-Modul gruppiert Verbindungen in Standorte, bildet Serverräume und Racks ab, verwaltet Hosts und führt wiederverwendbare Aufgaben auf ausgewählten Rechnern aus. Batch-Läufe speichern Ergebnisse pro Host; Automatisierungen verbinden Auslöser und Bedingungen mit Benachrichtigungen, Webhooks oder Aufgaben.
 
-Wähl eine Stimmung — pro Dashboard-Ansicht *oder hinter jedem Terminal* — aus **36** Canvas-animierten Hintergründen:
-
-| Stimmung | Hintergründe |
-| --- | --- |
-| Ruhig | `fuji`, `aurora`, `halftone`, `clouds`, `ocean`, `raindrops`, `rainywindow`, `frostedWindow`, `snow`, `sakura`, `fireflies`, `bubbles`, `aquarium`, `jellyfish`, `lighthouse`, `balloons`, `ricefield`, `lanterns` |
-| Weltraum | `starfield`, `nebula`, `orbitals` |
-| Warm | `embers`, `lava`, `ink`, `dunes`, `savanna` |
-| Geeky | `matrix`, `topo`, `synthwave`, `circuit`, `crystals` |
-| Unruhig | `cyberpunk`, `taipei101`, `thunderstorm`, `confetti`, `particleCursor` |
-
-Derselbe Picker steht auch hinter deinen Terminal-Panes, du kannst also `matrix` hinter eine laufende SSH-Session legen. Sie pausieren, wenn du woanders bist, kosten also so gut wie nichts. Kombiniere `matrix` mit deinem KI-Assistenten für eine Stimmung, die sagt „ich bin extrem produktiv und vermutlich in einem Wachowski-Film". Oder nimm `ocean` und wirk wie ein seriöser Mensch. Wir urteilen über keine der beiden Entscheidungen.
-
-<p align="center">
-  <img src="docs/assets/screenshots/backgrounds.png" alt="Einige der animierten Hintergründe nebeneinander" width="720" />
-</p>
-
+> 🖼️ **Platzhalter für IT-Ops-Screenshot — Bild folgt.**
 
 ### Deine KI-Agenten am Leben halten
 
-Das ist die zweite Funktion, in die sich Leute verlieben. KKTerms SSH-Terminals können dich direkt in eine **benannte tmux-Session** auf dem entfernten Host setzen, die ein Wiederverbinden übersteht:
-
-- Öffne eine SSH-Verbindung mit aktiviertem tmux und starte `claude`, `codex`, `gemini-cli`, `cursor-agent` oder welchen Langläufer-Agenten du magst.
-- Klapp das Notebook zu. Klapp es wieder auf. Das Pane hängt sich still wieder an — der Agent läuft noch, hat sein Scrollback, steckt mittendrin in dem, was er gerade tat.
-- Netzwerk-Aussetzer? KKTerm verbindet sich leise wieder mit derselben Session, ohne dich zu stören.
-- Soll der Assistent helfen? „Terminal-Puffer zum Kontext hinzufügen" zieht die ganze entfernte Session in die Konversation, damit deine lokale KI nachvollziehen kann, was dein entfernter Agent tut.
-
-Wer je eine sechsstündige `claude`- oder `codex`-Session an das wacklige Hotel-WLAN verloren hat, für den rechtfertigt diese eine Funktion die App. (Die App ist gratis. Die Funktion ist sie trotzdem wert.)
-
-Lokale Shells bekommen unter Windows denselben Trick: PowerShell-Panes können in **psmux** laufen, dem nativen tmux-Klon, damit deine lokalen Langläufer ein geschlossenes Pane genauso überleben wie die entfernten.
+Das ist die zweite Funktion, in die sich Leute verlieben. KKTerms SSH-Terminals können dich direkt in eine **benannte tmux-Session** auf dem entfernten Host setzen, die ein Wiederverbinden übersteht.
 
 <p align="center">
   <img src="docs/assets/screenshots/tmux-reattach.png" alt="Ein SSH-Pane, das sich nach einer Wiederverbindung erneut an eine benannte tmux-Session anhängt" width="720" />
 </p>
-
 
 ### Mit Workspaces deine Welten trennen
 
@@ -263,44 +171,21 @@ Das Homelab, der Hauptjob und die Server dieses einen Kunden gehören nicht in d
   <img src="docs/assets/screenshots/workspaces.png" alt="Der Workspace-Umschalter im Activity Rail" width="720" />
 </p>
 
-
 ### Mach's dir schön: Farbthemen
 
-Hintergründe sind der Spaß; **Farbthemen** sind das, worauf du den ganzen Tag tatsächlich starrst. KKTerm bringt **sechsundzwanzig** Farbschemata mit, die die ganze App-Oberfläche neu einkleiden — Activity Rail, Verbindungsbaum, Tabs, Dialoge — mit einer Live-Mini-Vorschau für jedes unter Einstellungen ▸ Darstellung:
-
-| Stimmung | Schemata |
-| --- | --- |
-| Neutral | `Default`, `Dark`, `Light`, `Match OS` (folgt dem Hell/Dunkel des Systems), `Mac` |
-| Bunt | `Orange`, `Purple`, `Pink`, `Confetti`, `Bubble Tea` |
-| Lokales Flair | `Green Kuai Kuai` (ja, der Snack), `Blue See`, `Blue, Green and White`, `Semiconductor` |
-
-Das Terminal behält seine eigene dunkle Palette, egal welches Schema du wählst, damit deine Shells lesbar bleiben, während der Rest der App zu deiner Stimmung passt.
+Hintergründe sind der Spaß; **Farbthemen** sind das, worauf du den ganzen Tag tatsächlich starrst. KKTerm bringt **sechsundzwanzig** Farbschemata mit, die die ganze App-Oberfläche neu einkleiden — Activity Rail, Verbindungsbaum, Tabs, Dialoge — mit einer Live-Mini-Vorschau für jedes unter Einstellungen ▸ Darstellung.
 
 <p align="center">
   <img src="docs/assets/screenshots/color-themes.png" alt="Das Raster der Farbschemata in den Einstellungen mit Live-Vorschauen" width="720" />
 </p>
 
-
 ### Install Helper (nur Windows)
 
-Eine frische Windows-Maschine fürs Entwickeln einzurichten heißt sonst zehn Browser-Tabs und viel „Weiter, Weiter, Fertig". Der **Install Helper** ist ein eingebauter Katalog, der die Tools, die du sonst von Hand jagst, findet, installiert, aktualisiert und deinstalliert — ohne KKTerm zu verlassen:
-
-- **Essentials** — winget, Node (über nvm-windows), Python (über uv), Git.
-- **AI Agents** — Claude Code, Codex, Antigravity, OpenCode und weitere CLIs und Desktop-Apps für Coding-Agenten.
-- **AI Platforms** — lokale / selbstgehostete Stacks wie Ollama, n8n, Open WebUI, Flowise und Langflow, für dich gestartet und verwaltet.
-- **Development** — Editoren, Container, API-Tools, WSL und seine Distributionen, Rustup.
-- **Windows Power User** — PowerToys, PowerShell 7, psmux, Sysinternals, Everything, Ditto.
-- **Remote Access** — Tailscale, RustDesk.
-- **Utilities** — Notepad++, ripgrep, jq, fzf, 7-Zip, Oh My Posh, FFmpeg und mehr.
-
-Er erkennt, was schon installiert ist, markiert, was ein Update hat, und **Alle aktualisieren** arbeitet die Warteschlange für dich ab. UAC-Abfragen bleiben explizit, nichts installiert sich heimlich, und der ganze Katalog steckt in der App — kein extra Konto, keine Hintergrund-Telemetrie.
-
-> macOS und Linux haben schon Paketmanager, die du liebst, also ist der Install Helper ein reiner Windows-Komfort und nicht Teil dieser Builds.
+Eine frische Windows-Maschine fürs Entwickeln einzurichten heißt sonst zehn Browser-Tabs und viel „Weiter, Weiter, Fertig". Der **Install Helper** ist ein eingebauter Katalog, der die Tools, die du sonst von Hand jagst, findet, installiert, aktualisiert und deinstalliert — ohne KKTerm zu verlassen.
 
 <p align="center">
   <img src="docs/assets/screenshots/install-helper.png" alt="Der Install-Helper-Katalog mit installierten und verfügbaren Tools" width="720" />
 </p>
-
 
 ---
 
@@ -341,12 +226,7 @@ Vollständige, häufig aktualisierte Version: [`docs/ROADMAP.md`](docs/ROADMAP.m
 
 ## Mitwirken
 
-Über eine helfende Hand würden wir uns sehr freuen. Ehrlich. Auch Kleinigkeiten zählen:
-
-- **Probier den Dev-Build** und mach eine Issue auf, wenn sich etwas falsch anfühlt. „Fühlte sich falsch an" ist ein legitimer Bug-Report; wir graben mit dir.
-- **Übersetz eine Sprache.** Englisch ist die Quelle der Wahrheit; dreizehn weitere Sprachen wohnen daneben.
-- **Füg ein Dashboard-Widget hinzu.** Nimm eine kleine Idee, liefere sie, lern das Muster.
-- **Verbessere das Handbuch.** Wenn du eine Funktion genutzt hast und die Doku nicht half, ist eine PR, die das behebt, Gold wert.
+Über eine helfende Hand würden wir uns sehr freuen. Ehrlich. Auch Kleinigkeiten zählen.
 
 Komplettes Setup, Projektstruktur und PR-Checkliste stehen in [`CONTRIBUTING.md`](CONTRIBUTING.md). Auf der Suche nach einem Einstieg? Filtere offene Issues nach [`good first issue`](https://github.com/ryantsai/KKTerm/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) oder [`help wanted`](https://github.com/ryantsai/KKTerm/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22).
 
@@ -373,10 +253,6 @@ Komplettes Setup, Projektstruktur und PR-Checkliste stehen in [`CONTRIBUTING.md`
     <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=ryantsai/KKTerm&type=Date" />
   </picture>
 </a>
-
-Wenn du es bis hierher geschafft und noch keinen Stern vergeben hast — worauf wartest du, eine persönliche Einladung? Betrachte dies als die persönliche Einladung.
-
-⭐ **[Gib KKTerm auf GitHub einen Stern](https://github.com/ryantsai/KKTerm)** — kostet einen Klick und macht dem Maintainer die ganze Woche schön. Sieh es als ein digitales 乖乖 im Rack.
 
 ---
 
