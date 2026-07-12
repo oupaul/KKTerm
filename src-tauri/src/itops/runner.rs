@@ -43,6 +43,27 @@ pub fn cap_output(mut output: String) -> String {
     output
 }
 
+/// Placeholder substituted for any sudo secret that surfaces in playbook output.
+const REDACTED_SECRET: &str = "••••••";
+
+/// Scrub every `secret` occurrence out of `text`. A PTY with echo enabled reflects
+/// the password we push for a `sudo -S` prompt, so this is the last line of defense
+/// enforcing the ITOPS invariant that plaintext never reaches the live stream or a
+/// persisted Run History row (docs/ITOPS.md). Empty secrets are ignored so an
+/// unset credential can never blank the whole transcript.
+pub fn redact_secrets(text: &str, secrets: &[String]) -> String {
+    let mut redacted = text.to_string();
+    for secret in secrets {
+        if secret.is_empty() {
+            continue;
+        }
+        if redacted.contains(secret.as_str()) {
+            redacted = redacted.replace(secret.as_str(), REDACTED_SECRET);
+        }
+    }
+    redacted
+}
+
 /// Runs a Batch Task on one host. Blocking; called from worker threads.
 /// `on_chunk` is invoked for each output frame as it arrives so the runner can
 /// stream live per-host output; the final combined output is still returned in
@@ -265,12 +286,21 @@ impl BatchTransport for SshTransport {
             socks_proxy: spec.socks_proxy.clone(),
             compression: spec.compression,
         };
+        // Every sudo credential in play, so we can scrub it from anything the
+        // remote PTY echoes back before it reaches the live stream or storage.
+        let redactions: Vec<String> = self
+            .task_secrets
+            .values()
+            .filter(|secret| !secret.is_empty())
+            .cloned()
+            .collect();
         let streamed_output = Mutex::new(String::new());
         let capture_chunk = |chunk: &str| {
-            streamed_output.lock().unwrap().push_str(chunk);
-            on_chunk(chunk);
+            let safe = redact_secrets(chunk, &redactions);
+            streamed_output.lock().unwrap().push_str(&safe);
+            on_chunk(&safe);
         };
-        match task {
+        let mut exec_outcome = match task {
             BatchTask::Script { .. } => {
                 let result = ssh::run_remote_command_capture_streaming(request, &capture_chunk);
                 outcome_from_streaming_result(result, streamed_output.into_inner().unwrap())
@@ -296,8 +326,14 @@ impl BatchTransport for SshTransport {
                                 .unwrap_or("KKTerm sudo password: ");
                             let quoted_prompt = prompt.replace('\'', "'\"'\"'");
                             step_specs.push(ssh::PlaybookStepSpec {
+                                // The `''` splits the ready marker across two adjacent
+                                // shell-quoted literals: the shell concatenates them so
+                                // printf still emits `__KKTERM_SUDO_READY__`, but the
+                                // command echoed back by the PTY reads `SUDO''_READY`,
+                                // so the next step's `expect` cannot match this echo and
+                                // must wait for sudo to actually succeed.
                                 send: format!(
-                                    "sudo -S -p '{quoted_prompt}' -v && printf '\\n__KKTERM_SUDO_READY__\\n'"
+                                    "sudo -S -p '{quoted_prompt}' -v && printf '\\n__KKTERM_SUDO''_READY__\\n'"
                                 ),
                                 expect: Some(prompt.to_string()),
                                 timeout_seconds: step.timeout_seconds,
@@ -378,7 +414,11 @@ impl BatchTransport for SshTransport {
                     },
                 }
             }
-        }
+        };
+        // ssh accumulates its own transcript for the returned outcome, so scrub the
+        // credential out of the persisted copy too, not just the streamed chunks.
+        exec_outcome.output = redact_secrets(&exec_outcome.output, &redactions);
+        exec_outcome
     }
 }
 
@@ -677,6 +717,24 @@ mod tests {
         });
         assert_eq!(chunks.load(Ordering::SeqCst), 2); // one "done" frame per host
         assert!(report.hosts.iter().all(|host| host.output == "done"));
+    }
+
+    #[test]
+    fn redact_secrets_scrubs_every_occurrence() {
+        let secrets = vec!["tsai0529".to_string()];
+        let transcript = "sudo -S ...\ntsai0529\n__KKTERM_SUDO_READY__\ntsai0529 again\n";
+        let redacted = redact_secrets(transcript, &secrets);
+        assert!(!redacted.contains("tsai0529"));
+        assert_eq!(redacted.matches("••••••").count(), 2);
+        assert!(redacted.contains("__KKTERM_SUDO_READY__")); // non-secret output survives
+    }
+
+    #[test]
+    fn redact_secrets_ignores_empty_secret() {
+        // An unset credential must never turn into a blanket match that blanks output.
+        let secrets = vec![String::new()];
+        let transcript = "nothing secret here";
+        assert_eq!(redact_secrets(transcript, &secrets), transcript);
     }
 
     #[test]
