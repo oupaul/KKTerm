@@ -36,10 +36,19 @@ export interface ItOpsExportLabels {
 
 const encoder = new TextEncoder();
 
-function asciiPdfText(value: string): string {
+interface PdfTextMaskCommand {
+  kind: "textMask";
+  x: number;
+  y: number;
+  size: number;
+  value: string;
+  color: string;
+}
+
+type PdfCommand = string | PdfTextMaskCommand;
+
+function escapedPdfText(value: string): string {
   return value
-    .normalize("NFKD")
-    .replace(/[^\x20-\x7e]/g, "?")
     .replace(/\\/g, "\\\\")
     .replace(/\(/g, "\\(")
     .replace(/\)/g, "\\)");
@@ -48,8 +57,16 @@ function asciiPdfText(value: string): string {
 const PAGE_WIDTH = 792;
 const PAGE_HEIGHT = 612;
 
-function pdfText(x: number, y: number, size: number, value: string, color = "0.12 0.16 0.22") {
-  return `${color} rg BT /F1 ${size} Tf ${x} ${y} Td (${asciiPdfText(value)}) Tj ET`;
+function pdfText(
+  x: number,
+  y: number,
+  size: number,
+  value: string,
+  color = "0.12 0.16 0.22",
+): PdfCommand {
+  return /[^\x20-\x7e]/.test(value)
+    ? { kind: "textMask", x, y, size, value, color }
+    : `${color} rg BT /F1 ${size} Tf ${x} ${y} Td (${escapedPdfText(value)}) Tj ET`;
 }
 
 function pdfRect(x: number, y: number, width: number, height: number, fill: string, stroke = fill) {
@@ -57,7 +74,10 @@ function pdfRect(x: number, y: number, width: number, height: number, fill: stri
 }
 
 function truncate(value: string, length: number) {
-  return value.length > length ? `${value.slice(0, Math.max(1, length - 3))}...` : value;
+  const characters = [...value];
+  return characters.length > length
+    ? `${characters.slice(0, Math.max(1, length - 3)).join("")}...`
+    : value;
 }
 
 function itemColor(item: RackItem): string {
@@ -82,8 +102,8 @@ function rackDrawing(
   width: number,
   height: number,
   kindLabel: (kind: RackItem["kind"]) => string,
-): string[] {
-  const commands = [
+): PdfCommand[] {
+  const commands: PdfCommand[] = [
     pdfRect(x, y, width, height, "0.10 0.13 0.18", "0.37 0.43 0.51"),
   ];
   const gutter = Math.max(18, width * 0.13);
@@ -109,7 +129,7 @@ function rackDrawing(
   return commands;
 }
 
-function pageHeader(title: string, subtitle: string, page: number): string[] {
+function pageHeader(title: string, subtitle: string, page: number): PdfCommand[] {
   return [
     pdfRect(0, 0, PAGE_WIDTH, PAGE_HEIGHT, "0.965 0.973 0.984"),
     pdfRect(0, PAGE_HEIGHT - 72, PAGE_WIDTH, 72, "0.08 0.12 0.18"),
@@ -119,8 +139,8 @@ function pageHeader(title: string, subtitle: string, page: number): string[] {
   ];
 }
 
-function graphicalPages(doc: ItOpsPdfDocument): string[][] {
-  const pages: string[][] = [];
+function graphicalPages(doc: ItOpsPdfDocument): PdfCommand[][] {
+  const pages: PdfCommand[][] = [];
   if (doc.scope === "site") {
     const commands = pageHeader(doc.title, `${doc.rooms.length} ${doc.labels.group} / ${doc.racks.length} ${doc.labels.rack}`, 1);
     commands.push(pdfText(38, 508, 13, doc.labels.inventory));
@@ -191,6 +211,62 @@ function graphicalPages(doc: ItOpsPdfDocument): string[][] {
   return pages;
 }
 
+interface PdfTextMask {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  bits: Uint8Array;
+}
+
+function rasterizePdfText(command: PdfTextMaskCommand): PdfTextMask {
+  if (typeof document === "undefined") {
+    throw new Error("Unicode PDF export requires a browser canvas");
+  }
+  const scale = 3;
+  const pad = 2 * scale;
+  const canvas = document.createElement("canvas");
+  const measureContext = canvas.getContext("2d");
+  if (!measureContext) throw new Error("Unicode PDF export could not create a canvas context");
+  const font = `${command.size * scale}px Inter, "Segoe UI", "Microsoft JhengHei", "PingFang TC", "Noto Sans", sans-serif`;
+  measureContext.font = font;
+  const metrics = measureContext.measureText(command.value);
+  const ascent = Math.ceil(metrics.actualBoundingBoxAscent || command.size * scale * 0.82);
+  const descent = Math.ceil(metrics.actualBoundingBoxDescent || command.size * scale * 0.22);
+  canvas.width = Math.max(1, Math.ceil(metrics.width) + pad * 2);
+  canvas.height = Math.max(1, ascent + descent + pad * 2);
+  const context = canvas.getContext("2d");
+  if (!context) throw new Error("Unicode PDF export could not create a canvas context");
+  context.font = font;
+  context.fillStyle = "#000";
+  context.textBaseline = "alphabetic";
+  context.fillText(command.value, pad, pad + ascent);
+
+  const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+  const rowBytes = Math.ceil(canvas.width / 8);
+  const bits = new Uint8Array(rowBytes * canvas.height);
+  bits.fill(0xff);
+  for (let pixel = 0; pixel < canvas.width * canvas.height; pixel += 1) {
+    if (pixels[pixel * 4 + 3] < 32) continue;
+    const px = pixel % canvas.width;
+    const py = Math.floor(pixel / canvas.width);
+    bits[py * rowBytes + Math.floor(px / 8)] &= ~(0x80 >> (px % 8));
+  }
+  return {
+    x: command.x - pad / scale,
+    y: command.y - (descent + pad) / scale,
+    width: canvas.width / scale,
+    height: canvas.height / scale,
+    bits,
+  };
+}
+
+function asciiHex(bytes: Uint8Array): string {
+  let output = "";
+  for (const byte of bytes) output += byte.toString(16).padStart(2, "0");
+  return output;
+}
+
 export function createItOpsPdfBytes(doc: ItOpsPdfDocument): Uint8Array {
   const pages = graphicalPages(doc);
 
@@ -205,11 +281,25 @@ export function createItOpsPdfBytes(doc: ItOpsPdfDocument): Uint8Array {
   const fontId = addObject("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>");
   const pageIds: number[] = [];
 
-  for (const pageCommands of pages) {
-    const stream = pageCommands.join("\n");
+  for (const [pageIndex, pageCommands] of pages.entries()) {
+    const images: Array<{ name: string; id: number }> = [];
+    const stream = pageCommands.map((command) => {
+      if (typeof command === "string") return command;
+      const mask = rasterizePdfText(command);
+      const encodedMask = `${asciiHex(mask.bits)}>`;
+      const imageId = addObject(
+        `<< /Type /XObject /Subtype /Image /Name /UnicodeText /Width ${Math.ceil(mask.width * 3)} /Height ${Math.ceil(mask.height * 3)} /ImageMask true /BitsPerComponent 1 /Decode [0 1] /Interpolate true /Filter /ASCIIHexDecode /Length ${encodedMask.length} >>\nstream\n${encodedMask}\nendstream`,
+      );
+      const name = `Im${pageIndex + 1}_${images.length + 1}`;
+      images.push({ name, id: imageId });
+      return `${command.color} rg q ${mask.width} 0 0 ${mask.height} ${mask.x} ${mask.y} cm /${name} Do Q`;
+    }).join("\n");
     const contentId = addObject(`<< /Length ${encoder.encode(stream).length} >>\nstream\n${stream}\nendstream`);
+    const xObjects = images.length
+      ? ` /XObject << ${images.map((image) => `/${image.name} ${image.id} 0 R`).join(" ")} >>`
+      : "";
     const pageId = addObject(
-      `<< /Type /Page /Parent ${pagesId} 0 R /MediaBox [0 0 ${PAGE_WIDTH} ${PAGE_HEIGHT}] /Resources << /Font << /F1 ${fontId} 0 R >> >> /Contents ${contentId} 0 R >>`,
+      `<< /Type /Page /Parent ${pagesId} 0 R /MediaBox [0 0 ${PAGE_WIDTH} ${PAGE_HEIGHT}] /Resources << /Font << /F1 ${fontId} 0 R >>${xObjects} >> /Contents ${contentId} 0 R >>`,
     );
     pageIds.push(pageId);
   }

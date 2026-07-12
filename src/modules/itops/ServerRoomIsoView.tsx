@@ -33,6 +33,7 @@ import {
   ISO_TILT_DEG,
   cornerFromDisplayPoint,
   expandIsoFloorFrame,
+  fitIsoRoomZoom,
   isoPlacementCells,
   moveIsoRack,
   rackDepthFrac,
@@ -279,10 +280,15 @@ export function ServerRoomIsoView({
   // cols+rows fixes the projected diagonal — a view rotation only swaps them
   // — so the ring size is angle-independent.
   const contentDiag = (gridCols + gridRows) * CELL * Math.SQRT1_2;
-  const viewW = Math.max(Math.ceil(contentDiag) + 48, (viewport?.w ?? 0) / zoom);
+  const naturalView = {
+    w: Math.ceil(contentDiag) + 48,
+    h: Math.ceil(contentDiag * ISO_TILT_COS) + Math.ceil(maxTop) + 84,
+  };
+  const effectiveZoom = fitIsoRoomZoom(naturalView, viewport, zoom);
+  const viewW = Math.max(naturalView.w, (viewport?.w ?? 0) / effectiveZoom);
   const viewH = Math.max(
-    Math.ceil(contentDiag * ISO_TILT_COS) + Math.ceil(maxTop) + 84,
-    (viewport?.h ?? 0) / zoom,
+    naturalView.h,
+    (viewport?.h ?? 0) / effectiveZoom,
   );
   const floorDiag = Math.max(viewW - 48, (viewH - Math.ceil(maxTop) - 84) / ISO_TILT_COS);
   const { floorCols, floorRows, offX, offY } = expandIsoFloorFrame(
@@ -343,11 +349,11 @@ export function ServerRoomIsoView({
   function moveDrag(event: ReactPointerEvent<HTMLDivElement>) {
     const state = dragRef.current;
     if (!state) return;
-    // Screen deltas divided by zoom: the dragged cabinet renders inside the
+    // Screen deltas divided by effective zoom: the dragged cabinet renders inside the
     // scaled viewport, so its translate scales back up to match the pointer.
     const { u, v } = screenDeltaToPlane(
-      (event.clientX - state.startX) / zoom,
-      (event.clientY - state.startY) / zoom,
+      (event.clientX - state.startX) / effectiveZoom,
+      (event.clientY - state.startY) / effectiveZoom,
     );
     if (Math.abs(u) > 3 || Math.abs(v) > 3) state.moved = true;
     if (!state.moved) return;
@@ -572,13 +578,13 @@ export function ServerRoomIsoView({
           onPointerDown={handleRoomPointerDown}
           onContextMenu={placing || onOpenBackground ? handleRoomContextMenu : undefined}
         >
-          <div className="rm-iso-zoom" style={{ width: viewW * zoom, height: viewH * zoom }}>
+          <div className="rm-iso-zoom" style={{ width: viewW * effectiveZoom, height: viewH * effectiveZoom }}>
             <div
               className="rm-iso-viewport"
               style={{
                 width: viewW,
                 height: viewH,
-                transform: zoom !== 1 ? `scale(${zoom})` : undefined,
+                transform: effectiveZoom !== 1 ? `scale(${effectiveZoom})` : undefined,
               }}
             >
               <div

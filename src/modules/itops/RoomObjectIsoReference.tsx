@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import type { Facing } from "./roomIsoLayout";
 import type { RoomObjectKind } from "./roomObjects";
 import { kuaiKuaiGrayscale } from "./KuaiKuaiBag";
@@ -22,7 +23,11 @@ export function RoomObjectIsoArtwork({
       data-kind={kind}
       data-facing={facing}
       data-expired={grayscale >= 1 || undefined}
-      style={grayscale > 0 ? { filter: `grayscale(${Math.round(grayscale * 100)}%)` } : undefined}
+      style={
+        grayscale > 0
+          ? { "--kuaiguai-grayscale": `${Math.round(grayscale * 100)}%` } as CSSProperties
+          : undefined
+      }
       aria-hidden="true"
     >
       <div className="rm-ref-iso-stage" dangerouslySetInnerHTML={{ __html: artwork }} />
@@ -81,11 +86,11 @@ const ARTWORK: Record<RoomObjectKind, string> = {
     <div style="transform:rotateX(55deg) rotateZ(45deg);transform-style:preserve-3d;position:relative;width:0;height:0">
       <div style="position:absolute;left:-31px;top:-8px;width:62px;height:24px;border-radius:50%;background:rgba(0,0,0,.28);filter:blur(4px);transform:translateZ(1px)"></div>
       <div style="position:absolute;left:-27px;top:-9px;width:54px;height:18px;transform-style:preserve-3d">
-        <div style="position:absolute;inset:0;transform:translateZ(72px);border-radius:8px;background:radial-gradient(circle at 35% 30%,#c9ff88,#65bc32 72%,#398119);border:1px solid #367d17"></div>
-        <div style="position:absolute;left:0;top:-54px;width:54px;height:72px;transform-origin:50% 100%;transform:rotateX(-90deg);border-radius:10px 10px 5px 5px;background:radial-gradient(circle at 38% 28%,#c9ff88 0,#78d33e 42%,#45931f 100%);border:1px solid #367d17;box-shadow:inset -6px -7px 9px rgba(30,91,10,.28),inset 5px 5px 8px rgba(255,255,255,.22);overflow:hidden"><span style="position:absolute;left:17px;top:9px;width:20px;height:8px;border-radius:3px;background:#d71920;color:#fff;font:bold 6px var(--app-ui-font-family);text-align:center;line-height:8px">KK</span><span style="position:absolute;left:10px;top:25px;width:34px;height:20px;border-radius:6px;background:#0c1219;color:#7ee787;font:bold 11px var(--font-mono);text-align:center;line-height:20px">KK</span><span style="position:absolute;left:8px;right:8px;bottom:8px;height:11px;border-radius:4px;background:#fff;border:1px solid #cfe3b0"></span></div>
-        <div style="position:absolute;left:0;top:0;width:54px;height:72px;transform-origin:50% 0;transform:rotateX(90deg);border-radius:10px 10px 5px 5px;background:linear-gradient(180deg,#8fd94a,#4c9a23);border:1px solid #367d17;filter:brightness(.92)"></div>
-        <div style="position:absolute;top:0;left:-54px;width:72px;height:18px;transform-origin:100% 50%;transform:rotateY(90deg);border-radius:7px 3px 3px 7px;background:linear-gradient(90deg,#2f7414,#58a72a);border:1px solid #367d17;box-shadow:inset 0 4px 6px rgba(255,255,255,.1)"></div>
-        <div style="position:absolute;top:0;left:0;width:72px;height:18px;transform-origin:0 50%;transform:rotateY(-90deg);border-radius:3px 7px 7px 3px;background:linear-gradient(90deg,#58a72a,#2f7414);border:1px solid #367d17;filter:brightness(.85)"></div>
+        <div class="rm-ref-kuaikuai-face" style="position:absolute;inset:0;transform:translateZ(72px);border-radius:8px;background:radial-gradient(circle at 35% 30%,#c9ff88,#65bc32 72%,#398119);border:1px solid #367d17"></div>
+        <div class="rm-ref-kuaikuai-face" style="position:absolute;left:0;top:-54px;width:54px;height:72px;transform-origin:50% 100%;transform:rotateX(-90deg);border-radius:10px 10px 5px 5px;background:radial-gradient(circle at 38% 28%,#c9ff88 0,#78d33e 42%,#45931f 100%);border:1px solid #367d17;box-shadow:inset -6px -7px 9px rgba(30,91,10,.28),inset 5px 5px 8px rgba(255,255,255,.22);overflow:hidden"><span style="position:absolute;left:17px;top:9px;width:20px;height:8px;border-radius:3px;background:#d71920;color:#fff;font:bold 6px var(--app-ui-font-family);text-align:center;line-height:8px">KK</span><span style="position:absolute;left:10px;top:25px;width:34px;height:20px;border-radius:6px;background:#0c1219;color:#7ee787;font:bold 11px var(--font-mono);text-align:center;line-height:20px">KK</span><span style="position:absolute;left:8px;right:8px;bottom:8px;height:11px;border-radius:4px;background:#fff;border:1px solid #cfe3b0"></span></div>
+        <div class="rm-ref-kuaikuai-face" style="--kuaiguai-brightness:.92;position:absolute;left:0;top:0;width:54px;height:72px;transform-origin:50% 0;transform:rotateX(90deg);border-radius:10px 10px 5px 5px;background:linear-gradient(180deg,#8fd94a,#4c9a23);border:1px solid #367d17"></div>
+        <div class="rm-ref-kuaikuai-face" style="position:absolute;top:0;left:-54px;width:72px;height:18px;transform-origin:100% 50%;transform:rotateY(90deg);border-radius:7px 3px 3px 7px;background:linear-gradient(90deg,#2f7414,#58a72a);border:1px solid #367d17;box-shadow:inset 0 4px 6px rgba(255,255,255,.1)"></div>
+        <div class="rm-ref-kuaikuai-face" style="--kuaiguai-brightness:.85;position:absolute;top:0;left:0;width:72px;height:18px;transform-origin:0 50%;transform:rotateY(-90deg);border-radius:3px 7px 7px 3px;background:linear-gradient(90deg,#58a72a,#2f7414);border:1px solid #367d17"></div>
       </div>
     </div>`,
 };

@@ -29,3 +29,56 @@ test("IT Ops PDF contains vector rack graphics and inventory data", () => {
   assert.match(pdf, / m .* l S/);
   assert.ok((pdf.match(/\/Type \/Page\b/g) ?? []).length >= 2);
 });
+
+test("IT Ops PDF preserves non-ASCII labels as rendered text masks", () => {
+  const originalDocument = globalThis.document;
+  const canvasContext = {
+    font: "",
+    fillStyle: "",
+    textBaseline: "alphabetic",
+    measureText: (value: string) => ({
+      width: value.length * 18,
+      actualBoundingBoxAscent: 20,
+      actualBoundingBoxDescent: 5,
+    }),
+    fillText: () => undefined,
+    getImageData: (_x: number, _y: number, width: number, height: number) => {
+      const data = new Uint8ClampedArray(width * height * 4);
+      for (let offset = 3; offset < data.length; offset += 4) data[offset] = 255;
+      return { data };
+    },
+  };
+  Object.defineProperty(globalThis, "document", {
+    configurable: true,
+    value: {
+      createElement: () => ({
+        width: 0,
+        height: 0,
+        getContext: () => canvasContext,
+      }),
+    },
+  });
+
+  try {
+    const unicodeSite = { ...site, name: "臺北" };
+    const unicodeRack = { ...rack, name: "網路機櫃", items: [{ ...rack.items[0], label: "核心交換器" }] };
+    const document = rackPdfDocument({
+      site: unicodeSite,
+      rack: unicodeRack,
+      roomName: "機房",
+      unassignedLabel: "未分配",
+      labels: { ...labels, inventory: "設備清冊", devices: "設備" },
+      kindLabel: () => "交換器",
+    });
+    const pdf = new TextDecoder().decode(createItOpsPdfBytes(document));
+
+    assert.match(pdf, /\/ImageMask true/);
+    assert.match(pdf, /\/UnicodeText\b/);
+    assert.doesNotMatch(pdf, /\(\?+\) Tj/);
+  } finally {
+    Object.defineProperty(globalThis, "document", {
+      configurable: true,
+      value: originalDocument,
+    });
+  }
+});

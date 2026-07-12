@@ -47,6 +47,11 @@ export interface IsoFloorFrame {
   offY: number;
 }
 
+interface IsoSize {
+  w: number;
+  h: number;
+}
+
 function cellKey(cell: IsoCell): string {
   return `${cell.x},${cell.y}`;
 }
@@ -151,6 +156,19 @@ export function expandIsoFloorFrame(
     offX: 0,
     offY: 0,
   };
+}
+
+/** Treat 100% as the largest scale that keeps the room's natural bounds in
+ * the current pane. User zoom remains relative to that baseline, so opening a
+ * side pane fits the same room while 150%/200% can still intentionally pan. */
+export function fitIsoRoomZoom(
+  natural: IsoSize,
+  viewport: IsoSize | null,
+  requestedZoom: number,
+): number {
+  if (!viewport || natural.w <= 0 || natural.h <= 0) return requestedZoom;
+  const fit = Math.min(1, viewport.w / natural.w, viewport.h / natural.h);
+  return requestedZoom * Math.max(0.01, fit);
 }
 
 /** Build edit-mode targets for the whole rendered floor. The viewport expands

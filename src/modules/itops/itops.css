@@ -5455,6 +5455,11 @@
    CSS-3D height axis: extinguisher to 1/2, erected 乖乖 pack to 1/4. */
 .itops-page .rm-object-art-iso[data-kind="fireExtinguisher"] .rm-ref-iso-stage { transform: scale3d(0.27, 0.27, 0.5); }
 .itops-page .rm-object-art-iso[data-kind="kuaikuai"] .rm-ref-iso-stage { transform: scale3d(0.33, 0.33, 0.25); }
+/* A filter on the preserve-3d wrapper flattens the erected pack. Dim each
+   already-planar face instead so expiry colour remains visible in 2.5D. */
+.itops-page .rm-object-art-iso[data-kind="kuaikuai"] .rm-ref-kuaikuai-face {
+  filter: brightness(var(--kuaiguai-brightness, 1)) grayscale(var(--kuaiguai-grayscale, 0%));
+}
 .itops-page .rm-iso-plane .rm-ref-iso-stage > div {
   /* The live room plane already owns rotateX(55deg) rotateZ(45deg). Keep
      only the object's effective quarter-turn inside that projected plane. */

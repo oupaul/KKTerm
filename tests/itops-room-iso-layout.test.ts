@@ -6,6 +6,7 @@ import {
   ISO_MIN_ROWS,
   ISO_TILT_COS,
   expandIsoFloorFrame,
+  fitIsoRoomZoom,
   isoPlacementCells,
   moveIsoRack,
   rackDepthFrac,
@@ -89,6 +90,19 @@ test("decorative 2.5D floor expansion keeps the room grid origin aligned", () =>
   assert.ok(frame.floorRows > 4);
   assert.equal(frame.offX, 0);
   assert.equal(frame.offY, 0);
+});
+
+test("2.5D room establishes a fit-to-pane baseline after the assistant narrows it", () => {
+  const natural = { w: 1280, h: 720 };
+  const viewport = { w: 880, h: 680 };
+  const effectiveZoom = fitIsoRoomZoom(natural, viewport, 1);
+
+  assert.equal(effectiveZoom, viewport.w / natural.w);
+  assert.ok(natural.w * effectiveZoom <= viewport.w);
+  assert.ok(natural.h * effectiveZoom <= viewport.h);
+  assert.equal(fitIsoRoomZoom(natural, null, 1), 1);
+  assert.equal(fitIsoRoomZoom(natural, { w: 1600, h: 900 }, 1), 1);
+  assert.equal(fitIsoRoomZoom(natural, viewport, 2), 2 * viewport.w / natural.w);
 });
 
 test("every visible 2.5D floor cell can receive an edit-mode placement", () => {

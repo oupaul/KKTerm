@@ -106,3 +106,20 @@ test("rack-top 乖乖 uses the same erected artwork as the standalone pack", asy
   assert.match(isoView, /rackTopCornerPoint\([\s\S]*rackTopCorner[\s\S]*viewAngle/);
   assert.doesNotMatch(rackView, /rackTopCorner/);
 });
+
+test("expiry grayscale does not flatten the 2.5D 乖乖 construction", async () => {
+  const iso = renderToStaticMarkup(
+    createElement(RoomObjectIsoArtwork, { kind: "kuaikuai", expiry: "2000-01-01" }),
+  );
+  const css = await readFile(
+    new URL("../src/modules/itops/itops.css", import.meta.url),
+    "utf8",
+  );
+
+  assert.doesNotMatch(iso, /class="rm-object-art rm-object-art-iso"[^>]*style="[^"]*filter:/);
+  assert.match(iso, /--kuaiguai-grayscale:/);
+  assert.match(
+    css,
+    /\.rm-ref-kuaikuai-face\s*\{[^}]*filter:\s*brightness\(var\(--kuaiguai-brightness[^}]*grayscale\(var\(--kuaiguai-grayscale/s,
+  );
+});
