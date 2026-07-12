@@ -2929,8 +2929,20 @@ async fn run_playbook_on_session(
         .channel_open_session()
         .await
         .map_err(|error| format!("failed to open SSH playbook channel: {error}"))?;
+    // Disable terminal echo on the playbook PTY. A sudo node pushes the password
+    // for `sudo -S`, which reads from stdin and therefore never suppresses echo the
+    // way it does for a real TTY prompt; without this the line discipline reflects
+    // the plaintext straight into the captured transcript (docs/ITOPS.md).
     channel
-        .request_pty(false, "xterm-256color", 120, 40, 0, 0, &[])
+        .request_pty(
+            false,
+            "xterm-256color",
+            120,
+            40,
+            0,
+            0,
+            &[(russh::Pty::ECHO, 0), (russh::Pty::ECHONL, 0)],
+        )
         .await
         .map_err(|error| format!("failed to allocate SSH PTY: {error}"))?;
     channel
