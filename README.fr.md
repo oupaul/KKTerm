@@ -153,7 +153,9 @@ Le Dashboard est une grille de widgets que l'on glisse et redimensionne. Ce n'es
 
 Le Module **IT Ops** regroupe les connexions par sites, représente les salles serveurs et les racks, inventorie les hôtes et exécute des tâches réutilisables sur les machines choisies. Les exécutions par lots conservent les résultats par hôte ; les automatisations relient déclencheurs et conditions aux notifications, webhooks ou tâches.
 
-> 🖼️ **Emplacement réservé à la capture d’écran IT Ops — image à venir.**
+<p align="center">
+  <img src="docs/assets/screenshots/itops.png" alt="La vue en élévation de la salle serveurs IT Ops avec six racks équipés et des indicateurs d’état des hôtes" width="720" />
+</p>
 
 ### Garder vos agents IA en vie
 

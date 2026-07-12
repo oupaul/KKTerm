@@ -153,7 +153,9 @@ El Dashboard es una cuadrícula de widgets que arrastras y redimensionas. No es 
 
 El módulo **IT Ops** agrupa conexiones en sitios, representa cuartos de servidores y racks, lleva el inventario de hosts y ejecuta tareas reutilizables en los equipos seleccionados. Las ejecuciones por lotes guardan resultados por host y las automatizaciones convierten eventos y condiciones en avisos, webhooks o tareas.
 
-> 🖼️ **Marcador para la captura de IT Ops — imagen próximamente.**
+<p align="center">
+  <img src="docs/assets/screenshots/itops.png" alt="La vista de elevaciones del cuarto de servidores de IT Ops con seis racks equipados e indicadores de estado de los hosts" width="720" />
+</p>
 
 ### Mantén vivos a tus agentes de IA
 

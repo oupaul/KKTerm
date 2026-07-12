@@ -2119,6 +2119,7 @@
     "shortcutPressKeys": "Pressione uma combinação de teclas…",
     "shortcutConflict": "Este atalho já é usado por {{action}}.",
     "shortcutReset": "Restaurar padrão",
+    "shortcutResetAll": "Restaurar todos os padrões",
     "shortcutClear": "Remover atalho",
     "shortcutsSaved": "Configurações de atalhos salvas.",
     "proxy": "Proxy",

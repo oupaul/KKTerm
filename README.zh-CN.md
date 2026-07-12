@@ -153,7 +153,9 @@ Dashboard 是一个可拖拽、可缩放的 widget 网格。它不是给你做 P
 
 **IT Ops** 模块将连接组织为站点，呈现服务器机房与机架，维护主机清单，并在所选机器上运行可复用任务。批量运行会保留每台主机的结果；自动化则把触发器和条件连接到通知、Webhook 或任务。
 
-> 🖼️ **IT Ops 截图占位 — 图片稍后补充。**
+<p align="center">
+  <img src="docs/assets/screenshots/itops.png" alt="IT Ops 服务器机房立面视图，显示六个已部署设备的机架和主机状态指示器" width="720" />
+</p>
 
 ### 让你的 AI agent 活着
 

@@ -153,7 +153,9 @@ Dashboard는 드래그·리사이즈 가능한 위젯 그리드다. 페타바이
 
 **IT Ops** Module은 Connection을 Site로 묶고 Server Room과 Rack을 시각화하며 Host를 관리하고 선택한 장비에서 재사용 가능한 Task를 실행합니다. Batch Run은 Host별 결과를 보존하고 Automation은 트리거와 조건을 알림, 웹훅 또는 Task로 연결합니다.
 
-> 🖼️ **IT Ops 스크린샷 자리 표시자 — 이미지는 추후 추가됩니다.**
+<p align="center">
+  <img src="docs/assets/screenshots/itops.png" alt="장비가 배치된 랙 6개와 호스트 상태 표시기를 보여 주는 IT Ops 서버실 정면도" width="720" />
+</p>
 
 ### AI 에이전트를 살아 있게 유지
 

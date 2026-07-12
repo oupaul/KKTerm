@@ -153,7 +153,9 @@ Dashboard là một lưới widget mà bạn kéo và đổi kích thước. Nó
 
 Module **IT Ops** nhóm Connection thành Site, mô phỏng Server Room và Rack, quản lý Host và chạy Task có thể tái sử dụng trên các máy đã chọn. Batch Run lưu kết quả theo từng Host, còn Automation nối điều kiện kích hoạt với thông báo, webhook hoặc Task.
 
-> 🖼️ **Vị trí dành cho ảnh chụp IT Ops — hình ảnh sẽ được bổ sung sau.**
+<p align="center">
+  <img src="docs/assets/screenshots/itops.png" alt="Chế độ xem mặt trước Server Room của IT Ops với sáu Rack chứa thiết bị và chỉ báo trạng thái Host" width="720" />
+</p>
 
 ### Giữ cho các agent AI của bạn sống
 

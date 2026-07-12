@@ -2119,6 +2119,7 @@
     "shortcutPressKeys": "Appuyez sur une combinaison de touches…",
     "shortcutConflict": "Ce raccourci est déjà utilisé par {{action}}.",
     "shortcutReset": "Réinitialiser la valeur par défaut",
+    "shortcutResetAll": "Tout réinitialiser aux valeurs par défaut",
     "shortcutClear": "Supprimer le raccourci",
     "shortcutsSaved": "Paramètres des raccourcis enregistrés.",
     "proxy": "Proxy",

@@ -2119,6 +2119,7 @@
     "shortcutPressKeys": "請按下按鍵組合…",
     "shortcutConflict": "此快速鍵已由 {{action}} 使用。",
     "shortcutReset": "還原為預設值",
+    "shortcutResetAll": "全部還原為預設值",
     "shortcutClear": "移除快速鍵",
     "shortcutsSaved": "快速鍵設定已儲存。",
     "proxy": "Proxy",

@@ -2119,6 +2119,7 @@
     "shortcutPressKeys": "키 조합을 누르세요…",
     "shortcutConflict": "이 단축키는 이미 {{action}}에서 사용 중입니다.",
     "shortcutReset": "기본값으로 재설정",
+    "shortcutResetAll": "모두 기본값으로 재설정",
     "shortcutClear": "단축키 제거",
     "shortcutsSaved": "단축키 설정이 저장되었습니다.",
     "proxy": "프록시",

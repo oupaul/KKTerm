@@ -172,6 +172,20 @@ export function ShortcutsSettings() {
   return (
     <section className="settings-card settings-section" data-tutorial-id="settings.shortcuts">
       <SettingsSectionHeader
+        actions={
+          <button
+            className="toolbar-button"
+            disabled={Object.keys(draft).length === 0}
+            onClick={() => {
+              stopRecording();
+              setDraft({});
+            }}
+            type="button"
+          >
+            <RotateCcw size={14} />
+            {t("settings.shortcutResetAll")}
+          </button>
+        }
         icon={<Keyboard size={18} />}
         label={t("settings.sectionShortcuts")}
         title={t("settings.sectionShortcuts")}

@@ -153,7 +153,9 @@ Dashboard adalah grid widget yang bisa kamu seret dan ubah ukurannya. Ini bukan 
 
 Module **IT Ops** mengelompokkan Connection ke dalam Site, memetakan Server Room dan Rack, menginventarisasi Host, serta menjalankan Task yang dapat digunakan kembali pada mesin terpilih. Batch Run menyimpan hasil per Host, sedangkan Automation mengubah pemicu dan kondisi menjadi notifikasi, webhook, atau Task.
 
-> 🖼️ **Placeholder tangkapan layar IT Ops — gambar segera hadir.**
+<p align="center">
+  <img src="docs/assets/screenshots/itops.png" alt="Tampilan elevasi Server Room IT Ops dengan enam Rack berisi perangkat dan indikator status Host" width="720" />
+</p>
 
 ### Jaga agar agen AI-mu tetap hidup
 

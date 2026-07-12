@@ -2119,6 +2119,7 @@
     "shortcutPressKeys": "キーの組み合わせを押してください…",
     "shortcutConflict": "このショートカットは{{action}}で既に使用されています。",
     "shortcutReset": "デフォルトに戻す",
+    "shortcutResetAll": "すべてデフォルトに戻す",
     "shortcutClear": "ショートカットを削除",
     "shortcutsSaved": "ショートカット設定を保存しました。",
     "proxy": "Proxy",

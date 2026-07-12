@@ -2119,6 +2119,7 @@
     "shortcutPressKeys": "Tastenkombination drücken …",
     "shortcutConflict": "Dieses Tastenkürzel wird bereits von {{action}} verwendet.",
     "shortcutReset": "Auf Standard zurücksetzen",
+    "shortcutResetAll": "Alle auf Standard zurücksetzen",
     "shortcutClear": "Tastenkürzel entfernen",
     "shortcutsSaved": "Tastenkürzel-Einstellungen gespeichert.",
     "proxy": "Proxy",

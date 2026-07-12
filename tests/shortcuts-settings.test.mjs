@@ -13,6 +13,10 @@ const keymapSource = await readFile(
   new URL("../src/modules/workspace/keymap.ts", import.meta.url),
   "utf8",
 );
+const shortcutsSettingsSource = await readFile(
+  new URL("../src/modules/settings/ShortcutsSettings.tsx", import.meta.url),
+  "utf8",
+);
 const workspaceCanvasSource = await readFile(
   new URL("../src/modules/workspace/WorkspaceCanvas.tsx", import.meta.url),
   "utf8",
@@ -50,6 +54,13 @@ test("keymap ships predefined defaults for common actions and leaves splits unbo
       new RegExp(`id: "${unbound}"[\\s\\S]*?defaultBinding: null`),
     );
   }
+});
+
+test("Shortcuts settings can reset every override to the catalog defaults", () => {
+  assert.equal(localeEn.settings.shortcutResetAll, "Reset all to defaults");
+  assert.match(shortcutsSettingsSource, /actions=\{/);
+  assert.match(shortcutsSettingsSource, /disabled=\{Object\.keys\(draft\)\.length === 0\}/);
+  assert.match(shortcutsSettingsSource, /setDraft\(\{\}\)/);
 });
 
 test("workspace shortcuts stay inactive behind both legacy and shared dialogs", () => {

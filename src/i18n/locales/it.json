@@ -2119,6 +2119,7 @@
     "shortcutPressKeys": "Premi una combinazione di tasti…",
     "shortcutConflict": "Questa scorciatoia è già usata da {{action}}.",
     "shortcutReset": "Ripristina predefinita",
+    "shortcutResetAll": "Ripristina tutti i valori predefiniti",
     "shortcutClear": "Rimuovi scorciatoia",
     "shortcutsSaved": "Impostazioni delle scorciatoie salvate.",
     "proxy": "Proxy",

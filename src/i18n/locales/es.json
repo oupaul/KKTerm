@@ -2119,6 +2119,7 @@
     "shortcutPressKeys": "Pulsa una combinación de teclas…",
     "shortcutConflict": "Este atajo ya lo usa {{action}}.",
     "shortcutReset": "Restablecer el valor predeterminado",
+    "shortcutResetAll": "Restablecer todos los valores predeterminados",
     "shortcutClear": "Quitar atajo",
     "shortcutsSaved": "Configuración de atajos guardada.",
     "proxy": "Proxy",

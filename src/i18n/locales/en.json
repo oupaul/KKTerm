@@ -2119,6 +2119,7 @@
     "shortcutPressKeys": "Press a key combination…",
     "shortcutConflict": "This shortcut is already used by {{action}}.",
     "shortcutReset": "Reset to default",
+    "shortcutResetAll": "Reset all to defaults",
     "shortcutClear": "Remove shortcut",
     "shortcutsSaved": "Shortcut settings saved.",
     "proxy": "Proxy",

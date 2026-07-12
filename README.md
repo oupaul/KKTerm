@@ -153,7 +153,9 @@ The Dashboard is a drag-and-resize grid of widgets. It's not for petabyte observ
 
 The **IT Ops** Module groups Connections into Sites, maps Server Rooms and Racks, inventories Hosts, and runs reusable Tasks across selected machines. Batch Runs preserve per-host results, while Automations turn triggers and conditions into notifications, webhooks, or scheduled Tasks.
 
-> 🖼️ **IT Ops screenshot placeholder — image coming soon.**
+<p align="center">
+  <img src="docs/assets/screenshots/itops.png" alt="The IT Ops Server Room elevations view showing six populated equipment racks and host health indicators" width="720" />
+</p>
 
 ### Keep your AI agents alive
 

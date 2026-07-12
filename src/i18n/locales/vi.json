@@ -2119,6 +2119,7 @@
     "shortcutPressKeys": "Nhấn một tổ hợp phím…",
     "shortcutConflict": "Phím tắt này đã được {{action}} sử dụng.",
     "shortcutReset": "Đặt lại về mặc định",
+    "shortcutResetAll": "Đặt lại tất cả về mặc định",
     "shortcutClear": "Xóa phím tắt",
     "shortcutsSaved": "Đã lưu cài đặt phím tắt.",
     "proxy": "Proxy",

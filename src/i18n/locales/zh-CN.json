@@ -2119,6 +2119,7 @@
     "shortcutPressKeys": "请按下按键组合…",
     "shortcutConflict": "此快捷键已被{{action}}使用。",
     "shortcutReset": "恢复默认值",
+    "shortcutResetAll": "全部恢复默认值",
     "shortcutClear": "移除快捷键",
     "shortcutsSaved": "快捷键设置已保存。",
     "proxy": "代理",

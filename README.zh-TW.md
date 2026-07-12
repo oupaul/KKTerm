@@ -153,7 +153,9 @@ Dashboard 是一個可拖曳、可縮放的 widget 網格。它不是給你做 P
 
 **IT Ops** Module 將連線整理成 Site、呈現伺服器機房與機架、管理 Host 清單，並在選取的機器上執行可重複使用的 Task。Batch Run 會保留每部 Host 的結果；Automation 則將觸發條件連結至通知、Webhook 或 Task。
 
-> 🖼️ **IT Ops 螢幕擷取畫面預留位置 — 圖片稍後補上。**
+<p align="center">
+  <img src="docs/assets/screenshots/itops.png" alt="IT Ops 伺服器機房立面檢視，顯示六座已配置設備的機架與主機狀態指示器" width="720" />
+</p>
 
 ### 讓你的 AI agent 活著
 

@@ -2119,6 +2119,7 @@
     "shortcutPressKeys": "Tekan kombinasi tombol…",
     "shortcutConflict": "Pintasan ini sudah digunakan oleh {{action}}.",
     "shortcutReset": "Atur ulang ke bawaan",
+    "shortcutResetAll": "Atur ulang semua ke bawaan",
     "shortcutClear": "Hapus pintasan",
     "shortcutsSaved": "Pengaturan pintasan disimpan.",
     "proxy": "Proxy",

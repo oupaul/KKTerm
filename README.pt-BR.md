@@ -153,7 +153,9 @@ O Dashboard é uma grade de widgets que você arrasta e redimensiona. Não é pr
 
 O Module **IT Ops** agrupa Connections em Sites, mapeia salas de servidores e racks, inventaria Hosts e executa Tasks reutilizáveis nas máquinas selecionadas. Batch Runs preservam resultados por Host, enquanto Automations transformam gatilhos e condições em notificações, webhooks ou Tasks.
 
-> 🖼️ **Espaço reservado para a captura do IT Ops — imagem em breve.**
+<p align="center">
+  <img src="docs/assets/screenshots/itops.png" alt="A vista frontal da sala de servidores do IT Ops com seis racks equipados e indicadores de status dos Hosts" width="720" />
+</p>
 
 ### Mantenha vivos os seus agentes de IA
 

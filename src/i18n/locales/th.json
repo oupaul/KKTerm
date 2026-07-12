@@ -2119,6 +2119,7 @@
     "shortcutPressKeys": "กดชุดแป้นพิมพ์…",
     "shortcutConflict": "ปุ่มลัดนี้ถูกใช้โดย {{action}} แล้ว",
     "shortcutReset": "คืนค่าเริ่มต้น",
+    "shortcutResetAll": "คืนค่าทั้งหมดเป็นค่าเริ่มต้น",
     "shortcutClear": "ลบปุ่มลัด",
     "shortcutsSaved": "บันทึกการตั้งค่าปุ่มลัดแล้ว",
     "proxy": "พร็อกซี",

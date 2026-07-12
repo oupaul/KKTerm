@@ -153,7 +153,9 @@ Das Dashboard ist ein Raster aus Widgets, die man zieht und in der Größe ände
 
 Das **IT-Ops**-Modul gruppiert Verbindungen in Standorte, bildet Serverräume und Racks ab, verwaltet Hosts und führt wiederverwendbare Aufgaben auf ausgewählten Rechnern aus. Batch-Läufe speichern Ergebnisse pro Host; Automatisierungen verbinden Auslöser und Bedingungen mit Benachrichtigungen, Webhooks oder Aufgaben.
 
-> 🖼️ **Platzhalter für IT-Ops-Screenshot — Bild folgt.**
+<p align="center">
+  <img src="docs/assets/screenshots/itops.png" alt="Die IT-Ops-Serverraumansicht mit sechs bestückten Racks und Host-Statusanzeigen" width="720" />
+</p>
 
 ### Deine KI-Agenten am Leben halten
 
