@@ -13,7 +13,7 @@ use std::{
 use time::{OffsetDateTime, format_description::well_known::Rfc3339};
 use zip::{ZipArchive, ZipWriter, write::SimpleFileOptions};
 
-const SCHEMA_USER_VERSION: i32 = 45;
+const SCHEMA_USER_VERSION: i32 = 46;
 
 const DEFAULT_TERMINAL_OPACITY: u8 = 50;
 
@@ -352,6 +352,8 @@ CREATE TABLE IF NOT EXISTS itops_tasks (
     name         TEXT NOT NULL,
     description  TEXT NOT NULL DEFAULT '',
     sort_order   INTEGER NOT NULL,
+    applicable_os_json TEXT NOT NULL DEFAULT '["any"]',
+    built_in_key TEXT,
     task_json    TEXT NOT NULL,
     created_at   TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at   TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -2069,6 +2071,20 @@ impl Storage {
         // Reusable Task execution statistics need a stable identity. Older
         // history rows remain unattributed instead of being guessed by label.
         ensure_column(&connection, "itops_run_history", "task_id", "TEXT")?;
+        // v46: Task applicability metadata plus stable app-owned catalog rows.
+        ensure_column(
+            &connection,
+            "itops_tasks",
+            "applicable_os_json",
+            "TEXT NOT NULL DEFAULT '[\"any\"]'",
+        )?;
+        ensure_column(&connection, "itops_tasks", "built_in_key", "TEXT")?;
+        connection
+            .execute_batch(
+                "CREATE UNIQUE INDEX IF NOT EXISTS idx_itops_tasks_built_in_key
+                 ON itops_tasks(built_in_key) WHERE built_in_key IS NOT NULL;",
+            )
+            .map_err(to_storage_error)?;
         // The default Site row keeps its legacy "default-fleet" id (an opaque key)
         // but its display name is migrated to "Default Site" for upgraded installs;
         // INSERT OR IGNORE in ensure_default_site never updates an existing row.
@@ -2581,6 +2597,8 @@ impl Storage {
             .map_err(to_storage_error)?;
         crate::dashboard_storage::seed_default(&connection)
             .map_err(|err| format!("dashboard seed failed: {err:?}"))?;
+        crate::itops::task_storage::sync_builtin_catalog(&connection)
+            .map_err(|err| format!("IT Ops Task catalog seed failed: {err}"))?;
         Ok(())
     }
     fn temp_database_path(&self, prefix: &str) -> PathBuf {

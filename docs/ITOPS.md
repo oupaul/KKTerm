@@ -275,6 +275,21 @@ only from selected Hosts; the Host-scoped launcher offers reusable definitions
 from the Task Library alongside an ad-hoc Script option. This prevents duplicated
 per-Site scripts and keeps target selection explicit.
 
+Every Task carries multi-select Applicable OS metadata: `any`, `linux`, `macos`,
+`windows`, `ciscoIos`, `ciscoNxos`, `fortiOs`, `junos`, or `aristaEos`. `any` is
+exclusive with the specific values. This metadata drives Task Library display,
+search, and filtering only; Hosts do not currently have a trusted OS identity,
+so launch-time target selection does not silently exclude Hosts.
+
+The app syncs a stable built-in diagnostic catalog into `itops_tasks` on startup.
+It covers system identity, uptime, resource usage, network interfaces, routing
+and DNS, and recent-log inspection for Linux, macOS, Windows, Cisco IOS,
+Cisco NX-OS, FortiOS, Juniper Junos, and Arista EOS. Built-ins use stable ids and
+catalog keys so Run History and Automation references survive catalog upgrades.
+They are app-owned, read-only, non-deletable definitions; the UI duplicates a
+built-in into an ordinary user Task before customization. Catalog commands are
+inspection-only and must not install, reboot, reconfigure, or delete anything.
+
 Creating or editing a Playbook opens a full ordered workflow editor. Command
 nodes send text through one shared interactive shell. A sudo node runs
 `sudo -S -v`, waits for a dedicated prompt, retrieves its password from the
@@ -295,7 +310,7 @@ Hosts, Automations, Run History, and the global Task Library share one
 destination-page frame: the same content inset, compact title/description
 header, right-aligned primary actions, divider, and bordered-row rhythm. The
 Task Library keeps its spreadsheet-style Task table inside that frame rather
-than owning a separate full-height chrome layout. Each row shows Task kind,
+than owning a separate full-height chrome layout. Each row shows Task kind, Applicable OS,
 execution count, failed-host count, and a link to the most recent Site Run
 History containing that Task. Statistics use the Task's stable id; ad-hoc,
 Automation, and older unattributed history rows are never guessed by label.

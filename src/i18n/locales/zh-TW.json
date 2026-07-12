@@ -1120,6 +1120,31 @@
       "deleteConfirmBody": "其子主機會保留並上移一層。不會刪除任何連線。"
     },
     "tasks": {
+      "columnOs": "Applicable OS",
+      "applicableOsLabel": "Applicable OS",
+      "applicableOsHint": "Choose every operating system this Task supports.",
+      "builtInBadge": "Built-in",
+      "duplicateBuiltin": "Duplicate to customize",
+      "duplicateName": "{{name}} copy",
+      "applicableOs": {
+        "any": "Any OS",
+        "linux": "Linux",
+        "macos": "macOS",
+        "windows": "Windows",
+        "ciscoIos": "Cisco IOS",
+        "ciscoNxos": "Cisco NX-OS",
+        "fortiOs": "FortiOS",
+        "junos": "Juniper Junos",
+        "aristaEos": "Arista EOS"
+      },
+      "catalog": {
+        "identity": "System identity",
+        "uptime": "Uptime",
+        "resources": "Resource usage",
+        "interfaces": "Network interfaces",
+        "routing": "Routing and DNS",
+        "logs": "Recent logs"
+      },
       "heading": "任務庫",
       "pageDescription": "建立及管理可重複使用的任務。",
       "searchPlaceholder": "搜尋任務……",

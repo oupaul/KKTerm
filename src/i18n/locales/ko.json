@@ -1120,6 +1120,31 @@
       "deleteConfirmBody": "하위 호스트는 유지되며 한 단계 위로 이동합니다. 연결은 삭제되지 않습니다."
     },
     "tasks": {
+      "columnOs": "Applicable OS",
+      "applicableOsLabel": "Applicable OS",
+      "applicableOsHint": "Choose every operating system this Task supports.",
+      "builtInBadge": "Built-in",
+      "duplicateBuiltin": "Duplicate to customize",
+      "duplicateName": "{{name}} copy",
+      "applicableOs": {
+        "any": "Any OS",
+        "linux": "Linux",
+        "macos": "macOS",
+        "windows": "Windows",
+        "ciscoIos": "Cisco IOS",
+        "ciscoNxos": "Cisco NX-OS",
+        "fortiOs": "FortiOS",
+        "junos": "Juniper Junos",
+        "aristaEos": "Arista EOS"
+      },
+      "catalog": {
+        "identity": "System identity",
+        "uptime": "Uptime",
+        "resources": "Resource usage",
+        "interfaces": "Network interfaces",
+        "routing": "Routing and DNS",
+        "logs": "Recent logs"
+      },
       "heading": "작업 라이브러리",
       "pageDescription": "재사용 가능한 작업을 만들고 관리합니다.",
       "searchPlaceholder": "작업 검색…",

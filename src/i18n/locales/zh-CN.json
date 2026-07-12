@@ -1120,6 +1120,31 @@
       "deleteConfirmBody": "其子主机将保留并上移一级。不会删除任何连接。"
     },
     "tasks": {
+      "columnOs": "Applicable OS",
+      "applicableOsLabel": "Applicable OS",
+      "applicableOsHint": "Choose every operating system this Task supports.",
+      "builtInBadge": "Built-in",
+      "duplicateBuiltin": "Duplicate to customize",
+      "duplicateName": "{{name}} copy",
+      "applicableOs": {
+        "any": "Any OS",
+        "linux": "Linux",
+        "macos": "macOS",
+        "windows": "Windows",
+        "ciscoIos": "Cisco IOS",
+        "ciscoNxos": "Cisco NX-OS",
+        "fortiOs": "FortiOS",
+        "junos": "Juniper Junos",
+        "aristaEos": "Arista EOS"
+      },
+      "catalog": {
+        "identity": "System identity",
+        "uptime": "Uptime",
+        "resources": "Resource usage",
+        "interfaces": "Network interfaces",
+        "routing": "Routing and DNS",
+        "logs": "Recent logs"
+      },
       "heading": "任务库",
       "pageDescription": "创建和管理可复用的任务。",
       "searchPlaceholder": "搜索任务……",

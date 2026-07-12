@@ -4,7 +4,7 @@ use tauri::{AppHandle, Manager};
 
 use super::ids::new_itops_id;
 use super::task_storage;
-use super::types::{BatchTask, ItopsTask};
+use super::types::{BatchTask, ItopsTask, TaskOperatingSystem};
 
 #[tauri::command]
 pub fn itops_list_tasks(app: AppHandle) -> Result<Vec<ItopsTask>, String> {
@@ -19,12 +19,13 @@ pub fn itops_create_task(
     app: AppHandle,
     name: String,
     description: String,
+    applicable_os: Vec<TaskOperatingSystem>,
     task: BatchTask,
 ) -> Result<ItopsTask, String> {
     let id = new_itops_id("task");
     app.state::<crate::storage::Storage>()
         .with_connection_infallible(|conn| {
-            task_storage::create_task(conn, &id, &name, &description, &task)
+            task_storage::create_task(conn, &id, &name, &description, &applicable_os, &task)
                 .map_err(|error| error.to_string())
         })
 }
@@ -35,6 +36,7 @@ pub fn itops_update_task(
     id: String,
     name: String,
     description: String,
+    applicable_os: Vec<TaskOperatingSystem>,
     task: BatchTask,
 ) -> Result<ItopsTask, String> {
     let (updated, removed_secret_ids) = app
@@ -43,6 +45,9 @@ pub fn itops_update_task(
             let existing = task_storage::get_task(conn, &id)
                 .map_err(|error| error.to_string())?
                 .ok_or_else(|| "task not found".to_string())?;
+            if existing.built_in_key.is_some() {
+                return Err("built-in tasks are read-only; duplicate the task to customize it".to_string());
+            }
             let next_ids = task.secret_owner_ids();
             let removed = existing
                 .task
@@ -50,7 +55,7 @@ pub fn itops_update_task(
                 .into_iter()
                 .filter(|owner_id| !next_ids.contains(owner_id))
                 .collect::<Vec<_>>();
-            let updated = task_storage::update_task(conn, &id, &name, &description, &task)
+            let updated = task_storage::update_task(conn, &id, &name, &description, &applicable_os, &task)
                 .map_err(|error| error.to_string())?;
             Ok::<_, String>((updated, removed))
         })?;
@@ -69,6 +74,9 @@ pub fn itops_remove_task(app: AppHandle, id: String) -> Result<(), String> {
             let existing = task_storage::get_task(conn, &id)
                 .map_err(|error| error.to_string())?
                 .ok_or_else(|| "task not found".to_string())?;
+            if existing.built_in_key.is_some() {
+                return Err("built-in tasks cannot be deleted".to_string());
+            }
             task_storage::remove_task(conn, &id).map_err(|error| error.to_string())?;
             Ok::<_, String>(existing.task.secret_owner_ids())
         })?;

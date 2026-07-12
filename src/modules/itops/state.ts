@@ -11,6 +11,7 @@ import type {
   AutomationTestResult,
   BatchTask,
   ItopsTask,
+  TaskOperatingSystem,
   HostImportResult,
   HostKind,
   HostScanEvent,
@@ -319,8 +320,8 @@ interface ItOpsState {
   tasks: ItopsTask[];
   tasksLoaded: boolean;
   loadTasks: () => Promise<void>;
-  createTask: (name: string, description: string, task: BatchTask) => Promise<ItopsTask>;
-  updateTask: (id: string, name: string, description: string, task: BatchTask) => Promise<ItopsTask>;
+  createTask: (name: string, description: string, applicableOs: TaskOperatingSystem[], task: BatchTask) => Promise<ItopsTask>;
+  updateTask: (id: string, name: string, description: string, applicableOs: TaskOperatingSystem[], task: BatchTask) => Promise<ItopsTask>;
   removeTask: (id: string) => Promise<void>;
 
   // ── Automations (Phase 3) ──
@@ -713,14 +714,14 @@ export const useItOpsStore = create<ItOpsState>((set, get) => ({
     set({ tasks, tasksLoaded: true });
   },
 
-  async createTask(name, description, task) {
-    const created = await invokeCommand("itops_create_task", { name, description, task });
+  async createTask(name, description, applicableOs, task) {
+    const created = await invokeCommand("itops_create_task", { name, description, applicableOs, task });
     set({ tasks: [...get().tasks, created] });
     return created;
   },
 
-  async updateTask(id, name, description, task) {
-    const updated = await invokeCommand("itops_update_task", { id, name, description, task });
+  async updateTask(id, name, description, applicableOs, task) {
+    const updated = await invokeCommand("itops_update_task", { id, name, description, applicableOs, task });
     set({ tasks: get().tasks.map((entry) => (entry.id === id ? updated : entry)) });
     return updated;
   },

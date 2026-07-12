@@ -1350,11 +1350,11 @@ type CommandMap = {
     result: ItopsTask[];
   };
   itops_create_task: {
-    args: { name: string; description: string; task: BatchTask };
+    args: { name: string; description: string; applicableOs: import("../types").TaskOperatingSystem[]; task: BatchTask };
     result: ItopsTask;
   };
   itops_update_task: {
-    args: { id: string; name: string; description: string; task: BatchTask };
+    args: { id: string; name: string; description: string; applicableOs: import("../types").TaskOperatingSystem[]; task: BatchTask };
     result: ItopsTask;
   };
   itops_remove_task: {

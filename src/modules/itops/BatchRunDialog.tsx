@@ -31,6 +31,7 @@ import type { BatchTask, RunScope } from "../../types";
 import { useWorkspaceStore } from "../../store";
 import { ItIcon, IT_ACCENTS, type ItIconName } from "./icons";
 import { useItOpsStore } from "./state";
+import { taskDisplayName } from "./taskCatalog";
 
 function scopeIsSet(scope?: RunScope | null): scope is RunScope {
   return !!scope && !!(scope.rackId || scope.serverRoom || scope.hostIds?.length);
@@ -305,14 +306,14 @@ export function BatchRunDialog({
                   onChange={(event) => selectTaskSource(event.currentTarget.value)}
                   options={[
                     { value: "", label: t("itops.batchRuns.adHocTask") },
-                    ...tasks.map((entry) => ({ value: entry.id, label: entry.name })),
+                    ...tasks.map((entry) => ({ value: entry.id, label: taskDisplayName(t, entry) })),
                   ]}
                 />
               </Field>
               {scope ? <div className="it-scope-note">{scopeLabel}</div> : null}
             </div>
             {selectedTask ? (
-              <ReadonlyTaskDefinition key={selectedTask.id} name={selectedTask.name} description={selectedTask.description} task={selectedTask.task} />
+              <ReadonlyTaskDefinition key={selectedTask.id} name={taskDisplayName(t, selectedTask)} description={selectedTask.description} task={selectedTask.task} />
             ) : (
               <Field label={t("itops.batchRuns.scriptLabel")} req>
                 <TextArea

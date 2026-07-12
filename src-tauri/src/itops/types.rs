@@ -750,6 +750,24 @@ pub enum BatchTask {
     },
 }
 
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum TaskOperatingSystem {
+    Any,
+    Linux,
+    Macos,
+    Windows,
+    CiscoIos,
+    CiscoNxos,
+    FortiOs,
+    Junos,
+    AristaEos,
+}
+
+fn default_task_operating_systems() -> Vec<TaskOperatingSystem> {
+    vec![TaskOperatingSystem::Any]
+}
+
 /// A reusable, global IT Ops task definition. Targets are deliberately absent:
 /// a Site, Host selection, or Automation supplies them when the Task launches.
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -760,6 +778,10 @@ pub struct ItopsTask {
     #[serde(default)]
     pub description: String,
     pub sort_order: i64,
+    #[serde(default = "default_task_operating_systems")]
+    pub applicable_os: Vec<TaskOperatingSystem>,
+    #[serde(default)]
+    pub built_in_key: Option<String>,
     pub task: BatchTask,
 }
 

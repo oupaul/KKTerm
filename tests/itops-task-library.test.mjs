@@ -9,6 +9,8 @@ const hosts = await readFile(new URL("../src/modules/itops/HostsPanel.tsx", impo
 const launcher = await readFile(new URL("../src/modules/itops/BatchRunDialog.tsx", import.meta.url), "utf8");
 const schema = await readFile(new URL("../src-tauri/src/storage.rs", import.meta.url), "utf8");
 const commands = await readFile(new URL("../src-tauri/src/lib.rs", import.meta.url), "utf8");
+const taskStorage = await readFile(new URL("../src-tauri/src/itops/task_storage.rs", import.meta.url), "utf8");
+const taskCommands = await readFile(new URL("../src-tauri/src/itops/task_commands.rs", import.meta.url), "utf8");
 const runner = await readFile(new URL("../src-tauri/src/itops/runner.rs", import.meta.url), "utf8");
 const ai = await readFile(new URL("../src-tauri/src/ai.rs", import.meta.url), "utf8");
 
@@ -48,6 +50,24 @@ test("Task Library manages definitions while the Hosts launcher selects saved Ta
   assert.match(library, /addStep\("sudo"\)/);
   assert.match(library, /addStep\("ai"\)/);
   assert.doesNotMatch(library, /playbookEditLater/);
+});
+
+test("Tasks carry Applicable OS metadata and built-ins duplicate before customization", () => {
+  assert.match(library, /function ApplicableOsPicker/);
+  assert.match(library, /TASK_OPERATING_SYSTEMS/);
+  assert.match(library, /itops\.tasks\.applicableOsLabel/);
+  assert.match(library, /task\.applicableOs/);
+  assert.match(library, /task\.builtInKey \? <button/);
+  assert.match(library, /duplicateBuiltin/);
+  assert.match(taskStorage, /const BUILTIN_TASKS/);
+  assert.match(taskStorage, /linux\.identity/);
+  assert.match(taskStorage, /windows\.identity/);
+  assert.match(taskStorage, /ciscoIos\.identity/);
+  assert.match(taskStorage, /fortiOs\.identity/);
+  assert.match(taskStorage, /junos\.identity/);
+  assert.match(taskStorage, /aristaEos\.identity/);
+  assert.match(taskCommands, /built-in tasks are read-only/);
+  assert.match(taskCommands, /built-in tasks cannot be deleted/);
 });
 
 test("Batch Run shows saved Task definitions in a read-only Task Editor preview", () => {
@@ -128,6 +148,8 @@ test("Tasks are durable global rows with registered CRUD commands", () => {
   assert.match(schema, /CREATE TABLE IF NOT EXISTS itops_tasks/);
   const taskTable = schema.match(/CREATE TABLE IF NOT EXISTS itops_tasks \([\s\S]*?\n\);/)?.[0] ?? "";
   assert.doesNotMatch(taskTable, /site_id/);
+  assert.match(taskTable, /applicable_os_json/);
+  assert.match(taskTable, /built_in_key/);
   for (const command of ["itops_list_tasks", "itops_create_task", "itops_update_task", "itops_remove_task"]) {
     assert.match(commands, new RegExp(`task_commands::${command}`));
   }

@@ -20,10 +20,11 @@ import "@xyflow/react/dist/style.css";
 import { Actions, ConfirmSheet, Btn, DialogShell, Field, Segmented, TextArea, TextInput } from "../../app/ui/dialog";
 import { invokeCommand } from "../../lib/tauri";
 import { useWorkspaceStore } from "../../store";
-import type { BatchTask, ItopsTask, PlaybookStep } from "../../types";
+import type { BatchTask, ItopsTask, PlaybookStep, TaskOperatingSystem } from "../../types";
 import { ItIcon, IT_ACCENTS, type ItIconName } from "./icons";
 import { ItOpsEmptyHint } from "./ItOpsEmptyHint";
 import { useItOpsStore } from "./state";
+import { TASK_OPERATING_SYSTEMS, normalizeTaskOperatingSystems, taskDisplayName, taskOsLabel } from "./taskCatalog";
 
 type TaskMode = "script" | "playbook";
 type EditorStep = PlaybookStep & { id: string; kind: "command" | "sudo" | "ai" };
@@ -187,6 +188,30 @@ function SudoCredentialInput({ ownerId, stored, drafts, onValidityChange, placeh
   }} />;
 }
 
+function ApplicableOsPicker({ value, onChange }: { value: TaskOperatingSystem[]; onChange: (next: TaskOperatingSystem[]) => void }) {
+  const { t } = useTranslation();
+  function toggle(os: TaskOperatingSystem) {
+    if (os === "any") {
+      onChange(["any"]);
+      return;
+    }
+    const withoutAny = value.filter((entry) => entry !== "any");
+    const next = withoutAny.includes(os)
+      ? withoutAny.filter((entry) => entry !== os)
+      : [...withoutAny, os];
+    onChange(normalizeTaskOperatingSystems(next));
+  }
+  return (
+    <div className="pb-os-picker" role="group" aria-label={t("itops.tasks.applicableOsLabel")}>
+      {TASK_OPERATING_SYSTEMS.map((os) => (
+        <button key={os} type="button" role="checkbox" aria-checked={value.includes(os)} className={value.includes(os) ? "active" : ""} onClick={() => toggle(os)}>
+          {taskOsLabel(t, os)}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 const taskNodeTypes = { task: TaskNode };
 const taskEdgeTypes = { insert: TaskEdge };
 
@@ -199,6 +224,9 @@ function TaskEditor({ task, onClose }: { task: ItopsTask | null; onClose: () => 
   const script = task?.task.kind === "script" ? task.task : null;
   const [name, setName] = useState(task?.name ?? "");
   const [description, setDescription] = useState(task?.description ?? "");
+  const [applicableOs, setApplicableOs] = useState<TaskOperatingSystem[]>(() =>
+    normalizeTaskOperatingSystems(task?.applicableOs ?? ["any"]),
+  );
   const [mode, setMode] = useState<TaskMode>(initialMode);
   const [body, setBody] = useState(script?.body ?? "");
   const [shell, setShell] = useState(script?.shell ?? "");
@@ -339,8 +367,8 @@ function TaskEditor({ task, onClose }: { task: ItopsTask | null; onClose: () => 
         };
     try {
       await storePendingSecrets(storedOwnerIds);
-      if (task) await updateTask(task.id, name, description, next);
-      else await createTask(name, description, next);
+      if (task) await updateTask(task.id, name, description, applicableOs, next);
+      else await createTask(name, description, applicableOs, next);
       showStatusBarNotice(t("itops.tasks.savedNotice", { name: name.trim() }), { tone: "success" });
       onClose();
     } catch (error) {
@@ -365,6 +393,10 @@ function TaskEditor({ task, onClose }: { task: ItopsTask | null; onClose: () => 
           <strong className="pb-editor-title">{task ? t("itops.tasks.editTitle") : t("itops.tasks.newTitle")}</strong>
           <label className="pb-editor-name"><span>{t("itops.tasks.nameLabel")}</span><input className="au-editor-name" value={name} placeholder={t("itops.tasks.namePlaceholder")} onChange={(event) => setName(event.currentTarget.value)} /></label>
           <Segmented value={mode} onChange={(value) => setMode(value as TaskMode)} options={[{ value: "script", label: t("itops.tasks.kind.script") }, { value: "playbook", label: t("itops.tasks.kind.playbook") }]} />
+        </div>
+        <div className="pb-os-field">
+          <div><strong>{t("itops.tasks.applicableOsLabel")}</strong><span>{t("itops.tasks.applicableOsHint")}</span></div>
+          <ApplicableOsPicker value={applicableOs} onChange={setApplicableOs} />
         </div>
         {mode === "script" ? (
           <div className="pb-script-editor">
@@ -434,12 +466,14 @@ export function TaskLibrary({ onOpenRunHistory }: { onOpenRunHistory: (siteId: s
   const tasks = useItOpsStore((state) => state.tasks);
   const loaded = useItOpsStore((state) => state.tasksLoaded);
   const loadTasks = useItOpsStore((state) => state.loadTasks);
+  const createTask = useItOpsStore((state) => state.createTask);
   const removeTask = useItOpsStore((state) => state.removeTask);
   const runHistory = useItOpsStore((state) => state.runHistory);
   const historyLoaded = useItOpsStore((state) => state.historyLoaded);
   const loadRunHistory = useItOpsStore((state) => state.loadRunHistory);
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
   const [query, setQuery] = useState("");
+  const [osFilter, setOsFilter] = useState<TaskOperatingSystem>("any");
   const [editor, setEditor] = useState<ItopsTask | null | undefined>(undefined);
   const [pendingDelete, setPendingDelete] = useState<ItopsTask | null>(null);
 
@@ -448,8 +482,12 @@ export function TaskLibrary({ onOpenRunHistory }: { onOpenRunHistory: (siteId: s
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    return needle ? tasks.filter((task) => `${task.name} ${task.description}`.toLowerCase().includes(needle)) : tasks;
-  }, [query, tasks]);
+    return tasks.filter((task) => {
+      const matchesOs = osFilter === "any" || task.applicableOs.includes("any") || task.applicableOs.includes(osFilter);
+      const haystack = `${taskDisplayName(t, task)} ${task.description} ${task.applicableOs.map((os) => taskOsLabel(t, os)).join(" ")}`.toLowerCase();
+      return matchesOs && (!needle || haystack.includes(needle));
+    });
+  }, [osFilter, query, t, tasks]);
   const taskStats = useMemo(() => {
     const stats = new Map<string, { executions: number; failures: number; lastSiteId: string | null }>();
     for (const run of runHistory) {
@@ -476,6 +514,17 @@ export function TaskLibrary({ onOpenRunHistory }: { onOpenRunHistory: (siteId: s
     }
   }
 
+  async function duplicateBuiltin(task: ItopsTask) {
+    try {
+      const name = t("itops.tasks.duplicateName", { name: taskDisplayName(t, task) });
+      const created = await createTask(name, task.description, task.applicableOs, task.task);
+      setEditor(created);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      showStatusBarNotice(t("itops.errorNotice", { message }), { tone: "error" });
+    }
+  }
+
   return (
     <div className="it-task-library-page it-destination-surface">
       <div className="it-destination-page-head">
@@ -489,23 +538,26 @@ export function TaskLibrary({ onOpenRunHistory }: { onOpenRunHistory: (siteId: s
         </button>
       </div>
       <div className="it-task-table-shell">
-        <label className="it-task-search">
+        <div className="it-task-toolbar"><label className="it-task-search">
             <ItIcon name="search" size={13} />
             <input value={query} placeholder={t("itops.tasks.searchPlaceholder")} onChange={(event) => setQuery(event.currentTarget.value)} />
-        </label>
+        </label><div className="it-task-os-filter" role="group" aria-label={t("itops.tasks.applicableOsLabel")}>
+          {TASK_OPERATING_SYSTEMS.map((os) => <button key={os} type="button" className={osFilter === os ? "active" : ""} onClick={() => setOsFilter(os)}>{taskOsLabel(t, os)}</button>)}
+        </div></div>
         {filtered.length ? <div className="it-task-table" role="table">
           <div className="it-task-table-head" role="row">
-            <span>{t("itops.tasks.columnName")}</span><span>{t("itops.tasks.columnType")}</span><span>{t("itops.tasks.columnExecutions")}</span><span>{t("itops.tasks.columnFailures")}</span><span>{t("itops.tasks.columnHistory")}</span><span>{t("itops.tasks.columnActions")}</span>
+            <span>{t("itops.tasks.columnName")}</span><span>{t("itops.tasks.columnType")}</span><span>{t("itops.tasks.columnOs")}</span><span>{t("itops.tasks.columnExecutions")}</span><span>{t("itops.tasks.columnFailures")}</span><span>{t("itops.tasks.columnHistory")}</span><span>{t("itops.tasks.columnActions")}</span>
           </div>
           {filtered.map((task) => {
             const stats = taskStats.get(task.id) ?? { executions: 0, failures: 0, lastSiteId: null };
             return <div key={task.id} className="it-task-table-row" role="row">
-              <span className="it-task-table-name"><span className="it-task-row-icon"><ItIcon name={taskKind(task) === "script" ? "code" : "book"} size={15} /></span><span><strong>{task.name}</strong><small>{task.description || t("itops.tasks.noDescription")}</small></span></span>
+              <span className="it-task-table-name"><span className="it-task-row-icon"><ItIcon name={taskKind(task) === "script" ? "code" : "book"} size={15} /></span><span><strong>{taskDisplayName(t, task)}{task.builtInKey ? <em>{t("itops.tasks.builtInBadge")}</em> : null}</strong><small>{task.description || t("itops.tasks.noDescription")}</small></span></span>
               <span>{t(`itops.tasks.kind.${taskKind(task)}`)}</span>
+              <span className="it-task-os-list">{task.applicableOs.map((os) => <small key={os}>{taskOsLabel(t, os)}</small>)}</span>
               <span className="it-task-number">{stats.executions}</span>
               <span className={stats.failures ? "it-task-number failed" : "it-task-number"}>{stats.failures}</span>
               <span><button type="button" className="it-task-history-link" disabled={!stats.lastSiteId} onClick={() => stats.lastSiteId && onOpenRunHistory(stats.lastSiteId)}>{t("itops.tasks.viewHistory")}</button></span>
-              <span className="it-task-row-actions"><button type="button" className="it-icon-btn" aria-label={t("itops.actions.edit")} onClick={() => setEditor(task)}><ItIcon name="edit" size={14} /></button><button type="button" className="it-icon-btn" aria-label={t("itops.actions.delete")} onClick={() => setPendingDelete(task)}><ItIcon name="trash" size={14} /></button></span>
+              <span className="it-task-row-actions">{task.builtInKey ? <button type="button" className="it-icon-btn" aria-label={t("itops.tasks.duplicateBuiltin")} onClick={() => void duplicateBuiltin(task)}><ItIcon name="plus" size={14} /></button> : <><button type="button" className="it-icon-btn" aria-label={t("itops.actions.edit")} onClick={() => setEditor(task)}><ItIcon name="edit" size={14} /></button><button type="button" className="it-icon-btn" aria-label={t("itops.actions.delete")} onClick={() => setPendingDelete(task)}><ItIcon name="trash" size={14} /></button></>}</span>
             </div>;
           })}
         </div> : loaded ? <ItOpsEmptyHint>{t("itops.tasks.emptyBody")}</ItOpsEmptyHint> : null}

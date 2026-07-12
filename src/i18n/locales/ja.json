@@ -1120,6 +1120,31 @@
       "deleteConfirmBody": "子ホストは保持され、1 つ上の階層に移動します。接続は削除されません。"
     },
     "tasks": {
+      "columnOs": "Applicable OS",
+      "applicableOsLabel": "Applicable OS",
+      "applicableOsHint": "Choose every operating system this Task supports.",
+      "builtInBadge": "Built-in",
+      "duplicateBuiltin": "Duplicate to customize",
+      "duplicateName": "{{name}} copy",
+      "applicableOs": {
+        "any": "Any OS",
+        "linux": "Linux",
+        "macos": "macOS",
+        "windows": "Windows",
+        "ciscoIos": "Cisco IOS",
+        "ciscoNxos": "Cisco NX-OS",
+        "fortiOs": "FortiOS",
+        "junos": "Juniper Junos",
+        "aristaEos": "Arista EOS"
+      },
+      "catalog": {
+        "identity": "System identity",
+        "uptime": "Uptime",
+        "resources": "Resource usage",
+        "interfaces": "Network interfaces",
+        "routing": "Routing and DNS",
+        "logs": "Recent logs"
+      },
       "heading": "タスクライブラリ",
       "pageDescription": "再利用可能なタスクを作成、管理します。",
       "searchPlaceholder": "タスクを検索…",
