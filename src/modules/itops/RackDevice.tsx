@@ -167,9 +167,16 @@ export function RackDevice({
     return { active, color: active ? "var(--green)" : "var(--rkd-dim)", blk: active ? `blk-${(i % 5) + 1}` : "" };
   });
 
+  // Storage bays are a fixed physical size (see itops.css): the 300px cabinet
+  // gives every device the same face width and column count, and a taller
+  // chassis simply stacks more rows. Cap the drive count to the rows that fit
+  // the device height so a dense array (e.g. a 4U/64-drive box) fills the face
+  // instead of overflowing past its clipped top and bottom edges. ~26px/U,
+  // ~12px per bay row; ~8 bay columns across the fixed-width face.
+  const maxStorageRows = Math.max(1, Math.floor((Math.max(1, heightU) * 26 - 4) / 12));
   const drawDisks = Math.min(
     disks || (isServer ? 4 : isStorage ? 8 : 0),
-    compact ? 4 : Math.max(1, heightU) * 24,
+    compact ? 4 : isStorage ? 8 * maxStorageRows : Math.max(1, heightU) * 24,
   );
   const diskList = Array.from({ length: drawDisks }, (_, i) => {
     const busy = !offline && rand() > 0.42;
