@@ -63,6 +63,16 @@
   line-height: 1.45;
 }
 
+/* The shared ConnectionIconPicker floats its mini grid as an absolutely
+   positioned popover. Inside a Sheet the clipping (.kk-dlg overflow:hidden) and
+   the scrolling body (.kk-dlg-body overflow-y:auto) would chop it into a jumbled
+   strip, so let a dialog hosting an open picker escape both while it is open.
+   Mirrors the .connection-dialog override in connections.css. */
+.kk-dlg:has(.connection-icon-popover),
+.kk-dlg:has(.connection-icon-popover) .kk-dlg-body {
+  overflow: visible;
+}
+
 .kk-dlg-head {
   position: relative;
   padding: 20px 22px 0;
