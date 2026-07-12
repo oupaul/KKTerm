@@ -36,6 +36,14 @@ test("Rack Device editor follows the compact redesign layout", async () => {
   assert.doesNotMatch(styles, /rack-item-dialog-column[\s\S]{0,180}border-right/);
 });
 
+test("Rack Device editor centers the current device type in its header", async () => {
+  const dialog = await read("src/modules/itops/RackItemDialog.tsx");
+  const styles = await read("src/modules/itops/itops.css");
+
+  assert.match(dialog, /className="rack-item-dialog-device-type"[\s\S]*itops\.racks\.kind\.\$\{kind\}/);
+  assert.match(styles, /rack-item-dialog-device-type[\s\S]*left: 50%[\s\S]*color: var\(--text-muted\)[\s\S]*translateX\(-50%\)/);
+});
+
 test("Rack Device editor keeps notes and tags in the model column and pairs capacity with height", async () => {
   const dialog = await read("src/modules/itops/RackItemDialog.tsx");
 

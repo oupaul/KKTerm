@@ -327,7 +327,14 @@ export function RackItemDialog({
       <Sheet
         width={760}
         className="rack-item-dialog"
-        title={isEdit ? t("itops.racks.editItemTitle") : t("itops.racks.addItemTitle")}
+        title={
+          <>
+            <span>{isEdit ? t("itops.racks.editItemTitle") : t("itops.racks.addItemTitle")}</span>
+            <span className="rack-item-dialog-device-type">
+              {t(`itops.racks.kind.${kind}`)}
+            </span>
+          </>
+        }
         ariaLabel={isEdit ? t("itops.racks.editItemTitle") : t("itops.racks.addItemTitle")}
         footer={
           <Actions

@@ -6321,6 +6321,15 @@
 .rack-item-dialog {
   max-width: calc(100vw - 64px);
 }
+.rack-item-dialog-device-type {
+  position: absolute;
+  left: 50%;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: normal;
+  transform: translateX(-50%);
+}
 
 .server-room-floor-options {
   display: grid;
