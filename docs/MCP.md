@@ -251,8 +251,8 @@ is Site → Server Room → Rack → Rack Device: create the parent first.
 | `kkterm.itops.server_rooms.create` | Create a Server Room in a Site. `floorColor` defaults to `default`. |
 | `kkterm.itops.racks.list` | List one Site's Racks by `siteId`, each with its placed Rack Devices in U order. |
 | `kkterm.itops.racks.create` | Create a Rack in a Site. `serverRoom` names an existing Server Room in the same Site; `heightU` defaults to 42, `depthMm` to 1000. |
-| `kkterm.itops.rack_items.place` | Place one Rack Device at a contiguous U span (`startU` is the lowest occupied U, 1 = bottom). Placement is validated against rack bounds and overlaps. Kind `connection` requires `connectionId`. |
-| `kkterm.itops.rack_items.update` | Update one Rack Device's kind, label, Connection binding, or metadata by id. Full-value semantics: omitted metadata clears stored metadata. |
+| `kkterm.itops.rack_items.place` | Place one Rack Device. In-cabinet spans use the lowest occupied `startU` (1 = bottom) and are validated against bounds/overlaps. A rack-top package uses kind `kuaiguai`, `startU = rack.heightU + 1`, height 4 with `metadata.kuaiguaiStyle = "full"` (or height 1 with `"laidDown"`), and optional ISO `metadata.expiry`; only one may occupy a Rack top. Kind `connection` requires `connectionId`. |
+| `kkterm.itops.rack_items.update` | Update one Rack Device's kind, label, Connection binding, or metadata by id. The kind enum includes `kuaiguai`, with typed expiry/style/size/rotation metadata. Full-value semantics: omitted metadata clears stored metadata. |
 | `kkterm.itops.rack_items.move` | Move and/or resize one Rack Device by id, possibly into a different Rack; the new span is re-validated. |
 | `kkterm.itops.rack_items.remove` | Remove one Rack Device placement by id. Bound saved Connections are untouched. |
 | `kkterm.itops.hosts.list` | List one Site's Hosts by `siteId`: hostname, kind, parent Host, bound Connection ids, and last connectivity-scan snapshot. |

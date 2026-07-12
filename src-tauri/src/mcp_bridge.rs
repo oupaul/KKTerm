@@ -1671,6 +1671,33 @@ mod tests {
     }
 
     #[test]
+    fn rack_item_descriptor_exposes_rack_top_kuaiguai_contract() {
+        let tools = crate::mcp_tool_catalog::tool_descriptors();
+        let place = tools
+            .iter()
+            .find(|tool| {
+                tool.get("name").and_then(Value::as_str) == Some("kkterm.itops.rack_items.place")
+            })
+            .expect("rack item placement descriptor exists");
+        let kinds = place
+            .pointer("/inputSchema/properties/kind/enum")
+            .and_then(Value::as_array)
+            .expect("rack item kind enum exists");
+
+        assert!(kinds.contains(&json!("kuaiguai")));
+        assert!(
+            place
+                .get("description")
+                .and_then(Value::as_str)
+                .is_some_and(|description| description.contains("rack.heightU + 1"))
+        );
+        assert_eq!(
+            place.pointer("/inputSchema/properties/metadata/properties/expiry/type"),
+            Some(&json!("string"))
+        );
+    }
+
+    #[test]
     fn parse_dashboard_json_unwraps_error_field() {
         let raw = r#"{"error":"view not found"}"#;
         let err = parse_dashboard_json(raw).unwrap_err();

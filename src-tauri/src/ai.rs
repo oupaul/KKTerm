@@ -2934,26 +2934,36 @@ fn ai_tool_definitions_with_skills(
         ));
         tools.push(tool_definition(
             "itops_place_rack_item",
-            "Place one Rack Device into a Rack at a contiguous U span. startU is the device's lowest occupied U (1 = bottom of the rack); the span startU..startU+heightU-1 must fit inside the rack and must not overlap existing devices, so call itops_list_racks first to find free space. kind \"connection\" makes the device openable and requires connectionId (a saved Connection id); the other kinds are passive inventory/visual devices. Optional metadata carries presentation fields such as status (\"online\"|\"warning\"|\"offline\"), accent, notes, ports, disks, battery, load, and powerW — never secrets.",
+            "Place one Rack Device into a Rack. Call itops_list_racks first. For an in-cabinet device, startU is its lowest occupied U (1 = bottom) and startU..startU+heightU-1 must fit without overlap. To place a standing Kuai Kuai package on the rack top, use kind \"kuaiguai\", startU = rack.heightU + 1, heightU 4, and metadata.kuaiguaiStyle \"full\"; a laid-down package uses heightU 1 and \"laidDown\". metadata.expiry is an ISO date (YYYY-MM-DD). Only one Kuai Kuai may occupy a rack top. kind \"connection\" requires connectionId; other kinds are passive inventory/visual devices. Metadata never contains secrets.",
             json!({"type":"object","properties":{
                 "rackId":{"type":"string"},
-                "kind":{"type":"string","enum":["connection","server","storage","switch","router","firewall","pdu","ups","kvm","patchPanel","genericDevice"]},
+                "kind":{"type":"string","enum":["connection","server","storage","switch","router","firewall","pdu","ups","kvm","patchPanel","genericDevice","kuaiguai"]},
                 "label":{"type":"string"},
                 "startU":{"type":"integer","minimum":1},
                 "heightU":{"type":"integer","minimum":1},
                 "connectionId":{"type":"string"},
-                "metadata":{"type":"object"}
+                "metadata":{"type":"object","properties":{
+                    "expiry":{"type":"string","description":"ISO date in YYYY-MM-DD form"},
+                    "kuaiguaiStyle":{"type":"string","enum":["full","laidDown"]},
+                    "kuaiguaiSize":{"type":"string","enum":["small","regular","large"]},
+                    "rotation":{"type":"integer"}
+                }}
             },"required":["rackId","kind","label","startU","heightU"]}),
         ));
         tools.push(tool_definition(
             "itops_update_rack_item",
-            "Update one Rack Device's kind, label, Connection binding, or metadata by id (position changes go through itops_move_rack_item). Submit full new values: omitted metadata clears previously stored metadata, so read the device from itops_list_racks first and resend the fields you want to keep.",
+            "Update one Rack Device's kind, label, Connection binding, or metadata by id (position changes go through itops_move_rack_item). kind includes \"kuaiguai\"; its metadata may include expiry (YYYY-MM-DD), kuaiguaiStyle (\"full\"|\"laidDown\"), kuaiguaiSize, and rotation. Submit full new values: omitted metadata clears previously stored metadata, so read the device from itops_list_racks first and resend the fields you want to keep.",
             json!({"type":"object","properties":{
                 "id":{"type":"string"},
-                "kind":{"type":"string","enum":["connection","server","storage","switch","router","firewall","pdu","ups","kvm","patchPanel","genericDevice"]},
+                "kind":{"type":"string","enum":["connection","server","storage","switch","router","firewall","pdu","ups","kvm","patchPanel","genericDevice","kuaiguai"]},
                 "label":{"type":"string"},
                 "connectionId":{"type":"string"},
-                "metadata":{"type":"object"}
+                "metadata":{"type":"object","properties":{
+                    "expiry":{"type":"string","description":"ISO date in YYYY-MM-DD form"},
+                    "kuaiguaiStyle":{"type":"string","enum":["full","laidDown"]},
+                    "kuaiguaiSize":{"type":"string","enum":["small","regular","large"]},
+                    "rotation":{"type":"integer"}
+                }}
             },"required":["id","kind","label"]}),
         ));
         tools.push(tool_definition(

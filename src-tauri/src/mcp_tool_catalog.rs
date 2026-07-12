@@ -584,17 +584,22 @@ pub fn tool_descriptors() -> Vec<Value> {
         }),
         json!({
             "name": "kkterm.itops.rack_items.place",
-            "description": "Place one Rack Device into a Rack at a contiguous U span. startU is the device's lowest occupied U (1 = bottom of the rack); the span startU..startU+heightU-1 must fit inside the rack and must not overlap existing devices — call kkterm.itops.racks.list first to find free space. kind 'connection' makes the device openable and requires connectionId (a saved Connection id); the other kinds are passive inventory/visual devices. Optional metadata carries presentation fields such as status ('online'|'warning'|'offline'), accent, notes, ports, disks, battery, load, and powerW — never secrets.",
+            "description": "Place one Rack Device into a Rack. Call kkterm.itops.racks.list first. For an in-cabinet device, startU is its lowest occupied U (1 = bottom) and its span must fit without overlap. To place a standing Kuai Kuai package on the rack top, use kind 'kuaiguai', startU = rack.heightU + 1, heightU 4, and metadata.kuaiguaiStyle 'full'; a laid-down package uses heightU 1 and 'laidDown'. metadata.expiry is an ISO date (YYYY-MM-DD). Only one Kuai Kuai may occupy a rack top. kind 'connection' requires connectionId; metadata never contains secrets.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "rackId": {"type": "string"},
-                    "kind": {"type": "string", "enum": ["connection", "server", "storage", "switch", "router", "firewall", "pdu", "ups", "kvm", "patchPanel", "genericDevice"]},
+                    "kind": {"type": "string", "enum": ["connection", "server", "storage", "switch", "router", "firewall", "pdu", "ups", "kvm", "patchPanel", "genericDevice", "kuaiguai"]},
                     "label": {"type": "string"},
                     "startU": {"type": "integer", "minimum": 1},
                     "heightU": {"type": "integer", "minimum": 1},
                     "connectionId": {"type": "string"},
-                    "metadata": {"type": "object"},
+                    "metadata": {"type": "object", "properties": {
+                        "expiry": {"type": "string", "description": "ISO date in YYYY-MM-DD form"},
+                        "kuaiguaiStyle": {"type": "string", "enum": ["full", "laidDown"]},
+                        "kuaiguaiSize": {"type": "string", "enum": ["small", "regular", "large"]},
+                        "rotation": {"type": "integer"},
+                    }},
                 },
                 "required": ["rackId", "kind", "label", "startU", "heightU"],
                 "additionalProperties": false,
@@ -602,15 +607,20 @@ pub fn tool_descriptors() -> Vec<Value> {
         }),
         json!({
             "name": "kkterm.itops.rack_items.update",
-            "description": "Update one Rack Device's kind, label, Connection binding, or metadata by id (position changes go through kkterm.itops.rack_items.move). Submit full new values: omitted metadata clears previously stored metadata, so read the device from kkterm.itops.racks.list first and resend the fields you want to keep.",
+            "description": "Update one Rack Device's kind, label, Connection binding, or metadata by id (position changes go through kkterm.itops.rack_items.move). kind includes 'kuaiguai'; its metadata may include expiry (YYYY-MM-DD), kuaiguaiStyle ('full'|'laidDown'), kuaiguaiSize, and rotation. Submit full new values: omitted metadata clears previously stored metadata, so read the device from kkterm.itops.racks.list first and resend the fields you want to keep.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "id": {"type": "string"},
-                    "kind": {"type": "string", "enum": ["connection", "server", "storage", "switch", "router", "firewall", "pdu", "ups", "kvm", "patchPanel", "genericDevice"]},
+                    "kind": {"type": "string", "enum": ["connection", "server", "storage", "switch", "router", "firewall", "pdu", "ups", "kvm", "patchPanel", "genericDevice", "kuaiguai"]},
                     "label": {"type": "string"},
                     "connectionId": {"type": "string"},
-                    "metadata": {"type": "object"},
+                    "metadata": {"type": "object", "properties": {
+                        "expiry": {"type": "string", "description": "ISO date in YYYY-MM-DD form"},
+                        "kuaiguaiStyle": {"type": "string", "enum": ["full", "laidDown"]},
+                        "kuaiguaiSize": {"type": "string", "enum": ["small", "regular", "large"]},
+                        "rotation": {"type": "integer"},
+                    }},
                 },
                 "required": ["id", "kind", "label"],
                 "additionalProperties": false,

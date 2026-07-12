@@ -2501,6 +2501,47 @@ fn dashboard_update_custom_widget_tool_accepts_structured_script_body_patch() {
 }
 
 #[test]
+fn itops_rack_item_tools_expose_rack_top_kuaiguai_contract() {
+    let settings: AiAssistantToolSettings = serde_json::from_value(json!({
+        "itops": true
+    }))
+    .expect("tool settings deserialize");
+    let tools = ai_tool_definitions(&settings);
+    let place = tools
+        .iter()
+        .find(|tool| tool.function.name == "itops_place_rack_item")
+        .expect("IT Ops place-rack-item tool exists");
+    let update = tools
+        .iter()
+        .find(|tool| tool.function.name == "itops_update_rack_item")
+        .expect("IT Ops update-rack-item tool exists");
+
+    for tool in [place, update] {
+        let kinds = tool
+            .function
+            .parameters
+            .pointer("/properties/kind/enum")
+            .and_then(Value::as_array)
+            .expect("rack device kind enum exists");
+        assert!(kinds.contains(&json!("kuaiguai")));
+        assert_eq!(
+            tool.function
+                .parameters
+                .pointer("/properties/metadata/properties/expiry/type"),
+            Some(&json!("string"))
+        );
+        assert_eq!(
+            tool.function
+                .parameters
+                .pointer("/properties/metadata/properties/kuaiguaiStyle/enum"),
+            Some(&json!(["full", "laidDown"]))
+        );
+    }
+    assert!(place.function.description.contains("rack.heightU + 1"));
+    assert!(place.function.description.contains("heightU 4"));
+}
+
+#[test]
 fn dashboard_update_patch_prefers_structured_body_over_stale_body_json() {
     let patch = json!({
         "body": {

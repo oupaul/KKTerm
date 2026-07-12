@@ -465,6 +465,9 @@ same model Dashboard uses. The assistant may draft a Site or an
 Automation (trigger + condition + actions) from a typed schema; a
 successful mutating tool emits an `itops-changed` backend event that
 reloads the IT Ops store so the new rule appears without restart. The
+Rack Device placement schema includes `kuaiguai` and documents the rack-top
+virtual position (`startU = rack.heightU + 1`) plus expiry/style metadata, so
+assistant and built-in MCP calls preserve the same placement invariant as the UI. The
 page-context payload is a compact projection — Site names/counts,
 Automation names/states, recent run summaries — never full run output,
 streamed host buffers, secrets, or credential references. Mutating
