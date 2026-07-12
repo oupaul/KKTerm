@@ -63,6 +63,7 @@ import { reiconIconRefForName } from "../../../lib/iconCatalog";
 import { requestCredentialUnlock } from "../../../lib/credentialUnlock";
 import { nativeMenuIcons } from "../../../lib/nativeMenuIcons";
 import { lockOsIconAutoDetect } from "../../../lib/osIcons";
+import { isMacPlatform } from "../../../lib/platform";
 import { showNativeContextMenu, type NativeContextMenuItem } from "../../../lib/nativeContextMenu";
 import { confirmNativeDialog, invokeCommand, isCredentialUnlockRequiredError, isTauriRuntime, selectAppLauncherFolder, selectFileViewPath, selectKeyFile, type TmuxSession } from "../../../lib/tauri";
 import { connectionTree } from "../../../app-defaults";
@@ -2244,11 +2245,21 @@ export function ConnectionSidebar({
 
   // Connection Tree keyboard shortcuts: F2 renames and Delete removes the
   // connection whose row currently has focus (falling back to the selected
-  // connection). Scoped to the tree container so a Delete keypress in a
-  // terminal or text field can never remove a connection. Child Connection
+  // connection). F2 stays the cross-platform rename key (Enter keeps opening
+  // the focused row). For delete, the Delete/forward-delete key works
+  // everywhere; on macOS we also accept Backspace and Cmd+Backspace, because
+  // the key Mac keyboards label "delete" is Backspace and Finder's Move to
+  // Trash is Cmd+Delete. Scoped to the tree container so a delete keypress in
+  // a terminal or text field can never remove a connection. Child Connection
   // Tabs and folders keep their existing context-menu flows.
   function handleTreeKeyDown(event: ReactKeyboardEvent<HTMLDivElement>) {
-    if (event.defaultPrevented || (event.key !== "F2" && event.key !== "Delete")) {
+    if (event.defaultPrevented) {
+      return;
+    }
+    const isRename = event.key === "F2";
+    const isDelete =
+      event.key === "Delete" || (isMacPlatform() && event.key === "Backspace");
+    if (!isRename && !isDelete) {
       return;
     }
     const target = event.target as HTMLElement;
@@ -2272,7 +2283,7 @@ export function ConnectionSidebar({
     const { connection } = found;
     event.preventDefault();
     setSelectedConnectionId(connection.id);
-    if (event.key === "F2") {
+    if (isRename) {
       setPendingFolderDraft(null);
       setTreeError("");
       setInlineRenameTarget({ kind: "connection", id: connection.id });

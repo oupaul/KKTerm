@@ -75,8 +75,8 @@ Icons are rasterized to 16 px PNG bytes via `src/lib/nativeContextMenu.ts`. Do n
 
 When the Connection Tree has keyboard focus, two shortcuts act on the Connection row that is focused (falling back to the currently selected Connection):
 
-- **F2** starts an inline rename on that Connection — the same inline editor as the context-menu `connections.rename`, committing on Enter and cancelling on Escape.
-- **Delete** removes that Connection through the shared confirm-then-delete flow (native confirmation dialog, or the in-app fallback), the same path and `connections.deleteConnectionConfirm` / `connections.cannotBeUndone` copy as the context-menu `connections.delete`.
+- **F2** starts an inline rename on that Connection — the same inline editor as the context-menu `connections.rename`, committing on Enter and cancelling on Escape. F2 is the rename key on every platform (Enter keeps opening the focused Connection); on macOS press Fn+F2, or enable "Use F1, F2, etc. keys as standard function keys".
+- **Delete** removes that Connection through the shared confirm-then-delete flow (native confirmation dialog, or the in-app fallback), the same path and `connections.deleteConnectionConfirm` / `connections.cannotBeUndone` copy as the context-menu `connections.delete`. On macOS, **Backspace** and **Command+Backspace** also delete, because the key Mac keyboards label "delete" is Backspace and Finder's Move to Trash is Command+Delete.
 
 The handler is bound to the tree container, so it fires only while the tree itself holds focus: a Delete keypress in a terminal Pane, the tree search field, or an active rename input is never intercepted, and folders and Child Connection Tabs keep their existing context-menu rename/delete. With the default single-click-opens-Connection behavior, clicking a Connection opens it and moves focus into the opened Pane; select without opening (for example in `settings.doubleClickOpensConnection` mode) or Tab into the tree to keep focus on a row for these keys. Both actions are always available and are not part of the customizable Settings → Shortcuts list.
 

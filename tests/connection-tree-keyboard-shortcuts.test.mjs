@@ -12,8 +12,13 @@ test("Connection Tree handles F2 rename and Delete on the focused connection row
   // (not a terminal or text field) has keyboard focus.
   assert.match(source, /className=\{`tree-list [\s\S]*?onKeyDown=\{handleTreeKeyDown\}/);
   assert.match(source, /function handleTreeKeyDown\(event: ReactKeyboardEvent<HTMLDivElement>\)/);
-  // Only F2 and Delete are handled.
-  assert.match(source, /event\.key !== "F2" && event\.key !== "Delete"/);
+  // F2 renames on every platform; delete is the Delete key everywhere plus
+  // Backspace / Cmd+Backspace on macOS (Finder convention).
+  assert.match(source, /const isRename = event\.key === "F2";/);
+  assert.match(
+    source,
+    /const isDelete =\s*event\.key === "Delete" \|\| \(isMacPlatform\(\) && event\.key === "Backspace"\);/,
+  );
   // Typing in an input/textarea/editable is never hijacked.
   assert.match(source, /target\.closest\("input, textarea, \[contenteditable='true'\]"\)/);
   // An active inline rename (connection or child) is left alone.
@@ -23,8 +28,8 @@ test("Connection Tree handles F2 rename and Delete on the focused connection row
     source,
     /\.connection-row\[data-connection-id\]"\)\?\.dataset\.connectionId;\s*const connectionId = rowConnectionId \?\? selectedConnectionId;/,
   );
-  // F2 starts an inline rename; Delete reuses the shared confirm-then-delete flow.
-  assert.match(source, /if \(event\.key === "F2"\) \{[\s\S]*?setInlineRenameTarget\(\{ kind: "connection", id: connection\.id \}\)/);
+  // F2 starts an inline rename; delete reuses the shared confirm-then-delete flow.
+  assert.match(source, /if \(isRename\) \{[\s\S]*?setInlineRenameTarget\(\{ kind: "connection", id: connection\.id \}\)/);
   assert.match(source, /void requestDeleteTarget\(\{ kind: "connection", connection \}\)/);
 });
 
