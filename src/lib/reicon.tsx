@@ -45,7 +45,7 @@ import {
   Wifi as ReWifi, Wind as ReWind, Window as ReWindow, X as ReX,
 } from "reicon-react";
 import {
-  Bot as LucideBot, Braces as LucideBraces, Brain as LucideBrain, Cable as LucideCable,
+  ArrowUpDown as LucideArrowUpDown, Bot as LucideBot, Braces as LucideBraces, Brain as LucideBrain, Cable as LucideCable,
   Circle as LucideCircle, CircleDashed as LucideCircleDashed, CircleDot as LucideCircleDot, Columns2 as LucideColumns2,
   Container as LucideContainer, ExternalLink as LucideExternalLink, Factory as LucideFactory, FileType as LucideFileType,
   FolderInput as LucideFolderInput, GitCommit as LucideGitCommit, GitFork as LucideGitFork,
@@ -112,7 +112,7 @@ const reiconIconComponents = {
 } as const satisfies Readonly<Record<string, IconComponent>>;
 
 const lucideFallbackIconComponents = {
-  "Bot": LucideBot as unknown as IconComponent, "Braces": LucideBraces as unknown as IconComponent, "Brain": LucideBrain as unknown as IconComponent, "Cable": LucideCable as unknown as IconComponent,
+  "ArrowUpDown": LucideArrowUpDown as unknown as IconComponent, "Bot": LucideBot as unknown as IconComponent, "Braces": LucideBraces as unknown as IconComponent, "Brain": LucideBrain as unknown as IconComponent, "Cable": LucideCable as unknown as IconComponent,
   "Circle": LucideCircle as unknown as IconComponent, "CircleDashed": LucideCircleDashed as unknown as IconComponent, "CircleDot": LucideCircleDot as unknown as IconComponent, "Columns2": LucideColumns2 as unknown as IconComponent,
   "Container": LucideContainer as unknown as IconComponent, "ExternalLink": LucideExternalLink as unknown as IconComponent, "Factory": LucideFactory as unknown as IconComponent, "FileType": LucideFileType as unknown as IconComponent,
   "FolderInput": LucideFolderInput as unknown as IconComponent, "GitCommit": LucideGitCommit as unknown as IconComponent, "GitFork": LucideGitFork as unknown as IconComponent,
@@ -144,6 +144,7 @@ export const ArrowLeft = ReArrowLeft;
 export const ArrowLeftRight = ReArrowSwapHorizontal2;
 export const ArrowRight = ReArrowRight;
 export const ArrowUp = ReArrowUp;
+export const ArrowUpDown = LucideArrowUpDown as unknown as IconComponent;
 export const ArrowUpFromLine = ReUpload;
 export const BadgeCheck = ReCheckCircle;
 export const BedSingle = ReBed;

@@ -206,6 +206,31 @@ function rectsOverlap(a: CellRect, b: CellRect): boolean {
   return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.d && a.y + a.d > b.y;
 }
 
+function objectCoversCell(object: RoomObject, cell: IsoCell): boolean {
+  const span = objectCellSpan(object.kind, object.rot);
+  return (
+    cell.x >= object.x &&
+    cell.x < object.x + span.w &&
+    cell.y >= object.y &&
+    cell.y < object.y + span.h
+  );
+}
+
+/** Walls reserve their whole logical floor cell even though their rendered
+ *  construction is a thin strip through that cell. */
+export function wallOccupiesCell(
+  cell: IsoCell,
+  objects: RoomObject[],
+  excludeObjectId?: string,
+): boolean {
+  return objects.some(
+    (object) =>
+      object.id !== excludeObjectId &&
+      object.kind === "wall" &&
+      objectCoversCell(object, cell),
+  );
+}
+
 interface CellSpanOptions {
   /** Object footprint relative to this cell; used so rack-top support follows
    *  the rack's drawn physical footprint instead of the whole floor cell. */
@@ -269,10 +294,23 @@ export function footprintSpans(
   const spans: ZSpan[] = [];
   for (let dy = 0; dy < span.h; dy += 1) {
     for (let dx = 0; dx < span.w; dx += 1) {
+      const target = { x: cell.x + dx, y: cell.y + dy };
+      const wholeCellReserved = kind === "wall"
+        ? racks.some((rack) => {
+            const at = rackCells[rack.id];
+            return at?.x === target.x && at.y === target.y;
+          }) || objects.some(
+            (object) => object.id !== excludeObjectId && objectCoversCell(object, target),
+          )
+        : wallOccupiesCell(target, objects, excludeObjectId);
+      if (wholeCellReserved) {
+        spans.push({ z0: 0, z1: ROOM_CEILING_U });
+        continue;
+      }
       const objectRect = { ...rect, x: rect.x - dx, y: rect.y - dy };
       spans.push(
         ...cellSpans(
-          { x: cell.x + dx, y: cell.y + dy },
+          target,
           racks,
           rackCells,
           objects,

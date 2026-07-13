@@ -15,6 +15,12 @@ import {
 import { useWorkspaceStore } from "../../store";
 import type { Site, Rack, RackShell, ServerRoom } from "../../types";
 import { RackElevation } from "./RackElevation";
+import {
+  RACK_SEQUENCE_TOKEN,
+  hasRackSequenceToken,
+  nextRackSequenceName,
+  type RackPlacementSequence,
+} from "./rackSequence";
 import { useItOpsStore } from "./state";
 
 const MAX_RACK_U = 100;
@@ -53,6 +59,7 @@ export function RackDialog({
   rack,
   defaultServerRoom,
   defaultGroup,
+  placementMode = false,
   onClose,
   onSaved,
 }: {
@@ -64,8 +71,10 @@ export function RackDialog({
   defaultServerRoom?: string;
   /** Prefill the Group for a new rack (e.g. added within a group section). */
   defaultGroup?: string;
+  /** The spatial picker will place the created Rack after this dialog closes. */
+  placementMode?: boolean;
   onClose: () => void;
-  onSaved?: (rack: Rack) => void;
+  onSaved?: (rack: Rack, sequence: RackPlacementSequence | null) => void;
 }) {
   const { t } = useTranslation();
   const isEdit = !!rack;
@@ -74,6 +83,7 @@ export function RackDialog({
   const updateRack = useItOpsStore((state) => state.updateRack);
   const racksBySite = useItOpsStore((state) => state.racksBySite);
   const groupListId = useId();
+  const nameInputId = useId();
 
   const [siteId, setSiteId] = useState(rack?.siteId ?? defaultSiteId);
   const [name, setName] = useState(rack?.name ?? "");
@@ -95,7 +105,15 @@ export function RackDialog({
   const [busy, setBusy] = useState(false);
 
   const trimmedName = name.trim();
-  const canSave = trimmedName.length > 0 && siteId.length > 0 && serverRoom.length > 0 && !busy;
+  const sequenceTemplate =
+    placementMode && !isEdit && hasRackSequenceToken(trimmedName) ? trimmedName : null;
+  const roomRackNames = (racksBySite[siteId] ?? [])
+    .filter((entry) => entry.serverRoom === serverRoom.trim())
+    .map((entry) => entry.name);
+  const resolvedName = sequenceTemplate
+    ? nextRackSequenceName(sequenceTemplate, roomRackNames)
+    : trimmedName;
+  const canSave = resolvedName.length > 0 && siteId.length > 0 && serverRoom.length > 0 && !busy;
 
   const serverRoomOptions = useMemo(() => {
     const names = new Set((serverRoomsBySite[siteId] ?? []).map((entry) => entry.name));
@@ -130,7 +148,7 @@ export function RackDialog({
     setBusy(true);
     const parsedPower = Number.parseInt(powerCapacity, 10);
     const input = {
-      name: trimmedName,
+      name: resolvedName,
       serverRoom: serverRoom.trim(),
       rackGroup: rackGroup.trim(),
       shell,
@@ -144,10 +162,25 @@ export function RackDialog({
     try {
       if (isEdit) {
         await updateRack(siteId, rack!.id, input);
-        onSaved?.({ ...rack!, ...input, shell: shell ?? null });
+        onSaved?.({ ...rack!, ...input, shell: shell ?? null }, null);
       } else {
         const created = await createRack(siteId, input);
-        onSaved?.(created);
+        onSaved?.(
+          created,
+          sequenceTemplate
+            ? {
+                template: sequenceTemplate,
+                input: {
+                  serverRoom: input.serverRoom,
+                  rackGroup: input.rackGroup,
+                  shell: input.shell,
+                  heightU: input.heightU,
+                  depthMm: input.depthMm,
+                  powerCapacityW: input.powerCapacityW,
+                },
+              }
+            : null,
+        );
       }
       onClose();
     } catch (error) {
@@ -155,6 +188,28 @@ export function RackDialog({
       showStatusBarNotice(t("itops.errorNotice", { message }), { tone: "error" });
       setBusy(false);
     }
+  }
+
+  function insertSequenceToken() {
+    const input = document.getElementById(nameInputId) as HTMLInputElement | null;
+    if (hasRackSequenceToken(name)) {
+      const start = name.indexOf(RACK_SEQUENCE_TOKEN);
+      input?.focus();
+      input?.setSelectionRange(start, start + RACK_SEQUENCE_TOKEN.length);
+      return;
+    }
+    const start = input?.selectionStart ?? name.length;
+    const end = input?.selectionEnd ?? start;
+    const next = `${name.slice(0, start)}${RACK_SEQUENCE_TOKEN}${name.slice(end)}`;
+    setName(next);
+    requestAnimationFrame(() => {
+      const nextInput = document.getElementById(nameInputId) as HTMLInputElement | null;
+      nextInput?.focus();
+      nextInput?.setSelectionRange(
+        start + RACK_SEQUENCE_TOKEN.length,
+        start + RACK_SEQUENCE_TOKEN.length,
+      );
+    });
   }
 
   const livePreview: Rack = {
@@ -165,7 +220,7 @@ export function RackDialog({
       sortOrder: 0,
       items: [],
     }),
-    name: trimmedName,
+    name: resolvedName,
     serverRoom,
     rackGroup,
     shell,
@@ -203,7 +258,7 @@ export function RackDialog({
               <RackElevation rack={livePreview} />
             </div>
             <div className="rack-dialog-preview-caption">
-              <strong>{trimmedName || t("itops.racks.newTitle")}</strong>
+              <strong>{resolvedName || t("itops.racks.newTitle")}</strong>
               <span>
                 {t("itops.racks.unitCount", { count: heightU })} · {depthMm} mm · {t(`itops.racks.shell.${shell}`)}
               </span>
@@ -230,14 +285,30 @@ export function RackDialog({
             </div>
 
             <div className="rack-dialog-field-row">
-              <Field label={t("itops.racks.nameLabel")} req>
+              <div className="kk-field rack-dialog-name-field">
+                <div className="rack-dialog-name-label-row">
+                  <label className="kk-lbl" htmlFor={nameInputId}>
+                    {t("itops.racks.nameLabel")}
+                    <span className="kk-req">*</span>
+                  </label>
+                  {placementMode && !isEdit ? (
+                    <button
+                      type="button"
+                      className="rack-dialog-sequence-link"
+                      onClick={insertSequenceToken}
+                    >
+                      {t("itops.racks.sequenceAction")}
+                    </button>
+                  ) : null}
+                </div>
                 <TextInput
+                  id={nameInputId}
                   value={name}
                   placeholder={t("itops.racks.namePlaceholder")}
                   onChange={(event) => setName(event.currentTarget.value)}
                   autoFocus
                 />
-              </Field>
+              </div>
               <Field label={t("itops.racks.groupLabel")}>
                 <TextInput
                   value={rackGroup}

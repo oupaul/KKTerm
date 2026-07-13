@@ -189,14 +189,15 @@ test("IT Ops page-root layout stays off dialog backdrops and edit-mode dot grids
   );
 });
 
-test("Armed placement previews a cursor-snapped ghost and cancels on right-click", async () => {
+test("Armed placement previews a cursor-snapped ghost and supports continuous Walls", async () => {
   const sites = await read("src/modules/itops/SitesTab.tsx");
   const floorPlan = await read("src/modules/itops/ServerRoomFloorPlan.tsx");
   const isoView = await read("src/modules/itops/ServerRoomIsoView.tsx");
   const roomParts = await read("src/modules/itops/roomViewParts.tsx");
   const css = await read("src/modules/itops/itops.css");
 
-  // SitesTab disarms fixtures and discards a just-created, still-unplaced Rack.
+  // SitesTab keeps Walls armed, disarms one-shot fixtures, and discards a
+  // just-created, still-unplaced Rack when placement is cancelled.
   assert.match(sites, /function cancelRoomPlacement\(\)/);
   assert.match(sites, /discardPendingRackRef\.current\(pendingRackId\)/);
   assert.match(sites, /onCancelPlacement=\{cancelRoomPlacement\}/g);
@@ -204,13 +205,17 @@ test("Armed placement previews a cursor-snapped ghost and cancels on right-click
     assert.match(view, /onCancelPlacement\?: \(\) => void/);
     assert.match(view, /onObjectPlaced\?: \(\) => void/);
     assert.match(view, /onObjectPlaced\?\.\(\)/);
-    assert.match(view, /useRoomPlacementPointer\(placing, onCancelPlacement\)/);
+    assert.match(view, /useRoomPlacementPointer\(placing, onCancelPlacement, scrollRef\)/);
     assert.match(view, /<RoomPlacementCursorGhost/);
+    assert.match(view, /<RoomPlacementFacingArrow/);
     assert.match(view, /onContextMenu=\{/);
     assert.match(view, /resolveDropZ\(\s*footprintSpans\(\s*hover,\s*tool,\s*0/);
+    assert.match(view, /if \(wallOccupiesCell\(state\.target, objects\)\) onObjectBlocked\?\.\(\)/);
+    assert.match(view, /if \(wallOccupiesCell\(cell, objects\)\) \{/);
   }
-  assert.match(sites, /onObjectPlaced=\{\(\) => setRoomTool\(null\)\}/g);
+  assert.match(sites, /onObjectPlaced=\{\(\) => \{\s*if \(roomTool !== "wall"\) setRoomTool\(null\);/);
   assert.match(roomParts, /document\.addEventListener\("pointermove", updatePointer, true\)/);
+  assert.match(roomParts, /document\.addEventListener\("pointerdown", cancelFromOtherUi, true\)/);
   assert.match(roomParts, /event\.key !== "Escape"/);
   assert.match(roomParts, /document\.addEventListener\("contextmenu", cancelFromContextMenu, true\)/);
   // The floor plan tracks the hovered cell and renders the plan-artwork ghost.
@@ -220,9 +225,11 @@ test("Armed placement previews a cursor-snapped ghost and cancels on right-click
   assert.match(isoView, /rm-iso-plane\$\{placing \? " placing" : ""\}/);
   assert.match(isoView, /onHoverCell/);
   assert.match(isoView, /className=\{`rm-iso-obj ghost/);
-  assert.match(isoView, /className="rm-iso-cab ghost"/);
+  assert.match(isoView, /className=\{`rm-iso-cab ghost\$\{blocked \? " blocked" : ""\}`\}/);
   assert.match(css, /\.rm-bp-ghost/);
   assert.match(css, /\.rm-iso-drop\.blocked/);
+  assert.match(css, /\.rm-placement-facing-arrow/);
+  assert.match(css, /--placement-facing-angle/);
   assert.match(css, /\.rm-cursor-ghost \{/);
 });
 

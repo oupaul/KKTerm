@@ -62,7 +62,13 @@ export function RoomObjectPlanArtwork({
   arms?: WallArms;
 }) {
   return (
-    <svg className="rm-object-art rm-object-art-plan" data-kind={kind} viewBox="0 0 100 100" aria-hidden="true">
+    <svg
+      className="rm-object-art rm-object-art-plan"
+      data-kind={kind}
+      viewBox="0 0 100 100"
+      preserveAspectRatio={kind === "wall" ? "none" : undefined}
+      aria-hidden="true"
+    >
       {kind === "wall" ? <WallPlanArtwork arms={arms ?? WALL_ARMS_DEFAULT} /> : null}
       {kind === "aircon" ? (
         <>

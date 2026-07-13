@@ -5077,9 +5077,13 @@
   background: color-mix(in srgb, var(--accent) 16%, transparent);
   pointer-events: none;
 }
+.itops-page .rm-bp-drop.blocked {
+  border-color: var(--red);
+  background: color-mix(in srgb, var(--red) 14%, transparent);
+}
 /* Armed-placement ghost: the picked fixture (or pending rack footprint) rides
    the cursor snapped to the hovered cell, previewing the drop before the
-   click commits; blocked means the cell has no free vertical span. */
+   click commits; blocked means the cell cannot accept that placement. */
 .itops-page .rm-bp-ghost {
   position: absolute;
   display: flex;
@@ -5108,6 +5112,50 @@
   border-radius: 3px;
   background: color-mix(in srgb, var(--accent) 22%, var(--surface));
   opacity: 0.75;
+}
+
+/* Snapped placement ghosts carry an explicit facing arrow. Facing 0 points
+   south/down; quarter turns follow the shared Rack/Object Facing numbering. */
+.itops-page .rm-placement-facing-arrow {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 22px;
+  height: 28px;
+  border: 1px solid color-mix(in srgb, var(--accent) 72%, var(--border));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  color: var(--accent);
+  box-shadow: var(--shadow-control);
+  transform: translate(-50%, -50%) rotate(var(--placement-facing-angle));
+  transform-origin: center;
+  pointer-events: none;
+  z-index: 7;
+}
+.itops-page .rm-placement-facing-arrow::before {
+  content: "";
+  position: absolute;
+  left: 9px;
+  top: 5px;
+  width: 3px;
+  height: 13px;
+  border-radius: 2px;
+  background: currentColor;
+}
+.itops-page .rm-placement-facing-arrow::after {
+  content: "";
+  position: absolute;
+  left: 5px;
+  bottom: 4px;
+  width: 0;
+  height: 0;
+  border-top: 7px solid currentColor;
+  border-right: 5.5px solid transparent;
+  border-left: 5.5px solid transparent;
+}
+.itops-page .blocked > .rm-placement-facing-arrow {
+  border-color: color-mix(in srgb, var(--red) 72%, var(--border));
+  color: var(--red);
 }
 
 /* One rack footprint standing on its cell, painted in the rack's shell
@@ -5963,6 +6011,7 @@
   border: 1.5px solid var(--accent);
   border-radius: 4px;
   background: color-mix(in srgb, var(--accent) 16%, transparent);
+  transform-style: preserve-3d;
   pointer-events: none;
 }
 .itops-page .rm-iso-drop.blocked {
@@ -5991,6 +6040,12 @@
 .itops-page .rm-iso-cab.ghost {
   opacity: 0.65;
   pointer-events: none;
+}
+.itops-page .rm-iso-cab.ghost.blocked {
+  opacity: 0.32;
+}
+.itops-page .rm-iso-drop .rm-placement-facing-arrow {
+  transform: translate3d(-50%, -50%, var(--placement-facing-lift, 8px)) rotate(var(--placement-facing-angle));
 }
 .itops-page .rm-iso-obj.ghost {
   /* Parent opacity flattens preserve-3d descendants and collapses every
@@ -6255,12 +6310,17 @@
 .itops-page .rm-iso-skin-item[data-kind="label"]::after {
   content: none;
 }
-/* Hover detail card shared by both spatial views (RackTipContent): billboarded
-   above a 2.5D cabinet, floating above a floor-plan footprint. */
-.itops-page .rm-iso-tip,
-.itops-page .rm-bp-tip {
-  position: absolute;
-  left: 50%;
+/* Hover detail card shared by both spatial views (RackTipContent). The portal
+   escapes both scroll overflow and the 2.5D floor clip; JS flips/clamps the
+   fixed card to the visible room rectangle. */
+.itops-page.rm-rack-hover-portal {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  pointer-events: none;
+}
+.itops-page .rm-rack-hover-card {
+  position: fixed;
   display: flex;
   flex-direction: column;
   gap: 3px;
@@ -6270,25 +6330,7 @@
   border-radius: 9px;
   background: var(--surface);
   box-shadow: var(--shadow-control);
-  opacity: 0;
   pointer-events: none;
-  transition: opacity 0.14s;
-}
-.itops-page .rm-iso-tip {
-  top: 50%;
-}
-.itops-page .rm-bp-tip {
-  bottom: calc(100% + 8px);
-  transform: translateX(-50%);
-  z-index: 9;
-}
-.itops-page .rm-iso-cab:hover .rm-iso-tip,
-.itops-page .rm-bp-rack:hover .rm-bp-tip {
-  opacity: 1;
-}
-/* Edit mode floats the control strip in the same spot; keep the card away. */
-.itops-page .rm-bp-rack.editing .rm-bp-tip {
-  display: none;
 }
 .itops-page .rm-tip-name {
   font-size: 12px;
@@ -6496,6 +6538,44 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+}
+.rack-dialog-name-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.rack-dialog-name-label-row .kk-lbl {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 590;
+}
+.rack-dialog-name-label-row .kk-req {
+  color: var(--accent);
+}
+.rack-dialog-sequence-link {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--green);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1;
+  cursor: pointer;
+}
+.rack-dialog-sequence-link:hover {
+  color: color-mix(in srgb, var(--green) 75%, var(--text));
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.rack-dialog-sequence-link:focus-visible {
+  outline: none;
+  border-radius: 3px;
+  box-shadow: var(--ring);
 }
 .rack-dialog-shell-grid {
   display: grid;

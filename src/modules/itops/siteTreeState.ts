@@ -9,6 +9,8 @@ import { sanitizeFacing, type Facing, type IsoViewAngle } from "./roomIsoLayout"
 const WIDTH_KEY = "kkterm.itopsSiteTreeWidth";
 const PANEL_COLLAPSED_KEY = "kkterm.itopsSiteTreePanelCollapsed";
 const COLLAPSED_KEY = "kkterm.itopsSiteTreeCollapsed";
+const SERVER_ROOM_SORT_KEY = "kkterm.itopsServerRoomTreeSort";
+const RACK_SORT_KEY = "kkterm.itopsRackTreeSort";
 const ROOM_VIEW_KEY = "kkterm.itopsRoomViewMode";
 const FREE_LAYOUT_KEY = "kkterm.itopsFreePlacement";
 const RACK_FACING_KEY = "kkterm.itopsRackFacing";
@@ -58,6 +60,80 @@ export function loadCollapsedNodeIds(): Set<string> {
 export function saveCollapsedNodeIds(ids: Set<string>): void {
   if (typeof localStorage === "undefined") return;
   localStorage.setItem(COLLAPSED_KEY, JSON.stringify([...ids]));
+}
+
+export type ServerRoomSortDirection = "asc" | "desc";
+
+export type ServerRoomSortMap = Record<string, ServerRoomSortDirection>;
+
+export function loadServerRoomTreeSort(): ServerRoomSortMap {
+  if (typeof localStorage === "undefined") return {};
+  try {
+    const stored = JSON.parse(localStorage.getItem(SERVER_ROOM_SORT_KEY) ?? "{}");
+    if (!stored || typeof stored !== "object" || Array.isArray(stored)) return {};
+    const sort: ServerRoomSortMap = {};
+    for (const [siteId, direction] of Object.entries(stored)) {
+      if (direction === "asc" || direction === "desc") sort[siteId] = direction;
+    }
+    return sort;
+  } catch {
+    return {};
+  }
+}
+
+export function saveServerRoomTreeSort(sort: ServerRoomSortMap): void {
+  if (typeof localStorage === "undefined") return;
+  localStorage.setItem(SERVER_ROOM_SORT_KEY, JSON.stringify(sort));
+}
+
+export function sortServerRoomTopology<T extends { key: string }>(
+  rooms: T[],
+  direction?: ServerRoomSortDirection,
+): T[] {
+  if (!direction) return rooms;
+  const multiplier = direction === "asc" ? 1 : -1;
+  return [...rooms].sort(
+    (left, right) => multiplier * left.key.localeCompare(right.key, undefined, {
+      numeric: true,
+      sensitivity: "base",
+    }),
+  );
+}
+
+export type RackSortMap = Record<string, ServerRoomSortDirection>;
+
+export function loadRackTreeSort(): RackSortMap {
+  if (typeof localStorage === "undefined") return {};
+  try {
+    const stored = JSON.parse(localStorage.getItem(RACK_SORT_KEY) ?? "{}");
+    if (!stored || typeof stored !== "object" || Array.isArray(stored)) return {};
+    const sort: RackSortMap = {};
+    for (const [roomId, direction] of Object.entries(stored)) {
+      if (direction === "asc" || direction === "desc") sort[roomId] = direction;
+    }
+    return sort;
+  } catch {
+    return {};
+  }
+}
+
+export function saveRackTreeSort(sort: RackSortMap): void {
+  if (typeof localStorage === "undefined") return;
+  localStorage.setItem(RACK_SORT_KEY, JSON.stringify(sort));
+}
+
+export function sortRackTopology<T extends { name: string }>(
+  racks: T[],
+  direction?: ServerRoomSortDirection,
+): T[] {
+  if (!direction) return racks;
+  const multiplier = direction === "asc" ? 1 : -1;
+  return [...racks].sort(
+    (left, right) => multiplier * left.name.localeCompare(right.name, undefined, {
+      numeric: true,
+      sensitivity: "base",
+    }),
+  );
 }
 
 // Server Room View layout: rack elevations (default), the top-down floor

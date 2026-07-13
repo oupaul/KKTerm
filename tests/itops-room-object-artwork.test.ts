@@ -8,6 +8,18 @@ import {
 } from "../src/modules/itops/RoomObjectArtwork";
 import { RoomObjectIsoArtwork } from "../src/modules/itops/RoomObjectIsoReference";
 import { ROOM_OBJECT_KINDS, type WallArms } from "../src/modules/itops/roomObjects";
+import { RoomPlacementFacingArrow } from "../src/modules/itops/roomViewParts";
+
+test("snapped placement arrows encode facing and 2.5D lift", () => {
+  const arrow = renderToStaticMarkup(
+    createElement(RoomPlacementFacingArrow, { facing: 3, liftPx: 92 }),
+  );
+
+  assert.match(arrow, /class="rm-placement-facing-arrow"/);
+  assert.match(arrow, /--placement-facing-angle:270deg/);
+  assert.match(arrow, /--placement-facing-lift:92px/);
+  assert.match(arrow, /aria-hidden="true"/);
+});
 
 test("every Server Room object has distinct floor-plan and 2.5D artwork", () => {
   for (const kind of ROOM_OBJECT_KINDS) {
@@ -65,6 +77,14 @@ test("wall artwork follows its resolved arms in both projections", () => {
   assert.match(isoStraight, /translateZ\(56px\)/);
   assert.match(isoCross, /left:-44px;top:-6px;width:88px;height:12px/);
   assert.match(isoCross, /left:-6px;top:-44px;width:12px;height:88px/);
+});
+
+test("floor-plan walls span rectangular grid cells without SVG letterboxing", () => {
+  const wall = renderToStaticMarkup(createElement(RoomObjectPlanArtwork, { kind: "wall" }));
+  const aircon = renderToStaticMarkup(createElement(RoomObjectPlanArtwork, { kind: "aircon" }));
+
+  assert.match(wall, /preserveAspectRatio="none"/);
+  assert.doesNotMatch(aircon, /preserveAspectRatio="none"/);
 });
 
 test("2.5D 乖乖 sits on the real room surface instead of a fake rack top", () => {

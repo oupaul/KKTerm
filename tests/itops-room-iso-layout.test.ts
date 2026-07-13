@@ -61,6 +61,17 @@ test("stored placements win and collisions slide right instead of stacking", () 
   assert.deepEqual(layout.cells.c, { x: 0, y: 0 });
 });
 
+test("resolved Rack placements skip cells reserved by Walls", () => {
+  const layout = resolveIsoLayout(
+    [rack("a"), rack("b")],
+    { a: { x: 0, y: 0 } },
+    [{ x: 0, y: 0 }, { x: 1, y: 0 }],
+  );
+
+  assert.deepEqual(layout.cells.a, { x: 2, y: 0 });
+  assert.deepEqual(layout.cells.b, { x: 3, y: 0 });
+});
+
 test("the grid always leaves free margin around the outermost cabinet", () => {
   const empty = resolveIsoLayout([], {});
   assert.equal(empty.cols, ISO_MIN_COLS);

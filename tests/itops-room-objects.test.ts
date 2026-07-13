@@ -3,6 +3,7 @@ import test from "node:test";
 import type { Rack } from "../src/types";
 import {
   ROOM_CEILING_U,
+  ROOM_OBJECT_KINDS,
   cellSpans,
   footprintSpans,
   nudgeZ,
@@ -15,6 +16,7 @@ import {
   sanitizeRoomObjects,
   settleRoomObjects,
   wallArms,
+  wallOccupiesCell,
   type RoomObject,
 } from "../src/modules/itops/roomObjects";
 import {
@@ -448,4 +450,19 @@ test("a wall spans its whole cell along the run and blocks the floor", () => {
   // A wall cannot share a cell with a rack: the cabinet occupies the floor.
   const spans = footprintSpans({ x: 0, y: 0 }, "wall", 0, [rack("a")], { a: { x: 0, y: 0 } }, []);
   assert.equal(resolveDropZ(spans, "wall"), null);
+});
+
+test("a wall reserves its entire floor block against every other room object", () => {
+  const wall = obj("wall", "wall", 0, 0, 0);
+  assert.equal(wallOccupiesCell({ x: 0, y: 0 }, [wall]), true);
+  assert.equal(wallOccupiesCell({ x: 1, y: 0 }, [wall]), false);
+  assert.equal(wallOccupiesCell({ x: 0, y: 0 }, [wall], wall.id), false);
+  for (const kind of ROOM_OBJECT_KINDS.filter((entry) => entry !== "wall")) {
+    const spans = footprintSpans({ x: 0, y: 0 }, kind, 0, [], {}, [wall]);
+    assert.equal(resolveDropZ(spans, kind), null, `${kind} cannot share a wall block`);
+  }
+
+  const camera = obj("camera", "camera", 0, 0, 52);
+  const wallSpans = footprintSpans({ x: 0, y: 0 }, "wall", 0, [], {}, [camera]);
+  assert.equal(resolveDropZ(wallSpans, "wall"), null, "a wall cannot claim an occupied block");
 });

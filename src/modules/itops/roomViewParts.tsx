@@ -16,6 +16,7 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import type { Rack } from "../../types";
 import { rackFloorMetrics } from "./roomFloorPlan";
+import type { Facing } from "./roomIsoLayout";
 import { ROOM_OBJECT_KINDS, type RoomObjectKind } from "./roomObjects";
 import { ROOM_ZOOM_LEVELS, sanitizeRoomZoom } from "./siteTreeState";
 import { RoomObjectPlanArtwork } from "./RoomObjectArtwork";
@@ -43,12 +44,37 @@ export interface RoomPlacementPointer {
   y: number;
 }
 
-/** Match Rack View's armed-placement contract: keep tracking outside the
- *  room canvas, cancel from anywhere with right-click or Escape, and let each
- *  view replace the floating preview with its snapped in-canvas ghost. */
+/** High-contrast direction marker drawn over a snapped placement ghost. */
+export function RoomPlacementFacingArrow({
+  facing,
+  liftPx,
+}: {
+  facing: Facing;
+  /** 2.5D height above the floor plane; omitted in the top-down plan. */
+  liftPx?: number;
+}) {
+  return (
+    <span
+      aria-hidden="true"
+      className="rm-placement-facing-arrow"
+      style={
+        {
+          "--placement-facing-angle": `${facing * 90}deg`,
+          ...(liftPx == null ? {} : { "--placement-facing-lift": `${liftPx}px` }),
+        } as CSSProperties
+      }
+    />
+  );
+}
+
+/** Match Rack View's armed-placement contract: keep tracking outside the room
+ *  canvas, cancel from anywhere with right-click/Escape or when another app
+ *  control is selected, and let each view replace the floating preview with
+ *  its snapped in-canvas ghost. */
 export function useRoomPlacementPointer(
   active: boolean,
   onCancel?: () => void,
+  placementViewport?: RefObject<HTMLElement | null>,
 ): RoomPlacementPointer | null {
   const [pointer, setPointer] = useState<RoomPlacementPointer | null>(null);
   const cancelRef = useRef(onCancel);
@@ -72,16 +98,27 @@ export function useRoomPlacementPointer(
       event.preventDefault();
       cancelRef.current?.();
     };
+    const cancelFromOtherUi = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      const insideViewport = placementViewport?.current?.contains(target);
+      const placementControl =
+        target instanceof Element && target.closest(".rm-bp-ctl, .rm-iso-ctl");
+      if (insideViewport && !placementControl) return;
+      cancelRef.current?.();
+    };
 
     document.addEventListener("pointermove", updatePointer, true);
+    document.addEventListener("pointerdown", cancelFromOtherUi, true);
     document.addEventListener("contextmenu", cancelFromContextMenu, true);
     document.addEventListener("keydown", cancelFromKeyboard, true);
     return () => {
       document.removeEventListener("pointermove", updatePointer, true);
+      document.removeEventListener("pointerdown", cancelFromOtherUi, true);
       document.removeEventListener("contextmenu", cancelFromContextMenu, true);
       document.removeEventListener("keydown", cancelFromKeyboard, true);
     };
-  }, [active]);
+  }, [active, placementViewport]);
 
   return pointer;
 }
@@ -356,8 +393,7 @@ export function RackTagChips({ rack }: { rack: Rack }) {
 
 /** Inner content of the hover detail card shared by the floor plan and the
  *  2.5D room: name, health · utilisation (· power), used/total rack units ·
- *  device count, and status tallies. The wrapping element (billboarded
- *  `.rm-iso-tip` / floating `.rm-bp-tip`) belongs to each view. */
+ *  device count, and status tallies. */
 export function RackTipContent({ rack }: { rack: Rack }) {
   const { t } = useTranslation();
   const m = rackFloorMetrics(rack);
@@ -401,6 +437,124 @@ export function RackTipContent({ rack }: { rack: Rack }) {
         </span>
       ) : null}
     </>
+  );
+}
+
+export interface RoomRackHoverPoint {
+  x: number;
+  y: number;
+}
+
+interface RoomRackHoverSize {
+  width: number;
+  height: number;
+}
+
+interface RoomRackHoverBounds {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+}
+
+interface RoomRackHoverPosition {
+  left: number;
+  top: number;
+}
+
+/** Place a pointer-anchored card inside the visible room rectangle. Prefer
+ *  above/right of the pointer, flip at the matching edge, then clamp as a
+ *  final guard for corners and narrow viewports. */
+export function placeRoomRackHoverCard(
+  pointer: RoomRackHoverPoint,
+  card: RoomRackHoverSize,
+  boundary: RoomRackHoverBounds,
+): RoomRackHoverPosition {
+  const margin = 8;
+  const gap = 12;
+  const minLeft = boundary.left + margin;
+  const minTop = boundary.top + margin;
+  const maxLeft = Math.max(minLeft, boundary.right - margin - card.width);
+  const maxTop = Math.max(minTop, boundary.bottom - margin - card.height);
+  let left = pointer.x + gap;
+  let top = pointer.y - gap - card.height;
+  if (left > maxLeft) left = pointer.x - gap - card.width;
+  if (top < minTop) top = pointer.y + gap;
+  return {
+    left: Math.min(maxLeft, Math.max(minLeft, left)),
+    top: Math.min(maxTop, Math.max(minTop, top)),
+  };
+}
+
+/** Viewport-aware Rack detail card shared by both spatial layouts. It portals
+ *  to the app window so neither scroll overflow nor the 2.5D floor clip can
+ *  cut it off, while its geometry remains constrained to the room viewport. */
+export function RoomRackHoverCard({
+  rack,
+  pointer,
+  boundaryRef,
+}: {
+  rack: Rack | null;
+  pointer: RoomRackHoverPoint | null;
+  boundaryRef: RefObject<HTMLElement | null>;
+}) {
+  const cardRef = useRef<HTMLSpanElement>(null);
+  const [position, setPosition] = useState<{ left: number; top: number } | null>(null);
+
+  useLayoutEffect(() => {
+    const card = cardRef.current;
+    const boundaryNode = boundaryRef.current;
+    if (!rack || !pointer || !card || !boundaryNode) {
+      setPosition(null);
+      return;
+    }
+    const measure = () => {
+      const cardRect = card.getBoundingClientRect();
+      const rawBoundary = boundaryNode.getBoundingClientRect();
+      const boundary = {
+        left: Math.max(0, rawBoundary.left),
+        top: Math.max(0, rawBoundary.top),
+        right: Math.min(window.innerWidth, rawBoundary.right),
+        bottom: Math.min(window.innerHeight, rawBoundary.bottom),
+      };
+      setPosition(
+        placeRoomRackHoverCard(
+          pointer,
+          { width: cardRect.width, height: cardRect.height },
+          boundary,
+        ),
+      );
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    boundaryNode.addEventListener("scroll", measure, { passive: true });
+    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(measure);
+    observer?.observe(boundaryNode);
+    observer?.observe(card);
+    return () => {
+      window.removeEventListener("resize", measure);
+      boundaryNode.removeEventListener("scroll", measure);
+      observer?.disconnect();
+    };
+  }, [boundaryRef, pointer, rack]);
+
+  if (typeof document === "undefined" || !rack || !pointer) return null;
+  return createPortal(
+    <div className="itops-page rm-rack-hover-portal">
+      <span
+        ref={cardRef}
+        className="rm-rack-hover-card"
+        role="tooltip"
+        style={{
+          left: position?.left ?? 0,
+          top: position?.top ?? 0,
+          visibility: position ? "visible" : "hidden",
+        }}
+      >
+        <RackTipContent rack={rack} />
+      </span>
+    </div>,
+    document.body,
   );
 }
 
@@ -507,9 +661,9 @@ export type RoomTool = RoomObjectKind | null;
 
 /** Full-height right-side picker column shown while editing a spatial room
  *  view: a search box over a grid of preview cards — Racks first, then every
- *  room-object kind. Clicking a card arms it; the next floor-cell click places
- *  it under the cursor. Racks have properties, so the Rack card opens the New
- *  Rack dialog first and the created rack is placed by the following click. */
+ *  room-object kind. Clicking a card arms it; floor-cell clicks place it under
+ *  the cursor. Racks have properties, so the Rack card opens the New Rack
+ *  dialog first and the created rack is placed by the following click. */
 export function RoomObjectPicker({
   tool,
   onToolChange,
