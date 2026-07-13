@@ -848,8 +848,8 @@ fn subject_public_key_from_cert_der(cert_der: &[u8]) -> Result<Vec<u8>, String> 
         .map_err(|e| format!("failed to parse server certificate: {e}"))?;
 
     Ok(cert
-        .tbs_certificate
-        .subject_public_key_info
+        .tbs_certificate()
+        .subject_public_key_info()
         .subject_public_key
         .as_bytes()
         .ok_or_else(|| "server certificate subject public key is not a bitstring".to_string())?

@@ -1,5 +1,5 @@
 use super::{SecretReference, SecretStore};
-use aes_gcm::aead::{Aead, AeadCore, KeyInit, OsRng, Payload};
+use aes_gcm::aead::{Aead, Generate, KeyInit, Payload};
 use aes_gcm::{Aes256Gcm, Nonce};
 use argon2::Argon2;
 use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
@@ -249,9 +249,9 @@ fn encrypt_secret(
     storage_key: &str,
     secret: &str,
 ) -> Result<EncryptedSecretRow, String> {
-    let salt = Aes256Gcm::generate_nonce(&mut OsRng);
-    let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
-    let key = derive_key(password, salt.as_slice())?;
+    let salt = rand::random::<[u8; AES_GCM_NONCE_LENGTH]>();
+    let nonce = Nonce::generate();
+    let key = derive_key(password, &salt)?;
     let cipher = Aes256Gcm::new_from_slice(&key)
         .map_err(|_| "Could not initialize encrypted SQLite secret cipher".to_string())?;
     let ciphertext = cipher
@@ -305,9 +305,11 @@ fn decrypt_secret(
     let key = derive_key(password, &salt)?;
     let cipher = Aes256Gcm::new_from_slice(&key)
         .map_err(|_| "Could not initialize encrypted SQLite secret cipher".to_string())?;
+    let nonce = Nonce::try_from(nonce_bytes.as_slice())
+        .map_err(|_| "Could not decode encrypted SQLite secret nonce: invalid length".to_string())?;
     let plaintext = cipher
         .decrypt(
-            Nonce::from_slice(&nonce_bytes),
+            &nonce,
             Payload {
                 msg: ciphertext.as_ref(),
                 aad: storage_key.as_bytes(),

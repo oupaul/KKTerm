@@ -24,23 +24,23 @@ tauri-build = { version = "2", features = [] }
 tauri = { version = "2", features = ["tray-icon", "image-png", "protocol-asset", "macos-proxy"] }
 tauri-plugin-opener = "2"
 anyhow = "1.0.102"
-rusqlite = { version = "0.39", features = ["bundled"] }
+rusqlite = { version = "0.40", features = ["bundled"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 reqwest = { version = "0.13", default-features = false, features = ["json", "rustls", "stream", "form", "blocking", "socks"] }
-sha2 = "0.10"
-aes-gcm = "0.10.3"
+sha2 = "0.11"
+aes-gcm = "0.11"
 argon2 = "0.5.3"
 # Do not enable default features here: github-copilot-sdk defaults to bundling
 # the Copilot CLI, which bloats the KKTerm installer by embedding a large binary.
-github-copilot-sdk = { version = "1.0.0", default-features = false }
-rand = "0.9"
+github-copilot-sdk = { version = "1.0.6", default-features = false }
+rand = "0.10"
 base64 = "0.22"
 # Document Connection text decoding: encoding_rs is the standard (Firefox) decoder
 # and chardetng its companion charset detector, used for the file viewer's
 # Auto/named-encoding text reads. See file_viewer.rs::read_text.
 encoding_rs = "0.8"
-chardetng = "0.1"
+chardetng = "1"
 image = { version = "0.25", default-features = false, features = ["jpeg", "png"] }
 # System font enumeration: parse the `name` table of installed font files to
 # list available families cross-platform, without pulling native fontconfig /
@@ -51,9 +51,9 @@ keyring-core = "1.0.0"
 # Keep pinned until russh and IronRDP both release stable dependency lines that
 # no longer need the local RustCrypto/Dalek compatibility patches below.
 russh = { version = "=0.61.2", default-features = false, features = ["flate2", "ring", "rsa"] }
-russh-sftp = "2.1.2"
-suppaftp = { version = "=7.1.0", default-features = false, features = ["tokio", "tokio-async-native-tls", "deprecated"] }
-async-native-tls = { version = "0.5", default-features = false, features = ["runtime-tokio"] }
+russh-sftp = "2.3.0"
+suppaftp = { version = "10.0.0", default-features = false, features = ["tokio", "tokio-async-native-tls", "deprecated"] }
+async-native-tls = { version = "0.6", default-features = false, features = ["runtime-tokio"] }
 serial2 = "0.2.37"
 tokio = { version = "1.52.3", features = ["io-std", "io-util", "macros", "net", "rt-multi-thread", "sync", "time"] }
 url = "2"
@@ -75,11 +75,11 @@ lettre = { version = "0.11", default-features = false, features = ["builder", "s
 # AST-based validation of AI-authored script widget source. oxc is ~3x faster
 # than swc on the parse-only path and ships a stable visitor API for
 # IdentifierReference walks. Used by validate_script_body_json_detailed.
-oxc_allocator = "0.132"
-oxc_parser = "0.132"
-oxc_span = "0.132"
-oxc_ast = "0.132"
-oxc_ast_visit = "0.132"
+oxc_allocator = "0.139"
+oxc_parser = "0.139"
+oxc_span = "0.139"
+oxc_ast = "0.139"
+oxc_ast_visit = "0.139"
 
 # Network admin tools - AV-friendly choices.
 # MVP scope: DNS, ping, port scan/check, WoL, interfaces, WHOIS. SNMP + traceroute deferred.
@@ -89,9 +89,11 @@ tokio-util = { version = "0.7", features = ["rt"] }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows = { version = "0.62", features = ["Win32_Foundation", "Win32_Graphics", "Win32_Graphics_Direct3D", "Win32_Graphics_Direct3D11", "Win32_Graphics_Dwm", "Win32_Graphics_Dxgi", "Win32_Graphics_Dxgi_Common", "Win32_Graphics_Gdi", "Win32_System_Com", "Win32_System_DataExchange", "Win32_System_LibraryLoader", "Win32_System_Memory", "Win32_System_Ole", "Win32_System_Variant", "Win32_UI_Controls", "Win32_UI_Input_KeyboardAndMouse", "Win32_UI_Shell", "Win32_UI_WindowsAndMessaging"] }
+# Keep these on Wry's binding line so WebView2 COM interface values use the
+# same windows-core ABI. Revisit together when Tauri/Wry updates webview2-com.
 windows-core = "=0.61.2"
 windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Graphics_Gdi", "Win32_NetworkManagement_IpHelper", "Win32_NetworkManagement_Ndis", "Win32_Security", "Win32_Storage_FileSystem", "Win32_System_Com", "Win32_System_Console", "Win32_System_DataExchange", "Win32_System_Environment", "Win32_System_LibraryLoader", "Win32_System_Memory", "Win32_System_Ole", "Win32_System_Power", "Win32_System_ProcessStatus", "Win32_System_Registry", "Win32_System_Shutdown", "Win32_System_SystemInformation", "Win32_System_Threading", "Win32_UI_Controls", "Win32_UI_Input_KeyboardAndMouse", "Win32_UI_Shell", "Win32_UI_WindowsAndMessaging"] }
-windows-native-keyring-store = "1.0.0"
+windows-native-keyring-store = "1.1.0"
 webview2-com = "=0.38.2"
 tauri-plugin-single-instance = "2"
 
@@ -143,11 +145,11 @@ zbus = "5"
 [target.'cfg(not(target_os = "windows"))'.dependencies]
 # Unix ICMP via surge-ping (raw sockets - Unix users typically have CAP_NET_RAW or root).
 # Windows uses winping instead (see Windows target block above).
-surge-ping = "0.8"
+surge-ping = "0.9"
 # Cross-platform battery info for the Dashboard PC Info widget (IOKit on macOS,
 # sysfs on Linux). Windows reads batteries via CIM. `starship-battery` is the
 # maintained fork of the `battery` crate; aliased so the code can `use battery`.
-battery = { package = "starship-battery", version = "0.10" }
+battery = { package = "starship-battery", version = "0.11" }
 # macOS/Linux RDP client via IronRDP (Windows uses the native ActiveX path in rdp.rs instead).
 # The umbrella crate pins a mutually-compatible sub-crate set.
 # ironrdp-tokio re-exports all of ironrdp-async (connect_begin, connect_finalize,
@@ -171,7 +173,7 @@ tokio-native-tls = "0.3"
 # skipped; `ring` matches the provider selected in rdp_client.rs::tls_upgrade.
 rustls = { version = "0.23", features = ["ring"] }
 # Parse the server certificate's SubjectPublicKeyInfo for the CredSSP public-key binding.
-x509-cert = "0.2"
+x509-cert = "0.3"
 # Cross-platform window pixel capture for the universal in-app screenshot MCP
 # tool. Windows keeps its native GDI/DXGI path in screenshot.rs; macOS/Linux use
 # xcap. `image` feature exposes capture_image(); default `wgc` (Windows Graphics
@@ -188,7 +190,7 @@ xcap = { version = "0.9", default-features = false, features = ["image"] }
 glib = "0.18"
 gio = "0.18"
 gdk-pixbuf = "0.18"
-freedesktop-icons = "0.2"
+freedesktop-icons = "0.4"
 
 [profile.release]
 lto = "fat"

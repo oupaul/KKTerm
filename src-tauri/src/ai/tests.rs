@@ -3990,6 +3990,7 @@ fn github_copilot_model_options_preserve_account_catalog_metadata() {
         capabilities: github_copilot_sdk::ModelCapabilities {
             limits: None,
             supports: Some(github_copilot_sdk::ModelCapabilitiesSupports {
+                adaptive_thinking: None,
                 reasoning_effort: Some(true),
                 vision: Some(false),
             }),

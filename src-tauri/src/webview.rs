@@ -15,7 +15,7 @@ use std::{
 };
 
 use crate::logging;
-use rand::RngCore;
+use rand::Rng;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use sha2::{Digest, Sha256};

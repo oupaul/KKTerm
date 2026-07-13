@@ -18,7 +18,7 @@ use std::io::{Read, Write};
 use std::path::Path;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use aes_gcm::aead::{Aead, AeadCore, KeyInit, OsRng, Payload};
+use aes_gcm::aead::{Aead, Generate, KeyInit, Payload};
 use aes_gcm::{Aes256Gcm, Nonce};
 use argon2::Argon2;
 use base64::Engine;
@@ -38,6 +38,7 @@ use crate::storage::{DEFAULT_WORKSPACE_ID, Storage};
 const SELECTIVE_FORMAT: &str = "kkterm-selective-export";
 const SELECTIVE_VERSION: u32 = 1;
 const SECRETS_AAD: &[u8] = b"kkterm-selective-secrets";
+const AES_GCM_NONCE_LENGTH: usize = 12;
 
 /// Per-table primary-key handling used when merging rows into an existing store.
 enum Pk {
@@ -912,9 +913,9 @@ fn read_bundle(path: &Path) -> Result<(SelectiveManifest, Value, Option<Vec<u8>>
 // ── Passphrase crypto (Argon2id + AES-256-GCM) ──────────────────────────────
 
 fn encrypt_blob(passphrase: &str, plaintext: &[u8]) -> Result<EncryptedBlob, String> {
-    let salt = Aes256Gcm::generate_nonce(&mut OsRng);
-    let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
-    let key = derive_key(passphrase, salt.as_slice())?;
+    let salt = rand::random::<[u8; AES_GCM_NONCE_LENGTH]>();
+    let nonce = Nonce::generate();
+    let key = derive_key(passphrase, &salt)?;
     let cipher =
         Aes256Gcm::new_from_slice(&key).map_err(|_| "failed to initialize cipher".to_string())?;
     let ciphertext = cipher
@@ -951,9 +952,11 @@ fn decrypt_blob(passphrase: &str, blob: &EncryptedBlob) -> Result<Vec<u8>, Strin
     let key = derive_key(passphrase, &salt)?;
     let cipher =
         Aes256Gcm::new_from_slice(&key).map_err(|_| "failed to initialize cipher".to_string())?;
+    let nonce = Nonce::try_from(nonce_bytes.as_slice())
+        .map_err(|_| "failed to decode nonce: invalid length".to_string())?;
     cipher
         .decrypt(
-            Nonce::from_slice(&nonce_bytes),
+            &nonce,
             Payload {
                 msg: ciphertext.as_ref(),
                 aad: SECRETS_AAD,

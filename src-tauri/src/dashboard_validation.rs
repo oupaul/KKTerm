@@ -657,15 +657,14 @@ fn parse_script_source_ast(source: &str) -> Result<HashSet<String>, String> {
     let ret = Parser::new(&allocator, &wrapped, source_type).parse();
     // Prefer the structured error (with location) over the bare panic flag,
     // since oxc sets `panicked` for unrecoverable parses but usually also
-    // populates `errors` with the precise failure.
-    if let Some(first) = ret.errors.first() {
+    // populates `diagnostics` with the precise failure.
+    if let Some(first) = ret.diagnostics.first() {
         let line_col = first
             .labels
-            .as_ref()
-            .and_then(|labels| labels.first())
+            .first()
             .map(|label| {
                 let start = label.offset();
-                map_offset_to_line_col(&wrapped, start)
+                map_offset_to_line_col(&wrapped, start as usize)
             });
         let location = match line_col {
             // The wrapper prepends one line; subtract it so the message

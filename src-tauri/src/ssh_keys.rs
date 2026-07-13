@@ -1,5 +1,5 @@
 use crate::ssh;
-use rand::RngCore;
+use rand::Rng;
 use serde::{Deserialize, Serialize};
 use std::{
     fs,
