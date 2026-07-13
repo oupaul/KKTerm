@@ -572,7 +572,7 @@ export function ImportDialog({ sshSettings, onClose, onImported }: ImportDialogP
   );
 
   return (
-    <DialogShell>
+    <DialogShell zClassName="connection-dialog-backdrop">
       <Sheet
         ariaLabel={t("connections.import.title")}
         className="import-dialog import-dialog-redesign"
