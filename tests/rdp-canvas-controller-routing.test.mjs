@@ -37,18 +37,18 @@ test("assistant remote-desktop tools use IronRDP client commands for canvas RDP"
 });
 
 test("IronRDP canvas syncs clipboard text through the CLIPRDR channel", () => {
-  // Ctrl/Cmd+V reads the local clipboard, advertises it through CLIPRDR, and sends
-  // a remote Ctrl+V paste chord.
-  assert.match(canvasSource, /readFromClipboard/);
+  // A trusted paste event supplies text without WKWebView async-read permission,
+  // advertises it through CLIPRDR, and sends a remote Ctrl+V paste chord.
   assert.match(
     canvasSource,
     /\(e\.ctrlKey \|\| e\.metaKey\) && !e\.altKey && !e\.shiftKey && e\.code === "KeyV"/,
   );
-  assert.match(canvasSource, /pasteFromClipboard\(\);/);
+  assert.match(canvasSource, /onPaste=\{onPaste\}/);
+  assert.match(canvasSource, /e\.clipboardData\.getData\("text\/plain"\)/);
+  assert.doesNotMatch(canvasSource, /readFromClipboard/);
   assert.match(canvasSource, /send_rdp_client_clipboard_text/);
-  assert.match(canvasSource, /readFromClipboard\(\)[\s\S]*sendClipboardText\(text\)/);
+  assert.match(canvasSource, /sendClipboardText\(text\)[\s\S]*sendRemotePasteChord\(\)/);
   assert.match(canvasSource, /sendRemotePasteChord\(\)/);
-  assert.match(canvasSource, /e\.preventDefault\(\);[\s\S]*pasteFromClipboard\(\);[\s\S]*return;/);
   assert.match(canvasSource, /clipboardText/);
   assert.match(canvasSource, /writeToClipboard\(payload\.text\)/);
   // The Cmd/Super modifier stays local so paste does not tap the remote Start menu.

@@ -13,7 +13,8 @@ import { listen } from "@tauri-apps/api/event";
 import { useEffect, useRef, useState } from "react";
 import type { RefObject } from "react";
 import { useTranslation } from "react-i18next";
-import { readFromClipboard, writeToClipboard } from "../../../../lib/clipboard";
+import { writeToClipboard } from "../../../../lib/clipboard";
+import { isMacPlatform } from "../../../../lib/platform";
 import { invokeCommand, isTauriRuntime, logUiDebug } from "../../../../lib/tauri";
 import type { Connection, RdpSettings } from "../../../../types";
 import { connectionPasswordOwnerId } from "../utils";
@@ -46,6 +47,16 @@ type RdpCanvasEvent =
 
 function isMetaKeyCode(code: string): boolean {
   return code === "MetaLeft" || code === "MetaRight";
+}
+
+function pointerButtonBit(button: number, ctrlKey: boolean): number {
+  if (button === 2 || (button === 0 && ctrlKey && isMacPlatform())) {
+    return 2;
+  }
+  if (button === 1) {
+    return 1;
+  }
+  return button === 0 ? 0 : -1;
 }
 
 function createRdpSessionId() {
@@ -255,15 +266,19 @@ export function RdpCanvasView({
     sendPointer(e.clientX, e.clientY, buttonMaskRef.current);
   };
   const onPointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    // WKWebView can apply the canvas's default pointer focus after this handler
+    // and immediately blur the hidden IME input. Cancel that default transition
+    // so keyboard and composition events stay routed to the input we focus here.
+    e.preventDefault();
     focusInput("pointerdown");
-    const bit = e.button === 1 ? 1 : e.button === 2 ? 2 : e.button === 0 ? 0 : -1;
+    const bit = pointerButtonBit(e.button, e.ctrlKey);
     if (bit >= 0) {
       buttonMaskRef.current |= 1 << bit;
     }
     sendPointer(e.clientX, e.clientY, buttonMaskRef.current);
   };
   const onPointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    const bit = e.button === 1 ? 1 : e.button === 2 ? 2 : e.button === 0 ? 0 : -1;
+    const bit = pointerButtonBit(e.button, e.ctrlKey);
     if (bit >= 0) {
       buttonMaskRef.current &= ~(1 << bit);
     }
@@ -314,11 +329,14 @@ export function RdpCanvasView({
     sendScancode(ctrlScancode, false);
   };
 
-  // Refresh CLIPRDR with the local clipboard before sending a remote Ctrl+V.
-  // This keeps Cmd+V on macOS local while still performing a normal remote paste.
-  const pasteFromClipboard = () => {
-    void readFromClipboard()
-      .then((text) => sendClipboardText(text))
+  // Refresh CLIPRDR with trusted paste-event text before sending remote Ctrl+V.
+  // Reading ClipboardEvent data avoids WKWebView's async clipboard permission
+  // boundary.
+  const pasteClipboardText = (text: string) => {
+    if (!text) {
+      return;
+    }
+    void sendClipboardText(text)
       .then(() => sendRemotePasteChord())
       .catch(() => undefined);
   };
@@ -357,11 +375,10 @@ export function RdpCanvasView({
     if (composingRef.current || e.key === "Process") {
       return; // IME is composing — let composition events handle it.
     }
-    // Ctrl/Cmd+V refreshes CLIPRDR, then sends a remote Ctrl+V paste chord.
-    // Swallow the local chord so Cmd+V does not arrive as a bare remote V.
+    // Let the focused IME input produce a trusted paste event. `onPaste` reads
+    // its clipboardData, refreshes CLIPRDR, and sends remote Ctrl+V. The key is
+    // not forwarded as a raw scancode, so no bare remote V can leak through.
     if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.code === "KeyV") {
-      e.preventDefault();
-      pasteFromClipboard();
       return;
     }
     const shortcut = e.ctrlKey || e.altKey || e.metaKey;
@@ -428,6 +445,16 @@ export function RdpCanvasView({
       inputRef.current.value = "";
     }
   };
+  const onPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    pasteClipboardText(e.clipboardData.getData("text/plain"));
+    if (inputRef.current) {
+      inputRef.current.value = "";
+    }
+  };
+  const preventLocalContextMenu = (e: React.MouseEvent<HTMLElement>) => {
+    e.preventDefault();
+  };
 
   const statusText =
     status === "connecting"
@@ -437,7 +464,7 @@ export function RdpCanvasView({
         : "";
 
   return (
-    <div className="rdp-canvas-view" onPointerDown={() => focusInput("surface-pointerdown")}>
+    <div className="rdp-canvas-view">
       <canvas
         ref={setCanvasRef}
         className="rdp-canvas-surface"
@@ -445,7 +472,8 @@ export function RdpCanvasView({
         onPointerDown={onPointerDown}
         onPointerUp={onPointerUp}
         onWheel={onWheel}
-        onContextMenu={(e) => e.preventDefault()}
+        onContextMenu={preventLocalContextMenu}
+        draggable={false}
       />
       {/* Visually-hidden focus target that captures IME composition + text input. */}
       <input
@@ -457,9 +485,11 @@ export function RdpCanvasView({
         autoCapitalize="off"
         autoCorrect="off"
         spellCheck={false}
+        onContextMenu={preventLocalContextMenu}
         onKeyDown={onKeyDown}
         onKeyUp={onKeyUp}
         onInput={onInput}
+        onPaste={onPaste}
         onCompositionStart={onCompositionStart}
         onCompositionUpdate={onCompositionStart}
         onCompositionEnd={onCompositionEnd}

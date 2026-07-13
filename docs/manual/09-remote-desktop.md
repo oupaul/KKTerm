@@ -47,6 +47,12 @@ Transport labels for status messages: `remoteDesktop.rdpActiveX`, `remoteDesktop
 
 Tutorial targets: `remoteDesktop.toolbar`, `remoteDesktop.viewMode`, `remoteDesktop.sendCtrlAltDel`, `remoteDesktop.reconnect`, `remoteDesktop.sendToAi`.
 
+## macOS/Linux RDP keyboard and clipboard
+
+The IronRDP canvas routes printable and IME-composed text through Unicode keyboard events, while navigation keys, modifiers, and shortcuts use RDP scancodes. Clicking the remote surface focuses an in-viewport hidden input and keeps the canvas pointer action from taking focus back, so typing starts immediately after the click in macOS WKWebView and Linux WebKitGTK.
+
+On macOS, Command+V uses the focused canvas input's trusted paste event to advertise local plain text through the IronRDP CLIPRDR channel, then sends the remote Ctrl+V chord. Ctrl+V provides the same behavior on Linux. Remote plain-text clipboard updates are written back to the local clipboard. Right-click remains a remote mouse action: the canvas suppresses WKWebView selection and its local DOM edit menu so the click reaches the remote Session instead. macOS Control-click is translated to the same remote right-button action.
+
 ## RDP overlay parking (implementation note)
 
 The native HWND backing an RDP Session does not obey DOM z-index. When an app-owned DOM overlay intersects the RDP host rectangle, KKTerm:

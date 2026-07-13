@@ -135,6 +135,8 @@
   height: 100%;
   overflow: hidden;
   background: #000;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .rdp-canvas-surface {
@@ -142,15 +144,18 @@
   height: 100%;
   object-fit: fill;
   touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .rdp-canvas-ime-input {
   position: absolute;
   top: 0;
-  left: -9999px;
+  left: 0;
   width: 1px;
   height: 1px;
   opacity: 0;
+  pointer-events: none;
 }
 
 .rdp-canvas-status {
