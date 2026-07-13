@@ -66,7 +66,7 @@ use crate::logging::rdp_debug;
 use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 use ironrdp::cliprdr::{
     CliprdrClient,
-    backend::{ClipboardMessage, ClipboardMessageProxy, CliprdrBackend},
+    backend::CliprdrBackend,
     pdu::{
         ClipboardFormat, ClipboardFormatId, ClipboardGeneralCapabilityFlags, FileContentsRequest,
         FileContentsResponse, FormatDataRequest, FormatDataResponse, LockDataId,
@@ -1357,22 +1357,12 @@ async fn rdp_connect_attempt(
 // ── Event loop ────────────────────────────────────────────────────────────────
 
 #[derive(Debug)]
-struct CanvasClipboardProxy;
-
-impl ClipboardMessageProxy for CanvasClipboardProxy {
-    fn send_clipboard_message(&self, message: ClipboardMessage) {
-        if let ClipboardMessage::Error(error) = message {
-            eprintln!("[rdp clipboard] {error}");
-        }
-    }
-}
-
-#[derive(Debug)]
 struct CanvasCliprdrBackend {
     app: AppHandle,
     session_id: String,
     remote_formats: Vec<ClipboardFormat>,
     local_text: Option<String>,
+    pending_local_format_response: Option<OwnedFormatDataResponse>,
     pending_remote_text_request: bool,
 }
 
@@ -1383,6 +1373,7 @@ impl CanvasCliprdrBackend {
             session_id,
             remote_formats: Vec::new(),
             local_text: None,
+            pending_local_format_response: None,
             pending_remote_text_request: false,
         }
     }
@@ -1429,11 +1420,12 @@ impl CliprdrBackend for CanvasCliprdrBackend {
     }
 
     fn on_format_data_request(&mut self, request: FormatDataRequest) {
-        if request.format == ClipboardFormatId::CF_UNICODETEXT {
-            CanvasClipboardProxy.send_clipboard_message(ClipboardMessage::SendFormatData(
-                utf16_clipboard_response(self.local_text.as_deref().unwrap_or("")),
-            ));
-        }
+        self.pending_local_format_response =
+            Some(if request.format == ClipboardFormatId::CF_UNICODETEXT {
+                utf16_clipboard_response(self.local_text.as_deref().unwrap_or(""))
+            } else {
+                FormatDataResponse::new_error().into_owned()
+            });
     }
 
     fn on_format_data_response(&mut self, response: FormatDataResponse<'_>) {
@@ -1639,6 +1631,9 @@ fn spawn_rdp_event_loop(
                             if should_break {
                                 break;
                             }
+                            if let Err(e) = flush_pending_clipboard_response(&mut framed, &mut active_stage).await {
+                                eprintln!("[rdp {session_id}] clipboard response error: {e}");
+                            }
                             if let Err(e) = flush_pending_clipboard_request(&mut framed, &mut active_stage).await {
                                 eprintln!("[rdp {session_id}] clipboard request error: {e}");
                             }
@@ -1835,6 +1830,29 @@ async fn flush_pending_clipboard_request(
     let bytes = active_stage
         .process_svc_processor_messages::<CliprdrClient>(messages)
         .map_err(|e| format!("failed to encode RDP clipboard request: {e}"))?;
+    write_rdp_frame(framed, &bytes).await
+}
+
+async fn flush_pending_clipboard_response(
+    framed: &mut UpgradedFramed,
+    active_stage: &mut ironrdp::session::ActiveStage,
+) -> Result<(), String> {
+    let cliprdr = match active_stage.get_svc_processor_mut::<CliprdrClient>() {
+        Some(cliprdr) => cliprdr,
+        None => return Ok(()),
+    };
+    let response = cliprdr
+        .downcast_backend_mut::<CanvasCliprdrBackend>()
+        .and_then(|backend| backend.pending_local_format_response.take());
+    let Some(response) = response else {
+        return Ok(());
+    };
+    let messages = cliprdr
+        .submit_format_data(response)
+        .map_err(|e| format!("failed to submit local clipboard data to RDP: {e}"))?;
+    let bytes = active_stage
+        .process_svc_processor_messages::<CliprdrClient>(messages)
+        .map_err(|e| format!("failed to encode RDP clipboard response: {e}"))?;
     write_rdp_frame(framed, &bytes).await
 }
 

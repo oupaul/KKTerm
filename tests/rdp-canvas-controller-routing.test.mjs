@@ -10,6 +10,7 @@ const canvasSource = await readFile(
   new URL("../src/modules/workspace/connections/remote-desktop/RdpCanvasView.tsx", import.meta.url),
   "utf8",
 );
+const backendSource = await readFile(new URL("../src-tauri/src/rdp_client.rs", import.meta.url), "utf8");
 
 test("IronRDP canvas sessions report lifecycle to the workspace controller", () => {
   assert.match(canvasSource, /onSessionConnected\?: \(sessionId: string\) => void;/);
@@ -49,6 +50,9 @@ test("IronRDP canvas syncs clipboard text through the CLIPRDR channel", () => {
   assert.match(canvasSource, /send_rdp_client_clipboard_text/);
   assert.match(canvasSource, /sendClipboardText\(text\)[\s\S]*sendRemotePasteChord\(\)/);
   assert.match(canvasSource, /sendRemotePasteChord\(\)/);
+  assert.match(backendSource, /pending_local_format_response: Option<OwnedFormatDataResponse>/);
+  assert.match(backendSource, /\.submit_format_data\(response\)/);
+  assert.doesNotMatch(backendSource, /CanvasClipboardProxy/);
   assert.match(canvasSource, /clipboardText/);
   assert.match(canvasSource, /writeToClipboard\(payload\.text\)/);
   // The Cmd/Super modifier stays local so paste does not tap the remote Start menu.
