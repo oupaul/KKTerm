@@ -272,21 +272,29 @@ export function RdpCanvasView({
   const sendClipboardText = (text: string) => {
     const sessionId = sessionIdRef.current;
     if (!sessionId || text.length === 0) {
-      return;
+      return Promise.resolve();
     }
-    void invokeCommand("send_rdp_client_clipboard_text", { request: { sessionId, text } }).catch(() => undefined);
+    return invokeCommand("send_rdp_client_clipboard_text", { request: { sessionId, text } }).catch(() => undefined);
   };
 
-  // Refresh CLIPRDR with the local clipboard before forwarding a remote paste
-  // chord. If the virtual channel is not ready, the explicit assistant/direct
-  // text path still uses Unicode input through sendText.
+  const sendRemotePasteChord = () => {
+    const ctrlScancode = scancodeForCode("ControlLeft");
+    const vScancode = scancodeForCode("KeyV");
+    if (ctrlScancode === undefined || vScancode === undefined) {
+      return;
+    }
+    sendScancode(ctrlScancode, true);
+    sendScancode(vScancode, true);
+    sendScancode(vScancode, false);
+    sendScancode(ctrlScancode, false);
+  };
+
+  // Refresh CLIPRDR with the local clipboard before sending a remote Ctrl+V.
+  // This keeps Cmd+V on macOS local while still performing a normal remote paste.
   const pasteFromClipboard = () => {
     void readFromClipboard()
-      .then((text) => {
-        if (text) {
-          sendClipboardText(text);
-        }
-      })
+      .then((text) => sendClipboardText(text))
+      .then(() => sendRemotePasteChord())
       .catch(() => undefined);
   };
 
@@ -317,10 +325,12 @@ export function RdpCanvasView({
     if (composingRef.current || e.key === "Process") {
       return; // IME is composing — let composition events handle it.
     }
-    // Ctrl/Cmd+V refreshes the CLIPRDR channel with local text before the raw
-    // paste chord is forwarded to the remote.
+    // Ctrl/Cmd+V refreshes CLIPRDR, then sends a remote Ctrl+V paste chord.
+    // Swallow the local chord so Cmd+V does not arrive as a bare remote V.
     if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.code === "KeyV") {
+      e.preventDefault();
       pasteFromClipboard();
+      return;
     }
     const shortcut = e.ctrlKey || e.altKey || e.metaKey;
     const isText = isCharacterCode(e.code);
@@ -339,6 +349,12 @@ export function RdpCanvasView({
 
   const onKeyUp = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (composingRef.current) {
+      return;
+    }
+    // Matches the paste interception in onKeyDown: swallow the "V" release so it
+    // is not forwarded as a lone scancode after the clipboard was replayed.
+    if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.code === "KeyV") {
+      e.preventDefault();
       return;
     }
     const shortcut = e.ctrlKey || e.altKey || e.metaKey;

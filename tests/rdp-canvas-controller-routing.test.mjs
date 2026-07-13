@@ -37,8 +37,8 @@ test("assistant remote-desktop tools use IronRDP client commands for canvas RDP"
 });
 
 test("IronRDP canvas syncs clipboard text through the CLIPRDR channel", () => {
-  // Ctrl/Cmd+V reads the local clipboard, advertises it through CLIPRDR, and lets
-  // the raw paste chord reach the remote desktop.
+  // Ctrl/Cmd+V reads the local clipboard, advertises it through CLIPRDR, and sends
+  // a remote Ctrl+V paste chord.
   assert.match(canvasSource, /readFromClipboard/);
   assert.match(
     canvasSource,
@@ -47,6 +47,8 @@ test("IronRDP canvas syncs clipboard text through the CLIPRDR channel", () => {
   assert.match(canvasSource, /pasteFromClipboard\(\);/);
   assert.match(canvasSource, /send_rdp_client_clipboard_text/);
   assert.match(canvasSource, /readFromClipboard\(\)[\s\S]*sendClipboardText\(text\)/);
+  assert.match(canvasSource, /sendRemotePasteChord\(\)/);
+  assert.match(canvasSource, /e\.preventDefault\(\);[\s\S]*pasteFromClipboard\(\);[\s\S]*return;/);
   assert.match(canvasSource, /clipboardText/);
   assert.match(canvasSource, /writeToClipboard\(payload\.text\)/);
   // The Cmd/Super modifier stays local so paste does not tap the remote Start menu.
