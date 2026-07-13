@@ -57,6 +57,7 @@ export type SshAuthMethod = "keyFile" | "password" | "agent";
  * `undefined` means "inherit the global SSH default".
  */
 export type SshCompressionMode = "off" | "fast";
+export type SshOldProtocolsMode = "off" | "legacy";
 
 /** Per-pane File Explorer / SFTP browser view options (item zoom + content-view
  * background), persisted durably on the Connection. */
@@ -94,6 +95,7 @@ export interface Connection {
   sshSocksProxyUsername?: string;
   sshSocksProxyInheritDefaults?: boolean;
   sshCompression?: SshCompressionMode;
+  sshOldProtocols?: SshOldProtocolsMode;
   authMethod?: SshAuthMethod;
   hasPassword?: boolean;
   localShell?: string;
@@ -539,6 +541,7 @@ export interface CreateConnectionRequest {
   sshSocksProxyUsername?: string;
   sshSocksProxyInheritDefaults?: boolean;
   sshCompression?: SshCompressionMode;
+  sshOldProtocols?: SshOldProtocolsMode;
   authMethod?: SshAuthMethod;
   localShell?: string;
   localStartupDirectory?: string;
@@ -1002,6 +1005,7 @@ export interface SshSettings {
   defaultKeyPath?: string;
   defaultProxyJump?: string;
   defaultSshCompression: SshCompressionMode;
+  defaultSshOldProtocols: SshOldProtocolsMode;
   bufferLines: number;
   defaultTransparency: number;
   defaultUseTmuxSessions: boolean;

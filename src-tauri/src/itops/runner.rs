@@ -159,7 +159,12 @@ pub fn run_batch(
         }
     });
 
-    let host_reports: Vec<HostReport> = results.into_inner().unwrap().into_iter().flatten().collect();
+    let host_reports: Vec<HostReport> = results
+        .into_inner()
+        .unwrap()
+        .into_iter()
+        .flatten()
+        .collect();
     let ok = host_reports.iter().filter(|report| report.ok).count();
     let failed = host_reports.iter().filter(|report| !report.ok).count();
     RunReport {
@@ -181,6 +186,7 @@ pub struct SshExecSpec {
     pub socks_proxy: Option<String>,
     pub timeout_seconds: Option<u64>,
     pub compression: bool,
+    pub old_protocols: bool,
 }
 
 /// The Phase 2 SSH transport. Holds pre-resolved per-host exec specs and runs
@@ -285,6 +291,7 @@ impl BatchTransport for SshTransport {
             timeout_seconds: spec.timeout_seconds,
             socks_proxy: spec.socks_proxy.clone(),
             compression: spec.compression,
+            old_protocols: spec.old_protocols,
         };
         // Every sudo credential in play, so we can scrub it from anything the
         // remote PTY echoes back before it reaches the live stream or storage.
@@ -382,13 +389,14 @@ impl BatchTransport for SshTransport {
                     let app = app.clone();
                     Box::pin(async move {
                         crate::ai::run_playbook_ai_decision(app, instruction, previous_output).await
-                    }) as std::pin::Pin<
-                        Box<
-                            dyn std::future::Future<
-                                    Output = Result<crate::ai::PlaybookAiDecision, String>,
-                                > + Send,
-                        >,
-                    >
+                    })
+                        as std::pin::Pin<
+                            Box<
+                                dyn std::future::Future<
+                                        Output = Result<crate::ai::PlaybookAiDecision, String>,
+                                    > + Send,
+                            >,
+                        >
                 };
                 let ai_handler: &ssh::PlaybookAiHandler = &ai_callback;
                 match ssh::run_playbook_capture_streaming(
@@ -540,6 +548,7 @@ fn resolve_one_ssh_spec(
         socks_proxy: socks_proxy.filter(|value| !value.trim().is_empty()),
         timeout_seconds: Some(timeout_seconds),
         compression: ssh::resolve_ssh_compression(ssh_compression.as_deref(), default_compression),
+        old_protocols: false,
     })
 }
 
@@ -625,7 +634,15 @@ mod tests {
             peak: AtomicUsize::new(0),
         };
         let cancel = AtomicBool::new(false);
-        let report = run_batch("run-pb", &hosts, &playbook(), &transport, 2, &cancel, &|_| {});
+        let report = run_batch(
+            "run-pb",
+            &hosts,
+            &playbook(),
+            &transport,
+            2,
+            &cancel,
+            &|_| {},
+        );
         assert_eq!(report.total, 2);
         assert_eq!(report.ok, 1);
         assert_eq!(report.failed, 1);
@@ -687,15 +704,23 @@ mod tests {
         let cancel = AtomicBool::new(false);
         let started = AtomicUsize::new(0);
         let finished = AtomicUsize::new(0);
-        run_batch("run-4", &hosts, &script(), &transport, 2, &cancel, &|event| match event {
-            RunEvent::HostStarted { .. } => {
-                started.fetch_add(1, Ordering::SeqCst);
-            }
-            RunEvent::HostFinished { .. } => {
-                finished.fetch_add(1, Ordering::SeqCst);
-            }
-            _ => {}
-        });
+        run_batch(
+            "run-4",
+            &hosts,
+            &script(),
+            &transport,
+            2,
+            &cancel,
+            &|event| match event {
+                RunEvent::HostStarted { .. } => {
+                    started.fetch_add(1, Ordering::SeqCst);
+                }
+                RunEvent::HostFinished { .. } => {
+                    finished.fetch_add(1, Ordering::SeqCst);
+                }
+                _ => {}
+            },
+        );
         assert_eq!(started.load(Ordering::SeqCst), 2);
         assert_eq!(finished.load(Ordering::SeqCst), 2);
     }
@@ -710,11 +735,19 @@ mod tests {
         };
         let cancel = AtomicBool::new(false);
         let chunks = AtomicUsize::new(0);
-        let report = run_batch("run-5", &hosts, &script(), &transport, 2, &cancel, &|event| {
-            if let RunEvent::HostOutput { .. } = event {
-                chunks.fetch_add(1, Ordering::SeqCst);
-            }
-        });
+        let report = run_batch(
+            "run-5",
+            &hosts,
+            &script(),
+            &transport,
+            2,
+            &cancel,
+            &|event| {
+                if let RunEvent::HostOutput { .. } = event {
+                    chunks.fetch_add(1, Ordering::SeqCst);
+                }
+            },
+        );
         assert_eq!(chunks.load(Ordering::SeqCst), 2); // one "done" frame per host
         assert!(report.hosts.iter().all(|host| host.output == "done"));
     }

@@ -247,6 +247,7 @@ pub struct NativeSshTerminalRequest {
     pub x11_forwarding: Option<NativeSshX11Forwarding>,
     pub socks_proxy: Option<String>,
     pub compression: bool,
+    pub old_protocols: bool,
 }
 
 #[derive(Clone)]
@@ -273,6 +274,7 @@ pub(crate) struct NativeSshConnectionRequest {
     pub x11_forwarding: Option<NativeSshX11Forwarding>,
     pub socks_proxy: Option<String>,
     pub compression: bool,
+    pub old_protocols: bool,
     pub(crate) remote_forward_targets: Option<RemoteForwardTargets>,
     pub(crate) bridge_tasks: Option<SshBridgeTasks>,
 }
@@ -288,6 +290,7 @@ pub(crate) struct NativeSshCommandRequest {
     pub timeout_seconds: Option<u64>,
     pub socks_proxy: Option<String>,
     pub compression: bool,
+    pub old_protocols: bool,
 }
 
 #[derive(Clone)]
@@ -296,7 +299,9 @@ pub enum NativeSshAuth {
         key_path: String,
         passphrase: Option<String>,
     },
-    Password { password: Option<String> },
+    Password {
+        password: Option<String>,
+    },
     Agent,
 }
 
@@ -311,6 +316,8 @@ pub struct InspectSshHostKeyRequest {
     pub ssh_socks_proxy_username: Option<String>,
     #[serde(default)]
     pub ssh_socks_proxy_secret_owner_id: Option<String>,
+    #[serde(default)]
+    pub ssh_old_protocols: Option<bool>,
 }
 
 #[derive(Deserialize)]
@@ -687,6 +694,10 @@ pub fn inspect_host_key(
     let key = runtime.block_on(async {
         let config = Arc::new(client::Config {
             inactivity_timeout: Some(SSH_STARTUP_TIMEOUT),
+            preferred: native_ssh_preferred_algorithms(
+                false,
+                request.ssh_old_protocols.unwrap_or(false),
+            ),
             ..Default::default()
         });
         let capture = Arc::clone(&server_public_key);
@@ -828,6 +839,7 @@ async fn run_remote_command_async(request: NativeSshCommandRequest) -> Result<St
         x11_forwarding: None,
         socks_proxy: request.socks_proxy,
         compression: request.compression,
+        old_protocols: request.old_protocols,
         remote_forward_targets: None,
         bridge_tasks: None,
     })
@@ -923,6 +935,7 @@ async fn run_remote_command_async_capture(
         x11_forwarding: None,
         socks_proxy: request.socks_proxy,
         compression: request.compression,
+        old_protocols: request.old_protocols,
         remote_forward_targets: None,
         bridge_tasks: None,
     })
@@ -1247,6 +1260,7 @@ async fn run_native_terminal_once(
                 x11_forwarding: request.x11_forwarding.clone(),
                 socks_proxy: request.socks_proxy.clone(),
                 compression: request.compression,
+                old_protocols: request.old_protocols,
                 remote_forward_targets: Some(Arc::clone(&remote_forward_targets)),
                 bridge_tasks: Some(Arc::clone(&bridge_tasks)),
             },
@@ -1894,7 +1908,10 @@ async fn connect_verified_client_with_prompt(
     }
 
     let auth = normalize_native_ssh_auth(request.auth)?;
-    let config = Arc::new(native_ssh_client_config(request.compression));
+    let config = Arc::new(native_ssh_client_config(
+        request.compression,
+        request.old_protocols,
+    ));
     let host_key_rejection = Arc::new(std::sync::Mutex::new(None));
     let socks_proxy = request
         .socks_proxy
@@ -2419,19 +2436,16 @@ mod ssh_port_forward_tests {
 /// default. Returns `true` when zlib compression should be negotiated. Mirrors
 /// the frontend `resolveSshCompression` so backend-initiated channels (SFTP,
 /// exec commands) honor the same setting as terminal sessions.
-pub(crate) fn resolve_ssh_compression(
-    connection_value: Option<&str>,
-    default_value: &str,
-) -> bool {
+pub(crate) fn resolve_ssh_compression(connection_value: Option<&str>, default_value: &str) -> bool {
     !matches!(connection_value.unwrap_or(default_value).trim(), "off")
 }
 
-fn native_ssh_client_config(compression: bool) -> client::Config {
+fn native_ssh_client_config(compression: bool, old_protocols: bool) -> client::Config {
     client::Config {
         inactivity_timeout: None,
         keepalive_interval: Some(SSH_KEEPALIVE_INTERVAL),
         keepalive_max: SSH_KEEPALIVE_MAX_MISSED,
-        preferred: native_ssh_preferred_algorithms(compression),
+        preferred: native_ssh_preferred_algorithms(compression, old_protocols),
         ..Default::default()
     }
 }
@@ -2444,18 +2458,36 @@ fn native_ssh_client_config(compression: bool) -> client::Config {
 // — so the transport actually compresses. `zlib@openssh.com` defers compression
 // until after authentication; russh handles that activation correctly. `none`
 // stays last as a fallback for servers that refuse compression.
-fn native_ssh_preferred_algorithms(compression: bool) -> russh::Preferred {
-    if !compression {
-        return russh::Preferred::DEFAULT;
+fn native_ssh_preferred_algorithms(compression: bool, old_protocols: bool) -> russh::Preferred {
+    let mut preferred = if compression {
+        russh::Preferred {
+            compression: std::borrow::Cow::Borrowed(&[
+                russh::compression::ZLIB_LEGACY,
+                russh::compression::ZLIB,
+                russh::compression::NONE,
+            ]),
+            ..russh::Preferred::DEFAULT
+        }
+    } else {
+        russh::Preferred::DEFAULT
+    };
+    if old_protocols {
+        let mut kex = preferred.kex.to_vec();
+        for name in [
+            russh::kex::DH_G14_SHA1,
+            russh::kex::DH_GEX_SHA1,
+            russh::kex::DH_G1_SHA1,
+        ] {
+            if !kex
+                .iter()
+                .any(|existing| existing.as_ref() == name.as_ref())
+            {
+                kex.push(name);
+            }
+        }
+        preferred.kex = std::borrow::Cow::Owned(kex);
     }
-    russh::Preferred {
-        compression: std::borrow::Cow::Borrowed(&[
-            russh::compression::ZLIB_LEGACY,
-            russh::compression::ZLIB,
-            russh::compression::NONE,
-        ]),
-        ..russh::Preferred::DEFAULT
-    }
+    preferred
 }
 
 async fn with_ssh_startup_timeout<T, F>(operation: &'static str, future: F) -> Result<T, String>
@@ -2501,10 +2533,14 @@ async fn authenticate_native_ssh(
                 Ok(key_pair) => key_pair,
                 Err(error)
                     if prompt.is_some()
-                        && should_prompt_for_key_passphrase(&error.to_string(), passphrase.is_some()) =>
+                        && should_prompt_for_key_passphrase(
+                            &error.to_string(),
+                            passphrase.is_some(),
+                        ) =>
                 {
                     let prompt = prompt.as_deref_mut().expect("prompt checked above");
-                    let entered = read_terminal_prompt(prompt, "SSH key passphrase: ", false).await?;
+                    let entered =
+                        read_terminal_prompt(prompt, "SSH key passphrase: ", false).await?;
                     load_secret_key(key_path, Some(&entered))
                         .map_err(|error| format!("failed to decrypt SSH key: {error}"))?
                 }
@@ -2836,9 +2872,8 @@ pub(crate) struct PlaybookStepSpec {
 pub(crate) type PlaybookAiHandler = dyn Fn(
         String,
         String,
-    ) -> Pin<
-        Box<dyn Future<Output = Result<crate::ai::PlaybookAiDecision, String>> + Send>,
-    > + Send
+    ) -> Pin<Box<dyn Future<Output = Result<crate::ai::PlaybookAiDecision, String>> + Send>>
+    + Send
     + Sync;
 
 /// Outcome of running a Playbook over one host's interactive shell. `ok` is true
@@ -2901,6 +2936,7 @@ async fn run_playbook_async(
         x11_forwarding: None,
         socks_proxy: request.socks_proxy,
         compression: request.compression,
+        old_protocols: request.old_protocols,
         remote_forward_targets: None,
         bridge_tasks: None,
     })
@@ -2968,16 +3004,16 @@ async fn run_playbook_on_session(
                     .map(|duration| duration.as_nanos())
                     .unwrap_or_default();
                 let marker = format!("__KKTERM_AI_BOUNDARY_{index}_{nonce}__");
-                let marker_command = format!(
-                    "printf '__KKTERM_AI_BOUNDARY_%s_%s__\\n' '{index}' '{nonce}'"
-                );
+                let marker_command =
+                    format!("printf '__KKTERM_AI_BOUNDARY_%s_%s__\\n' '{index}' '{nonce}'");
                 channel
                     .data(format!("{marker_command}\r").as_bytes())
                     .await
                     .map_err(|error| format!("failed to delimit AI node input: {error}"))?;
                 let timeout =
                     Duration::from_secs(step.timeout_seconds.unwrap_or(default_timeout_seconds));
-                if !wait_for_substring(&mut channel, &marker, timeout, &mut output, on_chunk).await {
+                if !wait_for_substring(&mut channel, &marker, timeout, &mut output, on_chunk).await
+                {
                     return Ok(PlaybookOutcome {
                         ok: false,
                         failure: Some(format!(
@@ -3083,8 +3119,7 @@ async fn run_playbook_on_session(
         let Some(pattern) = step.expect.as_deref().filter(|pattern| !pattern.is_empty()) else {
             continue;
         };
-        let timeout =
-            Duration::from_secs(step.timeout_seconds.unwrap_or(default_timeout_seconds));
+        let timeout = Duration::from_secs(step.timeout_seconds.unwrap_or(default_timeout_seconds));
         if !wait_for_substring(&mut channel, pattern, timeout, &mut output, on_chunk).await {
             return Ok(PlaybookOutcome {
                 ok: false,
@@ -3095,7 +3130,12 @@ async fn run_playbook_on_session(
                 output,
             });
         }
-        last_node_output = Some(output.get(last_node_start..).unwrap_or_default().to_string());
+        last_node_output = Some(
+            output
+                .get(last_node_start..)
+                .unwrap_or_default()
+                .to_string(),
+        );
     }
 
     let _ = channel.eof().await;
@@ -3176,7 +3216,10 @@ mod tests {
         generate_test_ssh_key(&path, "correct-passphrase");
 
         let missing = load_secret_key(&path, None).expect_err("encrypted key needs a passphrase");
-        assert!(should_prompt_for_key_passphrase(&missing.to_string(), false));
+        assert!(should_prompt_for_key_passphrase(
+            &missing.to_string(),
+            false
+        ));
         let wrong = load_secret_key(&path, Some("wrong-passphrase"))
             .expect_err("wrong passphrase cannot decrypt key");
         assert!(should_prompt_for_key_passphrase(&wrong.to_string(), true));
@@ -3256,14 +3299,14 @@ mod tests {
 
     #[test]
     fn native_ssh_client_does_not_timeout_idle_terminal_sessions() {
-        let config = native_ssh_client_config(true);
+        let config = native_ssh_client_config(true, false);
 
         assert_eq!(config.inactivity_timeout, None);
     }
 
     #[test]
     fn native_ssh_client_sends_keepalives_to_detect_dead_idle_links() {
-        let config = native_ssh_client_config(true);
+        let config = native_ssh_client_config(true, false);
 
         // Without keepalives an idle session behind a NAT/firewall freezes:
         // the link dies silently, input is swallowed, yet the session never
@@ -3281,7 +3324,7 @@ mod tests {
         // `ssh -XC` parity: with compression on, zlib must outrank `none` in the
         // client's preference list, otherwise negotiation settles on `none` and
         // X11 traffic travels uncompressed (the slow path users reported).
-        let config = native_ssh_client_config(true);
+        let config = native_ssh_client_config(true, false);
         let order: Vec<&str> = config
             .preferred
             .compression
@@ -3304,7 +3347,7 @@ mod tests {
 
     #[test]
     fn disabling_compression_keeps_none_first() {
-        let config = native_ssh_client_config(false);
+        let config = native_ssh_client_config(false, false);
         let first = config
             .preferred
             .compression
@@ -3316,6 +3359,47 @@ mod tests {
             Some("none"),
             "with compression off the default order (none first) must be kept"
         );
+    }
+
+    #[test]
+    fn old_protocols_are_not_advertised_by_default() {
+        let config = native_ssh_client_config(true, false);
+        let order: Vec<&str> = config
+            .preferred
+            .kex
+            .iter()
+            .map(|name| name.as_ref())
+            .collect();
+
+        assert!(!order.contains(&"diffie-hellman-group14-sha1"));
+        assert!(!order.contains(&"diffie-hellman-group-exchange-sha1"));
+        assert!(!order.contains(&"diffie-hellman-group1-sha1"));
+    }
+
+    #[test]
+    fn legacy_mode_appends_sha1_kex_after_modern_defaults() {
+        let config = native_ssh_client_config(true, true);
+        let order: Vec<&str> = config
+            .preferred
+            .kex
+            .iter()
+            .map(|name| name.as_ref())
+            .collect();
+        let modern = order
+            .iter()
+            .position(|name| *name == "diffie-hellman-group14-sha256")
+            .expect("modern group14 sha256 stays advertised");
+        let legacy = order
+            .iter()
+            .position(|name| *name == "diffie-hellman-group14-sha1")
+            .expect("legacy group14 sha1 is advertised only in legacy mode");
+
+        assert!(
+            modern < legacy,
+            "legacy KEX must not outrank modern KEX: {order:?}"
+        );
+        assert!(order.contains(&"diffie-hellman-group-exchange-sha1"));
+        assert!(order.contains(&"diffie-hellman-group1-sha1"));
     }
 
     #[test]
@@ -3715,6 +3799,7 @@ mod tests {
             x11_forwarding: None,
             socks_proxy: None,
             compression: true,
+            old_protocols: false,
             remote_forward_targets: None,
             bridge_tasks: None,
         })

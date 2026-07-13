@@ -2351,7 +2351,11 @@
     "removeHyperlinkRule": "Remove rule {{pattern}}",
     "hyperlinkRuleIncomplete": "Each hyperlink rule needs both a pattern and a URL.",
     "hyperlinkRuleInvalidPattern": "The pattern \"{{pattern}}\" is not a valid regular expression.",
-    "hyperlinkRuleUrlInvalid": "Hyperlink rule URLs must start with http:// or https://."
+    "hyperlinkRuleUrlInvalid": "Hyperlink rule URLs must start with http:// or https://.",
+    "sshOldProtocols": "Old protocol support",
+    "sshOldProtocolsOff": "Off",
+    "sshOldProtocolsLegacy": "Legacy SHA-1 KEX",
+    "sshOldProtocolsHint": "Off by default. Enable only for trusted older SSH servers that cannot negotiate modern key exchange algorithms."
   },
   "connections": {
     "title": "Connections",
@@ -2689,7 +2693,11 @@
     "fileViewPathPlaceholder": "Select a file to view",
     "fileViewPickerTitle": "Select a file to view",
     "fileViewOpenExternal": "Open in external editor",
-    "fileViewOpenExternalHint": "Open this Document Connection with the operating system's default app instead of creating a KKTerm tab."
+    "fileViewOpenExternalHint": "Open this Document Connection with the operating system's default app instead of creating a KKTerm tab.",
+    "sshOldProtocols": "Old protocols",
+    "importSshConfig": "Import .ssh/config",
+    "sshConfigFile": "SSH config",
+    "importSshConfigEmpty": "No importable SSH Host entries were found in the selected config file."
   },
   "terminal": {
     "openSftp": "Open SFTP browser",

@@ -9,9 +9,9 @@ import {
   save as saveDialog,
 } from "@tauri-apps/plugin-dialog";
 import type { ConfirmDialogOptions } from "@tauri-apps/plugin-dialog";
-import { readFile, writeFile, writeTextFile } from "@tauri-apps/plugin-fs";
+import { exists, readFile, writeFile, writeTextFile } from "@tauri-apps/plugin-fs";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { documentDir } from "@tauri-apps/api/path";
+import { documentDir, homeDir } from "@tauri-apps/api/path";
 import { isMacPlatform, isWindowsPlatform } from "./platform";
 import i18next from "../i18n/config";
 import {
@@ -163,6 +163,7 @@ export interface StartTerminalSessionRequest {
   sshSocksProxySecretOwnerId?: string;
   sshSocksProxyInheritDefaults?: boolean;
   sshCompression?: boolean;
+  sshOldProtocols?: boolean;
   authMethod?: "keyFile" | "password" | "agent";
   secretOwnerId?: string;
   passphraseOwnerId?: string;
@@ -262,6 +263,7 @@ export interface StartSftpSessionRequest {
   passphraseOwnerId?: string;
   path?: string;
   sshCompression?: boolean;
+  sshOldProtocols?: boolean;
 }
 
 export interface SftpDirectoryEntry {
@@ -1713,6 +1715,7 @@ type CommandMap = {
         sshSocksProxySecretOwnerId?: string;
         sshSocksProxyInheritDefaults?: boolean;
         sshCompression?: boolean;
+  sshOldProtocols?: boolean;
       };
     };
     result: TransferSshPublicKeyResult;
@@ -2021,7 +2024,7 @@ type CommandMap = {
     result: ScanNetworkResponse;
   };
   inspect_ssh_host_key: {
-    args: { request: { host: string; port?: number; sshSocksProxy?: string; sshSocksProxyUsername?: string; sshSocksProxySecretOwnerId?: string } };
+    args: { request: { host: string; port?: number; sshSocksProxy?: string; sshSocksProxyUsername?: string; sshSocksProxySecretOwnerId?: string; sshOldProtocols?: boolean } };
     result: SshHostKeyPreview;
   };
   trust_ssh_host_key: {
@@ -2144,6 +2147,7 @@ type CommandMap = {
   sshSocksProxySecretOwnerId?: string;
   sshSocksProxyInheritDefaults?: boolean;
         sshCompression?: boolean;
+  sshOldProtocols?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
         passphraseOwnerId?: string;
@@ -2164,6 +2168,7 @@ type CommandMap = {
   sshSocksProxySecretOwnerId?: string;
   sshSocksProxyInheritDefaults?: boolean;
         sshCompression?: boolean;
+  sshOldProtocols?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
         passphraseOwnerId?: string;
@@ -2186,6 +2191,7 @@ type CommandMap = {
   sshSocksProxySecretOwnerId?: string;
   sshSocksProxyInheritDefaults?: boolean;
         sshCompression?: boolean;
+  sshOldProtocols?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
         passphraseOwnerId?: string;
@@ -2208,6 +2214,7 @@ type CommandMap = {
   sshSocksProxySecretOwnerId?: string;
   sshSocksProxyInheritDefaults?: boolean;
         sshCompression?: boolean;
+  sshOldProtocols?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
         passphraseOwnerId?: string;
@@ -2229,6 +2236,7 @@ type CommandMap = {
   sshSocksProxySecretOwnerId?: string;
   sshSocksProxyInheritDefaults?: boolean;
         sshCompression?: boolean;
+  sshOldProtocols?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
         passphraseOwnerId?: string;
@@ -2251,6 +2259,7 @@ type CommandMap = {
   sshSocksProxySecretOwnerId?: string;
   sshSocksProxyInheritDefaults?: boolean;
         sshCompression?: boolean;
+  sshOldProtocols?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
         passphraseOwnerId?: string;
@@ -2273,6 +2282,7 @@ type CommandMap = {
   sshSocksProxySecretOwnerId?: string;
   sshSocksProxyInheritDefaults?: boolean;
         sshCompression?: boolean;
+  sshOldProtocols?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
         passphraseOwnerId?: string;
@@ -2310,6 +2320,7 @@ type CommandMap = {
   sshSocksProxySecretOwnerId?: string;
   sshSocksProxyInheritDefaults?: boolean;
         sshCompression?: boolean;
+  sshOldProtocols?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
         passphraseOwnerId?: string;
@@ -2330,6 +2341,7 @@ type CommandMap = {
         sshSocksProxySecretOwnerId?: string;
         sshSocksProxyInheritDefaults?: boolean;
         sshCompression?: boolean;
+  sshOldProtocols?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
         passphraseOwnerId?: string;
@@ -2351,6 +2363,7 @@ type CommandMap = {
   sshSocksProxySecretOwnerId?: string;
   sshSocksProxyInheritDefaults?: boolean;
         sshCompression?: boolean;
+  sshOldProtocols?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
         passphraseOwnerId?: string;
@@ -2372,6 +2385,7 @@ type CommandMap = {
         sshSocksProxySecretOwnerId?: string;
         sshSocksProxyInheritDefaults?: boolean;
         sshCompression?: boolean;
+  sshOldProtocols?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
         passphraseOwnerId?: string;
@@ -2398,6 +2412,7 @@ type CommandMap = {
   sshSocksProxySecretOwnerId?: string;
   sshSocksProxyInheritDefaults?: boolean;
         sshCompression?: boolean;
+  sshOldProtocols?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
         passphraseOwnerId?: string;
@@ -2897,6 +2912,10 @@ type CommandMap = {
     result: null;
   };
   send_rdp_client_text: {
+    args: { request: RdpClientTextRequest };
+    result: null;
+  };
+  send_rdp_client_clipboard_text: {
     args: { request: RdpClientTextRequest };
     result: null;
   };
@@ -3542,6 +3561,38 @@ export async function selectKeyFile(defaultPath?: string) {
   });
 
   return typeof selectedPath === "string" ? selectedPath : null;
+}
+
+export async function selectAndReadSshConfigFile(): Promise<{ path: string; content: string } | null> {
+  if (!isTauriRuntime()) {
+    return null;
+  }
+
+  const home = await homeDir().catch(() => "");
+  const separator = isWindowsPlatform() ? "\\" : "/";
+  const defaultPath = home ? `${home.replace(/[\\/]$/, "")}${separator}.ssh${separator}config` : undefined;
+  let path = defaultPath && await exists(defaultPath).catch(() => false) ? defaultPath : undefined;
+
+  if (!path) {
+    const selectedPath = await openDialog({
+      defaultPath: home || undefined,
+      directory: false,
+      multiple: false,
+      title: i18next.t("connections.importSshConfig"),
+      filters: [
+        { name: i18next.t("connections.sshConfigFile"), extensions: ["config", "txt"] },
+        { name: i18next.t("common.allFilesFilter"), extensions: ["*"] },
+      ],
+    });
+    path = typeof selectedPath === "string" ? selectedPath : undefined;
+  }
+
+  if (!path) {
+    return null;
+  }
+
+  const content = new TextDecoder().decode(await readFile(path));
+  return { path, content };
 }
 
 export async function selectFileViewPath(options: { title: string; defaultPath?: string }) {

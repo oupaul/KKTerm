@@ -113,6 +113,7 @@ export const defaultSshSettings: SshSettings = {
   defaultKeyPath: "",
   defaultProxyJump: "",
   defaultSshCompression: "fast",
+  defaultSshOldProtocols: "off",
   bufferLines: 5000,
   defaultTransparency: 50,
   defaultUseTmuxSessions: true,

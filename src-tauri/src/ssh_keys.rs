@@ -35,6 +35,8 @@ pub struct TransferSshPublicKeyRequest {
     pub(crate) ssh_socks_proxy_username: Option<String>,
     pub(crate) ssh_socks_proxy_secret_owner_id: Option<String>,
     pub(crate) ssh_compression: Option<bool>,
+    #[serde(default)]
+    pub(crate) ssh_old_protocols: Option<bool>,
 }
 
 #[derive(Serialize)]
@@ -132,6 +134,7 @@ pub fn transfer_public_key(
         timeout_seconds: Some(30),
         socks_proxy: request.ssh_socks_proxy,
         compression: request.ssh_compression.unwrap_or(true),
+        old_protocols: request.ssh_old_protocols.unwrap_or(false),
     })?;
 
     Ok(TransferSshPublicKeyResult {
