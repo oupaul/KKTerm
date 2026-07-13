@@ -3349,6 +3349,15 @@ fn send_rdp_client_clipboard_text(
 
 #[cfg(not(target_os = "windows"))]
 #[tauri::command]
+fn paste_rdp_client_clipboard(
+    rdp_sessions: tauri::State<'_, rdp_client::RdpClientSessionManager>,
+    request: rdp_client::RdpClientSimpleRequest,
+) -> Result<(), String> {
+    rdp_sessions.paste_clipboard(request)
+}
+
+#[cfg(not(target_os = "windows"))]
+#[tauri::command]
 fn send_rdp_client_ctrl_alt_delete(
     rdp_sessions: tauri::State<'_, rdp_client::RdpClientSessionManager>,
     request: rdp_client::RdpClientSimpleRequest,
@@ -4026,6 +4035,8 @@ pub fn run() {
             send_rdp_client_text,
             #[cfg(not(target_os = "windows"))]
             send_rdp_client_clipboard_text,
+            #[cfg(not(target_os = "windows"))]
+            paste_rdp_client_clipboard,
             #[cfg(not(target_os = "windows"))]
             send_rdp_client_ctrl_alt_delete,
             #[cfg(not(target_os = "windows"))]

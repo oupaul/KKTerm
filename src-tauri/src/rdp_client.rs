@@ -131,6 +131,7 @@ enum RdpInput {
     /// events — layout- and IME-independent, unlike scancodes.
     Text(String),
     LocalClipboardText(String),
+    PasteLocalClipboardText(String),
     CtrlAltDelete,
 }
 
@@ -420,6 +421,30 @@ impl RdpClientSessionManager {
             &request.session_id,
             RdpInput::LocalClipboardText(request.text),
         )
+    }
+
+    pub fn paste_clipboard(&self, request: RdpClientSimpleRequest) -> Result<(), String> {
+        let text = read_system_clipboard_text().map_err(|error| {
+            rdp_debug(
+                "ironrdp.clipboard.native_read_error",
+                &json!({
+                    "sessionId": request.session_id,
+                    "error": error,
+                }),
+            );
+            error
+        })?;
+        rdp_debug(
+            "ironrdp.clipboard.native_read",
+            &json!({
+                "sessionId": request.session_id,
+                "characterCount": text.chars().count(),
+            }),
+        );
+        if text.is_empty() {
+            return Ok(());
+        }
+        self.queue_input(&request.session_id, RdpInput::PasteLocalClipboardText(text))
     }
 
     pub fn send_ctrl_alt_delete(&self, request: RdpClientSimpleRequest) -> Result<(), String> {
@@ -1364,6 +1389,8 @@ struct CanvasCliprdrBackend {
     local_text: Option<String>,
     pending_local_format_response: Option<OwnedFormatDataResponse>,
     pending_remote_text_request: bool,
+    paste_after_format_list: bool,
+    pending_remote_paste_chord: bool,
 }
 
 impl CanvasCliprdrBackend {
@@ -1375,6 +1402,8 @@ impl CanvasCliprdrBackend {
             local_text: None,
             pending_local_format_response: None,
             pending_remote_text_request: false,
+            paste_after_format_list: false,
+            pending_remote_paste_chord: false,
         }
     }
 }
@@ -1398,9 +1427,28 @@ impl CliprdrBackend for CanvasCliprdrBackend {
         ClipboardGeneralCapabilityFlags::empty()
     }
 
-    fn on_ready(&mut self) {}
+    fn on_ready(&mut self) {
+        rdp_debug(
+            "ironrdp.clipboard.ready",
+            &json!({ "sessionId": self.session_id }),
+        );
+    }
 
     fn on_request_format_list(&mut self) {}
+
+    fn on_format_list_response(&mut self, ok: bool) {
+        if self.paste_after_format_list {
+            self.pending_remote_paste_chord = ok;
+            self.paste_after_format_list = false;
+        }
+        rdp_debug(
+            "ironrdp.clipboard.format_list_response",
+            &json!({
+                "sessionId": self.session_id,
+                "accepted": ok,
+            }),
+        );
+    }
 
     fn on_process_negotiated_capabilities(
         &mut self,
@@ -1420,6 +1468,15 @@ impl CliprdrBackend for CanvasCliprdrBackend {
     }
 
     fn on_format_data_request(&mut self, request: FormatDataRequest) {
+        rdp_debug(
+            "ironrdp.clipboard.format_data_request",
+            &json!({
+                "sessionId": self.session_id,
+                "formatId": request.format.0,
+                "hasLocalText": self.local_text.is_some(),
+                "characterCount": self.local_text.as_deref().map(|text| text.chars().count()),
+            }),
+        );
         self.pending_local_format_response =
             Some(if request.format == ClipboardFormatId::CF_UNICODETEXT {
                 utf16_clipboard_response(self.local_text.as_deref().unwrap_or(""))
@@ -1522,6 +1579,7 @@ fn spawn_rdp_event_loop(
                     match input {
                         Some(rdp_input) => {
                             if let Err(e) = send_rdp_input(
+                                &session_id,
                                 &mut framed,
                                 &mut active_stage,
                                 &mut input_db,
@@ -1631,8 +1689,16 @@ fn spawn_rdp_event_loop(
                             if should_break {
                                 break;
                             }
-                            if let Err(e) = flush_pending_clipboard_response(&mut framed, &mut active_stage).await {
+                            if let Err(e) = flush_pending_clipboard_response(&session_id, &mut framed, &mut active_stage).await {
                                 eprintln!("[rdp {session_id}] clipboard response error: {e}");
+                            }
+                            if let Err(e) = flush_pending_remote_paste_chord(
+                                &session_id,
+                                &mut framed,
+                                &mut active_stage,
+                                &mut input_db,
+                            ).await {
+                                eprintln!("[rdp {session_id}] remote paste chord error: {e}");
                             }
                             if let Err(e) = flush_pending_clipboard_request(&mut framed, &mut active_stage).await {
                                 eprintln!("[rdp {session_id}] clipboard request error: {e}");
@@ -1700,6 +1766,7 @@ fn mouse_button_for_bit(bit: u8) -> ironrdp::input::MouseButton {
 /// PDU to the server. `last_button_mask` carries the previous primary-button mask
 /// so press/release can be derived from the absolute mask the frontend sends.
 async fn send_rdp_input(
+    session_id: &str,
     framed: &mut UpgradedFramed,
     active_stage: &mut ironrdp::session::ActiveStage,
     db: &mut ironrdp::input::Database,
@@ -1753,19 +1820,11 @@ async fn send_rdp_input(
             }
         }
         RdpInput::LocalClipboardText(text) => {
-            let cliprdr = active_stage
-                .get_svc_processor_mut::<CliprdrClient>()
-                .ok_or_else(|| "RDP clipboard channel is not available".to_string())?;
-            if let Some(backend) = cliprdr.downcast_backend_mut::<CanvasCliprdrBackend>() {
-                backend.local_text = Some(text);
-            }
-            let messages = cliprdr
-                .initiate_copy(&[ClipboardFormat::new(ClipboardFormatId::CF_UNICODETEXT)])
-                .map_err(|e| format!("failed to advertise local clipboard to RDP: {e}"))?;
-            let bytes = active_stage
-                .process_svc_processor_messages::<CliprdrClient>(messages)
-                .map_err(|e| format!("failed to encode RDP clipboard update: {e}"))?;
-            write_rdp_frame(framed, &bytes).await?;
+            advertise_local_clipboard_text(session_id, framed, active_stage, text, false).await?;
+            return Ok(());
+        }
+        RdpInput::PasteLocalClipboardText(text) => {
+            advertise_local_clipboard_text(session_id, framed, active_stage, text, true).await?;
             return Ok(());
         }
         RdpInput::CtrlAltDelete => {
@@ -1793,6 +1852,75 @@ async fn send_rdp_input(
     let bytes =
         ironrdp::core::encode_vec(&pdu).map_err(|e| format!("failed to encode RDP input: {e}"))?;
     write_rdp_frame(framed, &bytes).await?;
+    Ok(())
+}
+
+async fn advertise_local_clipboard_text(
+    session_id: &str,
+    framed: &mut UpgradedFramed,
+    active_stage: &mut ironrdp::session::ActiveStage,
+    text: String,
+    paste_after_format_list: bool,
+) -> Result<(), String> {
+    let character_count = text.chars().count();
+    let cliprdr = active_stage
+        .get_svc_processor_mut::<CliprdrClient>()
+        .ok_or_else(|| "RDP clipboard channel is not available".to_string())?;
+    if let Some(backend) = cliprdr.downcast_backend_mut::<CanvasCliprdrBackend>() {
+        backend.local_text = Some(text);
+        backend.paste_after_format_list = paste_after_format_list;
+        backend.pending_remote_paste_chord = false;
+    }
+    let messages = cliprdr
+        .initiate_copy(&[ClipboardFormat::new(ClipboardFormatId::CF_UNICODETEXT)])
+        .map_err(|e| format!("failed to advertise local clipboard to RDP: {e}"))?;
+    let bytes = active_stage
+        .process_svc_processor_messages::<CliprdrClient>(messages)
+        .map_err(|e| format!("failed to encode RDP clipboard update: {e}"))?;
+    write_rdp_frame(framed, &bytes).await?;
+    rdp_debug(
+        "ironrdp.clipboard.format_list_sent",
+        &json!({
+            "sessionId": session_id,
+            "characterCount": character_count,
+        }),
+    );
+    Ok(())
+}
+
+async fn flush_pending_remote_paste_chord(
+    session_id: &str,
+    framed: &mut UpgradedFramed,
+    active_stage: &mut ironrdp::session::ActiveStage,
+    db: &mut ironrdp::input::Database,
+) -> Result<(), String> {
+    use ironrdp::input::{Operation, Scancode};
+
+    let should_paste = active_stage
+        .get_svc_processor_mut::<CliprdrClient>()
+        .and_then(|cliprdr| cliprdr.downcast_backend_mut::<CanvasCliprdrBackend>())
+        .map(|backend| std::mem::take(&mut backend.pending_remote_paste_chord))
+        .unwrap_or(false);
+    if !should_paste {
+        return Ok(());
+    }
+    let ctrl = Scancode::from_u16(0x001D);
+    let v = Scancode::from_u16(0x002F);
+    let events = db.apply([
+        Operation::KeyPressed(ctrl),
+        Operation::KeyPressed(v),
+        Operation::KeyReleased(v),
+        Operation::KeyReleased(ctrl),
+    ]);
+    let pdu = ironrdp::pdu::input::fast_path::FastPathInput::new(events.to_vec())
+        .map_err(|e| format!("failed to build remote paste input PDU: {e}"))?;
+    let bytes = ironrdp::core::encode_vec(&pdu)
+        .map_err(|e| format!("failed to encode remote paste input: {e}"))?;
+    write_rdp_frame(framed, &bytes).await?;
+    rdp_debug(
+        "ironrdp.clipboard.remote_paste_sent",
+        &json!({ "sessionId": session_id }),
+    );
     Ok(())
 }
 
@@ -1834,6 +1962,7 @@ async fn flush_pending_clipboard_request(
 }
 
 async fn flush_pending_clipboard_response(
+    session_id: &str,
     framed: &mut UpgradedFramed,
     active_stage: &mut ironrdp::session::ActiveStage,
 ) -> Result<(), String> {
@@ -1847,13 +1976,40 @@ async fn flush_pending_clipboard_response(
     let Some(response) = response else {
         return Ok(());
     };
+    let response_bytes = response.data().len();
     let messages = cliprdr
         .submit_format_data(response)
         .map_err(|e| format!("failed to submit local clipboard data to RDP: {e}"))?;
     let bytes = active_stage
         .process_svc_processor_messages::<CliprdrClient>(messages)
         .map_err(|e| format!("failed to encode RDP clipboard response: {e}"))?;
-    write_rdp_frame(framed, &bytes).await
+    write_rdp_frame(framed, &bytes).await?;
+    rdp_debug(
+        "ironrdp.clipboard.format_data_response_sent",
+        &json!({
+            "sessionId": session_id,
+            "responseBytes": response_bytes,
+        }),
+    );
+    Ok(())
+}
+
+#[cfg(target_os = "macos")]
+fn read_system_clipboard_text() -> Result<String, String> {
+    use objc2_app_kit::{NSPasteboard, NSPasteboardTypeString};
+
+    // SAFETY: NSPasteboardTypeString is an AppKit-provided process-lifetime
+    // NSString constant.
+    let string_type = unsafe { NSPasteboardTypeString };
+    NSPasteboard::generalPasteboard()
+        .stringForType(string_type)
+        .map(|text| text.to_string())
+        .ok_or_else(|| "macOS clipboard does not contain plain text".to_string())
+}
+
+#[cfg(not(target_os = "macos"))]
+fn read_system_clipboard_text() -> Result<String, String> {
+    Err("native RDP clipboard paste is only available on macOS".to_string())
 }
 
 // ── Cursor stub (Task 5 fills in real pointer decoding) ───────────────────────

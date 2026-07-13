@@ -119,6 +119,9 @@ objc2-app-kit = { version = "0.3", default-features = false, features = [
     "NSImageRep",
     "NSBitmapImageRep",
     "NSGraphics",
+    # Native macOS text paste for the IronRDP canvas. WKWebView may deliver
+    # Command+V without exposing usable ClipboardEvent data.
+    "NSPasteboard",
 ] }
 objc2-foundation = { version = "0.3", default-features = false, features = [
     "std",
