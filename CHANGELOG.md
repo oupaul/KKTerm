@@ -3,6 +3,68 @@
 All notable changes to KKTerm are documented here.
 
 ## Direct Downloads
+* 💻 [Download for Windows (64-bit)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.121/kkterm-0.1.121-windows-x64-setup.exe)
+* 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.121/kkterm-0.1.121-windows-arm64-setup.exe)
+
+## Highlights
+- **RDP Clipboard (macOS/Linux canvas):** Pasting now sends your **local clipboard contents** into the **remote Session** again—no more “nothing happens” after Ctrl/Cmd+V. (IronRDP-based)
+- **RDP stability & focus:** Improved handling for **Window/overlay focus** and more reliable **HWND realization**, plus better diagnostics when the canvas focus gets temperamental.
+- **Session workflow polish:** Preserved **SSH forwards** when changing **tmux** panes; improved **RDP scaling** for Windows text size.
+
+## New
+- **IronRDP CLIPRDR clipboard redirection for canvas RDP** (https://github.com/ryantsai/KKTerm/pull/584)
+- **Legacy SSH key-exchange support for older servers** (https://github.com/ryantsai/KKTerm/pull/592)
+- **Server room partition wall objects** (https://github.com/ryantsai/KKTerm/pull/594)
+
+## Improved
+- **RDP input handling & diagnostics for macOS/Linux** (https://github.com/ryantsai/KKTerm/pull/590)
+- **Retry URL webview HWND realization** to avoid transient failures (https://github.com/ryantsai/KKTerm/pull/590)
+- **Fix RDP overlay handling for connection import dialog** (https://github.com/ryantsai/KKTerm/pull/589)
+- **RDP ActiveX focus repair + canvas focus diagnostics** (https://github.com/ryantsai/KKTerm/pull/591)
+- **Honor legacy SSH protocol choice in IT Ops batch runs** (https://github.com/ryantsai/KKTerm/pull/592)
+- **Preserve SSH forwards after tmux pane changes** (https://github.com/ryantsai/KKTerm/pull/586)
+
+## Fixed
+- **Paste local clipboard into remote on macOS/Linux canvas RDP** — credited to @ryantsai (https://github.com/ryantsai/KKTerm/pull/582)
+  - *Sysadmin humor:* Ctrl/Cmd+V should now behave like it’s actually plugged into the network, not just “waiting patiently” on the desktop.
+- **Fix RDP scaling with Windows text size** — credited to @ryantsai (https://github.com/ryantsai/KKTerm/pull/585)
+- **Fix RDP overlay handling for connection import dialog** — credited to @ryantsai (https://github.com/ryantsai/KKTerm/pull/589)
+
+## Internal
+- Bumped/updated dependencies and code quality improvements (rusqlite, sha2, aes-gcm, and more), plus installer-related adjustments and refactors in RDP/SSH-related modules.  
+- Merge commits included in this release: #582–#594 (see changelog link: https://github.com/ryantsai/KKTerm/compare/v0.1.120...v0.1.121)
+
+---
+
+## Highlights（重點）
+- **RDP 剪貼簿（macOS/Linux 的 Canvas）**：現在重新把**本機剪貼簿內容**送到**遠端 Session** 了；不再出現按下 Ctrl/Cmd+V 後**什麼都沒發生**的情況。（基於 IronRDP）
+- **RDP 穩定性與焦點**：改善 **Window/overlay 焦點**處理、讓 **HWND realization** 更可靠，並加強在 Canvas 焦點變得難搞時的**診斷資訊**。
+- **工作流程微調**：tmux 分割視窗切換後會保留 **SSH forwards**；也修正了 Windows 字體大小導致的 **RDP 縮放**問題。
+
+## New（新增）
+- **IronRDP CLIPRDR 剪貼簿重新導向（Canvas RDP）**（https://github.com/ryantsai/KKTerm/pull/584）
+- **支援較舊伺服器的 Legacy SSH key-exchange**（https://github.com/ryantsai/KKTerm/pull/592）
+- **伺服器機房分隔牆物件**（https://github.com/ryantsai/KKTerm/pull/594）
+
+## Improved（改善）
+- **macOS/Linux 的 RDP 輸入處理與診斷**（https://github.com/ryantsai/KKTerm/pull/590）
+- **重試 URL webview 的 HWND realization**，避免短暫失敗（https://github.com/ryantsai/KKTerm/pull/590）
+- **修正連線匯入對話框的 RDP overlay 處理**（https://github.com/ryantsai/KKTerm/pull/589）
+- **RDP ActiveX 焦點修復 + Canvas 焦點診斷**（https://github.com/ryantsai/KKTerm/pull/591）
+- **IT Ops 批次作業中遵守 Legacy SSH 協定選項**（https://github.com/ryantsai/KKTerm/pull/592）
+- **tmux 分割視窗切換後保留 SSH forwards**（https://github.com/ryantsai/KKTerm/pull/586）
+
+## Fixed（修正）
+- **macOS/Linux Canvas RDP：把本機剪貼簿貼到遠端** — 感謝 @ryantsai（https://github.com/ryantsai/KKTerm/pull/582）
+  - *小小系統工程師冷笑話：*現在 Ctrl/Cmd+V 真的會把內容送上網，不再只是「在桌面上乖乖等著」。  
+- **修正 Windows 字體大小造成的 RDP 縮放** — 感謝 @ryantsai（https://github.com/ryantsai/KKTerm/pull/585）
+- **修正連線匯入對話框的 RDP overlay 處理** — 感謝 @ryantsai（https://github.com/ryantsai/KKTerm/pull/589）
+
+## Internal（內部）
+- 更新/調整相依套件與程式碼品質（rusqlite、sha2、aes-gcm 等），以及在 RDP/SSH 相關模組中的 refactor 與安裝器調整。  
+- 本版包含的 merge commit：#582–#594（完整差異見：https://github.com/ryantsai/KKTerm/compare/v0.1.120...v0.1.121）
+
+## Direct Downloads
 * 💻 [Download for Windows (64-bit)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.120/kkterm-0.1.120-windows-x64-setup.exe)
 * 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.120/kkterm-0.1.120-windows-arm64-setup.exe)
 
