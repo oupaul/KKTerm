@@ -3344,6 +3344,7 @@ mod tests {
             passphrase_owner_id: None,
             path: None,
             ssh_compression: None,
+            ssh_old_protocols: None,
         }
     }
 }

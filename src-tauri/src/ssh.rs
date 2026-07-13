@@ -589,6 +589,7 @@ pub fn start_native_terminal(
         x11_forwarding: request.x11_forwarding,
         socks_proxy: request.socks_proxy,
         compression: request.compression,
+        old_protocols: request.old_protocols,
     };
     ssh_debug(
         "terminal.start",
@@ -3939,6 +3940,7 @@ mod tests {
             x11_forwarding: None,
             socks_proxy: None,
             compression: true,
+            old_protocols: false,
         }
     }
 
