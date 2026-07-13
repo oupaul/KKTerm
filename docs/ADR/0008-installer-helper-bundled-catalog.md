@@ -99,8 +99,9 @@ and should be updated to match when the user-visible set changes.
 
 When adding a package, look for **every** source we can support so users
 get a primary provider plus fallbacks (the provider selector — option
-`provider` — surfaces `downloadProvider` and `chocolateyProvider`
-alternatives). Check, in this order, and wire up whichever exist:
+`provider` — surfaces `downloadProvider`, `chocolateyProvider`, and the
+supported `npmProvider` alternative). Check, in this order, and wire up
+whichever exist:
 
 1. **winget** (`provider: { kind: "winget", id }`) — the default for
    most Windows tools. Find the id at <https://winstall.app/> or
@@ -117,6 +118,10 @@ alternatives). Check, in this order, and wire up whichever exist:
      with `assetPattern`, `layout` (`zip` / `exeInstaller` / `msi`), and
      an optional `pathSubdir` pointing at the nested executable directory
      (supports a `{tag}` placeholder).
+4. **npm** (`npmProvider`) — retain a verified global npm package as an
+   alternative when a tool has moved to winget as its Windows default. The npm
+   selection replaces the winget prerequisite with `node-bundle`; existing npm
+   installs remain npm-managed for detection, updates, and uninstall.
 
 Worked example — **Bun** (`development` section) exposes all three:
 winget `Oven-sh.Bun`, Chocolatey `bun`, and a `githubRelease` fallback

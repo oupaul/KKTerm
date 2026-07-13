@@ -743,33 +743,38 @@
     {
       "id": "claude-code-cli",
       "name": "Claude Code CLI",
-      "descriptionEn": "Anthropic's official CLI coding agent. Requires Node.",
+      "descriptionEn": "Anthropic's official CLI coding agent.",
       "category": "ai",
       "icon": "Bot",
       "needs": [
-        "node-bundle"
+        "winget"
       ],
       "provider": {
+        "kind": "winget",
+        "id": "Anthropic.ClaudeCode"
+      },
+      "npmProvider": {
         "kind": "npm",
         "pkg": "@anthropic-ai/claude-code"
       },
       "options": [
+        "provider",
         "version"
       ],
       "descriptionLocales": {
-        "es-MX": "Agente de codificación CLI oficial de Anthropic. Requiere Node.",
-        "es": "Agente de codificación CLI oficial de Anthropic. Requiere Node.",
-        "zh-CN": "Anthropic的官方CLI编码代理。需要 Node。",
-        "ko": "Anthropic의 공식 CLI 코딩 에이전트입니다. Node이 필요합니다.",
-        "it": "Agente di codifica CLI ufficiale di Anthropic. Richiede Node.",
-        "zh-TW": "Anthropic 官方 CLI 程式開發代理。需要 Node。",
-        "ja": "Anthropic の公式 CLI コーディング エージェント。 Nodeが必要です。",
-        "vi": "Đại lý mã hóa CLI chính thức của Anthropic. Yêu cầu Node.",
-        "pt-BR": "Agente de codificação CLI oficial do Anthropic. Requer Node.",
-        "de": "Der offizielle CLI-Coding-Agent von Anthropic. Erfordert Node.",
-        "fr": "Agent de codage CLI officiel de Anthropic. Nécessite Node.",
-        "th": "ตัวแทนการเข้ารหัส CLI อย่างเป็นทางการของ Anthropic ต้องใช้ Node",
-        "id": "Agen pengkodean CLI resmi Anthropic. Membutuhkan Node."
+        "es-MX": "Agente de codificación CLI oficial de Anthropic.",
+        "es": "Agente de codificación CLI oficial de Anthropic.",
+        "zh-CN": "Anthropic 的官方 CLI 编码代理。",
+        "ko": "Anthropic의 공식 CLI 코딩 에이전트입니다.",
+        "it": "Agente di codifica CLI ufficiale di Anthropic.",
+        "zh-TW": "Anthropic 官方 CLI 程式開發代理。",
+        "ja": "Anthropic の公式 CLI コーディングエージェント。",
+        "vi": "Tác nhân lập trình CLI chính thức của Anthropic.",
+        "pt-BR": "Agente de codificação CLI oficial da Anthropic.",
+        "de": "Der offizielle CLI-Coding-Agent von Anthropic.",
+        "fr": "Agent de codage CLI officiel d’Anthropic.",
+        "th": "เอเจนต์เขียนโค้ดแบบ CLI อย่างเป็นทางการของ Anthropic",
+        "id": "Agen pengodean CLI resmi Anthropic."
       }
     },
     {

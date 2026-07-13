@@ -2364,7 +2364,9 @@
     "removeHyperlinkRule": "移除規則 {{pattern}}",
     "hyperlinkRuleIncomplete": "每條超連結規則都需要樣式與 URL。",
     "hyperlinkRuleInvalidPattern": "樣式「{{pattern}}」不是有效的正規表示式。",
-    "hyperlinkRuleUrlInvalid": "超連結規則的 URL 必須以 http:// 或 https:// 開頭。"
+    "hyperlinkRuleUrlInvalid": "超連結規則的 URL 必須以 http:// 或 https:// 開頭。",
+    "sshOldProtocols": "舊版協定",
+    "sshOldProtocolsHint": "預設為關閉。僅在信任的舊版伺服器上啟用所有支援的舊版 SSH 相容性演算法。"
   },
   "connections": {
     "title": "連線",
@@ -2618,12 +2620,12 @@
       "back": "返回",
       "chooseSource": "選擇匯入來源",
       "fromFileTitle": "從檔案匯入",
-      "fromFileSubtitle": "CSV、TSV、RDCMan、MobaXterm、PuTTY",
+      "fromFileSubtitle": "CSV、TSV、OpenSSH 設定、RDCMan、MobaXterm、PuTTY",
       "scanTitle": "掃描網路",
       "scanSubtitle": "在範圍內探測開啟的 SSH、Telnet、RDP",
       "chooseFile": "選擇檔案",
       "noFileChosen": "未選擇檔案",
-      "fileFormatsHint": "支援:CSV/TSV/純文字、RDCMan (.rdg)、MobaXterm (.mxtsessions)、PuTTY (.reg)。",
+      "fileFormatsHint": "支援:CSV/TSV/純文字、OpenSSH 設定、RDCMan (.rdg)、MobaXterm (.mxtsessions)、PuTTY (.reg)。",
       "scanTargetLabel": "目標",
       "scanTargetPlaceholder": "192.168.1.0/24、10.0.0.10-10.0.0.50,或單一 IP/主機",
       "scanTargetHint": "對選定連接埠進行輕量 TCP 探測。每次掃描限制 1024 台主機。",
@@ -2705,7 +2707,11 @@
     "fileViewPathPlaceholder": "選擇要檢視的檔案",
     "fileViewPickerTitle": "選擇要檢視的檔案",
     "fileViewOpenExternal": "在外部編輯器中開啟",
-    "fileViewOpenExternalHint": "使用作業系統預設應用程式開啟此文件連線，而不是建立 KKTerm 分頁。"
+    "fileViewOpenExternalHint": "使用作業系統預設應用程式開啟此文件連線，而不是建立 KKTerm 分頁。",
+    "sshOldProtocols": "舊版協定",
+    "importSshConfig": "匯入 .ssh/config",
+    "sshConfigFile": "SSH 設定",
+    "importSshConfigEmpty": "在選取的設定檔中找不到可匯入的 SSH 主機項目。"
   },
   "terminal": {
     "openSftp": "開啟 SFTP 瀏覽器",

@@ -2364,7 +2364,9 @@
     "removeHyperlinkRule": "移除规则 {{pattern}}",
     "hyperlinkRuleIncomplete": "每条超链接规则都需要模式和 URL。",
     "hyperlinkRuleInvalidPattern": "模式“{{pattern}}”不是有效的正则表达式。",
-    "hyperlinkRuleUrlInvalid": "超链接规则的 URL 必须以 http:// 或 https:// 开头。"
+    "hyperlinkRuleUrlInvalid": "超链接规则的 URL 必须以 http:// 或 https:// 开头。",
+    "sshOldProtocols": "旧版协议",
+    "sshOldProtocolsHint": "默认关闭。仅在受信任的旧服务器上启用所有受支持的旧版 SSH 兼容性算法。"
   },
   "connections": {
     "title": "连接",
@@ -2618,12 +2620,12 @@
       "back": "返回",
       "chooseSource": "选择导入来源",
       "fromFileTitle": "从文件导入",
-      "fromFileSubtitle": "CSV、TSV、RDCMan、MobaXterm、PuTTY",
+      "fromFileSubtitle": "CSV、TSV、OpenSSH 配置、RDCMan、MobaXterm、PuTTY",
       "scanTitle": "扫描网络",
       "scanSubtitle": "在范围内探测开放的 SSH、Telnet、RDP",
       "chooseFile": "选择文件",
       "noFileChosen": "未选择文件",
-      "fileFormatsHint": "支持:CSV/TSV/纯文本、RDCMan (.rdg)、MobaXterm (.mxtsessions)、PuTTY (.reg)。",
+      "fileFormatsHint": "支持:CSV/TSV/纯文本、OpenSSH 配置、RDCMan (.rdg)、MobaXterm (.mxtsessions)、PuTTY (.reg)。",
       "scanTargetLabel": "目标",
       "scanTargetPlaceholder": "192.168.1.0/24、10.0.0.10-10.0.0.50,或单个 IP/主机",
       "scanTargetHint": "对所选端口进行轻量 TCP 探测。每次扫描限制 1024 台主机。",
@@ -2705,7 +2707,11 @@
     "fileViewPathPlaceholder": "选择要查看的文件",
     "fileViewPickerTitle": "选择要查看的文件",
     "fileViewOpenExternal": "在外部编辑器中打开",
-    "fileViewOpenExternalHint": "使用操作系统默认应用打开此文档连接，而不是创建 KKTerm 标签页。"
+    "fileViewOpenExternalHint": "使用操作系统默认应用打开此文档连接，而不是创建 KKTerm 标签页。",
+    "sshOldProtocols": "旧版协议",
+    "importSshConfig": "导入 .ssh/config",
+    "sshConfigFile": "SSH 配置",
+    "importSshConfigEmpty": "在所选配置文件中未找到可导入的 SSH 主机条目。"
   },
   "terminal": {
     "openSftp": "打开 SFTP 浏览器",

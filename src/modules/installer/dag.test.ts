@@ -173,6 +173,67 @@ if (
   );
 }
 
+const npmBackedWingetRecipe: Recipe = {
+  id: "npm-backed-winget-app",
+  name: "npm-backed winget app",
+  descriptionEn: "npm-backed winget app",
+  category: "utilities",
+  icon: "Package",
+  needs: ["winget"],
+  provider: { kind: "winget", id: "Example.App" },
+  npmProvider: { kind: "npm", pkg: "@example/app" },
+  options: ["provider", "version"],
+};
+
+const catalogWithNpmProvider: Catalog = {
+  schemaVersion: 1,
+  recipes: [
+    {
+      id: "winget",
+      name: "winget",
+      descriptionEn: "winget",
+      provider: {
+        kind: "downloadInstaller",
+        url: "https://example.test/winget.msixbundle",
+        fileName: "winget.msixbundle",
+      },
+    },
+    {
+      id: "node-bundle",
+      name: "Node",
+      descriptionEn: "Node",
+      provider: { kind: "bundle", steps: [] },
+    },
+    npmBackedWingetRecipe,
+  ],
+};
+
+const defaultNpmBackedPlan = resolveInstallPlan(
+  "npm-backed-winget-app",
+  catalogWithNpmProvider,
+  {},
+  { provider: "default" },
+);
+if (
+  !defaultNpmBackedPlan.actionable.some((step) => step.recipe.id === "winget") ||
+  defaultNpmBackedPlan.actionable.some((step) => step.recipe.id === "node-bundle")
+) {
+  throw new Error("The default provider should require winget, not Node.");
+}
+
+const npmProviderPlan = resolveInstallPlan(
+  "npm-backed-winget-app",
+  catalogWithNpmProvider,
+  {},
+  { provider: "npm" },
+);
+if (
+  !npmProviderPlan.actionable.some((step) => step.recipe.id === "node-bundle") ||
+  npmProviderPlan.actionable.some((step) => step.recipe.id === "winget")
+) {
+  throw new Error("The npm provider should require Node instead of winget.");
+}
+
 const chocolateyBackedWingetRecipe: Recipe = {
   id: "choco-backed-winget-app",
   name: "Chocolatey-backed winget app",
