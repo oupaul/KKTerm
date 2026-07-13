@@ -54,6 +54,7 @@ const FILE_BROWSER_RECENT_PATHS_STORAGE_KEY = "kkterm.fileBrowserRecentPaths.v1"
 const FILE_BROWSER_FAVORITES_STORAGE_KEY = "kkterm.fileBrowserFavorites.v1";
 const FILE_BROWSER_SIDEBAR_STORAGE_KEY = "kkterm.fileBrowserSidebarCollapsed.v1";
 const SSH_FILE_BROWSER_PROTOCOL_STORAGE_KEY = "kkterm.sshFileBrowserProtocol.v1";
+const SSH_FILE_BROWSER_LOCAL_PATH_STORAGE_KEY = "kkterm.sshFileBrowserLocalPath.v1";
 const RECENT_PATH_LIMIT = 5;
 
 type SshFileBrowserProtocol = "sftp" | "ftpsExplicit" | "ftpsImplicit" | "ftp";
@@ -135,6 +136,7 @@ export function SftpWorkspace({
   inline = false,
   onClose,
   protocolSourceConnection,
+  initialRemotePath,
 }: {
   isActive: boolean;
   tab: WorkspaceTab;
@@ -144,6 +146,9 @@ export function SftpWorkspace({
   inline?: boolean;
   onClose?: () => void;
   protocolSourceConnection?: Connection;
+  // Preferred remote start directory (e.g. the SSH session's current working
+  // directory when the browser opens from a terminal pane).
+  initialRemotePath?: string;
 }) {
   const { t } = useTranslation();
   const appearanceSettings = useWorkspaceStore((state) => state.appearanceSettings);
@@ -342,7 +347,23 @@ export function SftpWorkspace({
   }, [protocolMenuOpen]);
 
   useEffect(() => {
-    void loadLocalDirectory(isLocalFilesBrowser ? connection?.localStartupDirectory : undefined);
+    if (isLocalFilesBrowser) {
+      void loadLocalDirectory(connection?.localStartupDirectory);
+      return;
+    }
+    // Terminal-spawned browser: reopen the last local folder used for this SSH
+    // Connection. Standalone FTP/SFTP Connection: start at the configured local
+    // path. Either way fall back to the home directory when the preferred
+    // folder is missing or fails to list.
+    const preferredLocalDirectory = sourceConnection
+      ? readStoredSshFileBrowserLocalPath(sourceConnection.id)
+      : tab.connection?.ftpOptions?.localPath?.trim() || undefined;
+    void (async () => {
+      if (preferredLocalDirectory && (await loadLocalDirectory(preferredLocalDirectory))) {
+        return;
+      }
+      await loadLocalDirectory(undefined);
+    })();
     // Reload when the startup directory or browser mode changes; loadLocalDirectory is recreated each render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connection?.localStartupDirectory, isLocalFilesBrowser]);
@@ -520,7 +541,7 @@ export function SftpWorkspace({
     if (!isTauriRuntime()) {
       setLocalStatus(t("sftp.tauriUnavailable"));
       setLocalFiles([]);
-      return;
+      return false;
     }
 
     setIsLocalLoading(true);
@@ -532,11 +553,16 @@ export function SftpWorkspace({
       setLocalPath(result.path);
       setLocalFiles(result.entries.map(localEntryToFileEntry));
       rememberLocalPath(result.path);
+      if (sourceConnection && result.path !== WINDOWS_DRIVES_PATH) {
+        writeStoredSshFileBrowserLocalPath(sourceConnection.id, result.path);
+      }
       setSelectedLocalNames([]);
       setLocalStatus("");
+      return true;
     } catch (error) {
       setLocalStatus(String(error));
       setLocalFiles([]);
+      return false;
     } finally {
       setIsLocalLoading(false);
     }
@@ -601,13 +627,33 @@ export function SftpWorkspace({
           password = enteredPassword;
           transientPasswordRef.current = password;
         }
+        // Prefer the terminal session's current directory (popup browser) or
+        // the Connection's configured remote path (standalone browser); fall
+        // back to the remote home directory when that folder cannot be opened.
+        const preferredRemoteDirectory =
+          (sourceConnection ? initialRemotePath : connection.ftpOptions?.remotePath)?.trim() || ".";
+        const startSessionAt = async (sessionPassword?: string) => {
+          try {
+            return await commands.startSession({
+              sessionId: requestedSessionId,
+              path: preferredRemoteDirectory,
+              password: sessionPassword,
+            });
+          } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            if (preferredRemoteDirectory === "." || isMissingFileBrowserPasswordError(message)) {
+              throw error;
+            }
+            return await commands.startSession({
+              sessionId: requestedSessionId,
+              path: ".",
+              password: sessionPassword,
+            });
+          }
+        };
         let result: SftpSessionStarted;
         try {
-          result = await commands.startSession({
-            sessionId: requestedSessionId,
-            path: ".",
-            password,
-          });
+          result = await startSessionAt(password);
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
           if (!password && isMissingFileBrowserPasswordError(message)) {
@@ -619,11 +665,7 @@ export function SftpWorkspace({
               throw Object.assign(new Error(t("sftp.passwordPromptCanceled")), { cause: error });
             }
             transientPasswordRef.current = enteredPassword;
-            result = await commands.startSession({
-              sessionId: requestedSessionId,
-              path: ".",
-              password: enteredPassword,
-            });
+            result = await startSessionAt(enteredPassword);
           } else if (sourceConnection && isFtpsProtocol(sshFileBrowserProtocol)) {
             setPlainFtpFallbackActive(true);
             setStatus(t("sftp.ftpsFallbackStatus"));
@@ -2450,6 +2492,36 @@ function writeStoredSshFileBrowserProtocol(
     window.localStorage.setItem(SSH_FILE_BROWSER_PROTOCOL_STORAGE_KEY, JSON.stringify(parsed));
   } catch {
     // Best-effort preference only; connection startup must not depend on storage.
+  }
+}
+
+// Last local folder opened in the terminal-spawned browser, per SSH Connection,
+// so reopening the popup returns to where the user left off.
+function readStoredSshFileBrowserLocalPath(connectionId: string): string | undefined {
+  if (typeof window === "undefined") {
+    return undefined;
+  }
+  try {
+    const raw = window.localStorage.getItem(SSH_FILE_BROWSER_LOCAL_PATH_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) as Record<string, unknown> : {};
+    const path = parsed[connectionId];
+    return typeof path === "string" && path.trim() ? path : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function writeStoredSshFileBrowserLocalPath(connectionId: string, path: string) {
+  if (typeof window === "undefined") {
+    return;
+  }
+  try {
+    const raw = window.localStorage.getItem(SSH_FILE_BROWSER_LOCAL_PATH_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) as Record<string, unknown> : {};
+    parsed[connectionId] = path;
+    window.localStorage.setItem(SSH_FILE_BROWSER_LOCAL_PATH_STORAGE_KEY, JSON.stringify(parsed));
+  } catch {
+    // Best-effort preference only; browsing must not depend on storage.
   }
 }
 

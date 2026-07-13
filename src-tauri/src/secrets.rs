@@ -144,6 +144,13 @@ impl SecretReferenceRequest {
         }
     }
 
+    pub(crate) fn itops_task_secret(owner_id: String) -> Self {
+        Self {
+            kind: SecretKind::ItopsTaskSecret,
+            owner_id,
+        }
+    }
+
     pub(crate) fn mcp_server_secret(owner_id: String) -> Self {
         Self {
             kind: SecretKind::McpServerSecret,
@@ -205,6 +212,7 @@ enum SecretKind {
     EmailApiKey,
     EmailSmtpPassword,
     WidgetSecret,
+    ItopsTaskSecret,
     McpServerSecret,
 }
 
@@ -320,7 +328,8 @@ impl Secrets {
                 .into_iter()
                 .map(str::to_string)
                 .collect(),
-            encrypted_store_exists: SqliteSecretStore::store_exists(&self.db_path).unwrap_or(false),
+            encrypted_store_exists: SqliteSecretStore::store_exists(&self.db_path)
+                .unwrap_or(false),
         }
     }
 
@@ -337,8 +346,7 @@ impl Secrets {
                 .or_else(|| state.init_error.clone())
                 .unwrap_or_else(|| "Secret store unavailable".to_string()),
             available: state.backend.is_some(),
-            encrypted_store_exists: SqliteSecretStore::store_exists(&self.db_path)
-                .unwrap_or(false),
+            encrypted_store_exists: SqliteSecretStore::store_exists(&self.db_path).unwrap_or(false),
             unlocked: state.selected_store == "file" && state.store.is_some(),
         }
     }
@@ -551,6 +559,17 @@ impl Secrets {
         self.read_secret(SecretReferenceRequest::widget_secret(owner_id))
     }
 
+    pub(crate) fn read_itops_task_secret(
+        &self,
+        owner_id: String,
+    ) -> Result<Option<String>, String> {
+        self.read_secret(SecretReferenceRequest::itops_task_secret(owner_id))
+    }
+
+    pub(crate) fn delete_itops_task_secret(&self, owner_id: String) -> Result<(), String> {
+        self.delete_secret(SecretReferenceRequest::itops_task_secret(owner_id))
+    }
+
     pub(crate) fn read_mcp_server_secret(
         &self,
         owner_id: String,
@@ -654,6 +673,7 @@ impl SecretKind {
             Self::EmailApiKey => "email-api-key",
             Self::EmailSmtpPassword => "email-smtp-password",
             Self::WidgetSecret => "widget-secret",
+            Self::ItopsTaskSecret => "itops-task-secret",
             Self::McpServerSecret => "mcp-server-secret",
         }
     }

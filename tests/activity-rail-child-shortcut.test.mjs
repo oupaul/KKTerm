@@ -35,6 +35,19 @@ test("Activity Rail opens Child Connection Tab layouts like the Connection Tree"
   );
 });
 
+test("Activity Rail returns to sessions living in another Workspace", () => {
+  assert.match(
+    activityRailSource,
+    /\(existingTab\.workspaceId \?\? DEFAULT_WORKSPACE_ID\) !== activeWorkspaceId[\s\S]*activateTab\(existingTab\.id\);[\s\S]*return;[\s\S]*generalSettings\.hideTopTabButtons/,
+    "a rail click on a session from another Workspace must activate its Tab (switching Workspaces) before the child-layout branch can spawn new sessions in the current Workspace",
+  );
+  assert.match(
+    activityRailSource,
+    /child\.parentConnectionId === item\.connection\.id &&[\s\S]*\(child\.workspaceId \?\? DEFAULT_WORKSPACE_ID\) === activeWorkspaceId/,
+    "rail shortcuts must only assemble child layouts from the active Workspace's Child Connections",
+  );
+});
+
 test("Activity Rail CSS tooltip stays hidden while native rail tooltip is active", () => {
   assert.match(
     appCss,

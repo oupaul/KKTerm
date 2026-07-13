@@ -782,6 +782,79 @@
   font-weight: 800;
 }
 
+.shortcut-list {
+  display: grid;
+  gap: 6px;
+}
+
+.shortcut-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.shortcut-row-label {
+  color: var(--text);
+  font-size: 13px;
+}
+
+.shortcut-row-controls {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.shortcut-binding-button {
+  min-width: 130px;
+  padding: 3px 10px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 12px;
+  text-align: center;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.shortcut-binding-button.unbound {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.shortcut-binding-button.recording {
+  color: var(--accent);
+  font-style: italic;
+  border-color: var(--accent);
+}
+
+.shortcut-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  color: var(--text-muted);
+  background: transparent;
+  border: 0;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.shortcut-icon-button:hover {
+  color: var(--text);
+  background: var(--surface-muted);
+}
+
+.shortcut-conflict-notice {
+  margin: 0;
+  color: var(--red);
+  font-size: 12px;
+}
+
 .settings-collapsible-legend-button {
   display: inline-flex;
   gap: 6px;
@@ -1518,6 +1591,12 @@
   grid-column: 2;
 }
 
+.settings-section label.terminal-color-scheme-setting > .terminal-scheme-picker {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+}
+
 .settings-section label.ssh-key-path-setting {
   grid-template-columns: minmax(140px, 200px) minmax(360px, 1fr);
 }
@@ -1763,6 +1842,87 @@
 .settings-section select:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.terminal-scheme-picker {
+  position: relative;
+  min-width: 0;
+}
+
+.terminal-scheme-picker-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: var(--app-ui-font-family);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.terminal-scheme-picker-trigger:focus-visible {
+  border-color: currentColor;
+  box-shadow: 0 0 0 3px var(--accent-soft);
+  outline: none;
+}
+
+.terminal-scheme-picker-trigger svg {
+  flex: 0 0 auto;
+  transition: transform 120ms ease;
+}
+
+.terminal-scheme-picker.open .terminal-scheme-picker-trigger svg {
+  transform: rotate(180deg);
+}
+
+.terminal-scheme-picker-list {
+  position: absolute;
+  top: calc(100% + 5px);
+  right: 0;
+  left: 0;
+  z-index: 80;
+  display: grid;
+  max-height: min(420px, 60vh);
+  padding: 4px;
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+}
+
+.terminal-scheme-picker-option {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 32px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: var(--app-ui-font-family);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.terminal-scheme-picker-option:hover,
+.terminal-scheme-picker-option:focus-visible {
+  filter: brightness(1.14);
+  box-shadow: inset 0 0 0 2px currentColor;
+  outline: none;
+}
+
+.terminal-scheme-picker-option svg {
+  flex: 0 0 auto;
 }
 
 .input-with-button,
@@ -2271,22 +2431,22 @@
 }
 
 .assistant-skill-row-name {
-  font-weight: 650;
+  color: var(--text);
+  font-weight: 530;
   font-size: 13px;
+  line-height: 1.3;
 }
 
-.assistant-skill-row-description,
-.assistant-skill-row-path {
+.assistant-skill-row-description {
   font-size: 12px;
-  color: var(--muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  font-weight: 450;
+  color: var(--text-muted);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .assistant-skill-row[data-invalid="true"] .assistant-skill-row-description {
   color: #b91c1c;
-  white-space: normal;
 }
 
 .assistant-skill-row-actions {

@@ -106,7 +106,7 @@ Technical terms (SSH, SFTP, RDP, VNC, tmux, ProxyJump, PowerShell, WSL, API, URL
 
 ## Namespaces
 
-`app`, `settings`, `connections`, `terminal`, `sftp`, `webview`, `remoteDesktop`, `ai`, `watchdog`, `workspace`, `common`, `languages`, `manual`, plus feature namespaces `dashboard`, `appLauncher`, `screenshots`, `installer`. Each chapter of this manual lists which namespaces are in scope.
+`app`, `settings`, `connections`, `terminal`, `sftp`, `webview`, `remoteDesktop`, `ai`, `watchdog`, `workspace`, `common`, `languages`, `manual`, plus feature namespaces `dashboard`, `appLauncher`, `installer`, `itops`, `git`, `compare`. Each chapter of this manual lists which namespaces are in scope.
 
 ## Typed key autocomplete
 

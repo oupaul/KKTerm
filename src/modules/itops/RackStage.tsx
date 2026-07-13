@@ -6,11 +6,33 @@
 
 import { useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { Rack, RackItem, RackItemStatus } from "../../types";
+import type { Rack, RackItem, RackItemStatus, SiteHost } from "../../types";
+import { childHostsOf, hostDisplayName } from "./hostTree";
 import { selectRandomRackCallouts, summarizeRackDeviceMetadata } from "./rackInventory";
-import { RackElevation } from "./RackElevation";
+import { RackElevation, U_PX } from "./RackElevation";
+import { KUAIGUAI_TOP_CLEARANCE_U } from "./rackPlacement";
+import type { RackItemDraft } from "./RackItemDialog";
+
+/** Child-host names for a device balloon: first two, then a "+N" overflow. */
+const BALLOON_CHILD_HOSTS = 2;
 
 const BALLOON_MIN_GAP = 44; // px between same-side balloon centers
+
+const MIN_RACK_U_PX = 12;
+const RACK_VERTICAL_CHROME_PX = 48;
+
+/** Fit the cabinet to the visible Rack View height without enlarging its
+ *  normal 26 px rack units. Very short windows retain a legible 12 px floor
+ *  and let the drill pane scroll only when it is genuinely unavoidable. */
+export function fittedRackUnitPx(
+  availableHeight: number,
+  rackHeightU: number,
+  topClearanceU: number,
+): number {
+  const totalU = Math.max(1, rackHeightU + topClearanceU);
+  const fitted = Math.floor((Math.max(0, availableHeight) - RACK_VERTICAL_CHROME_PX) / totalU);
+  return Math.max(MIN_RACK_U_PX, Math.min(U_PX, fitted));
+}
 
 function itemStatus(item: RackItem): RackItemStatus {
   return item.metadata?.status ?? "online";
@@ -47,9 +69,9 @@ interface Balloon {
 
 export function RackStage({
   rack,
+  hosts,
   hostFor,
   isGhost,
-  onSlotClick,
   onOpenItem,
   onEditItem,
   onBindItem,
@@ -59,11 +81,16 @@ export function RackStage({
   onMoveItem,
   onDeleteItem,
   editMode = false,
+  placeSpec,
+  onPlaceAt,
+  onCancelPlacement,
 }: {
   rack: Rack;
+  /** The Site's Host inventory; devices with a bound `metadata.hostId` list
+   *  their Host and its child Hosts (VMs/containers) in the balloon callout. */
+  hosts?: SiteHost[];
   hostFor?: (item: RackItem) => string | null;
   isGhost?: (item: RackItem) => boolean;
-  onSlotClick?: (startU: number) => void;
   onOpenItem?: (item: RackItem, anchor: HTMLElement) => void;
   onEditItem?: (item: RackItem) => void;
   onBindItem?: (item: RackItem) => void;
@@ -73,13 +100,41 @@ export function RackStage({
   onMoveItem?: (itemId: string, targetRackId: string, startU: number) => void;
   onDeleteItem?: (item: RackItem) => void;
   editMode?: boolean;
+  /** Armed picker placement pass-through (see RackElevation). */
+  placeSpec?: RackItemDraft | null;
+  onPlaceAt?: (startU: number) => void;
+  onCancelPlacement?: () => void;
 }) {
   const { t } = useTranslation();
   const stageRef = useRef<HTMLDivElement | null>(null);
+  const [unitPx, setUnitPx] = useState(U_PX);
   const [geom, setGeom] = useState<{ top: number; height: number; left: number; right: number } | null>(
     null,
   );
   const randomCallouts = selectRandomRackCallouts(rack.items, rack.id, 2);
+
+  // Rack View is the only elevation that adapts its U height to the current
+  // drill viewport. Other rack previews keep their normal fixed-size skin.
+  useLayoutEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) return;
+    const drill = stage.closest(".ft-drill") as HTMLElement | null;
+    const measure = () => {
+      const stageTop = stage.getBoundingClientRect().top;
+      const drillBottom = drill?.getBoundingClientRect().bottom ?? window.innerHeight;
+      const visibleBottom = Math.min(window.innerHeight, drillBottom);
+      const availableHeight = Math.max(0, visibleBottom - stageTop - 4);
+      setUnitPx(fittedRackUnitPx(availableHeight, rack.heightU, KUAIGUAI_TOP_CLEARANCE_U));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(drill ?? stage);
+    window.addEventListener("resize", measure);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [rack.heightU]);
 
   // Measure the device grid relative to the stage so balloons anchor to the
   // right U rows regardless of the rack header's height.
@@ -126,10 +181,12 @@ export function RackStage({
       <div className="rk-stage-rack">
         <RackElevation
           rack={rack}
+          unitPx={unitPx}
+          hideHeader
+          reserveTopU={KUAIGUAI_TOP_CLEARANCE_U}
           hostFor={hostFor}
           isGhost={isGhost}
           editMode={editMode}
-          onSlotClick={onSlotClick}
           onOpenItem={onOpenItem}
           onEditItem={onEditItem}
           onBindItem={onBindItem}
@@ -138,6 +195,9 @@ export function RackStage({
           onRunRack={onRunRack}
           onMoveItem={onMoveItem}
           onDeleteItem={onDeleteItem}
+          placeSpec={placeSpec}
+          onPlaceAt={onPlaceAt}
+          onCancelPlacement={onCancelPlacement}
         />
       </div>
       {geom
@@ -145,6 +205,12 @@ export function RackStage({
             const status = isGhost?.(b.item) ? "offline" : itemStatus(b.item);
             const spec = specOf(b.item, t);
             const sub = hostFor?.(b.item);
+            const boundHost = b.item.metadata?.hostId
+              ? hosts?.find((entry) => entry.id === b.item.metadata?.hostId)
+              : undefined;
+            const childHosts = boundHost ? childHostsOf(hosts ?? [], boundHost.id) : [];
+            const shownChildren = childHosts.slice(0, BALLOON_CHILD_HOSTS);
+            const overflow = childHosts.length - shownChildren.length;
             // Left balloons fill from the stage's left edge to the rack's left
             // edge; right balloons from the rack's right edge to the stage's end.
             const style =
@@ -162,6 +228,21 @@ export function RackStage({
                     <span className="rk-balloon-meta">
                       {sub ? <span className="host">{sub}</span> : null}
                       {spec ? <span className="spec">{spec}</span> : null}
+                    </span>
+                  ) : null}
+                  {boundHost ? (
+                    <span className="rk-balloon-hosts">
+                      <span className="hostname">{boundHost.hostname}</span>
+                      {shownChildren.map((child) => (
+                        <span key={child.id} className="child">
+                          {hostDisplayName(child)}
+                        </span>
+                      ))}
+                      {overflow > 0 ? (
+                        <span className="more">
+                          {t("itops.hosts.childOverflow", { count: overflow })}
+                        </span>
+                      ) : null}
                     </span>
                   ) : null}
                 </span>

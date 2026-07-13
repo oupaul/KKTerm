@@ -117,6 +117,9 @@ export interface Connection {
   iconBackgroundColor?: string | null;
   terminalOpacity?: number | null;
   terminalBackground?: DashboardBackground | null;
+  /** Per-Connection terminal color scheme override; null inherits the global
+   * Terminal Settings default. Set from the terminal Pane actions menu. */
+  terminalColorScheme?: string | null;
   fileBrowserViewOptions?: FileBrowserViewOptions | null;
   sshPortForwardings?: SshPortForwarding[] | null;
   fileViewOpenExternal?: boolean;
@@ -195,6 +198,47 @@ export interface ResolvedHost {
   transport: ItopsTransport;
 }
 
+// IT Ops Hosts (docs/ITOPS.md Hosts). A Host is a durable inventory entry for
+// one device or guest in a Site, addressed by hostname; a VM/container Host
+// points at its carrying device via parentHostId (a soft self reference).
+export type HostKind = "physical" | "vm" | "container" | "other";
+
+// The last connectivity-scan snapshot: which remote-orchestration endpoints
+// answered a TCP probe. Stored result, not live Session state; a Host without
+// one was never scanned.
+export interface HostScan {
+  ssh: boolean;
+  winrm: boolean;
+  https: boolean;
+  scannedAt?: string | null;
+}
+
+export interface SiteHost {
+  id: string;
+  siteId: string;
+  parentHostId?: string | null;
+  hostname: string;
+  // Optional display name; blank = show the hostname.
+  label: string;
+  kind: HostKind;
+  // Ordered soft references to Connection ids — one Host may bind several
+  // Connections (an SSH terminal plus an HTTPS management URL).
+  connectionIds: string[];
+  scan?: HostScan | null;
+  notes: string;
+  sortOrder: number;
+}
+
+export interface HostImportResult {
+  hosts: SiteHost[];
+  skipped: number;
+}
+
+// Live Host connectivity-scan progress streamed on `itops://host-scan`.
+export type HostScanEvent =
+  | { kind: "host"; siteId: string; host: SiteHost }
+  | { kind: "finished"; siteId: string };
+
 // Site topology (docs/SITE.md Phase B). A Rack belongs to one Site, grouped
 // grouped by server room, and holds Rack Devices at U positions.
 export type RackItemKind =
@@ -202,6 +246,7 @@ export type RackItemKind =
   | "switch"
   | "pdu"
   | "patchPanel"
+  // Legacy persisted kinds: retained only so older Site data still loads.
   | "blank"
   | "label"
   | "server"
@@ -210,11 +255,13 @@ export type RackItemKind =
   | "firewall"
   | "ups"
   | "kvm"
-  | "equipment"
-  | "general"
+  | "genericDevice"
   | "kuaiguai";
 
 export type RackItemStatus = "online" | "warning" | "offline";
+
+export type RackServerFormFactor = "rack" | "tower";
+export type RackServerPanelStyle = "default" | "style1" | "style2";
 
 export type RackPortSpeed = "gigabit" | "10g" | "25g" | "40g" | "100g" | "custom";
 
@@ -260,14 +307,25 @@ export interface RackItemMetadata {
   tags?: string[] | null;
   /** Additional Connection ids bound to this rack device. */
   connectionIds?: string[] | null;
+  /** Soft reference to the IT Ops Host this device is; the Rack View callout
+   *  lists the Host and its child Hosts (VMs/containers). */
+  hostId?: string | null;
   /** Switch/router port speeds, e.g. gigabit/10g, optionally filled from SNMP polling. */
   networkPorts?: RackNetworkPort[] | string[] | null;
   /** SNMP target or OID hint for polling this device. */
   snmp?: RackSnmpHint | string | null;
   /** 乖乖 package size variant. */
   kuaiguaiSize?: "small" | "regular" | "large" | null;
+  /** Standing package (4U) or package laid face-up (1U). */
+  kuaiguaiStyle?: "full" | "laidDown" | null;
+  /** Optional rack-top corner selected in a Server Room spatial view. */
+  rackTopCorner?: 0 | 1 | 2 | 3 | null;
   /** Hardware model used for the graphical device preview, e.g. Dell 740XD. */
   vendor?: string | null;
+  /** Server chassis presentation. Tower servers render at half rack width. */
+  formFactor?: RackServerFormFactor | null;
+  /** Server front-panel artwork; independent of shell finish and form factor. */
+  serverPanelStyle?: RackServerPanelStyle | null;
 }
 
 // Skeuomorphic shell finish for a rack cabinet or a device faceplate. White and
@@ -322,15 +380,24 @@ export interface Rack {
 export interface RunScope {
   rackId?: string | null;
   serverRoom?: string | null;
+  hostIds?: string[];
 }
 
-// One step of an interactive Playbook: text sent to the host's PTY shell, then
-// an optional literal substring to wait for before the next step runs.
+// One ordered Playbook node: a PTY command/input, cached sudo acquisition, or
+// a closed AI decision over the preceding node output.
 export interface PlaybookStep {
+  /** Stable editor identity; older saved Playbooks may omit it. */
+  id?: string;
+  /** Command is the backwards-compatible default. */
+  kind?: "command" | "sudo" | "ai";
   name: string;
   send: string;
   expect?: string | null;
   timeoutSeconds?: number | null;
+  /** Vault reference only. The secret value never enters the Task JSON. */
+  secretOwnerId?: string | null;
+  /** AI-node instruction applied to the immediately preceding node output. */
+  aiInstruction?: string | null;
 }
 
 // A Batch Run task (docs/ITOPS.md): a one-shot script, or an interactive
@@ -338,6 +405,28 @@ export interface PlaybookStep {
 export type BatchTask =
   | { kind: "script"; body: string; shell?: string | null }
   | { kind: "playbook"; name: string; steps: PlaybookStep[] };
+
+export type TaskOperatingSystem =
+  | "any"
+  | "linux"
+  | "macos"
+  | "windows"
+  | "ciscoIos"
+  | "ciscoNxos"
+  | "fortiOs"
+  | "junos"
+  | "aristaEos";
+
+// Reusable global Task Library entry. Targets are chosen when the Task runs.
+export interface ItopsTask {
+  id: string;
+  name: string;
+  description: string;
+  sortOrder: number;
+  applicableOs: TaskOperatingSystem[];
+  builtInKey: string | null;
+  task: BatchTask;
+}
 
 export interface HostReport {
   connectionId: string;
@@ -365,6 +454,7 @@ export interface RunHistoryEntry {
   id: string;
   source: string;
   siteId?: string | null;
+  taskId?: string | null;
   taskSummary: string;
   startedAt: string;
   finishedAt?: string | null;
@@ -420,6 +510,9 @@ export interface Automation {
   enabled: boolean;
   config: WatchdogConfig;
   actions: AutomationAction[];
+  // Durable Site binding (soft reference): which Site's Automations segment
+  // lists this rule. null/undefined = unbound (legacy rows).
+  siteId?: string | null;
 }
 
 // Result of a one-shot Automation test (docs/ITOPS.md): samples the trigger now
@@ -658,6 +751,9 @@ export interface GeneralSettings {
   statusBarMonitorIntervalSeconds: number;
   advancedDebuggingEnabled: boolean;
   rdpWebviewStability: boolean;
+  // Workspace shortcut overrides keyed by keymap action id. A null value
+  // explicitly unbinds the action; absent ids keep the catalog default.
+  workspaceShortcuts: Record<string, string | null>;
   proxyMode: ProxyMode;
   proxyUrl?: string;
   lastBackupAt?: string | null;
@@ -830,6 +926,21 @@ export interface TerminalSettings {
   confirmMultilinePaste: boolean;
   defaultShell: string;
   customShells: TerminalCustomShell[];
+  /** Global default terminal color scheme id; each terminal-type Connection
+   * may override it from the Pane actions menu. */
+  colorScheme: string;
+  enableInlineImages: boolean;
+  allowTerminalNotifications: boolean;
+  hyperlinkRules: TerminalHyperlinkRule[];
+}
+
+/** User-defined regex → URL rule that turns matching terminal text into a
+ * Ctrl+click hyperlink. `$0`…`$9` in the URL template substitute capture
+ * groups from the match. */
+export interface TerminalHyperlinkRule {
+  id: string;
+  pattern: string;
+  urlTemplate: string;
 }
 
 export type ColorScheme =
@@ -1013,6 +1124,10 @@ export interface FtpConnectionOptions {
   connectTimeoutSecs?: number;
   ignoreCertErrors: boolean;
   keepaliveSecs?: number;
+  /** Start directory for the local pane; empty/undefined = the OS home folder. */
+  localPath?: string;
+  /** Start directory for the remote pane; empty/undefined = the server's home. */
+  remotePath?: string;
 }
 
 export interface ScreenshotSettings {
@@ -1049,6 +1164,7 @@ export type AiAssistantToolId =
   | "performanceCounters"
   | "email"
   | "dashboard"
+  | "itops"
   | "connections"
   | "sessions"
   | "tutorial"
@@ -1244,7 +1360,8 @@ export type SecretKind =
   | "tavilySearchApiKey"
   | "emailApiKey"
   | "emailSmtpPassword"
-  | "widgetSecret";
+  | "widgetSecret"
+  | "itopsTaskSecret";
 
 export interface KeychainStatus {
   available: boolean;

@@ -625,6 +625,15 @@ fn update_connection_terminal_appearance(
 }
 
 #[tauri::command]
+fn update_connection_terminal_color_scheme(
+    storage: tauri::State<'_, storage::Storage>,
+    connection_id: String,
+    terminal_color_scheme: Option<String>,
+) -> Result<Option<storage::SavedConnection>, String> {
+    storage.update_connection_terminal_color_scheme(connection_id, terminal_color_scheme)
+}
+
+#[tauri::command]
 fn update_connection_tab_title(
     storage: tauri::State<'_, storage::Storage>,
     connection_id: String,
@@ -2263,6 +2272,19 @@ async fn capture_tmux_pane(
 }
 
 #[tauri::command]
+async fn tmux_current_path(
+    app: tauri::AppHandle,
+    request: sessions::TmuxCurrentPathRequest,
+) -> Result<String, String> {
+    run_blocking_command("tmux current path", move || {
+        let sessions = app.state::<sessions::SessionManager>();
+        let secrets = app.state::<secrets::Secrets>();
+        sessions.tmux_current_path(app.clone(), &secrets, request)
+    })
+    .await
+}
+
+#[tauri::command]
 async fn list_psmux_sessions() -> Result<Vec<sessions::TmuxSession>, String> {
     run_blocking_command("psmux list sessions", sessions::list_psmux_sessions).await
 }
@@ -2510,7 +2532,10 @@ async fn probe_file_view(
 async fn read_file_view_text(
     request: file_viewer::FileViewTextRequest,
 ) -> Result<file_viewer::FileViewText, String> {
-    run_blocking_command("read file view text", move || file_viewer::read_text(request)).await
+    run_blocking_command("read file view text", move || {
+        file_viewer::read_text(request)
+    })
+    .await
 }
 
 #[tauri::command]
@@ -2597,10 +2622,7 @@ fn create_compare_temp_dir() -> Result<String, String> {
         .duration_since(std::time::UNIX_EPOCH)
         .map(|delta| delta.as_nanos())
         .unwrap_or(0);
-    let dir = std::env::temp_dir().join(format!(
-        "kkterm-compare-{}-{nanos}",
-        std::process::id()
-    ));
+    let dir = std::env::temp_dir().join(format!("kkterm-compare-{}-{nanos}", std::process::id()));
     std::fs::create_dir_all(&dir)
         .map_err(|error| format!("failed to create compare staging directory: {error}"))?;
     Ok(dir.to_string_lossy().into_owned())
@@ -3318,6 +3340,15 @@ fn send_rdp_client_text(
 
 #[cfg(not(target_os = "windows"))]
 #[tauri::command]
+fn send_rdp_client_clipboard_text(
+    rdp_sessions: tauri::State<'_, rdp_client::RdpClientSessionManager>,
+    request: rdp_client::RdpClientTextRequest,
+) -> Result<(), String> {
+    rdp_sessions.clipboard_text(request)
+}
+
+#[cfg(not(target_os = "windows"))]
+#[tauri::command]
 fn send_rdp_client_ctrl_alt_delete(
     rdp_sessions: tauri::State<'_, rdp_client::RdpClientSessionManager>,
     request: rdp_client::RdpClientSimpleRequest,
@@ -3702,6 +3733,7 @@ pub fn run() {
             update_connection_icon_color,
             update_connection_icon_background_color,
             update_connection_terminal_appearance,
+            update_connection_terminal_color_scheme,
             update_connection_file_browser_view_options,
             update_connection_ssh_port_forwardings,
             update_connection_tab_title,
@@ -3866,6 +3898,7 @@ pub fn run() {
             set_psmux_mouse,
             scroll_tmux_pane,
             capture_tmux_pane,
+            tmux_current_path,
             // ── SSH system context, port forwarding & elevation
             inspect_ssh_system_context,
             detect_ssh_remote_os,
@@ -3993,6 +4026,8 @@ pub fn run() {
             #[cfg(not(target_os = "windows"))]
             send_rdp_client_text,
             #[cfg(not(target_os = "windows"))]
+            send_rdp_client_clipboard_text,
+            #[cfg(not(target_os = "windows"))]
             send_rdp_client_ctrl_alt_delete,
             #[cfg(not(target_os = "windows"))]
             close_rdp_client_session,
@@ -4049,10 +4084,20 @@ pub fn run() {
             itops::commands::itops_move_rack_item,
             itops::commands::itops_remove_rack_item,
             itops::commands::itops_refresh_rack_item_snmp,
+            itops::commands::itops_list_hosts,
+            itops::commands::itops_create_host,
+            itops::commands::itops_update_host,
+            itops::commands::itops_delete_host,
+            itops::commands::itops_import_hosts,
+            itops::commands::itops_scan_hosts,
             itops::commands::itops_get_connection,
             itops::commands::itops_start_batch_run,
             itops::commands::itops_cancel_batch_run,
             itops::commands::itops_list_run_history,
+            itops::task_commands::itops_list_tasks,
+            itops::task_commands::itops_create_task,
+            itops::task_commands::itops_update_task,
+            itops::task_commands::itops_remove_task,
             itops::automation_commands::itops_list_automations,
             itops::automation_commands::itops_create_automation,
             itops::automation_commands::itops_update_automation,

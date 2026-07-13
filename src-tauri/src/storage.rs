@@ -2,6 +2,7 @@ use crate::window_state::{MainWindowSettings, validate_main_window_settings};
 use rusqlite::{Connection as SqliteConnection, OptionalExtension, params};
 use serde::{Deserialize, Serialize};
 use std::{
+    collections::BTreeMap,
     fs,
     fs::{File, OpenOptions},
     io::{Read, Write, copy},
@@ -12,7 +13,7 @@ use std::{
 use time::{OffsetDateTime, format_description::well_known::Rfc3339};
 use zip::{ZipArchive, ZipWriter, write::SimpleFileOptions};
 
-const SCHEMA_USER_VERSION: i32 = 42;
+const SCHEMA_USER_VERSION: i32 = 47;
 
 const DEFAULT_TERMINAL_OPACITY: u8 = 50;
 
@@ -79,6 +80,7 @@ CREATE TABLE IF NOT EXISTS connections (
     icon_background_color TEXT,
     terminal_opacity INTEGER,
     terminal_background_json TEXT,
+    terminal_color_scheme TEXT,
     file_browser_view_options_json TEXT,
     ssh_port_forwardings_json TEXT,
     file_view_open_external INTEGER NOT NULL DEFAULT 0,
@@ -330,6 +332,8 @@ CREATE TABLE IF NOT EXISTS itops_run_history (
     -- 'manual' or 'automation:<automation_id>'.
     source         TEXT NOT NULL,
     site_id  TEXT,
+    -- Stable soft reference for reusable-Task statistics; null for ad-hoc and Automation runs.
+    task_id        TEXT,
     -- Redacted one-line task label, never a secret-bearing script body.
     task_summary   TEXT NOT NULL,
     started_at     TEXT NOT NULL,
@@ -340,6 +344,20 @@ CREATE TABLE IF NOT EXISTS itops_run_history (
 
 CREATE INDEX IF NOT EXISTS idx_itops_run_history_source
     ON itops_run_history(source, started_at);
+
+-- Reusable IT Ops task definitions. Tasks are global to the Module: a Site or
+-- Host selection supplies the target when the task is launched. v45.
+CREATE TABLE IF NOT EXISTS itops_tasks (
+    id           TEXT PRIMARY KEY,
+    name         TEXT NOT NULL,
+    description  TEXT NOT NULL DEFAULT '',
+    sort_order   INTEGER NOT NULL,
+    applicable_os_json TEXT NOT NULL DEFAULT '["any"]',
+    built_in_key TEXT,
+    task_json    TEXT NOT NULL,
+    created_at   TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at   TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 
 -- A durable Automation (docs/ITOPS.md Phase 3): the persistent definition of a
 -- Watchdog. Enabled rows are re-armed into the live WatchdogRegistry on launch;
@@ -353,6 +371,9 @@ CREATE TABLE IF NOT EXISTS itops_automations (
     config_json  TEXT NOT NULL,
     -- Ordered IT Ops action catalog run on each trigger fire (Phase 4). v32.
     actions_json TEXT NOT NULL DEFAULT '[]',
+    -- Optional durable Site binding (soft reference, like itops_run_history's
+    -- site_id): which Site's Automations segment lists this rule. v43.
+    site_id      TEXT,
     created_at   TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at   TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -389,7 +410,7 @@ CREATE INDEX IF NOT EXISTS idx_itops_site_racks_site
     ON itops_site_racks(site_id, sort_order);
 
 -- Non-rack Server Room fixtures on the room floor grid (docs/SITE.md Room
--- Object): cameras, CRAC units, fire extinguishers, cable trays, UPS
+-- Object): cameras, CRAC units, fire extinguishers, UPS
 -- cabinets, sensors, smoke detectors, crash carts, 乖乖. Scoped by Site +
 -- Server Room name like racks; z is the object's bottom in rack units so
 -- occupants can stack in one floor cell. v41. corner is the cell quadrant a
@@ -432,6 +453,33 @@ CREATE TABLE IF NOT EXISTS itops_site_rack_items (
 
 CREATE INDEX IF NOT EXISTS idx_itops_site_rack_items_rack
     ON itops_site_rack_items(rack_id, start_u);
+
+-- IT Ops Hosts (docs/ITOPS.md Hosts). A Host is a durable inventory entry for
+-- one device or guest in a Site, addressed by hostname. parent_host_id is a
+-- SOFT self reference: a VM/container Host points at the device Host carrying
+-- it (children are re-parented on delete, never dropped). connection_ids_json
+-- holds ordered SOFT references to connections.id — one Host may bind several
+-- Connections (an SSH terminal plus an HTTPS management URL). scan_json is the
+-- last connectivity-scan snapshot (ssh/winrm/https reachability + timestamp);
+-- a stored probe result, never live Session state and never a secret. v44.
+CREATE TABLE IF NOT EXISTS itops_hosts (
+    id                  TEXT PRIMARY KEY,
+    site_id             TEXT NOT NULL REFERENCES itops_sites(id) ON DELETE CASCADE,
+    parent_host_id      TEXT,
+    hostname            TEXT NOT NULL,
+    label               TEXT NOT NULL DEFAULT '',
+    -- 'physical' | 'vm' | 'container' | 'other'
+    kind                TEXT NOT NULL DEFAULT 'physical',
+    connection_ids_json TEXT NOT NULL DEFAULT '[]',
+    scan_json           TEXT,
+    notes               TEXT NOT NULL DEFAULT '',
+    sort_order          INTEGER NOT NULL,
+    created_at          TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at          TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_itops_hosts_site
+    ON itops_hosts(site_id, sort_order);
 "#;
 
 pub struct Storage {
@@ -463,8 +511,10 @@ pub struct GeneralSettings {
     separate_split_terminal_backgrounds: bool,
     #[serde(default = "default_show_installer_on_rail")]
     show_installer_on_rail: bool,
-    // IT Ops Module rail visibility. Defaults off while the Module is in
-    // development; users opt in via Settings → IT Ops.
+    // IT Ops Module rail visibility. Now that the Module is officially released
+    // it defaults on; users can still hide it via Settings → IT Ops. Installs
+    // that persisted the former dev-era `false` are flipped once by the v47
+    // migration (see `reveal_it_ops_on_release`).
     #[serde(default = "default_show_it_ops")]
     show_it_ops: bool,
     #[serde(default = "default_show_dont_sleep_on_rail")]
@@ -497,6 +547,11 @@ pub struct GeneralSettings {
     advanced_debugging_enabled: bool,
     #[serde(default)]
     rdp_webview_stability: bool,
+    // Workspace shortcut overrides keyed by frontend keymap action id. A null
+    // value explicitly unbinds the action; absent ids keep the frontend
+    // catalog default. Stored opaque — only bounded/sanitized here.
+    #[serde(default)]
+    workspace_shortcuts: BTreeMap<String, Option<String>>,
     // Global application proxy. `proxy_mode` is "system" (default), "none", or
     // "manual"; `proxy_url` holds the normalized `<scheme>://host:port` value
     // (http/https/socks5) when the mode is "manual". See `net::proxy`.
@@ -619,6 +674,14 @@ pub struct TerminalSettings {
     default_shell: String,
     #[serde(default)]
     custom_shells: Vec<TerminalCustomShell>,
+    #[serde(default = "default_terminal_color_scheme")]
+    color_scheme: String,
+    #[serde(default = "default_true")]
+    enable_inline_images: bool,
+    #[serde(default = "default_true")]
+    allow_terminal_notifications: bool,
+    #[serde(default)]
+    hyperlink_rules: Vec<TerminalHyperlinkRule>,
 }
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -627,6 +690,14 @@ pub struct TerminalCustomShell {
     id: String,
     name: String,
     command_line: String,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TerminalHyperlinkRule {
+    id: String,
+    pattern: String,
+    url_template: String,
 }
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -840,6 +911,8 @@ pub struct AiAssistantToolSettings {
     performance_counters: bool,
     #[serde(default = "default_ai_dashboard_tool_enabled")]
     dashboard: bool,
+    #[serde(default = "default_ai_itops_tool_enabled")]
+    itops: bool,
     #[serde(default = "default_ai_connections_tool_enabled")]
     connections: bool,
     #[serde(default = "default_ai_sessions_tool_enabled")]
@@ -883,6 +956,9 @@ impl AiAssistantToolSettings {
     pub(crate) fn dashboard(&self) -> bool {
         self.dashboard
     }
+    pub(crate) fn itops(&self) -> bool {
+        self.itops
+    }
     pub(crate) fn connections(&self) -> bool {
         self.connections
     }
@@ -916,6 +992,7 @@ impl AiAssistantToolSettings {
             || self.current_time
             || self.performance_counters
             || self.dashboard
+            || self.itops
             || self.connections
             || self.sessions
             || self.tutorial
@@ -1000,6 +1077,10 @@ pub struct AiProviderSettings {
 }
 
 impl AiProviderSettings {
+    pub(crate) fn enabled(&self) -> bool {
+        self.enabled
+    }
+
     pub(crate) fn provider_kind(&self) -> &str {
         &self.provider_kind
     }
@@ -1249,6 +1330,8 @@ pub struct SavedConnection {
     icon_background_color: Option<String>,
     terminal_opacity: Option<u8>,
     terminal_background: Option<crate::dashboard_storage::DashboardBackground>,
+    #[serde(default)]
+    terminal_color_scheme: Option<String>,
     file_browser_view_options: Option<FileBrowserViewOptions>,
     ssh_port_forwardings: Option<Vec<SshPortForwarding>>,
     file_view_open_external: bool,
@@ -1989,6 +2072,23 @@ impl Storage {
         connection
             .execute_batch(CURRENT_SCHEMA)
             .map_err(to_storage_error)?;
+        // Reusable Task execution statistics need a stable identity. Older
+        // history rows remain unattributed instead of being guessed by label.
+        ensure_column(&connection, "itops_run_history", "task_id", "TEXT")?;
+        // v46: Task applicability metadata plus stable app-owned catalog rows.
+        ensure_column(
+            &connection,
+            "itops_tasks",
+            "applicable_os_json",
+            "TEXT NOT NULL DEFAULT '[\"any\"]'",
+        )?;
+        ensure_column(&connection, "itops_tasks", "built_in_key", "TEXT")?;
+        connection
+            .execute_batch(
+                "CREATE UNIQUE INDEX IF NOT EXISTS idx_itops_tasks_built_in_key
+                 ON itops_tasks(built_in_key) WHERE built_in_key IS NOT NULL;",
+            )
+            .map_err(to_storage_error)?;
         // The default Site row keeps its legacy "default-fleet" id (an opaque key)
         // but its display name is migrated to "Default Site" for upgraded installs;
         // INSERT OR IGNORE in ensure_default_site never updates an existing row.
@@ -2039,6 +2139,8 @@ impl Storage {
             "actions_json",
             "TEXT NOT NULL DEFAULT '[]'",
         )?;
+        // v43: Automations gain an optional durable Site binding.
+        ensure_column(&connection, "itops_automations", "site_id", "TEXT")?;
         // Rack View topology is Site → Server Room → Rack, plus a cabinet shell
         // colour. Legacy region/datacenter/area columns are retired in place.
         ensure_column(
@@ -2425,6 +2527,10 @@ impl Storage {
         // fresh install (still at user_version 0 when v25 runs) loses it. NULL
         // inherits the global SSH default; 'off'/'fast' force a choice.
         ensure_column(&connection, "connections", "ssh_compression", "TEXT")?;
+        // Per-connection terminal color scheme override. NULL inherits the
+        // global Terminal Settings default. Ensured past every
+        // connections-table rebuild, like ssh_compression above.
+        ensure_column(&connection, "connections", "terminal_color_scheme", "TEXT")?;
         ensure_column(&connection, "connections", "url_user_agent", "TEXT")?;
         ensure_column(&connection, "connections", "url_proxy", "TEXT")?;
         ensure_column(
@@ -2490,11 +2596,26 @@ impl Storage {
         )?;
         // Cell quadrant of quarter-block room fixtures (NULL = pre-corner row).
         ensure_column(&connection, "itops_room_objects", "corner", "INTEGER")?;
+        // v47: IT Ops graduated from a dev-only, hidden-by-default Module to an
+        // officially released one. Existing installs persisted `showItOps: false`
+        // (the former dev default, baked into the 'general' settings blob by any
+        // settings save — including the periodic auto-backup timestamp update), so
+        // flipping the default alone only reaches fresh installs. Reveal the Module
+        // once for upgrading installs. Nothing distinguishes "never touched" from
+        // "explicitly hidden while in dev", and the Module was never officially
+        // visible to be hidden, so treat every upgrading install as opting in;
+        // users can hide it again afterwards and that choice persists (this
+        // one-time migration never runs again).
+        if stored_version < 47 {
+            reveal_it_ops_on_release(&connection)?;
+        }
         connection
             .execute_batch(&format!("PRAGMA user_version = {SCHEMA_USER_VERSION}"))
             .map_err(to_storage_error)?;
         crate::dashboard_storage::seed_default(&connection)
             .map_err(|err| format!("dashboard seed failed: {err:?}"))?;
+        crate::itops::task_storage::sync_builtin_catalog(&connection)
+            .map_err(|err| format!("IT Ops Task catalog seed failed: {err}"))?;
         Ok(())
     }
     fn temp_database_path(&self, prefix: &str) -> PathBuf {
@@ -2712,6 +2833,41 @@ fn ensure_column(
         .execute(
             &format!("ALTER TABLE {table} ADD COLUMN {column} {definition}"),
             [],
+        )
+        .map_err(to_storage_error)?;
+    Ok(())
+}
+
+/// One-time v47 migration: reveal the IT Ops Module on the Activity Rail for
+/// upgrading installs by flipping the stored `showItOps` flag to `true` in the
+/// 'general' settings blob. Fresh installs have no 'general' row yet and pick up
+/// the new default instead, so this only touches already-persisted settings. A
+/// missing or unparseable blob is left untouched.
+fn reveal_it_ops_on_release(connection: &SqliteConnection) -> Result<(), String> {
+    let stored: Option<String> = connection
+        .query_row(
+            "SELECT value FROM settings WHERE key = 'general'",
+            [],
+            |row| row.get::<_, String>(0),
+        )
+        .optional()
+        .map_err(to_storage_error)?;
+    let Some(stored) = stored else {
+        return Ok(());
+    };
+    let Ok(serde_json::Value::Object(mut object)) =
+        serde_json::from_str::<serde_json::Value>(&stored)
+    else {
+        return Ok(());
+    };
+    object.insert("showItOps".to_string(), serde_json::Value::Bool(true));
+    let serialized = serde_json::to_string(&serde_json::Value::Object(object))
+        .map_err(|error| format!("failed to serialize general settings: {error}"))?;
+    connection
+        .execute(
+            "UPDATE settings SET value = ?1, updated_at = CURRENT_TIMESTAMP \
+             WHERE key = 'general'",
+            params![serialized],
         )
         .map_err(to_storage_error)?;
     Ok(())
@@ -3344,7 +3500,7 @@ fn list_root_connections_for_workspace(
     let mut statement = connection
         .prepare(
             "SELECT connections.id, name, tab_title, host, connections.username, port, key_path, proxy_jump, ssh_socks_proxy, ssh_socks_proxy_username, ssh_socks_proxy_inherit_defaults, auth_method, local_shell, local_startup_directory, local_startup_script, url, data_partition, use_tmux_sessions, tmux_connection_id, connection_type, serial_line, serial_speed, rdp_options, vnc_options, ftp_options, icon_color, icon_data_url, icon_background_color, terminal_opacity, terminal_background_json, password_credential_id,
-                    (SELECT username FROM url_credentials WHERE url_credentials.connection_id = connections.id ORDER BY updated_at DESC LIMIT 1), file_browser_view_options_json, file_view_open_external, ssh_port_forwardings_json, use_psmux_sessions, ssh_compression, url_proxy, url_proxy_inherit_defaults, url_user_agent
+                    (SELECT username FROM url_credentials WHERE url_credentials.connection_id = connections.id ORDER BY updated_at DESC LIMIT 1), file_browser_view_options_json, file_view_open_external, ssh_port_forwardings_json, use_psmux_sessions, ssh_compression, url_proxy, url_proxy_inherit_defaults, url_user_agent, terminal_color_scheme
              FROM connections
              WHERE folder_id IS NULL AND workspace_id = ?1
              ORDER BY sort_order, name",
@@ -3406,7 +3562,7 @@ fn list_connections_for_folder(
     let mut statement = connection
         .prepare(&format!(
             "SELECT connections.id, name, tab_title, host, connections.username, port, key_path, proxy_jump, ssh_socks_proxy, ssh_socks_proxy_username, ssh_socks_proxy_inherit_defaults, auth_method, local_shell, local_startup_directory, local_startup_script, url, data_partition, use_tmux_sessions, tmux_connection_id, connection_type, serial_line, serial_speed, rdp_options, vnc_options, ftp_options, icon_color, icon_data_url, icon_background_color, terminal_opacity, terminal_background_json, password_credential_id,
-                    (SELECT username FROM url_credentials WHERE url_credentials.connection_id = connections.id ORDER BY updated_at DESC LIMIT 1), file_browser_view_options_json, file_view_open_external, ssh_port_forwardings_json, use_psmux_sessions, ssh_compression, url_proxy, url_proxy_inherit_defaults, url_user_agent
+                    (SELECT username FROM url_credentials WHERE url_credentials.connection_id = connections.id ORDER BY updated_at DESC LIMIT 1), file_browser_view_options_json, file_view_open_external, ssh_port_forwardings_json, use_psmux_sessions, ssh_compression, url_proxy, url_proxy_inherit_defaults, url_user_agent, terminal_color_scheme
              FROM connections
              WHERE {where_clause}
              ORDER BY sort_order, name",
@@ -3781,7 +3937,7 @@ fn get_connection_by_id(
     let saved_connection = connection
         .query_row(
             "SELECT connections.id, name, tab_title, host, connections.username, port, key_path, proxy_jump, ssh_socks_proxy, ssh_socks_proxy_username, ssh_socks_proxy_inherit_defaults, auth_method, local_shell, local_startup_directory, local_startup_script, url, data_partition, use_tmux_sessions, tmux_connection_id, connection_type, serial_line, serial_speed, rdp_options, vnc_options, ftp_options, icon_color, icon_data_url, icon_background_color, terminal_opacity, terminal_background_json, password_credential_id,
-                    (SELECT username FROM url_credentials WHERE url_credentials.connection_id = connections.id ORDER BY updated_at DESC LIMIT 1), file_browser_view_options_json, file_view_open_external, ssh_port_forwardings_json, use_psmux_sessions, ssh_compression, url_proxy, url_proxy_inherit_defaults, url_user_agent
+                    (SELECT username FROM url_credentials WHERE url_credentials.connection_id = connections.id ORDER BY updated_at DESC LIMIT 1), file_browser_view_options_json, file_view_open_external, ssh_port_forwardings_json, use_psmux_sessions, ssh_compression, url_proxy, url_proxy_inherit_defaults, url_user_agent, terminal_color_scheme
              FROM connections
              WHERE connections.id = ?1",
             params![connection_id],
@@ -3824,6 +3980,7 @@ fn get_connection_by_id(
                     icon_background_color: row.get(27)?,
                     terminal_opacity: normalize_loaded_terminal_opacity(row.get(28)?),
                     terminal_background: terminal_background_from_json(row.get(29)?),
+                    terminal_color_scheme: row.get(40)?,
                     file_browser_view_options: file_browser_view_options_from_json(row.get(32)?),
                     file_view_open_external: row.get(33)?,
                     ssh_port_forwardings: ssh_port_forwardings_from_json(row.get(34)?),
@@ -3885,6 +4042,7 @@ fn saved_connection_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<SavedC
         icon_background_color: row.get(27)?,
         terminal_opacity: normalize_loaded_terminal_opacity(row.get(28)?),
         terminal_background: terminal_background_from_json(row.get(29)?),
+        terminal_color_scheme: row.get(40)?,
         file_browser_view_options: file_browser_view_options_from_json(row.get(32)?),
         file_view_open_external: row.get(33)?,
         ssh_port_forwardings: ssh_port_forwardings_from_json(row.get(34)?),
@@ -4558,17 +4716,18 @@ fn normalize_connection_icon_data_url(value: Option<String>) -> Result<Option<St
             return Err("connection icon data URL is too large".to_string());
         }
         // Accept an inline image data URL or one of the app's icon-catalog refs
-        // ("lucide:Name" / "material:id" / "os:id" / "brand:id"), which the icon picker offers
+        // ("reicon:Name" / "lucide:Name" / "material:id" / "os:id" / "brand:id"), which the icon picker offers
         // and the ConnectionIcon renderer resolves. Catalog refs are short
         // identifiers; "os:id" is the bundled OS/distro logo set used by SSH
         // remote-OS auto-detection.
         let is_image_data_url = value.starts_with("data:image/");
-        let is_icon_ref = value.starts_with("lucide:")
+        let is_icon_ref = value.starts_with("reicon:")
+            || value.starts_with("lucide:")
             || value.starts_with("material:")
             || value.starts_with("os:")
             || value.starts_with("brand:");
         if !is_image_data_url && !is_icon_ref {
-            return Err("connection icon must be an image data URL".to_string());
+            return Err("connection icon must be an image data URL or icon ref".to_string());
         }
     }
     Ok(value)
@@ -4701,6 +4860,7 @@ fn default_general_settings() -> GeneralSettings {
         status_bar_monitor_interval_seconds: default_status_bar_monitor_interval_seconds(),
         advanced_debugging_enabled: false,
         rdp_webview_stability: false,
+        workspace_shortcuts: BTreeMap::new(),
         proxy_mode: default_proxy_mode(),
         proxy_url: None,
         last_backup_at: None,
@@ -4758,7 +4918,7 @@ fn default_show_dashboard_on_rail() -> bool {
 }
 
 fn default_show_it_ops() -> bool {
-    false
+    true
 }
 
 fn default_show_dont_sleep_on_rail() -> bool {
@@ -4887,10 +5047,22 @@ fn default_terminal_settings() -> TerminalSettings {
             std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".to_string())
         },
         custom_shells: Vec::new(),
+        color_scheme: default_terminal_color_scheme(),
+        enable_inline_images: true,
+        allow_terminal_notifications: true,
+        hyperlink_rules: Vec::new(),
     }
 }
 
 fn default_allow_osc52_clipboard() -> bool {
+    true
+}
+
+fn default_terminal_color_scheme() -> String {
+    "kkterm".to_string()
+}
+
+fn default_true() -> bool {
     true
 }
 
@@ -5161,6 +5333,7 @@ fn default_ai_assistant_tool_settings() -> AiAssistantToolSettings {
         current_time: default_ai_current_time_tool_enabled(),
         performance_counters: default_ai_performance_counters_tool_enabled(),
         dashboard: default_ai_dashboard_tool_enabled(),
+        itops: default_ai_itops_tool_enabled(),
         connections: default_ai_connections_tool_enabled(),
         sessions: default_ai_sessions_tool_enabled(),
         tutorial: default_ai_tutorial_tool_enabled(),
@@ -5193,6 +5366,10 @@ fn default_ai_performance_counters_tool_enabled() -> bool {
 }
 
 fn default_ai_dashboard_tool_enabled() -> bool {
+    true
+}
+
+fn default_ai_itops_tool_enabled() -> bool {
     true
 }
 
@@ -5233,7 +5410,7 @@ fn default_ai_provider_kind() -> String {
 }
 
 fn default_ai_model() -> String {
-    "gpt-5.4-mini".to_string()
+    "gpt-5.6-luna".to_string()
 }
 
 fn default_ai_reasoning_effort() -> String {
@@ -5267,6 +5444,7 @@ fn validate_general_settings(mut settings: GeneralSettings) -> Result<GeneralSet
         3_600 | 86_400 | 604_800 | 2_592_000 => settings.installer_check_interval_seconds,
         _ => default_installer_check_interval_seconds(),
     };
+    settings.workspace_shortcuts = sanitize_workspace_shortcuts(settings.workspace_shortcuts);
     settings.proxy_mode = match settings.proxy_mode.trim().to_lowercase().as_str() {
         "none" => "none".to_string(),
         "manual" => "manual".to_string(),
@@ -5281,6 +5459,36 @@ fn validate_general_settings(mut settings: GeneralSettings) -> Result<GeneralSet
         settings.proxy_url = None;
     }
     Ok(settings)
+}
+
+/// Sanitize Workspace shortcut overrides: trimmed non-empty keys and values
+/// (an empty trimmed value collapses to None = explicitly unbound), bounded
+/// lengths, and a bounded entry count. Action ids and binding strings are
+/// interpreted by the frontend keymap catalog, so unknown ids are kept.
+fn sanitize_workspace_shortcuts(
+    shortcuts: BTreeMap<String, Option<String>>,
+) -> BTreeMap<String, Option<String>> {
+    shortcuts
+        .into_iter()
+        .filter_map(|(key, value)| {
+            let key = key.trim().to_string();
+            if key.is_empty() || key.len() > 64 {
+                return None;
+            }
+            let value = match value {
+                Some(value) => {
+                    let value = value.trim().to_string();
+                    if value.len() > 64 {
+                        return None;
+                    }
+                    if value.is_empty() { None } else { Some(value) }
+                }
+                None => None,
+            };
+            Some((key, value))
+        })
+        .take(64)
+        .collect()
 }
 
 /// Validate and normalize a global app proxy URL to `<scheme>://host:port`.
@@ -5478,7 +5686,48 @@ fn validate_terminal_settings(mut settings: TerminalSettings) -> Result<Terminal
         return Err("terminal default transparency must be between 0 and 100".to_string());
     }
 
+    settings.color_scheme = {
+        let scheme = settings.color_scheme.trim().to_string();
+        if scheme.is_empty() {
+            default_terminal_color_scheme()
+        } else {
+            scheme
+        }
+    };
+    settings.hyperlink_rules = validate_terminal_hyperlink_rules(settings.hyperlink_rules)?;
+
     Ok(settings)
+}
+
+fn validate_terminal_hyperlink_rules(
+    rules: Vec<TerminalHyperlinkRule>,
+) -> Result<Vec<TerminalHyperlinkRule>, String> {
+    const MAX_HYPERLINK_RULES: usize = 50;
+    let mut normalized = Vec::new();
+    let mut seen_ids = Vec::new();
+    for rule in rules {
+        let id = required_field("hyperlink rule id", rule.id)?;
+        let pattern = required_field("hyperlink rule pattern", rule.pattern)?;
+        let url_template = required_field("hyperlink rule URL", rule.url_template)?;
+        if !url_template.starts_with("http://") && !url_template.starts_with("https://") {
+            return Err("hyperlink rule URLs must start with http:// or https://".to_string());
+        }
+        if seen_ids.contains(&id) {
+            continue;
+        }
+        seen_ids.push(id.clone());
+        normalized.push(TerminalHyperlinkRule {
+            id,
+            pattern,
+            url_template,
+        });
+    }
+    if normalized.len() > MAX_HYPERLINK_RULES {
+        return Err(format!(
+            "at most {MAX_HYPERLINK_RULES} hyperlink rules are supported"
+        ));
+    }
+    Ok(normalized)
 }
 
 fn validate_terminal_custom_shells(

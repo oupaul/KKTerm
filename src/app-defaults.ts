@@ -35,7 +35,7 @@ export const defaultGeneralSettings: GeneralSettings = {
   submitAiAttachmentsDirectly: true,
   separateSplitTerminalBackgrounds: false,
   showInstallerOnRail: true,
-  showItOps: false,
+  showItOps: true,
   showDontSleepOnRail: true,
   activityRailOrder: [...DEFAULT_ACTIVITY_RAIL_ORDER],
   installerCheckIntervalSeconds: 86400,
@@ -51,6 +51,7 @@ export const defaultGeneralSettings: GeneralSettings = {
   statusBarMonitorIntervalSeconds: 5,
   advancedDebuggingEnabled: false,
   rdpWebviewStability: false,
+  workspaceShortcuts: {},
   proxyMode: "system",
   proxyUrl: "",
   lastBackupAt: null,
@@ -94,6 +95,10 @@ export const defaultTerminalSettings: TerminalSettings = {
   confirmMultilinePaste: true,
   defaultShell: defaultLocalShell(),
   customShells: [],
+  colorScheme: "kkterm",
+  enableInlineImages: true,
+  allowTerminalNotifications: true,
+  hyperlinkRules: [],
 };
 
 export const defaultAppearanceSettings: AppearanceSettings = {
@@ -164,6 +169,7 @@ export const defaultAiAssistantToolSettings = {
   performanceCounters: true,
   email: false,
   dashboard: true,
+  itops: true,
   connections: true,
   sessions: true,
   tutorial: true,
@@ -176,7 +182,7 @@ export const defaultAiAssistantToolSettings = {
 export const defaultAiProviderSettings: AiProviderSettings = {
   providerKind: "openai",
   baseUrl: "https://api.openai.com/v1",
-  model: "gpt-5.4-mini",
+  model: "gpt-5.6-luna",
   reasoningEffort: "medium",
   outputLanguage: "",
   customInstructions: "",

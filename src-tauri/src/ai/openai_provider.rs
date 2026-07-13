@@ -1,6 +1,10 @@
 #[allow(unused_imports)]
 use super::*;
 
+pub(crate) const DEFAULT_MAX_AGENT_TOOL_SUBTURNS: usize = 10;
+pub(crate) const ITOPS_MAX_AGENT_TOOL_SUBTURNS: usize = 32;
+pub(crate) const TOOL_SUBTURN_LIMIT_NOTICE: &str = "The tool-call safety limit was reached. Do not output tool-call JSON, function names, or arguments as a substitute for executing tools. Briefly summarize what was completed, clearly say that the requested work is incomplete, and ask the user to continue in a new message.";
+
 impl OpenAiCompatibleProvider {
     pub(crate) fn api_style_for_settings(&self, api_mode: &str) -> OpenAiApiStyle {
         if self.provider_kind != "openai-compatible" {
@@ -133,6 +137,11 @@ impl OpenAiCompatibleProvider {
             .app_data_dir()
             .map_err(|error| format!("failed to locate KKTerm app data: {error}"))?;
         let model = settings.model().to_string();
+        let max_tool_subturns = if settings.tools().itops() {
+            ITOPS_MAX_AGENT_TOOL_SUBTURNS
+        } else {
+            DEFAULT_MAX_AGENT_TOOL_SUBTURNS
+        };
         let mut tool_error_tracker = ConsecutiveToolErrorTracker::default();
         // Cancellation is scoped to interactive (streaming) runs. Unattended
         // non-streaming runs — watchdog intervention sub-turns — must not be
@@ -142,7 +151,7 @@ impl OpenAiCompatibleProvider {
             cancel_generation.is_some_and(|generation| assistant_stream_canceled(app, generation))
         };
 
-        for turn_index in 0..10 {
+        for turn_index in 0..max_tool_subturns {
             if run_canceled(&app) {
                 return Err(ASSISTANT_STREAM_CANCELED_ERROR.to_string());
             }
@@ -250,13 +259,15 @@ impl OpenAiCompatibleProvider {
         }
 
         // Sub-turn cap reached: ask for one final answer with tools withheld
-        // so the model must reply instead of looping.
+        // so the model must reply instead of looping. Make the incomplete state
+        // explicit so it does not print planned tool-call JSON as if it ran.
         ai_debug!(
             "agent loop exhausted provider={} model={} streaming={}",
             self.provider_kind,
             model,
             channel.is_some()
         );
+        transport.append_tool_subturn_limit_notice();
         let turn = transport
             .run_turn(
                 self,
@@ -264,7 +275,7 @@ impl OpenAiCompatibleProvider {
                 &settings,
                 api_key.as_deref(),
                 channel.as_ref(),
-                11,
+                max_tool_subturns + 1,
                 false,
             )
             .await?;
@@ -598,6 +609,23 @@ impl AgentTransport {
                 "type": "function_call_output",
                 "call_id": tool_call.id,
                 "output": result,
+            })),
+        }
+    }
+
+    fn append_tool_subturn_limit_notice(&mut self) {
+        match self {
+            AgentTransport::Chat { messages, .. } => messages.push(OpenAiCompatibleMessage {
+                role: "user".to_string(),
+                content: OpenAiCompatibleContent::Text(TOOL_SUBTURN_LIMIT_NOTICE.to_string()),
+                reasoning_content: None,
+                tool_call_id: None,
+                tool_calls: None,
+            }),
+            AgentTransport::Responses { input, .. } => input.push(json!({
+                "type": "message",
+                "role": "user",
+                "content": [{"type": "input_text", "text": TOOL_SUBTURN_LIMIT_NOTICE}],
             })),
         }
     }

@@ -433,6 +433,29 @@ pub fn resolve_site_scoped(
     site: &Site,
     scope: &RunScope,
 ) -> Result<Vec<ResolvedHost>> {
+    if !scope.host_ids.is_empty() {
+        let wanted: HashSet<&str> = scope.host_ids.iter().map(String::as_str).collect();
+        let mut seen = HashSet::new();
+        let mut resolved = Vec::new();
+        for host in super::host_storage::list_hosts(conn, &site.id)? {
+            if !wanted.contains(host.id.as_str()) {
+                continue;
+            }
+            // One inventory Host can bind several Connections (for example
+            // SSH plus a management URL). Execution uses its first SSH binding.
+            for connection_id in host.connection_ids {
+                let Some(target) = fetch_resolved_host(conn, &connection_id, site.transport)? else {
+                    continue;
+                };
+                if target.connection_type == "ssh" && seen.insert(target.connection_id.clone()) {
+                    resolved.push(target);
+                    break;
+                }
+            }
+        }
+        return Ok(resolved);
+    }
+
     let racks = super::site_storage::list_racks(conn, &site.id)?;
     let mut seen: HashSet<String> = HashSet::new();
     let mut resolved: Vec<ResolvedHost> = Vec::new();
@@ -554,10 +577,66 @@ mod tests {
                 connection_type TEXT NOT NULL,
                 sort_order INTEGER NOT NULL
             );
+            CREATE TABLE itops_hosts (
+                id TEXT PRIMARY KEY,
+                site_id TEXT NOT NULL,
+                parent_host_id TEXT,
+                hostname TEXT NOT NULL,
+                label TEXT NOT NULL DEFAULT '',
+                kind TEXT NOT NULL DEFAULT 'physical',
+                connection_ids_json TEXT NOT NULL DEFAULT '[]',
+                scan_json TEXT,
+                notes TEXT NOT NULL DEFAULT '',
+                sort_order INTEGER NOT NULL
+            );
             "#,
         )
         .unwrap();
         conn
+    }
+
+    #[test]
+    fn host_scope_resolves_each_selected_hosts_first_bound_ssh_connection() {
+        let conn = open_test_db();
+        insert_connection(&conn, "ssh-1", "ssh", None, 0);
+        insert_connection(&conn, "url-1", "url", None, 1);
+        let site = create_site(
+            &conn,
+            "site-1",
+            "Site",
+            vec!["ssh-1".into(), "url-1".into()],
+            None,
+            Transport::Auto,
+            None,
+            None,
+            None,
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO itops_hosts
+             (id, site_id, hostname, connection_ids_json, sort_order)
+             VALUES ('host-1', 'site-1', 'web-01', '[\"url-1\",\"ssh-1\"]', 0),
+                    ('host-2', 'site-1', 'web-02', '[\"url-1\"]', 1)",
+            [],
+        )
+        .unwrap();
+
+        let resolved = resolve_site_scoped(
+            &conn,
+            &site,
+            &RunScope { host_ids: vec!["host-1".into()], ..Default::default() },
+        )
+        .unwrap();
+        assert_eq!(resolved.len(), 1);
+        assert_eq!(resolved[0].connection_id, "ssh-1");
+
+        let unrunnable = resolve_site_scoped(
+            &conn,
+            &site,
+            &RunScope { host_ids: vec!["host-2".into()], ..Default::default() },
+        )
+        .unwrap();
+        assert!(unrunnable.is_empty());
     }
 
     fn insert_connection(
@@ -626,6 +705,32 @@ mod tests {
             remove_site(&conn, "hg-1"),
             Err(ItopsStorageError::NotFound)
         ));
+    }
+
+    #[test]
+    fn site_background_roundtrips_through_list_sites() {
+        let conn = open_test_db();
+        create_site(
+            &conn,
+            "hg-bg",
+            "Background Site",
+            vec![],
+            None,
+            Transport::Auto,
+            None,
+            None,
+            None,
+        )
+        .unwrap();
+
+        let background = DashboardBackground::Preset {
+            preset: "mist".into(),
+        };
+        let updated = set_site_background(&conn, "hg-bg", Some(background.clone())).unwrap();
+        assert_eq!(updated.background, Some(background.clone()));
+
+        let listed = list_sites(&conn).unwrap();
+        assert_eq!(listed[0].background, Some(background));
     }
 
     #[test]

@@ -33,6 +33,7 @@ import {
 import { ConnectionSidebar } from "./modules/workspace/connections/ConnectionSidebar";
 import { useDashboardStore } from "./modules/dashboard/state/dashboardStore";
 import { useDashboardBackendInvalidation } from "./modules/dashboard/state/invalidation";
+import { useItOpsBackendInvalidation } from "./modules/itops/invalidation";
 import {
   loadSiteTreeCollapsed,
   saveSiteTreeCollapsed,
@@ -218,6 +219,7 @@ function App() {
 
   const { generalSettingsReady } = useBootstrapSettings();
   useDashboardBackendInvalidation();
+  useItOpsBackendInvalidation();
   useDebugFrontendHeartbeat();
   useFrontendLaunchTimestamp();
   useHostUsagePolling();
@@ -323,7 +325,7 @@ function App() {
     return { ok: true };
   }
 
-  // The IT Ops Module is hidden by default while under development. If it gets
+  // The IT Ops Module shows by default, but users can hide it. If it gets
   // turned off while it is the active (or last-active) page, fall back to the
   // Workspace so the user is never stranded on a Module they can't navigate to.
   useEffect(() => {
@@ -386,6 +388,7 @@ function App() {
         <div className="connection-panel-slot">
           <ConnectionSidebar
             onExternalOpenConnection={() => navigateToPage("workspace")}
+            onRevealPanel={expandConnectionPanel}
             onTogglePanel={toggleConnectionPanel}
           />
         </div>

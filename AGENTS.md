@@ -12,6 +12,8 @@ Use these docs as the source of truth instead of copying their rules here:
 - `docs/ARCHITECTURE.md` — architecture, source map, command boundaries,
   native-window rules, Settings rules, overlays, i18n, and UI placement.
 - `docs/PRD.md` / `docs/ROADMAP.md` — product scope and direction.
+- `docs/DASHBOARD.md` / `docs/ITOPS.md` — Dashboard and IT Ops Module deep
+  dives; each wins over `docs/ARCHITECTURE.md` on its Module-internal concerns.
 - `docs/ADR/` — accepted architectural decisions.
 - `docs/manual/INDEX.md` — shipped operation manual and chapter index.
 
@@ -60,9 +62,9 @@ Strong success criteria let you loop independently.
   resources, **Session** for live runtime state, and **Tab** for the frontend
   workspace container. Do not say "profile" for a stored Connection.
 - Capital-M **Module** means a top-level Activity Rail destination. Current
-  product Modules are **Workspace**, **Dashboard**, and **Install Helper**;
-  **Settings** is the bottom rail destination. The App Launcher is a Dashboard
-  widget, not a Module.
+  product Modules are **Workspace**, **Dashboard**, **Install Helper**, and
+  **IT Ops** (IT Ops defaults hidden on the rail); **Settings** is the bottom
+  rail destination. The App Launcher is a Dashboard widget, not a Module.
 - Source placement lives in `docs/ARCHITECTURE.md` → "Frontend Source Map".
   Prefer existing source areas and typed wrappers in `src/lib/tauri.ts`.
 - The operation manual ships with the app. Any UI behavior change in a manual

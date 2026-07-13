@@ -21,7 +21,7 @@ import { showNativeContextMenu, type NativeContextMenuItem } from "../lib/native
 import { supportsInstallerHelper } from "../lib/platform";
 import { activityRailModuleOrder } from "./activityRailOrder";
 import { invokeCommand, isTauriRuntime } from "../lib/tauri";
-import { useWorkspaceStore } from "../store";
+import { DEFAULT_WORKSPACE_ID, useWorkspaceStore } from "../store";
 import type { Connection, Workspace } from "../types";
 import { NewWorkspaceDialog } from "../modules/workspace/NewWorkspaceDialog";
 import { DeleteWorkspaceDialog } from "../modules/workspace/WorkspaceRailDialogs";
@@ -307,9 +307,24 @@ export function ActivityRail({
 
   function handleRailConnectionClick(item: ConnectedRailItem) {
     onNavigate("workspace");
+    const existingTab = item.tabId
+      ? tabs.find((tab) => tab.id === item.tabId)
+      : undefined;
+    // A connected session can live in another Workspace; jump back to it
+    // (activateTab switches Workspaces) instead of assembling a child
+    // layout — and brand-new sessions — in the current Workspace.
+    if (
+      existingTab &&
+      (existingTab.workspaceId ?? DEFAULT_WORKSPACE_ID) !== activeWorkspaceId
+    ) {
+      activateTab(existingTab.id);
+      return;
+    }
     if (generalSettings.hideTopTabButtons) {
       const childConnections = loadStoredChildConnections().filter(
-        (child) => child.parentConnectionId === item.connection.id,
+        (child) =>
+          child.parentConnectionId === item.connection.id &&
+          (child.workspaceId ?? DEFAULT_WORKSPACE_ID) === activeWorkspaceId,
       );
       if (childConnections.length > 0) {
         openChildConnectionLayout(item.connection, childConnections);

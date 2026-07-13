@@ -10,8 +10,14 @@ import type {
   AutomationAction,
   AutomationTestResult,
   BatchTask,
+  ItopsTask,
+  TaskOperatingSystem,
+  HostImportResult,
+  HostKind,
+  HostScanEvent,
   Site,
   SiteFilter,
+  SiteHost,
   ItopsTransport,
   Rack,
   ServerRoom,
@@ -78,6 +84,14 @@ export interface UpdateItemInput {
   connectionId: string | null;
   label: string;
   metadata?: RackItemMetadata;
+}
+
+export interface HostInput {
+  hostname: string;
+  label: string;
+  kind: HostKind;
+  parentHostId: string | null;
+  notes: string;
 }
 
 export type LiveRunHostStatus = "pending" | "running" | "ok" | "failed";
@@ -265,6 +279,27 @@ interface ItOpsState {
   removeRackItem: (siteId: string, id: string) => Promise<void>;
   refreshRackItemSnmp: (siteId: string, id: string) => Promise<void>;
 
+  // ── Hosts (docs/ITOPS.md Hosts) ──
+  /** Host inventory per Site id, flat rows in stored order. Loaded on demand. */
+  hostsBySite: Record<string, SiteHost[]>;
+  /** Host ids with a connectivity scan in flight (drives the "scanning" chip). */
+  scanningHostIds: Record<string, true>;
+  loadHosts: (siteId: string) => Promise<void>;
+  createHost: (siteId: string, input: HostInput) => Promise<SiteHost>;
+  updateHost: (
+    siteId: string,
+    id: string,
+    input: HostInput & { connectionIds: string[] },
+  ) => Promise<SiteHost>;
+  deleteHost: (siteId: string, id: string) => Promise<void>;
+  /** Import a parsed hostname list, then start a connectivity scan over the
+   *  created rows. Returns the import outcome (created + skipped counts). */
+  importHosts: (siteId: string, hostnames: string[]) => Promise<HostImportResult>;
+  /** Scan the given Hosts (all of the Site's Hosts when empty) for SSH/WinRM/
+   *  HTTPS endpoints. Per-host results stream in via applyHostScanEvent. */
+  scanHosts: (siteId: string, hostIds: string[]) => Promise<void>;
+  /** Fold one streamed `itops://host-scan` event into the Host cache. */
+  applyHostScanEvent: (event: HostScanEvent) => void;
   // ── Batch Runs (Phase 2) ──
   activeRun: LiveRun | null;
   runHistory: RunHistoryEntry[];
@@ -274,11 +309,20 @@ interface ItOpsState {
   pendingRunGroupId: string | null;
   /** Optional Rack / Server Room scope carried into the launcher for a scoped run. */
   pendingRunScope: RunScope | null;
-  requestNewBatchRun: (siteId?: string, scope?: RunScope) => void;
+  pendingRunTask: BatchTask | null;
+  requestNewBatchRun: (siteId?: string, scope?: RunScope, task?: BatchTask) => void;
   applyRunEvent: (event: RunEvent) => void;
-  startBatchRun: (siteId: string, task: BatchTask, scope?: RunScope | null) => Promise<string>;
+  startBatchRun: (siteId: string, task: BatchTask, scope?: RunScope | null, taskId?: string | null) => Promise<string>;
   cancelRun: (runId: string) => Promise<void>;
   loadRunHistory: () => Promise<void>;
+
+  // ── Global Task Library ──
+  tasks: ItopsTask[];
+  tasksLoaded: boolean;
+  loadTasks: () => Promise<void>;
+  createTask: (name: string, description: string, applicableOs: TaskOperatingSystem[], task: BatchTask) => Promise<ItopsTask>;
+  updateTask: (id: string, name: string, description: string, applicableOs: TaskOperatingSystem[], task: BatchTask) => Promise<ItopsTask>;
+  removeTask: (id: string) => Promise<void>;
 
   // ── Automations (Phase 3) ──
   automations: Automation[];
@@ -291,12 +335,14 @@ interface ItOpsState {
     config: WatchdogConfig,
     actions: AutomationAction[],
     enabled: boolean,
+    siteId: string | null,
   ) => Promise<Automation>;
   updateAutomation: (
     id: string,
     name: string,
     config: WatchdogConfig,
     actions: AutomationAction[],
+    siteId: string | null,
   ) => Promise<Automation>;
   setAutomationEnabled: (id: string, enabled: boolean) => Promise<void>;
   removeAutomation: (id: string) => Promise<void>;
@@ -507,6 +553,78 @@ export const useItOpsStore = create<ItOpsState>((set, get) => ({
     await get().loadRacks(siteId);
   },
 
+  // ── Hosts ──
+  hostsBySite: {},
+  scanningHostIds: {},
+  async loadHosts(siteId) {
+    if (!isTauriRuntime()) {
+      set({ hostsBySite: { ...get().hostsBySite, [siteId]: [] } });
+      return;
+    }
+    const hosts = await invokeCommand("itops_list_hosts", { siteId });
+    set({ hostsBySite: { ...get().hostsBySite, [siteId]: hosts } });
+  },
+
+  async createHost(siteId, input) {
+    const created = await invokeCommand("itops_create_host", { siteId, ...input });
+    await get().loadHosts(siteId);
+    return created;
+  },
+
+  async updateHost(siteId, id, input) {
+    const updated = await invokeCommand("itops_update_host", { id, ...input });
+    await get().loadHosts(siteId);
+    return updated;
+  },
+
+  async deleteHost(siteId, id) {
+    await invokeCommand("itops_delete_host", { id });
+    await get().loadHosts(siteId);
+  },
+
+  async importHosts(siteId, hostnames) {
+    const result = await invokeCommand("itops_import_hosts", { siteId, hostnames });
+    await get().loadHosts(siteId);
+    if (result.hosts.length > 0) {
+      void get().scanHosts(siteId, result.hosts.map((host) => host.id));
+    }
+    return result;
+  },
+
+  async scanHosts(siteId, hostIds) {
+    if (!isTauriRuntime()) return;
+    const targets =
+      hostIds.length > 0
+        ? hostIds
+        : (get().hostsBySite[siteId] ?? []).map((host) => host.id);
+    const scanning = { ...get().scanningHostIds };
+    for (const id of targets) scanning[id] = true;
+    set({ scanningHostIds: scanning });
+    try {
+      const hosts = await invokeCommand("itops_scan_hosts", { siteId, hostIds });
+      set({ hostsBySite: { ...get().hostsBySite, [siteId]: hosts } });
+    } finally {
+      const cleared = { ...get().scanningHostIds };
+      for (const id of targets) delete cleared[id];
+      set({ scanningHostIds: cleared });
+    }
+  },
+
+  applyHostScanEvent(event) {
+    if (event.kind !== "host") return;
+    const hosts = get().hostsBySite[event.siteId];
+    if (!hosts) return;
+    const scanning = { ...get().scanningHostIds };
+    delete scanning[event.host.id];
+    set({
+      hostsBySite: {
+        ...get().hostsBySite,
+        [event.siteId]: hosts.map((host) => (host.id === event.host.id ? event.host : host)),
+      },
+      scanningHostIds: scanning,
+    });
+  },
+
   async setSiteBackground(siteId, background) {
     const updated = await invokeCommand("itops_set_site_background", { siteId, background });
     set({ sites: get().sites.map((site) => (site.id === siteId ? updated : site)) });
@@ -542,12 +660,14 @@ export const useItOpsStore = create<ItOpsState>((set, get) => ({
   newRunRequest: 0,
   pendingRunGroupId: null,
   pendingRunScope: null,
+  pendingRunTask: null,
 
-  requestNewBatchRun(siteId, scope) {
+  requestNewBatchRun(siteId, scope, task) {
     set({
       newRunRequest: get().newRunRequest + 1,
       pendingRunGroupId: siteId ?? null,
       pendingRunScope: scope ?? null,
+      pendingRunTask: task ?? null,
     });
   },
 
@@ -558,11 +678,11 @@ export const useItOpsStore = create<ItOpsState>((set, get) => ({
     }
   },
 
-  async startBatchRun(siteId, task, scope) {
+  async startBatchRun(siteId, task, scope, taskId) {
     // The Started event populates activeRun; clear any prior run first so the
     // grid does not briefly show stale hosts.
     set({ activeRun: null });
-    return invokeCommand("itops_start_batch_run", { siteId, task, scope: scope ?? null });
+    return invokeCommand("itops_start_batch_run", { siteId, task, scope: scope ?? null, taskId: taskId ?? null });
   },
 
   async cancelRun(runId) {
@@ -577,8 +697,38 @@ export const useItOpsStore = create<ItOpsState>((set, get) => ({
       set({ historyLoaded: true });
       return;
     }
-    const runHistory = await invokeCommand("itops_list_run_history", { limit: 25 });
+    const runHistory = await invokeCommand("itops_list_run_history", { limit: 500 });
     set({ runHistory, historyLoaded: true });
+  },
+
+  // ── Global Task Library ──
+  tasks: [],
+  tasksLoaded: false,
+
+  async loadTasks() {
+    if (!isTauriRuntime()) {
+      set({ tasksLoaded: true });
+      return;
+    }
+    const tasks = await invokeCommand("itops_list_tasks");
+    set({ tasks, tasksLoaded: true });
+  },
+
+  async createTask(name, description, applicableOs, task) {
+    const created = await invokeCommand("itops_create_task", { name, description, applicableOs, task });
+    set({ tasks: [...get().tasks, created] });
+    return created;
+  },
+
+  async updateTask(id, name, description, applicableOs, task) {
+    const updated = await invokeCommand("itops_update_task", { id, name, description, applicableOs, task });
+    set({ tasks: get().tasks.map((entry) => (entry.id === id ? updated : entry)) });
+    return updated;
+  },
+
+  async removeTask(id) {
+    await invokeCommand("itops_remove_task", { id });
+    set({ tasks: get().tasks.filter((entry) => entry.id !== id) });
   },
 
   // ── Automations ──
@@ -599,19 +749,26 @@ export const useItOpsStore = create<ItOpsState>((set, get) => ({
     set({ automations, automationsLoaded: true });
   },
 
-  async createAutomation(name, config, actions, enabled) {
+  async createAutomation(name, config, actions, enabled, siteId) {
     const created = await invokeCommand("itops_create_automation", {
       name,
       config,
       actions,
       enabled,
+      siteId,
     });
     set({ automations: [...get().automations, created] });
     return created;
   },
 
-  async updateAutomation(id, name, config, actions) {
-    const updated = await invokeCommand("itops_update_automation", { id, name, config, actions });
+  async updateAutomation(id, name, config, actions, siteId) {
+    const updated = await invokeCommand("itops_update_automation", {
+      id,
+      name,
+      config,
+      actions,
+      siteId,
+    });
     set({
       automations: get().automations.map((automation) =>
         automation.id === id ? updated : automation,

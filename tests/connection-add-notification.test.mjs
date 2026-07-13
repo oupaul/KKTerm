@@ -15,7 +15,7 @@ test("adding a saved Connection does not show a success notification", async () 
   assert.ok(submitHandler, "handleConnectionSubmit implementation should be discoverable");
   assert.match(
     submitHandler,
-    /await handleConnectionSaved\(\);/,
+    /await handleConnectionSaved\(connection\);/,
     "adding a saved Connection should still refresh Connection state",
   );
   assert.doesNotMatch(

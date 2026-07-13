@@ -200,6 +200,7 @@ test("SSH forwarding starts through the Pane's live Session", async () => {
 
   assert.match(workspaceSource, /onOpenSshPortForwarding\(pane\.connection, pane\.id, sessionIdRef\.current\)/);
   assert.match(workspaceSource, /startEnabledSshPortForwardings\(\s*connection\.sshPortForwardings \?\? \[\]/);
+  assert.match(workspaceSource, /onConnectionUpdated=\{\(updatedConnection\) => \{[\s\S]*?refreshOpenConnectionMetadata\(updatedConnection\);[\s\S]*?notifyConnectionTreeInvalidated\(\);[\s\S]*?setSshPortForwardingDialogConnection\(updatedConnection\);/);
   assert.match(workspaceSource, /terminal\.sshPortForwardStartupFailed/);
   assert.match(dialogSource, /remotePort:[\s\S]*\bsessionId,/);
   assert.match(tauriSource, /start_ssh_port_forward:[\s\S]*sessionId:\s*string/);

@@ -16,6 +16,12 @@ The IT Ops Module owns:
 
 - **Sites** — durable named selections of existing Connections used as site
   targets, plus the optional Site → Server Room → Rack topology.
+- **Hosts** — a per-Site durable inventory of devices and their VM/container
+  guests, imported from hostname lists and scanned for remote-access
+  endpoints (see "Hosts" below).
+- **Tasks** — global reusable script or Playbook definitions. A Task owns what
+  to execute but never owns targets; a Site, Host selection, or Automation
+  supplies targets when the Task launches.
 - **Batch Runs** — fan-out task execution across a Site with
   per-host live output and a consolidated, saved run report.
 - **Automations** — durable trigger → condition → action rules (the
@@ -36,7 +42,7 @@ It does not own:
 - Selective export/import shape (extends the ADR-0010 flow; it does not
   fork it).
 
-## Why this is one Module, not three features
+## Why this is one Module, not separate features
 
 Batch Runs and Automations are the same primitive seen from two
 directions. A Batch Run is a task executed **now** against a Site.
@@ -45,6 +51,10 @@ trigger fires. They share the host-targeting model (Sites), the
 fan-out executor, the transport adapters, and the run-history store.
 Keeping them in one Module lets an Automation's `runBatch` action reuse
 the exact executor a manual run uses.
+
+The UI makes the shared primitive explicit: **Task + targets → Batch Run**,
+while **trigger + Task + targets → Automation**. Tasks are global to IT Ops so
+the same definition can run against several Sites without duplication.
 
 ## Domain Concepts
 
@@ -82,6 +92,36 @@ rendering and properties; it is not a Connection type.
 
 **Rack Device Properties** — non-secret presentation metadata for a Rack
 Device. Never store credentials or live Session state here.
+Server Rack Devices may use a rack or tower form factor; tower is a half-width
+faceplate presentation and does not change vertical U occupancy. A Server may
+also select Default, Style 1, or Style 2 front-panel artwork independently of
+its form factor and shell finish. Style 1 uses height-specific chassis artwork:
+3–4U has a two-row lattice over a deep drive wall, while 5U and taller keeps
+the lattice in the upper faceplate and exposes a separate lower expansion-card
+and grille section instead of vertically stretching the 1U design.
+
+**Host** — a durable inventory entry for one device or guest in a Site,
+addressed by hostname and stored in `itops_hosts`. The device itself can be a
+Host; a Host may carry **child Hosts** (its VMs or containers) via a soft
+`parent_host_id` self reference — deleting a Host re-parents its children one
+level up rather than dropping them. A Host binds any number of Connections at
+once (`connection_ids_json`, ordered soft refs) — e.g. an SSH terminal plus an
+HTTPS URL Connection to its management interface. Hosts are imported from a
+pasted hostname list (blank/duplicate lines skipped) and then scanned with
+bounded-concurrency TCP probes for SSH (22), WinRM (5985/5986), and HTTPS
+(443); the scan snapshot is stored on the Host (`scan_json`) as data, never
+live Session state and never a secret, and per-host results stream on the
+`itops://host-scan` event channel. A Rack Device may reference a Host through
+`metadata.hostId` so the Rack View balloon callout lists the Host and its
+child Hosts. Storage lives in `src-tauri/src/itops/host_storage.rs`; the
+Site-owned Hosts page is implemented by `src/modules/itops/HostsPanel.tsx`.
+Each Host row also shows its current Batch Run state (queued, running,
+succeeded, or failed) while a run is active, plus the newest persisted run
+result for that Host in a separate Last run status column. That page owns
+manual execution targeting: the operator selects Hosts with SSH
+Connection bindings, chooses a reusable Task or ad-hoc Script Batch Task, and starts a
+Batch Run scoped to exactly those Host ids.
+_Avoid_: node, agent, connection host field
 
 **Transport** — how a Batch Run reaches one host. Per host (derived from
 the Connection, overridable per Site/run):
@@ -105,6 +145,18 @@ the Connection, overridable per Site/run):
   appear within its timeout fails, which **stops the playbook on that
   host** (other hosts continue). Steps run over a **single shell per
   host**, so later steps see the state earlier steps left behind.
+
+**Task** — a durable reusable Batch Task stored in `itops_tasks`. A Task has a
+name, optional description, and one script or Playbook definition. It has no
+Site id, Host ids, plaintext credentials, or live state. A sudo node may keep
+an opaque secret-vault reference; the password itself never enters Task JSON.
+The operator chooses targets at
+launch time; an Automation references the Task and target Site separately.
+Deleting or editing a Task never rewrites completed Run History, whose report
+keeps a redacted task-summary snapshot. The Task Library editor supports both
+script Tasks and reusable Playbooks. Playbooks use the same ordered node-canvas
+language as Automations, but remain a linear chain rather than a free-form DAG.
+_Avoid_: Site task, saved Batch Run, Automation workflow
 
 **Batch Run** — one execution of a Batch Task against a resolved Host
 Site. Live run state (per-host status, streamed stdout/stderr, exit
@@ -152,15 +204,25 @@ between each other (no DAG); each reads the trigger snapshot.
 Three SQLite tables (new schema version):
 
 - `itops_sites` — id, name, ordered Connection ids, optional dynamic filter,
-  transport defaults.
+  and a legacy transport fallback retained for storage compatibility. Site
+  Properties does not expose transport; new Sites use `auto`, and current Host
+  execution resolves from bound Connections.
 - `itops_site_racks` / `itops_site_rack_items` — Site topology and Rack
   Devices. Pure metadata; Connection ids are soft references.
+- `itops_hosts` — per-Site Host inventory: hostname, label, kind
+  (physical/vm/container/other), soft `parent_host_id` self reference for
+  child Hosts, ordered soft Connection references, and the last
+  connectivity-scan snapshot. No secret, no live state.
 - `itops_automations` — id, name, enabled flag, trigger config, optional
   condition, ordered actions, poll/stop/suppression settings (the durable
-  superset of `WatchdogConfig`).
+  superset of `WatchdogConfig`), plus an optional Site binding (`site_id`,
+  a soft reference like `itops_run_history`'s) that scopes the rule to one
+  Site's Automations page.
 - `itops_run_history` — id, source (manual run or automation id), task
   summary, started/finished, per-host outcome summary, consolidated
   report blob. Local-first; no telemetry.
+- `itops_tasks` — global reusable Task definitions: id, name, description,
+  ordered position, and typed `BatchTask` JSON. No target or live state.
 
 Durable definitions only. **Live state never persists**: in-flight Batch
 Run progress, Automation poll ticks, tick ring buffers, and runtime state
@@ -203,15 +265,176 @@ UI/native thread (`docs/ARCHITECTURE.md` command-runtime boundaries).
 
 ## Frontend
 
-`src/modules/itops/` owns the Module shell. The current visible shell opens
-directly into the Site topology surface: a resizable/collapsible left Sites
-tree and a right Site View / Server Room View / Rack View drill-down. Batch
-Run and Automation editors/runtime remain in this source area, but their
-top-level tab chrome is hidden while the Site-only UI is active. The drill-down
-views own an icon-only Edit / New / Export toolbar: edit mode gates free
-placement, Rack Device drag/drop, and destructive controls; normal mode remains
-an inspect/open surface. Site and Server Room exports save PDF, while Rack View
-also saves an Excel-readable inventory table. The live
+`src/modules/itops/` owns the Module shell. The visible shell uses one
+resizable/collapsible operational navigator. Only the active Site needs to be
+expanded. Each Site exposes predefined virtual destinations — **Server Rooms**,
+**Hosts**, **Automations**, and **Run History** — while its topology continues
+to drill down Server Room → Rack beneath Server Rooms. These destinations are
+navigation state, not durable database entities or copied containers.
+
+The global **Task Library** is a sibling of Sites rather than a child of every
+Site. Opening a Task shows and manages its definition. Manual execution starts
+only from selected Hosts; the Host-scoped launcher offers reusable definitions
+from the Task Library alongside an ad-hoc Script option. This prevents duplicated
+per-Site scripts and keeps target selection explicit.
+
+Every Task carries multi-select Applicable OS metadata: `any`, `linux`, `macos`,
+`windows`, `ciscoIos`, `ciscoNxos`, `fortiOs`, `junos`, or `aristaEos`. `any` is
+exclusive with the specific values. This metadata drives Task Library display,
+search, and filtering only; Hosts do not currently have a trusted OS identity,
+so launch-time target selection does not silently exclude Hosts.
+
+The app syncs a stable built-in diagnostic catalog into `itops_tasks` on startup.
+It covers system identity, uptime, resource usage, network interfaces, routing
+and DNS, and recent-log inspection for Linux, macOS, Windows, Cisco IOS,
+Cisco NX-OS, FortiOS, Juniper Junos, and Arista EOS. Built-ins use stable ids and
+catalog keys so Run History and Automation references survive catalog upgrades.
+They are app-owned, read-only, non-deletable definitions; the UI duplicates a
+built-in into an ordinary user Task before customization. Catalog commands are
+inspection-only and must not install, reboot, reconfigure, or delete anything.
+
+Creating or editing a Playbook opens a full ordered workflow editor. Command
+nodes send text through one shared interactive shell. A sudo node runs
+`sudo -S -v`, waits for a dedicated prompt, retrieves its password from the
+configured secret vault, and validates elevation before later nodes continue.
+Only the vault owner id is durable; plaintext is resolved in memory immediately
+before the Batch Run and is never copied into SQLite or Run History. Removing a
+sudo node or deleting its Task removes the associated vault entry.
+
+An AI node evaluates the immediately preceding node output with the currently
+configured AI Assistant provider. KKTerm sends that output as explicitly
+untrusted data with tools disabled and requires one parsed JSON decision:
+`continue` runs the next ordered node, `success` ends that Host successfully,
+and `fail` stops that Host as failed. Any provider error, invalid JSON, or value
+outside this closed enum fails the Host. AI nodes never turn model text into a
+shell command or choose an arbitrary graph edge.
+
+Hosts, Automations, Run History, and the global Task Library share one
+destination-page frame: the same content inset, compact title/description
+header, right-aligned primary actions, divider, and bordered-row rhythm. The
+Task Library keeps its spreadsheet-style Task table inside that frame rather
+than owning a separate full-height chrome layout. Each row shows Task kind, Applicable OS,
+execution count, failed-host count, and a link to the most recent Site Run
+History containing that Task. Statistics use the Task's stable id; ad-hoc,
+Automation, and older unattributed history rows are never guessed by label.
+
+### IT Ops destination-page UI contract
+
+This section is normative for future IT Ops frontend work. It applies to
+Hosts, Automations, Run History, Task Library, and any later non-spatial
+destination opened from the IT Ops navigator. Do not give a new destination an
+independent page shell or visual language.
+
+#### Required page anatomy
+
+1. The navigator's detail host uses `it-destination-page`; the destination root
+   uses `it-destination-surface`. The root owns the shared `var(--pad)` inset.
+   Do not add a second page-level inset inside an individual destination.
+2. The first element is `it-destination-page-head`. It contains one compact
+   title and, when useful, one single-line description on the left. Page-level
+   metadata and actions stay on the right.
+3. Use at most one emphasized page-level primary action. Put it at the far
+   right and keep its placement stable across empty and populated states. A
+   read-only destination such as Run History may omit it; do not invent an
+   action merely to fill the space.
+4. An optional compact toolbar follows the header divider. Use it for filters,
+   selection controls, search, counts, and secondary actions. It must not
+   become a second competing page header.
+5. The content begins on the same left edge as the header and toolbar. Lists use
+   one bordered container with themed surface rows and hairline separators.
+   Avoid unrelated floating cards, per-row shadows, and different corner radii
+   for each destination.
+
+#### Master-detail and specialized content
+
+- Task Library may keep its master-detail body, but the split view is one
+  bordered content region below the shared page header. Its create action stays
+  in the page header; do not restore a separate mini-header in the list pane.
+- Run reports and live-run progress may use status-specific summaries inside
+  the shared frame. Navigating from history list to report detail must not move
+  or restyle the destination header.
+- Automation's node editor is a full-canvas workflow entered from the
+  destination. Its specialized canvas does not license a different layout for
+  the Automations list page.
+- Site View, Server Room View, and Rack View are spatial drill-down canvases,
+  not destination pages. They keep their centered view controls and icon-only
+  Edit/Export toolbar described below.
+
+#### Empty and setup states
+
+- Keep the page header and its action positions unchanged when data is empty.
+  Do not replace the entire destination with a one-off landing page.
+- Every destination and topology setup state renders through
+  `ItOpsEmptyHint`. It is one short neutral centered sentence, without a glyph,
+  secondary heading, promotional card, or large primary button.
+- When a meaningful setup action exists, keep it as an inline accent-colored
+  phrase inside the sentence. The action looks and behaves
+  like the Workspace empty-state links: transparent background, compact hover
+  treatment, visible focus ring, and no surrounding promotional card.
+- A missing Site collection uses `itops.sites.emptyHint`; an empty Site uses
+  `itops.sites.emptyServerRoomsHint`; an empty Server Room uses
+  `itops.racks.emptyServerRoomHint`; an empty Rack uses
+  `itops.racks.emptyRackHint`; Hosts uses `itops.hosts.empty`; Automations uses
+  `itops.automations.emptyHint`; and Run History uses
+  `itops.batchRuns.historyEmptyHint`. Keep actionable phrases inside their full
+  translated sentences with `Trans` component markers. Do not concatenate text
+  fragments or replace a hint with a lone button.
+
+#### Implementation and review gates
+
+- Reuse the existing `it-destination-*`, `it-task-library-*`, list-row, and
+  `it-empty-hint` rules in `src/modules/itops/itops.css`. Extend these
+  shared rules when the whole family needs to change; do not add page-specific
+  copies with slightly different spacing or colors.
+- Read colors, borders, hover states, radii, and typography from app tokens.
+  IT Ops hardware artwork may use its documented physical-equipment palette,
+  but destination chrome must not hard-code colors.
+- Route all text through `itops.*` i18n keys and follow the localization backlog
+  workflow. Inline action markers such as `<addRack>` and `<editMode>` are part
+  of the translation contract.
+- Update this section when intentionally changing the shared pattern. Add or
+  adjust a focused frontend regression test so Task Library and every Site
+  destination cannot silently drift back into separate page shells.
+- Review the four destinations together at the same window size in Default and
+  Dark before handing off an IT Ops UI change. Also check the affected topology
+  empty state when changing Rack or Server Room flows.
+
+Site View is now overview-only and has no segmented content switcher. Hosts,
+Automations, and Run History each own a separate Site-scoped page selected from
+the navigator. The Hosts page owns Host selection and the manual **Run Task**
+action; its launcher accepts a reusable Task from the global Task Library or an
+ad-hoc Script Batch Task and fixes the target scope to the selected Host ids. A Host is
+runnable when it has a bound SSH Connection; target resolution uses the first
+bound SSH Connection for each selected Host and deduplicates Connections.
+
+Run History is read-only navigation over the selected Site's live run and
+completed reports. It has no independent start or rerun action; “Batch Run” is
+the execution concept, not the name of a page or durable container. Automations are
+filtered to rules bound to the selected Site by their durable `site_id` (set in
+the node editor's header Site select and defaulted from the destination that
+opened it; legacy rows without a binding fall back to inference — a runBatch
+action targeting the Site, or a host-addressed trigger watching one of its
+resolved member hosts). The
+drill-down views own an icon-only Edit / Export toolbar: edit mode gates free
+placement, Rack Device drag/drop, empty-slot add affordances, and destructive
+controls; normal mode remains an inspect/open surface. Site and Server Room
+exports save a graphical PDF report with topology summaries, scaled rack elevations,
+placed Rack Device faceplates, paginated inventory data, and platform-rendered Unicode
+text for localized names and labels. Rack View also saves an
+Excel-readable inventory table.
+An empty Server Room uses explanatory guidance with an inline New Rack action.
+An empty Rack uses an inline Edit mode action that reveals the Rack Device
+picker.
+Site, Server Room, and Rack tree rows share one native context-menu contract:
+Properties is always the final item, separated from the commands above it.
+Delete sits above Properties and routes to the shared danger `ConfirmSheet`;
+the seeded Default Site shows Delete disabled. A Server Room also places
+`itops.racks.addRackAction` above Delete and opens the New Rack dialog already
+scoped to that Server Room.
+The virtual Server Rooms row has its own single-command native menu:
+`itops.racks.addServerRoomAction`, which opens the New Server Room dialog for
+that Site.
+The live
 Batch Run view renders a per-host grid
 with status chips and **live streamed output** (each host auto-reveals its
 output as it arrives over the `itops://run` `HostOutput` frames; the SSH
@@ -242,6 +465,9 @@ same model Dashboard uses. The assistant may draft a Site or an
 Automation (trigger + condition + actions) from a typed schema; a
 successful mutating tool emits an `itops-changed` backend event that
 reloads the IT Ops store so the new rule appears without restart. The
+Rack Device placement schema includes `kuaiguai` and documents the rack-top
+virtual position (`startU = rack.heightU + 1`) plus expiry/style metadata, so
+assistant and built-in MCP calls preserve the same placement invariant as the UI. The
 page-context payload is a compact projection — Site names/counts,
 Automation names/states, recent run summaries — never full run output,
 streamed host buffers, secrets, or credential references. Mutating
@@ -312,6 +538,8 @@ CREATE TABLE IF NOT EXISTS itops_automations (
     condition_json TEXT,
     -- JSON array of typed actions, executed in order.
     actions_json  TEXT NOT NULL DEFAULT '[]',
+    -- Optional durable Site binding (soft reference; NULL = unbound).
+    site_id       TEXT,
     -- Loop settings (poll_ms, stop, sustained_for_ms, suppression_ms): JSON object.
     runtime_json  TEXT NOT NULL DEFAULT '{}',
     created_at    TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -335,6 +563,17 @@ CREATE TABLE IF NOT EXISTS itops_run_history (
 
 CREATE INDEX IF NOT EXISTS idx_itops_run_history_source
     ON itops_run_history(source, started_at);
+
+-- A reusable global Task definition. Targets are supplied when launched.
+CREATE TABLE IF NOT EXISTS itops_tasks (
+    id          TEXT PRIMARY KEY,
+    name        TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    sort_order  INTEGER NOT NULL,
+    task_json   TEXT NOT NULL,
+    created_at  TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at  TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 ```
 
 `itops_run_history` uses a **soft** `host_group_id` (no `REFERENCES`) so
@@ -424,10 +663,14 @@ pub enum BatchTask {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PlaybookStep {
+    pub id: Option<String>,            // stable editor identity
+    pub kind: PlaybookStepKind,        // command (default) or sudo
     pub name: String,
     pub send: String,
     pub expect: Option<String>,        // literal substring; None = don't wait
     pub timeout_seconds: Option<u64>,  // falls back to the run default
+    pub secret_owner_id: Option<String>, // vault reference only; sudo nodes
+    pub ai_instruction: Option<String>, // closed decision prompt; AI nodes
 }
 
 /// Common transport interface; SSH/WinRM/PsExec each implement it.
@@ -525,7 +768,7 @@ The plumbing above is complete (Sites, SSH Batch Runs, durable
 Automations + action catalog, playbooks, AI integration), but from an
 operator's seat the Module today is mostly a transport: it returns N raw
 per-host output blobs and a flat list of names. The enhancements below turn it
-into something that produces *answers* and a site you *see*. They are captured
+into something that produces _answers_ and a site you _see_. They are captured
 here so the design is not lost; sequence them by demand.
 
 **Site management (implemented, detailed in `docs/SITE.md`).** Host Group is
@@ -534,14 +777,14 @@ run-history soft reference is `site_id`, and commands/i18n use the Site term.
 The Site topology layer adds per-Site **Server Rooms**, **Racks**, and **Rack
 Devices**. Racks are drawn as full 42U rack elevations and may hold placed
 Connections (click to open ssh/rdp/vnc/etc.) or passive items (switch, PDU,
-patch panel, blank, label). Scoped Batch Runs use Server Room / Rack scope. See
+patch panel). Scoped Batch Runs use Server Room / Rack scope. See
 `docs/SITE.md` for the detailed data model and product terminology.
 
 The following are noted for later consideration (not yet planned in detail):
 
 1. **Run result synthesis (low-hanging).** A Batch Run already persists
    per-host `{exitCode, ok, output}` in `itops_run_history.report_json` and
-   `RunReportView` replays the text. Add a synthesis layer over that *existing*
+   `RunReportView` replays the text. Add a synthesis layer over that _existing_
    data: an **aggregate view** (group hosts by identical output / exit code —
    "27 OK, 2 disk 94%, 1 unreachable"), an **outlier/diff** mode (show only
    hosts whose output differs from the majority — site drift), and an
@@ -549,13 +792,13 @@ The following are noted for later consideration (not yet planned in detail):
    Mostly frontend + AI over data the backend already stores; highest
    value-per-effort. Reframes a run from "30 transcripts" to "one answer."
 
-3. **Built-in task library (cheap quick win).** A new Batch Run today is an
+2. **Built-in task library (cheap quick win).** A new Batch Run today is an
    empty textarea. Ship a curated, per-OS task catalog (disk/mem/uptime,
    who's-logged-in, service status, package-update dry-run, security-patch
    status) so the tool is usable in the first 30 seconds. Matches the ROADMAP
    "reusable workflow templates" item.
 
-4. **Durable Automation event log.** Automation fires are transient today
+3. **Durable Automation event log.** Automation fires are transient today
    (`itops://automation` emits a one-shot notice/popup, then it's gone). Batch
    Runs get durable `itops_run_history`; Automations get nothing. Add a durable
    automation-event log (what fired, when, trigger snapshot, which actions ran,
@@ -563,7 +806,7 @@ The following are noted for later consideration (not yet planned in detail):
    answerable. Live runtime state still stays in-memory; only the fire record
    is durable.
 
-5. **Scheduled inventory with trend.** The `Schedule` (cron) trigger only
+4. **Scheduled inventory with trend.** The `Schedule` (cron) trigger only
    drives fire-and-forget actions. Add a pattern that runs a query on a
    schedule, stores each snapshot, and shows what changed since the last run —
    reusing the run-history store plus the diff from (1). This is where ongoing

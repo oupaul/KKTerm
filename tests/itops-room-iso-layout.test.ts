@@ -6,6 +6,8 @@ import {
   ISO_MIN_ROWS,
   ISO_TILT_COS,
   expandIsoFloorFrame,
+  fitIsoRoomZoom,
+  isoPlacementCells,
   moveIsoRack,
   rackDepthFrac,
   rackFootprint,
@@ -88,6 +90,29 @@ test("decorative 2.5D floor expansion keeps the room grid origin aligned", () =>
   assert.ok(frame.floorRows > 4);
   assert.equal(frame.offX, 0);
   assert.equal(frame.offY, 0);
+});
+
+test("2.5D room establishes a fit-to-pane baseline after the assistant narrows it", () => {
+  const natural = { w: 1280, h: 720 };
+  const viewport = { w: 880, h: 680 };
+  const effectiveZoom = fitIsoRoomZoom(natural, viewport, 1);
+
+  assert.equal(effectiveZoom, viewport.w / natural.w);
+  assert.ok(natural.w * effectiveZoom <= viewport.w);
+  assert.ok(natural.h * effectiveZoom <= viewport.h);
+  assert.equal(fitIsoRoomZoom(natural, null, 1), 1);
+  assert.equal(fitIsoRoomZoom(natural, { w: 1600, h: 900 }, 1), 1);
+  assert.equal(fitIsoRoomZoom(natural, viewport, 2), 2 * viewport.w / natural.w);
+});
+
+test("every visible 2.5D floor cell can receive an edit-mode placement", () => {
+  const cells = isoPlacementCells(9, 7, new Set(["1,2", "4,5"]));
+
+  assert.equal(cells.length, 9 * 7 - 2);
+  assert.deepEqual(cells[0], { x: 0, y: 0 });
+  assert.ok(cells.some((cell) => cell.x === 8 && cell.y === 6));
+  assert.ok(!cells.some((cell) => cell.x === 1 && cell.y === 2));
+  assert.ok(!cells.some((cell) => cell.x === 4 && cell.y === 5));
 });
 
 test("rackDepthFrac scales displayed depth by the 1200 mm cell", () => {

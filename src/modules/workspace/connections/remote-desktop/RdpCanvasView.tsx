@@ -14,6 +14,7 @@ import { useEffect, useRef, useState } from "react";
 import type { FormEvent, RefObject } from "react";
 import { useTranslation } from "react-i18next";
 import { Actions, Btn, DialogShell, Field, Sheet, TextInput } from "../../../../app/ui/dialog";
+import { readFromClipboard, writeToClipboard } from "../../../../lib/clipboard";
 import { invokeCommand, isTauriRuntime } from "../../../../lib/tauri";
 import type { Connection } from "../../../../types";
 import { connectionPasswordOwnerId } from "../utils";
@@ -41,7 +42,12 @@ type RdpCanvasEvent =
       rgba: string;
     }
   | { kind: "error"; sessionId: string; message: string }
-  | { kind: "disconnected"; sessionId: string };
+  | { kind: "disconnected"; sessionId: string }
+  | { kind: "clipboardText"; sessionId: string; text: string };
+
+function isMetaKeyCode(code: string): boolean {
+  return code === "MetaLeft" || code === "MetaRight";
+}
 
 function createRdpSessionId() {
   return `rdp-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
@@ -171,6 +177,9 @@ export function RdpCanvasView({
           setStatus("disconnected");
           reportDisconnected();
           break;
+        case "clipboardText":
+          void writeToClipboard(payload.text).catch(() => undefined);
+          break;
         default:
           draw(payload);
       }
@@ -298,6 +307,35 @@ export function RdpCanvasView({
     void invokeCommand("send_rdp_client_text", { request: { sessionId, text } }).catch(() => undefined);
   };
 
+  const sendClipboardText = (text: string) => {
+    const sessionId = sessionIdRef.current;
+    if (!sessionId || text.length === 0) {
+      return Promise.resolve();
+    }
+    return invokeCommand("send_rdp_client_clipboard_text", { request: { sessionId, text } }).catch(() => undefined);
+  };
+
+  const sendRemotePasteChord = () => {
+    const ctrlScancode = scancodeForCode("ControlLeft");
+    const vScancode = scancodeForCode("KeyV");
+    if (ctrlScancode === undefined || vScancode === undefined) {
+      return;
+    }
+    sendScancode(ctrlScancode, true);
+    sendScancode(vScancode, true);
+    sendScancode(vScancode, false);
+    sendScancode(ctrlScancode, false);
+  };
+
+  // Refresh CLIPRDR with the local clipboard before sending a remote Ctrl+V.
+  // This keeps Cmd+V on macOS local while still performing a normal remote paste.
+  const pasteFromClipboard = () => {
+    void readFromClipboard()
+      .then((text) => sendClipboardText(text))
+      .then(() => sendRemotePasteChord())
+      .catch(() => undefined);
+  };
+
   const setCanvasRef = (node: HTMLCanvasElement | null) => {
     canvasRef.current = node;
     if (surfaceRef) {
@@ -325,10 +363,20 @@ export function RdpCanvasView({
     if (composingRef.current || e.key === "Process") {
       return; // IME is composing — let composition events handle it.
     }
+    // Ctrl/Cmd+V refreshes CLIPRDR, then sends a remote Ctrl+V paste chord.
+    // Swallow the local chord so Cmd+V does not arrive as a bare remote V.
+    if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.code === "KeyV") {
+      e.preventDefault();
+      pasteFromClipboard();
+      return;
+    }
     const shortcut = e.ctrlKey || e.altKey || e.metaKey;
     const isText = isCharacterCode(e.code);
     if (isText && !shortcut) {
       return; // Plain printable key → handled by the Unicode/input path below.
+    }
+    if (isMetaKeyCode(e.code)) {
+      return; // Cmd/Super is a local modifier here; forwarding it just taps the remote Start menu.
     }
     const scancode = scancodeForCode(e.code);
     if (scancode !== undefined) {
@@ -341,10 +389,19 @@ export function RdpCanvasView({
     if (composingRef.current) {
       return;
     }
+    // Matches the paste interception in onKeyDown: swallow the "V" release so it
+    // is not forwarded as a lone scancode after the clipboard was replayed.
+    if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.code === "KeyV") {
+      e.preventDefault();
+      return;
+    }
     const shortcut = e.ctrlKey || e.altKey || e.metaKey;
     const isText = isCharacterCode(e.code);
     if (isText && !shortcut) {
       return;
+    }
+    if (isMetaKeyCode(e.code)) {
+      return; // See onKeyDown: the Cmd/Super modifier is not forwarded to the remote.
     }
     const scancode = scancodeForCode(e.code);
     if (scancode !== undefined) {

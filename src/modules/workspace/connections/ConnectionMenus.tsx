@@ -3,6 +3,22 @@ import { useTranslation } from "react-i18next";
 import { ConnectionTypeGlyph } from "./ConnectionGlyph";
 import type { ConnectionType } from "../../../types";
 
+export const CONNECTION_CREATION_OPTIONS = [
+  { type: "local", labelKey: "connections.localTerminal" },
+  { type: "ssh", labelKey: "connections.ssh" },
+  { type: "telnet", labelKey: "connections.telnet" },
+  { type: "serial", labelKey: "connections.serial" },
+  { type: "url", labelKey: "connections.url" },
+  { type: "rdp", labelKey: "connections.rdp" },
+  { type: "vnc", labelKey: "connections.vnc" },
+  { type: "ftp", labelKey: "connections.ftp" },
+  { type: "localFiles", labelKey: "connections.localFiles" },
+  { type: "fileView", labelKey: "connections.fileView" },
+] as const satisfies ReadonlyArray<{
+  type: ConnectionType;
+  labelKey: string;
+}>;
+
 export function AddConnectionMenu({
   onImportRequested,
   onSelectType,
@@ -11,59 +27,14 @@ export function AddConnectionMenu({
   onSelectType: (connectionType: ConnectionType) => void;
 }) {
   const { t } = useTranslation();
-  const connectionTypeOptions: Array<{
-    type: ConnectionType;
-    title: string;
-  }> = [
-    {
-      type: "local",
-      title: t("connections.localTerminal"),
-    },
-    {
-      type: "ssh",
-      title: t("connections.ssh"),
-    },
-    {
-      type: "telnet",
-      title: t("connections.telnet"),
-    },
-    {
-      type: "serial",
-      title: t("connections.serial"),
-    },
-    {
-      type: "url",
-      title: t("connections.url"),
-    },
-    {
-      type: "rdp",
-      title: t("connections.rdp"),
-    },
-    {
-      type: "vnc",
-      title: t("connections.vnc"),
-    },
-    {
-      type: "ftp",
-      title: t("connections.ftp"),
-    },
-    {
-      type: "localFiles",
-      title: t("connections.localFiles"),
-    },
-    {
-      type: "fileView",
-      title: t("connections.fileView"),
-    },
-  ];
 
   return (
     <div className="add-connection-menu" role="menu" aria-label={t("connections.addConnection")}>
-      {connectionTypeOptions.map((option) => (
+      {CONNECTION_CREATION_OPTIONS.map((option) => (
         <button key={option.type} onClick={() => onSelectType(option.type)} role="menuitem" type="button">
           <ConnectionTypeGlyph className="menu-item-icon" size={15} type={option.type} />
           <span className="connection-main">
-            <strong>{option.title}</strong>
+            <strong>{t(option.labelKey)}</strong>
           </span>
         </button>
       ))}

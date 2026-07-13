@@ -1,6 +1,31 @@
 use super::*;
 
 #[test]
+fn large_agent_jobs_have_headroom_and_never_dump_unexecuted_tool_json_at_the_limit() {
+    assert_eq!(DEFAULT_MAX_AGENT_TOOL_SUBTURNS, 10);
+    assert_eq!(ITOPS_MAX_AGENT_TOOL_SUBTURNS, 32);
+    assert!(TOOL_SUBTURN_LIMIT_NOTICE.contains("Do not output tool-call JSON"));
+    assert!(TOOL_SUBTURN_LIMIT_NOTICE.contains("requested work is incomplete"));
+}
+
+#[test]
+fn playbook_ai_decision_accepts_closed_json_and_rejects_unknown_actions() {
+    let decision = parse_playbook_ai_decision(
+        "```json\n{\"decision\":\"success\",\"reason\":\"service is active\"}\n```",
+    )
+    .unwrap();
+    assert_eq!(decision.decision, PlaybookAiDecisionKind::Success);
+    assert_eq!(decision.reason, "service is active");
+
+    assert!(
+        parse_playbook_ai_decision(
+            "{\"decision\":\"runCommand\",\"reason\":\"sudo rm -rf /\"}"
+        )
+        .is_err()
+    );
+}
+
+#[test]
 fn ai_stream_tool_events_use_frontend_field_names() {
     let event = serde_json::to_value(AiStreamEvent::ToolCallStart {
         tool_id: "call_123".to_string(),
@@ -486,17 +511,22 @@ fn windows_cli_process_args_run_cmd_shims_through_cmd_exe() {
 
 #[test]
 fn windows_external_terminal_command_line_wraps_quoted_command() {
-    // A `.cmd` shim installed via nvm-for-windows: shell_quote wraps the path in
-    // double quotes, and the external-terminal command line must wrap that whole
-    // command in a second quote pair so the inner `cmd /K` strips exactly the
-    // outer pair and runs the original quoted command. Regression for the
-    // `'\"...claude.cmd\"' is not recognized` failure on quote-escaped launches.
-    let command = format!(
-        "{} auth login",
-        shell_quote("C:\\nvm4w\\nodejs\\claude.cmd")
+    // A `.cmd` shim installed via nvm-for-windows: on Windows `shell_quote`
+    // wraps the path in double quotes, and the external-terminal command line
+    // must wrap that whole command in a second quote pair so the inner
+    // `cmd /K` strips exactly the outer pair and runs the original quoted
+    // command. Regression for the `'\"...claude.cmd\"' is not recognized`
+    // failure on quote-escaped launches. The Windows-quoted command is spelled
+    // out (instead of calling the host-dependent `shell_quote`) so this cmd.exe
+    // command line is asserted identically on every test host.
+    let command = "\"C:\\nvm4w\\nodejs\\claude.cmd\" auth login";
+    #[cfg(target_os = "windows")]
+    assert_eq!(
+        command,
+        format!("{} auth login", shell_quote("C:\\nvm4w\\nodejs\\claude.cmd"))
     );
 
-    let line = windows_external_terminal_command_line(&command);
+    let line = windows_external_terminal_command_line(command);
 
     assert_eq!(
         line,
@@ -509,12 +539,19 @@ fn windows_external_terminal_command_line_wraps_quoted_command() {
 
 #[test]
 fn windows_external_terminal_command_line_handles_paths_with_spaces() {
-    let command = format!(
-        "{} auth login",
-        shell_quote("C:\\Program Files\\nodejs\\claude.cmd")
+    // Windows-quoted input spelled out for host-independent assertions; see
+    // windows_external_terminal_command_line_wraps_quoted_command.
+    let command = "\"C:\\Program Files\\nodejs\\claude.cmd\" auth login";
+    #[cfg(target_os = "windows")]
+    assert_eq!(
+        command,
+        format!(
+            "{} auth login",
+            shell_quote("C:\\Program Files\\nodejs\\claude.cmd")
+        )
     );
 
-    let line = windows_external_terminal_command_line(&command);
+    let line = windows_external_terminal_command_line(command);
 
     // Outer wrap keeps the space-containing path quoted after cmd strips one pair.
     assert!(line.ends_with("/K \"\"C:\\Program Files\\nodejs\\claude.cmd\" auth login\""));
@@ -1418,6 +1455,10 @@ fn model_context_limit_tracks_current_large_context_families() {
     assert_eq!(
         model_context_limit_tokens("anthropic", "claude-sonnet-4.5"),
         (200_000, false)
+    );
+    assert_eq!(
+        model_context_limit_tokens("grok", "grok-4.5"),
+        (500_000, false)
     );
     assert_eq!(
         model_context_limit_tokens("openai-compatible", "custom-local-model"),
@@ -2457,6 +2498,47 @@ fn dashboard_update_custom_widget_tool_accepts_structured_script_body_patch() {
             .pointer("/properties/patch/properties/bodyJson")
             .is_some()
     );
+}
+
+#[test]
+fn itops_rack_item_tools_expose_rack_top_kuaiguai_contract() {
+    let settings: AiAssistantToolSettings = serde_json::from_value(json!({
+        "itops": true
+    }))
+    .expect("tool settings deserialize");
+    let tools = ai_tool_definitions(&settings);
+    let place = tools
+        .iter()
+        .find(|tool| tool.function.name == "itops_place_rack_item")
+        .expect("IT Ops place-rack-item tool exists");
+    let update = tools
+        .iter()
+        .find(|tool| tool.function.name == "itops_update_rack_item")
+        .expect("IT Ops update-rack-item tool exists");
+
+    for tool in [place, update] {
+        let kinds = tool
+            .function
+            .parameters
+            .pointer("/properties/kind/enum")
+            .and_then(Value::as_array)
+            .expect("rack device kind enum exists");
+        assert!(kinds.contains(&json!("kuaiguai")));
+        assert_eq!(
+            tool.function
+                .parameters
+                .pointer("/properties/metadata/properties/expiry/type"),
+            Some(&json!("string"))
+        );
+        assert_eq!(
+            tool.function
+                .parameters
+                .pointer("/properties/metadata/properties/kuaiguaiStyle/enum"),
+            Some(&json!(["full", "laidDown"]))
+        );
+    }
+    assert!(place.function.description.contains("rack.heightU + 1"));
+    assert!(place.function.description.contains("heightU 4"));
 }
 
 #[test]

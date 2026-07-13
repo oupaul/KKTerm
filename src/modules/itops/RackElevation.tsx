@@ -2,17 +2,22 @@
 // skeuomorphic metal frame — rail caps, a U-number gutter, and a slatted device
 // column — with each Rack Device drawn as an animated <RackDevice> faceplate at
 // its U position (ported from the "IT Ops Racks" design comp). With callbacks
-// wired it is the editor: click an empty U to add a device; a device with bound
-// Connections opens the connect popover on click with a pencil to edit; items
-// without bindings open the edit dialog on click.
+// wired it is the editor: devices are added through the picker column's armed
+// placement flow; a device with bound Connections opens the connect popover on
+// click with a pencil to edit; items without bindings open the edit dialog on
+// click.
 // A Connection-backed item whose Connection is gone renders as a dimmed
 // "ghost". Items are drag-to-restacked onto any U slot (possibly across racks).
 
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import type { Rack, RackItem, RackItemStatus } from "../../types";
 import { ItIcon } from "./icons";
 import { collectBoundConnectionIds, summarizeRackDeviceMetadata } from "./rackInventory";
 import { RackDevice } from "./RackDevice";
+import type { RackItemDraft } from "./RackItemDialog";
+import { isRackTopItem, snapRackPlacement, type RackPlacementSnap } from "./rackPlacement";
 
 // Pixel height of one rack unit (U) row. Kept in sync with `--rk-u` in CSS.
 export const U_PX = 26;
@@ -31,7 +36,6 @@ function itemRowStart(rackHeightU: number, item: RackItem): number {
 export function RackElevation({
   rack,
   hostFor,
-  onSlotClick,
   onOpenItem,
   onEditItem,
   onBindItem,
@@ -42,12 +46,17 @@ export function RackElevation({
   onDeleteItem,
   isGhost,
   detailed,
+  unitPx = U_PX,
+  hideHeader = false,
   editMode = false,
+  reserveTopU = 0,
+  placeSpec,
+  onPlaceAt,
+  onCancelPlacement,
 }: {
   rack: Rack;
   /** Resolve a placed Connection's host/ip for the faceplate sub-line. */
   hostFor?: (item: RackItem) => string | null;
-  onSlotClick?: (startU: number) => void;
   /** Open the connect popover for a device with bound Connections; the anchor
    *  is the clicked faceplate element. */
   onOpenItem?: (item: RackItem, anchor: HTMLElement) => void;
@@ -62,11 +71,120 @@ export function RackElevation({
   isGhost?: (item: RackItem) => boolean;
   /** Single-rack detail view: wider cabinet + a placed-device summary list. */
   detailed?: boolean;
+  /** Rack View may shrink one U to fit the visible drill viewport. */
+  unitPx?: number;
+  /** Rack View moves this identity/spec line into the drill toolbar. */
+  hideHeader?: boolean;
   editMode?: boolean;
+  /** Always keep at least this much headroom (in U) above the cabinet so a
+   *  rack-top 乖乖 has room and the rack doesn't shift when one is placed. */
+  reserveTopU?: number;
+  /** Armed picker placement: the configured device ghosts under the cursor,
+   *  snapped to the hovered U slot, and a slot click places it there. */
+  placeSpec?: RackItemDraft | null;
+  onPlaceAt?: (startU: number) => void;
+  /** Right-click while placing disarms (mirrors the room-view pickers). */
+  onCancelPlacement?: () => void;
 }) {
   const { t } = useTranslation();
   const editable = !!onEditItem;
   const canMove = editMode && !!onMoveItem;
+  const placing = editMode && !!placeSpec && !!onPlaceAt;
+  const rackRef = useRef<HTMLDivElement | null>(null);
+  const pointerRef = useRef<{
+    draft: RackItemDraft;
+    x: number;
+    y: number;
+    width: number;
+    snap: RackPlacementSnap | null;
+  } | null>(null);
+  const [pointerGhost, setPointerGhost] = useState(pointerRef.current);
+
+  // Snap the armed device's span to a hovered U: the hovered unit is the
+  // bottom-most U, clamped so the span stays inside the rack.
+  function snapPlacement(u: number): { startU: number; blocked: boolean } {
+    const heightU = Math.max(1, Math.min(placeSpec?.heightU ?? 1, rack.heightU));
+    const startU = Math.max(1, Math.min(u, rack.heightU - heightU + 1));
+    const blocked = rack.items.some(
+      (item) => startU < item.startU + item.heightU && item.startU < startU + heightU,
+    );
+    return { startU, blocked };
+  }
+  useEffect(() => {
+    if (!placing || !placeSpec || !onPlaceAt) return;
+
+    const updatePointer = (event: PointerEvent) => {
+      const rackElement = rackRef.current;
+      const slot = rackElement?.querySelector(".rk-slot") as HTMLElement | null;
+      const grid = rackElement?.querySelector(".rk-grid") as HTMLElement | null;
+      const slotRect = slot?.getBoundingClientRect();
+      const gridRect = grid?.getBoundingClientRect();
+      if (!slotRect || !gridRect) return;
+      const bayRect = {
+        left: slotRect.left,
+        right: slotRect.right,
+        top: gridRect.top,
+        bottom: gridRect.bottom,
+        width: slotRect.width,
+        height: gridRect.height,
+      };
+      const snap = snapRackPlacement({
+        x: event.clientX,
+        y: event.clientY,
+        bayRect,
+        rackHeightU: rack.heightU,
+        placeHeightU: placeSpec.heightU,
+        items: rack.items,
+        allowTop: placeSpec.kind === "kuaiguai",
+      });
+      const next = {
+        draft: placeSpec,
+        x: event.clientX,
+        y: event.clientY,
+        width: bayRect.width,
+        snap,
+      };
+      pointerRef.current = next;
+      setPointerGhost(next);
+    };
+    const placeFromPointer = (event: PointerEvent) => {
+      if (event.button !== 0) return;
+      const snap = pointerRef.current?.snap;
+      if (!snap) return;
+      event.preventDefault();
+      event.stopPropagation();
+      if (!snap.blocked) onPlaceAt(snap.startU);
+    };
+    const cancelFromContextMenu = (event: MouseEvent) => {
+      event.preventDefault();
+      pointerRef.current = null;
+      setPointerGhost(null);
+      onCancelPlacement?.();
+    };
+    const cancelFromKeyboard = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      pointerRef.current = null;
+      setPointerGhost(null);
+      onCancelPlacement?.();
+    };
+
+    document.addEventListener("pointermove", updatePointer, true);
+    document.addEventListener("pointerdown", placeFromPointer, true);
+    document.addEventListener("contextmenu", cancelFromContextMenu, true);
+    document.addEventListener("keydown", cancelFromKeyboard, true);
+    return () => {
+      document.removeEventListener("pointermove", updatePointer, true);
+      document.removeEventListener("pointerdown", placeFromPointer, true);
+      document.removeEventListener("contextmenu", cancelFromContextMenu, true);
+      document.removeEventListener("keydown", cancelFromKeyboard, true);
+      pointerRef.current = null;
+    };
+  }, [onCancelPlacement, onPlaceAt, placeSpec, placing, rack.heightU, rack.items]);
+
+  const activePointer = pointerGhost?.draft === placeSpec ? pointerGhost : null;
+  const placeGhost = placing && activePointer?.snap?.zone === "inside" ? activePointer.snap : null;
+  const topPlaceGhost = placing && activePointer?.snap?.zone === "top" ? activePointer.snap : null;
   // Top-to-bottom U numbers: heightU … 1.
   const unitNumbers = Array.from({ length: rack.heightU }, (_, i) => rack.heightU - i);
 
@@ -89,14 +207,31 @@ export function RackElevation({
   );
 
   const cabShell = rack.shell && rack.shell !== "black" ? rack.shell : undefined;
+  const topItems = rack.items.filter((item) => isRackTopItem(item, rack.heightU));
+  const cabinetItems = rack.items.filter((item) => !isRackTopItem(item, rack.heightU));
+  const topClearanceU = Math.max(
+    0,
+    reserveTopU,
+    ...topItems.map((item) => item.heightU),
+    placing && placeSpec?.kind === "kuaiguai" ? placeSpec.heightU : 0,
+  );
   // Placed devices, top-of-rack first, for the detail summary list.
   const placed = [...rack.items].sort(
     (a, b) => b.startU + b.heightU - (a.startU + a.heightU),
   );
 
   return (
-    <div className={`rk${detailed ? " rk-detailed" : ""}`} data-shell={cabShell}>
-      <div className="rk-head">
+    <div
+      className={`rk${detailed ? " rk-detailed" : ""}${topClearanceU > 0 ? " has-top-item" : ""}`}
+      data-shell={cabShell}
+      data-rack-id={rack.id}
+      ref={rackRef}
+      style={{
+        ["--rk-u" as string]: `${unitPx}px`,
+        ["--rk-top-clearance" as string]: `${topClearanceU * unitPx}px`,
+      }}
+    >
+      {!hideHeader ? <div className="rk-head">
         <div className="rk-head-txt">
           <span className="rk-name">{rack.name}</span>
           <span className="rk-meta">
@@ -156,14 +291,102 @@ export function RackElevation({
             <ItIcon name="xmark" size={12} />
           </button>
         ) : null}
-      </div>
+      </div> : null}
 
-      <div className="rk-frame">
+      <div className="rk-cabinet">
+        <div
+          className={`rk-top-area${canMove ? " drop-target" : ""}`}
+          onDragOver={canMove ? (event) => {
+            if (event.dataTransfer.types.includes("application/x-itops-rack-kuaiguai")) {
+              event.preventDefault();
+              event.dataTransfer.dropEffect = "move";
+            }
+          } : undefined}
+          onDrop={canMove ? (event) => {
+            event.preventDefault();
+            if (!event.dataTransfer.getData("application/x-itops-rack-kuaiguai")) return;
+            const itemId = event.dataTransfer.getData("application/x-itops-rack-item");
+            if (itemId) onMoveItem?.(itemId, rack.id, rack.heightU + 1);
+          } : undefined}
+        >
+          {topItems.map((item) => (
+            <div
+              className={`rk-top-item${canMove ? " draggable" : ""}`}
+              key={item.id}
+              style={{ height: item.heightU * unitPx }}
+              draggable={canMove}
+              onDragStart={canMove ? (event) => {
+                event.dataTransfer.setData("application/x-itops-rack-item", item.id);
+                event.dataTransfer.setData("application/x-itops-rack-kuaiguai", "true");
+                event.dataTransfer.effectAllowed = "move";
+              } : undefined}
+            >
+              <button type="button" className="rk-top-item-main" onClick={() => onEditItem?.(item)}>
+                <RackDevice
+                  kind={item.kind}
+                  label={item.label || t(`itops.racks.kind.${item.kind}`)}
+                  status={itemStatus(item)}
+                  expiry={item.metadata?.expiry ?? null}
+                  rotation={item.metadata?.rotation ?? null}
+                  yaw={item.metadata?.yaw ?? null}
+                  kuaiguaiSize={item.metadata?.kuaiguaiSize ?? null}
+                  kuaiguaiStyle={item.metadata?.kuaiguaiStyle ?? null}
+                  formFactor={item.metadata?.formFactor ?? null}
+                  serverPanelStyle={item.metadata?.serverPanelStyle ?? null}
+                  heightU={item.heightU}
+                  seed={item.id}
+                />
+              </button>
+              {editMode && onDeleteItem ? (
+                <button
+                  type="button"
+                  className="rk-top-item-delete"
+                  title={t("itops.racks.deleteItemTitle")}
+                  aria-label={t("itops.racks.deleteItemTitle")}
+                  onClick={() => onDeleteItem(item)}
+                >
+                  <ItIcon name="xmark" size={11} />
+                </button>
+              ) : null}
+            </div>
+          ))}
+          {topPlaceGhost && placeSpec ? (
+            <div
+              className={`rk-top-item rk-place-ghost${topPlaceGhost.blocked ? " blocked" : ""}`}
+              style={{ height: placeSpec.heightU * unitPx }}
+              aria-hidden="true"
+            >
+              <RackDevice
+                kind={placeSpec.kind}
+                label={placeSpec.label || t(`itops.racks.kind.${placeSpec.kind}`)}
+                status={placeSpec.metadata?.status ?? "online"}
+                expiry={placeSpec.metadata?.expiry ?? null}
+                rotation={placeSpec.metadata?.rotation ?? null}
+                yaw={placeSpec.metadata?.yaw ?? null}
+                kuaiguaiSize={placeSpec.metadata?.kuaiguaiSize ?? null}
+                kuaiguaiStyle={placeSpec.metadata?.kuaiguaiStyle ?? null}
+                formFactor={placeSpec.metadata?.formFactor ?? null}
+                serverPanelStyle={placeSpec.metadata?.serverPanelStyle ?? null}
+                heightU={placeSpec.heightU}
+                seed="place-top-ghost"
+              />
+            </div>
+          ) : null}
+        </div>
+        <div className="rk-frame">
         <div className="rk-rail" />
         <div className="rk-bay">
           <div
-            className="rk-grid"
+            className={`rk-grid${placing ? " placing" : ""}`}
             style={{ gridTemplateRows: `repeat(${rack.heightU}, var(--rk-u, ${U_PX}px))` }}
+            onContextMenu={
+              placing
+                ? (event) => {
+                    event.preventDefault();
+                    onCancelPlacement?.();
+                  }
+                : undefined
+            }
           >
             {/* U-number gutter. */}
             {unitNumbers.map((u) => (
@@ -171,16 +394,20 @@ export function RackElevation({
                 {u}
               </div>
             ))}
-            {/* Empty slots — clickable to add a device when editing; drop targets. */}
+            {/* Empty slots — armed-placement targets and drag/drop targets. */}
             {unitNumbers.map((u) =>
-              editMode && onSlotClick ? (
+              editMode && (placing || canMove) ? (
                 <button
                   type="button"
-                  className="rk-slot rk-slot-btn"
+                  className={`rk-slot rk-slot-btn${placing ? "" : " passive"}`}
                   key={`s-${u}`}
                   style={{ gridColumn: 2, gridRow: rack.heightU - u + 1 }}
-                  title={t("itops.racks.addAtUnit", { unit: u })}
-                  onClick={() => onSlotClick(u)}
+                  aria-label={t("itops.racks.addAtUnit", { unit: u })}
+                  onClick={() => {
+                    if (!placing) return;
+                    const snap = snapPlacement(u);
+                    if (!snap.blocked) onPlaceAt!(snap.startU);
+                  }}
                   onDragOver={
                     canMove
                       ? (event) => {
@@ -208,7 +435,7 @@ export function RackElevation({
               ),
             )}
             {/* Items paint over the empty slots they occupy. */}
-            {rack.items.map((item) => {
+            {cabinetItems.map((item) => {
               const ghost = item.kind === "connection" && !!isGhost?.(item);
               const text = item.label || t(`itops.racks.kind.${item.kind}`);
               const model = item.metadata?.vendor?.trim() || null;
@@ -238,6 +465,9 @@ export function RackElevation({
                   rotation={item.metadata?.rotation ?? null}
                   yaw={item.metadata?.yaw ?? null}
                   kuaiguaiSize={item.metadata?.kuaiguaiSize ?? null}
+                  kuaiguaiStyle={item.metadata?.kuaiguaiStyle ?? null}
+                  formFactor={item.metadata?.formFactor ?? null}
+                  serverPanelStyle={item.metadata?.serverPanelStyle ?? null}
                   heightU={item.heightU}
                   accent={item.metadata?.accent ?? null}
                   shell={item.metadata?.shell ?? null}
@@ -265,6 +495,9 @@ export function RackElevation({
                     canMove
                       ? (event) => {
                           event.dataTransfer.setData("application/x-itops-rack-item", item.id);
+                          if (item.kind === "kuaiguai") {
+                            event.dataTransfer.setData("application/x-itops-rack-kuaiguai", "true");
+                          }
                           event.dataTransfer.effectAllowed = "move";
                         }
                       : undefined
@@ -317,9 +550,44 @@ export function RackElevation({
                 </div>
               );
             })}
+            {/* Armed placement preview: the configured faceplate tracks the
+                hovered slot in realtime; red when the span overlaps a device. */}
+            {placing && placeGhost && placeSpec ? (
+              <div
+                className={`rk-item rk-place-ghost${placeGhost.blocked ? " blocked" : ""}`}
+                aria-hidden="true"
+                style={{
+                  gridColumn: 2,
+                  gridRow: `${rack.heightU - (placeGhost.startU + Math.min(placeSpec.heightU, rack.heightU) - 1) + 1} / span ${Math.min(placeSpec.heightU, rack.heightU)}`,
+                }}
+              >
+                <RackDevice
+                  kind={placeSpec.kind}
+                  label={placeSpec.label || t(`itops.racks.kind.${placeSpec.kind}`)}
+                  subLabel={placeSpec.metadata?.vendor ?? null}
+                  status={placeSpec.metadata?.status ?? "online"}
+                  ports={placeSpec.metadata?.ports ?? null}
+                  disks={placeSpec.metadata?.disks ?? null}
+                  battery={placeSpec.metadata?.battery ?? null}
+                  load={placeSpec.metadata?.load ?? null}
+                  expiry={placeSpec.metadata?.expiry ?? null}
+                  rotation={placeSpec.metadata?.rotation ?? null}
+                  yaw={placeSpec.metadata?.yaw ?? null}
+                  kuaiguaiSize={placeSpec.metadata?.kuaiguaiSize ?? null}
+                  kuaiguaiStyle={placeSpec.metadata?.kuaiguaiStyle ?? null}
+                  formFactor={placeSpec.metadata?.formFactor ?? null}
+                  serverPanelStyle={placeSpec.metadata?.serverPanelStyle ?? null}
+                  heightU={Math.min(placeSpec.heightU, rack.heightU)}
+                  accent={placeSpec.metadata?.accent ?? null}
+                  shell={placeSpec.metadata?.shell ?? null}
+                  seed="place-ghost"
+                />
+              </div>
+            ) : null}
           </div>
         </div>
         <div className="rk-rail" />
+        </div>
       </div>
       {detailed ? (
         <div className="rk-detail-list">
@@ -354,6 +622,43 @@ export function RackElevation({
           )}
         </div>
       ) : null}
+      {placing && activePointer && !activePointer.snap && placeSpec
+        ? createPortal(
+            <div
+              className="itops-page rk-cursor-ghost"
+              aria-hidden="true"
+              style={{
+                left: activePointer.x,
+                top: activePointer.y,
+                width: activePointer.width,
+                height: Math.max(1, placeSpec.heightU) * unitPx,
+              }}
+            >
+              <RackDevice
+                kind={placeSpec.kind}
+                label={placeSpec.label || t(`itops.racks.kind.${placeSpec.kind}`)}
+                subLabel={placeSpec.metadata?.vendor ?? null}
+                status={placeSpec.metadata?.status ?? "online"}
+                ports={placeSpec.metadata?.ports ?? null}
+                disks={placeSpec.metadata?.disks ?? null}
+                battery={placeSpec.metadata?.battery ?? null}
+                load={placeSpec.metadata?.load ?? null}
+                expiry={placeSpec.metadata?.expiry ?? null}
+                rotation={placeSpec.metadata?.rotation ?? null}
+                yaw={placeSpec.metadata?.yaw ?? null}
+                kuaiguaiSize={placeSpec.metadata?.kuaiguaiSize ?? null}
+                kuaiguaiStyle={placeSpec.metadata?.kuaiguaiStyle ?? null}
+                formFactor={placeSpec.metadata?.formFactor ?? null}
+                serverPanelStyle={placeSpec.metadata?.serverPanelStyle ?? null}
+                heightU={placeSpec.heightU}
+                accent={placeSpec.metadata?.accent ?? null}
+                shell={placeSpec.metadata?.shell ?? null}
+                seed="cursor-ghost"
+              />
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }

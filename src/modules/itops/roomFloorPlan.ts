@@ -55,7 +55,7 @@ export function rackFloorMetrics(rack: Rack): RackFloorMetrics {
   let offline = 0;
   let powerW = 0;
   for (const item of rack.items) {
-    used += Math.max(0, item.heightU);
+    if (item.startU <= rack.heightU) used += Math.max(0, item.heightU);
     powerW += Math.max(0, item.metadata?.powerW ?? 0);
     const status = itemStatus(item);
     if (status === "warning") warning += 1;

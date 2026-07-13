@@ -1,6 +1,6 @@
 // Server Room objects (docs/SITE.md Server Room View): non-rack room fixtures
-// — security cameras, CRAC units, fire extinguishers, cable trays, UPS
-// cabinets, environment sensors, smoke detectors, crash carts, and the
+// — security cameras, CRAC units, fire extinguishers, UPS cabinets,
+// environment sensors, smoke detectors, crash carts, and the
 // obligatory pack of 乖乖 — placed on the same floor grid as the racks in both
 // the floor plan and the 2.5D view. Each object also has a vertical position:
 // `z` is the bottom of the object in rack units above the floor, so two
@@ -27,7 +27,6 @@ export type RoomObjectKind =
   | "camera"
   | "aircon"
   | "fireExtinguisher"
-  | "cableTray"
   | "ups"
   | "sensor"
   | "smokeDetector"
@@ -38,7 +37,6 @@ export const ROOM_OBJECT_KINDS: RoomObjectKind[] = [
   "camera",
   "aircon",
   "fireExtinguisher",
-  "cableTray",
   "ups",
   "sensor",
   "smokeDetector",
@@ -76,19 +74,17 @@ export interface RoomObjectSpec {
   quarter?: boolean;
 }
 
-// Footprints follow real-world sizes against the 1200 mm cell: a CRAC unit
-// (~1800×850 mm) spans one and a half cells, a cable-tray section runs two
-// cells long, a UPS cabinet is ~600×800 mm, and hand-sized fixtures (camera,
-// extinguisher, sensor, smoke detector, 乖乖 pack) each take a cell quadrant.
+// Footprints are the exact cell proportions specified by
+// `Server Room Objects.dc.html`. Small fixtures take a cell quadrant; the
+// larger floor/overhead fixtures remain centred within one snapped cell.
 const SPECS: Record<RoomObjectKind, RoomObjectSpec> = {
   camera: { heightU: 3, defaultZ: 52, wide: 0.34, deep: 0.34, quarter: true },
-  aircon: { heightU: 46, defaultZ: "floor", wide: 1.5, deep: 0.72 },
+  aircon: { heightU: 46, defaultZ: "floor", wide: 0.94, deep: 0.62 },
   fireExtinguisher: { heightU: 7, defaultZ: "floor", wide: 0.28, deep: 0.28, quarter: true },
-  cableTray: { heightU: 2, defaultZ: 50, wide: 2, deep: 0.26 },
-  ups: { heightU: 12, defaultZ: "floor", wide: 0.5, deep: 0.66 },
+  ups: { heightU: 12, defaultZ: "floor", wide: 0.6, deep: 0.6 },
   sensor: { heightU: 2, defaultZ: 40, wide: 0.24, deep: 0.24, quarter: true },
   smokeDetector: { heightU: 1, defaultZ: ROOM_CEILING_U - 1, wide: 0.3, deep: 0.3, quarter: true },
-  crashCart: { heightU: 22, defaultZ: "floor", wide: 0.58, deep: 0.44 },
+  crashCart: { heightU: 22, defaultZ: "floor", wide: 0.56, deep: 0.44 },
   kuaikuai: { heightU: 2, defaultZ: "stack", wide: 0.36, deep: 0.28, quarter: true },
 };
 
@@ -227,6 +223,40 @@ export function footprintSpans(
     }
   }
   return spans;
+}
+
+/** The rack whose cabinet top an object with bottom `z` would rest on: its
+ *  drawn footprint overlaps the object's and its top surface is exactly `z`.
+ *  Rack-top 乖乖 drops use this to become rack items (the object the Rack View
+ *  shows center-top) instead of separate room objects. */
+export function rackTopSupport(
+  cell: IsoCell,
+  kind: RoomObjectKind,
+  rot: Facing,
+  corner: Corner,
+  z: number,
+  racks: Rack[],
+  rackCells: Record<string, IsoCell>,
+  rackFacing: Record<string, Facing | undefined> = {},
+): Rack | null {
+  if (z <= 0) return null;
+  const span = objectCellSpan(kind, rot);
+  const rect = objectFootprint(kind, rot, corner);
+  for (let dy = 0; dy < span.h; dy += 1) {
+    for (let dx = 0; dx < span.w; dx += 1) {
+      const objectRect = { ...rect, x: rect.x - dx, y: rect.y - dy };
+      for (const rack of racks) {
+        const at = rackCells[rack.id];
+        if (!at || at.x !== cell.x + dx || at.y !== cell.y + dy) continue;
+        if (Math.min(ROOM_CEILING_U, Math.max(1, rack.heightU)) !== z) continue;
+        const facing = sanitizeFacing(rackFacing[rack.id]);
+        if (rectsOverlap(objectRect, rackFootprint(facing, rackDepthFrac(rack.depthMm)))) {
+          return rack;
+        }
+      }
+    }
+  }
+  return null;
 }
 
 function fits(spans: ZSpan[], z: number, heightU: number): boolean {

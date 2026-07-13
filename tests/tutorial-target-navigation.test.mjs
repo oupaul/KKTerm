@@ -103,6 +103,7 @@ for (const sectionId of [
   "url-settings",
   "rdp-settings",
   "vnc-settings",
+  "shortcuts-settings",
   "about-settings",
 ]) {
   if (!tutorialToolBlock.includes(`"${sectionId}"`)) {

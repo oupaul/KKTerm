@@ -4,17 +4,56 @@ import test from "node:test";
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
-test("IT Ops drill views expose icon-only edit add export actions", async () => {
+test("IT Ops drill views expose icon-only edit and share-export actions", async () => {
   const sites = await read("src/modules/itops/SitesTab.tsx");
 
   assert.match(sites, /className="it-drill-toolbar"/);
   assert.match(sites, /aria-label=\{t\("itops\.actions\.viewActions"\)\}/);
   assert.match(sites, /title=\{editMode \? t\("itops\.actions\.editDone"\) : t\("itops\.actions\.edit"\)\}/);
   assert.match(sites, /<ItIcon name=\{editMode \? "check" : "edit"\}/);
-  assert.match(sites, /<ItIcon name="plus"/);
-  assert.match(sites, /<ItIcon name="download"/);
+  assert.doesNotMatch(sites, /siteSegmentActive/);
+  assert.doesNotMatch(sites, /rack\s*\?\s*t\("itops\.racks\.addItemTitle"\)/);
+  assert.match(sites, /<ItIcon name="share"/);
   assert.match(sites, /handleExport\("pdf"\)/);
   assert.match(sites, /rack \? \([\s\S]*handleExport\("excel"\)/);
+});
+
+test("Room elevation edit mode places devices through the shared picker column", async () => {
+  const rackElevation = await read("src/modules/itops/RackElevation.tsx");
+  const stage = await read("src/modules/itops/RackStage.tsx");
+  const sites = await read("src/modules/itops/SitesTab.tsx");
+  const css = await read("src/modules/itops/itops.css");
+
+  assert.match(rackElevation, /editMode && \(placing \|\| canMove\)/);
+  assert.match(rackElevation, /aria-label=\{t\("itops\.racks\.addAtUnit"/);
+  // The empty-slot add-dialog flow is gone everywhere: slots are placement /
+  // drop targets only, and adds go through the picker column's armed flow.
+  assert.doesNotMatch(rackElevation, /onSlotClick|rk-slot-callout/);
+  assert.doesNotMatch(stage, /onSlotClick/);
+  assert.doesNotMatch(sites, /onSlotClick/);
+  assert.doesNotMatch(css, /rk-slot-callout/);
+  assert.match(css, /\.rk-slot-btn\.passive/);
+  // The elevation rows host the shared device picker, and only the cabinet
+  // nearest the pointer carries the armed spec so a click between two
+  // side-by-side cabinets cannot place the device into both.
+  assert.match(sites, /className="rk-room-layout"/);
+  assert.match(sites, /function useNearestPlacementRack/);
+  assert.match(sites, /roomPlaceRackId === r\.id \? placeDevice : null/);
+  assert.match(sites, /racks=\{serverRoom\.racks\}/);
+  assert.match(sites, /racks=\{\[rack\]\}/);
+  assert.match(rackElevation, /data-rack-id=\{rack\.id\}/);
+  assert.match(css, /\.itops-page \.rk-room-layout \{/);
+});
+
+test("Empty Server Rooms and Racks use linked explanatory guidance", async () => {
+  const sites = await read("src/modules/itops/SitesTab.tsx");
+  const css = await read("src/modules/itops/itops.css");
+
+  assert.match(sites, /i18nKey="itops\.racks\.emptyServerRoomHint"/);
+  assert.match(sites, /addRack:[\s\S]*onAddRack\(serverRoom\.key\)/);
+  assert.match(sites, /i18nKey="itops\.racks\.emptyRackHint"/);
+  assert.match(sites, /editMode:[\s\S]*setEditMode\(true\)/);
+  assert.match(css, /\.it-empty-hint button:focus-visible/);
 });
 
 test("Server Room view switcher sits in the drill toolbar with line icons", async () => {
@@ -66,24 +105,114 @@ test("Edit mode arms placement through the shared object picker column", async (
   assert.match(sites, /setPlaceRackId\(saved\.id\)/);
   for (const view of [floorPlan, isoView]) {
     assert.match(view, /placeRackId/);
-    assert.match(view, /moveIsoRack\(grid, placeRackId/);
     assert.match(view, /onRackPlaced/);
   }
+  assert.match(floorPlan, /moveIsoRack\(grid, placeRackId/);
+  assert.match(isoView, /moveIsoRack\(placementGrid, placeRackId/);
+});
+
+test("Site edit mode uses the same object-picker column for creating Server Rooms", async () => {
+  const sites = await read("src/modules/itops/SitesTab.tsx");
+  const css = await read("src/modules/itops/itops.css");
+
+  assert.match(sites, /function SiteObjectPicker/);
+  assert.match(sites, /className="rm-picker"/);
+  assert.match(sites, /itops\.racks\.serverRoomLabel/);
+  assert.match(sites, /<ItIcon name="room"/);
+  assert.match(sites, /editMode \? <SiteObjectPicker onPickServerRoom=\{onAddServerRoom\} \/> : null/);
+  assert.match(sites, /className="it-site-layout"/);
+  assert.match(css, /\.itops-page \.it-site-layout \{/);
+});
+
+test("Rack edit mode uses the object-picker column for Rack Device types", async () => {
+  const sites = await read("src/modules/itops/SitesTab.tsx");
+  const dialog = await read("src/modules/itops/RackItemDialog.tsx");
+  const css = await read("src/modules/itops/itops.css");
+
+  assert.match(dialog, /export const RACK_ITEM_KINDS/);
+  assert.match(dialog, /defaultKind\?: RackItemKind/);
+  assert.match(dialog, /item\?\.kind \?\? defaultKind \?\? "server"/);
+  assert.match(sites, /function RackObjectPicker/);
+  assert.match(sites, /RACK_ITEM_KINDS\.filter/);
+  assert.match(sites, /<RackDevice/);
+  assert.match(sites, /firstAvailableRackUnit\(rack\)/);
+  assert.match(sites, /defaultKind=\{itemDialog\.kind\}/);
+  assert.match(sites, /className="it-rack-layout"/);
+  assert.match(css, /\.itops-page \.it-rack-layout \{/);
+});
+
+test("Rack device picker arms a configure-then-place flow with a cursor-snapped ghost", async () => {
+  const sites = await read("src/modules/itops/SitesTab.tsx");
+  const dialog = await read("src/modules/itops/RackItemDialog.tsx");
+  const stage = await read("src/modules/itops/RackStage.tsx");
+  const rackElevation = await read("src/modules/itops/RackElevation.tsx");
+  const css = await read("src/modules/itops/itops.css");
+
+  // The dialog configures a draft (no position field, no type switcher —
+  // the picker already chose the type) instead of placing.
+  assert.match(dialog, /export interface RackItemDraft/);
+  assert.match(dialog, /onConfigured\?: \(draft: RackItemDraft\) => void/);
+  assert.match(dialog, /const placementMode = !isEdit && !!onConfigured/);
+  assert.match(dialog, /\{placementMode \|\| isEdit \? null : \(/);
+  assert.match(dialog, /placementMode \|\| isEdit \? null : \(\s*<div\s*className="rack-kind-preview-grid"/);
+  // SitesTab arms the configured draft and places it on the elevation click.
+  assert.match(sites, /useState<RackItemDraft \| null>\(null\)/);
+  assert.match(sites, /onConfigureDevice/);
+  assert.match(sites, /onPlaceDevice\(rack, placeDevice, startU\)/);
+  assert.match(sites, /placeConfiguredDevice/);
+  assert.match(sites, /armedKind=\{placeDevice\?\.kind \?\? null\}/);
+  // The elevation snaps the ghost to the hovered U, blocks overlaps, and
+  // cancels on right-click.
+  assert.match(stage, /placeSpec=\{placeSpec\}/);
+  assert.match(rackElevation, /function snapPlacement/);
+  assert.match(rackElevation, /rk-place-ghost/);
+  assert.match(rackElevation, /onCancelPlacement/);
+  assert.match(css, /\.rk-place-ghost/);
+  assert.match(css, /\.rk-grid\.placing \.rk-item-row/);
+});
+
+test("IT Ops page-root layout stays off dialog backdrops and edit-mode dot grids", async () => {
+  const css = await read("src/modules/itops/itops.css");
+
+  // `.itops-page` rides on Sheet backdrops (zClassName) and the armed
+  // placement cursor ghost for module tokens; the page-root positioning must
+  // not demote those fixed overlays or they render below the viewport.
+  assert.match(
+    css,
+    /\.itops-page:not\(\.kk-dlg-backdrop\):not\(\.rk-cursor-ghost\):not\(\.rm-cursor-ghost\) \{/,
+  );
+  // The Site View dot grid is an edit-mode affordance even over a custom
+  // background (the `.has-bg` rule is more specific than the generic reset).
+  assert.match(
+    css,
+    /\.ft-drill-bg\.has-bg \.it-free-surface\.site:not\(\.editing\) \{\s*background: none;/,
+  );
 });
 
 test("Armed placement previews a cursor-snapped ghost and cancels on right-click", async () => {
   const sites = await read("src/modules/itops/SitesTab.tsx");
   const floorPlan = await read("src/modules/itops/ServerRoomFloorPlan.tsx");
   const isoView = await read("src/modules/itops/ServerRoomIsoView.tsx");
+  const roomParts = await read("src/modules/itops/roomViewParts.tsx");
   const css = await read("src/modules/itops/itops.css");
 
-  // SitesTab disarms both the object tool and the pending rack on cancel.
-  assert.match(sites, /onCancelPlacement=\{\(\) => \{\s*setRoomTool\(null\);\s*setPlaceRackId\(null\);/);
+  // SitesTab disarms fixtures and discards a just-created, still-unplaced Rack.
+  assert.match(sites, /function cancelRoomPlacement\(\)/);
+  assert.match(sites, /discardPendingRackRef\.current\(pendingRackId\)/);
+  assert.match(sites, /onCancelPlacement=\{cancelRoomPlacement\}/g);
   for (const view of [floorPlan, isoView]) {
     assert.match(view, /onCancelPlacement\?: \(\) => void/);
+    assert.match(view, /onObjectPlaced\?: \(\) => void/);
+    assert.match(view, /onObjectPlaced\?\.\(\)/);
+    assert.match(view, /useRoomPlacementPointer\(placing, onCancelPlacement\)/);
+    assert.match(view, /<RoomPlacementCursorGhost/);
     assert.match(view, /onContextMenu=\{/);
-    assert.match(view, /resolveDropZ\(\s*footprintSpans\(hover, tool, 0/);
+    assert.match(view, /resolveDropZ\(\s*footprintSpans\(\s*hover,\s*tool,\s*0/);
   }
+  assert.match(sites, /onObjectPlaced=\{\(\) => setRoomTool\(null\)\}/g);
+  assert.match(roomParts, /document\.addEventListener\("pointermove", updatePointer, true\)/);
+  assert.match(roomParts, /event\.key !== "Escape"/);
+  assert.match(roomParts, /document\.addEventListener\("contextmenu", cancelFromContextMenu, true\)/);
   // The floor plan tracks the hovered cell and renders the plan-artwork ghost.
   assert.match(floorPlan, /className=\{`rm-bp-ghost\$\{blocked \? " blocked" : ""\}`\}/);
   assert.match(floorPlan, /onPointerMove=\{placing \? trackPlacement : undefined\}/);
@@ -94,6 +223,7 @@ test("Armed placement previews a cursor-snapped ghost and cancels on right-click
   assert.match(isoView, /className="rm-iso-cab ghost"/);
   assert.match(css, /\.rm-bp-ghost/);
   assert.match(css, /\.rm-iso-drop\.blocked/);
+  assert.match(css, /\.rm-cursor-ghost \{/);
 });
 
 test("Rack drag/drop and direct delete are gated behind edit mode", async () => {
@@ -101,7 +231,7 @@ test("Rack drag/drop and direct delete are gated behind edit mode", async () => 
   const sites = await read("src/modules/itops/SitesTab.tsx");
 
   assert.match(rackElevation, /const canMove = editMode && !!onMoveItem/);
-  assert.match(rackElevation, /editMode && onSlotClick/);
+  assert.match(rackElevation, /editMode && \(placing \|\| canMove\)/);
   assert.match(rackElevation, /draggable=\{canMove\}/);
   assert.match(rackElevation, /editMode && onDeleteItem/);
   assert.match(rackElevation, /className="rk-item-delete"/);
@@ -157,7 +287,7 @@ test("Rack device dialog includes a preview picker for every device type", async
   const dialog = await read("src/modules/itops/RackItemDialog.tsx");
 
   assert.match(dialog, /className="rack-kind-preview-grid"/);
-  assert.match(dialog, /ALL_KINDS\.map/);
+  assert.match(dialog, /RACK_ITEM_KINDS\.map/);
   assert.match(dialog, /<RackDevice[\s\S]*kind=\{value\}/);
   assert.match(dialog, /aria-label=\{t\("itops\.racks\.kindPreviewLabel"\)\}/);
 });

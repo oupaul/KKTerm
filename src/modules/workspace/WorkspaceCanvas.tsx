@@ -6,7 +6,13 @@ import {
 import { ftpBrowserCommands, localBrowserCommands } from "../../lib/fileBrowserCommands";
 import { TerminalWorkspace } from "./connections/terminal/TerminalWorkspace";
 import { ConnectionIcon } from "./connections/ConnectionIcon";
-import { ChevronLeft, ChevronRight, Terminal, X } from "../../lib/reicon";
+import { ConnectionTypeGlyph } from "./connections/ConnectionGlyph";
+import { CONNECTION_CREATION_OPTIONS } from "./connections/ConnectionMenus";
+import {
+  requestImportConnections,
+  requestNewConnection,
+} from "./connections/connectionSidebarState";
+import { ChevronLeft, ChevronRight, Download, Terminal, X } from "../../lib/reicon";
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type {
@@ -17,6 +23,7 @@ import type {
 } from "react";
 import { useTranslation } from "react-i18next";
 import { DEFAULT_WORKSPACE_ID, useWorkspaceStore } from "../../store";
+import { workspaceShortcutFromKeyboardEvent } from "./keymap";
 import type { WorkspaceTab } from "../../types";
 
 const SftpWorkspace = lazy(() =>
@@ -61,6 +68,39 @@ function tabDisplayTitle(tab: WorkspaceTab) {
 
 function tabWorkspaceId(tab: WorkspaceTab) {
   return tab.workspaceId ?? DEFAULT_WORKSPACE_ID;
+}
+
+function WorkspaceEmptyState() {
+  const { t } = useTranslation();
+
+  return (
+    <section className="empty-workspace" data-tutorial-id="workspace.emptyState">
+      <Terminal size={28} />
+      <h2>{t("workspace.noActiveSession")}</h2>
+      <p>{t("workspace.openFromTree")}</p>
+      <div className="empty-workspace-connection-links">
+        {CONNECTION_CREATION_OPTIONS.map(({ labelKey, type }) => (
+          <button
+            className="empty-workspace-connection-link"
+            key={type}
+            onClick={() => requestNewConnection(type, { openAfterCreate: true })}
+            type="button"
+          >
+            <ConnectionTypeGlyph size={15} type={type} />
+            <span>{t(labelKey)}</span>
+          </button>
+        ))}
+        <button
+          className="empty-workspace-connection-link empty-workspace-connection-link--import"
+          onClick={requestImportConnections}
+          type="button"
+        >
+          <Download size={15} />
+          <span>{t("workspace.importConnections")}</span>
+        </button>
+      </div>
+    </section>
+  );
 }
 
 function DockableWorkspaceTab({
@@ -324,7 +364,6 @@ export function WorkspaceCanvas({
   onOpenAssistant?: () => void;
   workspaceActive?: boolean;
 } = {}) {
-  const { t } = useTranslation();
   const tabs = useWorkspaceStore((state) => state.tabs);
   const activeWorkspaceId = useWorkspaceStore((state) => state.activeWorkspaceId);
   const activeTabId = useWorkspaceStore((state) => state.activeTabId);
@@ -355,6 +394,66 @@ export function WorkspaceCanvas({
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [closeLocalTerminalPopup, localTerminalPopup]);
+
+  useEffect(() => {
+    if (!workspaceActive) {
+      return;
+    }
+    // Capture phase so Tab shortcuts win over xterm.js and other focused
+    // surfaces; stopPropagation keeps the handled key out of the terminal.
+    const handleShortcutKeyDown = (event: globalThis.KeyboardEvent) => {
+      const target = event.target instanceof Element ? event.target : null;
+      // Remote Desktop surfaces forward raw keys to the remote host. Block
+      // shortcuts whenever a Settings or dialog backdrop is mounted as focus
+      // can still be parked on a Workspace control behind a modal.
+      if (target?.closest(".rdp-canvas-view, .vnc-display")) {
+        return;
+      }
+      if (document.querySelector(".settings-backdrop, .dialog-backdrop, .kk-dlg-backdrop")) {
+        return;
+      }
+      const state = useWorkspaceStore.getState();
+      const action = workspaceShortcutFromKeyboardEvent(
+        event,
+        state.generalSettings.workspaceShortcuts,
+        "workspace",
+      );
+      if (!action) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      switch (action) {
+        case "newTab":
+          state.openLocalTerminal();
+          break;
+        case "closeTab":
+          if (state.activeTabId) {
+            state.closeTab(state.activeTabId);
+          }
+          break;
+        case "nextTab":
+        case "previousTab": {
+          const workspaceTabs = state.tabs.filter(
+            (tab) => tabWorkspaceId(tab) === state.activeWorkspaceId,
+          );
+          if (workspaceTabs.length < 2) {
+            break;
+          }
+          const index = workspaceTabs.findIndex((tab) => tab.id === state.activeTabId);
+          const step = action === "nextTab" ? 1 : -1;
+          const nextTab =
+            workspaceTabs[(index + step + workspaceTabs.length) % workspaceTabs.length];
+          state.activateTab(nextTab.id);
+          break;
+        }
+        default:
+          break;
+      }
+    };
+    window.addEventListener("keydown", handleShortcutKeyDown, { capture: true });
+    return () => window.removeEventListener("keydown", handleShortcutKeyDown, { capture: true });
+  }, [workspaceActive]);
 
   const terminalPopup = localTerminalPopup
     ? createPortal(
@@ -421,11 +520,7 @@ export function WorkspaceCanvas({
     return (
       <>
         <div className="workspace-canvas" data-dock-empty-canvas data-tutorial-id="workspace.canvas">
-          <section className="empty-workspace" data-tutorial-id="workspace.emptyState">
-            <Terminal size={28} />
-            <h2>{t("workspace.noActiveSession")}</h2>
-            <p>{t("workspace.openFromTree")}</p>
-          </section>
+          <WorkspaceEmptyState />
         </div>
         {terminalPopup}
         {gitBrowserOverlay}
@@ -443,11 +538,7 @@ export function WorkspaceCanvas({
         data-tutorial-id="workspace.canvas"
       >
       {showEmptyState ? (
-        <section className="empty-workspace" data-tutorial-id="workspace.emptyState">
-          <Terminal size={28} />
-          <h2>{t("workspace.noActiveSession")}</h2>
-          <p>{t("workspace.openFromTree")}</p>
-        </section>
+        <WorkspaceEmptyState />
       ) : null}
       {tabs.map((tab) => {
         const tabIsActive = workspaceActive && tab.id === activeTabId;

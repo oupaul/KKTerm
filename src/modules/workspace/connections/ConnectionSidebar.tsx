@@ -2,7 +2,7 @@ import { ConnectionGlyph, connectionSubtitle, connectionTypeSubtitle } from "./C
 import { ConnectionIconBackgroundPicker } from "./ConnectionIconBackgroundPicker";
 import { ConnectionIconPicker } from "./ConnectionIconPicker";
 import { ConnectionIcon, connectionIconSrcForConnection } from "./ConnectionIcon";
-import { AddConnectionMenu } from "./ConnectionMenus";
+import { AddConnectionMenu, CONNECTION_CREATION_OPTIONS } from "./ConnectionMenus";
 import { FtpConnectionFields, FtpConnectionOptions } from "./connection-dialog/FtpConnectionFields";
 import { LocalConnectionFields } from "./connection-dialog/LocalConnectionFields";
 import { defaultWslConnectionName, distroFromWslShell } from "./connection-dialog/wslLocalShell";
@@ -42,13 +42,13 @@ import {
   shouldDeleteSshSocksProxySecret,
 } from "./credentialUnlockPreflight";
 import { confirmTrustedSshHostKey, connectionPasswordOwnerId, connectionSshSocksProxyPasswordOwnerId, defaultPortForConnectionType, connectionTypeLabel, ftpPortForProtocolSelection, isRemoteDesktopConnectionType, localShellOptionsForPlatform, resolveSshCompression, resolveSshSocksProxyRequest, uniqueRuntimeId, type LocalShellOption } from "./utils";
-import { RECENT_CONNECTION_LIMIT, loadCollapsedFolderIds, loadRecentConnectionIds, notifyConnectionTreeInvalidated, saveCollapsedFolderIds, saveRecentConnectionIds } from "./connectionSidebarState";
+import { IMPORT_CONNECTIONS_REQUEST_EVENT, NEW_CONNECTION_REQUEST_EVENT, RECENT_CONNECTION_LIMIT, loadCollapsedFolderIds, loadRecentConnectionIds, notifyConnectionTreeInvalidated, saveCollapsedFolderIds, saveRecentConnectionIds, type NewConnectionRequestDetail } from "./connectionSidebarState";
 import { collectConnectionFolderIds, countConnections, countFolders, filterConnectedConnections, filterConnectionTree, findConnectionInTree, flattenConnections, flattenFolders, visibleFlatConnections as flattenVisibleConnections, withLiveConnectionStatuses } from "./treeUtils";
 import { WorkspaceIcon } from "../workspaceIcons";
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Check, ChevronDown, ChevronRight, CircleDot, Folder, FolderPlus, KeyRound, LayoutDashboard, List, Maximize2, Minimize2, PanelsTopLeft, PanelRight, Pencil, Pin, PinOff, Play, Plus, Radio, RotateCcw, Save, Search, Settings, SquarePlus, Trash2, X } from "../../../lib/reicon";
 import { listen } from "@tauri-apps/api/event";
 import { useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import type { DragEvent as ReactDragEvent, FormEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from "react";
+import type { DragEvent as ReactDragEvent, FormEvent, KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from "react";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import {
@@ -63,6 +63,7 @@ import { reiconIconRefForName } from "../../../lib/iconCatalog";
 import { requestCredentialUnlock } from "../../../lib/credentialUnlock";
 import { nativeMenuIcons } from "../../../lib/nativeMenuIcons";
 import { lockOsIconAutoDetect } from "../../../lib/osIcons";
+import { isMacPlatform } from "../../../lib/platform";
 import { showNativeContextMenu, type NativeContextMenuItem } from "../../../lib/nativeContextMenu";
 import { confirmNativeDialog, invokeCommand, isCredentialUnlockRequiredError, isTauriRuntime, selectAppLauncherFolder, selectFileViewPath, selectKeyFile, type TmuxSession } from "../../../lib/tauri";
 import { connectionTree } from "../../../app-defaults";
@@ -246,9 +247,11 @@ const QUICK_CONNECT_RECENT_SUBMENU_LIMIT = 20;
 
 export function ConnectionSidebar({
   onExternalOpenConnection,
+  onRevealPanel,
   onTogglePanel,
 }: {
   onExternalOpenConnection?: () => void;
+  onRevealPanel?: () => void;
   onTogglePanel?: () => void;
 }) {
   const { i18n, t } = useTranslation();
@@ -360,6 +363,7 @@ export function ConnectionSidebar({
     stop: (event: PointerEvent) => void;
   } | null>(null);
   const suppressTreeClickRef = useRef(false);
+  const openNextCreatedConnectionRef = useRef(false);
 
   useEffect(() => {
     const handleTreeInvalidated = () => {
@@ -495,13 +499,17 @@ export function ConnectionSidebar({
     }
   }
 
-  async function handleConnectionSaved() {
+  async function handleConnectionSaved(connection?: Connection) {
     await reloadConnectionGroups();
     notifyConnectionTreeInvalidated();
     setFormMode(null);
     setNewConnectionType(null);
     setFormError("");
     setTreeError("");
+    if (connection && openNextCreatedConnectionRef.current) {
+      openNextCreatedConnectionRef.current = false;
+      handleOpenConnection(connection);
+    }
   }
 
   function showConnectionSuccessStatus(message: string) {
@@ -611,6 +619,29 @@ export function ConnectionSidebar({
     setFormMode("save");
   }
 
+  useEffect(() => {
+    function handleNewConnectionRequest(event: Event) {
+      const { connectionType, openAfterCreate } = (event as CustomEvent<NewConnectionRequestDetail>).detail;
+      openNextCreatedConnectionRef.current = Boolean(openAfterCreate);
+      if (openAfterCreate) {
+        onRevealPanel?.();
+      }
+      handleNewConnectionTypeSelected(connectionType);
+    }
+
+    function handleImportConnectionsRequest() {
+      onRevealPanel?.();
+      handleImportRequested();
+    }
+
+    window.addEventListener(NEW_CONNECTION_REQUEST_EVENT, handleNewConnectionRequest);
+    window.addEventListener(IMPORT_CONNECTIONS_REQUEST_EVENT, handleImportConnectionsRequest);
+    return () => {
+      window.removeEventListener(NEW_CONNECTION_REQUEST_EVENT, handleNewConnectionRequest);
+      window.removeEventListener(IMPORT_CONNECTIONS_REQUEST_EVENT, handleImportConnectionsRequest);
+    };
+  });
+
   async function handleNewFileViewConnectionSelected() {
     setAddConnectionMenuOpen(false);
     setFormError("");
@@ -618,6 +649,7 @@ export function ConnectionSidebar({
       title: t("connections.fileViewPickerTitle"),
     });
     if (!selectedPath) {
+      openNextCreatedConnectionRef.current = false;
       return;
     }
 
@@ -629,7 +661,7 @@ export function ConnectionSidebar({
         request,
       });
       await saveConnectionIconPresentation(connection, iconDataUrl, null, null);
-      await handleConnectionSaved();
+      await handleConnectionSaved(connection);
     } catch (error) {
       setTreeError(error instanceof Error ? error.message : String(error));
     }
@@ -1306,7 +1338,7 @@ export function ConnectionSidebar({
         if (connection.type === "ssh") {
           writeSshApplyStartupToExistingTmux(connection.id, Boolean(sshStartupScriptApplyToExistingTmux));
         }
-        await handleConnectionSaved();
+        await handleConnectionSaved(connection);
       } catch (error) {
         showConnectionFormError(error);
       }
@@ -1764,22 +1796,10 @@ export function ConnectionSidebar({
   }
 
   function buildAddConnectionMenuItems(): NativeContextMenuItem[] {
-    const connectionTypes: ConnectionType[] = [
-      "local",
-      "ssh",
-      "telnet",
-      "serial",
-      "url",
-      "rdp",
-      "vnc",
-      "ftp",
-      "localFiles",
-      "fileView",
-    ];
     return [
-      ...connectionTypes.map((connectionType) => ({
+      ...CONNECTION_CREATION_OPTIONS.map(({ labelKey, type: connectionType }) => ({
         kind: "item" as const,
-        label: connectionType === "ssh" ? t("connections.ssh") : connectionTypeLabel(connectionType),
+        label: t(labelKey),
         iconSrc: connectionIconSrcForConnection({ type: connectionType }),
         action:
           connectionType === "fileView"
@@ -2192,6 +2212,14 @@ export function ConnectionSidebar({
       return;
     }
 
+    await requestDeleteTarget(target);
+  }
+
+  // Confirm-then-delete a connection or folder. Prefers the native OS
+  // confirmation dialog and falls back to the in-app ConfirmDeleteDialog when
+  // the native dialog is unavailable. Shared by the tree context menu and the
+  // Connection Tree keyboard shortcut (Delete).
+  async function requestDeleteTarget(target: DeleteTarget) {
     let confirmed: boolean | null;
     try {
       confirmed = await confirmNativeDialog(deleteConfirmationMessage(t, target), {
@@ -2212,6 +2240,59 @@ export function ConnectionSidebar({
 
     if (confirmed === null) {
       setConfirmDeleteTarget(target);
+    }
+  }
+
+  // Connection Tree keyboard shortcuts: F2 renames and Delete removes the
+  // connection whose row currently has focus (falling back to the selected
+  // connection). F2 stays the cross-platform rename key (Enter keeps opening
+  // the focused row). For delete, the Delete/forward-delete key works
+  // everywhere; on macOS we also accept Backspace and Cmd+Backspace, because
+  // the key Mac keyboards label "delete" is Backspace and Finder's Move to
+  // Trash is Cmd+Delete. Scoped to the tree container so a delete keypress in
+  // a terminal or text field can never remove a connection. Child Connection
+  // Tabs and folders keep their existing context-menu flows.
+  function handleTreeKeyDown(event: ReactKeyboardEvent<HTMLDivElement>) {
+    if (event.defaultPrevented) {
+      return;
+    }
+    const isRename = event.key === "F2";
+    const isDelete =
+      event.key === "Delete" || (isMacPlatform() && event.key === "Backspace");
+    if (!isRename && !isDelete) {
+      return;
+    }
+    if (event.repeat) {
+      event.preventDefault();
+      return;
+    }
+    const target = event.target as HTMLElement;
+    // Never hijack typing in the rename input, search field, or any editable.
+    if (target.closest("input, textarea, [contenteditable='true']")) {
+      return;
+    }
+    if (inlineRenameTarget || inlineChildRenameTarget) {
+      return;
+    }
+    const rowConnectionId =
+      target.closest<HTMLElement>(".connection-row[data-connection-id]")?.dataset.connectionId;
+    const connectionId = rowConnectionId ?? selectedConnectionId;
+    if (!connectionId) {
+      return;
+    }
+    const found = findConnectionInTree(treeRef.current, connectionId);
+    if (!found) {
+      return;
+    }
+    const { connection } = found;
+    event.preventDefault();
+    setSelectedConnectionId(connection.id);
+    if (isRename) {
+      setPendingFolderDraft(null);
+      setTreeError("");
+      setInlineRenameTarget({ kind: "connection", id: connection.id });
+    } else {
+      void requestDeleteTarget({ kind: "connection", connection });
     }
   }
 
@@ -2906,6 +2987,7 @@ export function ConnectionSidebar({
         onDragOver={handleTreePathsDragOver}
         onDragLeave={handleTreePathsDragLeave}
         onDrop={handleTreePathsDrop}
+        onKeyDown={handleTreeKeyDown}
       >
         {/* In "Hide Folders" mode the flat list below already includes these
             root connections (flattenConnections starts at the root), so render
@@ -3118,6 +3200,7 @@ export function ConnectionSidebar({
             )
           }
           onCancel={() => {
+            openNextCreatedConnectionRef.current = false;
             setFormMode(null);
             setNewConnectionType(null);
             setFormError("");
@@ -4024,6 +4107,9 @@ function ConnectionDialog({
   const [ftpProtocol, setFtpProtocol] = useState<"ftp" | "ftps" | "sftp">(
     initialConnection?.ftpOptions?.protocol ?? "sftp",
   );
+  const [ftpLocalPath, setFtpLocalPath] = useState(
+    initialConnection?.ftpOptions?.localPath ?? "",
+  );
   const [keyPath, setKeyPath] = useState(
     initialConnection?.keyPath ?? sshSettings.defaultKeyPath ?? "",
   );
@@ -4191,6 +4277,28 @@ function ConnectionDialog({
       disposed = true;
     };
   }, [canUseSavedPasswordCredential, connectionType]);
+
+  // New FTP/SFTP Connections prefill the local start path with the actual home
+  // folder so the user sees (and can adjust) the concrete default.
+  useEffect(() => {
+    if (connectionType !== "ftp" || isEditMode || !isTauriRuntime()) {
+      return;
+    }
+
+    let disposed = false;
+    void invokeCommand("list_local_places", undefined)
+      .then((places) => {
+        const homePath = places.home?.path ?? "";
+        if (!disposed && homePath) {
+          setFtpLocalPath((current) => current || homePath);
+        }
+      })
+      .catch(() => undefined);
+
+    return () => {
+      disposed = true;
+    };
+  }, [connectionType, isEditMode]);
 
   useEffect(() => {
     if (connectionType !== "localFiles" || !isTauriRuntime()) {
@@ -4450,6 +4558,8 @@ function ConnectionDialog({
                 Number(String(form.get("ftpConnectTimeoutSecs") ?? "30")) || 30,
               keepaliveSecs:
                 Number(String(form.get("ftpKeepaliveSecs") ?? "0")) || undefined,
+              localPath: String(form.get("ftpLocalPath") ?? "").trim() || undefined,
+              remotePath: String(form.get("ftpRemotePath") ?? "").trim() || undefined,
             }
           : undefined,
       password:
@@ -4478,6 +4588,15 @@ function ConnectionDialog({
     const selectedPath = await selectKeyFile(keyPath || sshSettings.defaultKeyPath);
     if (selectedPath) {
       setKeyPath(selectedPath);
+    }
+  }
+
+  async function handleBrowseFtpLocalPath() {
+    const selectedPath = await selectAppLauncherFolder({
+      title: t("connections.ftpLocalPathPickerTitle"),
+    });
+    if (selectedPath) {
+      setFtpLocalPath(selectedPath);
     }
   }
 
@@ -4737,8 +4856,11 @@ function ConnectionDialog({
       case "ftp":
         return (
           <FtpConnectionOptions
+            ftpLocalPath={ftpLocalPath}
             ftpProtocol={ftpProtocol}
             initialConnection={initialConnection}
+            onBrowseFtpLocalPath={handleBrowseFtpLocalPath}
+            onFtpLocalPathChange={setFtpLocalPath}
             onFtpProtocolChange={handleFtpProtocolChange}
           />
         );

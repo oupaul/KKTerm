@@ -1,6 +1,6 @@
 // Create / edit a Site. Built from the shared dialog primitives
-// (docs/DESIGN_LANGUAGE.md): a name field, an icon picker, and the legacy
-// per-host transport default on edit. Connection binding belongs to Rack Devices.
+// (docs/DESIGN_LANGUAGE.md): a name field and an icon picker. Connection
+// binding and execution transport resolution do not belong to Site properties.
 
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -9,10 +9,9 @@ import { reiconIconRefForName } from "../../lib/iconCatalog";
 import { ConnectionIconBackgroundPicker } from "../workspace/connections/ConnectionIconBackgroundPicker";
 import { ConnectionIconPicker } from "../workspace/connections/ConnectionIconPicker";
 import { useWorkspaceStore } from "../../store";
-import type { Site, ItopsTransport } from "../../types";
+import type { Site } from "../../types";
 import { useItOpsStore } from "./state";
 
-const TRANSPORTS: ItopsTransport[] = ["auto", "ssh", "winrm", "psexec"];
 const DEFAULT_SITE_ICON_REF = reiconIconRefForName("Buildings2");
 
 export function SiteDialog({
@@ -31,7 +30,6 @@ export function SiteDialog({
   const updateSite = useItOpsStore((state) => state.updateSite);
 
   const [name, setName] = useState(group?.name ?? "");
-  const [transport, setTransport] = useState<ItopsTransport>(group?.transport ?? "auto");
   const [iconColor, setIconColor] = useState<string | null>(group?.iconColor ?? null);
   const [iconDataUrl, setIconDataUrl] = useState<string | null>(group?.iconDataUrl ?? null);
   const [iconBackgroundColor, setIconBackgroundColor] = useState<string | null>(
@@ -51,7 +49,9 @@ export function SiteDialog({
       name: trimmedName,
       memberIds: group?.memberIds ?? [],
       filter: group?.filter ?? null,
-      transport,
+      // Keep legacy persisted values stable on edit. New Sites use automatic
+      // per-Host resolution; transport is no longer a Site property control.
+      transport: group?.transport ?? "auto",
       iconColor,
       iconDataUrl,
       iconBackgroundColor,
@@ -118,23 +118,6 @@ export function SiteDialog({
             autoFocus
           />
         </Field>
-
-        {isEdit ? (
-          <Field label={t("itops.sites.perHostTransport")}>
-            <div className="hg-dlg-seg">
-              {TRANSPORTS.map((value) => (
-                <button
-                  key={value}
-                  type="button"
-                  className={value === transport ? "on" : ""}
-                  onClick={() => setTransport(value)}
-                >
-                  {value === "auto" ? t("itops.transport.auto") : value.toUpperCase()}
-                </button>
-              ))}
-            </div>
-          </Field>
-        ) : null}
 
       </Sheet>
     </DialogShell>

@@ -83,18 +83,22 @@ Replaces the **Host Group** entry in `CONTEXT.md`; adds the rest. Follows the
   status colouring) with compact utilisation/power tags, and hold
   **Room Objects**. _Avoid_: area view, region view.
 - **Room Object** — a non-rack fixture standing on the Server Room floor grid
-  (security camera, air conditioner, fire extinguisher, cable tray, UPS,
+  (security camera, air conditioner, fire extinguisher, UPS,
   environment sensor, smoke detector, crash cart, 乖乖). A Room Object has a
   facing and a vertical position in rack units, so occupants can share a
   floor cell while their vertical spans don't intersect. Resting objects
-  settle on the lowest fitting support surface (a 乖乖 pack sits on a cabinet
-  top), while top-hung fixtures such as cameras and detectors keep their
-  overhead placement. Footprints follow real-world size against the 1200 mm
+  settle on the lowest fitting support surface, while top-hung fixtures such
+  as cameras and detectors keep their overhead placement. A 乖乖 pack is never
+  a Room Object while on a cabinet top: a rack-top drop (or a legacy rack-top
+  Room Object found on load) becomes that Rack's single rack-top 乖乖 Rack
+  Device, so the Rack View and the room views share one object; only a
+  floor-standing pack remains a Room Object. Footprints follow real-world size against the 1200 mm
   floor cell: small hand-sized fixtures (camera, fire extinguisher, sensor,
   smoke detector, 乖乖) occupy one cell quadrant chosen by a durable
-  `corner` property (clockwise 0=NW..3=SW), while large fixtures may span
-  several cells (a CRAC unit covers a 2×1-cell span, a cable-tray section
-  runs two cells) and block every covered cell for stacking. Durable in
+  `corner` property (clockwise 0=NW..3=SW). Larger fixtures use the exact
+  one-cell proportions from `Server Room Objects.dc.html` (for example CRAC
+  0.94×0.62 and UPS 0.6×0.6) and block their snapped
+  cell for stacking. Durable in
   `itops_room_objects`, scoped by Site + Server Room name like racks (the
   pure model lives in `roomObjects.ts`; the pre-durable localStorage scope
   remains a legacy fallback). Rack facing is a durable `facing` column on
@@ -114,12 +118,12 @@ Replaces the **Host Group** entry in `CONTEXT.md`; adds the rest. Follows the
   the older `RackItem` / Rack Item names. _Avoid_: slot, node, host card.
 - **Rack Device Type** — the finite visual/device kind for a Rack Device:
   connection, server, storage, switch, router, firewall, PDU, UPS, KVM, patch
-  panel, equipment, general, 乖乖, blank, or label. It controls faceplate
+  panel, generic device, 乖乖, blank, or label. It controls faceplate
   rendering and editing fields; it is not a Connection type.
 - **Rack Device Properties** — non-secret presentation metadata for a Rack
   Device: label, status, accent, notes, tags, additional Connection bindings,
   typed port rows, SNMP target/OID hints for user-triggered refresh, shell/model
-  preview data, 乖乖 package expiry/size/rotation/yaw, ports, disks, battery,
+  preview data, 乖乖 package expiry/size/style/rotation, ports, disks, battery,
   load, icon, and placement. Never store credentials, secrets, or live Session
   state here. SNMP refresh is manual rather than a background polling service.
 
@@ -182,7 +186,7 @@ CREATE TABLE IF NOT EXISTS itops_site_rack_items (
     connection_id TEXT,
     -- 'connection' | 'switch' | 'pdu' | 'patchPanel' | 'blank' | 'label' |
     -- 'server' | 'storage' | 'router' | 'firewall' | 'ups' | 'kvm' |
-    -- 'equipment' | 'general' — each kind paints its own animated faceplate.
+    -- 'genericDevice' — passive catch-all hardware with a generic faceplate.
     kind          TEXT NOT NULL,
     -- Display label (passive items, or an override for a connection item).
     label         TEXT NOT NULL DEFAULT '',
@@ -206,11 +210,12 @@ flat Site target.
 ### Overlap / validation rule
 
 A rack item must not overlap another item's U span in the same rack, and must
-fit within `1..=height_u`. Validate in `itops/site_storage.rs` on
-insert/update (pure helper, unit-tested) and re-check in the UI before a
-drag-drop commit. This is the one new non-trivial invariant; keep it in a small
-pure function (`fn overlaps(existing: &[Span], candidate: Span) -> bool`) so it
-is testable without a DB.
+fit within `1..=height_u`. The sole exception is one 乖乖 package on the rack
+top, stored at the virtual position `height_u + 1`; changing the Rack height
+moves that package's virtual position with the top. Validate in
+`itops/site_storage.rs` on insert/update (pure helper, unit-tested) and
+re-check in the UI before a drag-drop commit. Keep the overlap and special
+placement rules in small pure functions so they remain testable without a DB.
 
 ### Rust types (`src-tauri/src/itops/types.rs`)
 
@@ -316,8 +321,13 @@ The visible IT Ops Module opens directly into the Site topology surface:
 - **Sites tree** — the left column contains the Module title/icon and the
   searchable Site → Server Room → Rack navigator. The whole column is
   resizable, and the IT Ops title-bar Sites button hides or shows it. Width
-  and hidden state persist. A native right-click Properties command reopens
-  the existing add dialog in edit mode for each Site, Server Room, or Rack.
+  and hidden state persist. A native right-click menu exposes Delete followed
+  by a separator and final Properties item for each Site, Server Room, or Rack.
+  A Server Room prepends `itops.racks.addRackAction`. Properties reopens the
+  existing add dialog in edit mode; Delete always opens the shared confirmation
+  sheet. The undeletable Default Site keeps a disabled Delete item.
+  Right-clicking the virtual Server Rooms row instead exposes
+  `itops.racks.addServerRoomAction` for that Site.
 - **Site View** — selecting a Site shows Server Room cards.
 - **Server Room View** — selecting a Server Room shows its Racks in one of
   three layouts: rack elevations (default, optionally grouped by each Rack's
@@ -341,7 +351,31 @@ The visible IT Ops Module opens directly into the Site topology surface:
   opens the shared Dashboard background picker; the room floor finish is a
   durable Server Room property rather than an always-visible canvas palette.
 - **Rack View** — selecting a Rack centers its front elevation and Rack Device
-  properties/placement interactions.
+  properties/placement interactions. The Rack name/specifications live in the
+  top-middle toolbar. An armed Rack Device remains under the pointer outside the
+  cabinet, magnetically snaps to a nearby U, and cancels on right-click, Escape,
+  picker disarm, or navigation. 乖乖 alone can also snap to the rack top (the
+  durable virtual position `start_u = height_u + 1`): `full` stands at 4U and
+  `laidDown` faces upward at 1U. Rack View and the Server Room elevation rows
+  always reserve 4U of headroom above the cabinet (`KUAIGUAI_TOP_CLEARANCE_U`)
+  so a rack-top package fits without shifting the rack. Floor views hide 乖乖
+  stored inside the cabinet and show only a rack-top package. The floor plan
+  and 2.5D views place the same rack-top Rack Device when their picker's 乖乖
+  is dropped on a cabinet top. Those spatial views preserve the selected one
+  of four rack-top corners in Rack Device metadata, while Rack View and the
+  elevation always draw it center top. A package with an
+  expiry date desaturates linearly over the last 30 days before the date,
+  rendering fully black and white on and after it (`kuaiKuaiGrayscale` in
+  `KuaiKuaiBag.tsx`, applied in every view through the shared bag artwork).
+
+  Server Room floor-plan and 2.5D pickers use the same single-item placement
+  contract: choosing a fixture arms one ghost immediately, while a Rack first
+  collects its properties; the armed object stays under the pointer outside
+  the floor, snaps to every visible grid cell inside it (including cells added
+  when the floor grows to fill the viewport), and is consumed by one successful
+  placement. Right-click, Escape, picker disarm, edit-mode exit, layout change,
+  or navigation cancels it (discarding a configured but unplaced Rack); a
+  blocked cell keeps it armed for another target.
 
 Batch Runs and Automations remain part of IT Ops, but their top-level
 management tab chrome is hidden while the Site-only UI is active.

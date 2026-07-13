@@ -47,13 +47,21 @@ impl SecurityType {
         match version {
             VncVersion::RFB33 => {
                 let security_type = reader.read_u32().await?;
-                let security_type = (security_type as u8).try_into()?;
-                if let SecurityType::Invalid = security_type {
+                if security_type == SecurityType::Invalid as u32 {
                     let _ = reader.read_u32().await?;
                     let mut err_msg = String::new();
                     reader.read_to_string(&mut err_msg).await?;
                     return Err(VncError::General(err_msg));
                 }
+                // In RFB 3.3 the server dictates a single u32 security type.
+                // Report out-of-range values (e.g. legacy UltraVNC MS-Logon
+                // 0xfffffffa) instead of truncating them to a bogus u8 id.
+                if security_type > u8::MAX as u32 {
+                    return Err(VncError::General(format!(
+                        "Server requires an unsupported security type: {security_type}"
+                    )));
+                }
+                let security_type = (security_type as u8).try_into()?;
                 Ok(vec![security_type])
             }
             _ => {
@@ -73,10 +81,28 @@ impl SecurityType {
                     return Err(VncError::General(err_msg));
                 }
                 let mut sec_types = vec![];
+                let mut unknown_types = vec![];
                 for _ in 0..num {
-                    sec_types.push(reader.read_u8().await?.try_into()?);
+                    let sec_type = reader.read_u8().await?;
+                    match SecurityType::try_from(sec_type) {
+                        Ok(sec_type) => sec_types.push(sec_type),
+                        // Servers may advertise proprietary security types
+                        // (e.g. UltraVNC MS-Logon / SecureVNC plugin ids)
+                        // alongside standard ones; skip them and negotiate
+                        // with any mutually supported type.
+                        Err(_) => unknown_types.push(sec_type),
+                    }
                 }
-                tracing::trace!("Server supported security type: {:?}", sec_types);
+                if sec_types.is_empty() {
+                    return Err(VncError::General(format!(
+                        "Server offered no supported security type: {unknown_types:?}"
+                    )));
+                }
+                tracing::trace!(
+                    "Server supported security type: {:?}, skipped unknown: {:?}",
+                    sec_types,
+                    unknown_types
+                );
                 Ok(sec_types)
             }
         }
@@ -88,6 +114,50 @@ impl SecurityType {
     {
         writer.write_all(&[(*self).into()]).await?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn skips_unknown_security_types() {
+        // UltraVNC advertises proprietary types (e.g. 117) alongside VncAuth.
+        let mut stream: &[u8] = &[2, 117, 2];
+        let types = SecurityType::read(&mut stream, &VncVersion::RFB38)
+            .await
+            .unwrap();
+        assert_eq!(types, vec![SecurityType::VncAuth]);
+    }
+
+    #[tokio::test]
+    async fn errors_when_no_supported_security_type() {
+        let mut stream: &[u8] = &[2, 115, 117];
+        let err = SecurityType::read(&mut stream, &VncVersion::RFB38)
+            .await
+            .unwrap_err();
+        assert!(err.to_string().contains("[115, 117]"), "{err}");
+    }
+
+    #[tokio::test]
+    async fn rfb33_reports_out_of_range_security_type() {
+        // Legacy UltraVNC MS-Logon (pre-RFB3.8) sends 0xfffffffa; it must not
+        // be truncated to a bogus u8 id.
+        let mut stream: &[u8] = &0xfffffffa_u32.to_be_bytes();
+        let err = SecurityType::read(&mut stream, &VncVersion::RFB33)
+            .await
+            .unwrap_err();
+        assert!(err.to_string().contains("4294967290"), "{err}");
+    }
+
+    #[tokio::test]
+    async fn rfb33_accepts_vnc_auth() {
+        let mut stream: &[u8] = &2_u32.to_be_bytes();
+        let types = SecurityType::read(&mut stream, &VncVersion::RFB33)
+            .await
+            .unwrap();
+        assert_eq!(types, vec![SecurityType::VncAuth]);
     }
 }
 

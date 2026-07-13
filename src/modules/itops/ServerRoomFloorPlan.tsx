@@ -16,6 +16,7 @@ import {
   moveIsoRack,
   rackDepthFrac,
   rackFootprint,
+  rackTopCornerPoint,
   resolveIsoLayout,
   sanitizeFacing,
   type Corner,
@@ -28,6 +29,7 @@ import {
   objectCellSpan,
   objectFootprint,
   objectSpec,
+  rackTopSupport,
   resolveDropZ,
   type RoomObject,
 } from "./roomObjects";
@@ -41,12 +43,15 @@ import {
 import { rackFloorMetrics } from "./roomFloorPlan";
 import { ItIcon } from "./icons";
 import { RoomObjectPlanArtwork } from "./RoomObjectArtwork";
+import { isRackTopItem } from "./rackPlacement";
 import {
   OBJECT_ACCENTS,
   RackTagChips,
   RackTipContent,
+  RoomPlacementCursorGhost,
   RoomZoomRuler,
   useRoomPan,
+  useRoomPlacementPointer,
   useRoomViewportSize,
   useWheelZoom,
   type RoomTool,
@@ -77,12 +82,14 @@ export function ServerRoomFloorPlan({
   tool = null,
   placeRackId = null,
   onRackPlaced,
+  onObjectPlaced,
   placement,
   onPlacementChange,
   facing,
   onFacingChange,
   objects,
   onObjectsChange,
+  onPlaceKuaiguai,
   onDeleteRack,
   onSelectRack,
   onObjectBlocked,
@@ -95,12 +102,18 @@ export function ServerRoomFloorPlan({
   /** A just-created rack awaiting its placement click. */
   placeRackId?: string | null;
   onRackPlaced?: () => void;
+  /** A room fixture was successfully placed; consume the armed picker item. */
+  onObjectPlaced?: () => void;
   placement: FreePlacementMap;
   onPlacementChange?: (next: FreePlacementMap) => void;
   facing: RackFacingMap;
   onFacingChange?: (next: RackFacingMap) => void;
   objects: RoomObject[];
   onObjectsChange?: (next: RoomObject[]) => void;
+  /** A 乖乖 pack landed on a cabinet top: it becomes a rack-top Rack Device
+   *  (shared with the Rack View) instead of a room object. Returns false when
+   *  the rack top is already taken. */
+  onPlaceKuaiguai?: (rack: Rack, corner?: Corner) => boolean;
   onDeleteRack?: (rack: Rack) => void;
   onSelectRack: (rackId: string) => void;
   /** A placement click found no free vertical span in the cell. */
@@ -140,6 +153,7 @@ export function ServerRoomFloorPlan({
   // the pointer) so the grid shows the drop before the click commits.
   const [hover, setHover] = useState<(IsoCell & { corner: Corner }) | null>(null);
   const placing = !!editMode && armed;
+  const placementPointer = useRoomPlacementPointer(placing, onCancelPlacement);
   useEffect(() => {
     if (!placing) setHover(null);
   }, [placing]);
@@ -233,6 +247,17 @@ export function ServerRoomFloorPlan({
       onObjectBlocked?.();
       return;
     }
+    if (object.kind === "kuaikuai" && onPlaceKuaiguai) {
+      const support = rackTopSupport(target, object.kind, object.rot, object.corner, z, racks, layout.cells, facing);
+      if (support) {
+        if (onPlaceKuaiguai(support, object.corner)) {
+          onObjectsChange(objects.filter((entry) => entry.id !== id));
+        } else {
+          onObjectBlocked?.();
+        }
+        return;
+      }
+    }
     onObjectsChange(
       objects.map((entry) => (entry.id === id ? { ...entry, x: target.x, y: target.y, z } : entry)),
     );
@@ -302,10 +327,19 @@ export function ServerRoomFloorPlan({
       onObjectBlocked?.();
       return;
     }
+    if (tool === "kuaikuai" && onPlaceKuaiguai) {
+      const support = rackTopSupport(cell, tool, 0, corner, z, racks, layout.cells, facing);
+      if (support) {
+        if (onPlaceKuaiguai(support, corner)) onObjectPlaced?.();
+        else onObjectBlocked?.();
+        return;
+      }
+    }
     onObjectsChange([
       ...objects,
       { id: crypto.randomUUID(), kind: tool, x: cell.x, y: cell.y, z, rot: 0, corner },
     ]);
+    onObjectPlaced?.();
   }
 
   function selectRack(rackId: string) {
@@ -448,10 +482,17 @@ export function ServerRoomFloorPlan({
                     const spec = tool != null ? objectSpec(tool) : null;
                     const blocked =
                       tool != null &&
-                      resolveDropZ(
-                        footprintSpans(hover, tool, 0, racks, layout.cells, objects, undefined, hover.corner, facing),
-                        tool,
-                      ) == null;
+                      (() => {
+                        const z = resolveDropZ(
+                          footprintSpans(hover, tool, 0, racks, layout.cells, objects, undefined, hover.corner, facing),
+                          tool,
+                        );
+                        if (z == null) return true;
+                        if (tool !== "kuaikuai") return false;
+                        // A rack-top drop becomes the rack's single top item.
+                        const support = rackTopSupport(hover, tool, 0, hover.corner, z, racks, layout.cells, facing);
+                        return !!support && support.items.some((item) => isRackTopItem(item, support.heightU));
+                      })();
                     const span = tool != null ? objectCellSpan(tool, 0) : { w: 1, h: 1 };
                     const slot = spec?.quarter
                       ? {
@@ -511,6 +552,13 @@ export function ServerRoomFloorPlan({
         <RoomZoomRuler zoom={zoom} onZoomChange={setZoom} />
       </div>
       {editMode ? <div className="rm-iso-hint">{t("itops.floorPlan.blueprintEditHint")}</div> : null}
+      <RoomPlacementCursorGhost
+        pointer={placementPointer}
+        tool={tool}
+        rackArmed={placeRackId != null}
+        variant="floor"
+        snapped={hover != null}
+      />
     </div>
   );
 }
@@ -556,6 +604,8 @@ function BlueprintRack({
   const left = (cell.x + fp.x) * cellW;
   const top = (cell.y + fp.y) * cellH;
   const front = (["s", "w", "n", "e"] as const)[facing];
+  const topKuaiguai = rack.items.find((item) => isRackTopItem(item, rack.heightU));
+  const topKuaiguaiPoint = rackTopCornerPoint(topKuaiguai?.metadata?.rackTopCorner);
 
   return (
     <div
@@ -584,6 +634,20 @@ function BlueprintRack({
         onClick={onSelect}
       >
         <span className="rm-bp-rack-name">{rack.name}</span>
+        {topKuaiguai ? (
+          <span
+            className="rm-bp-top-kuaiguai"
+            style={
+              {
+                left: `${topKuaiguaiPoint.x * 100}%`,
+                top: `${topKuaiguaiPoint.y * 100}%`,
+                "--obj": OBJECT_ACCENTS.kuaikuai,
+              } as React.CSSProperties
+            }
+          >
+            <RoomObjectPlanArtwork kind="kuaikuai" />
+          </span>
+        ) : null}
         <RackTagChips rack={rack} />
       </button>
       <span className="rm-bp-tip">

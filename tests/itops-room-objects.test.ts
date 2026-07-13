@@ -10,12 +10,15 @@ import {
   objectFootprint,
   objectSurfaceAnchor,
   objectSpec,
+  rackTopSupport,
   resolveDropZ,
   sanitizeRoomObjects,
   settleRoomObjects,
   type RoomObject,
 } from "../src/modules/itops/roomObjects";
 import {
+  cornerFromDisplayPoint,
+  rackTopCornerPoint,
   rotateCellForView,
   rotateFacingForView,
   sanitizeFacing,
@@ -126,6 +129,49 @@ test("quarter objects in different rack corners share the same rack top", () => 
   assert.equal(resolveDropZ(sameCorner, "kuaikuai"), 44);
 });
 
+test("fire extinguisher and 乖乖 share one floor cell in different corners", () => {
+  const fire = { ...obj("fire", "fireExtinguisher", 0, 0, 0), corner: 0 as const };
+  const spans = footprintSpans(
+    { x: 0, y: 0 },
+    "kuaikuai",
+    0,
+    [],
+    {},
+    [fire],
+    undefined,
+    2,
+  );
+
+  assert.deepEqual(spans, []);
+  assert.equal(resolveDropZ(spans, "kuaikuai"), 0);
+});
+
+test("2.5D pointer quadrants map back to durable corners at every view angle", () => {
+  const displayPoints = [
+    [10, 10],
+    [90, 10],
+    [90, 90],
+    [10, 90],
+  ] as const;
+
+  for (const angle of [0, 1, 2, 3] as const) {
+    for (const [displayCorner, [x, y]] of displayPoints.entries()) {
+      assert.equal(
+        cornerFromDisplayPoint(x, y, 100, 100, angle),
+        (displayCorner - angle + 4) % 4,
+      );
+    }
+  }
+});
+
+test("rack-top corner metadata rotates in spatial views while legacy items stay centered", () => {
+  assert.deepEqual(rackTopCornerPoint(undefined), { x: 0.5, y: 0.5 });
+  assert.deepEqual(rackTopCornerPoint(0, 0), { x: 0.25, y: 0.25 });
+  assert.deepEqual(rackTopCornerPoint(0, 1), { x: 0.75, y: 0.25 });
+  assert.deepEqual(rackTopCornerPoint(0, 2), { x: 0.75, y: 0.75 });
+  assert.deepEqual(rackTopCornerPoint(0, 3), { x: 0.25, y: 0.75 });
+});
+
 test("settleRoomObjects repairs stale raised rack-top corner placements", () => {
   const racks = [rack("a")];
   const cells = { a: { x: 0, y: 0 } };
@@ -166,6 +212,28 @@ test("settleRoomObjects preserves intentional same-corner stacks", () => {
       { id: "top", z: 44, corner: 3 },
     ],
   );
+});
+
+test("rackTopSupport identifies the rack a pack's bottom rests on", () => {
+  const racks = [rack("a")];
+  const cells = { a: { x: 0, y: 0 } };
+  // A 乖乖 dropped at the rack's top surface is supported by that rack…
+  assert.equal(rackTopSupport({ x: 0, y: 0 }, "kuaikuai", 0, 0, 42, racks, cells)?.id, "a");
+  // …but not on the floor, at another level, or over an empty cell.
+  assert.equal(rackTopSupport({ x: 0, y: 0 }, "kuaikuai", 0, 0, 0, racks, cells), null);
+  assert.equal(rackTopSupport({ x: 0, y: 0 }, "kuaikuai", 0, 0, 44, racks, cells), null);
+  assert.equal(rackTopSupport({ x: 1, y: 0 }, "kuaikuai", 0, 0, 42, racks, cells), null);
+});
+
+test("rackTopSupport honors the rack's drawn footprint under its facing", () => {
+  // A 600 mm network rack fills half the cell, front flush south (facing 0):
+  // the south quadrants sit on the cabinet, the north strip hangs off it.
+  const racks = [{ ...rack("a"), depthMm: 600 }];
+  const cells = { a: { x: 0, y: 0 } };
+  const nw = rackTopSupport({ x: 0, y: 0 }, "kuaikuai", 0, 0, 42, racks, cells, { a: 0 });
+  const sw = rackTopSupport({ x: 0, y: 0 }, "kuaikuai", 0, 3, 42, racks, cells, { a: 0 });
+  assert.equal(nw, null);
+  assert.equal(sw?.id, "a");
 });
 
 test("gravity objects land on the lowest fitting surface", () => {
@@ -213,6 +281,7 @@ test("sanitizeRoomObjects drops malformed entries and rounds coordinates", () =>
   const parsed = sanitizeRoomObjects([
     { id: "ok", kind: "camera", x: 1.4, y: 2.6, z: 52.2, rot: 3, corner: 2 },
     { id: "legacy", kind: "sensor", x: 0, y: 0, z: 40, rot: 0 },
+    { id: "removed-cable", kind: "cableTray", x: 0, y: 0, z: 50, rot: 0 },
     { id: "bad-kind", kind: "sofa", x: 0, y: 0, z: 0, rot: 0 },
     { id: 42, kind: "camera", x: 0, y: 0, z: 0, rot: 0 },
     { id: "bad-x", kind: "camera", x: "left", y: 0, z: 0, rot: 0 },
@@ -256,33 +325,45 @@ test("quarter-block billboard anchors use the chosen footprint center", () => {
 });
 
 test("large fixtures span whole cells and rotate their span", () => {
-  // A CRAC unit is one and a half cells wide → it occupies a 2×1 cell span
-  // and draws centred over it; rotating a quarter turn swaps the span.
-  assert.deepEqual(objectCellSpan("aircon", 0), { w: 2, h: 1 });
-  assert.deepEqual(objectCellSpan("aircon", 1), { w: 1, h: 2 });
+  // Reference fixture footprints fit one floor cell and rotate in place.
+  assert.deepEqual(objectCellSpan("aircon", 0), { w: 1, h: 1 });
+  assert.deepEqual(objectCellSpan("aircon", 1), { w: 1, h: 1 });
   const fp = objectFootprint("aircon", 0, 0);
   assert.equal(fp.w, objectSpec("aircon").wide);
-  assert.equal(fp.x, (2 - fp.w) / 2);
-  // A cable tray section runs two cells long.
-  assert.deepEqual(objectCellSpan("cableTray", 0), { w: 2, h: 1 });
+  assert.equal(fp.x, (1 - fp.w) / 2);
 });
 
-test("cellSpans blocks every cell a multi-cell fixture covers", () => {
+test("fixture footprints match Server Room Objects.dc.html", () => {
+  assert.deepEqual(
+    Object.fromEntries(
+      (["aircon", "ups", "crashCart", "camera", "sensor", "smokeDetector", "fireExtinguisher", "kuaikuai"] as const)
+        .map((kind) => [kind, [objectSpec(kind).wide, objectSpec(kind).deep]]),
+    ),
+    {
+      aircon: [0.94, 0.62],
+      ups: [0.6, 0.6],
+      crashCart: [0.56, 0.44],
+      camera: [0.34, 0.34],
+      sensor: [0.24, 0.24],
+      smokeDetector: [0.3, 0.3],
+      fireExtinguisher: [0.28, 0.28],
+      kuaikuai: [0.36, 0.28],
+    },
+  );
+});
+
+test("cellSpans blocks the snapped cell covered by a reference fixture", () => {
   const crac = obj("crac", "aircon", 1, 0, 0);
-  // Both the anchor cell and the spanned neighbour are occupied…
+  // The reference CRAC is 0.94 cells wide, so only its snapped cell is occupied.
   assert.equal(cellSpans({ x: 1, y: 0 }, [], {}, [crac]).length, 1);
-  assert.equal(cellSpans({ x: 2, y: 0 }, [], {}, [crac]).length, 1);
-  // …but the next cell over is free.
+  assert.equal(cellSpans({ x: 2, y: 0 }, [], {}, [crac]).length, 0);
   assert.equal(cellSpans({ x: 3, y: 0 }, [], {}, [crac]).length, 0);
 });
 
-test("footprintSpans collision-checks a multi-cell fixture's whole span", () => {
-  // A rack on the CRAC's second cell blocks the placement even though the
-  // anchor cell itself is empty.
-  const spans = footprintSpans({ x: 0, y: 0 }, "aircon", 0, [rack("a")], { a: { x: 1, y: 0 } }, []);
+test("footprintSpans collision-checks the fixture's snapped cell", () => {
+  const spans = footprintSpans({ x: 0, y: 0 }, "aircon", 0, [rack("a")], { a: { x: 0, y: 0 } }, []);
   assert.equal(resolveDropZ(spans, "aircon"), null);
-  // With the neighbour clear, the CRAC lands on the floor.
-  const clear = footprintSpans({ x: 0, y: 0 }, "aircon", 0, [rack("a")], { a: { x: 3, y: 0 } }, []);
+  const clear = footprintSpans({ x: 0, y: 0 }, "aircon", 0, [rack("a")], { a: { x: 1, y: 0 } }, []);
   assert.equal(resolveDropZ(clear, "aircon"), 0);
 });
 

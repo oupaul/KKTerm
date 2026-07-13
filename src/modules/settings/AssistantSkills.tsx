@@ -240,7 +240,6 @@ function AssistantSkillRow({
         <div className="assistant-skill-row-description">
           {skill.invalidReason || skill.description}
         </div>
-        <div className="assistant-skill-row-path">{skill.folderPath}</div>
       </div>
       <div className="assistant-skill-row-actions">
         <label className="assistant-skill-toggle">

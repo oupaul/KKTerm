@@ -141,8 +141,23 @@ test("file browser password prompts pass transient passwords without saving them
   );
   assert.match(
     workspaceSource,
-    /password: enteredPassword/,
+    /result = await startSessionAt\(enteredPassword\)/,
     "the retry after a password prompt should use the entered password transiently",
+  );
+  assert.match(
+    workspaceSource,
+    /path: preferredRemoteDirectory,[\s\S]*password: sessionPassword,/,
+    "session startup should pass the transient password alongside the preferred start directory",
+  );
+  assert.match(
+    workspaceSource,
+    /tab\.connection\?\.ftpOptions\?\.localPath\?\.trim\(\) \|\| undefined/,
+    "standalone FTP/SFTP browser tabs should read the configured local start path",
+  );
+  assert.match(
+    workspaceSource,
+    /\(sourceConnection \? initialRemotePath : connection\.ftpOptions\?\.remotePath\)\?\.trim\(\) \|\| "\."/,
+    "standalone FTP/SFTP browser tabs should read the configured remote start path",
   );
   assert.match(
     commandSource,

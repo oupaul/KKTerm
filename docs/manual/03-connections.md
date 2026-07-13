@@ -3,7 +3,8 @@
 ## AI grep hints
 
 - Keys: `connections.*` (full namespace), `app.connectionRail`
-- Topics: Connection Tree, Child Connection Tabs, folders, search, Quick Connect, Add Connection, tutorial targets `connections.panel`, `connections.search`, `connections.quickConnect`, `connections.addConnection`, `connections.folderControls`, `connections.tree`, rename, delete, duplicate, pin to rail, drag/drop, properties dialog, icon image, icon foreground, icon background
+- Topics: Connection Tree, Child Connection Tabs, folders, search, Quick Connect, Add Connection, tutorial targets `connections.panel`, `connections.search`, `connections.quickConnect`, `connections.addConnection`, `connections.folderControls`, `connections.tree`, rename, delete, duplicate, pin to rail, drag/drop, properties dialog, icon image, icon foreground, icon background, Connection Tree keyboard shortcuts, F2 rename, Delete key
+- Synonyms: "rename connection with keyboard", "F2 rename", "press delete to remove connection", "delete key connection tree", "keyboard rename", "remove connection shortcut"
 - Synonyms: "child tab", "connection tree tab", "saved tab", "named tab under a connection", "sub tab"
 - Synonyms: "saved host", "profile", "ssh entry", "create folder", "favourites", "icon color", "connection color"
 
@@ -69,6 +70,15 @@ Driven by `src/lib/nativeContextMenu.ts`. On a Connection or folder node:
 - `connections.properties`
 
 Icons are rasterized to 16 px PNG bytes via `src/lib/nativeContextMenu.ts`. Do not pass raw SVG paths to Tauri menu APIs.
+
+## Connection Tree keyboard shortcuts
+
+When the Connection Tree has keyboard focus, two shortcuts act on the Connection row that is focused (falling back to the currently selected Connection):
+
+- **F2** starts an inline rename on that Connection — the same inline editor as the context-menu `connections.rename`, committing on Enter and cancelling on Escape. F2 is the rename key on every platform (Enter keeps opening the focused Connection); on macOS press Fn+F2, or enable "Use F1, F2, etc. keys as standard function keys".
+- **Delete** removes that Connection through the shared confirm-then-delete flow (native confirmation dialog, or the in-app fallback), the same path and `connections.deleteConnectionConfirm` / `connections.cannotBeUndone` copy as the context-menu `connections.delete`. On macOS, **Backspace** and **Command+Backspace** also delete, because the key Mac keyboards label "delete" is Backspace and Finder's Move to Trash is Command+Delete.
+
+The handler is bound to the tree container, so it fires only while the tree itself holds focus: a Delete keypress in a terminal Pane, the tree search field, or an active rename input is never intercepted, and folders and Child Connection Tabs keep their existing context-menu rename/delete. With the default single-click-opens-Connection behavior, clicking a Connection opens it and moves focus into the opened Pane; select without opening (for example in `settings.doubleClickOpensConnection` mode) or Tab into the tree to keep focus on a row for these keys. Both actions are always available and are not part of the customizable Settings → Shortcuts list.
 
 ## Child Connection Tabs
 
@@ -154,6 +164,8 @@ A file with an unrecognized extension opens as editable text (the Text/Code edit
 For text-based modes the toolbar carries a Font & Encoding menu (`workspace.fileViewer.textMenu`) plus the soft-wrap control (`workspace.fileViewer.softWrap`). Soft wrap defaults on so long lines stay inside the Document body; its pressed state is remembered per Connection for the current app session in `sessionStorage`, not in the SQLite Connection model. Font family and size apply live to the text. Encoding defaults to Auto (`workspace.fileViewer.encodingAuto`); the backend auto-detects the charset and shows the resolved encoding (`workspace.fileViewer.encodingDetected`), or the user can force a specific encoding (UTF-8, GBK, Shift_JIS, …), which reloads the file. Saving always writes UTF-8, so a non-UTF-8 file is read-only to avoid silently transcoding it. Font, size, and encoding are remembered per Connection in `localStorage` and restored the next time that Document opens.
 
 SSH Add/Edit Connection uses the `connections.auth` tabbed selector for authentication method choices: `connections.keyFile`, `connections.password`, and `connections.sshAgent`. FTP Add/Edit Connection shows the same selector only when `connections.ftpProtocolSftp` is selected in `connections.ftpProtocol`; choosing `connections.ftpProtocolFtps` or `connections.ftpProtocolFtp` keeps the authentication area password-only.
+
+The FTP options panel also carries two per-Connection start folders for the dual-pane browser: `connections.ftpLocalPath` (with a `connections.browse` folder picker titled `connections.ftpLocalPathPickerTitle`; Add Connection prefills it with the actual home directory, and an empty value means the home directory, `connections.ftpLocalPathPlaceholder`) and `connections.ftpRemotePath` (empty by default; an empty value means the server's default directory, `connections.ftpRemotePathPlaceholder`).
 
 For SSH (password auth) and Telnet Connections the password is optional: the field is not required and its placeholder is `connections.passwordOptionalHint`. Leaving it blank stores no credential, and KKTerm answers the remote login prompt interactively in the terminal on every connect. When a stored password is rejected (wrong password), the connect falls back to the same in-terminal prompt so the user can re-enter it. Typing a password stores it in the selected credential backend and uses it automatically.
 

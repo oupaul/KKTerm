@@ -49,8 +49,12 @@ import type {
   RackItemMetadata,
   RunScope,
   ResolvedHost,
+  HostKind,
+  HostImportResult,
+  SiteHost,
   RoomIconEntry,
   BatchTask,
+  ItopsTask,
   RunHistoryEntry,
   Automation,
   AutomationAction,
@@ -806,6 +810,7 @@ export interface StartRdpSessionRequest {
   y: number;
   width: number;
   height: number;
+  scaleFactor?: number;
   options?: RdpSettings;
 }
 
@@ -828,6 +833,7 @@ export interface UpdateRdpBoundsRequest {
   y: number;
   width: number;
   height: number;
+  scaleFactor?: number;
   /**
    * Re-apply the remote desktop resize even when the cached size already
    * matches. Used by the post-connect settle passes; defaults to false.
@@ -842,6 +848,7 @@ export interface SetRdpVisibilityRequest {
   y: number;
   width: number;
   height: number;
+  scaleFactor?: number;
 }
 
 export interface SyncRdpDisplaySizeRequest {
@@ -850,6 +857,7 @@ export interface SyncRdpDisplaySizeRequest {
   y: number;
   width: number;
   height: number;
+  scaleFactor?: number;
 }
 
 export interface RdpDisplaySizeSync {
@@ -1286,12 +1294,52 @@ type CommandMap = {
     args: { id: string };
     result: RackItem;
   };
+  // IT Ops Hosts (docs/ITOPS.md Hosts).
+  itops_list_hosts: {
+    args: { siteId: string };
+    result: SiteHost[];
+  };
+  itops_create_host: {
+    args: {
+      siteId: string;
+      hostname: string;
+      label: string;
+      kind: HostKind;
+      parentHostId: string | null;
+      notes: string;
+    };
+    result: SiteHost;
+  };
+  itops_update_host: {
+    args: {
+      id: string;
+      hostname: string;
+      label: string;
+      kind: HostKind;
+      parentHostId: string | null;
+      connectionIds: string[];
+      notes: string;
+    };
+    result: SiteHost;
+  };
+  itops_delete_host: {
+    args: { id: string };
+    result: void;
+  };
+  itops_import_hosts: {
+    args: { siteId: string; hostnames: string[] };
+    result: HostImportResult;
+  };
+  itops_scan_hosts: {
+    args: { siteId: string; hostIds: string[] };
+    result: SiteHost[];
+  };
   itops_get_connection: {
     args: { id: string };
     result: Connection;
   };
   itops_start_batch_run: {
-    args: { siteId: string; task: BatchTask; scope?: RunScope | null };
+    args: { siteId: string; task: BatchTask; scope?: RunScope | null; taskId?: string | null };
     result: string;
   };
   itops_cancel_batch_run: {
@@ -1302,16 +1350,44 @@ type CommandMap = {
     args: { limit?: number } | undefined;
     result: RunHistoryEntry[];
   };
+  itops_list_tasks: {
+    args: undefined;
+    result: ItopsTask[];
+  };
+  itops_create_task: {
+    args: { name: string; description: string; applicableOs: import("../types").TaskOperatingSystem[]; task: BatchTask };
+    result: ItopsTask;
+  };
+  itops_update_task: {
+    args: { id: string; name: string; description: string; applicableOs: import("../types").TaskOperatingSystem[]; task: BatchTask };
+    result: ItopsTask;
+  };
+  itops_remove_task: {
+    args: { id: string };
+    result: void;
+  };
   itops_list_automations: {
     args: undefined;
     result: Automation[];
   };
   itops_create_automation: {
-    args: { name: string; config: WatchdogConfig; actions: AutomationAction[]; enabled: boolean };
+    args: {
+      name: string;
+      config: WatchdogConfig;
+      actions: AutomationAction[];
+      enabled: boolean;
+      siteId: string | null;
+    };
     result: Automation;
   };
   itops_update_automation: {
-    args: { id: string; name: string; config: WatchdogConfig; actions: AutomationAction[] };
+    args: {
+      id: string;
+      name: string;
+      config: WatchdogConfig;
+      actions: AutomationAction[];
+      siteId: string | null;
+    };
     result: Automation;
   };
   itops_set_automation_enabled: {
@@ -1392,6 +1468,10 @@ type CommandMap = {
   };
   update_connection_terminal_appearance: {
     args: { connectionId: string; terminalOpacity?: number | null; terminalBackground?: DashboardBackground | null };
+    result: Connection | null;
+  };
+  update_connection_terminal_color_scheme: {
+    args: { connectionId: string; terminalColorScheme?: string | null };
     result: Connection | null;
   };
   update_connection_file_browser_view_options: {
@@ -2181,6 +2261,27 @@ type CommandMap = {
     };
     result: string;
   };
+  tmux_current_path: {
+    args: {
+      request: {
+        host: string;
+        user: string;
+        port?: number;
+        keyPath?: string;
+        proxyJump?: string;
+  sshSocksProxy?: string;
+  sshSocksProxyUsername?: string;
+  sshSocksProxySecretOwnerId?: string;
+  sshSocksProxyInheritDefaults?: boolean;
+        sshCompression?: boolean;
+        authMethod?: "keyFile" | "password" | "agent";
+        secretOwnerId?: string;
+        passphraseOwnerId?: string;
+        tmuxSessionId: string;
+      };
+    };
+    result: string;
+  };
   list_psmux_sessions: {
     args: Record<string, never>;
     result: TmuxSession[];
@@ -2797,6 +2898,10 @@ type CommandMap = {
     result: null;
   };
   send_rdp_client_text: {
+    args: { request: RdpClientTextRequest };
+    result: null;
+  };
+  send_rdp_client_clipboard_text: {
     args: { request: RdpClientTextRequest };
     result: null;
   };

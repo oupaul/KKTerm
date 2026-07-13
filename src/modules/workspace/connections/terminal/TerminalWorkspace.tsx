@@ -7,7 +7,7 @@ import { CUSTOM_FONTS_LOADED_EVENT } from "../../../../lib/customFonts";
 import { ScreenshotMenu } from "../../ScreenshotMenu";
 
 import { ConnectionGlyph } from "../ConnectionGlyph";
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Bot, Check, FileText, Folder, FolderOpen, Mouse, ChevronRight, Circle, ClipboardPaste, Copy, Menu, Monitor, Network, PanelBottom, Pencil, Radio, RefreshCw, Save, Search, SplitSquareHorizontal, Square, Type, X } from "../../../../lib/reicon";
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Bot, Check, FileText, Folder, FolderOpen, Mouse, ChevronRight, Circle, ClipboardPaste, Copy, Menu, Monitor, Network, Palette, PanelBottom, Pencil, Radio, RefreshCw, Save, Scan, Search, SplitSquareHorizontal, Square, Type, X } from "../../../../lib/reicon";
 import { listen } from "@tauri-apps/api/event";
 import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -16,7 +16,7 @@ import { useTranslation } from "react-i18next";
 import i18next from "../../../../i18n/config";
 import { ariaInvalid, dialogButtonAria, menuButtonAria } from "../../../../lib/aria";
 import { fileBrowserCommandsFor } from "../../../../lib/fileBrowserCommands";
-import { focusCurrentWebview, invokeCommand, isTauriRuntime, logUiDebug, saveTextFile, type TerminalOutput, type TerminalRecordingEntry, type TerminalRecordingInfo, type TmuxSession } from "../../../../lib/tauri";
+import { focusCurrentWebview, invokeCommand, isTauriRuntime, logUiDebug, openExternalUrl, saveTextFile, type TerminalOutput, type TerminalRecordingEntry, type TerminalRecordingInfo, type TmuxSession } from "../../../../lib/tauri";
 import { markOsIconAutoDetectDone, osIconIdForDetection, osIconRefForId, shouldAutoDetectOsIcon } from "../../../../lib/osIcons";
 import { notifyConnectionTreeInvalidated } from "../connectionSidebarState";
 import { defaultTerminalSettings } from "../../../../app-defaults";
@@ -24,6 +24,12 @@ import { forgetTmuxSessionId, useWorkspaceStore } from "../../../../store";
 import { GitIcon } from "../../../git/GitIcon";
 import { useGitRepoDetection } from "../../../git/useGitRepoDetection";
 import { createTerminalRenderer, logTerminalFontAtlasState, scheduleTerminalFontAtlasRefresh, type TerminalDimensions, type TerminalRenderer } from "./renderer";
+import { resolveTerminalColorScheme, TERMINAL_COLOR_SCHEMES } from "./colorSchemes";
+import { findQuickSelectMatches, labelQuickSelectMatches, quickSelectPointerAction, type LabeledQuickSelectMatch } from "./quickSelect";
+import {
+  fixedTerminalShortcutFromKeyboardEvent,
+  workspaceShortcutFromKeyboardEvent,
+} from "../../keymap";
 import { ensureLayout } from "../../layout";
 import {
   broadcastInputToOtherPanes,
@@ -149,11 +155,13 @@ export function TerminalWorkspace({
     generalSettings.separateSplitTerminalBackgrounds &&
     tab.panes.filter(isTerminalPane).length > 1;
   const [sftpDialogConnection, setSftpDialogConnection] = useState<Connection | null>(null);
+  const [sftpDialogInitialRemotePath, setSftpDialogInitialRemotePath] = useState<string | undefined>(undefined);
   const [sshPortForwardingDialogConnection, setSshPortForwardingDialogConnection] = useState<Connection | null>(null);
   const [sshPortForwardingDialogSessionId, setSshPortForwardingDialogSessionId] = useState<string | null>(null);
   const [sshPortForwardingDialogPaneId, setSshPortForwardingDialogPaneId] = useState<string | null>(null);
   const setOpenTerminalPaneSshForwardFailures = useWorkspaceStore((state) => state.setOpenTerminalPaneSshForwardFailures);
   const sftpFocusRestorePaneIdRef = useRef<string | null>(null);
+  const sftpOpenRequestIdRef = useRef(0);
   const sshPortForwardingFocusRestorePaneIdRef = useRef<string | null>(null);
   const { t } = useTranslation();
   const defaultFontSize = defaultTerminalSettings.fontSize;
@@ -222,14 +230,23 @@ export function TerminalWorkspace({
   function closeSftpDialog() {
     const restorePaneId = sftpFocusRestorePaneIdRef.current;
     sftpFocusRestorePaneIdRef.current = null;
+    sftpOpenRequestIdRef.current += 1;
     setSftpDialogConnection(null);
     if (restorePaneId) {
       focusTerminalPaneAfterDialogClose(restorePaneId);
     }
   }
 
-  function openSftpDialog(connection: Connection, paneId: string) {
+  async function openSftpDialog(connection: Connection, paneId: string) {
+    const requestId = sftpOpenRequestIdRef.current + 1;
+    sftpOpenRequestIdRef.current = requestId;
     sftpFocusRestorePaneIdRef.current = paneId === focusedPaneId ? paneId : null;
+    const pane = tab.panes.find((candidate) => candidate.id === paneId);
+    const initialRemotePath = await resolveSftpDialogInitialRemotePath(connection, pane);
+    if (sftpOpenRequestIdRef.current !== requestId) {
+      return;
+    }
+    setSftpDialogInitialRemotePath(initialRemotePath);
     setSftpDialogConnection(connection);
   }
 
@@ -556,6 +573,7 @@ export function TerminalWorkspace({
                   inline
                   onClose={closeSftpDialog}
                   protocolSourceConnection={sftpDialogConnection ?? undefined}
+                  initialRemotePath={sftpDialogInitialRemotePath}
                 />
               </Suspense>
             </div>
@@ -580,6 +598,7 @@ export function TerminalWorkspace({
           onClose={closeSshPortForwardingDialog}
           onConnectionUpdated={(updatedConnection) => {
             refreshOpenConnectionMetadata(updatedConnection);
+            notifyConnectionTreeInvalidated();
             setSshPortForwardingDialogConnection(updatedConnection);
           }}
         />,
@@ -1615,6 +1634,12 @@ function TerminalPaneView({
   useEffect(() => {
     onFocusRef.current = onFocus;
   }, [onFocus]);
+  // The xterm custom key handler is installed once per terminal, so shortcut
+  // targets that change across renders are reached through a ref.
+  const shortcutHandlersRef = useRef({ canSplit, onFontChange, onSplit });
+  useEffect(() => {
+    shortcutHandlersRef.current = { canSplit, onFontChange, onSplit };
+  }, [canSplit, onFontChange, onSplit]);
   useEffect(() => {
     isActiveRef.current = isActive;
   }, [isActive]);
@@ -1662,6 +1687,15 @@ function TerminalPaneView({
   const [tmuxMouseEnabled, setTmuxMouseEnabled] = useState(
     pane.connection?.type !== "ssh",
   );
+  const [quickSelect, setQuickSelect] = useState<{
+    matches: LabeledQuickSelectMatch[];
+    offsetLeft: number;
+    offsetTop: number;
+    cellWidth: number;
+    cellHeight: number;
+    input: string;
+  } | null>(null);
+  const quickSelectOverlayRef = useRef<HTMLDivElement | null>(null);
   function focusTerminalRenderer() {
     const renderer = terminalRendererRef.current;
     if (renderer) {
@@ -1721,6 +1755,7 @@ function TerminalPaneView({
   const closePane = useWorkspaceStore((state) => state.closePane);
   const updatePaneCwd = useWorkspaceStore((state) => state.updatePaneCwd);
   const updateOpenConnectionTerminalAppearance = useWorkspaceStore((state) => state.updateOpenConnectionTerminalAppearance);
+  const updateOpenConnectionTerminalColorScheme = useWorkspaceStore((state) => state.updateOpenConnectionTerminalColorScheme);
   const updateOpenTerminalPaneAppearance = useWorkspaceStore((state) => state.updateOpenTerminalPaneAppearance);
   const updateOpenTerminalPaneBackground = useWorkspaceStore((state) => state.updateOpenTerminalPaneBackground);
   const updateOpenTerminalPaneX11ForwardingStatus = useWorkspaceStore((state) => state.updateOpenTerminalPaneX11ForwardingStatus);
@@ -1744,6 +1779,16 @@ function TerminalPaneView({
   const terminalBackground = usePaneTerminalBackgrounds
     ? (pane.terminalBackground ?? pane.connection?.terminalBackground ?? null)
     : (pane.connection?.terminalBackground ?? null);
+  // Per-Connection color scheme override wins over the global Terminal
+  // Settings default; both live-apply to the open renderer below.
+  const terminalColorScheme = pane.connection?.terminalColorScheme ?? terminalSettings.colorScheme;
+  const globalTerminalColorScheme = resolveTerminalColorScheme(terminalSettings.colorScheme);
+  const committedTerminalColorSchemeRef = useRef(terminalColorScheme);
+
+  useEffect(() => {
+    committedTerminalColorSchemeRef.current = terminalColorScheme;
+    terminalRendererRef.current?.setColorScheme(terminalColorScheme);
+  }, [terminalColorScheme]);
 
   useEffect(() => {
     return () => {
@@ -1776,6 +1821,12 @@ function TerminalPaneView({
     window.addEventListener(TMUX_MOUSE_MODE_EVENT, handleTmuxMouseModeEvent);
     return () => window.removeEventListener(TMUX_MOUSE_MODE_EVENT, handleTmuxMouseModeEvent);
   }, [pane.tmuxSessionId]);
+
+  useEffect(() => {
+    if (quickSelect) {
+      quickSelectOverlayRef.current?.focus();
+    }
+  }, [quickSelect]);
 
   function requestMultilinePasteConfirmation() {
     multilinePasteConfirmationResolverRef.current?.(false);
@@ -1930,15 +1981,33 @@ function TerminalPaneView({
             fontSize: pane.fontSize ?? terminalSettings.fontSize,
             scrollbackLines: sshSettings.bufferLines,
             allowOsc52Clipboard: sshSettings.allowOsc52Clipboard,
+            colorScheme: connection.terminalColorScheme ?? terminalSettings.colorScheme,
           }
         : {
             ...terminalSettings,
             fontSize: pane.fontSize ?? terminalSettings.fontSize,
+            colorScheme: connection.terminalColorScheme ?? terminalSettings.colorScheme,
           };
     const terminalHost = element;
     const terminal = createTerminalRenderer(rendererSettings, terminalOpacity);
     terminalRendererRef.current = terminal;
     const cwdDisposable = terminal.onCwdChange((cwd) => updatePaneCwd(tabId, pane.id, cwd));
+    const notificationDisposable = terminal.onNotification((notification) => {
+      // Read the toggle at event time so turning terminal notifications off in
+      // Settings silences already-open terminals immediately.
+      if (!useWorkspaceStore.getState().terminalSettings.allowTerminalNotifications) {
+        return;
+      }
+      useWorkspaceStore.getState().showStatusBarNotice(
+        notification.title
+          ? t("terminal.notificationWithTitle", {
+              name: connection.name,
+              title: notification.title,
+              message: notification.body,
+            })
+          : t("terminal.notification", { name: connection.name, message: notification.body }),
+      );
+    });
     terminal.setWheelScrollbackOverride(Boolean(pane.tmuxSessionId && !tmuxMouseEnabled), handleTmuxWheelScroll);
     terminal.open(element);
     terminal.fit();
@@ -1977,46 +2046,81 @@ function TerminalPaneView({
         return true;
       }
 
-      const key = event.key.toLowerCase();
-
-      // On Mac, Cmd+C with a terminal selection copies via the native Tauri
-      // clipboard (writeToClipboard → tauri-plugin-clipboard-manager). The
-      // native write needs no user-gesture context, so it works reliably in
-      // every pane including SSH — unlike the browser clipboard APIs. We fall
-      // back to the last saved selection because the WKWebView clears xterm's
-      // selection on mouse release. Return false to stop xterm from sending a
-      // Meta+C sequence to the PTY.
-      if (isMacPlatform() && event.metaKey && !event.ctrlKey && key === "c") {
-        const selection = readActiveTerminalSelection();
-        if (selection) {
-          void writeToClipboard(selection);
-          setContextMenu(null);
+      // Terminal-scope Workspace shortcuts, rebindable in Settings →
+      // Shortcuts. Workspace-scope shortcuts (Tab management) are handled by
+      // the window capture listener before xterm ever sees the key. The fixed
+      // aliases also carry macOS Cmd+C → copy (see keymap.ts).
+      const action = fixedTerminalShortcutFromKeyboardEvent(event)
+        ?? workspaceShortcutFromKeyboardEvent(
+          event,
+          useWorkspaceStore.getState().generalSettings.workspaceShortcuts,
+          "terminal",
+        );
+      switch (action) {
+        case "copy": {
+          // Read via readActiveTerminalSelection (xterm + native DOM selection
+          // + last-saved ref) and persist through setSelection so copy stays
+          // reliable on macOS WKWebView, where xterm clears its selection on
+          // mouse release. writeToClipboard uses the native Tauri clipboard,
+          // which needs no user-gesture context (unlike the browser APIs) and
+          // so works in every pane including SSH.
+          const selection = readActiveTerminalSelection();
+          if (selection) {
+            void writeToClipboard(selection);
+            setSelection(selection);
+            setContextMenu(null);
+            return false;
+          }
+          return true;
+        }
+        case "paste":
+          // Prevent the browser's native paste event from also reaching
+          // xterm's hidden textarea — otherwise the clipboard text is written
+          // twice.
+          event.preventDefault();
+          void handlePasteIntoTerminal();
+          return false;
+        case "quickSelect":
+          // Quick Select (WezTerm parity): copies a visible token by hint
+          // label.
+          event.preventDefault();
+          startQuickSelect();
+          return false;
+        case "find":
+          event.preventDefault();
+          setSearchOpen(true);
+          return false;
+        case "zoomIn":
+          event.preventDefault();
+          shortcutHandlersRef.current.onFontChange(1);
+          return false;
+        case "zoomOut":
+          event.preventDefault();
+          shortcutHandlersRef.current.onFontChange(-1);
+          return false;
+        case "zoomReset":
+          event.preventDefault();
+          shortcutHandlersRef.current.onFontChange("reset");
+          return false;
+        case "splitRight":
+        case "splitLeft":
+        case "splitDown":
+        case "splitUp": {
+          if (shortcutHandlersRef.current.canSplit) {
+            event.preventDefault();
+            const direction = action === "splitRight"
+              ? "right"
+              : action === "splitLeft"
+                ? "left"
+                : action === "splitDown"
+                  ? "down"
+                  : "up";
+            shortcutHandlersRef.current.onSplit(pane.id, direction);
+          }
           return false;
         }
-        return true;
-      }
-
-      if (!event.ctrlKey) {
-        return true;
-      }
-
-      if ((key === "c" && event.shiftKey) || key === "insert") {
-        const selection = readActiveTerminalSelection();
-        if (selection) {
-          void writeToClipboard(selection);
-          setSelection(selection);
-          setContextMenu(null);
-          return false;
-        }
-        return true;
-      }
-
-      if (key === "v") {
-        // Prevent the browser's native paste event from also reaching xterm's
-        // hidden textarea — otherwise the clipboard text is written twice.
-        event.preventDefault();
-        void handlePasteIntoTerminal();
-        return false;
+        default:
+          break;
       }
 
       return true;
@@ -2037,6 +2141,7 @@ function TerminalPaneView({
       terminal.writeln(t("terminal.desktopRuntimeRequired"));
       return () => {
         cwdDisposable.dispose();
+        notificationDisposable.dispose();
         focusDisposable.dispose();
         unregisterPaneRenderer(pane.id, terminal);
         terminal.dispose();
@@ -2401,6 +2506,7 @@ function TerminalPaneView({
       }
       tmuxWheelPendingLinesRef.current = 0;
       cwdDisposable.dispose();
+      notificationDisposable.dispose();
       removeOutputListener?.();
       const sessionId = sessionIdRef.current;
       preservingRuntime = Boolean(sessionId && shouldPreservePaneRuntimeOnUnmount(pane.id));
@@ -2425,6 +2531,7 @@ function TerminalPaneView({
       setRecordingBusy(false);
       setRecordingsOpen(false);
       setContextMenu(null);
+      setQuickSelect(null);
       setSearchResult({ resultIndex: -1, resultCount: 0, found: true });
       terminal.dispose();
     };
@@ -2583,6 +2690,127 @@ function TerminalPaneView({
     void saveTerminalAppearance(terminalOpacity, nextBackground);
   }
 
+  async function saveTerminalColorScheme(nextScheme: string | null) {
+    const connection = pane.connection;
+    if (!connection) {
+      return;
+    }
+    updateOpenConnectionTerminalColorScheme(connection.id, nextScheme);
+    if (isTransientLocalConnectionId(connection.id) || !isTauriRuntime()) {
+      return;
+    }
+    try {
+      await invokeCommand("update_connection_terminal_color_scheme", {
+        connectionId: connection.id,
+        terminalColorScheme: nextScheme,
+      });
+    } catch (error) {
+      console.warn("terminal color scheme update failed.", error);
+      showStatusBarNotice(t("terminal.colorSchemeSaveFailed", { message: String(error) }), { tone: "error" });
+    }
+  }
+
+  function previewTerminalColorScheme(nextScheme: string | null) {
+    terminalRendererRef.current?.setColorScheme(nextScheme ?? terminalSettings.colorScheme);
+  }
+
+  function restoreTerminalColorSchemePreview() {
+    terminalRendererRef.current?.setColorScheme(committedTerminalColorSchemeRef.current);
+  }
+
+  function commitTerminalColorScheme(nextScheme: string | null) {
+    const appliedScheme = nextScheme ?? terminalSettings.colorScheme;
+    committedTerminalColorSchemeRef.current = appliedScheme;
+    terminalRendererRef.current?.setColorScheme(appliedScheme);
+    void saveTerminalColorScheme(nextScheme);
+  }
+
+  function startQuickSelect() {
+    const renderer = terminalRendererRef.current;
+    const host = terminalElementRef.current;
+    const paneElement = paneRef.current;
+    if (!renderer || !host || !paneElement) {
+      return;
+    }
+    const geometry = renderer.getScreenGeometry();
+    if (!geometry) {
+      return;
+    }
+    const matches = labelQuickSelectMatches(findQuickSelectMatches(renderer.getViewportLines()));
+    if (matches.length === 0) {
+      showStatusBarNotice(t("terminal.quickSelectNoMatches"));
+      return;
+    }
+    const hostRect = host.getBoundingClientRect();
+    const paneRect = paneElement.getBoundingClientRect();
+    setQuickSelect({
+      matches,
+      offsetLeft: hostRect.left - paneRect.left + geometry.left,
+      offsetTop: hostRect.top - paneRect.top + geometry.top,
+      cellWidth: geometry.cellWidth,
+      cellHeight: geometry.cellHeight,
+      input: "",
+    });
+  }
+
+  function closeQuickSelect() {
+    setQuickSelect(null);
+    focusTerminalRenderer();
+  }
+
+  function copyQuickSelectMatch(match: LabeledQuickSelectMatch) {
+    void writeToClipboard(match.text);
+    showStatusBarNotice(t("terminal.quickSelectCopied", { text: truncateForNotice(match.text) }), { tone: "success" });
+    closeQuickSelect();
+  }
+
+  function handleQuickSelectClick(
+    event: ReactMouseEvent<HTMLButtonElement>,
+    match: LabeledQuickSelectMatch,
+  ) {
+    event.preventDefault();
+    event.stopPropagation();
+    const action = quickSelectPointerAction(match.text, event.shiftKey || event.ctrlKey);
+    if (action.kind === "open") {
+      closeQuickSelect();
+      void openExternalUrl(action.url).catch((error) => {
+        console.warn("Quick Select external link open failed.", error);
+      });
+      return;
+    }
+    copyQuickSelectMatch(match);
+  }
+
+  function handleQuickSelectKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    if (!quickSelect) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.key === "Escape") {
+      closeQuickSelect();
+      return;
+    }
+    if (event.key === "Backspace") {
+      setQuickSelect({ ...quickSelect, input: quickSelect.input.slice(0, -1) });
+      return;
+    }
+    if (!/^[a-z]$/i.test(event.key)) {
+      return;
+    }
+    const input = quickSelect.input + event.key.toLowerCase();
+    const remaining = quickSelect.matches.filter((match) => match.label.startsWith(input));
+    if (remaining.length === 0) {
+      return;
+    }
+    const selected = remaining.find((match) => match.label === input);
+    if (selected) {
+      copyQuickSelectMatch(selected);
+      return;
+    }
+    setQuickSelect({ ...quickSelect, input });
+  }
+
   function handleCopyTerminalSelection() {
     const text = readActiveTerminalSelection() || selectedTerminalText;
     if (text) {
@@ -2728,7 +2956,7 @@ function TerminalPaneView({
     if (pane.connection?.type !== "ssh") {
       return;
     }
-    onOpenSftp(pane.connection, pane.id);
+    void onOpenSftp(pane.connection, pane.id);
   }
 
   function handleOpenSshPortForwarding() {
@@ -2912,6 +3140,16 @@ function TerminalPaneView({
           </button>
           <button
             className="terminal-pane-action"
+            aria-label={t("terminal.quickSelect")}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={startQuickSelect}
+            title={t("terminal.quickSelect")}
+            type="button"
+          >
+            <Scan size={13} />
+          </button>
+          <button
+            className="terminal-pane-action"
             aria-label={t("terminal.copySelection")}
             data-tutorial-id="terminal.copySelection"
             disabled={!selectedTerminalText}
@@ -2974,7 +3212,7 @@ function TerminalPaneView({
                   </button>
                   <div className="terminal-menu terminal-menu-submenu-panel" role="menu">
                     <button
-                      className="terminal-menu-item"
+                      className="terminal-menu-item terminal-color-scheme-item"
                       disabled={!canSplit}
                       onClick={() => handleSplit("right")}
                       role="menuitem"
@@ -3086,6 +3324,70 @@ function TerminalPaneView({
                   <PanelBottom size={13} />
                   {t("terminal.background")}
                 </button>
+                <div className="terminal-menu-submenu">
+                  <button
+                    className="terminal-menu-item"
+                    role="menuitem"
+                    type="button"
+                  >
+                    <Palette size={13} />
+                    {t("terminal.colorScheme")}
+                    <ChevronRight size={13} className="terminal-menu-chevron" />
+                  </button>
+                  <div
+                    className="terminal-menu terminal-menu-submenu-panel terminal-color-scheme-panel"
+                    onMouseLeave={restoreTerminalColorSchemePreview}
+                    role="menu"
+                  >
+                    <button
+                      className="terminal-menu-item"
+                      onClick={() => {
+                        setActionsMenuOpen(false);
+                        commitTerminalColorScheme(null);
+                        focusTerminalRenderer();
+                      }}
+                      onMouseEnter={() => previewTerminalColorScheme(null)}
+                      role="menuitemradio"
+                      aria-checked={!pane.connection?.terminalColorScheme}
+                      style={{
+                        backgroundColor: globalTerminalColorScheme.palette.background,
+                        color: globalTerminalColorScheme.palette.foreground,
+                      }}
+                      type="button"
+                    >
+                      <Monitor size={13} />
+                      {t("terminal.colorSchemeGlobalDefault")}
+                      {!pane.connection?.terminalColorScheme ? (
+                        <Check size={13} className="terminal-color-scheme-check" />
+                      ) : null}
+                    </button>
+                    {TERMINAL_COLOR_SCHEMES.map((scheme) => (
+                      <button
+                        className="terminal-menu-item terminal-color-scheme-item"
+                        key={scheme.id}
+                        onClick={() => {
+                          setActionsMenuOpen(false);
+                          commitTerminalColorScheme(scheme.id);
+                          focusTerminalRenderer();
+                        }}
+                        onMouseEnter={() => previewTerminalColorScheme(scheme.id)}
+                        role="menuitemradio"
+                        aria-checked={pane.connection?.terminalColorScheme === scheme.id}
+                        style={{
+                          backgroundColor: scheme.palette.background,
+                          color: scheme.palette.foreground,
+                        }}
+                        type="button"
+                      >
+                        <Palette aria-hidden size={13} />
+                        {scheme.name}
+                        {pane.connection?.terminalColorScheme === scheme.id ? (
+                          <Check size={13} className="terminal-color-scheme-check" />
+                        ) : null}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <div className="terminal-menu-submenu">
                   <button
                     className="terminal-menu-item"
@@ -3206,6 +3508,40 @@ function TerminalPaneView({
           onBackgroundChange={handleBackgroundChange}
           onClose={() => setBackgroundPopoverOpen(false)}
         />
+      ) : null}
+      {quickSelect ? (
+        <div
+          aria-label={t("terminal.quickSelect")}
+          className="terminal-quick-select-overlay"
+          onKeyDown={handleQuickSelectKeyDown}
+          onPointerDown={(event) => {
+            if (event.target === event.currentTarget) {
+              closeQuickSelect();
+            }
+          }}
+          ref={quickSelectOverlayRef}
+          role="dialog"
+          tabIndex={-1}
+        >
+          {quickSelect.matches
+            .filter((match) => match.label.startsWith(quickSelect.input))
+            .map((match) => (
+              <button
+                aria-label={match.text}
+                className="terminal-quick-select-hint"
+                key={match.label}
+                onClick={(event) => handleQuickSelectClick(event, match)}
+                style={{
+                  left: quickSelect.offsetLeft + match.column * quickSelect.cellWidth,
+                  top: quickSelect.offsetTop + match.row * quickSelect.cellHeight,
+                }}
+              >
+                <strong>{match.label.slice(quickSelect.input.length)}</strong>
+                <span className="terminal-quick-select-hint-text">{match.text}</span>
+              </button>
+            ))}
+          <div className="terminal-quick-select-help">{t("terminal.quickSelectHint")}</div>
+        </div>
       ) : null}
       {contextMenu ? (
         <TerminalContextMenu
@@ -3439,6 +3775,10 @@ function isMultilinePaste(data: string) {
   return data.split(/\r\n|\r|\n/).filter((line) => line.length > 0).length > 1;
 }
 
+function truncateForNotice(text: string) {
+  return text.length > 60 ? `${text.slice(0, 57)}…` : text;
+}
+
 function formatRecordingMetadata(recording: TerminalRecordingEntry, t: (key: string, options?: Record<string, unknown>) => string) {
   const parts = [formatByteCount(recording.sizeBytes)];
   if (recording.modifiedAtMillis) {
@@ -3517,6 +3857,30 @@ async function terminalBufferForAssistant(
   }
 
   return renderer?.getBufferText() ?? "";
+}
+
+async function resolveSftpDialogInitialRemotePath(connection: Connection, pane: WorkspacePane | undefined) {
+  if (!pane || !isTerminalPane(pane) || connection.type !== "ssh") {
+    return undefined;
+  }
+
+  if (pane.tmuxSessionId && isTauriRuntime()) {
+    try {
+      const tmuxPath = await invokeCommand("tmux_current_path", {
+        request: {
+          ...tmuxConnectionRequest(connection),
+          tmuxSessionId: pane.tmuxSessionId,
+        },
+      });
+      if (isRemoteInitialDirectory(tmuxPath)) {
+        return tmuxPath.trim();
+      }
+    } catch (error) {
+      console.debug("Falling back to terminal cwd after tmux current-path probe failed.", error);
+    }
+  }
+
+  return isRemoteInitialDirectory(pane.cwd) ? pane.cwd.trim() : undefined;
 }
 
 function isRemoteInitialDirectory(cwd: string) {

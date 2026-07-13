@@ -50,6 +50,12 @@ For operational measurement records see `docs/PERFORMANCE.md`. For packaging and
 - [x] Custom shell presets/profiles for local terminals with command-line validation.
 - [x] WSL distribution selection for local terminal connections.
 - [x] Shared font catalog with system-font refresh, custom font support with metadata, monospace detection/normalization, and font-atlas refresh/diagnostics across renderers.
+- [x] OSC 133 shell integration: failed-command gutter marks; the renderer also tracks command-output zones. The prompt-to-prompt navigation and copy-last-command-output menu surfaces were removed/hidden — too few shells emit the marks unaided; see the backlog item on injecting shell integration.
+- [x] Quick Select mode: hint-labeled keyboard copying of visible URLs, paths, IPs, hashes, and UUIDs (Ctrl+Shift+Space).
+- [x] Inline images via Sixel and the iTerm2 image protocol (toggle in Terminal Settings).
+- [x] OSC 9 / OSC 777 terminal notifications surfaced through the Status Bar (toggle in Terminal Settings).
+- [x] User-defined hyperlink rules turning matching terminal text into Ctrl+click links.
+- [x] Bundled 117-scheme terminal catalog (original KKTerm set plus the deduplicated TerminalColors catalog): palette-preview listbox in Terminal Settings with per-Connection override and hover preview in the Pane actions menu.
 
 ### SSH
 
@@ -189,6 +195,19 @@ For operational measurement records see `docs/PERFORMANCE.md`. For packaging and
 - [ ] Optional crash reporting after explicit opt-in design.
 - [ ] WGPU terminal renderer replacement (deferred; xterm WebGL is current fast path).
 
+### Terminal Power Features (WezTerm-inspired backlog)
+
+Second-tier follow-ups to the shipped OSC 133 / Quick Select / inline images / notifications / hyperlink rules / color schemes batch:
+
+- [ ] KKTerm-injected shell integration (Warp/Kitty-style): opt-in per Connection, reuse the existing startup-script plumbing to emit OSC 133 (+ OSC 7) marks in bash/zsh/fish/PowerShell without user dotfile edits; this is the prerequisite for reinstating prompt-to-prompt scrollback navigation and the copy-last-command-output menu surface.
+- [ ] Copy Mode: keyboard-driven (vim-style) scrollback navigation and selection.
+- [ ] Global command palette spanning app actions (open Connection, split Pane, switch Workspace); generalize the existing Git Browser palette.
+- [ ] Pane zoom (temporarily maximize one Pane in a split) and directional keyboard Pane focus/resize.
+- [ ] User-configurable keybindings with an optional tmux-style leader key (see also "Editable keybindings" under UX).
+- [ ] `kkterm` CLI for scripting the app from a shell (spawn/split/send-text over the existing MCP/tool backend).
+- [ ] Kitty keyboard protocol (progressive keyboard enhancement); xterm.js gap noted on the terminal compatibility checklist — modern TUIs increasingly probe for it.
+- [ ] Font ligatures need a shaping renderer; fold into the WGPU renderer evaluation above (WezTerm's MIT `termwiz`/`wezterm-term` crates are candidate foundations).
+
 ### Session Logging & Universal Search
 
 - [ ] Autosave all terminal/SSH/Telnet/Serial text buffers to plain-text logs organized by Connection name and serial.
@@ -212,7 +231,7 @@ For operational measurement records see `docs/PERFORMANCE.md`. For packaging and
 
 ### IT Ops Center
 
-Design accepted: see `docs/ADR/0011-it-ops-module.md`, `docs/ADR/0012-winrm-transport-library.md` (WinRM transport for Windows Update playbooks), `docs/ITOPS.md`, and `docs/manual/12-it-ops.md`. The first runtime module is wired up with Host Groups, Batch Runs, Automations, run history, and Run Reports; the remaining work is deeper IT Ops automation functionality.
+Design accepted: see `docs/ADR/0011-it-ops-module.md`, `docs/ADR/0012-winrm-transport-library.md` (WinRM transport for Windows Update playbooks), `docs/ITOPS.md`, and `docs/manual/12-it-ops.md`. The runtime module is Site-first, with Site-owned Server Rooms, Hosts, Automations, and Run History plus a global reusable Task Library. The first Task slice persists reusable scripts and launches them through Batch Runs; reusable Playbook editing and Automation `taskId` references remain follow-up work.
 
 - [ ] More IT Ops automation actions, conditions, and reusable workflow templates.
 - [ ] Automated server-update playbooks (apt, dnf, yum, Windows Update via WinRM) with dry-run preview and rollback-aware sequencing.

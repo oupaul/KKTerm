@@ -78,6 +78,12 @@ pub struct FtpOptions {
     /// Keepalive (NOOP) interval in seconds; None = no keepalive.
     #[serde(default)]
     pub keepalive_secs: Option<u64>,
+    /// Start directory for the local pane; None = the OS home folder.
+    #[serde(default)]
+    pub local_path: Option<String>,
+    /// Start directory for the remote pane; None = the server's home.
+    #[serde(default)]
+    pub remote_path: Option<String>,
 }
 
 fn default_mode() -> FtpConnectionMode {
@@ -100,6 +106,8 @@ impl Default for FtpOptions {
             connect_timeout_secs: Some(30),
             ignore_cert_errors: false,
             keepalive_secs: None,
+            local_path: None,
+            remote_path: None,
         }
     }
 }
@@ -1532,6 +1540,8 @@ mod tests {
             connect_timeout_secs: Some(15),
             ignore_cert_errors: true,
             keepalive_secs: Some(30),
+            local_path: Some("C:\\Users\\example\\Downloads".to_string()),
+            remote_path: Some("/srv/files".to_string()),
         };
         let json = opts.to_json().unwrap();
         let parsed = FtpOptions::from_json(&json).unwrap();
@@ -1542,6 +1552,11 @@ mod tests {
         assert!(parsed.show_hidden);
         assert!(parsed.ignore_cert_errors);
         assert_eq!(parsed.keepalive_secs, Some(30));
+        assert_eq!(
+            parsed.local_path.as_deref(),
+            Some("C:\\Users\\example\\Downloads")
+        );
+        assert_eq!(parsed.remote_path.as_deref(), Some("/srv/files"));
     }
 
     #[test]

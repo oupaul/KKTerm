@@ -11,11 +11,14 @@ use std::sync::{Mutex, mpsc};
 use std::time::Instant;
 
 use rusqlite::{Connection as SqliteConnection, OptionalExtension, params};
+use tauri::AppHandle;
 
 use crate::secrets;
 use crate::ssh::{self, NativeSshAuth, NativeSshCommandRequest};
 
-use super::types::{BatchTask, ExecOutcome, HostReport, ResolvedHost, RunEvent, RunReport};
+use super::types::{
+    BatchTask, ExecOutcome, HostReport, PlaybookStepKind, ResolvedHost, RunEvent, RunReport,
+};
 
 pub const DEFAULT_CONCURRENCY: usize = 8;
 pub const DEFAULT_TIMEOUT_SECONDS: u64 = 120;
@@ -38,6 +41,27 @@ pub fn cap_output(mut output: String) -> String {
     output.truncate(end);
     output.push_str("\n…[output truncated]");
     output
+}
+
+/// Placeholder substituted for any sudo secret that surfaces in playbook output.
+const REDACTED_SECRET: &str = "••••••";
+
+/// Scrub every `secret` occurrence out of `text`. A PTY with echo enabled reflects
+/// the password we push for a `sudo -S` prompt, so this is the last line of defense
+/// enforcing the ITOPS invariant that plaintext never reaches the live stream or a
+/// persisted Run History row (docs/ITOPS.md). Empty secrets are ignored so an
+/// unset credential can never blank the whole transcript.
+pub fn redact_secrets(text: &str, secrets: &[String]) -> String {
+    let mut redacted = text.to_string();
+    for secret in secrets {
+        if secret.is_empty() {
+            continue;
+        }
+        if redacted.contains(secret.as_str()) {
+            redacted = redacted.replace(secret.as_str(), REDACTED_SECRET);
+        }
+    }
+    redacted
 }
 
 /// Runs a Batch Task on one host. Blocking; called from worker threads.
@@ -162,13 +186,51 @@ pub struct SshExecSpec {
 /// The Phase 2 SSH transport. Holds pre-resolved per-host exec specs and runs
 /// each on a fresh authenticated exec channel via `ssh::run_remote_command_capture`.
 pub struct SshTransport {
+    app: AppHandle,
     specs: HashMap<String, SshExecSpec>,
+    task_secrets: HashMap<String, String>,
 }
 
 impl SshTransport {
-    pub fn new(specs: HashMap<String, SshExecSpec>) -> Self {
-        Self { specs }
+    pub fn new(
+        app: AppHandle,
+        specs: HashMap<String, SshExecSpec>,
+        task_secrets: HashMap<String, String>,
+    ) -> Self {
+        Self {
+            app,
+            specs,
+            task_secrets,
+        }
     }
+}
+
+/// Resolve only the vault entries referenced by sudo nodes. Plaintext stays in
+/// this in-memory transport map and never enters Task storage or Run History.
+pub fn resolve_task_secrets(
+    task: &BatchTask,
+    secrets: &secrets::Secrets,
+) -> Result<HashMap<String, String>, String> {
+    let mut resolved = HashMap::new();
+    let BatchTask::Playbook { steps, .. } = task else {
+        return Ok(resolved);
+    };
+    for step in steps
+        .iter()
+        .filter(|step| step.kind == PlaybookStepKind::Sudo)
+    {
+        let owner_id = step
+            .secret_owner_id
+            .as_deref()
+            .map(str::trim)
+            .filter(|owner_id| !owner_id.is_empty())
+            .ok_or_else(|| "sudo node has no credential reference".to_string())?;
+        let secret = secrets
+            .read_itops_task_secret(owner_id.to_string())?
+            .ok_or_else(|| "sudo credential is missing from the secret store".to_string())?;
+        resolved.insert(owner_id.to_string(), secret);
+    }
+    Ok(resolved)
 }
 
 fn outcome_from_streaming_result(
@@ -224,26 +286,117 @@ impl BatchTransport for SshTransport {
             socks_proxy: spec.socks_proxy.clone(),
             compression: spec.compression,
         };
+        // Every sudo credential in play, so we can scrub it from anything the
+        // remote PTY echoes back before it reaches the live stream or storage.
+        let redactions: Vec<String> = self
+            .task_secrets
+            .values()
+            .filter(|secret| !secret.is_empty())
+            .cloned()
+            .collect();
         let streamed_output = Mutex::new(String::new());
         let capture_chunk = |chunk: &str| {
-            streamed_output.lock().unwrap().push_str(chunk);
-            on_chunk(chunk);
+            let safe = redact_secrets(chunk, &redactions);
+            streamed_output.lock().unwrap().push_str(&safe);
+            on_chunk(&safe);
         };
-        match task {
+        let mut exec_outcome = match task {
             BatchTask::Script { .. } => {
                 let result = ssh::run_remote_command_capture_streaming(request, &capture_chunk);
                 outcome_from_streaming_result(result, streamed_output.into_inner().unwrap())
             }
             BatchTask::Playbook { steps, .. } => {
-                let step_specs = steps
-                    .iter()
-                    .map(|step| ssh::PlaybookStepSpec {
-                        send: step.send.clone(),
-                        expect: step.expect.clone(),
-                        timeout_seconds: step.timeout_seconds,
-                    })
-                    .collect();
-                match ssh::run_playbook_capture_streaming(request, step_specs, &capture_chunk) {
+                let mut step_specs = Vec::new();
+                for step in steps {
+                    match step.kind {
+                        PlaybookStepKind::Sudo => {
+                            let owner_id = step.secret_owner_id.as_deref().unwrap_or_default();
+                            let Some(secret) = self.task_secrets.get(owner_id) else {
+                                return ExecOutcome {
+                                    ok: false,
+                                    exit_code: None,
+                                    output: streamed_output.into_inner().unwrap(),
+                                    error: Some("sudo credential is unavailable".to_string()),
+                                };
+                            };
+                            let prompt = step
+                                .expect
+                                .as_deref()
+                                .filter(|value| !value.is_empty())
+                                .unwrap_or("KKTerm sudo password: ");
+                            let quoted_prompt = prompt.replace('\'', "'\"'\"'");
+                            step_specs.push(ssh::PlaybookStepSpec {
+                                // The `''` splits the ready marker across two adjacent
+                                // shell-quoted literals: the shell concatenates them so
+                                // printf still emits `__KKTERM_SUDO_READY__`, but the
+                                // command echoed back by the PTY reads `SUDO''_READY`,
+                                // so the next step's `expect` cannot match this echo and
+                                // must wait for sudo to actually succeed.
+                                send: format!(
+                                    "sudo -S -p '{quoted_prompt}' -v && printf '\\n__KKTERM_SUDO''_READY__\\n'"
+                                ),
+                                expect: Some(prompt.to_string()),
+                                timeout_seconds: step.timeout_seconds,
+                                ai_instruction: None,
+                            });
+                            step_specs.push(ssh::PlaybookStepSpec {
+                                send: secret.clone(),
+                                expect: Some("__KKTERM_SUDO_READY__".to_string()),
+                                timeout_seconds: step.timeout_seconds,
+                                ai_instruction: None,
+                            });
+                        }
+                        PlaybookStepKind::Ai => {
+                            let Some(instruction) = step
+                                .ai_instruction
+                                .as_deref()
+                                .map(str::trim)
+                                .filter(|value| !value.is_empty())
+                            else {
+                                return ExecOutcome {
+                                    ok: false,
+                                    exit_code: None,
+                                    output: streamed_output.into_inner().unwrap(),
+                                    error: Some("AI node instruction is required".to_string()),
+                                };
+                            };
+                            step_specs.push(ssh::PlaybookStepSpec {
+                                send: String::new(),
+                                expect: None,
+                                timeout_seconds: step.timeout_seconds,
+                                ai_instruction: Some(instruction.to_string()),
+                            });
+                        }
+                        PlaybookStepKind::Command => {
+                            step_specs.push(ssh::PlaybookStepSpec {
+                                send: step.send.clone(),
+                                expect: step.expect.clone(),
+                                timeout_seconds: step.timeout_seconds,
+                                ai_instruction: None,
+                            });
+                        }
+                    }
+                }
+                let app = self.app.clone();
+                let ai_callback = move |instruction, previous_output| {
+                    let app = app.clone();
+                    Box::pin(async move {
+                        crate::ai::run_playbook_ai_decision(app, instruction, previous_output).await
+                    }) as std::pin::Pin<
+                        Box<
+                            dyn std::future::Future<
+                                    Output = Result<crate::ai::PlaybookAiDecision, String>,
+                                > + Send,
+                        >,
+                    >
+                };
+                let ai_handler: &ssh::PlaybookAiHandler = &ai_callback;
+                match ssh::run_playbook_capture_streaming(
+                    request,
+                    step_specs,
+                    Some(ai_handler),
+                    &capture_chunk,
+                ) {
                     // A timed-out step is a normal completion with ok == false; the
                     // failure message becomes the host's error note. No exit code:
                     // an interactive shell has no per-step status to report.
@@ -261,7 +414,11 @@ impl BatchTransport for SshTransport {
                     },
                 }
             }
-        }
+        };
+        // ssh accumulates its own transcript for the returned outcome, so scrub the
+        // credential out of the persisted copy too, not just the streamed chunks.
+        exec_outcome.output = redact_secrets(&exec_outcome.output, &redactions);
+        exec_outcome
     }
 }
 
@@ -444,10 +601,14 @@ mod tests {
         BatchTask::Playbook {
             name: "restart".to_string(),
             steps: vec![super::super::types::PlaybookStep {
+                id: None,
+                kind: super::super::types::PlaybookStepKind::Command,
                 name: "go".to_string(),
                 send: "echo hi".to_string(),
                 expect: Some("$".to_string()),
                 timeout_seconds: Some(5),
+                secret_owner_id: None,
+                ai_instruction: None,
             }],
         }
     }
@@ -556,6 +717,24 @@ mod tests {
         });
         assert_eq!(chunks.load(Ordering::SeqCst), 2); // one "done" frame per host
         assert!(report.hosts.iter().all(|host| host.output == "done"));
+    }
+
+    #[test]
+    fn redact_secrets_scrubs_every_occurrence() {
+        let secrets = vec!["tsai0529".to_string()];
+        let transcript = "sudo -S ...\ntsai0529\n__KKTERM_SUDO_READY__\ntsai0529 again\n";
+        let redacted = redact_secrets(transcript, &secrets);
+        assert!(!redacted.contains("tsai0529"));
+        assert_eq!(redacted.matches("••••••").count(), 2);
+        assert!(redacted.contains("__KKTERM_SUDO_READY__")); // non-secret output survives
+    }
+
+    #[test]
+    fn redact_secrets_ignores_empty_secret() {
+        // An unset credential must never turn into a blanket match that blanks output.
+        let secrets = vec![String::new()];
+        let transcript = "nothing secret here";
+        assert_eq!(redact_secrets(transcript, &secrets), transcript);
     }
 
     #[test]

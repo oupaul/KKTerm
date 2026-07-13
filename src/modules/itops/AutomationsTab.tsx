@@ -6,13 +6,14 @@
 // performance-counter rule; richer triggers/actions land in Phases 4–5.
 
 import { useEffect, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import { ConfirmSheet } from "../../app/ui/dialog";
 import { useWorkspaceStore } from "../../store";
 import type { Automation, AutomationAction } from "../../types";
 import type { WatchdogConfig } from "../../watchdog/types";
 import { ItIcon, IT_ACCENTS, type ItIconName } from "./icons";
 import { AutomationEditor } from "./AutomationEditor";
+import { ItOpsEmptyHint } from "./ItOpsEmptyHint";
 import { useItOpsStore } from "./state";
 
 function triggerIcon(config: WatchdogConfig): ItIconName {
@@ -104,11 +105,48 @@ const ACTION_COLOR: Record<AutomationAction["kind"], string> = {
   runBatch: IT_ACCENTS.orange,
 };
 
-export function AutomationsTab() {
+// An Automation is bound to a Site by its durable siteId. Legacy rows saved
+// before that column exist with no binding; for those only, fall back to
+// inference — a runBatch action targeting the Site, or a host-addressed
+// trigger (ping / TCP reachable) watching one of the Site's resolved member
+// hosts. Metric/session/schedule triggers carry no host.
+function automationBoundToSite(
+  automation: Automation,
+  siteId: string,
+  siteHosts: ReadonlySet<string>,
+): boolean {
+  if (automation.siteId != null) {
+    return automation.siteId === siteId;
+  }
+  if (
+    automation.actions.some((action) => action.kind === "runBatch" && action.siteId === siteId)
+  ) {
+    return true;
+  }
+  const target = automation.config.target;
+  if (target.kind === "ping" || target.kind === "tcpReachable") {
+    return siteHosts.has(target.host.trim().toLowerCase());
+  }
+  return false;
+}
+
+export function AutomationsTab({
+  siteId,
+  siteHosts,
+}: {
+  /** When set, only Automations bound to this Site are shown. */
+  siteId?: string;
+  /** The Site's resolved member hosts, for matching host-addressed triggers. */
+  siteHosts?: string[];
+} = {}) {
   const { t } = useTranslation();
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
-  const automations = useItOpsStore((state) => state.automations);
+  const allAutomations = useItOpsStore((state) => state.automations);
   const loaded = useItOpsStore((state) => state.automationsLoaded);
+  const hostSet = new Set((siteHosts ?? []).map((host) => host.trim().toLowerCase()));
+  const automations = siteId
+    ? allAutomations.filter((automation) => automationBoundToSite(automation, siteId, hostSet))
+    : allAutomations;
   const setAutomationEnabled = useItOpsStore((state) => state.setAutomationEnabled);
   const removeAutomation = useItOpsStore((state) => state.removeAutomation);
   const newAutomationRequest = useItOpsStore((state) => state.newAutomationRequest);
@@ -153,30 +191,46 @@ export function AutomationsTab() {
 
   const editorOverlay =
     editor !== undefined ? (
-      <AutomationEditor automation={editor} onClose={() => setEditor(undefined)} />
+      <AutomationEditor
+        automation={editor}
+        defaultSiteId={siteId}
+        onClose={() => setEditor(undefined)}
+      />
     ) : null;
+
+  const pageHeader = (
+    <div className="it-destination-page-head">
+      <div>
+        <h2>{t("itops.tabs.autos")}</h2>
+        <p>{t("itops.automations.pageDescription")}</p>
+      </div>
+      <button type="button" className="it-btn primary" onClick={() => setEditor(null)}>
+        <ItIcon name="plus" size={14} />
+        {t("itops.actions.newAutomation")}
+      </button>
+    </div>
+  );
 
   if (loaded && automations.length === 0) {
     return (
-      <div className="it-empty">
-        <span className="glyph">
-          <ItIcon name="auto" size={28} sw={1.6} />
-        </span>
-        <h2>{t("itops.automations.emptyTitle")}</h2>
-        <p>{t("itops.automations.emptyBody")}</p>
-        <button type="button" className="it-btn primary" onClick={() => setEditor(null)}>
-          <span className="it-btn-ic">
-            <ItIcon name="plus" size={15} />
-          </span>
-          {t("itops.actions.newAutomation")}
-        </button>
+      <div className="it-destination-surface">
+        {pageHeader}
+        <ItOpsEmptyHint>
+          <Trans
+            i18nKey="itops.automations.emptyHint"
+            components={{
+              newAutomation: <button type="button" onClick={() => setEditor(null)} />,
+            }}
+          />
+        </ItOpsEmptyHint>
         {editorOverlay}
       </div>
     );
   }
 
   return (
-    <div className="au">
+    <div className="au it-destination-surface">
+      {pageHeader}
       <div className="au-list">
         {automations.map((automation) => (
           <div key={automation.id} className={`au-row${automation.enabled ? "" : " off"}`}>

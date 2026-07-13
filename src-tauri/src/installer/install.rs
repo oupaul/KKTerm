@@ -9,7 +9,7 @@
 // The flow is intentionally not transactional — partial installs are owned
 // by the underlying installer (ADR 0007 §"Execution constraints").
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, VecDeque};
 use std::io::{BufReader, Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
@@ -24,6 +24,8 @@ use serde_json::json;
 /// child process is alive but silent. Set conservatively — winget can be
 /// genuinely quiet for 30–90s during MSIX staging.
 const HEARTBEAT_INTERVAL_SECS: u64 = 10;
+const RECENT_PROCESS_OUTPUT_LINES: usize = 40;
+const FAILURE_OUTPUT_DETAIL_MAX_CHARS: usize = 500;
 
 use super::detect::{
     GithubReleaseMarker, InstallScope, detect_chocolatey_package, detect_one,
@@ -1994,6 +1996,7 @@ fn run_streamed_elevated_impl(
     })?;
 
     let mut emitted = 0usize;
+    let mut recent_output = RecentProcessOutput::default();
     let started_at = Instant::now();
     let mut last_output_at = Instant::now();
     let mut next_heartbeat_at =
@@ -2001,6 +2004,7 @@ fn run_streamed_elevated_impl(
 
     let result = loop {
         for line in drain_elevated_log(&log_path, &mut emitted, false) {
+            recent_output.remember(&line);
             emit(ProgressEvent::Stdout {
                 tool_id: tool_id.into(),
                 step_id: None,
@@ -2031,6 +2035,7 @@ fn run_streamed_elevated_impl(
         match child.try_wait() {
             Ok(Some(status)) => {
                 for line in drain_elevated_log(&log_path, &mut emitted, true) {
+                    recent_output.remember(&line);
                     emit(ProgressEvent::Stdout {
                         tool_id: tool_id.into(),
                         step_id: None,
@@ -2057,8 +2062,12 @@ fn run_streamed_elevated_impl(
                     step_id: None,
                     line: format!("[installer] `{program}` exited {code}{hint} after {elapsed}s"),
                 });
-                break Err(format!(
-                    "elevated `{program}` exited with status {code}{hint}"
+                break Err(process_failure_message(
+                    "elevated ",
+                    program,
+                    code,
+                    hint,
+                    recent_output.lines(),
                 ));
             }
             Ok(None) => std::thread::sleep(std::time::Duration::from_millis(150)),
@@ -2166,10 +2175,12 @@ fn run_streamed_with_environment(
     let mut last_output_at = Instant::now();
     let mut next_heartbeat_at =
         started_at + std::time::Duration::from_secs(HEARTBEAT_INTERVAL_SECS);
+    let mut recent_output = RecentProcessOutput::default();
 
     loop {
         let mut got_line = false;
         while let Ok(line) = rx.try_recv() {
+            recent_output.remember(&line.line);
             emit_stream_line(tool_id, emit, line);
             got_line = true;
         }
@@ -2182,6 +2193,7 @@ fn run_streamed_with_environment(
             join_stream(stdout_thread);
             join_stream(stderr_thread);
             while let Ok(line) = rx.try_recv() {
+                recent_output.remember(&line.line);
                 emit_stream_line(tool_id, emit, line);
             }
             crate::logging::installer_helper_debug(
@@ -2218,6 +2230,7 @@ fn run_streamed_with_environment(
                 join_stream(stdout_thread);
                 join_stream(stderr_thread);
                 while let Ok(line) = rx.try_recv() {
+                    recent_output.remember(&line.line);
                     emit_stream_line(tool_id, emit, line);
                 }
                 let elapsed = started_at.elapsed().as_secs();
@@ -2262,12 +2275,20 @@ fn run_streamed_with_environment(
                         "elapsedMs": started_at_log.elapsed().as_millis(),
                         "code": code,
                         "detail": detail,
+                        "failureOutput": failure_output_detail(recent_output.lines()),
                     }),
                 );
-                return Err(format!("`{program}` exited with status {code}{detail}"));
+                return Err(process_failure_message(
+                    "",
+                    program,
+                    code,
+                    &detail,
+                    recent_output.lines(),
+                ));
             }
             Ok(None) => match rx.recv_timeout(std::time::Duration::from_millis(100)) {
                 Ok(line) => {
+                    recent_output.remember(&line.line);
                     emit_stream_line(tool_id, emit, line);
                     last_output_at = Instant::now();
                 }
@@ -2428,6 +2449,117 @@ fn merge_path_values<'a>(
         }
     }
     parts.join(";")
+}
+
+#[derive(Default)]
+struct RecentProcessOutput {
+    lines: VecDeque<String>,
+}
+
+impl RecentProcessOutput {
+    fn remember(&mut self, line: &str) {
+        let line = line.trim();
+        if line.is_empty() {
+            return;
+        }
+        if self.lines.len() >= RECENT_PROCESS_OUTPUT_LINES {
+            self.lines.pop_front();
+        }
+        self.lines.push_back(line.to_string());
+    }
+
+    fn lines(&mut self) -> &[String] {
+        self.lines.make_contiguous()
+    }
+}
+
+fn process_failure_message(
+    prefix: &str,
+    program: &str,
+    code: i32,
+    detail: &str,
+    output_lines: &[String],
+) -> String {
+    let base = format!("{prefix}`{program}` exited with status {code}{detail}");
+    match failure_output_detail(output_lines) {
+        Some(output) => format!("{base}: {output}"),
+        None => base,
+    }
+}
+
+fn failure_output_detail(output_lines: &[String]) -> Option<String> {
+    let mut fallback = None;
+    for raw_line in output_lines.iter().rev() {
+        let Some(line) = clean_failure_output_line(raw_line) else {
+            continue;
+        };
+        fallback.get_or_insert_with(|| line.clone());
+        if is_salient_failure_line(&line) {
+            return Some(line);
+        }
+    }
+    fallback
+}
+
+fn clean_failure_output_line(line: &str) -> Option<String> {
+    let line = line
+        .trim()
+        .trim_start_matches(|ch: char| ch == '-' || ch == '>' || ch.is_whitespace())
+        .trim();
+    let line = line.strip_prefix("[NuGet]:").unwrap_or(line).trim();
+    if line.is_empty() || is_low_value_failure_line(line) {
+        return None;
+    }
+    Some(truncate_failure_output_detail(line))
+}
+
+fn is_salient_failure_line(line: &str) -> bool {
+    let lower = line.to_ascii_lowercase();
+    lower.starts_with("unable ")
+        || lower.contains(" unable ")
+        || lower.starts_with("error")
+        || lower.contains(" error")
+        || lower.contains("failed")
+        || lower.contains("failure")
+        || lower.contains("cannot ")
+        || lower.contains("can't ")
+        || lower.contains("not found")
+        || lower.contains("denied")
+        || lower.contains("blocked")
+        || lower.contains("depends on")
+        || lower.contains("requires")
+}
+
+fn is_low_value_failure_line(line: &str) -> bool {
+    let lower = line.to_ascii_lowercase();
+    lower.starts_with("$ ")
+        || lower.starts_with("[installer] still running")
+        || lower.starts_with("[installer] `")
+        || lower.starts_with("see the log for details")
+        || lower == "failures"
+        || lower.starts_with("if a package ")
+        || lower.starts_with("software outside of chocolatey")
+        || lower.starts_with("with `-n`")
+        || lower.starts_with("adding `--skip")
+        || lower.starts_with("remove system-installed")
+        || lower.starts_with("and not things")
+        || lower.starts_with("or packages")
+        || lower.starts_with("you decide")
+        || lower.starts_with("$env:chocolateyinstall")
+        || lower.starts_with("be removed")
+        || lower.starts_with("this option only as a last resort")
+}
+
+fn truncate_failure_output_detail(line: &str) -> String {
+    if line.chars().count() <= FAILURE_OUTPUT_DETAIL_MAX_CHARS {
+        return line.to_string();
+    }
+    let mut truncated: String = line
+        .chars()
+        .take(FAILURE_OUTPUT_DETAIL_MAX_CHARS.saturating_sub(3))
+        .collect();
+    truncated.push_str("...");
+    truncated
 }
 
 struct StreamLine {
@@ -2691,6 +2823,22 @@ mod tests {
         assert!(drain_elevated_log(&path, &mut emitted, true).is_empty());
 
         std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn process_failure_message_includes_salient_child_output() {
+        let output = vec![
+            "Chocolatey uninstalled 0/1 packages. 1 packages failed.".to_string(),
+            "If a package is failing because it is a dependency of another package".to_string(),
+            " - fzf - Unable to uninstall 'fzf.0.74.0' because 'opencode.1.17.15' depends on it."
+                .to_string(),
+            " this option only as a last resort.".to_string(),
+        ];
+
+        assert_eq!(
+            process_failure_message("elevated ", "choco", 1, "", &output),
+            "elevated `choco` exited with status 1: fzf - Unable to uninstall 'fzf.0.74.0' because 'opencode.1.17.15' depends on it."
+        );
     }
 
     #[test]

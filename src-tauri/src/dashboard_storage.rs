@@ -426,21 +426,90 @@ pub fn update_view(
 pub fn referenced_background_image_files(
     conn: &SqliteConnection,
 ) -> Result<HashSet<String>, DashboardStorageError> {
-    let mut stmt = conn
-        .prepare("SELECT background_json FROM dashboard_views WHERE background_json IS NOT NULL")?;
-    let rows = stmt.query_map([], |row| row.get::<_, String>(0))?;
     let mut files = HashSet::new();
+    collect_background_column(conn, "dashboard_views", "background_json", &mut files)?;
+    collect_background_column(conn, "itops_sites", "background_json", &mut files)?;
+    collect_background_column(conn, "itops_site_racks", "background_json", &mut files)?;
+    collect_background_column(conn, "connections", "terminal_background_json", &mut files)?;
+    collect_background_map_column(conn, "itops_sites", "room_backgrounds_json", &mut files)?;
+    Ok(files)
+}
+
+fn collect_background_column(
+    conn: &SqliteConnection,
+    table: &str,
+    column: &str,
+    files: &mut HashSet<String>,
+) -> Result<(), DashboardStorageError> {
+    if !column_exists(conn, table, column)? {
+        return Ok(());
+    }
+    let mut stmt = conn.prepare(&format!(
+        "SELECT {column} FROM {table} WHERE {column} IS NOT NULL"
+    ))?;
+    let rows = stmt.query_map([], |row| row.get::<_, String>(0))?;
+    for json in rows {
+        collect_background_file(files, &json?);
+    }
+    Ok(())
+}
+
+fn collect_background_map_column(
+    conn: &SqliteConnection,
+    table: &str,
+    column: &str,
+    files: &mut HashSet<String>,
+) -> Result<(), DashboardStorageError> {
+    if !column_exists(conn, table, column)? {
+        return Ok(());
+    }
+    let mut stmt = conn.prepare(&format!(
+        "SELECT {column} FROM {table} WHERE {column} IS NOT NULL"
+    ))?;
+    let rows = stmt.query_map([], |row| row.get::<_, String>(0))?;
     for json in rows {
         let json = json?;
-        match serde_json::from_str::<DashboardBackground>(&json) {
-            Ok(DashboardBackground::Image { file, .. })
-            | Ok(DashboardBackground::Video { file, .. }) => {
-                files.insert(file);
-            }
-            _ => {}
+        let Ok(backgrounds) =
+            serde_json::from_str::<std::collections::HashMap<String, DashboardBackground>>(&json)
+        else {
+            continue;
+        };
+        for background in backgrounds.values() {
+            collect_background_value(files, background);
         }
     }
-    Ok(files)
+    Ok(())
+}
+
+fn column_exists(
+    conn: &SqliteConnection,
+    table: &str,
+    column: &str,
+) -> Result<bool, DashboardStorageError> {
+    let escaped_table = table.replace('\'', "''");
+    let mut stmt = conn.prepare(&format!("PRAGMA table_info('{escaped_table}')"))?;
+    let rows = stmt.query_map([], |row| row.get::<_, String>(1))?;
+    for name in rows {
+        if name? == column {
+            return Ok(true);
+        }
+    }
+    Ok(false)
+}
+
+fn collect_background_file(files: &mut HashSet<String>, json: &str) {
+    if let Ok(background) = serde_json::from_str::<DashboardBackground>(json) {
+        collect_background_value(files, &background);
+    }
+}
+
+fn collect_background_value(files: &mut HashSet<String>, background: &DashboardBackground) {
+    match background {
+        DashboardBackground::Image { file, .. } | DashboardBackground::Video { file, .. } => {
+            files.insert(file.clone());
+        }
+        DashboardBackground::Preset { .. } | DashboardBackground::Dynamic { .. } => {}
+    }
 }
 
 pub fn remove_view(conn: &SqliteConnection, id: &str) -> Result<(), DashboardStorageError> {
@@ -1683,6 +1752,56 @@ mod tests {
         assert_eq!(files.len(), 2);
         assert!(files.contains("bg-aaa.jpg"));
         assert!(files.contains("bg-bbb.mp4"));
+    }
+
+    #[test]
+    fn referenced_background_image_files_includes_shared_picker_surfaces() {
+        let conn = open_test_db();
+        create_view(&conn, "v1", "First", None).unwrap();
+        conn.execute_batch(
+            r#"
+            CREATE TABLE itops_sites (
+                id TEXT PRIMARY KEY,
+                background_json TEXT,
+                room_backgrounds_json TEXT
+            );
+            CREATE TABLE itops_site_racks (
+                id TEXT PRIMARY KEY,
+                background_json TEXT
+            );
+            CREATE TABLE connections (
+                id TEXT PRIMARY KEY,
+                terminal_background_json TEXT
+            );
+            "#,
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO itops_sites (id, background_json, room_backgrounds_json)
+             VALUES ('site-1', ?, ?)",
+            params![
+                r#"{"kind":"image","file":"itops-site.svg","fit":"fit","dim":0}"#,
+                r#"{"Room A":{"kind":"video","file":"itops-room.mp4","fit":"fill","dim":0},
+                    "Room B":{"kind":"dynamic","dynamic":"starfield"}}"#,
+            ],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO itops_site_racks (id, background_json) VALUES ('rack-1', ?)",
+            params![r#"{"kind":"image","file":"itops-rack.webp","fit":"fill","dim":0}"#],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO connections (id, terminal_background_json) VALUES ('conn-1', ?)",
+            params![r#"{"kind":"image","file":"connection-bg.png","fit":"fill","dim":0}"#],
+        )
+        .unwrap();
+
+        let files = referenced_background_image_files(&conn).unwrap();
+        assert!(files.contains("itops-site.svg"));
+        assert!(files.contains("itops-room.mp4"));
+        assert!(files.contains("itops-rack.webp"));
+        assert!(files.contains("connection-bg.png"));
     }
 
     #[test]

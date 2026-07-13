@@ -9,6 +9,7 @@ import { useTranslation } from "react-i18next";
 import type { HostReport, RunHistoryEntry } from "../../types";
 import { ItIcon, type ItIconName } from "./icons";
 import { TransportChip } from "./TransportChip";
+import { ItOpsEmptyHint } from "./ItOpsEmptyHint";
 import { useItOpsStore, type LiveRun, type LiveRunHost, type LiveRunHostStatus } from "./state";
 
 const DEFAULT_CONCURRENCY = 8;
@@ -139,7 +140,6 @@ function LiveRunView({ run }: { run: LiveRun }) {
   const { t } = useTranslation();
   const sites = useItOpsStore((state) => state.sites);
   const cancelRun = useItOpsStore((state) => state.cancelRun);
-  const requestNewBatchRun = useItOpsStore((state) => state.requestNewBatchRun);
 
   const tally = run.hosts.reduce(
     (acc, host) => {
@@ -226,18 +226,7 @@ function LiveRunView({ run }: { run: LiveRun }) {
               </span>
               {t("itops.actions.cancel")}
             </button>
-          ) : (
-            <button
-              type="button"
-              className="it-btn"
-              onClick={() => requestNewBatchRun(run.siteId ?? undefined)}
-            >
-              <span className="it-btn-ic">
-                <ItIcon name="rerun" size={14} />
-              </span>
-              {t("itops.actions.rerun")}
-            </button>
-          )}
+          ) : null}
         </div>
       </div>
 
@@ -388,35 +377,44 @@ function RunReportView({ entry, onBack }: { entry: RunHistoryEntry; onBack: () =
   );
 }
 
-export function BatchRunsTab({ onNewBatchRun }: { onNewBatchRun: () => void }) {
+function RunHistoryHeader() {
+  const { t } = useTranslation();
+  return (
+    <div className="it-destination-page-head">
+      <div>
+        <h2>{t("itops.navigation.runHistory")}</h2>
+        <p>{t("itops.batchRuns.historyDescription")}</p>
+      </div>
+    </div>
+  );
+}
+
+export function BatchRunsTab({ siteId }: {
+  /** When set, only runs targeting this Site are shown. */
+  siteId?: string;
+}) {
   const { t } = useTranslation();
   const activeRun = useItOpsStore((state) => state.activeRun);
-  const runHistory = useItOpsStore((state) => state.runHistory);
+  const allRunHistory = useItOpsStore((state) => state.runHistory);
+  const runHistory = siteId
+    ? allRunHistory.filter((entry) => entry.siteId === siteId)
+    : allRunHistory;
   const [openReport, setOpenReport] = useState<RunHistoryEntry | null>(null);
 
-  if (activeRun) {
-    return <LiveRunView run={activeRun} />;
+  if (activeRun && (!siteId || activeRun.siteId === siteId)) {
+    return <div className="it-destination-surface"><RunHistoryHeader /><LiveRunView run={activeRun} /></div>;
   }
 
   if (openReport) {
-    return <RunReportView entry={openReport} onBack={() => setOpenReport(null)} />;
+    return <div className="it-destination-surface"><RunHistoryHeader /><RunReportView entry={openReport} onBack={() => setOpenReport(null)} /></div>;
   }
 
   return (
-    <div className="br">
-      <div className="it-empty" style={{ minHeight: 240 }}>
-        <span className="glyph">
-          <ItIcon name="run" size={28} sw={1.6} />
-        </span>
-        <h2>{t("itops.batchRuns.emptyTitle")}</h2>
-        <p>{t("itops.batchRuns.emptyBody")}</p>
-        <button type="button" className="it-btn primary" onClick={onNewBatchRun}>
-          <span className="it-btn-ic">
-            <ItIcon name="run" size={14} />
-          </span>
-          {t("itops.actions.startBatchRun")}
-        </button>
-      </div>
+    <div className="br it-destination-surface">
+      <RunHistoryHeader />
+      {runHistory.length === 0 ? (
+        <ItOpsEmptyHint>{t("itops.batchRuns.historyEmptyHint")}</ItOpsEmptyHint>
+      ) : null}
 
       {runHistory.length > 0 ? (
         <>

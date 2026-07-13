@@ -55,6 +55,7 @@ test("Site tree state persists width, collapse state, and clamps like a panel", 
 
 test("Site tree add menu opens distinct Site, Server Room, and Rack dialogs", async () => {
   const sites = await read("src/modules/itops/SitesTab.tsx");
+  const css = await read("src/modules/itops/itops.css");
   const siteDialog = await read("src/modules/itops/SiteDialog.tsx");
   const rackDialog = await read("src/modules/itops/RackDialog.tsx");
   const serverRoomDialog = await read("src/modules/itops/ServerRoomDialog.tsx");
@@ -68,11 +69,15 @@ test("Site tree add menu opens distinct Site, Server Room, and Rack dialogs", as
   assert.match(sites, /className="icon-button"[\s\S]*aria-label=\{t\("itops\.racks\.addNode"\)\}/);
   assert.match(sites, /ft-head-title[\s\S]*itops\.sites\.heading[\s\S]*connections\.collapseAll[\s\S]*connections\.expandAll/);
   assert.doesNotMatch(sites, /<span className="ft-head-title">\{t\("itops\.sites\.heading"\)\}<\/span>[\s\S]{0,120}ft-add-wrap/);
+  assert.match(css, /\.itops-page \.it-side-head \{[\s\S]*overflow:\s*visible;/);
+  assert.match(css, /\.itops-page \.ft-add-wrap \{[\s\S]*z-index:\s*45;/);
+  assert.match(css, /\.itops-page \.ft-add-menu \{[\s\S]*position:\s*absolute;/);
   assert.match(sites, /customIcon=\{site\}/);
   assert.match(sites, /customIcon=\{site\.roomIcons\?\.\[room\.key\]\}/);
   assert.match(sites, /<ConnectionIcon\b/);
   assert.match(siteDialog, /itops\.sites\.createHelp/);
-  assert.match(siteDialog, /\{isEdit \? \([\s\S]*itops\.sites\.perHostTransport/);
+  assert.doesNotMatch(siteDialog, /itops\.sites\.perHostTransport|TRANSPORTS|setTransport/);
+  assert.match(siteDialog, /transport: group\?\.transport \?\? "auto"/);
   assert.doesNotMatch(siteDialog, /\{isEdit \? \([\s\S]{0,120}<Field\s+label=\{t\("itops\.sites\.connectionsLabel"\)\}/);
   assert.match(serverRoomDialog, /itops\.racks\.serverRoomSiteLabel/);
   assert.match(serverRoomDialog, /createServerRoom\(/);
@@ -83,17 +88,79 @@ test("Site tree add menu opens distinct Site, Server Room, and Rack dialogs", as
   assert.match(rackDialog, /itops\.racks\.serverRoomSelectLabel/);
 });
 
-test("Site topology rows open their existing dialogs from native Properties menus", async () => {
+test("Sites load durable topology before the tree decides whether they have children", async () => {
+  const sites = await read("src/modules/itops/SitesTab.tsx");
+
+  assert.match(
+    sites,
+    /for \(const site of sites\) \{[\s\S]*if \(!racksBySite\[site\.id\]\) void loadRacks\(site\.id\);[\s\S]*if \(!serverRoomsBySite\[site\.id\]\) void loadServerRooms\(site\.id\);/,
+  );
+  assert.doesNotMatch(sites, /if \(isExpanded\(nodeId\.site\(site\.id\)\)\)/);
+  assert.match(sites, /topologyLoaded=\{topologyLoaded\}/);
+});
+
+test("empty Site and Server Room views expose their contextual create actions", async () => {
+  const sites = await read("src/modules/itops/SitesTab.tsx");
+  const css = await read("src/modules/itops/itops.css");
+
+  assert.match(sites, /topology\.length === 0[\s\S]*itops\.sites\.emptyServerRoomsHint/);
+  assert.match(sites, /serverRoom\.racks\.length === 0[\s\S]*itops\.racks\.emptyServerRoomHint/);
+  assert.match(sites, /<ItOpsEmptyHint>/);
+  assert.match(css, /\.itops-page \.it-empty-hint \{/);
+  assert.doesNotMatch(sites, /\) : racks\.length === 0 \? \(/);
+  assert.match(sites, /hasChildren=\{siteTopo\.length > 0\}/);
+});
+
+test("Site View shows its placement dots only while editing", async () => {
+  const sites = await read("src/modules/itops/SitesTab.tsx");
+  const css = await read("src/modules/itops/itops.css");
+
+  assert.match(sites, /className=\{`it-free-surface site\$\{editMode \? " editing" : ""\}`\}/);
+  assert.match(css, /\.itops-page \.it-free-surface\.site:not\(\.editing\) \{[\s\S]*background-image:\s*none;/);
+});
+
+test("Site topology rows expose Properties and confirmation-backed Delete menus", async () => {
   const sites = await read("src/modules/itops/SitesTab.tsx");
   const english = JSON.parse(await read("src/i18n/locales/en.json"));
 
   assert.match(sites, /showNativeContextMenu/);
   assert.match(sites, /label: t\("common\.properties"\)/);
+  assert.match(sites, /label: t\("itops\.actions\.delete"\)/);
+  assert.match(sites, /iconSvg: nativeMenuIcons\.trash/);
   assert.equal(english.common.properties, "Properties");
   assert.match(sites, /setDialog\(\{ group: site \}\)/);
   assert.match(sites, /setServerRoomDialog\(\{ siteId: site\.id, room: room\.room! \}\)/);
   assert.match(sites, /setRackDialog\(\{ siteId: site\.id, rack \}\)/);
+  assert.match(sites, /setPendingDelete\(\{ kind: "site", site \}\)/);
+  assert.match(sites, /deleteDisabled: site\.id === DEFAULT_SITE_ID/);
+  assert.match(sites, /await removeSite\(pending\.site\.id\)/);
+  assert.match(sites, /setPendingDelete\(\{ kind: "serverRoom"/);
+  assert.match(sites, /setPendingDelete\(\{ kind: "rack"/);
+  assert.match(sites, /<ConfirmSheet[\s\S]*pendingDelete\.kind === "site"/);
   assert.match(sites, /<TreeRow[\s\S]*onContextMenu=/);
+  const menuHelper = sites.match(/function showTopologyMenu\([\s\S]*?\n  \}/)?.[0] ?? "";
+  assert.ok(menuHelper.indexOf('label: t("itops.actions.delete")') < menuHelper.indexOf('label: t("common.properties")'));
+  assert.match(menuHelper, /label: t\("common\.properties"\)[\s\S]*action: onProperties[\s\S]*$/);
+});
+
+test("Server Room rows expose Add Rack before Delete and final Properties", async () => {
+  const sites = await read("src/modules/itops/SitesTab.tsx");
+  const english = JSON.parse(await read("src/i18n/locales/en.json"));
+
+  assert.equal(english.itops.racks.addRackAction, "Add Rack");
+  assert.match(sites, /showTopologyMenu\(event, \{[\s\S]*addAction: \{[\s\S]*label: t\("itops\.racks\.addRackAction"\)/);
+  assert.match(sites, /setRackDialog\(\{[\s\S]*siteId: site\.id,[\s\S]*rack: null,[\s\S]*defaultServerRoom: room\.key/);
+});
+
+test("Server Rooms virtual row exposes its contextual add command", async () => {
+  const sites = await read("src/modules/itops/SitesTab.tsx");
+  const english = JSON.parse(await read("src/i18n/locales/en.json"));
+
+  assert.equal(english.itops.racks.addServerRoomAction, "Add Server Room");
+  assert.match(sites, /label=\{t\("itops\.navigation\.serverRooms"\)\}[\s\S]*onContextMenu=\{\(event\) =>[\s\S]*showAddServerRoomMenu\(event, site\.id\)/);
+  assert.match(sites, /label: t\("itops\.racks\.addServerRoomAction"\)/);
+  assert.match(sites, /iconSvg: nativeMenuIcons\.plus/);
+  assert.match(sites, /setServerRoomDialog\(\{ siteId, room: null \}\)/);
 });
 
 test("Site dialog no longer loads or selects Connections", async () => {

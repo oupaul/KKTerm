@@ -40,6 +40,30 @@ test("SSH pane toolbar SFTP button opens an in-place popup instead of a workspac
   );
 });
 
+test("SSH pane toolbar SFTP popup prefers tmux pane current path before OSC cwd fallback", async () => {
+  const terminalSource = await readFile(
+    new URL("../src/modules/workspace/connections/terminal/TerminalWorkspace.tsx", import.meta.url),
+    "utf8",
+  );
+  const tauriSource = await readFile(new URL("../src/lib/tauri.ts", import.meta.url), "utf8");
+
+  assert.match(
+    terminalSource,
+    /async function resolveSftpDialogInitialRemotePath\(connection: Connection, pane: WorkspacePane \| undefined\)[\s\S]*?invokeCommand\("tmux_current_path",[\s\S]*?tmuxSessionId: pane\.tmuxSessionId,[\s\S]*?return tmuxPath\.trim\(\);[\s\S]*?return isRemoteInitialDirectory\(pane\.cwd\) \? pane\.cwd\.trim\(\) : undefined;/,
+    "the SFTP popup should ask tmux for pane_current_path before falling back to the terminal cwd",
+  );
+  assert.match(
+    terminalSource,
+    /const requestId = sftpOpenRequestIdRef\.current \+ 1;[\s\S]*?const initialRemotePath = await resolveSftpDialogInitialRemotePath\(connection, pane\);[\s\S]*?setSftpDialogInitialRemotePath\(initialRemotePath\);[\s\S]*?setSftpDialogConnection\(connection\);/,
+    "the popup should resolve the remote start path before mounting SftpWorkspace",
+  );
+  assert.match(
+    tauriSource,
+    /tmux_current_path:\s*\{[\s\S]*?tmuxSessionId: string;[\s\S]*?result: string;/,
+    "the typed Tauri command map should expose the tmux current-path probe",
+  );
+});
+
 test("SSH pane toolbar SFTP action is icon-only with a native SFTP tooltip", async () => {
   const terminalSource = await readFile(
     new URL("../src/modules/workspace/connections/terminal/TerminalWorkspace.tsx", import.meta.url),
@@ -116,6 +140,11 @@ test("SFTP-over-FTP Connections keep the SFTP runtime adapter after metadata ref
     storeSource,
     /connection: refreshedConnection/,
     "the refreshed SFTP tab should retain the converted runtime Connection",
+  );
+  assert.match(
+    storeSource,
+    /ftpOptions: connection\.ftpOptions/,
+    "the converted runtime Connection should preserve standalone SFTP start-path preferences",
   );
 });
 

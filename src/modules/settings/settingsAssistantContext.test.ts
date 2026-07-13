@@ -86,6 +86,7 @@ const sectionIds: SettingsSectionId[] = [
   "url-settings",
   "rdp-settings",
   "vnc-settings",
+  "shortcuts-settings",
   "about-settings",
 ];
 

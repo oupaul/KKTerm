@@ -58,7 +58,7 @@ test("Activity Rail visibility defaults and rendering match the unified controls
   assert.match(defaults, /showWorkspaceOnRail:\s*true/);
   assert.match(defaults, /showDashboardOnRail:\s*true/);
   assert.match(defaults, /showInstallerOnRail:\s*true/);
-  assert.match(defaults, /showItOps:\s*false/);
+  assert.match(defaults, /showItOps:\s*true/);
   assert.match(defaults, /showDontSleepOnRail:\s*true/);
   assert.match(defaults, /activityRailOrder:\s*\[\.\.\.DEFAULT_ACTIVITY_RAIL_ORDER\]/);
 

@@ -11,6 +11,7 @@ import {
   Coffee,
   FolderOpen,
   Info,
+  Keyboard,
   KeyRound,
   Gauge,
   LayoutDashboard,
@@ -43,6 +44,7 @@ import { FileExplorerSettings } from "./FileExplorerSettings";
 import { InstallerSettings } from "./InstallerSettings";
 import { ProxySettings } from "./ProxySettings";
 import { RdpSettings } from "./RdpSettings";
+import { ShortcutsSettings } from "./ShortcutsSettings";
 import { SshSettings } from "./SshSettings";
 import { TerminalSettings as TerminalSettingsPage } from "./TerminalSettings";
 import { UrlSettings } from "./UrlSettings";
@@ -75,6 +77,7 @@ const SETTINGS_SECTION_IDS: readonly SettingsSectionId[] = [
   "rdp-settings",
   "vnc-settings",
   "dont-sleep-settings",
+  "shortcuts-settings",
   "proxy-settings",
   "about-settings",
 ];
@@ -104,6 +107,7 @@ const SETTINGS_NAV: readonly {
   { id: "rdp-settings", Icon: Monitor, color: "#5856d6", labelKey: "settings.sectionRdp", requires: "rdp" },
   { id: "vnc-settings", Icon: Network, color: "#5ac8fa", labelKey: "settings.sectionVnc" },
   { id: "dont-sleep-settings", Icon: Coffee, color: "#ac8e68", labelKey: "settings.sectionDontSleep" },
+  { id: "shortcuts-settings", Icon: Keyboard, color: "#ff6482", labelKey: "settings.sectionShortcuts" },
   { id: "proxy-settings", Icon: Waypoints, color: "#00c7be", labelKey: "settings.proxy" },
   { id: "about-settings", Icon: Info, color: "#64748b", labelKey: "settings.sectionAbout" },
 ];
@@ -320,6 +324,7 @@ export function SettingsPage({
             {rdpSupported ? renderSettingsSection("rdp-settings", <RdpSettings />) : null}
             {renderSettingsSection("vnc-settings", <VncSettings />)}
             {renderSettingsSection("dont-sleep-settings", <DontSleepSettings />)}
+            {renderSettingsSection("shortcuts-settings", <ShortcutsSettings />)}
             {renderSettingsSection("proxy-settings", <ProxySettings />)}
             {renderSettingsSection("about-settings", <AboutSettings />)}
           </section>

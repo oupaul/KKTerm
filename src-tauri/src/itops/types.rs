@@ -26,6 +26,10 @@ pub struct Automation {
     /// Ordered IT Ops actions run on each trigger fire by the action executor.
     #[serde(default)]
     pub actions: Vec<AutomationAction>,
+    /// Optional durable Site binding (soft reference): which Site's
+    /// Automations segment lists this rule. `None` = unbound (legacy rows).
+    #[serde(default)]
+    pub site_id: Option<String>,
 }
 
 /// How a `Notify` action surfaces.
@@ -254,7 +258,7 @@ pub struct RackFacingEntry {
 }
 
 /// A non-rack Server Room fixture on the room floor grid (docs/SITE.md Room
-/// Object): camera, CRAC unit, fire extinguisher, cable tray, UPS, sensor,
+/// Object): camera, CRAC unit, fire extinguisher, UPS, sensor,
 /// smoke detector, crash cart, or 乖乖. `z` is the bottom of the object in
 /// rack units above the floor so occupants can stack in one cell.
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
@@ -273,6 +277,93 @@ pub struct RoomObject {
     pub corner: Option<i64>,
 }
 
+/// What a Host is: the device itself, or a guest carried by a parent Host.
+#[derive(Clone, Copy, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum HostKind {
+    #[default]
+    Physical,
+    Vm,
+    Container,
+    Other,
+}
+
+impl HostKind {
+    pub fn as_db_str(self) -> &'static str {
+        match self {
+            HostKind::Physical => "physical",
+            HostKind::Vm => "vm",
+            HostKind::Container => "container",
+            HostKind::Other => "other",
+        }
+    }
+
+    pub fn from_db_str(value: &str) -> Option<Self> {
+        match value {
+            "physical" => Some(HostKind::Physical),
+            "vm" => Some(HostKind::Vm),
+            "container" => Some(HostKind::Container),
+            "other" => Some(HostKind::Other),
+            _ => None,
+        }
+    }
+}
+
+/// The last connectivity-scan snapshot for a Host: which remote-orchestration
+/// endpoints answered a TCP probe. A stored result (like the SNMP hint), not
+/// live Session state; `None` on the Host means it was never scanned.
+#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct HostScan {
+    /// SSH (port 22) answered.
+    #[serde(default)]
+    pub ssh: bool,
+    /// WinRM (port 5985/5986) answered.
+    #[serde(default)]
+    pub winrm: bool,
+    /// HTTPS (port 443) answered — a management-interface hint.
+    #[serde(default)]
+    pub https: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scanned_at: Option<String>,
+}
+
+/// A durable IT Ops Host (docs/ITOPS.md Hosts): one device or guest in a Site's
+/// inventory, addressed by hostname. `parent_host_id` is a soft self reference —
+/// a VM/container Host points at the device Host that carries it. A Host may
+/// bind several Connections at once (`connection_ids`, ordered soft refs), e.g.
+/// an SSH terminal plus an HTTPS management URL. Owns no Session and no secret.
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct SiteHost {
+    pub id: String,
+    pub site_id: String,
+    #[serde(default)]
+    pub parent_host_id: Option<String>,
+    pub hostname: String,
+    /// Optional display name; blank = show the hostname.
+    #[serde(default)]
+    pub label: String,
+    pub kind: HostKind,
+    #[serde(default)]
+    pub connection_ids: Vec<String>,
+    #[serde(default)]
+    pub scan: Option<HostScan>,
+    #[serde(default)]
+    pub notes: String,
+    pub sort_order: i64,
+}
+
+/// Live Host connectivity-scan progress streamed on the `itops://host-scan`
+/// channel. Each finished probe re-sends the updated Host so the panel's chips
+/// update as results land.
+#[derive(Clone, Debug, Serialize)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum HostScanEvent {
+    Host { site_id: String, host: SiteHost },
+    Finished { site_id: String },
+}
+
 /// What a Rack Device represents. `Connection` items are openable (carry a
 /// `connection_id`); the rest are passive inventory/visual devices.
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq)]
@@ -282,6 +373,7 @@ pub enum RackItemKind {
     Switch,
     Pdu,
     PatchPanel,
+    // Legacy persisted kinds: no longer offered by Rack Device pickers.
     Blank,
     Label,
     Server,
@@ -290,8 +382,7 @@ pub enum RackItemKind {
     Firewall,
     Ups,
     Kvm,
-    Equipment,
-    General,
+    GenericDevice,
     Kuaiguai,
 }
 
@@ -310,8 +401,7 @@ impl RackItemKind {
             RackItemKind::Firewall => "firewall",
             RackItemKind::Ups => "ups",
             RackItemKind::Kvm => "kvm",
-            RackItemKind::Equipment => "equipment",
-            RackItemKind::General => "general",
+            RackItemKind::GenericDevice => "genericDevice",
             RackItemKind::Kuaiguai => "kuaiguai",
         }
     }
@@ -330,11 +420,26 @@ impl RackItemKind {
             "firewall" => Some(RackItemKind::Firewall),
             "ups" => Some(RackItemKind::Ups),
             "kvm" => Some(RackItemKind::Kvm),
-            "equipment" => Some(RackItemKind::Equipment),
-            "general" => Some(RackItemKind::General),
+            "genericDevice" | "equipment" | "general" => Some(RackItemKind::GenericDevice),
             "kuaiguai" => Some(RackItemKind::Kuaiguai),
             _ => None,
         }
+    }
+}
+
+#[cfg(test)]
+mod rack_item_kind_tests {
+    use super::RackItemKind;
+
+    #[test]
+    fn legacy_generic_device_kinds_migrate_to_the_merged_kind() {
+        for legacy in ["equipment", "general"] {
+            assert_eq!(
+                RackItemKind::from_db_str(legacy),
+                Some(RackItemKind::GenericDevice)
+            );
+        }
+        assert_eq!(RackItemKind::GenericDevice.as_db_str(), "genericDevice");
     }
 }
 
@@ -496,6 +601,10 @@ pub struct RackItemMetadata {
     pub tags: Option<Vec<String>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub connection_ids: Option<Vec<String>>,
+    /// Soft reference to an `itops_hosts` row: the Host this device *is*. The
+    /// Rack View callout lists the Host and its child Hosts (VMs/containers).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub host_id: Option<String>,
     #[serde(
         default,
         deserialize_with = "deserialize_network_ports",
@@ -510,8 +619,20 @@ pub struct RackItemMetadata {
     pub snmp: Option<RackSnmpHint>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub kuaiguai_size: Option<String>,
+    /// Standing package ("full", 4U) or package laid face-up ("laidDown", 1U).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub kuaiguai_style: Option<String>,
+    /// Optional Server Room rack-top corner (clockwise 0=NW..3=SW).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rack_top_corner: Option<u8>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub vendor: Option<String>,
+    /// Server chassis presentation ("rack" | "tower").
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub form_factor: Option<String>,
+    /// Server front-panel artwork ("default" | "style1" | "style2").
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub server_panel_style: Option<String>,
 }
 
 /// One device occupying a contiguous `start_u..start_u + height_u` span in a
@@ -542,12 +663,17 @@ pub struct RunScope {
     pub rack_id: Option<String>,
     #[serde(default)]
     pub server_room: Option<String>,
+    /// Site Host ids selected on the Hosts page. Each Host resolves through
+    /// its first bound SSH Connection; Hosts without one are not runnable.
+    #[serde(default)]
+    pub host_ids: Vec<String>,
 }
 
 impl RunScope {
     pub fn is_empty(&self) -> bool {
         self.rack_id.as_deref().unwrap_or("").is_empty()
             && self.server_room.as_deref().unwrap_or("").is_empty()
+            && self.host_ids.is_empty()
     }
 }
 
@@ -566,14 +692,17 @@ pub struct ResolvedHost {
     pub transport: Transport,
 }
 
-/// One step of an interactive Playbook. The runner types `send` into the host's
-/// PTY shell, then — when `expect` is set — waits until the streamed output
-/// contains that literal substring before moving on (the "wait for a prompt,
-/// then answer it" pattern). A step whose `expect` never appears within
-/// `timeout_seconds` fails, which stops the Playbook on that host.
+/// One ordered Playbook node. Command nodes type `send` into the host's PTY and
+/// may wait for `expect`; sudo nodes acquire cached elevation from a vault
+/// reference; AI nodes evaluate the preceding node output through a closed
+/// structured decision contract.
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct PlaybookStep {
+    #[serde(default)]
+    pub id: Option<String>,
+    #[serde(default)]
+    pub kind: PlaybookStepKind,
     /// Short label shown in the run report (e.g. "update apt cache").
     pub name: String,
     /// Text sent to the interactive shell — a command, or an answer to a prompt
@@ -586,6 +715,21 @@ pub struct PlaybookStep {
     /// Per-step wait budget for `expect`. Falls back to the run default when unset.
     #[serde(default)]
     pub timeout_seconds: Option<u64>,
+    /// Reference to the configured secret store. Never contains plaintext.
+    #[serde(default)]
+    pub secret_owner_id: Option<String>,
+    /// Instruction for an AI node. Its input is the preceding node's output.
+    #[serde(default)]
+    pub ai_instruction: Option<String>,
+}
+
+#[derive(Clone, Copy, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum PlaybookStepKind {
+    #[default]
+    Command,
+    Sudo,
+    Ai,
 }
 
 /// What a Batch Run executes on each targeted host (docs/ITOPS.md).
@@ -606,7 +750,52 @@ pub enum BatchTask {
     },
 }
 
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum TaskOperatingSystem {
+    Any,
+    Linux,
+    Macos,
+    Windows,
+    CiscoIos,
+    CiscoNxos,
+    FortiOs,
+    Junos,
+    AristaEos,
+}
+
+fn default_task_operating_systems() -> Vec<TaskOperatingSystem> {
+    vec![TaskOperatingSystem::Any]
+}
+
+/// A reusable, global IT Ops task definition. Targets are deliberately absent:
+/// a Site, Host selection, or Automation supplies them when the Task launches.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ItopsTask {
+    pub id: String,
+    pub name: String,
+    #[serde(default)]
+    pub description: String,
+    pub sort_order: i64,
+    #[serde(default = "default_task_operating_systems")]
+    pub applicable_os: Vec<TaskOperatingSystem>,
+    #[serde(default)]
+    pub built_in_key: Option<String>,
+    pub task: BatchTask,
+}
+
 impl BatchTask {
+    pub fn secret_owner_ids(&self) -> Vec<String> {
+        match self {
+            Self::Playbook { steps, .. } => steps
+                .iter()
+                .filter_map(|step| step.secret_owner_id.clone())
+                .collect(),
+            Self::Script { .. } => Vec::new(),
+        }
+    }
+
     /// A redacted, one-line label for the run-history audit log — never the full
     /// script body, which may embed secrets.
     pub fn summary(&self) -> String {
@@ -664,6 +853,51 @@ mod tests {
         };
         assert_eq!(blank.summary(), "playbook");
     }
+
+    #[test]
+    fn playbook_step_defaults_old_rows_to_command_and_keeps_only_secret_reference() {
+        let old: PlaybookStep = serde_json::from_value(serde_json::json!({
+            "name": "uptime",
+            "send": "uptime",
+            "expect": null,
+            "timeoutSeconds": 10
+        }))
+        .unwrap();
+        assert_eq!(old.kind, PlaybookStepKind::Command);
+        assert_eq!(old.secret_owner_id, None);
+
+        let task = BatchTask::Playbook {
+            name: "restart".to_string(),
+            steps: vec![PlaybookStep {
+                id: Some("step-1".to_string()),
+                kind: PlaybookStepKind::Sudo,
+                name: "Acquire sudo".to_string(),
+                send: String::new(),
+                expect: Some("KKTerm sudo password: ".to_string()),
+                timeout_seconds: Some(30),
+                secret_owner_id: Some("itops-sudo-1".to_string()),
+                ai_instruction: None,
+            }],
+        };
+        assert_eq!(task.secret_owner_ids(), vec!["itops-sudo-1"]);
+        let json = serde_json::to_string(&task).unwrap();
+        assert!(json.contains("itops-sudo-1"));
+        assert!(!json.contains("password-value"));
+
+        let ai: PlaybookStep = serde_json::from_value(serde_json::json!({
+            "id": "step-ai",
+            "kind": "ai",
+            "name": "Evaluate health",
+            "send": "",
+            "aiInstruction": "Succeed only when the service is active"
+        }))
+        .unwrap();
+        assert_eq!(ai.kind, PlaybookStepKind::Ai);
+        assert_eq!(
+            ai.ai_instruction.as_deref(),
+            Some("Succeed only when the service is active")
+        );
+    }
 }
 
 /// The outcome of running a Batch Task on one host. `ok` means the transport
@@ -716,6 +950,7 @@ pub struct RunHistoryEntry {
     pub id: String,
     pub source: String,
     pub site_id: Option<String>,
+    pub task_id: Option<String>,
     pub task_summary: String,
     pub started_at: String,
     pub finished_at: Option<String>,

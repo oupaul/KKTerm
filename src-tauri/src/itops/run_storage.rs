@@ -35,6 +35,7 @@ pub fn insert_run_report(
     id: &str,
     source: &str,
     site_id: Option<&str>,
+    task_id: Option<&str>,
     task_summary: &str,
     started_at: &str,
     finished_at: Option<&str>,
@@ -44,14 +45,15 @@ pub fn insert_run_report(
         serde_json::to_string(report).map_err(|error| RunStorageError::Serialize(error.to_string()))?;
     conn.execute(
         "INSERT INTO itops_run_history
-            (id, source, site_id, task_summary, started_at, finished_at, report_json)
-         VALUES (?, ?, ?, ?, ?, ?, ?)",
-        params![id, source, site_id, task_summary, started_at, finished_at, report_json],
+            (id, source, site_id, task_id, task_summary, started_at, finished_at, report_json)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        params![id, source, site_id, task_id, task_summary, started_at, finished_at, report_json],
     )?;
     Ok(RunHistoryEntry {
         id: id.to_string(),
         source: source.to_string(),
         site_id: site_id.map(str::to_string),
+        task_id: task_id.map(str::to_string),
         task_summary: task_summary.to_string(),
         started_at: started_at.to_string(),
         finished_at: finished_at.map(str::to_string),
@@ -61,7 +63,7 @@ pub fn insert_run_report(
 
 pub fn list_run_history(conn: &SqliteConnection, limit: i64) -> Result<Vec<RunHistoryEntry>> {
     let mut stmt = conn.prepare(
-        "SELECT id, source, site_id, task_summary, started_at, finished_at, report_json
+        "SELECT id, source, site_id, task_id, task_summary, started_at, finished_at, report_json
          FROM itops_run_history
          ORDER BY started_at DESC, id DESC
          LIMIT ?",
@@ -72,21 +74,23 @@ pub fn list_run_history(conn: &SqliteConnection, limit: i64) -> Result<Vec<RunHi
                 row.get::<_, String>(0)?,
                 row.get::<_, String>(1)?,
                 row.get::<_, Option<String>>(2)?,
-                row.get::<_, String>(3)?,
+                row.get::<_, Option<String>>(3)?,
                 row.get::<_, String>(4)?,
-                row.get::<_, Option<String>>(5)?,
-                row.get::<_, String>(6)?,
+                row.get::<_, String>(5)?,
+                row.get::<_, Option<String>>(6)?,
+                row.get::<_, String>(7)?,
             ))
         })?
         .collect::<rusqlite::Result<Vec<_>>>()?;
     Ok(rows
         .into_iter()
         .map(
-            |(id, source, site_id, task_summary, started_at, finished_at, report_json)| {
+            |(id, source, site_id, task_id, task_summary, started_at, finished_at, report_json)| {
                 RunHistoryEntry {
                     id,
                     source,
                     site_id,
+                    task_id,
                     task_summary,
                     started_at,
                     finished_at,
@@ -110,6 +114,7 @@ mod tests {
                 id TEXT PRIMARY KEY,
                 source TEXT NOT NULL,
                 site_id TEXT,
+                task_id TEXT,
                 task_summary TEXT NOT NULL,
                 started_at TEXT NOT NULL,
                 finished_at TEXT,
@@ -164,6 +169,7 @@ mod tests {
             "run-1",
             "manual",
             Some("hg-1"),
+            Some("task-1"),
             "apt upgrade",
             "2026-01-01T00:00:00Z",
             Some("2026-01-01T00:01:00Z"),
@@ -182,7 +188,7 @@ mod tests {
     fn list_is_newest_first_and_limited() {
         let conn = open_test_db();
         for (id, started) in [("a", "2026-01-01T00:00:00Z"), ("b", "2026-01-02T00:00:00Z")] {
-            insert_run_report(&conn, id, "manual", None, "t", started, None, &RunReport::default())
+            insert_run_report(&conn, id, "manual", None, None, "t", started, None, &RunReport::default())
                 .unwrap();
         }
         let history = list_run_history(&conn, 1).unwrap();

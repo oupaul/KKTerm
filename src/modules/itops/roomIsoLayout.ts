@@ -47,6 +47,11 @@ export interface IsoFloorFrame {
   offY: number;
 }
 
+interface IsoSize {
+  w: number;
+  h: number;
+}
+
 function cellKey(cell: IsoCell): string {
   return `${cell.x},${cell.y}`;
 }
@@ -153,6 +158,38 @@ export function expandIsoFloorFrame(
   };
 }
 
+/** Treat 100% as the largest scale that keeps the room's natural bounds in
+ * the current pane. User zoom remains relative to that baseline, so opening a
+ * side pane fits the same room while 150%/200% can still intentionally pan. */
+export function fitIsoRoomZoom(
+  natural: IsoSize,
+  viewport: IsoSize | null,
+  requestedZoom: number,
+): number {
+  if (!viewport || natural.w <= 0 || natural.h <= 0) return requestedZoom;
+  const fit = Math.min(1, viewport.w / natural.w, viewport.h / natural.h);
+  return requestedZoom * Math.max(0.01, fit);
+}
+
+/** Build edit-mode targets for the whole rendered floor. The viewport expands
+ * beyond the rack-derived minimum grid, and those extra cells are real room
+ * space rather than decorative padding: users must be able to place fixtures
+ * anywhere the floor grid is visible. Rack cells are handled by their cabinet
+ * click targets, so they are omitted here. */
+export function isoPlacementCells(
+  floorCols: number,
+  floorRows: number,
+  rackCells: ReadonlySet<string>,
+): IsoCell[] {
+  const cells: IsoCell[] = [];
+  for (let y = 0; y < floorRows; y += 1) {
+    for (let x = 0; x < floorCols; x += 1) {
+      if (!rackCells.has(`${x},${y}`)) cells.push({ x, y });
+    }
+  }
+  return cells;
+}
+
 // Convert a pointer drag delta (screen px) into floor-plane px by inverting
 // the axonometric projection: un-squash the vertical axis by cos(tilt), then
 // rotate by −ISO_ROT_DEG back into plane axes.
@@ -180,6 +217,38 @@ export type Facing = 0 | 1 | 2 | 3;
  *  3 = SW. Corners rotate under a view angle exactly like facings — one view
  *  step maps corner c to (c + 1) % 4 — so `rotateFacingForView` applies. */
 export type Corner = 0 | 1 | 2 | 3;
+
+/** Map a pointer position inside a displayed floor tile back to the durable
+ * grid corner. The room rotates corners clockwise for each view step, so the
+ * picked display quadrant must be rotated back before it is stored. */
+export function cornerFromDisplayPoint(
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  angle: IsoViewAngle,
+): Corner {
+  const east = x >= width / 2;
+  const south = y >= height / 2;
+  const displayed: Corner = south ? (east ? 2 : 3) : east ? 1 : 0;
+  return ((displayed - angle + 4) % 4) as Corner;
+}
+
+/** Position a rack-top item at a selected corner. Missing legacy metadata
+ * remains centered; spatial views rotate stored room corners with the view. */
+export function rackTopCornerPoint(
+  value: unknown,
+  angle: IsoViewAngle = 0,
+): { x: number; y: number } {
+  if (value !== 0 && value !== 1 && value !== 2 && value !== 3) {
+    return { x: 0.5, y: 0.5 };
+  }
+  const corner = rotateFacingForView(value, angle);
+  return {
+    x: corner === 0 || corner === 3 ? 0.25 : 0.75,
+    y: corner === 0 || corner === 1 ? 0.25 : 0.75,
+  };
+}
 
 export function sanitizeCorner(value: unknown): Corner {
   return value === 1 || value === 2 || value === 3 ? value : 0;

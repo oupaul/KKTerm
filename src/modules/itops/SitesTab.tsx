@@ -14,21 +14,27 @@ import {
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
+  type RefObject,
 } from "react";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import { Maximize2, Minimize2 } from "../../lib/reicon";
 import { ConfirmSheet } from "../../app/ui/dialog";
-import { showNativeContextMenu } from "../../lib/nativeContextMenu";
+import { showNativeContextMenu, type NativeContextMenuItem } from "../../lib/nativeContextMenu";
 import { nativeMenuIcons } from "../../lib/nativeMenuIcons";
 import { useWorkspaceStore } from "../../store";
-import type { Site, Rack, RackItem, ResolvedHost, ServerRoom } from "../../types";
+import type { Site, Rack, RackItem, RackItemKind, ResolvedHost, ServerRoom } from "../../types";
 import { ConnectionIcon } from "../workspace/connections/ConnectionIcon";
 import { ItIcon, IT_ACCENTS, type ItIconName } from "./icons";
 import { SiteDialog } from "./SiteDialog";
+import { BatchRunsTab } from "./BatchRunsTab";
+import { AutomationsTab } from "./AutomationsTab";
+import { HostsPanel } from "./HostsPanel";
+import { TaskLibrary } from "./TaskLibrary";
 import { RackElevation } from "./RackElevation";
 import { RackDialog } from "./RackDialog";
 import { ServerRoomDialog } from "./ServerRoomDialog";
-import { RackItemDialog } from "./RackItemDialog";
+import { RackItemDialog, RACK_ITEM_KINDS, type RackItemDraft } from "./RackItemDialog";
+import { RackDevice } from "./RackDevice";
 import { RackItemBindingsDialog } from "./RackItemBindingsDialog";
 import { RackItemConnectPopover, type ConnectPopoverAnchor } from "./RackItemConnectPopover";
 import { useItOpsStore, type RackPlacementKind } from "./state";
@@ -40,13 +46,15 @@ import {
   topologyGroupKey,
   type DrillPath,
 } from "./rackTopology";
-import { resolveIsoLayout, sanitizeFacing } from "./roomIsoLayout";
+import { resolveIsoLayout, sanitizeFacing, type Corner } from "./roomIsoLayout";
 import { ItOpsBackground } from "./ItOpsBackground";
+import { ItOpsEmptyHint } from "./ItOpsEmptyHint";
 import { RackStage } from "./RackStage";
 import { ServerRoomFloorPlan } from "./ServerRoomFloorPlan";
 import { ServerRoomIsoView } from "./ServerRoomIsoView";
 import { RoomObjectPicker, type RoomTool } from "./roomViewParts";
 import { collectBoundConnectionIds } from "./rackInventory";
+import { isRackTopItem, KUAIGUAI_TOP_CLEARANCE_U } from "./rackPlacement";
 import type { DashboardBackground } from "../dashboard/types";
 import { SharedBackgroundPopover } from "../dashboard/edit/SharedBackgroundPopover";
 import { loadBackgroundImage } from "../dashboard/state/persistence";
@@ -71,7 +79,7 @@ import {
   type RackFacingMap,
   type RoomViewMode,
 } from "./siteTreeState";
-import { settleRoomObjects, type RoomObject } from "./roomObjects";
+import { rackTopSupport, settleRoomObjects, type RoomObject } from "./roomObjects";
 import {
   createItOpsPdfBytes,
   excelFilename,
@@ -103,12 +111,16 @@ type ItOpsCustomIcon = {
 };
 
 type PendingDelete =
+  | { kind: "site"; site: Site }
   | { kind: "serverRoom"; siteId: string; room: ServerRoom; racks: Rack[] }
   | { kind: "rack"; siteId: string; rack: Rack }
   | { kind: "item"; siteId: string; rack: Rack; item: RackItem };
 
 const FREE_CARD_WIDTH = 240;
 const FREE_CARD_HEIGHT = 74;
+const DEFAULT_SITE_ID = "default-fleet";
+
+type SiteDestination = "site" | "serverRooms" | "hosts" | "runHistory" | "automations";
 
 // A stable per-group tile colour (Sites don't store one); hashing the id
 // keeps a group's colour steady across reloads without a durable field.
@@ -155,10 +167,14 @@ export function SitesTab({
   const loadRacks = useItOpsStore((state) => state.loadRacks);
   const serverRoomsBySite = useItOpsStore((state) => state.serverRoomsBySite);
   const loadServerRooms = useItOpsStore((state) => state.loadServerRooms);
+  const removeSite = useItOpsStore((state) => state.removeSite);
   const deleteServerRoom = useItOpsStore((state) => state.deleteServerRoom);
+  const taskCount = useItOpsStore((state) => state.tasks.length);
 
   const [activeId, setActiveId] = useState<string | null>(null);
   const [drill, setDrill] = useState<DrillPath>(EMPTY_DRILL);
+  const [selectedDestination, setSelectedDestination] = useState<SiteDestination>("site");
+  const [rootSurface, setRootSurface] = useState<"site" | "tasks">("site");
   const [members, setMembers] = useState<ResolvedHost[]>([]);
   const [dialog, setDialog] = useState<{ group: Site | null } | null>(null);
   const [rackDialog, setRackDialog] = useState<{
@@ -176,7 +192,9 @@ export function SitesTab({
   const [itemDialog, setItemDialog] = useState<{
     rack: Rack;
     item: RackItem | null;
-    startU?: number;
+    kind?: RackItemKind;
+    /** Picker placement flow: arm the configured draft instead of placing. */
+    onConfigured?: (draft: RackItemDraft) => void;
   } | null>(null);
   const [bindingsDialog, setBindingsDialog] = useState<RackItem | null>(null);
   const [connectPopover, setConnectPopover] = useState<{
@@ -184,6 +202,7 @@ export function SitesTab({
     anchor: ConnectPopoverAnchor;
   } | null>(null);
   const moveRackItem = useItOpsStore((state) => state.moveRackItem);
+  const placeRackItem = useItOpsStore((state) => state.placeRackItem);
   const deleteRack = useItOpsStore((state) => state.deleteRack);
   const removeRackItem = useItOpsStore((state) => state.removeRackItem);
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
@@ -214,13 +233,12 @@ export function SitesTab({
         const siteId = nodeId.site(site.id);
         const siteRacks = racksBySite[site.id] ?? [];
         const siteTopo = groupRackTopology(siteRacks, serverRoomsBySite[site.id] ?? []);
-        if (siteRacks.length > 0) {
-          next.add(siteId);
-        }
+        // Every Site has the virtual Server Rooms / Hosts / Automations /
+        // Run History children, even when its topology is empty.
+        next.add(siteId);
+        next.add(`${siteId}:rooms`);
         for (const room of siteTopo) {
-          if (room.racks.length > 0) {
-            next.add(nodeId.serverRoom(site.id, room.key));
-          }
+          next.add(nodeId.serverRoom(site.id, room.key));
         }
       }
       return next;
@@ -315,15 +333,15 @@ export function SitesTab({
     };
   }, [activeGroup, resolveSite]);
 
-  // Load racks for every expanded Site node so the tree can show its topology.
+  // Load every Site's durable topology before deciding whether its tree row
+  // has children. Gating the request on expansion creates a deadlock for a
+  // restored collapsed row: unloaded data means no caret, so it cannot expand.
   useEffect(() => {
     for (const site of sites) {
-      if (isExpanded(nodeId.site(site.id))) {
-        if (!racksBySite[site.id]) void loadRacks(site.id);
-        if (!serverRoomsBySite[site.id]) void loadServerRooms(site.id);
-      }
+      if (!racksBySite[site.id]) void loadRacks(site.id);
+      if (!serverRoomsBySite[site.id]) void loadServerRooms(site.id);
     }
-  }, [sites, racksBySite, serverRoomsBySite, isExpanded, loadRacks, loadServerRooms]);
+  }, [sites, racksBySite, serverRoomsBySite, loadRacks, loadServerRooms]);
 
   const racks = useMemo(
     () => (activeGroup ? (racksBySite[activeGroup.id] ?? []) : []),
@@ -334,6 +352,9 @@ export function SitesTab({
     [activeGroup, serverRoomsBySite],
   );
   const topology = useMemo(() => groupRackTopology(racks, serverRooms), [racks, serverRooms]);
+  const topologyLoaded = activeGroup
+    ? racksBySite[activeGroup.id] !== undefined && serverRoomsBySite[activeGroup.id] !== undefined
+    : false;
   const selectedSiteIdForDialog = activeGroup?.id ?? sites[0]?.id ?? "";
   const selectedServerRoomForDialog =
     drill.serverRoom ?? (drill.rackId ? racks.find((rack) => rack.id === drill.rackId)?.serverRoom : undefined);
@@ -357,24 +378,96 @@ export function SitesTab({
 
   // Select a node: focus its Site, switch to the Rack view, and set the drill.
   function selectNode(siteId: string, next: DrillPath) {
+    setRootSurface("site");
     setActiveId(siteId);
+    setSelectedDestination("serverRooms");
     setDrill(next);
   }
 
-  function showPropertiesMenu(event: ReactMouseEvent<HTMLElement>, action: () => void) {
+  function selectSiteDestination(siteId: string, destination: SiteDestination) {
+    setRootSurface("site");
+    setActiveId(siteId);
+    setDrill(EMPTY_DRILL);
+    setSelectedDestination(destination);
+  }
+
+  function showTopologyMenu(
+    event: ReactMouseEvent<HTMLElement>,
+    {
+      onProperties,
+      onDelete,
+      deleteDisabled = false,
+      addAction,
+    }: {
+      onProperties: () => void;
+      onDelete: () => void;
+      deleteDisabled?: boolean;
+      addAction?: { label: string; action: () => void };
+    },
+  ) {
+    event.preventDefault();
+    event.stopPropagation();
+    const items: NativeContextMenuItem[] = [];
+    if (addAction) {
+      items.push({
+        kind: "item",
+        label: addAction.label,
+        iconSvg: nativeMenuIcons.plus,
+        action: addAction.action,
+      });
+    }
+    items.push(
+      {
+        kind: "item",
+        label: t("itops.actions.delete"),
+        iconSvg: nativeMenuIcons.trash,
+        disabled: deleteDisabled,
+        action: onDelete,
+      },
+      { kind: "separator" },
+      {
+        kind: "item",
+        label: t("common.properties"),
+        iconSvg: nativeMenuIcons.pencil,
+        action: onProperties,
+      },
+    );
+    void showNativeContextMenu(items, { x: event.clientX, y: event.clientY });
+  }
+
+  function showAddServerRoomMenu(event: ReactMouseEvent<HTMLElement>, siteId: string) {
     event.preventDefault();
     event.stopPropagation();
     void showNativeContextMenu(
       [
         {
           kind: "item",
-          label: t("common.properties"),
-          iconSvg: nativeMenuIcons.pencil,
-          action,
+          label: t("itops.racks.addServerRoomAction"),
+          iconSvg: nativeMenuIcons.plus,
+          action: () => setServerRoomDialog({ siteId, room: null }),
         },
       ],
       { x: event.clientX, y: event.clientY },
     );
+  }
+
+  // Armed picker placement: the configured Rack Device lands on the clicked U.
+  async function placeConfiguredDevice(rack: Rack, draft: RackItemDraft, startU: number) {
+    if (!activeGroup) return;
+    try {
+      await placeRackItem(activeGroup.id, {
+        rackId: rack.id,
+        connectionId: draft.connectionId,
+        kind: draft.kind,
+        label: draft.label,
+        startU,
+        heightU: draft.heightU,
+        metadata: draft.metadata,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      showStatusBarNotice(t("itops.errorNotice", { message }), { tone: "error" });
+    }
   }
 
   async function moveItem(itemId: string, targetRackId: string, startU: number) {
@@ -416,6 +509,14 @@ export function SitesTab({
     if (!pending) return;
     setPendingDelete(null);
     try {
+      if (pending.kind === "site") {
+        await removeSite(pending.site.id);
+        setActiveId(null);
+        setDrill(EMPTY_DRILL);
+        setSelectedDestination("site");
+        setRootSurface("site");
+        return;
+      }
       if (pending.kind === "serverRoom") {
         for (const rack of pending.racks) {
           await deleteRack(pending.siteId, rack.id);
@@ -439,19 +540,14 @@ export function SitesTab({
   if (loaded && sites.length === 0) {
     return (
       <>
-        <div className="it-empty">
-          <span className="glyph">
-            <ItIcon name="site" size={30} sw={1.5} />
-          </span>
-          <h2>{t("itops.sites.emptyTitle")}</h2>
-          <p>{t("itops.sites.emptyBody")}</p>
-          <button type="button" className="it-btn primary" onClick={() => setDialog({ group: null })}>
-            <span className="it-btn-ic">
-              <ItIcon name="plus" size={15} />
-            </span>
-            {t("itops.actions.newSite")}
-          </button>
-        </div>
+        <ItOpsEmptyHint>
+          <Trans
+            i18nKey="itops.sites.emptyHint"
+            components={{
+              newSite: <button type="button" onClick={() => setDialog({ group: null })} />,
+            }}
+          />
+        </ItOpsEmptyHint>
         {dialog ? (
           <SiteDialog
             group={dialog.group}
@@ -464,7 +560,9 @@ export function SitesTab({
   }
 
   // The deepest selected node id, for tree-row highlighting.
-  const selectedId = !activeGroup
+  const selectedId = rootSurface === "tasks"
+    ? "itops:tasks"
+    : !activeGroup
     ? ""
     : drill.rackId
       ? nodeId.rack(drill.rackId)
@@ -484,7 +582,7 @@ export function SitesTab({
   const q = query.trim().toLowerCase();
   const matchQ = (s: string) => !q || (s || t("itops.racks.unassigned")).toLowerCase().includes(q);
   const effectiveTreeWidth = treeCollapsed ? SITE_TREE_COLLAPSED_WIDTH : treeWidth;
-  const hasExpandableTreeNodes = sites.some((site) => (racksBySite[site.id] ?? []).length > 0);
+  const hasExpandableTreeNodes = sites.length > 0;
   const addTopologyMenu = !treeCollapsed ? (
     <div className="ft-add-wrap">
       <button
@@ -612,20 +710,36 @@ export function SitesTab({
                       customIcon={site}
                       label={site.name}
                       tint={groupColor(site.id)}
-                      hasChildren={siteRacks.length > 0}
+                      hasChildren
                       open={open}
-                      selected={selectedId === fId && drill.serverRoom == null}
+                      selected={activeId === site.id && selectedDestination === "site" && drill.serverRoom == null && rootSurface === "site"}
                       onToggle={() => toggleNode(fId)}
                       onSelect={() => {
-                        setActiveId(site.id);
-                        setDrill(EMPTY_DRILL);
+                        selectSiteDestination(site.id, "site");
                       }}
                       onContextMenu={(event) =>
-                        showPropertiesMenu(event, () => setDialog({ group: site }))
+                        showTopologyMenu(event, {
+                          onProperties: () => setDialog({ group: site }),
+                          onDelete: () => setPendingDelete({ kind: "site", site }),
+                          deleteDisabled: site.id === DEFAULT_SITE_ID,
+                        })
                       }
                     />
-                    {open
-                      ? siteTopo
+                    {open ? (
+                      <>
+                        <TreeRow
+                          depth={1}
+                          icon="room"
+                          label={t("itops.navigation.serverRooms")}
+                          count={siteTopo.length}
+                          hasChildren={siteTopo.length > 0}
+                          open={isExpanded(`${fId}:rooms`)}
+                          selected={activeId === site.id && selectedDestination === "serverRooms" && drill.serverRoom == null && rootSurface === "site"}
+                          onToggle={() => toggleNode(`${fId}:rooms`)}
+                          onSelect={() => selectSiteDestination(site.id, "serverRooms")}
+                          onContextMenu={(event) => showAddServerRoomMenu(event, site.id)}
+                        />
+                        {isExpanded(`${fId}:rooms`) ? siteTopo
                           .filter((room) => matchQ(room.key))
                           .map((room) => {
                             const mId = nodeId.serverRoom(site.id, room.key);
@@ -633,7 +747,7 @@ export function SitesTab({
                             return (
                               <div key={mId}>
                                 <TreeRow
-                                  depth={1}
+                                  depth={2}
                                   icon="room"
                                   customIcon={site.roomIcons?.[room.key]}
                                   label={room.key || t("itops.racks.unassigned")}
@@ -648,9 +762,26 @@ export function SitesTab({
                                   onContextMenu={
                                     room.room
                                       ? (event) =>
-                                          showPropertiesMenu(event, () =>
-                                            setServerRoomDialog({ siteId: site.id, room: room.room! }),
-                                          )
+                                          showTopologyMenu(event, {
+                                            addAction: {
+                                              label: t("itops.racks.addRackAction"),
+                                              action: () =>
+                                                setRackDialog({
+                                                  siteId: site.id,
+                                                  rack: null,
+                                                  defaultServerRoom: room.key,
+                                                }),
+                                            },
+                                            onProperties: () =>
+                                              setServerRoomDialog({ siteId: site.id, room: room.room! }),
+                                            onDelete: () =>
+                                              setPendingDelete({
+                                                kind: "serverRoom",
+                                                siteId: site.id,
+                                                room: room.room!,
+                                                racks: room.racks,
+                                              }),
+                                          })
                                       : undefined
                                   }
                                 />
@@ -658,7 +789,7 @@ export function SitesTab({
                                   ? room.racks.map((rack) => (
                                       <TreeRow
                                         key={rack.id}
-                                        depth={2}
+                                        depth={3}
                                         icon="rack"
                                         label={rack.name}
                                         hasChildren={false}
@@ -671,20 +802,29 @@ export function SitesTab({
                                           })
                                         }
                                         onContextMenu={(event) =>
-                                          showPropertiesMenu(event, () =>
-                                            setRackDialog({ siteId: site.id, rack }),
-                                          )
+                                          showTopologyMenu(event, {
+                                            onProperties: () =>
+                                              setRackDialog({ siteId: site.id, rack }),
+                                            onDelete: () =>
+                                              setPendingDelete({ kind: "rack", siteId: site.id, rack }),
+                                          })
                                         }
                                       />
                                     ))
                                   : null}
                               </div>
                             );
-                          })
-                      : null}
+                          }) : null}
+                        <TreeRow depth={1} icon="server" label={t("itops.tabs.hosts")} hasChildren={false} open={false} selected={activeId === site.id && selectedDestination === "hosts" && rootSurface === "site"} onSelect={() => selectSiteDestination(site.id, "hosts")} />
+                        <TreeRow depth={1} icon="auto" label={t("itops.tabs.autos")} hasChildren={false} open={false} selected={activeId === site.id && selectedDestination === "automations" && rootSurface === "site"} onSelect={() => selectSiteDestination(site.id, "automations")} />
+                        <TreeRow depth={1} icon="history" label={t("itops.navigation.runHistory")} hasChildren={false} open={false} selected={activeId === site.id && selectedDestination === "runHistory" && rootSurface === "site"} onSelect={() => selectSiteDestination(site.id, "runHistory")} />
+                      </>
+                    ) : null}
                   </div>
                 );
               })}
+              <div className="ft-tree-library-label">{t("itops.navigation.library")}</div>
+              <TreeRow depth={0} icon="code" label={t("itops.tasks.heading")} count={taskCount} hasChildren={false} open={false} selected={rootSurface === "tasks"} onSelect={() => setRootSurface("tasks")} />
             </div>
           </>
         ) : null}
@@ -695,10 +835,27 @@ export function SitesTab({
       </div>
 
       {/* ── Detail ── */}
-      {activeGroup ? (
+      {rootSurface === "tasks" ? (
+        <div className="hg-detail it-destination-page">
+        <TaskLibrary onOpenRunHistory={(siteId) => selectSiteDestination(siteId, "runHistory")} />
+        </div>
+      ) : activeGroup && selectedDestination === "hosts" ? (
+        <div className="hg-detail it-destination-page">
+          <HostsPanel siteId={activeGroup.id} />
+        </div>
+      ) : activeGroup && selectedDestination === "automations" ? (
+        <div className="hg-detail it-destination-page">
+          <AutomationsTab siteId={activeGroup.id} siteHosts={members.map((member) => member.host)} />
+        </div>
+      ) : activeGroup && selectedDestination === "runHistory" ? (
+        <div className="hg-detail it-destination-page">
+          <BatchRunsTab siteId={activeGroup.id} />
+        </div>
+      ) : activeGroup ? (
         <div className="hg-detail" data-tutorial-id="itops.siteView">
           <RackDrill
             topology={topology}
+            topologyLoaded={topologyLoaded}
             racks={racks}
             site={activeGroup}
             drill={drill}
@@ -707,20 +864,23 @@ export function SitesTab({
             roomIcons={activeGroup.roomIcons}
             hostForItem={hostForItem}
             isGhostItem={isGhostItem}
-            onSlotClick={(rack, startU) => setItemDialog({ rack, item: null, startU })}
+            onConfigureDevice={(rack, kind, arm) =>
+              setItemDialog({ rack, item: null, kind, onConfigured: arm })
+            }
+            onPlaceDevice={(rack, draft, startU) => void placeConfiguredDevice(rack, draft, startU)}
             onOpenItem={openRackItem}
             onEditItem={(rack, item) => setItemDialog({ rack, item })}
             onBindItem={setBindingsDialog}
             onMoveItem={(itemId, targetRackId, startU) => void moveItem(itemId, targetRackId, startU)}
-            onAddServerRoom={() =>
-              setServerRoomDialog({ siteId: activeGroup.id, room: null })
-            }
             onAddRack={(serverRoom) => {
               setRackDialog({
                 siteId: activeGroup.id,
                 rack: null,
                 defaultServerRoom: serverRoom,
               });
+            }}
+            onAddServerRoom={() => {
+              setServerRoomDialog({ siteId: activeGroup.id, room: null });
             }}
             onAddRackForPlacement={(serverRoom, onSaved) => {
               setRackDialog({
@@ -730,7 +890,6 @@ export function SitesTab({
                 onSaved,
               });
             }}
-            onAddRackItem={(rack, startU) => setItemDialog({ rack, item: null, startU })}
             onDeleteServerRoom={(serverRoom, roomRacks) => {
               const room = serverRooms.find((entry) => topologyGroupKey(entry.name) === topologyGroupKey(serverRoom));
               if (room) setPendingDelete({ kind: "serverRoom", siteId: activeGroup.id, room, racks: roomRacks });
@@ -789,9 +948,10 @@ export function SitesTab({
           siteId={activeGroup.id}
           rack={itemDialog.rack}
           item={itemDialog.item}
-          defaultStartU={itemDialog.startU}
+          defaultKind={itemDialog.kind}
           members={members}
           onClose={() => setItemDialog(null)}
+          onConfigured={itemDialog.onConfigured}
         />
       ) : null}
       {bindingsDialog && activeGroup ? (
@@ -809,14 +969,18 @@ export function SitesTab({
         <ConfirmSheet
           tone="danger"
           title={
-            pendingDelete.kind === "serverRoom"
+            pendingDelete.kind === "site"
+              ? t("itops.sites.deleteTitle")
+              : pendingDelete.kind === "serverRoom"
               ? t("itops.racks.deleteServerRoomTitle")
               : pendingDelete.kind === "rack"
                 ? t("itops.racks.deleteTitle")
                 : t("itops.racks.deleteItemTitle")
           }
           message={
-            pendingDelete.kind === "serverRoom"
+            pendingDelete.kind === "site"
+              ? t("itops.sites.deleteBody", { name: pendingDelete.site.name })
+              : pendingDelete.kind === "serverRoom"
               ? t("itops.racks.deleteServerRoomBody", {
                   name: pendingDelete.room.name,
                   count: pendingDelete.racks.length,
@@ -945,6 +1109,7 @@ function TreeRow({
 // ── Rack drill body ───────────────────────────────────────────────────────
 function RackDrill({
   topology,
+  topologyLoaded,
   racks,
   site,
   drill,
@@ -953,7 +1118,8 @@ function RackDrill({
   roomIcons,
   hostForItem,
   isGhostItem,
-  onSlotClick,
+  onConfigureDevice,
+  onPlaceDevice,
   onOpenItem,
   onEditItem,
   onBindItem,
@@ -961,12 +1127,12 @@ function RackDrill({
   onAddServerRoom,
   onAddRack,
   onAddRackForPlacement,
-  onAddRackItem,
   onDeleteServerRoom,
   onDeleteRack,
   onDeleteItem,
 }: {
   topology: ReturnType<typeof groupRackTopology>;
+  topologyLoaded: boolean;
   racks: Rack[];
   site: Site;
   drill: DrillPath;
@@ -975,7 +1141,11 @@ function RackDrill({
   roomIcons?: Record<string, ItOpsCustomIcon>;
   hostForItem: (item: RackItem) => string | null;
   isGhostItem: (item: RackItem) => boolean;
-  onSlotClick: (rack: Rack, startU: number) => void;
+  /** Picker flow: open the device dialog in configure mode; `arm` receives the
+   *  configured draft so the drill can start the cursor-tracked placement. */
+  onConfigureDevice: (rack: Rack, kind: RackItemKind, arm: (draft: RackItemDraft) => void) => void;
+  /** Armed placement click landed on `startU`: place the configured device. */
+  onPlaceDevice: (rack: Rack, draft: RackItemDraft, startU: number) => void;
   onOpenItem: (item: RackItem, anchor: HTMLElement) => void;
   onEditItem: (rack: Rack, item: RackItem) => void;
   onBindItem: (item: RackItem) => void;
@@ -985,7 +1155,6 @@ function RackDrill({
   /** Picker flow: open the New Rack dialog, hand the saved rack back for a
    *  placement click instead of drilling into it. */
   onAddRackForPlacement: (serverRoom: string, onSaved: (saved: Rack) => void) => void;
-  onAddRackItem: (rack: Rack, startU?: number) => void;
   onDeleteServerRoom: (serverRoom: string, racks: Rack[]) => void;
   onDeleteRack: (rack: Rack) => void;
   onDeleteItem: (rack: Rack, item: RackItem) => void;
@@ -999,16 +1168,49 @@ function RackDrill({
   const [backgroundOpen, setBackgroundOpen] = useState(false);
   const setServerRoomBackground = useItOpsStore((state) => state.setServerRoomBackground);
   const setSiteBackground = useItOpsStore((state) => state.setSiteBackground);
+  const discardRack = useItOpsStore((state) => state.deleteRack);
 
   // Server Room View layout: rack elevations (default), the blueprint floor
   // plan, or the 2.5D room. Persists app-wide.
   const [roomView, setRoomView] = useState<RoomViewMode>(loadRoomViewMode);
   useEffect(() => saveRoomViewMode(roomView), [roomView]);
 
+  // Host inventory for Rack View callouts.
+  const siteHosts = useItOpsStore((state) => state.hostsBySite[site.id]);
+  const loadHosts = useItOpsStore((state) => state.loadHosts);
+  useEffect(() => {
+    void loadHosts(site.id).catch(() => undefined);
+  }, [site.id, loadHosts]);
+
   // Picker column state shared by the two spatial layouts: the armed room
   // object kind, and a just-created rack awaiting its placement click.
   const [roomTool, setRoomTool] = useState<RoomTool>(null);
   const [placeRackId, setPlaceRackId] = useState<string | null>(null);
+  const placeRackIdRef = useRef(placeRackId);
+  placeRackIdRef.current = placeRackId;
+  const discardPendingRackRef = useRef<(rackId: string) => void>(() => undefined);
+  discardPendingRackRef.current = (rackId) => {
+    void discardRack(site.id, rackId).catch((error: unknown) => {
+      const message = error instanceof Error ? error.message : String(error);
+      showStatusBarNotice(t("itops.errorNotice", { message }), { tone: "error" });
+    });
+  };
+
+  function cancelRoomPlacement() {
+    const pendingRackId = placeRackIdRef.current;
+    placeRackIdRef.current = null;
+    setRoomTool(null);
+    setPlaceRackId(null);
+    if (pendingRackId) discardPendingRackRef.current(pendingRackId);
+  }
+
+  function completeRackPlacement() {
+    placeRackIdRef.current = null;
+    setPlaceRackId(null);
+  }
+  // Rack View and Server Room elevation picker: a configured Rack Device
+  // awaiting its placement click.
+  const [placeDevice, setPlaceDevice] = useState<RackItemDraft | null>(null);
 
   const serverRoom =
     drill.serverRoom != null
@@ -1026,9 +1228,28 @@ function RackDrill({
     setBackgroundOpen(false);
   }, [viewKey]);
   useEffect(() => {
+    const pendingRackId = placeRackIdRef.current;
+    placeRackIdRef.current = null;
     setRoomTool(null);
     setPlaceRackId(null);
+    setPlaceDevice(null);
+    if (pendingRackId) discardPendingRackRef.current(pendingRackId);
   }, [viewKey, editMode, roomView]);
+
+  // Server Room elevation placement: every cabinet listens document-wide while
+  // armed, so only the cabinet nearest the pointer carries the armed spec —
+  // otherwise a click landing between two adjacent cabinets would place the
+  // device into both. The room's tallest cabinet bounds the configure dialog.
+  const roomElevationsRef = useRef<HTMLDivElement | null>(null);
+  const roomPlaceRackId = useNearestPlacementRack(
+    editMode && roomView === "elevation" && serverRoom != null && rack == null && placeDevice != null,
+    roomElevationsRef,
+    () => setPlaceDevice(null),
+  );
+  const roomPickerRack = (serverRoom?.racks ?? []).reduce<Rack | null>(
+    (tallest, entry) => (tallest == null || entry.heightU > tallest.heightU ? entry : tallest),
+    null,
+  );
 
   const sitePlacementScope = siteLayoutScope(site.id);
   const [sitePlacements, setSitePlacements] = useState<FreePlacementMap>(() =>
@@ -1134,6 +1355,44 @@ function RackDrill({
     }, 500);
   }, [isoPlacementScope, roomName, saveDurableRoomObjects, showStatusBarNotice, site.id, t]);
 
+  // A 乖乖 pack resting on a cabinet top lives as the rack's single rack-top
+  // Rack Device — the same object the Rack View shows center top — never as a
+  // room object. Both room views hand rack-top drops here; the settle effect
+  // below migrates packs from older saves the same way.
+  const placeRackItemAction = useItOpsStore((state) => state.placeRackItem);
+  const kuaiguaiPlacingRef = useRef<Set<string>>(new Set());
+  const placeKuaiguaiOnRack = useCallback(
+    (target: Rack, corner?: Corner): boolean => {
+      if (
+        kuaiguaiPlacingRef.current.has(target.id) ||
+        target.items.some((item) => isRackTopItem(item, target.heightU))
+      ) {
+        return false;
+      }
+      kuaiguaiPlacingRef.current.add(target.id);
+      placeRackItemAction(site.id, {
+        rackId: target.id,
+        connectionId: null,
+        kind: "kuaiguai",
+        label: "",
+        startU: target.heightU + 1,
+        heightU: KUAIGUAI_TOP_CLEARANCE_U,
+        metadata: {
+          kuaiguaiSize: "large",
+          kuaiguaiStyle: "full",
+          rackTopCorner: corner,
+        },
+      })
+        .catch((error: unknown) => {
+          const message = error instanceof Error ? error.message : String(error);
+          showStatusBarNotice(t("itops.errorNotice", { message }), { tone: "error" });
+        })
+        .finally(() => kuaiguaiPlacingRef.current.delete(target.id));
+      return true;
+    },
+    [placeRackItemAction, showStatusBarNotice, site.id, t],
+  );
+
   useEffect(() => {
     if (!isoPlacementScope || roomRacks == null || roomObjects.length === 0) return;
     // Settle against the same resolved cells the room views draw (stored
@@ -1142,8 +1401,28 @@ function RackDrill({
     // would be yanked to the floor.
     const rackCells = resolveIsoLayout(roomRacks, isoPlacements).cells;
     const settled = settleRoomObjects(roomObjects, roomRacks, rackCells, roomFacing);
-    if (!sameRoomObjects(roomObjects, settled)) saveRoomObjectsState(settled);
-  }, [isoPlacementScope, roomObjects, roomRacks, isoPlacements, roomFacing, saveRoomObjectsState]);
+    // Rack-top 乖乖 packs from older saves become rack items; a pack whose
+    // cabinet top is already taken merges away instead of double-stacking.
+    const kept = settled.filter((object) => {
+      if (object.kind !== "kuaikuai") return true;
+      const support = rackTopSupport(
+        { x: object.x, y: object.y },
+        object.kind,
+        object.rot,
+        object.corner,
+        object.z,
+        roomRacks,
+        rackCells,
+        roomFacing,
+      );
+      if (!support) return true;
+      placeKuaiguaiOnRack(support, object.corner);
+      return false;
+    });
+    if (kept.length !== settled.length || !sameRoomObjects(roomObjects, settled)) {
+      saveRoomObjectsState(kept);
+    }
+  }, [isoPlacementScope, roomObjects, roomRacks, isoPlacements, roomFacing, placeKuaiguaiOnRack, saveRoomObjectsState]);
 
   function notifyObjectBlocked() {
     showStatusBarNotice(t("itops.floorPlan.objectNoSpace"), { tone: "warning" });
@@ -1203,8 +1482,15 @@ function RackDrill({
         key={r.id}
         rack={r}
         hostFor={hostForItem}
+        reserveTopU={KUAIGUAI_TOP_CLEARANCE_U}
         editMode={editMode}
-        onSlotClick={editMode ? (startU) => onSlotClick(r, startU) : undefined}
+        placeSpec={roomPlaceRackId === r.id ? placeDevice : null}
+        onPlaceAt={(startU) => {
+          if (!placeDevice) return;
+          onPlaceDevice(r, placeDevice, startU);
+          setPlaceDevice(null);
+        }}
+        onCancelPlacement={() => setPlaceDevice(null)}
         onOpenItem={onOpenItem}
         onEditItem={(item) => onEditItem(r, item)}
         onBindItem={onBindItem}
@@ -1214,31 +1500,6 @@ function RackDrill({
         isGhost={isGhostItem}
       />
     );
-  }
-
-  function firstAvailableStartU(targetRack: Rack) {
-    const occupied = new Set<number>();
-    for (const item of targetRack.items) {
-      for (let u = item.startU; u < item.startU + item.heightU; u += 1) {
-        occupied.add(u);
-      }
-    }
-    for (let u = 1; u <= targetRack.heightU; u += 1) {
-      if (!occupied.has(u)) return u;
-    }
-    return 1;
-  }
-
-  function handleAdd() {
-    if (rack) {
-      onAddRackItem(rack, firstAvailableStartU(rack));
-      return;
-    }
-    if (serverRoom) {
-      onAddRack(serverRoom.key);
-      return;
-    }
-    onAddServerRoom();
   }
 
   function kindLabel(kind: RackItem["kind"]) {
@@ -1370,6 +1631,18 @@ function RackDrill({
               </button>
             </div>
           ) : null}
+          {rack ? (
+            <div className="it-rack-toolbar-meta">
+              <strong>{rack.name}</strong>
+              <span>
+                {t("itops.racks.unitCount", { count: rack.heightU })}
+                {` · ${rack.depthMm} mm`}
+                {rack.items.length > 0
+                  ? ` · ${t("itops.racks.deviceCount", { count: rack.items.length })}`
+                  : ""}
+              </span>
+            </div>
+          ) : null}
           <div className="it-drill-actions" aria-label={t("itops.actions.viewActions")}>
             {!rack && !serverRoom && topology.length > 0 ? (
               <button
@@ -1392,78 +1665,100 @@ function RackDrill({
             >
               <ItIcon name={editMode ? "check" : "edit"} size={15} />
             </button>
-            <button
-              type="button"
-              className="it-drill-action"
-              title={
-                rack
-                  ? t("itops.racks.addItemTitle")
-                  : serverRoom
-                    ? t("itops.racks.addRack")
-                    : t("itops.racks.addServerRoom")
-              }
-              aria-label={
-                rack
-                  ? t("itops.racks.addItemTitle")
-                  : serverRoom
-                    ? t("itops.racks.addRack")
-                    : t("itops.racks.addServerRoom")
-              }
-              onClick={handleAdd}
-            >
-              <ItIcon name="plus" size={15} />
-            </button>
             <div className="it-drill-export">
               <button
-                type="button"
-                className="it-drill-action"
-                title={t("itops.actions.export")}
-                aria-label={t("itops.actions.export")}
-                aria-haspopup="menu"
-                aria-expanded={exportMenuOpen}
-                onClick={() => setExportMenuOpen((open) => !open)}
-              >
-                <ItIcon name="download" size={15} />
+                  type="button"
+                  className="it-drill-action"
+                  title={t("itops.actions.export")}
+                  aria-label={t("itops.actions.export")}
+                  aria-haspopup="menu"
+                  aria-expanded={exportMenuOpen}
+                  onClick={() => setExportMenuOpen((open) => !open)}
+                >
+                  <ItIcon name="share" size={15} />
               </button>
               {exportMenuOpen ? (
-                <>
-                  <div className="it-drill-menu-backdrop" onClick={() => setExportMenuOpen(false)} />
-                  <div className="it-drill-menu" role="menu">
-                    <button type="button" role="menuitem" onClick={() => void handleExport("pdf")}>
-                      <ItIcon name="book" size={14} />
-                      {t("itops.export.pdf")}
-                    </button>
-                    {rack ? (
-                      <button type="button" role="menuitem" onClick={() => void handleExport("excel")}>
-                        <ItIcon name="table" size={14} />
-                        {t("itops.export.excel")}
+                  <>
+                    <div className="it-drill-menu-backdrop" onClick={() => setExportMenuOpen(false)} />
+                    <div className="it-drill-menu" role="menu">
+                      <button type="button" role="menuitem" onClick={() => void handleExport("pdf")}>
+                        <ItIcon name="book" size={14} />
+                        {t("itops.export.pdf")}
                       </button>
-                    ) : null}
-                  </div>
-                </>
+                      {rack ? (
+                        <button type="button" role="menuitem" onClick={() => void handleExport("excel")}>
+                          <ItIcon name="table" size={14} />
+                          {t("itops.export.excel")}
+                        </button>
+                      ) : null}
+                    </div>
+                  </>
               ) : null}
             </div>
           </div>
         </div>
-        {racks.length === 0 ? (
-          <div className="card">
-            <div className="hg-dlg-empty">{t("itops.racks.empty")}</div>
+        {!topologyLoaded ? null : rack ? (
+          <div className="it-rack-layout">
+            <RackStage
+              rack={rack}
+              hosts={siteHosts}
+              hostFor={hostForItem}
+              isGhost={isGhostItem}
+              editMode={editMode}
+              onOpenItem={onOpenItem}
+              onEditItem={(item) => onEditItem(rack, item)}
+              onBindItem={onBindItem}
+              onMoveItem={editMode ? onMoveItem : undefined}
+              onDeleteItem={editMode ? (item) => onDeleteItem(rack, item) : undefined}
+              placeSpec={editMode ? placeDevice : null}
+              onPlaceAt={(startU) => {
+                if (!placeDevice) return;
+                onPlaceDevice(rack, placeDevice, startU);
+                setPlaceDevice(null);
+              }}
+              onCancelPlacement={() => setPlaceDevice(null)}
+            />
+            {rack.items.length === 0 && !editMode ? (
+              <ItOpsEmptyHint>
+                <Trans
+                  i18nKey="itops.racks.emptyRackHint"
+                  components={{
+                    editMode: (
+                      <button type="button" onClick={() => setEditMode(true)} />
+                    ),
+                  }}
+                />
+              </ItOpsEmptyHint>
+            ) : null}
+            {editMode ? (
+              <RackObjectPicker
+                racks={[rack]}
+                armedKind={placeDevice?.kind ?? null}
+                onPickDevice={(kind) => {
+                  // Clicking the armed card again disarms; any card re-opens
+                  // the configure dialog and re-arms with the new draft.
+                  if (placeDevice?.kind === kind) {
+                    setPlaceDevice(null);
+                    return;
+                  }
+                  onConfigureDevice(rack, kind, setPlaceDevice);
+                }}
+              />
+            ) : null}
           </div>
-        ) : rack ? (
-          <RackStage
-            rack={rack}
-            hostFor={hostForItem}
-            isGhost={isGhostItem}
-            editMode={editMode}
-            onSlotClick={editMode ? (startU) => onSlotClick(rack, startU) : undefined}
-            onOpenItem={onOpenItem}
-            onEditItem={(item) => onEditItem(rack, item)}
-            onBindItem={onBindItem}
-            onMoveItem={editMode ? onMoveItem : undefined}
-            onDeleteItem={editMode ? (item) => onDeleteItem(rack, item) : undefined}
-          />
         ) : serverRoom ? (
-          roomView === "iso" || roomView === "floor" ? (
+          serverRoom.racks.length === 0 ? (
+            <ItOpsEmptyHint>
+              <Trans
+                i18nKey="itops.racks.emptyServerRoomHint"
+                components={{
+                  addRack: (
+                    <button type="button" onClick={() => onAddRack(serverRoom.key)} />
+                  ),
+                }}
+              />
+            </ItOpsEmptyHint>
+          ) : roomView === "iso" || roomView === "floor" ? (
             <div className="rm-spatial">
               {roomView === "iso" ? (
                 <ServerRoomIsoView
@@ -1472,22 +1767,21 @@ function RackDrill({
                   floorColor={sanitizeIsoFloor(serverRoom.room?.floorColor)}
                   tool={roomTool}
                   placeRackId={placeRackId}
-                  onRackPlaced={() => setPlaceRackId(null)}
+                  onRackPlaced={completeRackPlacement}
+                  onObjectPlaced={() => setRoomTool(null)}
                   placement={isoPlacements}
                   onPlacementChange={saveIsoPlacements}
                   facing={roomFacing}
                   onFacingChange={editMode ? saveRoomFacingState : undefined}
                   objects={roomObjects}
                   onObjectsChange={editMode ? saveRoomObjectsState : undefined}
+                  onPlaceKuaiguai={editMode ? placeKuaiguaiOnRack : undefined}
                   onDeleteRack={editMode ? onDeleteRack : undefined}
                   onSelectRack={(rackId) => setDrill({ serverRoom: serverRoom.key, rackId })}
                   onAddRack={editMode ? () => onAddRack(serverRoom.key) : undefined}
                   onObjectBlocked={notifyObjectBlocked}
                   onOpenBackground={() => setBackgroundOpen(true)}
-                  onCancelPlacement={() => {
-                    setRoomTool(null);
-                    setPlaceRackId(null);
-                  }}
+                  onCancelPlacement={cancelRoomPlacement}
                 />
               ) : (
                 <ServerRoomFloorPlan
@@ -1495,34 +1789,33 @@ function RackDrill({
                   editMode={editMode}
                   tool={roomTool}
                   placeRackId={placeRackId}
-                  onRackPlaced={() => setPlaceRackId(null)}
+                  onRackPlaced={completeRackPlacement}
+                  onObjectPlaced={() => setRoomTool(null)}
                   placement={isoPlacements}
                   onPlacementChange={saveIsoPlacements}
                   facing={roomFacing}
                   onFacingChange={editMode ? saveRoomFacingState : undefined}
                   objects={roomObjects}
                   onObjectsChange={editMode ? saveRoomObjectsState : undefined}
+                  onPlaceKuaiguai={editMode ? placeKuaiguaiOnRack : undefined}
                   onDeleteRack={editMode ? onDeleteRack : undefined}
                   onSelectRack={(rackId) => setDrill({ serverRoom: serverRoom.key, rackId })}
                   onObjectBlocked={notifyObjectBlocked}
-                  onCancelPlacement={() => {
-                    setRoomTool(null);
-                    setPlaceRackId(null);
-                  }}
+                  onCancelPlacement={cancelRoomPlacement}
                 />
               )}
               {editMode ? (
                 <RoomObjectPicker
                   tool={roomTool}
                   onToolChange={(tool) => {
-                    setPlaceRackId(null);
+                    if (placeRackId != null) cancelRoomPlacement();
                     setRoomTool(tool);
                   }}
                   rackArmed={placeRackId != null}
                   onPickRack={() => {
                     setRoomTool(null);
                     if (placeRackId != null) {
-                      setPlaceRackId(null);
+                      cancelRoomPlacement();
                       return;
                     }
                     onAddRackForPlacement(serverRoom.key, (saved) => setPlaceRackId(saved.id));
@@ -1531,27 +1824,58 @@ function RackDrill({
               ) : null}
             </div>
           ) : (
-            groupRacksByGroup(serverRoom.racks).map((g) => (
-              <div className="rk-group" key={g.key}>
-                {groupRacksByGroup(serverRoom.racks).length > 1 || g.key ? (
-                  <div className="rk-group-h">{g.key || ungrouped}</div>
-                ) : null}
-                <div className="rk-row">{g.racks.map((r) => elevation(r))}</div>
+            <div className="rk-room-layout">
+              <div className="rk-elevations" ref={roomElevationsRef}>
+                {groupRacksByGroup(serverRoom.racks).map((g) => (
+                  <div className="rk-group" key={g.key}>
+                    {groupRacksByGroup(serverRoom.racks).length > 1 || g.key ? (
+                      <div className="rk-group-h">{g.key || ungrouped}</div>
+                    ) : null}
+                    <div className="rk-row">{g.racks.map((r) => elevation(r))}</div>
+                  </div>
+                ))}
               </div>
-            ))
+              {editMode ? (
+                <RackObjectPicker
+                  racks={serverRoom.racks}
+                  armedKind={placeDevice?.kind ?? null}
+                  onPickDevice={(kind) => {
+                    // Clicking the armed card again disarms; any card re-opens
+                    // the configure dialog and re-arms with the new draft.
+                    if (placeDevice?.kind === kind) {
+                      setPlaceDevice(null);
+                      return;
+                    }
+                    if (roomPickerRack) onConfigureDevice(roomPickerRack, kind, setPlaceDevice);
+                  }}
+                />
+              ) : null}
+            </div>
           )
+        ) : topology.length === 0 && !editMode ? (
+          <ItOpsEmptyHint>
+            <Trans
+              i18nKey="itops.sites.emptyServerRoomsHint"
+              components={{
+                addServerRoom: <button type="button" onClick={onAddServerRoom} />,
+              }}
+            />
+          </ItOpsEmptyHint>
         ) : (
-          <SiteRoomCards
-            rooms={topology}
-            roomIcons={roomIcons}
-            unassigned={unassigned}
-            editMode={editMode}
-            placement={sitePlacements}
-            onPlacementChange={saveSitePlacements}
-            onDeleteRoom={onDeleteServerRoom}
-            onSelectRoom={(room) => setDrill({ serverRoom: room.key, rackId: null })}
-            onOpenBackground={() => setBackgroundOpen(true)}
-          />
+          <div className="it-site-layout">
+            <SiteRoomCards
+              rooms={topology}
+              roomIcons={roomIcons}
+              unassigned={unassigned}
+              editMode={editMode}
+              placement={sitePlacements}
+              onPlacementChange={saveSitePlacements}
+              onDeleteRoom={onDeleteServerRoom}
+              onSelectRoom={(room) => setDrill({ serverRoom: room.key, rackId: null })}
+              onOpenBackground={() => setBackgroundOpen(true)}
+            />
+            {editMode ? <SiteObjectPicker onPickServerRoom={onAddServerRoom} /> : null}
+          </div>
         )}
       </ItOpsBackground>
       {backgroundOpen && ((serverRoom && roomView === "iso") || (!serverRoom && !rack)) ? (
@@ -1668,9 +1992,178 @@ function useFreeDrag(
   return { startDrag, moveDrag, endDrag };
 }
 
-// Site View is a free-form Server Room placement surface in both modes: cards
-// sit on a full-pane dot grid at their stored positions. Edit mode adds drag
-// and delete; right-clicking empty surface offers the Site background change.
+function SiteObjectPicker({ onPickServerRoom }: { onPickServerRoom: () => void }) {
+  const { t } = useTranslation();
+  const label = t("itops.racks.serverRoomLabel");
+
+  return (
+    <div className="rm-picker" role="group" aria-label={t("itops.floorPlan.pickerTitle")}>
+      <div className="rm-picker-h">{t("itops.floorPlan.pickerTitle")}</div>
+      <div className="rm-picker-grid">
+        <button
+          type="button"
+          className="rm-picker-card"
+          title={label}
+          onClick={onPickServerRoom}
+        >
+          <span className="rm-picker-thumb">
+            <ItIcon name="room" size={30} sw={1.3} />
+          </span>
+          <span className="rm-picker-name">{label}</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** While a Rack Device placement is armed over the Server Room elevation
+ *  rows, resolve which cabinet is nearest the pointer. Every armed
+ *  <RackElevation> listens document-wide, so the room arms only this one —
+ *  adjacent cabinets sit flush, and a click between two would otherwise place
+ *  the device into both. Escape / right-click disarm here too, covering the
+ *  moment before the first pointer move has picked a target cabinet. */
+function useNearestPlacementRack(
+  active: boolean,
+  containerRef: RefObject<HTMLDivElement | null>,
+  onCancel: () => void,
+): string | null {
+  const [rackId, setRackId] = useState<string | null>(null);
+  const cancelRef = useRef(onCancel);
+  cancelRef.current = onCancel;
+  useEffect(() => {
+    if (!active) {
+      setRackId(null);
+      return;
+    }
+    const track = (event: PointerEvent) => {
+      const container = containerRef.current;
+      if (!container) return;
+      let bestId: string | null = null;
+      let bestDistance = Infinity;
+      for (const node of container.querySelectorAll<HTMLElement>(".rk[data-rack-id]")) {
+        const rect = node.getBoundingClientRect();
+        const dx = Math.max(rect.left - event.clientX, event.clientX - rect.right, 0);
+        const dy = Math.max(rect.top - event.clientY, event.clientY - rect.bottom, 0);
+        const distance = Math.hypot(dx, dy);
+        if (distance < bestDistance) {
+          bestDistance = distance;
+          bestId = node.dataset.rackId ?? null;
+        }
+      }
+      setRackId(bestId);
+    };
+    const cancelFromContextMenu = (event: MouseEvent) => {
+      event.preventDefault();
+      cancelRef.current();
+    };
+    const cancelFromKeyboard = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      cancelRef.current();
+    };
+    document.addEventListener("pointermove", track, true);
+    document.addEventListener("contextmenu", cancelFromContextMenu, true);
+    document.addEventListener("keydown", cancelFromKeyboard, true);
+    return () => {
+      document.removeEventListener("pointermove", track, true);
+      document.removeEventListener("contextmenu", cancelFromContextMenu, true);
+      document.removeEventListener("keydown", cancelFromKeyboard, true);
+    };
+  }, [active, containerRef]);
+  return rackId;
+}
+
+function firstAvailableRackUnit(rack: Rack): number | null {
+  for (let unit = 1; unit <= rack.heightU; unit += 1) {
+    const occupied = rack.items.some(
+      (item) => unit >= item.startU && unit < item.startU + item.heightU,
+    );
+    if (!occupied) return unit;
+  }
+  return null;
+}
+
+function RackObjectPicker({
+  racks,
+  armedKind,
+  onPickDevice,
+}: {
+  /** Rack View passes its single Rack; the Server Room elevation layout passes
+   *  the whole room, and a card stays enabled while any cabinet has space. */
+  racks: Rack[];
+  /** The configured draft's kind while a placement click is armed. */
+  armedKind: RackItemKind | null;
+  onPickDevice: (kind: RackItemKind) => void;
+}) {
+  const { t } = useTranslation();
+  const [query, setQuery] = useState("");
+  const q = query.trim().toLowerCase();
+  const hasFreeUnit = racks.some((rack) => firstAvailableRackUnit(rack) != null);
+  const rackTopAvailable = racks.some(
+    (rack) => !rack.items.some((item) => isRackTopItem(item, rack.heightU)),
+  );
+  const kinds = RACK_ITEM_KINDS.filter(
+    (kind) => !q || t(`itops.racks.kind.${kind}`).toLowerCase().includes(q),
+  );
+
+  return (
+    <div
+      className="rm-picker rm-picker-devices"
+      role="group"
+      aria-label={t("itops.floorPlan.pickerTitle")}
+    >
+      <div className="rm-picker-h">{t("itops.floorPlan.pickerTitle")}</div>
+      <div className="rm-picker-search">
+        <ItIcon name="search" size={13} />
+        <input
+          type="text"
+          value={query}
+          placeholder={t("itops.floorPlan.pickerSearchPlaceholder")}
+          onChange={(event) => setQuery(event.currentTarget.value)}
+        />
+        {query ? (
+          <button type="button" className="rm-picker-search-x" onClick={() => setQuery("")}>
+            <ItIcon name="xmark" size={12} />
+          </button>
+        ) : null}
+      </div>
+      <div className="rm-picker-grid">
+        {kinds.map((kind) => {
+          const label = t(`itops.racks.kind.${kind}`);
+          const available = hasFreeUnit || (kind === "kuaiguai" && rackTopAvailable);
+          return (
+            <button
+              key={kind}
+              type="button"
+              className="rm-picker-card"
+              title={label}
+              aria-label={label}
+              data-active={armedKind === kind || undefined}
+              disabled={!available}
+              onClick={() => available && onPickDevice(kind)}
+            >
+              <span className="rm-picker-thumb device">
+                <RackDevice
+                  kind={kind}
+                  label={label}
+                  status="online"
+                  heightU={kind === "kuaiguai" ? 4 : 1}
+                  shell="black"
+                  seed={`picker-${kind}`}
+                  compact
+                />
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// Site View is a free-form Server Room placement surface in both modes. Edit
+// mode reveals the dot grid and adds drag/delete controls; right-clicking empty
+// surface offers the Site background change.
 function SiteRoomCards({
   rooms,
   roomIcons,
@@ -1714,7 +2207,7 @@ function SiteRoomCards({
 
   return (
     <div
-      className="it-free-surface site"
+      className={`it-free-surface site${editMode ? " editing" : ""}`}
       style={{ minHeight: freeSurfaceHeight(rooms.length, FREE_CARD_WIDTH, FREE_CARD_HEIGHT) }}
       onContextMenu={onOpenBackground ? handleSurfaceContextMenu : undefined}
     >

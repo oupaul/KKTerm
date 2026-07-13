@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { FolderOpen, Plus, RefreshCw, Terminal, Trash2 } from "../../lib/reicon";
+import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { Check, ChevronDown, FolderOpen, Link, Plus, RefreshCw, Terminal, Trash2 } from "../../lib/reicon";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { invokeCommand, isTauriRuntime } from "../../lib/tauri";
@@ -18,6 +18,11 @@ import {
 import { defaultTerminalSettings } from "../../app-defaults";
 import { currentPlatform } from "../../lib/platform";
 import { useWorkspaceStore } from "../../store";
+import {
+  DEFAULT_TERMINAL_COLOR_SCHEME_ID,
+  resolveTerminalColorScheme,
+  TERMINAL_COLOR_SCHEMES,
+} from "../workspace/connections/terminal/colorSchemes";
 import type { TerminalCursorStyle, TerminalSettings as TerminalSettingsType } from "../../types";
 import { localShellOptionsForPlatform, resolveAvailableLocalShell } from "../workspace/connections/utils";
 import { customShellPresetsForPlatform, findCustomShellPreset } from "./customShellPresets";
@@ -65,6 +70,31 @@ function normalizeTerminalSettingsDraft(settings: TerminalSettingsType, t: TFunc
     }))
     .filter((shell) => shell.name && shell.commandLine);
 
+  const hyperlinkRules = (settings.hyperlinkRules ?? [])
+    .map((rule) => ({
+      id: rule.id.trim() || makeHyperlinkRuleId(),
+      pattern: rule.pattern.trim(),
+      urlTemplate: rule.urlTemplate.trim(),
+    }))
+    .filter((rule) => rule.pattern || rule.urlTemplate);
+  for (const rule of hyperlinkRules) {
+    if (!rule.pattern || !rule.urlTemplate) {
+      throw new Error(t("settings.hyperlinkRuleIncomplete"));
+    }
+    try {
+      new RegExp(rule.pattern);
+    } catch {
+      throw new Error(t("settings.hyperlinkRuleInvalidPattern", { pattern: rule.pattern }));
+    }
+    if (!/^https?:\/\//.test(rule.urlTemplate)) {
+      throw new Error(t("settings.hyperlinkRuleUrlInvalid"));
+    }
+  }
+
+  const colorScheme = TERMINAL_COLOR_SCHEMES.some((scheme) => scheme.id === settings.colorScheme)
+    ? settings.colorScheme
+    : DEFAULT_TERMINAL_COLOR_SCHEME_ID;
+
   return {
     ...settings,
     fontFamily: settings.fontFamily.trim(),
@@ -75,6 +105,8 @@ function normalizeTerminalSettingsDraft(settings: TerminalSettingsType, t: TFunc
     useRandomDynamicBackground: settings.useRandomDynamicBackground ?? false,
     defaultShell: resolveAvailableLocalShell(settings.defaultShell, localShellOptionsForPlatform(customShells)),
     customShells,
+    colorScheme,
+    hyperlinkRules,
   };
 }
 
@@ -83,6 +115,128 @@ function makeCustomShellId() {
     return `custom-shell-${crypto.randomUUID()}`;
   }
   return `custom-shell-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+function makeHyperlinkRuleId() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return `hyperlink-rule-${crypto.randomUUID()}`;
+  }
+  return `hyperlink-rule-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+function TerminalColorSchemePicker({
+  label,
+  onChange,
+  value,
+}: {
+  label: string;
+  onChange: (value: string) => void;
+  value: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
+  const selectedOptionRef = useRef<HTMLButtonElement | null>(null);
+  const selectedScheme = resolveTerminalColorScheme(value);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    const frame = window.requestAnimationFrame(() => selectedOptionRef.current?.focus());
+    const closeFromOutside = (event: PointerEvent) => {
+      const target = event.target instanceof Node ? event.target : null;
+      if (target && !rootRef.current?.contains(target)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("pointerdown", closeFromOutside);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      document.removeEventListener("pointerdown", closeFromOutside);
+    };
+  }, [open]);
+
+  function handleOptionKeyDown(event: ReactKeyboardEvent<HTMLButtonElement>) {
+    const options = [...(rootRef.current?.querySelectorAll<HTMLButtonElement>("[role='option']") ?? [])];
+    const currentIndex = options.indexOf(event.currentTarget);
+    let nextIndex: number | null = null;
+    if (event.key === "ArrowDown") {
+      nextIndex = Math.min(currentIndex + 1, options.length - 1);
+    } else if (event.key === "ArrowUp") {
+      nextIndex = Math.max(currentIndex - 1, 0);
+    } else if (event.key === "Home") {
+      nextIndex = 0;
+    } else if (event.key === "End") {
+      nextIndex = options.length - 1;
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      setOpen(false);
+      buttonRef.current?.focus();
+      return;
+    }
+    if (nextIndex !== null) {
+      event.preventDefault();
+      options[nextIndex]?.focus();
+    }
+  }
+
+  return (
+    <div className={`terminal-scheme-picker${open ? " open" : ""}`} ref={rootRef}>
+      <button
+        aria-controls="settings-terminal-scheme-listbox"
+        aria-expanded={open}
+        aria-haspopup="listbox"
+        aria-label={label}
+        className="terminal-scheme-picker-trigger"
+        onClick={() => setOpen((current) => !current)}
+        ref={buttonRef}
+        style={{
+          backgroundColor: selectedScheme.palette.background,
+          color: selectedScheme.palette.foreground,
+        }}
+        type="button"
+      >
+        <span>{selectedScheme.name}</span>
+        <ChevronDown aria-hidden size={14} />
+      </button>
+      {open ? (
+        <div
+          aria-label={label}
+          className="terminal-scheme-picker-list"
+          id="settings-terminal-scheme-listbox"
+          role="listbox"
+        >
+          {TERMINAL_COLOR_SCHEMES.map((scheme) => {
+            const selected = scheme.id === value;
+            return (
+              <button
+                aria-selected={selected}
+                className="terminal-scheme-picker-option"
+                key={scheme.id}
+                onClick={() => {
+                  onChange(scheme.id);
+                  setOpen(false);
+                  buttonRef.current?.focus();
+                }}
+                onKeyDown={handleOptionKeyDown}
+                ref={selected ? selectedOptionRef : undefined}
+                role="option"
+                style={{
+                  backgroundColor: scheme.palette.background,
+                  color: scheme.palette.foreground,
+                }}
+                type="button"
+              >
+                <span>{scheme.name}</span>
+                {selected ? <Check aria-hidden size={14} /> : null}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 export function TerminalSettings() {
@@ -205,6 +359,36 @@ export function TerminalSettings() {
             }
           : shell,
       ),
+    }));
+  }
+
+  function handleAddHyperlinkRule() {
+    setDraft((settings) => ({
+      ...settings,
+      hyperlinkRules: [
+        ...(settings.hyperlinkRules ?? []),
+        {
+          id: makeHyperlinkRuleId(),
+          pattern: "",
+          urlTemplate: "",
+        },
+      ],
+    }));
+  }
+
+  function handleUpdateHyperlinkRule(ruleId: string, field: "pattern" | "urlTemplate", value: string) {
+    setDraft((settings) => ({
+      ...settings,
+      hyperlinkRules: (settings.hyperlinkRules ?? []).map((rule) =>
+        rule.id === ruleId ? { ...rule, [field]: value } : rule,
+      ),
+    }));
+  }
+
+  function handleRemoveHyperlinkRule(ruleId: string) {
+    setDraft((settings) => ({
+      ...settings,
+      hyperlinkRules: (settings.hyperlinkRules ?? []).filter((rule) => rule.id !== ruleId),
     }));
   }
 
@@ -384,6 +568,20 @@ export function TerminalSettings() {
               <option value="underline">{t("settings.underline")}</option>
             </select>
           </label>
+          <label className="terminal-color-scheme-setting">
+            <span>{t("settings.terminalColorScheme")}</span>
+            <TerminalColorSchemePicker
+              label={t("settings.terminalColorScheme")}
+              onChange={(colorScheme) => {
+                setDraft((settings) => ({
+                  ...settings,
+                  colorScheme,
+                }));
+              }}
+              value={draft.colorScheme}
+            />
+            <small className="field-hint">{t("settings.terminalColorSchemeHint")}</small>
+          </label>
         </div>
       </fieldset>
 
@@ -513,6 +711,84 @@ export function TerminalSettings() {
           <button className="toolbar-button" onClick={handleAddCustomShell} type="button">
             <Plus size={15} />
             {t("settings.addCustomShell")}
+          </button>
+        </div>
+      </fieldset>
+
+      <fieldset className="settings-subsection settings-fieldset">
+        <legend>{t("settings.terminalIntegrations")}</legend>
+        <div>
+          <p className="field-hint">{t("settings.terminalIntegrationsHint")}</p>
+        </div>
+        <div className="settings-toggle-list">
+          <label className="settings-toggle-row">
+            <ToggleSwitch
+              checked={draft.enableInlineImages}
+              onChange={(checked) =>
+                setDraft((settings) => ({ ...settings, enableInlineImages: checked }))
+              }
+            />
+            <span>
+              <strong>{t("settings.enableInlineImages")}</strong>
+              <small>{t("settings.enableInlineImagesHint")}</small>
+            </span>
+          </label>
+          <label className="settings-toggle-row">
+            <ToggleSwitch
+              checked={draft.allowTerminalNotifications}
+              onChange={(checked) =>
+                setDraft((settings) => ({ ...settings, allowTerminalNotifications: checked }))
+              }
+            />
+            <span>
+              <strong>{t("settings.allowTerminalNotifications")}</strong>
+              <small>{t("settings.allowTerminalNotificationsHint")}</small>
+            </span>
+          </label>
+        </div>
+      </fieldset>
+
+      <fieldset className="settings-subsection settings-fieldset">
+        <legend>{t("settings.hyperlinkRules")}</legend>
+        <div>
+          <p className="field-hint">{t("settings.hyperlinkRulesHint")}</p>
+        </div>
+        <div className="settings-toggle-list">
+          {(draft.hyperlinkRules ?? []).map((rule) => (
+            <div className="settings-custom-shell-row" key={rule.id}>
+              <Link size={16} aria-hidden />
+              <div className="settings-custom-shell-fields">
+                <label>
+                  <span>{t("settings.hyperlinkRulePattern")}</span>
+                  <input
+                    onChange={(event) => handleUpdateHyperlinkRule(rule.id, "pattern", event.currentTarget.value)}
+                    placeholder="[A-Z]+-\d+"
+                    value={rule.pattern}
+                  />
+                </label>
+                <label>
+                  <span>{t("settings.hyperlinkRuleUrl")}</span>
+                  <input
+                    onChange={(event) => handleUpdateHyperlinkRule(rule.id, "urlTemplate", event.currentTarget.value)}
+                    placeholder="https://tracker.example.com/browse/$0"
+                    value={rule.urlTemplate}
+                  />
+                </label>
+              </div>
+              <button
+                aria-label={t("settings.removeHyperlinkRule", { pattern: rule.pattern || t("settings.hyperlinkRule") })}
+                className="toolbar-button"
+                onClick={() => handleRemoveHyperlinkRule(rule.id)}
+                title={t("settings.removeHyperlinkRule", { pattern: rule.pattern || t("settings.hyperlinkRule") })}
+                type="button"
+              >
+                <Trash2 size={15} />
+              </button>
+            </div>
+          ))}
+          <button className="toolbar-button" onClick={handleAddHyperlinkRule} type="button">
+            <Plus size={15} />
+            {t("settings.addHyperlinkRule")}
           </button>
         </div>
       </fieldset>

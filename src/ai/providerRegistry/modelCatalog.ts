@@ -14,11 +14,12 @@ type AiProviderModelCatalog = Record<AiProviderKind, AiProviderModelCatalogEntry
 // moderation, or transcription models.
 export const AI_PROVIDER_MODEL_CATALOG: AiProviderModelCatalog = {
   openai: {
-    defaultModel: "gpt-5.5",
+    defaultModel: "gpt-5.6-luna",
     defaultReasoningEffort: "medium",
     models: [
-      { id: "gpt-5.5", label: "GPT-5.5", recommended: true, supportsImageInput: true },
-      { id: "gpt-5.5-pro", label: "GPT-5.5 Pro", recommended: true, supportsImageInput: true },
+      { id: "gpt-5.6-luna", label: "GPT-5.6 Luna", recommended: true, supportsImageInput: true },
+      { id: "gpt-5.6-terra", label: "GPT-5.6 Terra", recommended: true, supportsImageInput: true },
+      { id: "gpt-5.6-sol", label: "GPT-5.6 Sol", recommended: true, supportsImageInput: true },
       { id: "gpt-5.4-mini", label: "GPT-5.4 Mini", recommended: true, supportsImageInput: true },
       { id: "gpt-5.4", label: "GPT-5.4", supportsImageInput: true },
       { id: "gpt-5.4-pro", label: "GPT-5.4 Pro", supportsImageInput: true },
@@ -79,6 +80,7 @@ export const AI_PROVIDER_MODEL_CATALOG: AiProviderModelCatalog = {
     defaultModel: "grok-4.3",
     defaultReasoningEffort: "medium",
     models: [
+      { id: "grok-4.5", label: "Grok 4.5", recommended: true, supportsImageInput: true },
       { id: "grok-4.3", label: "Grok 4.3", recommended: true, supportsImageInput: true },
       { id: "grok-4.3-latest", label: "Grok 4.3 Latest", recommended: true, supportsImageInput: true },
       { id: "grok-4.1-fast", label: "Grok 4.1 Fast", recommended: true, supportsImageInput: true },

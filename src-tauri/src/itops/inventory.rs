@@ -28,7 +28,17 @@ pub fn normalize_metadata(mut metadata: RackItemMetadata) -> RackItemMetadata {
     trim_string(&mut metadata.shell);
     trim_string(&mut metadata.expiry);
     trim_string(&mut metadata.vendor);
+    trim_string(&mut metadata.form_factor);
+    trim_string(&mut metadata.server_panel_style);
     trim_string(&mut metadata.kuaiguai_size);
+    trim_string(&mut metadata.host_id);
+
+    metadata.form_factor = metadata
+        .form_factor
+        .filter(|value| matches!(value.as_str(), "rack" | "tower"));
+    metadata.server_panel_style = metadata
+        .server_panel_style
+        .filter(|value| matches!(value.as_str(), "default" | "style1" | "style2"));
 
     if let Some(tags) = metadata.tags.take() {
         let tags = tags
@@ -78,6 +88,7 @@ pub fn normalize_metadata(mut metadata: RackItemMetadata) -> RackItemMetadata {
 
     // A 0 W draw carries no information for the power heatmap; store as unset.
     metadata.power_w = metadata.power_w.filter(|watts| *watts > 0);
+    metadata.rack_top_corner = metadata.rack_top_corner.filter(|corner| *corner <= 3);
 
     metadata
 }
@@ -94,7 +105,10 @@ mod inventory_tests {
             "connectionIds": ["conn-1", "conn-1", "conn-2"],
             "networkPorts": ["1:gigabit", "2:10g"],
             "snmp": "public@192.0.2.10:1.3.6.1.2.1.2",
-            "vendor": "Dell"
+            "vendor": "Dell",
+            "formFactor": "tower",
+            "serverPanelStyle": "style1",
+            "rackTopCorner": 3
         }))
         .expect("legacy metadata should deserialize");
 
@@ -105,5 +119,8 @@ mod inventory_tests {
         assert_eq!(normalized.network_ports.unwrap()[1].speed, "10g");
         assert_eq!(normalized.snmp.unwrap().target, "192.0.2.10");
         assert_eq!(normalized.vendor.unwrap(), "Dell");
+        assert_eq!(normalized.form_factor.as_deref(), Some("tower"));
+        assert_eq!(normalized.server_panel_style.as_deref(), Some("style1"));
+        assert_eq!(normalized.rack_top_corner, Some(3));
     }
 }

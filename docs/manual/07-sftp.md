@@ -12,6 +12,8 @@ SFTP is not a standalone Connection kind. Open an SFTP browser popup from an SSH
 
 The SSH Pane toolbar popup behaves the same whether the top Tab Strip is visible or hidden.
 
+**Start folders.** The SSH-toolbar popup opens its remote pane at the SSH session's current working directory when the remote shell reports one (OSC 7); otherwise it opens at the remote home directory. Its local pane reopens the last local folder browsed for that SSH Connection (remembered in localStorage per Connection), falling back to the home directory. A standalone FTP/FTPS/SFTP Connection Tab opens its local pane at the Connection's `connections.ftpLocalPath` and its remote pane at `connections.ftpRemotePath` (see [03-connections.md](03-connections.md)); when either is empty — or the configured folder cannot be opened — the pane falls back to the local home directory or the server's default directory respectively.
+
 Startup states:
 
 - `sftp.connecting`

@@ -10,7 +10,14 @@
 // physical-hardware palette, like the terminal surfaces); status/accent colour
 // reads the shared theme tokens.
 
-import type { RackItemKind, RackItemStatus, RackShell } from "../../types";
+import type {
+  RackItemKind,
+  RackItemStatus,
+  RackServerFormFactor,
+  RackServerPanelStyle,
+  RackShell,
+} from "../../types";
+import { KuaiKuaiBag, type KuaiKuaiStyle } from "./KuaiKuaiBag";
 
 export interface RackDeviceProps {
   kind: RackItemKind;
@@ -26,6 +33,11 @@ export interface RackDeviceProps {
   rotation?: number | null;
   yaw?: number | null;
   kuaiguaiSize?: "small" | "regular" | "large" | null;
+  kuaiguaiStyle?: KuaiKuaiStyle | null;
+  formFactor?: RackServerFormFactor | null;
+  serverPanelStyle?: RackServerPanelStyle | null;
+  /** Dense object-picker rendering that leaves more room for the faceplate name. */
+  compact?: boolean;
   heightU: number;
   /** User accent override; falls back to the per-kind device colour. */
   accent?: string | null;
@@ -49,8 +61,7 @@ const KIND_ACCENT: Record<RackItemKind, string> = {
   patchPanel: "#8e8e93",
   blank: "#48484a",
   label: "#48484a",
-  general: "#8e8e93",
-  equipment: "#8e8e93",
+  genericDevice: "#8e8e93",
   kuaiguai: "#30d158",
 };
 
@@ -97,7 +108,10 @@ export function RackDevice({
   expiry,
   rotation,
   yaw,
-  kuaiguaiSize,
+  kuaiguaiStyle,
+  formFactor,
+  serverPanelStyle,
+  compact = false,
   heightU,
   accent,
   shell,
@@ -108,8 +122,10 @@ export function RackDevice({
   const devAccent = accent || KIND_ACCENT[kind] || "#8e8e93";
 
   const isPanel = kind === "patchPanel";
-  const isBlank = kind === "blank" || kind === "label";
-  const isEquip = kind === "general" || kind === "equipment";
+  const isBlankPlate = kind === "blank";
+  const isLabel = kind === "label";
+  const isBlank = isBlankPlate || isLabel;
+  const isGenericDevice = kind === "genericDevice";
   const isKuaiguai = kind === "kuaiguai";
   const isServer = kind === "server" || kind === "connection";
   const isStorage = kind === "storage";
@@ -119,22 +135,49 @@ export function RackDevice({
   const isPdu = kind === "pdu";
   const isUps = kind === "ups";
   const isKvm = kind === "kvm";
+  const panelStyle = kind === "server" ? serverPanelStyle ?? "default" : "default";
+  const serverHeightBand = heightU >= 5 ? "chassis" : heightU >= 3 ? "dense" : "compact";
+  const serverTopRatio = Math.min(40, 200 / Math.max(1, heightU));
+
+  if (isKuaiguai) {
+    return (
+      <div
+        className="rkd rkd-kuaiguai-only"
+        data-kuaiguai-size="large"
+        data-kuaiguai-style={kuaiguaiStyle ?? "full"}
+        style={{
+          ["--rkd-rotate" as string]: `${rotation ?? -2}deg`,
+          ["--rkd-yaw" as string]: `${yaw ?? 0}deg`,
+        }}
+      >
+        <KuaiKuaiBag style={kuaiguaiStyle ?? "full"} expiry={expiry} />
+      </div>
+    );
+  }
 
   const statusLed = STATUS_LED[status];
   const statusGlow = STATUS_GLOW[status];
-  const powerColor = offline ? "#5a2422" : "var(--green)";
-  const powerGlow = offline ? "transparent" : "rgba(50,215,75,.55)";
   const ledStatusClass = status === "warning" ? "led-warn" : offline ? "" : "led-ok";
-  const ledPowerClass = offline ? "" : "led-ok";
 
-  const portCap = isPanel ? 24 : isSwitch ? 24 : 8;
+  let portCap = isPanel || isSwitch ? 24 : 8;
+  if (compact) portCap = isSwitch ? 6 : 4;
   const drawPorts = Math.min(ports || (isSwitch ? 12 : isRouter ? 5 : 0), portCap);
   const portList = Array.from({ length: drawPorts }, (_, i) => {
     const active = !offline && rand() > 0.34;
     return { active, color: active ? "var(--green)" : "var(--rkd-dim)", blk: active ? `blk-${(i % 5) + 1}` : "" };
   });
 
-  const drawDisks = Math.min(disks || (isServer ? 4 : isStorage ? 8 : 0), Math.max(1, heightU) * 24);
+  // Storage bays are a fixed physical size (see itops.css): the 300px cabinet
+  // gives every device the same face width and column count, and a taller
+  // chassis simply stacks more rows. Cap the drive count to the rows that fit
+  // the device height so a dense array (e.g. a 4U/64-drive box) fills the face
+  // instead of overflowing past its clipped top and bottom edges. ~26px/U,
+  // ~12px per bay row; ~8 bay columns across the fixed-width face.
+  const maxStorageRows = Math.max(1, Math.floor((Math.max(1, heightU) * 26 - 4) / 12));
+  const drawDisks = Math.min(
+    disks || (isServer ? 4 : isStorage ? 8 : 0),
+    compact ? 4 : isStorage ? 8 * maxStorageRows : Math.max(1, heightU) * 24,
+  );
   const diskList = Array.from({ length: drawDisks }, (_, i) => {
     const busy = !offline && rand() > 0.42;
     return {
@@ -144,13 +187,17 @@ export function RackDevice({
     };
   });
 
-  const panelPorts = isPanel ? Array.from({ length: Math.min(ports || 24, 24) }, (_, i) => i) : [];
-  const outlets = isPdu ? [0, 1, 2, 3, 4, 5] : [];
-  const fwBars = isFirewall ? [0, 1, 2, 3, 4, 5].map((i) => `fwb-${(i % 3) + 1}`) : [];
+  const panelPorts = isPanel
+    ? Array.from({ length: Math.min(ports || 24, compact ? 4 : 24) }, (_, i) => i)
+    : [];
+  const outlets = isPdu ? (compact ? [0, 1, 2] : [0, 1, 2, 3, 4, 5]) : [];
+  const fwBars = isFirewall
+    ? (compact ? [0, 1, 2, 3] : [0, 1, 2, 3, 4, 5]).map((i) => `fwb-${(i % 3) + 1}`)
+    : [];
 
   const batteryPct = Math.max(0, Math.min(100, battery ?? (offline ? 0 : 88)));
   const cells = isUps
-    ? [0, 1, 2, 3, 4].map((i) => {
+    ? (compact ? [0, 1, 2] : [0, 1, 2, 3, 4]).map((i) => {
         const on = batteryPct > i * 20 + 4;
         const col = batteryPct < 30 ? "var(--amber)" : "var(--green)";
         return on ? col : "var(--rkd-cell-off)";
@@ -162,7 +209,7 @@ export function RackDevice({
   const loadPct = Math.max(2, Math.min(100, load ?? 62));
 
   const channels = isKvm
-    ? [1, 2, 3, 4].map((n) => {
+    ? (compact ? [1, 2] : [1, 2, 3, 4]).map((n) => {
         const sel = n === 1;
         return {
           n,
@@ -173,19 +220,24 @@ export function RackDevice({
       })
     : [];
 
-  const hasName = !!label && !isBlank;
+  const hasName = !!label && !isBlankPlate;
   const showLeds = !isBlank && !isPanel && !isKuaiguai;
-  const showMeta = !isBlank && !isKuaiguai;
 
   return (
     <div
       className="rkd"
       data-shell={shell ?? undefined}
-      data-kuaiguai-size={isKuaiguai ? kuaiguaiSize ?? "regular" : undefined}
+      data-compact={compact || undefined}
+      data-form-factor={isServer ? formFactor ?? "rack" : undefined}
+      data-server-panel-style={kind === "server" ? panelStyle : undefined}
+      data-server-height-band={kind === "server" ? serverHeightBand : undefined}
+      data-kuaiguai-size={isKuaiguai ? "large" : undefined}
       style={{
         ["--rkd-accent" as string]: devAccent,
         ["--rkd-rotate" as string]: `${rotation ?? -2}deg`,
         ["--rkd-yaw" as string]: `${yaw ?? 0}deg`,
+        ["--rkd-server-top" as string]: `${serverTopRatio}%`,
+        ["--rkd-server-top-mid" as string]: `${serverTopRatio / 2}%`,
       }}
     >
       {/* left rack ear */}
@@ -195,13 +247,75 @@ export function RackDevice({
       </div>
 
       <div className="rkd-body">
+        {kind === "server" && panelStyle === "style1" ? (
+          <div className="rkd-server-style1" data-height-band={serverHeightBand} aria-hidden="true">
+            <span className="rkd-server-style1-control" />
+            <div className="rkd-server-style1-center">
+              <div className="rkd-server-style1-bays">
+                {Array.from({ length: Math.max(8, Math.min(12, diskList.length)) }, (_, i) => (
+                  <span className="rkd-server-style1-bay" key={i}>
+                    <i className={i % 3 === 0 ? `blk-${(i % 5) + 1}` : undefined} />
+                  </span>
+                ))}
+              </div>
+              <svg
+                className="rkd-server-style1-lattice"
+                viewBox={serverHeightBand === "compact" ? "0 0 180 40" : "0 0 180 84"}
+                preserveAspectRatio="none"
+              >
+                <g fill="none" stroke="currentColor" strokeWidth="4">
+                  <path d="M-8 20 2 2h22l10 18-10 18H2Z" />
+                  <path d="M32 20 42 2h22l10 18-10 18H42Z" />
+                  <path d="M72 20 82 2h22l10 18-10 18H82Z" />
+                  <path d="M112 20 122 2h22l10 18-10 18h-22Z" />
+                  <path d="M152 20 162 2h22l10 18-10 18h-22Z" />
+                  {serverHeightBand === "compact" ? null : (
+                    <>
+                      <path d="M12 62 22 44h22l10 18-10 18H22Z" />
+                      <path d="M52 62 62 44h22l10 18-10 18H62Z" />
+                      <path d="M92 62 102 44h22l10 18-10 18h-22Z" />
+                      <path d="M132 62 142 44h22l10 18-10 18h-22Z" />
+                      <path d="M172 62 182 44h22l10 18-10 18h-22Z" />
+                    </>
+                  )}
+                </g>
+                <path
+                  className="rkd-server-style1-mark"
+                  d={serverHeightBand === "compact" ? "m81 20 6-6h6l6 6-6 6h-6Z" : "m81 42 6-6h6l6 6-6 6h-6Z"}
+                />
+              </svg>
+              {serverHeightBand === "chassis" ? (
+                <div className="rkd-server-style1-lower">
+                  {Array.from({ length: 6 }, (_, i) => (
+                    <span className={i % 3 === 1 ? "short" : "tall"} key={i}><i /></span>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+            <span className="rkd-server-style1-io"><i /><i /><i /></span>
+          </div>
+        ) : kind === "server" && panelStyle === "style2" ? (
+          <div className="rkd-server-style2" aria-hidden="true">
+            <span className="rkd-server-style2-bezel left" />
+            <div className="rkd-server-style2-core">
+              <div className="rkd-server-style2-bays top">
+                {Array.from({ length: 12 }, (_, i) => <i key={i} />)}
+              </div>
+              <span className="rkd-server-style2-rail upper" />
+              <span className="rkd-server-style2-badge" />
+              <span className="rkd-server-style2-rail lower" />
+              <div className="rkd-server-style2-bays bottom">
+                {Array.from({ length: Math.max(8, Math.min(12, diskList.length)) }, (_, i) => (
+                  <i key={i} />
+                ))}
+              </div>
+            </div>
+            <span className="rkd-server-style2-bezel right" />
+          </div>
+        ) : null}
+
         {showLeds ? (
           <div className="rkd-leds">
-            <span
-              className={ledPowerClass}
-              title="power"
-              style={{ background: powerColor, boxShadow: `0 0 6px ${powerGlow}` }}
-            />
             <span
               className={ledStatusClass}
               title="status"
@@ -218,18 +332,6 @@ export function RackDevice({
         ) : null}
 
         <div className="rkd-visual">
-
-          {/* 乖乖 novelty keep-good-luck package */}
-          {isKuaiguai ? (
-            <div className="rkd-kuaiguai" title={expiry ? `Expires ${expiry}` : undefined}>
-              <div className="rkd-kk-pack">
-                <span className="rkd-kk-brand">KK</span>
-                <span className="rkd-kk-name">乖乖</span>
-                <span className="rkd-kk-art">◕‿◕</span>
-                {expiry ? <span className="rkd-kk-exp">EXP {expiry}</span> : null}
-              </div>
-            </div>
-          ) : null}
 
           {/* SWITCH */}
           {isSwitch ? (
@@ -293,8 +395,8 @@ export function RackDevice({
           ) : null}
 
           {/* SERVER / CONNECTION */}
-          {isServer ? (
-            <div className="rkd-server">
+          {isServer && panelStyle === "default" ? (
+            <div className="rkd-server" data-panel-style={panelStyle}>
               <div className="rkd-disks-row">
                 {diskList.map((disk, i) => (
                   <span className="rkd-disk-bay" key={i}>
@@ -393,11 +495,11 @@ export function RackDevice({
             </div>
           ) : null}
 
-          {/* EQUIPMENT / GENERAL */}
-          {isEquip ? (
+          {/* GENERIC DEVICE */}
+          {isGenericDevice ? (
             <div className="rkd-equip">
               <div className="rkd-vent flex" />
-              <span className="rkd-equip-label">{kind === "equipment" ? "Equipment" : "Device"}</span>
+              <span className="rkd-equip-label">{label}</span>
             </div>
           ) : null}
 
@@ -408,12 +510,6 @@ export function RackDevice({
             </div>
           ) : null}
         </div>
-
-        {showMeta ? (
-          <div className="rkd-meta">
-            <span className="rkd-status-dot" style={{ background: statusLed }} title={status} />
-          </div>
-        ) : null}
       </div>
     </div>
   );

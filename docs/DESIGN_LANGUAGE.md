@@ -66,6 +66,17 @@ When adding a Module, add its `ModuleKind` and tint to the shared template, use
 that template for the Module header, and reuse the same `ModuleIconTile` wherever
 Settings represents that Module.
 
+### IT Ops destination pages
+
+IT Ops has a Module-internal destination-page contract in
+`docs/ITOPS.md` → **IT Ops destination-page UI contract**. Read it before
+adding or redesigning Hosts, Automations, Run History, Task Library, or any new
+non-spatial IT Ops destination. Those pages share one inset, compact
+title/description header, stable right-aligned actions, optional toolbar, and
+bordered-row rhythm. Site, Server Room, and Rack drill-down views are the
+documented spatial-canvas exception; their empty setup states use explanatory
+text with inline action links rather than isolated primary buttons.
+
 ## Dialog primitives — `src/app/ui/dialog/`
 
 Build dialogs from these typed primitives instead of bespoke markup. Import from
@@ -199,3 +210,5 @@ Copy Path / Get Info. Reuse `FilePane` and these patterns for new browser UIs.
 5. Route every string through `t()`; add `en.json` keys + a
    `docs/localization_todo/` pending file (see that README).
 6. Verify in Default and Dark plus one extra scheme in the real Tauri runtime.
+7. For IT Ops, apply the destination-page contract in `docs/ITOPS.md` and review
+   Hosts, Automations, Run History, and Task Library together for drift.

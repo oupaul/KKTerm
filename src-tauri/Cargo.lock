@@ -3618,6 +3618,7 @@ version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "20226e8e12da999061891e6ebd51647063d0d96a69ce28a31a866248b5e2b403"
 dependencies = [
+ "ironrdp-cliprdr",
  "ironrdp-connector",
  "ironrdp-core",
  "ironrdp-graphics",
@@ -3642,6 +3643,19 @@ name = "ironrdp-bulk"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2e548d9fd162558a5a8aaed72e528556ce88e77773634e3722b8d01d6f170388"
+
+[[package]]
+name = "ironrdp-cliprdr"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d6aa0a35408ce5100b0aabb1bb596379d4f730f23a032122c19e93ff3bbc4f5f"
+dependencies = [
+ "bitflags 2.13.0",
+ "ironrdp-core",
+ "ironrdp-pdu",
+ "ironrdp-svc",
+ "tracing",
+]
 
 [[package]]
 name = "ironrdp-connector"
@@ -4047,7 +4061,7 @@ checksum = "e2db585e1d738fc771bf08a151420d3ed193d9d895a36df7f6f8a9456b911ddc"
 
 [[package]]
 name = "kkterm"
-version = "0.1.116"
+version = "0.1.120"
 dependencies = [
  "aes-gcm 0.10.3",
  "anyhow",

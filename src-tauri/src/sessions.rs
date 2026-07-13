@@ -146,6 +146,14 @@ pub struct CaptureTmuxPaneRequest {
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct TmuxCurrentPathRequest {
+    #[serde(flatten)]
+    pub connection: TmuxConnectionRequest,
+    pub tmux_session_id: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SetTmuxSessionMouseRequest {
     #[serde(flatten)]
     pub connection: TmuxConnectionRequest,
@@ -1174,6 +1182,23 @@ impl SessionManager {
             &request.connection,
             tmux_capture_pane_command(&tmux_session_id, ssh_buffer_lines_for(request.buffer_lines)),
         )
+    }
+
+    pub fn tmux_current_path(
+        &self,
+        app: AppHandle,
+        secrets: &secrets::Secrets,
+        request: TmuxCurrentPathRequest,
+    ) -> Result<String, String> {
+        let tmux_session_id = required_tmux_session_id(request.tmux_session_id)?;
+        Ok(run_tmux_command(
+            app,
+            secrets,
+            &request.connection,
+            tmux_current_path_command(&tmux_session_id),
+        )?
+        .trim()
+        .to_string())
     }
 
     pub fn inspect_ssh_system_context(
@@ -2288,6 +2313,13 @@ fn tmux_capture_pane_command(tmux_session_id: &str, buffer_lines: u32) -> String
     )
 }
 
+fn tmux_current_path_command(tmux_session_id: &str) -> String {
+    format!(
+        "if ! command -v tmux >/dev/null 2>&1; then printf 'tmux is not available on the remote host\\n' >&2; exit 127; fi; tmux display-message -p -t {}: '#{{pane_current_path}}'",
+        shell_single_quote(tmux_session_id),
+    )
+}
+
 fn remote_os_detect_command() -> String {
     // Lightweight, POSIX-sh probe: the os-release ID/ID_LIKE and kernel name pick
     // a bundled distro/OS logo for the common case. A device-tree MODEL catches
@@ -2491,10 +2523,9 @@ fn psmux_list_format() -> &'static str {
 
 fn is_powershell_family_program(program: &str) -> bool {
     let lower = program.to_ascii_lowercase();
-    let name = std::path::Path::new(&lower)
-        .file_name()
-        .and_then(|value| value.to_str())
-        .unwrap_or(lower.as_str());
+    // Split on both separators explicitly: these are Windows program paths, and
+    // std::path::Path only treats `\` as a separator on Windows hosts.
+    let name = lower.rsplit(['/', '\\']).next().unwrap_or(lower.as_str());
     matches!(name, "powershell.exe" | "pwsh.exe" | "powershell" | "pwsh")
 }
 
@@ -3722,9 +3753,15 @@ mod tests {
 
         let resolved = resolve_managed_terminal_environment(&variable, root.path())
             .expect("managed environment resolves");
+        // The app data folder name matches the resolver: "KKTerm" on Windows,
+        // lowercase "kkterm" elsewhere.
         let expected = root
             .path()
-            .join("KKTerm")
+            .join(if cfg!(target_os = "windows") {
+                "KKTerm"
+            } else {
+                "kkterm"
+            })
             .join("cli-accounts")
             .join("claude-code")
             .join("work");
@@ -3835,6 +3872,22 @@ mod tests {
         assert_eq!(
             tmux_capture_pane_command("kkterm-test", 12_000),
             "if ! command -v tmux >/dev/null 2>&1; then printf 'tmux is not available on the remote host\\n' >&2; exit 127; fi; tmux capture-pane -p -S -12000 -t 'kkterm-test':"
+        );
+    }
+
+    #[test]
+    fn tmux_current_path_command_targets_active_pane_path() {
+        assert_eq!(
+            tmux_current_path_command("kkterm-test"),
+            "if ! command -v tmux >/dev/null 2>&1; then printf 'tmux is not available on the remote host\\n' >&2; exit 127; fi; tmux display-message -p -t 'kkterm-test': '#{pane_current_path}'"
+        );
+    }
+
+    #[test]
+    fn tmux_current_path_command_quotes_session_id() {
+        assert_eq!(
+            tmux_current_path_command("kkterm-test'quoted"),
+            "if ! command -v tmux >/dev/null 2>&1; then printf 'tmux is not available on the remote host\\n' >&2; exit 127; fi; tmux display-message -p -t 'kkterm-test'\\''quoted': '#{pane_current_path}'"
         );
     }
 

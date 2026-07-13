@@ -41,7 +41,7 @@ test("Document Connection add menu opens the file picker instead of the properti
   );
   assert.match(
     menuSource,
-    /type: "fileView",\s*title: t\("connections\.fileView"\)/,
+    /\{ type: "fileView", labelKey: "connections\.fileView" \}/,
     "The React Add Connection menu should expose the Document Connection type.",
   );
 });

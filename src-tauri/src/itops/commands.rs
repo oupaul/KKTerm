@@ -13,15 +13,17 @@ use crate::dashboard_storage::DashboardBackground;
 use crate::secrets;
 use crate::ssh;
 
+use super::host_storage as hosts;
 use super::ids::new_itops_id;
 use super::run_storage;
 use super::runner::{self, DEFAULT_CONCURRENCY, DEFAULT_TIMEOUT_SECONDS, SshTransport};
 use super::site_storage as topo;
 use super::storage as ito;
 use super::types::{
-    BatchTask, Rack, RackFacingEntry, RackItem, RackItemKind, RackItemMetadata, RackNetworkPort,
-    RackPlacementEntry, ResolvedHost, RoomIcon, RoomObject, RunEvent, RunEventHost,
-    RunHistoryEntry, RunScope, ServerRoom, Site, SiteFilter, Transport,
+    BatchTask, HostKind, HostScan, HostScanEvent, Rack, RackFacingEntry, RackItem, RackItemKind,
+    RackItemMetadata, RackNetworkPort, RackPlacementEntry, ResolvedHost, RoomIcon, RoomObject,
+    RunEvent, RunEventHost, RunHistoryEntry, RunScope, ServerRoom, Site, SiteFilter, SiteHost,
+    Transport,
 };
 
 fn storage(app: &AppHandle) -> State<'_, crate::storage::Storage> {
@@ -167,8 +169,9 @@ pub fn itops_start_batch_run(
     site_id: String,
     task: BatchTask,
     scope: Option<RunScope>,
+    task_id: Option<String>,
 ) -> Result<String, String> {
-    start_run(&app, site_id, task, scope)
+    start_run(&app, site_id, task, scope, task_id)
 }
 
 /// Start a Batch Run; reusable by the command above and the Automation
@@ -180,10 +183,12 @@ pub fn start_run(
     site_id: String,
     task: BatchTask,
     scope: Option<RunScope>,
+    task_id: Option<String>,
 ) -> Result<String, String> {
     let secrets = app.state::<secrets::Secrets>();
     let known_hosts = ssh::app_known_hosts_path(app)?;
     let scoped = scope.filter(|scope| !scope.is_empty());
+    let task_secrets = runner::resolve_task_secrets(&task, &secrets)?;
     let (hosts, specs) = storage(app).with_connection_infallible(|conn| {
         let group = ito::list_sites(conn)
             .map_err(|error| error.to_string())?
@@ -225,7 +230,7 @@ pub fn start_run(
 
     let cancel = app.state::<ItopsRunRegistry>().register(&run_id);
 
-    let transport = SshTransport::new(specs);
+    let transport = SshTransport::new(app.clone(), specs, task_secrets);
     let app_thread = app.clone();
     let run_id_thread = run_id.clone();
     std::thread::spawn(move || {
@@ -265,6 +270,7 @@ pub fn start_run(
                     &run_id_thread,
                     "manual",
                     Some(&site_id),
+                    task_id.as_deref(),
                     &task_summary,
                     &started_at,
                     Some(&finished_at),
@@ -652,6 +658,187 @@ pub async fn itops_refresh_rack_item_snmp(app: AppHandle, id: String) -> Result<
             metadata,
         )
         .map_err(|error| error.to_string())
+    })
+}
+
+// ── Hosts (docs/ITOPS.md Hosts) ─────────────────────────────────────────────
+
+/// Parallel Host probes per scan; mirrors the Connection Batch Importer's
+/// bounded network-scan fan-out so one scan can't open unbounded sockets.
+const HOST_SCAN_CONCURRENCY: usize = 16;
+const HOST_SCAN_TIMEOUT_MS: u64 = 1500;
+
+#[tauri::command]
+pub fn itops_list_hosts(app: AppHandle, site_id: String) -> Result<Vec<SiteHost>, String> {
+    storage(&app).with_connection_infallible(|conn| {
+        hosts::list_hosts(conn, &site_id).map_err(|error| error.to_string())
+    })
+}
+
+#[tauri::command]
+pub fn itops_create_host(
+    app: AppHandle,
+    site_id: String,
+    hostname: String,
+    label: String,
+    kind: HostKind,
+    parent_host_id: Option<String>,
+    notes: String,
+) -> Result<SiteHost, String> {
+    let id = new_itops_id("host");
+    storage(&app).with_connection_infallible(|conn| {
+        hosts::create_host(
+            conn,
+            &id,
+            &site_id,
+            &hostname,
+            &label,
+            kind,
+            parent_host_id.as_deref(),
+            &notes,
+        )
+        .map_err(|error| error.to_string())
+    })
+}
+
+#[tauri::command]
+pub fn itops_update_host(
+    app: AppHandle,
+    id: String,
+    hostname: String,
+    label: String,
+    kind: HostKind,
+    parent_host_id: Option<String>,
+    connection_ids: Vec<String>,
+    notes: String,
+) -> Result<SiteHost, String> {
+    storage(&app).with_connection_infallible(|conn| {
+        hosts::update_host(
+            conn,
+            &id,
+            &hostname,
+            &label,
+            kind,
+            parent_host_id.as_deref(),
+            connection_ids,
+            &notes,
+        )
+        .map_err(|error| error.to_string())
+    })
+}
+
+#[tauri::command]
+pub fn itops_delete_host(app: AppHandle, id: String) -> Result<(), String> {
+    storage(&app).with_connection_infallible(|conn| {
+        hosts::delete_host(conn, &id).map_err(|error| error.to_string())
+    })
+}
+
+#[tauri::command]
+pub fn itops_import_hosts(
+    app: AppHandle,
+    site_id: String,
+    hostnames: Vec<String>,
+) -> Result<hosts::HostImportResult, String> {
+    storage(&app).with_connection_infallible(|conn| {
+        hosts::import_hosts(conn, &site_id, &hostnames, || new_itops_id("host"))
+            .map_err(|error| error.to_string())
+    })
+}
+
+/// One TCP reachability probe; an accepted connection within the timeout means
+/// the endpoint is listening.
+async fn probe_port(hostname: &str, port: u16) -> bool {
+    let address = format!("{hostname}:{port}");
+    matches!(
+        tokio::time::timeout(
+            std::time::Duration::from_millis(HOST_SCAN_TIMEOUT_MS),
+            tokio::net::TcpStream::connect(address.as_str()),
+        )
+        .await,
+        Ok(Ok(_))
+    )
+}
+
+fn scan_timestamp() -> Option<String> {
+    time::OffsetDateTime::now_utc()
+        .format(&time::format_description::well_known::Rfc3339)
+        .ok()
+}
+
+/// Scan the given Hosts (all of the Site's Hosts when `host_ids` is empty) for
+/// remote-orchestration endpoints: SSH (22), WinRM (5985/5986), and HTTPS
+/// (443, a management-interface hint). Each finished Host persists its scan
+/// snapshot and streams an `itops://host-scan` event so the panel updates as
+/// results land; the full updated list returns when the scan completes.
+#[tauri::command]
+pub async fn itops_scan_hosts(
+    app: AppHandle,
+    site_id: String,
+    host_ids: Vec<String>,
+) -> Result<Vec<SiteHost>, String> {
+    let all = storage(&app).with_connection_infallible(|conn| {
+        hosts::list_hosts(conn, &site_id).map_err(|error| error.to_string())
+    })?;
+    let wanted: Vec<SiteHost> = if host_ids.is_empty() {
+        all
+    } else {
+        let ids: std::collections::HashSet<&str> =
+            host_ids.iter().map(String::as_str).collect();
+        all.into_iter()
+            .filter(|host| ids.contains(host.id.as_str()))
+            .collect()
+    };
+
+    let semaphore = Arc::new(tokio::sync::Semaphore::new(HOST_SCAN_CONCURRENCY));
+    let mut probes = tokio::task::JoinSet::new();
+    for host in wanted {
+        let semaphore = semaphore.clone();
+        probes.spawn(async move {
+            let _permit = semaphore.acquire_owned().await.ok()?;
+            let hostname = host.hostname.clone();
+            let (ssh, winrm_http, winrm_https, https) = tokio::join!(
+                probe_port(&hostname, 22),
+                probe_port(&hostname, 5985),
+                probe_port(&hostname, 5986),
+                probe_port(&hostname, 443),
+            );
+            Some((
+                host.id,
+                HostScan {
+                    ssh,
+                    winrm: winrm_http || winrm_https,
+                    https,
+                    scanned_at: scan_timestamp(),
+                },
+            ))
+        });
+    }
+    while let Some(joined) = probes.join_next().await {
+        let Ok(Some((id, scan))) = joined else {
+            continue;
+        };
+        let updated = storage(&app).with_connection_infallible(|conn| {
+            hosts::set_host_scan(conn, &id, Some(scan)).map_err(|error| error.to_string())
+        });
+        if let Ok(host) = updated {
+            let _ = app.emit(
+                "itops://host-scan",
+                HostScanEvent::Host {
+                    site_id: site_id.clone(),
+                    host,
+                },
+            );
+        }
+    }
+    let _ = app.emit(
+        "itops://host-scan",
+        HostScanEvent::Finished {
+            site_id: site_id.clone(),
+        },
+    );
+    storage(&app).with_connection_infallible(|conn| {
+        hosts::list_hosts(conn, &site_id).map_err(|error| error.to_string())
     })
 }
 
