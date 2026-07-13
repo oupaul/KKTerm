@@ -28,6 +28,8 @@ use tauri::{
 const HOST_WINDOW_LABEL: &str = "main";
 const DEFAULT_PARTITION: &str = "shared";
 const HIDDEN_WEBVIEW_POSITION: f64 = -32_000.0;
+#[cfg(target_os = "windows")]
+const WEBVIEW_HWND_REALIZE_RETRY_DELAYS_MS: &[u64] = &[15, 30, 60, 120, 240, 480, 960];
 
 /// WebView2 browser arguments that keep the renderer alive across RDP session
 /// disconnect/reconnect. Passed to the main window and URL overlay windows when
@@ -1351,18 +1353,47 @@ fn host_content_origin(host_window: &WebviewWindow) -> Result<PhysicalPosition<i
 
 #[cfg(target_os = "windows")]
 fn webview_hwnd(window: &WebviewWindow) -> Result<*mut std::ffi::c_void, String> {
-    match window.hwnd() {
-        Ok(hwnd) => Ok(hwnd.0),
-        Err(_) => {
-            window
-                .show()
-                .map_err(|error| format!("failed to realize URL webview window: {error}"))?;
-            window
-                .hwnd()
-                .map(|hwnd| hwnd.0)
-                .map_err(|error| format!("failed to get URL webview HWND after realize: {error}"))
+    if let Ok(hwnd) = window.hwnd() {
+        return Ok(hwnd.0);
+    }
+
+    window
+        .show()
+        .map_err(|error| format!("failed to realize URL webview window: {error}"))?;
+
+    let mut elapsed_ms = 0_u64;
+    let mut last_error = None;
+    for (attempt, delay_ms) in WEBVIEW_HWND_REALIZE_RETRY_DELAYS_MS.iter().enumerate() {
+        match window.hwnd() {
+            Ok(hwnd) => {
+                if attempt > 0 {
+                    logging::url_connection_debug(
+                        "backend.window.hwnd_realized_after_retry",
+                        &json!({
+                            "attempt": attempt,
+                            "elapsedMs": elapsed_ms,
+                        }),
+                    );
+                }
+                return Ok(hwnd.0);
+            }
+            Err(error) => {
+                last_error = Some(error.to_string());
+                std::thread::sleep(std::time::Duration::from_millis(*delay_ms));
+                elapsed_ms += *delay_ms;
+            }
         }
     }
+
+    window
+        .hwnd()
+        .map(|hwnd| hwnd.0)
+        .map_err(|error| {
+            let previous_error = last_error.unwrap_or_else(|| "unknown".to_string());
+            format!(
+                "failed to get URL webview HWND after realize: {error}; previous retry error: {previous_error}"
+            )
+        })
 }
 
 #[cfg(target_os = "windows")]
