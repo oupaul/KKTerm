@@ -142,6 +142,8 @@ export const defaultRdpSettings: RdpSettings = {
   colorDepth: 32,
   redirectClipboard: true,
   redirectDrives: false,
+  driveSelection: { mode: "all" },
+  sharedLocalFolder: "",
   bitmapCache: true,
   performanceProfile: "balanced",
   remoteResolution: "automatic",

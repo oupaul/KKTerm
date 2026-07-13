@@ -154,7 +154,8 @@ battery = { package = "starship-battery", version = "0.10" }
 # mark_as_upgraded, NetworkClient) via `pub use ironrdp_async::*`, so no separate
 # ironrdp-async dep is needed. The umbrella `input` feature re-exports ironrdp-input v0.6,
 # so no separate ironrdp-input dep is needed either.
-ironrdp = { version = "0.16", features = ["connector", "session", "graphics", "pdu", "input", "cliprdr"] }
+ironrdp = { version = "0.16", features = ["connector", "session", "graphics", "pdu", "input", "cliprdr", "rdpdr", "rdpsnd", "svc"] }
+ironrdp-rdpdr-native = "0.6"
 ironrdp-tokio = "0.9"
 tokio-rustls = "0.26"
 # Legacy TLS fallback for the RDP upgrade (issue #344): rustls only speaks

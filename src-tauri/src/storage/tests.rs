@@ -3120,12 +3120,17 @@ fn rdp_and_vnc_settings_round_trip_through_settings_table() {
     assert_eq!(rdp_defaults.color_depth, 32);
     assert!(rdp_defaults.redirect_clipboard);
     assert!(!rdp_defaults.redirect_drives);
+    assert_eq!(rdp_defaults.drive_selection, RdpDriveSelection::All);
 
     storage
         .update_rdp_settings(RdpSettings {
             color_depth: 24,
             redirect_clipboard: false,
             redirect_drives: true,
+            drive_selection: RdpDriveSelection::Selected {
+                drives: vec!["D:\\".to_string(), "c:".to_string(), "D:".to_string()],
+            },
+            shared_local_folder: Some(" /tmp/rdp-share ".to_string()),
             bitmap_cache: true,
             performance_profile: "quality".to_string(),
             remote_resolution: "automatic".to_string(),
@@ -3137,6 +3142,16 @@ fn rdp_and_vnc_settings_round_trip_through_settings_table() {
     assert_eq!(rdp_reloaded.color_depth, 24);
     assert!(!rdp_reloaded.redirect_clipboard);
     assert!(rdp_reloaded.redirect_drives);
+    assert_eq!(
+        rdp_reloaded.drive_selection,
+        RdpDriveSelection::Selected {
+            drives: vec!["C:".to_string(), "D:".to_string()],
+        }
+    );
+    assert_eq!(
+        rdp_reloaded.shared_local_folder.as_deref(),
+        Some("/tmp/rdp-share")
+    );
     assert_eq!(rdp_reloaded.performance_profile, "quality");
     assert_eq!(rdp_reloaded.view_mode, "actualSize");
 
@@ -3160,6 +3175,17 @@ fn rdp_and_vnc_settings_round_trip_through_settings_table() {
     assert_eq!(vnc_reloaded.color_level, "256");
     assert_eq!(vnc_reloaded.preferred_encoding, "raw");
     assert_eq!(vnc_reloaded.view_mode, "fitWidth");
+}
+
+#[test]
+fn legacy_rdp_settings_default_drive_selection_to_all() {
+    let settings: RdpSettings = serde_json::from_str(
+        r#"{"colorDepth":32,"redirectClipboard":true,"redirectDrives":true,"bitmapCache":true,"performanceProfile":"balanced","remoteResolution":"automatic","viewMode":"fit"}"#,
+    )
+    .expect("legacy RDP settings deserialize");
+
+    assert_eq!(settings.drive_selection, RdpDriveSelection::All);
+    assert!(settings.shared_local_folder.is_none());
 }
 
 #[test]
@@ -3252,6 +3278,8 @@ fn remote_desktop_connection_options_are_optional_protocol_overrides() {
                 color_depth: Some(24),
                 redirect_clipboard: Some(false),
                 redirect_drives: Some(true),
+                drive_selection: Some(RdpDriveSelection::All),
+                shared_local_folder: None,
                 bitmap_cache: Some(true),
                 performance_profile: Some("quality".to_string()),
                 remote_resolution: None,
@@ -3309,6 +3337,8 @@ fn remote_desktop_connection_options_are_optional_protocol_overrides() {
                 color_depth: Some(24),
                 redirect_clipboard: Some(false),
                 redirect_drives: Some(true),
+                drive_selection: Some(RdpDriveSelection::All),
+                shared_local_folder: None,
                 bitmap_cache: Some(true),
                 performance_profile: Some("quality".to_string()),
                 remote_resolution: None,

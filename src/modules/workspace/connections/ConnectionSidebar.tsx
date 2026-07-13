@@ -9,6 +9,12 @@ import { defaultWslConnectionName, distroFromWslShell } from "./connection-dialo
 import { LocalFilesConnectionFields } from "./connection-dialog/LocalFilesConnectionFields";
 import { FileViewConnectionFields } from "./connection-dialog/FileViewConnectionFields";
 import { RdpConnectionFields, RdpConnectionOptions } from "./connection-dialog/RdpConnectionFields";
+import { parseRdpDriveSelection } from "./remote-desktop/rdpLocalResources";
+import {
+  resolvePanoramaConnections,
+  shouldConfirmPanorama,
+  unopenedPanoramaConnections,
+} from "./panorama";
 import { SerialConnectionFields } from "./connection-dialog/SerialConnectionFields";
 import { SshConnectionFields, SshConnectionOptions } from "./connection-dialog/SshConnectionFields";
 import { writeSshApplyStartupToExistingTmux } from "./connection-dialog/sshStartupScript";
@@ -63,13 +69,13 @@ import { reiconIconRefForName } from "../../../lib/iconCatalog";
 import { requestCredentialUnlock } from "../../../lib/credentialUnlock";
 import { nativeMenuIcons } from "../../../lib/nativeMenuIcons";
 import { lockOsIconAutoDetect } from "../../../lib/osIcons";
-import { isMacPlatform } from "../../../lib/platform";
+import { isMacPlatform, isWindowsPlatform } from "../../../lib/platform";
 import { showNativeContextMenu, type NativeContextMenuItem } from "../../../lib/nativeContextMenu";
 import { confirmNativeDialog, invokeCommand, isCredentialUnlockRequiredError, isTauriRuntime, selectAndReadSshConfigFile, selectAppLauncherFolder, selectFileViewPath, selectKeyFile, type TmuxSession } from "../../../lib/tauri";
 import { connectionTree } from "../../../app-defaults";
 import { DeleteConfirmationDialog } from "../../../app/DeleteConfirmationDialog";
 import { DialogPortal } from "../../../app/DialogPortal";
-import { LegacyDialogActions } from "../../../app/ui/dialog";
+import { ConfirmSheet, LegacyDialogActions } from "../../../app/ui/dialog";
 import { pushTrayMenu } from "../../../app/trayMenu";
 import { CHILD_CONNECTION_CLOSED_EVENT, DEFAULT_WORKSPACE_ID, appendTmuxSessionId, useWorkspaceStore } from "../../../store";
 import type { Connection, ConnectionFolder, ConnectionStatus, ConnectionTree, ConnectionType, CreateConnectionRequest, RdpSettings, SplitDirection, SshCompressionMode, SshOldProtocolsMode, SshSettings, StoredCredentialSummary, UpdateConnectionRequest, VncSettings, WorkspaceChildConnection, WorkspaceTab } from "../../../types";
@@ -242,6 +248,12 @@ type FolderIconDialogState = {
   folder: ConnectionFolder;
 };
 
+type PendingPanorama = {
+  connectionIds: string[];
+  title: string;
+  newSessionCount: number;
+};
+
 const QUICK_CONNECT_RECENT_TOP_LEVEL_LIMIT = 5;
 const QUICK_CONNECT_RECENT_SUBMENU_LIMIT = 20;
 
@@ -328,6 +340,7 @@ export function ConnectionSidebar({
   const [transferSshPublicKeyError, setTransferSshPublicKeyError] = useState("");
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [confirmDeleteTarget, setConfirmDeleteTarget] = useState<DeleteTarget | null>(null);
+  const [pendingPanorama, setPendingPanorama] = useState<PendingPanorama | null>(null);
   // Ephemeral filter: only show connections with a live session. Not persisted
   // because "currently connected" is meaningless across restarts.
   const [showConnectedOnly, setShowConnectedOnly] = useState(false);
@@ -2397,8 +2410,28 @@ export function ConnectionSidebar({
   }
 
   function openConnectionPanorama(connections: Connection[], title: string) {
-    const unopenedConnections = connections.filter(
-      (connection) => !findOpenTabForConnection(connection.id),
+    const connectionIds = connections.map((connection) => connection.id);
+    const rawConnections = resolvePanoramaConnections(tree, connectionIds);
+    const unopenedConnections = unopenedPanoramaConnections(
+      rawConnections,
+      (connectionId) => Boolean(findOpenTabForConnection(connectionId)),
+    );
+    if (shouldConfirmPanorama(unopenedConnections.length)) {
+      setPendingPanorama({
+        connectionIds,
+        title,
+        newSessionCount: unopenedConnections.length,
+      });
+      return;
+    }
+    openResolvedConnectionPanorama(connectionIds, title);
+  }
+
+  function openResolvedConnectionPanorama(connectionIds: string[], title: string) {
+    const connections = resolvePanoramaConnections(tree, connectionIds);
+    const unopenedConnections = unopenedPanoramaConnections(
+      connections,
+      (connectionId) => Boolean(findOpenTabForConnection(connectionId)),
     );
     if (unopenedConnections.length > 0) {
       openConnectionsInPanorama(unopenedConnections, { title });
@@ -2413,7 +2446,7 @@ export function ConnectionSidebar({
   }
 
   function handleOpenRootPanorama() {
-    openConnectionPanorama(flattenConnections(treeWithLiveStatuses), panelTitle);
+    openConnectionPanorama(flattenConnections(tree), panelTitle);
   }
 
   // Closes every open Tab and Pane for every connection in the folder (child
@@ -3283,6 +3316,21 @@ export function ConnectionSidebar({
           target={confirmDeleteTarget}
         />
       ) : null}
+      {pendingPanorama ? (
+        <ConfirmSheet
+          tone="warn"
+          confirmIcon="monitor"
+          title={t("connections.openPanoramaConfirmTitle", { count: pendingPanorama.newSessionCount })}
+          message={t("connections.openPanoramaConfirmBody", { count: pendingPanorama.newSessionCount })}
+          confirmLabel={t("connections.openPanoramaConfirmAction")}
+          onCancel={() => setPendingPanorama(null)}
+          onConfirm={() => {
+            const pending = pendingPanorama;
+            setPendingPanorama(null);
+            openResolvedConnectionPanorama(pending.connectionIds, pending.title);
+          }}
+        />
+      ) : null}
       {transferSshPublicKeyDialog ? (
         <TransferSshPublicKeyDialog
           connection={transferSshPublicKeyDialog.connection}
@@ -4136,6 +4184,7 @@ function ConnectionDialog({
   const [keyPassphraseDraft, setKeyPassphraseDraft] = useState("");
   const [isGeneratingKey, setIsGeneratingKey] = useState(false);
   const [keyGenerationError, setKeyGenerationError] = useState("");
+  const [rdpLocalResourceError, setRdpLocalResourceError] = useState("");
   const [hasStoredConnectionPassword, setHasStoredConnectionPassword] = useState(
     Boolean(initialConnection?.hasPassword || initialConnection?.passwordCredentialId),
   );
@@ -4362,6 +4411,7 @@ function ConnectionDialog({
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setRdpLocalResourceError("");
     if (!connectionType) {
       return;
     }
@@ -4445,6 +4495,24 @@ function ConnectionDialog({
         : undefined;
     const usePsmuxSessions = connectionType === "local" && form.get("usePsmuxSessions") === "on";
     const inheritRdpDefaults = form.get("rdpInheritDefaults") === "on";
+    const rdpDriveSelection = inheritRdpDefaults
+      ? rdpSettings.driveSelection
+      : parseRdpDriveSelection(form.get("rdpDriveSelection"), rdpSettings.driveSelection);
+    const rdpSharedLocalFolder = inheritRdpDefaults
+      ? rdpSettings.sharedLocalFolder
+      : String(form.get("rdpSharedLocalFolder") ?? "").trim() || undefined;
+    const redirectsRdpLocalResources = inheritRdpDefaults
+      ? rdpSettings.redirectDrives
+      : form.get("rdpRedirectDrives") === "on";
+    if (
+      connectionType === "rdp"
+      && !isWindowsPlatform()
+      && redirectsRdpLocalResources
+      && !rdpSharedLocalFolder
+    ) {
+      setRdpLocalResourceError(t("settings.rdpSharedFolderRequired"));
+      return;
+    }
     const inheritVncDefaults = form.get("vncInheritDefaults") === "on";
     const urlProxyInheritDefaults = form.get("urlProxyInheritDefaults") === "on";
     const urlProxyMode = String(form.get("urlProxyMode") ?? "direct") as UrlProxyMode;
@@ -4537,6 +4605,8 @@ function ConnectionDialog({
               redirectDrives: inheritRdpDefaults
                 ? rdpSettings.redirectDrives
                 : form.get("rdpRedirectDrives") === "on",
+              driveSelection: rdpDriveSelection,
+              sharedLocalFolder: rdpSharedLocalFolder,
               bitmapCache: inheritRdpDefaults
                 ? rdpSettings.bitmapCache
                 : form.get("rdpBitmapCache") === "on",
@@ -5013,7 +5083,7 @@ function ConnectionDialog({
           </div>
         ) : null}
 
-        {error ? <p className="form-error">{error}</p> : null}
+        {rdpLocalResourceError || error ? <p className="form-error">{rdpLocalResourceError || error}</p> : null}
 
         <LegacyDialogActions
           primary={<button className="approve-button" disabled={!connectionType} type="submit">

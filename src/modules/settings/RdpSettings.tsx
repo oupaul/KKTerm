@@ -2,6 +2,7 @@ import { Monitor } from "../../lib/reicon";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { invokeCommand, isTauriRuntime } from "../../lib/tauri";
+import { isWindowsPlatform } from "../../lib/platform";
 import { useWorkspaceStore } from "../../store";
 import {
   RDP_REMOTE_RESOLUTION_FIXED,
@@ -13,6 +14,7 @@ import {
 } from "../../types";
 import { SettingsSectionHeader, useSettingsSaveRegistration } from "./shared";
 import { ToggleSwitch } from "./ToggleSwitch";
+import { RdpLocalResourceSelector } from "../workspace/connections/remote-desktop/RdpLocalResourceSelector";
 
 export function RdpSettings() {
   const { t } = useTranslation();
@@ -20,6 +22,7 @@ export function RdpSettings() {
   const setRdpSettings = useWorkspaceStore((state) => state.setRdpSettings);
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
   const [draft, setDraft] = useState<RdpSettingsModel>(() => normalizeRdpResolutionSettings(rdpSettings));
+  const usesWindowsDriveMapping = isWindowsPlatform();
   const hasChanges = JSON.stringify(draft) !== JSON.stringify(rdpSettings);
 
   useEffect(() => {
@@ -27,6 +30,10 @@ export function RdpSettings() {
   }, [rdpSettings]);
 
   async function handleSave() {
+    if (!usesWindowsDriveMapping && draft.redirectDrives && !draft.sharedLocalFolder?.trim()) {
+      showStatusBarNotice(t("settings.rdpSharedFolderRequired"), { tone: "error" });
+      return;
+    }
     try {
       const saved = isTauriRuntime()
         ? await invokeCommand("update_rdp_settings", { request: draft })
@@ -139,16 +146,34 @@ export function RdpSettings() {
               <small>{t("settings.rdpRedirectClipboardHint")}</small>
             </span>
           </label>
-          <label className="settings-toggle-row">
-            <ToggleSwitch
-              checked={draft.redirectDrives}
-              onChange={(checked) => setDraft((settings) => ({ ...settings, redirectDrives: checked }))}
-            />
-            <span>
-              <strong>{t("settings.rdpRedirectDrives")}</strong>
-              <small>{t("settings.rdpRedirectDrivesHint")}</small>
-            </span>
-          </label>
+          <div className="settings-rdp-local-resource">
+            <label className="settings-toggle-row">
+              <ToggleSwitch
+                checked={draft.redirectDrives}
+                onChange={(checked) => setDraft((settings) => ({ ...settings, redirectDrives: checked }))}
+              />
+              <span>
+                <strong>
+                  {t(usesWindowsDriveMapping ? "settings.rdpRedirectDrives" : "settings.rdpShareLocalFolder")}
+                </strong>
+                <small>
+                  {t(usesWindowsDriveMapping ? "settings.rdpRedirectDrivesHint" : "settings.rdpShareLocalFolderHint")}
+                </small>
+              </span>
+            </label>
+            {draft.redirectDrives ? (
+              <RdpLocalResourceSelector
+                driveSelection={draft.driveSelection}
+                sharedLocalFolder={draft.sharedLocalFolder}
+                onDriveSelectionChange={(driveSelection) =>
+                  setDraft((settings) => ({ ...settings, driveSelection }))
+                }
+                onSharedLocalFolderChange={(sharedLocalFolder) =>
+                  setDraft((settings) => ({ ...settings, sharedLocalFolder }))
+                }
+              />
+            ) : null}
+          </div>
           <label className="settings-toggle-row">
             <ToggleSwitch
               checked={draft.bitmapCache}

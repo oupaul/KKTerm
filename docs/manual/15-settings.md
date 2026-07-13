@@ -37,7 +37,7 @@ Settings tutorial targets:
 - SSH: `settings.defaultUser`, `settings.defaultPort`, `settings.defaultKey`, `settings.proxyJump`, `settings.sshBufferLines`. (The SSH SOCKS proxy default moved to Settings → Proxy; per-Connection SSH SOCKS overrides remain in the add/edit Connection dialog.)
 - Terminal: `settings.terminalFontFamily`, `settings.terminalFontSize`, `settings.defaultShell`, `settings.customShells`, `settings.scrollbackLines`.
 - URL: `settings.ignoreCertificateErrors`, `settings.urlSavedPasswords`, `settings.urlDataShards`.
-- RDP: `settings.rdpColorDepth`, `settings.rdpPerformanceProfile`.
+- RDP: `settings.rdpColorDepth`, `settings.rdpPerformanceProfile`, `settings.rdpRedirectDrives`, `settings.rdpAllLocalDrives`, `settings.rdpShareLocalFolder`.
 - VNC: `settings.vncViewOnly`, `settings.vncColorLevel`.
 - Shortcuts: `settings.sectionShortcuts` (navigation `settingsSectionId=shortcuts-settings`, `tutorial_highlight` target `settings.shortcuts`).
 - Proxy: `settings.proxy` (navigation `settingsSectionId=proxy-settings`).
@@ -191,7 +191,7 @@ Section header `settings.sectionTerminal`. Font family + size, line height, curs
 
 ## RDP and VNC
 
-- `settings.sectionRdp` — RDP defaults: `settings.remoteDesktopViewMode`, resolution, colour depth, redirection toggles.
+- `settings.sectionRdp` — RDP defaults: `settings.remoteDesktopViewMode`, resolution, colour depth, and local-resource redirection. `settings.rdpRedirectDrives` is off by default. On Windows, enabling it defaults to every local drive and `settings.rdpChooseDrives` opens the drive-selection Sheet; on macOS and Linux, it becomes `settings.rdpShareLocalFolder` and `settings.rdpChooseFolder` chooses the single directory exposed through IronRDP. Per-Connection RDP options can inherit this default or store their own selection.
 - `settings.sectionVnc` — VNC defaults: `settings.remoteDesktopViewMode`, colour depth, view-only, encoding preferences. The view-mode default controls how new or inheriting VNC Connections display large or multi-monitor framebuffers before a per-Connection override is selected from the remote desktop toolbar.
 
 ## URL

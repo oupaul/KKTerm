@@ -951,6 +951,7 @@ export interface StartRdpClientSessionRequest {
   password?: string;
   desktopWidth?: number;
   desktopHeight?: number;
+  sharedLocalFolder?: string;
 }
 
 export interface RdpClientSessionStarted {
@@ -3540,6 +3541,24 @@ export async function selectAppLauncherFolder(options: {
   }
 
   const selectedPath = await openDialog({
+    directory: true,
+    multiple: false,
+    title: options.title,
+  });
+
+  return typeof selectedPath === "string" ? selectedPath : null;
+}
+
+export async function selectRdpSharedFolder(options: {
+  defaultPath?: string;
+  title: string;
+}) {
+  if (!isTauriRuntime()) {
+    return null;
+  }
+
+  const selectedPath = await openDialog({
+    defaultPath: options.defaultPath,
     directory: true,
     multiple: false,
     title: options.title,

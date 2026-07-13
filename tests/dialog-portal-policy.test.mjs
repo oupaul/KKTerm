@@ -226,6 +226,18 @@ test("Assistant image preview escapes the AI Assistant Panel and remains RDP-blo
   );
 });
 
+test("dialog-kit confirmations suppress an intersecting native RDP surface", async () => {
+  const nativeOverlaySource = await readFile(
+    new URL("../src/modules/workspace/nativeOverlay.ts", import.meta.url),
+    "utf8",
+  );
+  assert.match(
+    nativeOverlaySource,
+    /NATIVE_BLOCKING_OVERLAY_SELECTOR[\s\S]*"\.kk-dlg-backdrop"/,
+    "ConfirmSheet's shared backdrop should trigger the existing RDP snapshot-and-park path",
+  );
+});
+
 
 test("Connection import dialog participates in RDP overlay parking", async () => {
   const importDialogSource = await readFile(

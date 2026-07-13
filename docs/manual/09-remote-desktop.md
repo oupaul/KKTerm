@@ -2,9 +2,9 @@
 
 ## AI grep hints
 
-- Keys: `remoteDesktop.*` (full namespace), `connections.windowsRdp`, `connections.screenControl`, `settings.rdpRemoteResolution*`, `settings.remoteDesktopViewMode*`, `settings.submitAiAttachmentsDirectly`, `workspace.sendEntirePanelToAi`, `ai.directAttachmentPrompt`
-- Topics: RDP via mstscax ActiveX, VNC via vnc-rs, Ctrl+Alt+Del, Ctrl+Alt+End hotkey hint, remote resolution (Automatic / fixed `WxH`), view mode scaling, reconnect, framebuffer waiting, tutorial targets `remoteDesktop.toolbar`, `remoteDesktop.viewMode`, `remoteDesktop.sendCtrlAltDel`, `remoteDesktop.reconnect`, `remoteDesktop.sendToAi`, `remoteDesktop.surface`, `settings.rdpRemoteResolution`
-- Synonyms: "remote desktop", "screen sharing", "mstsc", "VNC viewer", "send three-finger salute", "high DPI scaling", "remote screen size"
+- Keys: `remoteDesktop.*` (full namespace), `connections.windowsRdp`, `connections.screenControl`, `settings.rdpRemoteResolution*`, `settings.remoteDesktopViewMode*`, `settings.rdpShareLocalFolder`, `settings.rdpAllLocalDrives`, `settings.rdpChooseDrives`, `settings.submitAiAttachmentsDirectly`, `workspace.sendEntirePanelToAi`, `ai.directAttachmentPrompt`
+- Topics: RDP via mstscax ActiveX, RDP via IronRDP, Windows drive redirection, macOS/Linux shared local folder, VNC via vnc-rs, Ctrl+Alt+Del, Ctrl+Alt+End hotkey hint, remote resolution (Automatic / fixed `WxH`), view mode scaling, reconnect, framebuffer waiting, tutorial targets `remoteDesktop.toolbar`, `remoteDesktop.viewMode`, `remoteDesktop.sendCtrlAltDel`, `remoteDesktop.reconnect`, `remoteDesktop.sendToAi`, `remoteDesktop.surface`, `settings.rdpRemoteResolution`
+- Synonyms: "remote desktop", "screen sharing", "mstsc", "IronRDP", "drive mapping", "redirect drives", "share local folder", "VNC viewer", "send three-finger salute", "high DPI scaling", "remote screen size"
 
 ## Connection kinds
 
@@ -55,7 +55,7 @@ The native HWND backing an RDP Session does not obey DOM z-index. When an app-ow
 2. Shows that bitmap underneath the DOM overlay.
 3. Hides ("parks") the ActiveX HWND until the overlay closes.
 
-This behaviour is **RDP-only**. WebView2, VNC, terminal, and SFTP surfaces never use overlay parking. Geometry-scoped detection lives in `src/modules/workspace/nativeOverlay.ts`. Do not extend this workaround to other surfaces.
+This behaviour is **RDP-only**. WebView2, VNC, terminal, and SFTP surfaces never use overlay parking. Geometry-scoped detection lives in `src/modules/workspace/nativeOverlay.ts`; app dialog backdrops (`.kk-dlg-backdrop`) participate so a confirmation such as the large-Panorama warning cannot sit underneath an ActiveX surface. Do not extend this workaround to other surfaces.
 
 In dense Panorama layouts, KKTerm intersects the RDP surface with its owning embedded Pane before sending bounds to the native ATL host. This prevents an overflowing descendant DOM box from expanding the native RDP window over adjacent Connection Panes.
 
@@ -66,6 +66,15 @@ Debug builds write RDP startup, ActiveX control creation, display-size sync, and
 ## RDP / VNC settings
 
 Per-kind defaults (resolution, view mode, colour depth, etc.) live in Settings → RDP (`settings.sectionRdp`) and Settings → VNC (`settings.sectionVnc`). See [15-settings.md](15-settings.md).
+
+### RDP local resources
+
+`settings.rdpRedirectDrives` remains disabled by default and is available both as a global RDP default and as a per-Connection override.
+
+- On Windows, enabling it defaults to `settings.rdpAllLocalDrives`. `settings.rdpChooseDrives` opens an app-owned Sheet where the user can retain all drives or choose individual drive roots such as C: and D:. Saved selections are applied through the ActiveX drive collection. A selected drive that is currently disconnected remains in the saved selection and is labelled with `settings.rdpUnavailableDrive`.
+- On macOS and Linux, the same setting is presented as `settings.rdpShareLocalFolder`. IronRDP redirects exactly one folder selected through `settings.rdpChooseFolder`; it never exposes the whole filesystem implicitly. Enabling the option without selecting a folder is rejected with `settings.rdpSharedFolderRequired`. The native RDPDR filesystem backend validates remote paths against the canonical selected root before file operations.
+
+When a Connection inherits RDP defaults, its selector is disabled and summarizes the inherited value. Choosing Connection-specific settings enables its own drive subset or shared folder without changing the global default.
 
 ### View mode (`settings.remoteDesktopViewMode`)
 

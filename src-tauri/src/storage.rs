@@ -849,6 +849,19 @@ pub struct UrlSettings {
     default_user_agent: Option<String>,
 }
 
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
+#[serde(tag = "mode", rename_all = "camelCase")]
+pub enum RdpDriveSelection {
+    All,
+    Selected { drives: Vec<String> },
+}
+
+impl Default for RdpDriveSelection {
+    fn default() -> Self {
+        Self::All
+    }
+}
+
 #[derive(Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RdpSettings {
@@ -858,6 +871,10 @@ pub struct RdpSettings {
     redirect_clipboard: bool,
     #[serde(default)]
     redirect_drives: bool,
+    #[serde(default)]
+    drive_selection: RdpDriveSelection,
+    #[serde(default)]
+    shared_local_folder: Option<String>,
     #[serde(default = "default_remote_desktop_true")]
     bitmap_cache: bool,
     #[serde(default = "default_remote_desktop_performance_profile")]
@@ -1510,6 +1527,10 @@ pub struct RdpConnectionOptions {
     redirect_clipboard: Option<bool>,
     #[serde(default)]
     redirect_drives: Option<bool>,
+    #[serde(default)]
+    drive_selection: Option<RdpDriveSelection>,
+    #[serde(default)]
+    shared_local_folder: Option<String>,
     #[serde(default)]
     bitmap_cache: Option<bool>,
     #[serde(default)]
@@ -4624,6 +4645,8 @@ fn normalize_rdp_connection_options(
             color_depth: None,
             redirect_clipboard: None,
             redirect_drives: None,
+            drive_selection: None,
+            shared_local_folder: None,
             bitmap_cache: None,
             performance_profile: None,
             remote_resolution: None,
@@ -4633,6 +4656,10 @@ fn normalize_rdp_connection_options(
     if let Some(color_depth) = options.color_depth {
         options.color_depth = Some(validate_rdp_color_depth(color_depth)?);
     }
+    if let Some(selection) = options.drive_selection {
+        options.drive_selection = Some(normalize_rdp_drive_selection(selection)?);
+    }
+    options.shared_local_folder = normalize_optional_text(options.shared_local_folder);
     if let Some(profile) = options.performance_profile {
         options.performance_profile = Some(validate_remote_desktop_performance_profile(profile)?);
     }
@@ -5190,6 +5217,8 @@ fn default_rdp_settings() -> RdpSettings {
         color_depth: default_rdp_color_depth(),
         redirect_clipboard: true,
         redirect_drives: false,
+        drive_selection: RdpDriveSelection::All,
+        shared_local_folder: None,
         bitmap_cache: true,
         performance_profile: default_remote_desktop_performance_profile(),
         remote_resolution: default_remote_desktop_resolution(),
@@ -5981,11 +6010,41 @@ pub(crate) fn normalize_url_proxy(value: Option<String>) -> Result<Option<String
 
 fn validate_rdp_settings(mut settings: RdpSettings) -> Result<RdpSettings, String> {
     settings.color_depth = validate_rdp_color_depth(settings.color_depth)?;
+    settings.drive_selection = normalize_rdp_drive_selection(settings.drive_selection)?;
+    settings.shared_local_folder = normalize_optional_text(settings.shared_local_folder);
     settings.performance_profile =
         validate_remote_desktop_performance_profile(settings.performance_profile)?;
     settings.remote_resolution = validate_remote_desktop_resolution(settings.remote_resolution)?;
     settings.view_mode = validate_remote_desktop_view_mode(settings.view_mode)?;
     Ok(settings)
+}
+
+fn normalize_rdp_drive_selection(
+    selection: RdpDriveSelection,
+) -> Result<RdpDriveSelection, String> {
+    let RdpDriveSelection::Selected { drives } = selection else {
+        return Ok(RdpDriveSelection::All);
+    };
+    let mut normalized = std::collections::BTreeSet::new();
+    for drive in drives {
+        let trimmed = drive.trim();
+        let bytes = trimmed.as_bytes();
+        if bytes.len() < 2
+            || !bytes[0].is_ascii_alphabetic()
+            || bytes[1] != b':'
+            || bytes[2..]
+                .iter()
+                .any(|value| !matches!(value, b'\\' | b'/'))
+        {
+            return Err(format!(
+                "RDP drive '{drive}' must be a drive root such as C:"
+            ));
+        }
+        normalized.insert(format!("{}:", char::from(bytes[0]).to_ascii_uppercase()));
+    }
+    Ok(RdpDriveSelection::Selected {
+        drives: normalized.into_iter().collect(),
+    })
 }
 
 fn validate_remote_desktop_resolution(value: String) -> Result<String, String> {

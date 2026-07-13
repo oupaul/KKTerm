@@ -74,10 +74,21 @@ use ironrdp::cliprdr::{
     },
 };
 use ironrdp::core::{AsAny, IntoOwned};
+use ironrdp::rdpdr::{
+    Rdpdr, RdpdrBackend,
+    pdu::efs::{
+        DeviceControlRequest, FileInformationClass, ServerDeviceAnnounceResponse,
+        ServerDriveIoRequest,
+    },
+    pdu::esc::{ScardCall, ScardIoCtlCode},
+};
+use ironrdp::rdpsnd::client::{NoopRdpsndBackend, Rdpsnd};
+use ironrdp_rdpdr_native::backend::NixRdpdrBackend;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::{
     collections::HashMap,
+    path::{Component, Path, PathBuf},
     sync::{Arc, Mutex, MutexGuard},
 };
 use tauri::{AppHandle, Emitter};
@@ -138,6 +149,8 @@ pub struct StartRdpClientSessionRequest {
     desktop_width: Option<u16>,
     #[serde(default)]
     desktop_height: Option<u16>,
+    #[serde(default)]
+    shared_local_folder: Option<String>,
 }
 
 impl StartRdpClientSessionRequest {
@@ -293,6 +306,8 @@ impl RdpClientSessionManager {
         let username = request.username.clone();
         let password = request.password.clone().unwrap_or_default();
         let domain = request.domain.clone();
+        let shared_local_folder =
+            validate_shared_local_folder(request.shared_local_folder.as_deref())?;
 
         rdp_debug(
             "ironrdp.start.request",
@@ -317,6 +332,7 @@ impl RdpClientSessionManager {
             domain,
             width,
             height,
+            shared_local_folder,
         )) {
             Ok(result) => result,
             Err(error) => {
@@ -882,6 +898,131 @@ fn tls_error_kind(error: &std::io::Error) -> String {
     format!("{:?}", error.kind())
 }
 
+fn validate_shared_local_folder(value: Option<&str>) -> Result<Option<PathBuf>, String> {
+    let Some(value) = value.map(str::trim).filter(|value| !value.is_empty()) else {
+        return Ok(None);
+    };
+    let root = std::fs::canonicalize(value)
+        .map_err(|error| format!("RDP shared local folder is unavailable: {error}"))?;
+    if !root.is_dir() {
+        return Err("RDP shared local folder must be a directory".to_string());
+    }
+    Ok(Some(root))
+}
+
+#[derive(Debug)]
+struct ContainedNixRdpdrBackend {
+    root: PathBuf,
+    inner: NixRdpdrBackend,
+}
+
+impl ContainedNixRdpdrBackend {
+    fn new(root: PathBuf) -> Self {
+        Self {
+            inner: NixRdpdrBackend::new(root.to_string_lossy().into_owned()),
+            root,
+        }
+    }
+
+    fn validate_request(&self, request: &ServerDriveIoRequest) -> Result<(), String> {
+        match request {
+            ServerDriveIoRequest::ServerCreateDriveRequest(request) => {
+                validate_rdp_remote_path(&self.root, &request.path)
+            }
+            ServerDriveIoRequest::ServerDriveQueryDirectoryRequest(request) => {
+                validate_rdp_remote_path(&self.root, &request.path)
+            }
+            ServerDriveIoRequest::ServerDriveSetInformationRequest(request) => {
+                if let FileInformationClass::Rename(rename) = &request.set_buffer {
+                    validate_rdp_remote_path(&self.root, &rename.file_name)?;
+                }
+                Ok(())
+            }
+            _ => Ok(()),
+        }
+    }
+}
+
+impl AsAny for ContainedNixRdpdrBackend {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
+}
+
+impl RdpdrBackend for ContainedNixRdpdrBackend {
+    fn handle_server_device_announce_response(
+        &mut self,
+        pdu: ServerDeviceAnnounceResponse,
+    ) -> ironrdp::pdu::PduResult<()> {
+        self.inner.handle_server_device_announce_response(pdu)
+    }
+
+    fn handle_scard_call(
+        &mut self,
+        request: DeviceControlRequest<ScardIoCtlCode>,
+        call: ScardCall,
+    ) -> ironrdp::pdu::PduResult<()> {
+        self.inner.handle_scard_call(request, call)
+    }
+
+    fn handle_drive_io_request(
+        &mut self,
+        request: ServerDriveIoRequest,
+    ) -> ironrdp::pdu::PduResult<Vec<ironrdp::svc::SvcMessage>> {
+        if self.validate_request(&request).is_err() {
+            return Err(ironrdp::pdu::pdu_other_err!(
+                "RDP shared folder request escaped the selected root"
+            ));
+        }
+        self.inner.handle_drive_io_request(request)
+    }
+
+    fn handle_user_logged_on(
+        &mut self,
+        rdpdr: &mut Rdpdr,
+    ) -> ironrdp::pdu::PduResult<Vec<ironrdp::svc::SvcMessage>> {
+        self.inner.handle_user_logged_on(rdpdr)
+    }
+}
+
+fn validate_rdp_remote_path(root: &Path, remote_path: &str) -> Result<(), String> {
+    if remote_path.contains('\0') {
+        return Err("RDP shared folder path contains a null byte".to_string());
+    }
+    if !remote_path.is_empty() && !remote_path.starts_with('\\') && !remote_path.starts_with('/') {
+        return Err("RDP shared folder path is not rooted at the announced drive".to_string());
+    }
+    let normalized = remote_path.replace('\\', "/");
+    let relative = normalized.trim_start_matches('/');
+    let mut target = root.to_path_buf();
+    for component in Path::new(relative).components() {
+        match component {
+            Component::Normal(value) => target.push(value),
+            Component::CurDir => {}
+            Component::ParentDir | Component::RootDir | Component::Prefix(_) => {
+                return Err("RDP shared folder path contains traversal".to_string());
+            }
+        }
+    }
+
+    let mut existing = target.as_path();
+    while !existing.exists() {
+        existing = existing
+            .parent()
+            .ok_or_else(|| "RDP shared folder path has no valid parent".to_string())?;
+    }
+    let canonical = std::fs::canonicalize(existing)
+        .map_err(|error| format!("failed to validate RDP shared folder path: {error}"))?;
+    if !canonical.starts_with(root) {
+        return Err("RDP shared folder path resolves outside the selected root".to_string());
+    }
+    Ok(())
+}
+
 async fn rdp_connect(
     app: AppHandle,
     session_id: String,
@@ -892,6 +1033,7 @@ async fn rdp_connect(
     domain: Option<String>,
     width: u16,
     height: u16,
+    shared_local_folder: Option<PathBuf>,
 ) -> Result<(ironrdp::connector::ConnectionResult, UpgradedFramed), String> {
     // CredSSP/NTLM needs the domain separated from the username. Split a
     // `DOMAIN\user` login into (domain, user); otherwise keep the requested
@@ -913,6 +1055,7 @@ async fn rdp_connect(
         domain.as_deref(),
         width,
         height,
+        shared_local_folder.as_deref(),
         TlsBackend::Rustls,
     )
     .await
@@ -943,6 +1086,7 @@ async fn rdp_connect(
                 domain.as_deref(),
                 width,
                 height,
+                shared_local_folder.as_deref(),
                 TlsBackend::NativeTls,
             )
             .await
@@ -968,6 +1112,7 @@ async fn rdp_connect_attempt(
     domain: Option<&str>,
     width: u16,
     height: u16,
+    shared_local_folder: Option<&Path>,
     backend: TlsBackend,
 ) -> Result<(ironrdp::connector::ConnectionResult, UpgradedFramed), ConnectAttemptError> {
     use ironrdp::connector::{
@@ -1086,6 +1231,24 @@ async fn rdp_connect_attempt(
         app.clone(),
         session_id.to_string(),
     ))));
+    if let Some(root) = shared_local_folder {
+        let share_name = root
+            .file_name()
+            .and_then(|name| name.to_str())
+            .filter(|name| !name.is_empty())
+            .unwrap_or("KKTerm Share")
+            .to_string();
+        // RDPDR must be advertised together with RDPSND for Windows servers
+        // to send device-redirection traffic back to the client.
+        connector.attach_static_channel(Rdpsnd::new(Box::new(NoopRdpsndBackend)));
+        connector.attach_static_channel(
+            Rdpdr::new(
+                Box::new(ContainedNixRdpdrBackend::new(root.to_path_buf())),
+                "KKTerm".to_string(),
+            )
+            .with_drives(Some(vec![(1, share_name)])),
+        );
+    }
     let should_upgrade = match connect_begin(&mut framed, &mut connector).await {
         Ok(should_upgrade) => should_upgrade,
         Err(error) => {

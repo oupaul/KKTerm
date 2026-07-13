@@ -1,6 +1,8 @@
 import { Clipboard, HardDrive, Layers, Monitor, Palette, Scaling, Settings2, Zap } from "../../../../lib/reicon";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { technicalInputProps } from "../../../../lib/inputBehavior";
+import { isWindowsPlatform } from "../../../../lib/platform";
 import {
   RDP_REMOTE_RESOLUTION_FIXED,
   type Connection,
@@ -10,6 +12,8 @@ import {
 } from "../../../../types";
 import { defaultPortForConnectionType } from "../utils";
 import { PasswordCredentialSelect, PasswordField } from "./ConnectionPasswordFields";
+import { RdpLocalResourceSelector } from "../remote-desktop/RdpLocalResourceSelector";
+import { normalizeRdpDriveSelection } from "../remote-desktop/rdpLocalResources";
 
 export function RdpConnectionFields({
   hasStoredConnectionPassword,
@@ -106,6 +110,23 @@ export function RdpConnectionOptions({
   rdpSettings: RdpSettings;
 }) {
   const { t } = useTranslation();
+  const [redirectDrives, setRedirectDrives] = useState(
+    initialConnection?.rdpOptions?.redirectDrives ?? rdpSettings.redirectDrives,
+  );
+  const [driveSelection, setDriveSelection] = useState(() =>
+    normalizeRdpDriveSelection(initialConnection?.rdpOptions?.driveSelection ?? rdpSettings.driveSelection),
+  );
+  const [sharedLocalFolder, setSharedLocalFolder] = useState(
+    initialConnection?.rdpOptions?.sharedLocalFolder ?? rdpSettings.sharedLocalFolder ?? "",
+  );
+  const effectiveRedirectDrives = rdpInheritsSettingsDefaults ? rdpSettings.redirectDrives : redirectDrives;
+  const effectiveDriveSelection = rdpInheritsSettingsDefaults
+    ? normalizeRdpDriveSelection(rdpSettings.driveSelection)
+    : driveSelection;
+  const effectiveSharedLocalFolder = rdpInheritsSettingsDefaults
+    ? rdpSettings.sharedLocalFolder ?? ""
+    : sharedLocalFolder;
+  const usesWindowsDriveMapping = isWindowsPlatform();
 
   return (
       <fieldset className="connection-session-fields connection-specific-options">
@@ -192,16 +213,32 @@ export function RdpConnectionOptions({
                 defaultChecked={initialConnection?.rdpOptions?.redirectClipboard ?? rdpSettings.redirectClipboard}
               />
             </label>
-            <label className="connection-session-toggle">
-              <HardDrive className="option-glyph" size={17} aria-hidden />
-              <span>{t("settings.rdpRedirectDrives")}</span>
-              <input
-                disabled={rdpInheritsSettingsDefaults}
-                name="rdpRedirectDrives"
-                type="checkbox"
-                defaultChecked={initialConnection?.rdpOptions?.redirectDrives ?? rdpSettings.redirectDrives}
-              />
-            </label>
+            <div className="rdp-connection-local-resource">
+              <label className="connection-session-toggle">
+                <HardDrive className="option-glyph" size={17} aria-hidden />
+                <span>
+                  {t(usesWindowsDriveMapping ? "settings.rdpRedirectDrives" : "settings.rdpShareLocalFolder")}
+                </span>
+                <input
+                  checked={effectiveRedirectDrives}
+                  disabled={rdpInheritsSettingsDefaults}
+                  name="rdpRedirectDrives"
+                  onChange={(event) => setRedirectDrives(event.currentTarget.checked)}
+                  type="checkbox"
+                />
+              </label>
+              <input name="rdpDriveSelection" type="hidden" value={JSON.stringify(effectiveDriveSelection)} />
+              <input name="rdpSharedLocalFolder" type="hidden" value={effectiveSharedLocalFolder} />
+              {effectiveRedirectDrives ? (
+                <RdpLocalResourceSelector
+                  disabled={rdpInheritsSettingsDefaults}
+                  driveSelection={effectiveDriveSelection}
+                  sharedLocalFolder={effectiveSharedLocalFolder}
+                  onDriveSelectionChange={setDriveSelection}
+                  onSharedLocalFolderChange={setSharedLocalFolder}
+                />
+              ) : null}
+            </div>
             <label className="connection-session-toggle">
               <Layers className="option-glyph" size={17} aria-hidden />
               <span>{t("settings.bitmapCache")}</span>

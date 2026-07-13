@@ -1594,6 +1594,10 @@ fieldset.connection-specific-options > legend {
   font-weight: 700;
 }
 
+.rdp-connection-local-resource {
+  display: contents;
+}
+
 .connection-dialog .connection-session-toggle input[type="checkbox"] {
   position: relative;
   width: 38px;

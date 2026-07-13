@@ -1071,10 +1071,16 @@ export const RDP_REMOTE_RESOLUTION_FIXED: readonly RdpRemoteResolutionFixed[] = 
   "3840x2400",
 ] as const;
 
+export type RdpDriveSelection =
+  | { mode: "all" }
+  | { mode: "selected"; drives: string[] };
+
 export interface RdpSettings {
   colorDepth: RdpColorDepth;
   redirectClipboard: boolean;
   redirectDrives: boolean;
+  driveSelection: RdpDriveSelection;
+  sharedLocalFolder?: string;
   bitmapCache: boolean;
   performanceProfile: RdpPerformanceProfile;
   remoteResolution: RdpRemoteResolution;
@@ -1086,6 +1092,8 @@ export interface RdpConnectionOptions {
   colorDepth?: RdpColorDepth;
   redirectClipboard?: boolean;
   redirectDrives?: boolean;
+  driveSelection?: RdpDriveSelection;
+  sharedLocalFolder?: string;
   bitmapCache?: boolean;
   performanceProfile?: RdpPerformanceProfile;
   remoteResolution?: RdpRemoteResolution;

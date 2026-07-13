@@ -15,7 +15,7 @@ import type { RefObject } from "react";
 import { useTranslation } from "react-i18next";
 import { readFromClipboard, writeToClipboard } from "../../../../lib/clipboard";
 import { invokeCommand, isTauriRuntime, logUiDebug } from "../../../../lib/tauri";
-import type { Connection } from "../../../../types";
+import type { Connection, RdpSettings } from "../../../../types";
 import { connectionPasswordOwnerId } from "../utils";
 import { isCharacterCode, scancodeForCode } from "./rdpScancodes";
 
@@ -66,12 +66,14 @@ export function RdpCanvasView({
   connection,
   onSessionConnected,
   onSessionDisconnected,
+  rdpOptions,
   surfaceRef,
 }: {
   cadSignal?: number;
   connection: Connection;
   onSessionConnected?: (sessionId: string) => void;
   onSessionDisconnected?: (sessionId: string) => void;
+  rdpOptions: RdpSettings;
   surfaceRef?: RefObject<HTMLCanvasElement | null>;
 }) {
   const { t } = useTranslation();
@@ -196,6 +198,7 @@ export function RdpCanvasView({
         port: connection.port,
         username: connection.user ?? "",
         secretOwnerId: connectionPasswordOwnerId(connection),
+        sharedLocalFolder: rdpOptions.redirectDrives ? rdpOptions.sharedLocalFolder : undefined,
       },
     }).catch((error) => {
       if (!disposed) {
@@ -213,7 +216,14 @@ export function RdpCanvasView({
       sessionIdRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [connection.id, connection.host, connection.port, connection.user]);
+  }, [
+    connection.id,
+    connection.host,
+    connection.port,
+    connection.user,
+    rdpOptions.redirectDrives,
+    rdpOptions.sharedLocalFolder,
+  ]);
 
   // ── Mouse ──────────────────────────────────────────────────────────────────
   const remotePoint = (clientX: number, clientY: number): { x: number; y: number } | null => {
