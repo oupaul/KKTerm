@@ -40,13 +40,13 @@ mod platform {
                     VIRTUAL_KEY, VkKeyScanW,
                 },
                 WindowsAndMessaging::{
-                    CallNextHookEx, CreateWindowExW, DestroyWindow, GetClientRect,
-                    GetWindowRect, HC_ACTION, HHOOK, HMENU, IsChild, MSLLHOOKSTRUCT,
-                    SW_SHOWNOACTIVATE, SWP_NOACTIVATE, SWP_NOZORDER, SendMessageW,
-                    SetForegroundWindow, SetWindowPos, SetWindowsHookExW, ShowWindow,
-                    UnhookWindowsHookEx, WH_MOUSE_LL, WM_LBUTTONDOWN, WM_MBUTTONDOWN,
-                    WM_RBUTTONDOWN, WM_XBUTTONDOWN, WS_CLIPCHILDREN, WS_CLIPSIBLINGS,
-                    WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_POPUP, WS_VISIBLE, WindowFromPoint,
+                    CallNextHookEx, CreateWindowExW, DestroyWindow, GetClientRect, GetWindowRect,
+                    HC_ACTION, HHOOK, HMENU, IsChild, MSLLHOOKSTRUCT, SW_SHOWNOACTIVATE,
+                    SWP_NOACTIVATE, SWP_NOZORDER, SendMessageW, SetForegroundWindow, SetWindowPos,
+                    SetWindowsHookExW, ShowWindow, UnhookWindowsHookEx, WH_MOUSE_LL,
+                    WM_LBUTTONDOWN, WM_MBUTTONDOWN, WM_RBUTTONDOWN, WM_XBUTTONDOWN,
+                    WS_CLIPCHILDREN, WS_CLIPSIBLINGS, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_POPUP,
+                    WS_VISIBLE, WindowFromPoint,
                 },
             },
         },
@@ -195,6 +195,7 @@ mod platform {
         y: f64,
         width: f64,
         height: f64,
+        scale_factor: Option<f64>,
         options: Option<RdpSessionOptions>,
     }
 
@@ -376,6 +377,7 @@ mod platform {
         y: f64,
         width: f64,
         height: f64,
+        scale_factor: Option<f64>,
         // When set, re-issue the remote desktop resize even if the cached
         // desktop size/scale already matches. Used by the post-connect settle
         // passes: the ActiveX control often ignores the first resize, so we
@@ -394,6 +396,7 @@ mod platform {
         y: f64,
         width: f64,
         height: f64,
+        scale_factor: Option<f64>,
     }
 
     #[derive(Deserialize)]
@@ -404,6 +407,7 @@ mod platform {
         y: f64,
         width: f64,
         height: f64,
+        scale_factor: Option<f64>,
     }
 
     #[derive(Serialize)]
@@ -477,6 +481,12 @@ mod platform {
 
     struct VariantArg(VARIANT);
 
+    fn rdp_request_scale_factor(requested: Option<f64>, host_scale_factor: f64) -> f64 {
+        requested
+            .filter(|scale| scale.is_finite() && *scale >= 0.25 && *scale <= 8.0)
+            .unwrap_or(host_scale_factor)
+    }
+
     impl RdpSessionManager {
         pub fn new() -> Self {
             Self {
@@ -505,9 +515,11 @@ mod platform {
                 let host_window = app
                     .get_webview_window(HOST_WINDOW_LABEL)
                     .ok_or_else(|| format!("host window '{HOST_WINDOW_LABEL}' is not available"))?;
-                let scale_factor = host_window
+                let host_scale_factor = host_window
                     .scale_factor()
                     .map_err(|error| format!("failed to read host window scale factor: {error}"))?;
+                let scale_factor =
+                    rdp_request_scale_factor(request.scale_factor, host_scale_factor);
                 let mut sessions = lock_sessions(&sessions)?;
                 let session = sessions
                     .get_mut(&request.session_id)
@@ -534,9 +546,11 @@ mod platform {
                 let host_window = app
                     .get_webview_window(HOST_WINDOW_LABEL)
                     .ok_or_else(|| format!("host window '{HOST_WINDOW_LABEL}' is not available"))?;
-                let scale_factor = host_window
+                let host_scale_factor = host_window
                     .scale_factor()
                     .map_err(|error| format!("failed to read host window scale factor: {error}"))?;
+                let scale_factor =
+                    rdp_request_scale_factor(request.scale_factor, host_scale_factor);
                 let sessions = lock_sessions(&sessions)?;
                 if request.visible {
                     let mut parked_other_sessions = 0;
@@ -567,6 +581,7 @@ mod platform {
                             "connectionState": connection_state,
                             "connectionStateLabel": rdp_connection_state_label(connection_state),
                             "scaleFactor": scale_factor,
+                            "hostScaleFactor": host_scale_factor,
                             "requestBounds": {
                                 "x": request.x,
                                 "y": request.y,
@@ -610,6 +625,7 @@ mod platform {
                             "connectionState": connection_state,
                             "connectionStateLabel": rdp_connection_state_label(connection_state),
                             "scaleFactor": scale_factor,
+                            "hostScaleFactor": host_scale_factor,
                             "requestBounds": {
                                 "x": request.x,
                                 "y": request.y,
@@ -640,9 +656,11 @@ mod platform {
                 let host_window = app
                     .get_webview_window(HOST_WINDOW_LABEL)
                     .ok_or_else(|| format!("host window '{HOST_WINDOW_LABEL}' is not available"))?;
-                let scale_factor = host_window
+                let host_scale_factor = host_window
                     .scale_factor()
                     .map_err(|error| format!("failed to read host window scale factor: {error}"))?;
+                let scale_factor =
+                    rdp_request_scale_factor(request.scale_factor, host_scale_factor);
                 let mut sessions = lock_sessions(&sessions)?;
                 let session = sessions
                     .get_mut(&request.session_id)
@@ -701,6 +719,7 @@ mod platform {
                         "displaySyncCompleted": display_sync_completed,
                         "displaySynced": display_synced,
                         "scaleFactor": scale_factor,
+                        "hostScaleFactor": host_scale_factor,
                         "requestBounds": {
                             "x": request.x,
                             "y": request.y,
@@ -1030,9 +1049,10 @@ mod platform {
             .map_err(|error| format!("failed to get host window handle: {error}"))?;
 
         let parent_hwnd = HWND(parent_hwnd.0);
-        let scale_factor = host_window
+        let host_scale_factor = host_window
             .scale_factor()
             .map_err(|error| format!("failed to read host window scale factor: {error}"))?;
+        let scale_factor = rdp_request_scale_factor(request.scale_factor, host_scale_factor);
         let size = scaled_rect(
             request.x,
             request.y,
@@ -1046,6 +1066,7 @@ mod platform {
             &json!({
                 "sessionId": &session_id,
                 "scaleFactor": scale_factor,
+                "hostScaleFactor": host_scale_factor,
                 "scaledRect": {
                     "x": size.0,
                     "y": size.1,
@@ -1373,11 +1394,11 @@ mod platform {
                     .ok()
                     .map(|handle| HINSTANCE(handle.0));
                 match SetWindowsHookExW(
-                    WH_MOUSE_LL,
-                    Some(rdp_overlay_focus_hook_proc),
-                    module,
-                    0,
-                ) {
+                        WH_MOUSE_LL,
+                        Some(rdp_overlay_focus_hook_proc),
+                        module,
+                        0,
+                    ) {
                     Ok(hook) => {
                         state.hook = Some(hook);
                     }
@@ -3092,6 +3113,7 @@ mod platform {
         pub y: f64,
         pub width: f64,
         pub height: f64,
+        pub scale_factor: Option<f64>,
         pub options: Option<RdpSessionOptions>,
     }
 
@@ -3132,6 +3154,7 @@ mod platform {
         pub y: f64,
         pub width: f64,
         pub height: f64,
+        pub scale_factor: Option<f64>,
         #[serde(default)]
         pub force: bool,
     }
@@ -3145,6 +3168,7 @@ mod platform {
         pub y: f64,
         pub width: f64,
         pub height: f64,
+        pub scale_factor: Option<f64>,
     }
 
     #[derive(Deserialize)]
@@ -3155,6 +3179,7 @@ mod platform {
         pub y: f64,
         pub width: f64,
         pub height: f64,
+        pub scale_factor: Option<f64>,
     }
 
     #[derive(Serialize)]

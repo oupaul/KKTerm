@@ -81,6 +81,10 @@ const RDP_DISPLAY_SETTLE_INTERVAL_MS = 2000;
 const RDP_DISPLAY_SETTLE_PASSES = 6;
 const RDP_DISPLAY_SETTLE_SUCCESS_PASSES = 2;
 
+function currentRdpPixelScale() {
+  return window.devicePixelRatio || 1;
+}
+
 function createRemoteDesktopSessionId(kind: "rdp" | "vnc") {
   return `${kind}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
 }
@@ -640,7 +644,7 @@ export function RemoteDesktopWorkspace({
     const previous = lastBoundsRef.current;
     const boundsChanged = !previous || !boundsEqual(previous, bounds);
     void invokeCommand("set_rdp_visibility", {
-      request: { sessionId, visible, ...bounds },
+      request: { sessionId, visible, scaleFactor: currentRdpPixelScale(), ...bounds },
     })
       .then(() => {
         rdpVisibleRef.current = visible;
@@ -660,7 +664,7 @@ export function RemoteDesktopWorkspace({
     if (boundsChanged) {
       lastBoundsRef.current = bounds;
       void invokeCommand("update_rdp_bounds", {
-        request: { sessionId, ...bounds },
+        request: { sessionId, scaleFactor: currentRdpPixelScale(), ...bounds },
       }).catch((error) => {
         reportRemoteDesktopError(error instanceof Error ? error.message : String(error));
       });
@@ -704,7 +708,7 @@ export function RemoteDesktopWorkspace({
       }
       lastBoundsRef.current = bounds;
       void invokeCommand("update_rdp_bounds", {
-        request: { sessionId, ...bounds, force: true },
+        request: { sessionId, scaleFactor: currentRdpPixelScale(), ...bounds, force: true },
       })
         .then(() => {
           successfulPasses += 1;
@@ -750,7 +754,7 @@ export function RemoteDesktopWorkspace({
     }
     displaySyncInFlightRef.current = true;
     void invokeCommand("sync_rdp_display_size", {
-      request: { sessionId, ...bounds },
+      request: { sessionId, scaleFactor: currentRdpPixelScale(), ...bounds },
     })
       .then((result) => {
         if (sessionIdRef.current !== result.sessionId) {
@@ -993,7 +997,7 @@ export function RemoteDesktopWorkspace({
       if (!rdpVisibleRef.current) {
         lastBoundsRef.current = bounds;
         void invokeCommand("set_rdp_visibility", {
-          request: { sessionId, visible: true, ...bounds },
+          request: { sessionId, visible: true, scaleFactor: currentRdpPixelScale(), ...bounds },
         })
           .then(() => {
             rdpVisibleRef.current = true;
@@ -1006,7 +1010,7 @@ export function RemoteDesktopWorkspace({
       }
       lastBoundsRef.current = bounds;
       void invokeCommand("update_rdp_bounds", {
-        request: { sessionId, ...bounds },
+        request: { sessionId, scaleFactor: currentRdpPixelScale(), ...bounds },
       }).catch((error) => {
         reportRemoteDesktopError(error instanceof Error ? error.message : String(error));
       });
@@ -1046,6 +1050,7 @@ export function RemoteDesktopWorkspace({
           port: connection.port,
           secretOwnerId: connectionPasswordOwnerId(connection),
           options: resolveRdpOptions(rdpSettings, connection.rdpOptions),
+          scaleFactor: currentRdpPixelScale(),
           ...bounds,
         },
       })
