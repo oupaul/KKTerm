@@ -442,6 +442,7 @@ pub fn resolve_ssh_specs(
 ) -> HashMap<String, SshExecSpec> {
     let mut specs = HashMap::new();
     let default_compression = global_default_ssh_compression(conn);
+    let default_old_protocols = global_default_ssh_old_protocols(conn);
     for host in hosts {
         if host.connection_type != "ssh" {
             continue;
@@ -453,6 +454,7 @@ pub fn resolve_ssh_specs(
             host,
             timeout_seconds,
             &default_compression,
+            &default_old_protocols,
         ) {
             specs.insert(host.connection_id.clone(), spec);
         }
@@ -479,6 +481,25 @@ fn global_default_ssh_compression(conn: &SqliteConnection) -> String {
     .unwrap_or_else(|| "fast".to_string())
 }
 
+/// Read the global legacy SSH key-exchange default (`"off"`/`"legacy"`) from the
+/// settings blob so batch runs honor the same setting as interactive sessions.
+/// Falls back to `"off"` when the settings row or field is absent.
+fn global_default_ssh_old_protocols(conn: &SqliteConnection) -> String {
+    conn.query_row("SELECT value FROM settings WHERE key = 'ssh'", [], |row| {
+        row.get::<_, String>(0)
+    })
+    .optional()
+    .ok()
+    .flatten()
+    .and_then(|value| serde_json::from_str::<serde_json::Value>(&value).ok())
+    .and_then(|json| {
+        json.get("defaultSshOldProtocols")
+            .and_then(|value| value.as_str())
+            .map(str::to_string)
+    })
+    .unwrap_or_else(|| "off".to_string())
+}
+
 fn resolve_one_ssh_spec(
     conn: &SqliteConnection,
     secrets: &secrets::Secrets,
@@ -486,10 +507,11 @@ fn resolve_one_ssh_spec(
     host: &ResolvedHost,
     timeout_seconds: u64,
     default_compression: &str,
+    default_old_protocols: &str,
 ) -> Option<SshExecSpec> {
     let row = conn
         .query_row(
-            "SELECT host, username, port, key_path, auth_method, password_credential_id, ssh_socks_proxy, ssh_compression
+            "SELECT host, username, port, key_path, auth_method, password_credential_id, ssh_socks_proxy, ssh_compression, ssh_old_protocols
              FROM connections WHERE id = ?",
             params![host.connection_id],
             |row| {
@@ -502,6 +524,7 @@ fn resolve_one_ssh_spec(
                     row.get::<_, Option<String>>(5)?,
                     row.get::<_, Option<String>>(6)?,
                     row.get::<_, Option<String>>(7)?,
+                    row.get::<_, Option<String>>(8)?,
                 ))
             },
         )
@@ -517,6 +540,7 @@ fn resolve_one_ssh_spec(
         password_credential_id,
         socks_proxy,
         ssh_compression,
+        ssh_old_protocols,
     ) = row;
 
     let key_path_present = key_path
@@ -548,7 +572,10 @@ fn resolve_one_ssh_spec(
         socks_proxy: socks_proxy.filter(|value| !value.trim().is_empty()),
         timeout_seconds: Some(timeout_seconds),
         compression: ssh::resolve_ssh_compression(ssh_compression.as_deref(), default_compression),
-        old_protocols: false,
+        old_protocols: ssh::resolve_ssh_old_protocols(
+            ssh_old_protocols.as_deref(),
+            default_old_protocols,
+        ),
     })
 }
 

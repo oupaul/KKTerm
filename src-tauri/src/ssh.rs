@@ -2440,6 +2440,18 @@ pub(crate) fn resolve_ssh_compression(connection_value: Option<&str>, default_va
     !matches!(connection_value.unwrap_or(default_value).trim(), "off")
 }
 
+/// Effective legacy SSH key-exchange mode for a launch on the backend: the
+/// per-Connection override (`"off"`/`"legacy"`) when set, otherwise the global
+/// SSH default. Returns `true` only for `"legacy"`. Mirrors the frontend
+/// `resolveSshOldProtocols` so backend-initiated channels (IT Ops batch runs)
+/// honor the same setting as terminal sessions.
+pub(crate) fn resolve_ssh_old_protocols(
+    connection_value: Option<&str>,
+    default_value: &str,
+) -> bool {
+    matches!(connection_value.unwrap_or(default_value).trim(), "legacy")
+}
+
 fn native_ssh_client_config(compression: bool, old_protocols: bool) -> client::Config {
     client::Config {
         inactivity_timeout: None,
