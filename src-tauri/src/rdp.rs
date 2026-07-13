@@ -36,9 +36,9 @@ mod platform {
             },
             UI::{
                 Input::KeyboardAndMouse::{
-                    INPUT, INPUT_0, INPUT_KEYBOARD, KEYBD_EVENT_FLAGS, KEYBDINPUT, KEYEVENTF_KEYUP,
-                    MAPVK_VK_TO_VSC, MAPVK_VK_TO_VSC_EX, MapVirtualKeyW, SendInput, SetFocus,
-                    VIRTUAL_KEY, VkKeyScanW,
+                    GetFocus, INPUT, INPUT_0, INPUT_KEYBOARD, KEYBD_EVENT_FLAGS, KEYBDINPUT,
+                    KEYEVENTF_KEYUP, MAPVK_VK_TO_VSC, MAPVK_VK_TO_VSC_EX, MapVirtualKeyW,
+                    SendInput, SetFocus, VIRTUAL_KEY, VkKeyScanW,
                 },
                 WindowsAndMessaging::{
                     CallNextHookEx, CreateWindowExW, DestroyWindow, GetClientRect,
@@ -1922,6 +1922,10 @@ mod platform {
         focus_rdp_window(owner, hwnd, hwnd);
     }
 
+    fn format_hwnd(hwnd: HWND) -> String {
+        format!("{:p}", hwnd.0)
+    }
+
     fn focus_rdp_window(owner: HWND, active: HWND, focus: HWND) {
         // Bring KKTerm forward, foreground the no-activate overlay explicitly, and
         // give keyboard focus to the ActiveX child/control HWND that should receive
@@ -1960,11 +1964,10 @@ mod platform {
 
             let foreground_owner = SetForegroundWindow(owner).as_bool();
             let foreground_active = SetForegroundWindow(active).as_bool();
-            let previous_focus = SetFocus(Some(focus));
-            let (set_focus_succeeded, previous_focus_hwnd) = match previous_focus {
-                Ok(previous) => (true, format_hwnd(previous)),
-                Err(error) => (false, error.to_string()),
-            };
+            let previous_focus = GetFocus();
+            let _ = SetFocus(Some(focus));
+            let resulting_focus = GetFocus();
+            let set_focus_succeeded = resulting_focus == focus;
             rdp_debug(
                 "focus.apply",
                 &json!({
@@ -1984,7 +1987,8 @@ mod platform {
                     "setForegroundOwner": foreground_owner,
                     "setForegroundActive": foreground_active,
                     "setFocusSucceeded": set_focus_succeeded,
-                    "previousFocusHwnd": previous_focus_hwnd,
+                    "previousFocusHwnd": format_hwnd(previous_focus),
+                    "resultingFocusHwnd": format_hwnd(resulting_focus),
                 }),
             );
 

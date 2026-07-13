@@ -47,8 +47,13 @@ test("RDP overlay keyboard focus uses a low-level click hook, not WM_MOUSEACTIVA
   );
   assert.match(
     source,
-    /rdp_debug\(\s*"focus\.apply"[\s\S]*"setFocusSucceeded"/,
-    "RDP focus repair should log whether focus calls actually succeeded",
+    /let previous_focus = GetFocus\(\);[\s\S]*SetFocus\(Some\(focus\)\)[\s\S]*let resulting_focus = GetFocus\(\);[\s\S]*let set_focus_succeeded = resulting_focus == focus/,
+    "RDP focus repair should verify the resulting focus instead of treating SetFocus's nullable previous-focus return as a success flag",
+  );
+  assert.match(
+    source,
+    /rdp_debug\(\s*"focus\.apply"[\s\S]*"setFocusSucceeded"[\s\S]*"previousFocusHwnd"[\s\S]*"resultingFocusHwnd"/,
+    "RDP focus repair should log the focus outcome and the before/after HWNDs",
   );
   assert.match(
     shim,
