@@ -2,7 +2,7 @@
 
 ## AI grep hints
 
-- Keys: `settings.exportSettings`, `settings.importSettings`, `settings.importBackupFileHint`, `settings.fullBackupImport`, `settings.includeCredentials`, `settings.includeCredentialsWarning`, `settings.importActionAdd`, `settings.importActionReplace`, `settings.resetAllSettings`, `settings.resetAllSettingsConfirm`, `settings.resetAllSettingsComplete`, `settings.sectionCredentials`, `settings.credentialStorage`, `settings.credentialsStored`, `settings.deleteCredential`
+- Keys: `settings.exportSettings`, `settings.importSettings`, `settings.importBackupFileHint`, `settings.fullBackupImport`, `settings.includeCredentials`, `settings.includeCredentialsWarning`, `settings.importActionAdd`, `settings.importActionReplace`, `settings.segment_itops`, `settings.segment_assistant`, `settings.resetAllSettings`, `settings.resetAllSettingsConfirm`, `settings.resetAllSettingsComplete`, `settings.sectionCredentials`, `settings.credentialStorage`, `settings.credentialsStored`, `settings.deleteCredential`
 - Topics: SQLite store, OS keychain, encrypted SQLite secret store, settings Import/Export `.kkbackup`, startup backup ZIP snapshots, import / restore, reset all, where my data lives
 - Synonyms: "where is my data", "back up settings", "restore", "factory reset", "uninstall", "API key storage", "export connections without passwords", "share connections", "selective backup"
 
@@ -19,7 +19,7 @@ Do **not** put live session state (open Tabs, focused Pane, in-flight Sessions) 
 
 ## Export `.kkbackup`
 
-`settings.exportSettings` opens the category-aware export dialog and produces a `.kkbackup` bundle (a ZIP holding `manifest.json`, `data.json`, and an optional `secrets.enc`). The export dialog offers a switch per segment — `settings.segment_connections`, `settings.segment_workspaces`, `settings.segment_dashboards`, `settings.segment_settings`, `settings.segment_mcpServers`.
+`settings.exportSettings` opens the category-aware export dialog and produces a `.kkbackup` bundle (a ZIP holding `manifest.json`, `data.json`, and an optional `secrets.enc`). The export dialog offers a switch per segment — `settings.segment_connections`, `settings.segment_workspaces`, `settings.segment_dashboards`, `settings.segment_settings`, `settings.segment_mcpServers`, `settings.segment_itops` (Sites, Server Rooms, Racks, Hosts, Tasks, Automations, and run history), and `settings.segment_assistant` (AI Assistant chat history and memories). Machine-local state — the encrypted secret store rows, AI coding usage accounts/snapshots, and Install Helper tool state — is never part of a selective bundle; the full ZIP snapshot still carries it.
 
 ## Automatic backup snapshots
 

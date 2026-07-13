@@ -23,6 +23,8 @@ const EXPORT_SEGMENTS: { id: string; icon: DialogIconName }[] = [
   { id: "dashboards", icon: "dashboard" },
   { id: "settings", icon: "gear" },
   { id: "mcpServers", icon: "cloud" },
+  { id: "itops", icon: "network" },
+  { id: "assistant", icon: "bot" },
 ];
 
 function defaultExportFilename() {
@@ -40,6 +42,8 @@ export function SelectiveExportDialog({ onClose }: { onClose: () => void }) {
     dashboards: true,
     settings: true,
     mcpServers: true,
+    itops: true,
+    assistant: true,
   });
   const [includeCredentials, setIncludeCredentials] = useState(false);
   const [passphrase, setPassphrase] = useState("");

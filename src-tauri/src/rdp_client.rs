@@ -1023,8 +1023,8 @@ fn validate_rdp_remote_path(root: &Path, remote_path: &str) -> Result<(), String
     Ok(())
 }
 
-async fn rdp_connect(
-    app: AppHandle,
+async fn rdp_connect<R: tauri::Runtime>(
+    app: AppHandle<R>,
     session_id: String,
     host: String,
     port: u16,
@@ -1102,8 +1102,8 @@ async fn rdp_connect(
 }
 
 #[allow(clippy::too_many_arguments)]
-async fn rdp_connect_attempt(
-    app: AppHandle,
+async fn rdp_connect_attempt<R: tauri::Runtime>(
+    app: AppHandle<R>,
     session_id: &str,
     host: &str,
     port: u16,
@@ -1357,8 +1357,8 @@ async fn rdp_connect_attempt(
 // ── Event loop ────────────────────────────────────────────────────────────────
 
 #[derive(Debug)]
-struct CanvasCliprdrBackend {
-    app: AppHandle,
+struct CanvasCliprdrBackend<R: tauri::Runtime> {
+    app: AppHandle<R>,
     session_id: String,
     remote_formats: Vec<ClipboardFormat>,
     local_text: Option<String>,
@@ -1366,8 +1366,8 @@ struct CanvasCliprdrBackend {
     pending_remote_text_request: bool,
 }
 
-impl CanvasCliprdrBackend {
-    fn new(app: AppHandle, session_id: String) -> Self {
+impl<R: tauri::Runtime> CanvasCliprdrBackend<R> {
+    fn new(app: AppHandle<R>, session_id: String) -> Self {
         Self {
             app,
             session_id,
@@ -1379,7 +1379,7 @@ impl CanvasCliprdrBackend {
     }
 }
 
-impl AsAny for CanvasCliprdrBackend {
+impl<R: tauri::Runtime> AsAny for CanvasCliprdrBackend<R> {
     fn as_any(&self) -> &dyn std::any::Any {
         self
     }
@@ -1389,7 +1389,7 @@ impl AsAny for CanvasCliprdrBackend {
     }
 }
 
-impl CliprdrBackend for CanvasCliprdrBackend {
+impl<R: tauri::Runtime> CliprdrBackend for CanvasCliprdrBackend<R> {
     fn temporary_directory(&self) -> &str {
         ""
     }
@@ -1756,7 +1756,9 @@ async fn send_rdp_input(
             let cliprdr = active_stage
                 .get_svc_processor_mut::<CliprdrClient>()
                 .ok_or_else(|| "RDP clipboard channel is not available".to_string())?;
-            if let Some(backend) = cliprdr.downcast_backend_mut::<CanvasCliprdrBackend>() {
+            if let Some(backend) =
+                cliprdr.downcast_backend_mut::<CanvasCliprdrBackend<tauri::Wry>>()
+            {
                 backend.local_text = Some(text);
             }
             let messages = cliprdr
@@ -1814,7 +1816,7 @@ async fn flush_pending_clipboard_request(
         None => return Ok(()),
     };
     let should_request = cliprdr
-        .downcast_backend_mut::<CanvasCliprdrBackend>()
+        .downcast_backend_mut::<CanvasCliprdrBackend<tauri::Wry>>()
         .map(|backend| {
             let pending = backend.pending_remote_text_request;
             backend.pending_remote_text_request = false;
@@ -1842,7 +1844,7 @@ async fn flush_pending_clipboard_response(
         None => return Ok(()),
     };
     let response = cliprdr
-        .downcast_backend_mut::<CanvasCliprdrBackend>()
+        .downcast_backend_mut::<CanvasCliprdrBackend<tauri::Wry>>()
         .and_then(|backend| backend.pending_local_format_response.take());
     let Some(response) = response else {
         return Ok(());
@@ -1876,7 +1878,7 @@ fn cursor_event(
 
 // ── Utilities ─────────────────────────────────────────────────────────────────
 
-fn emit_rdp_event(app: &AppHandle, event: RdpCanvasEvent) {
+fn emit_rdp_event<R: tauri::Runtime>(app: &AppHandle<R>, event: RdpCanvasEvent) {
     let _ = app.emit("rdp-canvas-event", event);
 }
 
@@ -1953,7 +1955,9 @@ mod tests {
             connections
         });
 
+        let app = tauri::test::mock_app();
         let error = match rdp_connect(
+            app.handle().clone(),
             "rdp-test".to_string(),
             "127.0.0.1".to_string(),
             port,
@@ -1962,6 +1966,7 @@ mod tests {
             None,
             1280,
             800,
+            None,
         )
         .await
         {

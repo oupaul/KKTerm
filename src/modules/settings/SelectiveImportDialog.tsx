@@ -23,6 +23,8 @@ const SEGMENT_ICONS: Record<string, DialogIconName> = {
   dashboards: "dashboard",
   settings: "gear",
   mcpServers: "cloud",
+  itops: "network",
+  assistant: "bot",
 };
 
 type SegmentAction = "skip" | "add" | "replace";

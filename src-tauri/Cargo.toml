@@ -221,6 +221,8 @@ ironrdp-connector = { path = "vendor/ironrdp-russh-061/crates/ironrdp-connector"
 
 [dev-dependencies]
 tempfile = "3.27.0"
+# Enables tauri::test::mock_app() so unit tests can build an AppHandle.
+tauri = { version = "2", features = ["test"] }
 
 
 

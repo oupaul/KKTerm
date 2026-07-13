@@ -38,9 +38,11 @@ encrypted SQLite backend is in use.
 
 - **Selective database export/import** (`.kkbackup`, ZIP of `manifest.json` +
   `data.json` + optional `secrets.enc`): the user picks which **segments** to
-  carry (`connections`, `workspaces`, `dashboards`, `settings`, `mcpServers`)
-  and, on import, chooses **per segment** whether to Skip, Add (merge), or
-  Replace.
+  carry (`connections`, `workspaces`, `dashboards`, `settings`, `mcpServers`;
+  bundle v2 added `itops` and `assistant`) and, on import, chooses **per
+  segment** whether to Skip, Add (merge), or Replace. The manifest records the
+  lowest bundle version able to carry the chosen segments, so bundles without
+  the newer segments stay importable by older app versions.
 
 ### Generic, metadata-driven row copy
 
