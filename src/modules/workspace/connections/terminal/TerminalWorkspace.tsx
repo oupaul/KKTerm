@@ -1,4 +1,4 @@
-import { confirmTrustedSshHostKey, connectionPasswordOwnerId, connectionToolbarTitle, localShellOptionsForPlatform, resolveAvailableLocalShell, resolveSshCompression, resolveSshSocksProxyRequest, uniqueRuntimeId, usesNativeSshHostKeyVerification } from "../utils";
+import { confirmTrustedSshHostKey, connectionPasswordOwnerId, connectionToolbarTitle, localShellOptionsForPlatform, resolveAvailableLocalShell, resolveSshCompression, resolveSshOldProtocols, resolveSshSocksProxyRequest, uniqueRuntimeId, usesNativeSshHostKeyVerification } from "../utils";
 import { resolveLocalShellForLaunch } from "./pwshPreflight";
 import { ConfirmDialog } from "../../../../app/ConfirmDialog";
 import { readFromClipboard, writeToClipboard } from "../../../../lib/clipboard";
@@ -2227,6 +2227,7 @@ function TerminalPaneView({
               host: connection.host,
               port: connection.port,
               ...resolveSshSocksProxyRequest(connection),
+              sshOldProtocols: resolveSshOldProtocols(connection, sshSettings),
             },
           });
           await confirmTrustedSshHostKey(preview);
@@ -2294,6 +2295,7 @@ function TerminalPaneView({
             sshBufferLines: connection.type === "ssh" ? sshSettings.bufferLines : undefined,
             sshCompression:
               connection.type === "ssh" ? resolveSshCompression(connection, sshSettings) : undefined,
+            sshOldProtocols: connection.type === "ssh" ? resolveSshOldProtocols(connection, sshSettings) : undefined,
           },
         });
         if (disposed) {

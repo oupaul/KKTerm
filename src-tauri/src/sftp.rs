@@ -60,6 +60,8 @@ pub struct StartSftpSessionRequest {
     pub passphrase_owner_id: Option<String>,
     pub path: Option<String>,
     pub ssh_compression: Option<bool>,
+    #[serde(default)]
+    pub ssh_old_protocols: Option<bool>,
 }
 
 #[derive(Deserialize)]
@@ -363,6 +365,7 @@ impl SftpSessionManager {
                     x11_forwarding: None,
                     socks_proxy,
                     compression,
+                    old_protocols: request.ssh_old_protocols.unwrap_or(false),
                     remote_forward_targets: None,
                     bridge_tasks: None,
                 })

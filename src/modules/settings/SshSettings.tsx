@@ -5,7 +5,7 @@ import type { TFunction } from "i18next";
 import { invokeCommand, isTauriRuntime, selectKeyFile } from "../../lib/tauri";
 import { LegacyDialogActions } from "../../app/ui/dialog";
 import { useWorkspaceStore } from "../../store";
-import type { SshCompressionMode, SshSettings as SshSettingsType } from "../../types";
+import type { SshCompressionMode, SshOldProtocolsMode, SshSettings as SshSettingsType } from "../../types";
 import { SettingsSectionHeader, useSettingsSaveRegistration } from "./shared";
 import { ToggleSwitch } from "./ToggleSwitch";
 
@@ -41,6 +41,7 @@ function normalizeSshSettingsDraft(settings: SshSettingsType, t: TFunction): Ssh
     defaultKeyPath,
     defaultProxyJump,
     defaultSshCompression: settings.defaultSshCompression ?? "fast",
+    defaultSshOldProtocols: settings.defaultSshOldProtocols ?? "off",
     bufferLines,
     defaultTransparency,
     defaultUseTmuxSessions: settings.defaultUseTmuxSessions ?? true,
@@ -249,6 +250,23 @@ export function SshSettings() {
               <option value="off">{t("settings.sshCompressionOff")}</option>
             </select>
             <small className="field-hint">{t("settings.sshCompressionHint")}</small>
+          </label>
+          <label>
+            <span>{t("settings.sshOldProtocols")}</span>
+            <select
+              onChange={(event) => {
+                const defaultSshOldProtocols = event.currentTarget.value as SshOldProtocolsMode;
+                setSshDraft((settings) => ({
+                  ...settings,
+                  defaultSshOldProtocols,
+                }));
+              }}
+              value={sshDraft.defaultSshOldProtocols ?? "off"}
+            >
+              <option value="off">{t("settings.sshOldProtocolsOff")}</option>
+              <option value="legacy">{t("settings.sshOldProtocolsLegacy")}</option>
+            </select>
+            <small className="field-hint">{t("settings.sshOldProtocolsHint")}</small>
           </label>
         </div>
       </fieldset>

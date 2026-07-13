@@ -159,7 +159,12 @@ pub fn run_batch(
         }
     });
 
-    let host_reports: Vec<HostReport> = results.into_inner().unwrap().into_iter().flatten().collect();
+    let host_reports: Vec<HostReport> = results
+        .into_inner()
+        .unwrap()
+        .into_iter()
+        .flatten()
+        .collect();
     let ok = host_reports.iter().filter(|report| report.ok).count();
     let failed = host_reports.iter().filter(|report| !report.ok).count();
     RunReport {
@@ -181,6 +186,7 @@ pub struct SshExecSpec {
     pub socks_proxy: Option<String>,
     pub timeout_seconds: Option<u64>,
     pub compression: bool,
+    pub old_protocols: bool,
 }
 
 /// The Phase 2 SSH transport. Holds pre-resolved per-host exec specs and runs
@@ -285,6 +291,7 @@ impl BatchTransport for SshTransport {
             timeout_seconds: spec.timeout_seconds,
             socks_proxy: spec.socks_proxy.clone(),
             compression: spec.compression,
+            old_protocols: spec.old_protocols,
         };
         // Every sudo credential in play, so we can scrub it from anything the
         // remote PTY echoes back before it reaches the live stream or storage.
@@ -382,13 +389,14 @@ impl BatchTransport for SshTransport {
                     let app = app.clone();
                     Box::pin(async move {
                         crate::ai::run_playbook_ai_decision(app, instruction, previous_output).await
-                    }) as std::pin::Pin<
-                        Box<
-                            dyn std::future::Future<
-                                    Output = Result<crate::ai::PlaybookAiDecision, String>,
-                                > + Send,
-                        >,
-                    >
+                    })
+                        as std::pin::Pin<
+                            Box<
+                                dyn std::future::Future<
+                                        Output = Result<crate::ai::PlaybookAiDecision, String>,
+                                    > + Send,
+                            >,
+                        >
                 };
                 let ai_handler: &ssh::PlaybookAiHandler = &ai_callback;
                 match ssh::run_playbook_capture_streaming(
@@ -434,6 +442,7 @@ pub fn resolve_ssh_specs(
 ) -> HashMap<String, SshExecSpec> {
     let mut specs = HashMap::new();
     let default_compression = global_default_ssh_compression(conn);
+    let default_old_protocols = global_default_ssh_old_protocols(conn);
     for host in hosts {
         if host.connection_type != "ssh" {
             continue;
@@ -445,6 +454,7 @@ pub fn resolve_ssh_specs(
             host,
             timeout_seconds,
             &default_compression,
+            &default_old_protocols,
         ) {
             specs.insert(host.connection_id.clone(), spec);
         }
@@ -471,6 +481,25 @@ fn global_default_ssh_compression(conn: &SqliteConnection) -> String {
     .unwrap_or_else(|| "fast".to_string())
 }
 
+/// Read the global legacy SSH key-exchange default (`"off"`/`"legacy"`) from the
+/// settings blob so batch runs honor the same setting as interactive sessions.
+/// Falls back to `"off"` when the settings row or field is absent.
+fn global_default_ssh_old_protocols(conn: &SqliteConnection) -> String {
+    conn.query_row("SELECT value FROM settings WHERE key = 'ssh'", [], |row| {
+        row.get::<_, String>(0)
+    })
+    .optional()
+    .ok()
+    .flatten()
+    .and_then(|value| serde_json::from_str::<serde_json::Value>(&value).ok())
+    .and_then(|json| {
+        json.get("defaultSshOldProtocols")
+            .and_then(|value| value.as_str())
+            .map(str::to_string)
+    })
+    .unwrap_or_else(|| "off".to_string())
+}
+
 fn resolve_one_ssh_spec(
     conn: &SqliteConnection,
     secrets: &secrets::Secrets,
@@ -478,10 +507,11 @@ fn resolve_one_ssh_spec(
     host: &ResolvedHost,
     timeout_seconds: u64,
     default_compression: &str,
+    default_old_protocols: &str,
 ) -> Option<SshExecSpec> {
     let row = conn
         .query_row(
-            "SELECT host, username, port, key_path, auth_method, password_credential_id, ssh_socks_proxy, ssh_compression
+            "SELECT host, username, port, key_path, auth_method, password_credential_id, ssh_socks_proxy, ssh_compression, ssh_old_protocols
              FROM connections WHERE id = ?",
             params![host.connection_id],
             |row| {
@@ -494,6 +524,7 @@ fn resolve_one_ssh_spec(
                     row.get::<_, Option<String>>(5)?,
                     row.get::<_, Option<String>>(6)?,
                     row.get::<_, Option<String>>(7)?,
+                    row.get::<_, Option<String>>(8)?,
                 ))
             },
         )
@@ -509,6 +540,7 @@ fn resolve_one_ssh_spec(
         password_credential_id,
         socks_proxy,
         ssh_compression,
+        ssh_old_protocols,
     ) = row;
 
     let key_path_present = key_path
@@ -540,6 +572,10 @@ fn resolve_one_ssh_spec(
         socks_proxy: socks_proxy.filter(|value| !value.trim().is_empty()),
         timeout_seconds: Some(timeout_seconds),
         compression: ssh::resolve_ssh_compression(ssh_compression.as_deref(), default_compression),
+        old_protocols: ssh::resolve_ssh_old_protocols(
+            ssh_old_protocols.as_deref(),
+            default_old_protocols,
+        ),
     })
 }
 
@@ -625,7 +661,15 @@ mod tests {
             peak: AtomicUsize::new(0),
         };
         let cancel = AtomicBool::new(false);
-        let report = run_batch("run-pb", &hosts, &playbook(), &transport, 2, &cancel, &|_| {});
+        let report = run_batch(
+            "run-pb",
+            &hosts,
+            &playbook(),
+            &transport,
+            2,
+            &cancel,
+            &|_| {},
+        );
         assert_eq!(report.total, 2);
         assert_eq!(report.ok, 1);
         assert_eq!(report.failed, 1);
@@ -687,15 +731,23 @@ mod tests {
         let cancel = AtomicBool::new(false);
         let started = AtomicUsize::new(0);
         let finished = AtomicUsize::new(0);
-        run_batch("run-4", &hosts, &script(), &transport, 2, &cancel, &|event| match event {
-            RunEvent::HostStarted { .. } => {
-                started.fetch_add(1, Ordering::SeqCst);
-            }
-            RunEvent::HostFinished { .. } => {
-                finished.fetch_add(1, Ordering::SeqCst);
-            }
-            _ => {}
-        });
+        run_batch(
+            "run-4",
+            &hosts,
+            &script(),
+            &transport,
+            2,
+            &cancel,
+            &|event| match event {
+                RunEvent::HostStarted { .. } => {
+                    started.fetch_add(1, Ordering::SeqCst);
+                }
+                RunEvent::HostFinished { .. } => {
+                    finished.fetch_add(1, Ordering::SeqCst);
+                }
+                _ => {}
+            },
+        );
         assert_eq!(started.load(Ordering::SeqCst), 2);
         assert_eq!(finished.load(Ordering::SeqCst), 2);
     }
@@ -710,11 +762,19 @@ mod tests {
         };
         let cancel = AtomicBool::new(false);
         let chunks = AtomicUsize::new(0);
-        let report = run_batch("run-5", &hosts, &script(), &transport, 2, &cancel, &|event| {
-            if let RunEvent::HostOutput { .. } = event {
-                chunks.fetch_add(1, Ordering::SeqCst);
-            }
-        });
+        let report = run_batch(
+            "run-5",
+            &hosts,
+            &script(),
+            &transport,
+            2,
+            &cancel,
+            &|event| {
+                if let RunEvent::HostOutput { .. } = event {
+                    chunks.fetch_add(1, Ordering::SeqCst);
+                }
+            },
+        );
         assert_eq!(chunks.load(Ordering::SeqCst), 2); // one "done" frame per host
         assert!(report.hosts.iter().all(|host| host.output == "done"));
     }

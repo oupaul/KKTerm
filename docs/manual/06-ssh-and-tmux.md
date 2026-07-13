@@ -29,6 +29,12 @@ This is not a `window.confirm`. Users explicitly approve the new key; the truste
 
 Add/Edit Connection places `connections.keyPassphraseOptional` directly below the private-key path. A value is stored as a per-Connection `connectionPassphrase` secret in the configured secret store, never in the Connection row or plaintext settings data. Leaving the field blank while editing preserves an existing passphrase. When an encrypted key has no stored passphrase, or the stored passphrase cannot decrypt it, the terminal prompts for `SSH key passphrase:` interactively before authentication. This fallback applies to terminal Sessions; non-interactive fresh connections such as SFTP and one-shot tmux/IT Ops commands require the saved passphrase. An entered passphrase does not prevent an unencrypted key from loading; it is ignored for that key.
 
+## Old protocol compatibility
+
+`settings.sshOldProtocols` controls the global default for old SSH protocol compatibility and defaults off. `connections.sshOldProtocols` can override it for a single SSH Connection. The legacy mode appends SHA-1-era key-exchange algorithms only for trusted older hosts that cannot negotiate the modern default set; leave it off for ordinary servers.
+
+The Add SSH Connection dialog's `connections.importSshConfig` action imports the platform default SSH config (`%USERPROFILE%\.ssh\config` on Windows, `~/.ssh/config` on macOS/Linux) when it exists. If the default file is absent, KKTerm opens a file picker. The import applies the first importable `Host` draft to the dialog and leaves unsupported directives visible through the SSH config importer result.
+
 ## Idle behaviour
 
 A live SSH Session has **no app-side idle timeout**. Quiet and unfocused Sessions stay connected until the remote, network, or an explicit user close ends them.

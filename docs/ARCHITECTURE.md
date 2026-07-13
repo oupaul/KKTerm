@@ -235,7 +235,7 @@ Owns in-process SSH connections, host key verification, authentication, terminal
 
 SOCKS support is for true SOCKS5 endpoints. Do not add protocol guessing that treats the SSH SOCKS field as an HTTP CONNECT proxy listener; keep HTTP proxy and ProxyJump semantics separate unless a new product design explicitly introduces them. A proven proxy edge case is `ssh.debug.log` showing `connection.socks.connect_ok`, followed by repeated `connection.disconnected.error` entries with `error: "early eof"`, while PuTTY or OpenSSH reproduces the same drop through the same SOCKS server. Treat that as a proxy/TCP-path close surfaced through the SSH transport. Preserve the bounded tmux reattach behavior and diagnostic logging, but do not hide persistent proxy-side disconnects with peculiar app-specific retry loops.
 
-Evaluate `russh` first. Evaluate `ssh2` if `russh` does not meet v0.1 needs.
+Evaluate `russh` first. Evaluate `ssh2` if `russh` does not meet v0.1 needs. Old SHA-1-era SSH key exchange support is opt-in only: `settings.sshOldProtocols` supplies the global default, and each SSH Connection may override it through `connections.sshOldProtocols`. Keep modern algorithms as the default and append legacy KEX only for trusted older hosts.
 
 ### SFTP
 
@@ -257,7 +257,7 @@ The same screenshot path is also used internally for RDP overlay suppression. Be
 
 Parses SSH config and creates draft connections. It should preserve supported directives and visibly report unsupported directives.
 
-Current implementation note: the importer supports `Host`, `HostName`, `User`, `Port`, `IdentityFile`, and `ProxyJump`. It skips wildcard-only host patterns and reports unsupported global or host-scoped directives with line numbers through the typed Tauri command. The previous top chrome import button has been removed; a future visible entry point should live in the connection tree or Settings rather than a standalone global button bar.
+Current implementation note: the importer supports `Host`, `HostName`, `User`, `Port`, `IdentityFile`, and `ProxyJump`. It skips wildcard-only host patterns and reports unsupported global or host-scoped directives with line numbers through the typed Tauri command. The Add SSH Connection dialog exposes `connections.importSshConfig`; it first reads the platform default `~/.ssh/config` / `%USERPROFILE%\.ssh\config` when present, otherwise opens a file picker, then applies the first importable Host draft to the dialog.
 
 ### Connection Batch Importer
 

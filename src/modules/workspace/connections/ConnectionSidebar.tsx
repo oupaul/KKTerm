@@ -41,7 +41,7 @@ import {
   connectionRequestNeedsCredentialStoreUnlock,
   shouldDeleteSshSocksProxySecret,
 } from "./credentialUnlockPreflight";
-import { confirmTrustedSshHostKey, connectionPasswordOwnerId, connectionSshSocksProxyPasswordOwnerId, defaultPortForConnectionType, connectionTypeLabel, ftpPortForProtocolSelection, isRemoteDesktopConnectionType, localShellOptionsForPlatform, resolveSshCompression, resolveSshSocksProxyRequest, uniqueRuntimeId, type LocalShellOption } from "./utils";
+import { confirmTrustedSshHostKey, connectionPasswordOwnerId, connectionSshSocksProxyPasswordOwnerId, defaultPortForConnectionType, connectionTypeLabel, ftpPortForProtocolSelection, isRemoteDesktopConnectionType, localShellOptionsForPlatform, resolveSshCompression, resolveSshOldProtocols, resolveSshSocksProxyRequest, uniqueRuntimeId, type LocalShellOption } from "./utils";
 import { IMPORT_CONNECTIONS_REQUEST_EVENT, NEW_CONNECTION_REQUEST_EVENT, RECENT_CONNECTION_LIMIT, loadCollapsedFolderIds, loadRecentConnectionIds, notifyConnectionTreeInvalidated, saveCollapsedFolderIds, saveRecentConnectionIds, type NewConnectionRequestDetail } from "./connectionSidebarState";
 import { collectConnectionFolderIds, countConnections, countFolders, filterConnectedConnections, filterConnectionTree, findConnectionInTree, flattenConnections, flattenFolders, visibleFlatConnections as flattenVisibleConnections, withLiveConnectionStatuses } from "./treeUtils";
 import { WorkspaceIcon } from "../workspaceIcons";
@@ -65,14 +65,14 @@ import { nativeMenuIcons } from "../../../lib/nativeMenuIcons";
 import { lockOsIconAutoDetect } from "../../../lib/osIcons";
 import { isMacPlatform } from "../../../lib/platform";
 import { showNativeContextMenu, type NativeContextMenuItem } from "../../../lib/nativeContextMenu";
-import { confirmNativeDialog, invokeCommand, isCredentialUnlockRequiredError, isTauriRuntime, selectAppLauncherFolder, selectFileViewPath, selectKeyFile, type TmuxSession } from "../../../lib/tauri";
+import { confirmNativeDialog, invokeCommand, isCredentialUnlockRequiredError, isTauriRuntime, selectAndReadSshConfigFile, selectAppLauncherFolder, selectFileViewPath, selectKeyFile, type TmuxSession } from "../../../lib/tauri";
 import { connectionTree } from "../../../app-defaults";
 import { DeleteConfirmationDialog } from "../../../app/DeleteConfirmationDialog";
 import { DialogPortal } from "../../../app/DialogPortal";
 import { LegacyDialogActions } from "../../../app/ui/dialog";
 import { pushTrayMenu } from "../../../app/trayMenu";
 import { CHILD_CONNECTION_CLOSED_EVENT, DEFAULT_WORKSPACE_ID, appendTmuxSessionId, useWorkspaceStore } from "../../../store";
-import type { Connection, ConnectionFolder, ConnectionStatus, ConnectionTree, ConnectionType, CreateConnectionRequest, RdpSettings, SplitDirection, SshCompressionMode, SshSettings, StoredCredentialSummary, UpdateConnectionRequest, VncSettings, WorkspaceChildConnection, WorkspaceTab } from "../../../types";
+import type { Connection, ConnectionFolder, ConnectionStatus, ConnectionTree, ConnectionType, CreateConnectionRequest, RdpSettings, SplitDirection, SshCompressionMode, SshOldProtocolsMode, SshSettings, StoredCredentialSummary, UpdateConnectionRequest, VncSettings, WorkspaceChildConnection, WorkspaceTab } from "../../../types";
 
 // Pointer travel (px, either axis) before a press is treated as a drag rather
 // than a click. Kept above ordinary click jitter so selecting a row never
@@ -944,6 +944,7 @@ export function ConnectionSidebar({
           proxyJump: connection.proxyJump,
           ...resolveSshSocksProxyRequest(connection),
           sshCompression: resolveSshCompression(connection, sshSettings),
+          sshOldProtocols: resolveSshOldProtocols(connection, sshSettings),
           authMethod: connection.authMethod,
           secretOwnerId: connectionPasswordOwnerId(connection),
         },
@@ -1097,6 +1098,7 @@ export function ConnectionSidebar({
           proxyJump: connection.proxyJump,
           ...resolveSshSocksProxyRequest(connection),
           sshCompression: resolveSshCompression(connection, sshSettings),
+          sshOldProtocols: resolveSshOldProtocols(connection, sshSettings),
         },
       });
       setTransferSshPublicKeyDialog(null);
@@ -3410,6 +3412,7 @@ function FolderIconDialog({
   const { t } = useTranslation();
   const [iconDataUrl, setIconDataUrl] = useState<string | null>(folder.iconDataUrl ?? null);
 
+
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     onSubmit(iconDataUrl);
@@ -4113,6 +4116,10 @@ function ConnectionDialog({
   const [keyPath, setKeyPath] = useState(
     initialConnection?.keyPath ?? sshSettings.defaultKeyPath ?? "",
   );
+  const [nameDraft, setNameDraft] = useState(initialConnection?.name ?? "");
+  const [hostDraft, setHostDraft] = useState(initialConnection?.host ?? "");
+  const [userDraft, setUserDraft] = useState(initialConnection?.user ?? sshSettings.defaultUser);
+  const [importedProxyJump, setImportedProxyJump] = useState<string | undefined>();
   const [localStartupDirectory, setLocalStartupDirectory] = useState(
     initialConnection?.localStartupDirectory ?? "",
   );
@@ -4324,6 +4331,35 @@ function ConnectionDialog({
     };
   }, [connectionType]);
 
+  async function handleImportSshConfig() {
+    try {
+      const file = await selectAndReadSshConfigFile();
+      if (!file) {
+        return;
+      }
+      const preview = await invokeCommand("import_ssh_config", {
+        request: { content: file.content, folderId: initialFolderId },
+      });
+      const draft = preview.drafts[0];
+      if (!draft) {
+        throw new Error(t("connections.importSshConfigEmpty"));
+      }
+      setNameDraft(draft.name ?? "");
+      setHostDraft(draft.host ?? "");
+      setUserDraft(draft.user ?? sshSettings.defaultUser);
+      setPortDraft(draft.port ? String(draft.port) : "");
+      setKeyPath(draft.keyPath ?? "");
+      if (draft.proxyJump) {
+        setImportedProxyJump(draft.proxyJump);
+        setSshSocksProxyInheritsSettingsDefaults(false);
+      }
+    } catch (importError) {
+      useWorkspaceStore.getState().showStatusBarNotice(importError instanceof Error ? importError.message : String(importError), { tone: "error" });
+    }
+  }
+
+
+
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!connectionType) {
@@ -4398,9 +4434,14 @@ function ConnectionDialog({
     // override (undefined) so the connection tracks the global default; an
     // explicit choice persists "off"/"fast".
     const formSshCompression = String(form.get("sshCompression") ?? "");
+    const formSshOldProtocols = String(form.get("sshOldProtocols") ?? "");
     const sshCompression =
       usesSshDefaults && !sshUsesDefaultOptions && (formSshCompression === "off" || formSshCompression === "fast")
         ? (formSshCompression as SshCompressionMode)
+        : undefined;
+    const sshOldProtocols =
+      usesSshDefaults && !sshUsesDefaultOptions && (formSshOldProtocols === "off" || formSshOldProtocols === "legacy")
+        ? (formSshOldProtocols as SshOldProtocolsMode)
         : undefined;
     const usePsmuxSessions = connectionType === "local" && form.get("usePsmuxSessions") === "on";
     const inheritRdpDefaults = form.get("rdpInheritDefaults") === "on";
@@ -4451,6 +4492,7 @@ function ConnectionDialog({
       sshSocksProxyUsername: usesSshDefaults ? sshSocksProxyUsername || undefined : undefined,
       sshSocksProxyInheritDefaults: usesSshDefaults ? sshUsesDefaultOptions : undefined,
       sshCompression: usesSshDefaults ? sshCompression : undefined,
+      sshOldProtocols: usesSshDefaults ? sshOldProtocols : undefined,
       sshSocksProxyPassword: usesSshDefaults && !sshUsesDefaultOptions ? sshSocksProxyPassword || undefined : undefined,
       authMethod: usesSshAuthFields ? effectiveAuthMethod : undefined,
       keyPassphrase: usesSshAuthFields && effectiveAuthMethod === "keyFile" ? keyPassphrase || undefined : undefined,
@@ -4741,12 +4783,19 @@ function ConnectionDialog({
             isEditMode={isEditMode}
             keyPath={keyPath}
             keyPassphraseDraft={keyPassphraseDraft}
+            nameDraft={nameDraft}
+            hostDraft={hostDraft}
+            userDraft={userDraft}
             matchingPasswordCredentials={matchingPasswordCredentials}
             onAuthMethodChange={setAuthMethod}
             onBrowseKeyFile={() => void handleBrowseKeyFile()}
+            onImportSshConfig={() => void handleImportSshConfig()}
             onKeyPathChange={setKeyPath}
             onOpenKeyEmailDialog={handleOpenKeyEmailDialog}
             onPortDraftChange={setPortDraft}
+            onHostDraftChange={setHostDraft}
+            onNameDraftChange={setNameDraft}
+            onUserDraftChange={setUserDraft}
             onSelectedPasswordCredentialIdChange={setSelectedPasswordCredentialId}
             portDraft={portDraft}
             selectedPasswordCredentialId={selectedPasswordCredentialId}
@@ -4829,6 +4878,7 @@ function ConnectionDialog({
         return (
           <SshConnectionOptions
             initialConnection={initialConnection}
+            importedProxyJump={importedProxyJump}
             onInheritsSettingsDefaultsChange={setSshSocksProxyInheritsSettingsDefaults}
             sshInheritsSettingsDefaults={sshSocksProxyInheritsSettingsDefaults}
             sshSettings={sshSettings}

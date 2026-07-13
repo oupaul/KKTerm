@@ -298,6 +298,14 @@ export function resolveSshCompression(
   return mode === "fast";
 }
 
+export function resolveSshOldProtocols(
+  connection: Pick<Connection, "sshOldProtocols">,
+  sshSettings: Pick<SshSettings, "defaultSshOldProtocols">,
+): boolean {
+  const mode = connection.sshOldProtocols ?? sshSettings.defaultSshOldProtocols ?? "off";
+  return mode === "legacy";
+}
+
 export function resolveSshSocksProxyRequest(
   connection: Pick<Connection, "id" | "sshSocksProxy" | "sshSocksProxyUsername" | "sshSocksProxyInheritDefaults">,
 ): SshSocksProxyRequestFields {

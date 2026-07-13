@@ -57,6 +57,7 @@ CREATE TABLE IF NOT EXISTS connections (
     ssh_socks_proxy_username TEXT,
     ssh_socks_proxy_inherit_defaults INTEGER NOT NULL DEFAULT 1,
     ssh_compression TEXT,
+    ssh_old_protocols TEXT,
     auth_method TEXT NOT NULL DEFAULT 'keyFile',
     local_shell TEXT,
     local_startup_directory TEXT,
@@ -783,6 +784,8 @@ pub struct SshSettings {
     default_proxy_jump: Option<String>,
     #[serde(default = "default_ssh_compression")]
     default_ssh_compression: String,
+    #[serde(default = "default_ssh_old_protocols")]
+    default_ssh_old_protocols: String,
     #[serde(default = "default_ssh_buffer_lines")]
     buffer_lines: u32,
     #[serde(default = "default_terminal_transparency")]
@@ -1304,6 +1307,8 @@ pub struct SavedConnection {
     ssh_socks_proxy_inherit_defaults: bool,
     #[serde(default)]
     ssh_compression: Option<String>,
+    #[serde(default)]
+    ssh_old_protocols: Option<String>,
     auth_method: String,
     local_shell: Option<String>,
     local_startup_directory: Option<String>,
@@ -1411,6 +1416,8 @@ pub struct CreateConnectionRequest {
     ssh_socks_proxy_inherit_defaults: Option<bool>,
     #[serde(default)]
     ssh_compression: Option<String>,
+    #[serde(default)]
+    ssh_old_protocols: Option<String>,
     auth_method: Option<String>,
     local_shell: Option<String>,
     #[serde(default)]
@@ -1461,6 +1468,8 @@ pub struct UpdateConnectionRequest {
     ssh_socks_proxy_inherit_defaults: Option<bool>,
     #[serde(default)]
     ssh_compression: Option<String>,
+    #[serde(default)]
+    ssh_old_protocols: Option<String>,
     auth_method: Option<String>,
     local_shell: Option<String>,
     #[serde(default)]
@@ -2525,6 +2534,7 @@ impl Storage {
         // fresh install (still at user_version 0 when v25 runs) loses it. NULL
         // inherits the global SSH default; 'off'/'fast' force a choice.
         ensure_column(&connection, "connections", "ssh_compression", "TEXT")?;
+        ensure_column(&connection, "connections", "ssh_old_protocols", "TEXT")?;
         // Per-connection terminal color scheme override. NULL inherits the
         // global Terminal Settings default. Ensured past every
         // connections-table rebuild, like ssh_compression above.
@@ -3498,7 +3508,7 @@ fn list_root_connections_for_workspace(
     let mut statement = connection
         .prepare(
             "SELECT connections.id, name, tab_title, host, connections.username, port, key_path, proxy_jump, ssh_socks_proxy, ssh_socks_proxy_username, ssh_socks_proxy_inherit_defaults, auth_method, local_shell, local_startup_directory, local_startup_script, url, data_partition, use_tmux_sessions, tmux_connection_id, connection_type, serial_line, serial_speed, rdp_options, vnc_options, ftp_options, icon_color, icon_data_url, icon_background_color, terminal_opacity, terminal_background_json, password_credential_id,
-                    (SELECT username FROM url_credentials WHERE url_credentials.connection_id = connections.id ORDER BY updated_at DESC LIMIT 1), file_browser_view_options_json, file_view_open_external, ssh_port_forwardings_json, use_psmux_sessions, ssh_compression, url_proxy, url_proxy_inherit_defaults, url_user_agent, terminal_color_scheme
+                    (SELECT username FROM url_credentials WHERE url_credentials.connection_id = connections.id ORDER BY updated_at DESC LIMIT 1), file_browser_view_options_json, file_view_open_external, ssh_port_forwardings_json, use_psmux_sessions, ssh_compression, url_proxy, url_proxy_inherit_defaults, url_user_agent, terminal_color_scheme, ssh_old_protocols
              FROM connections
              WHERE folder_id IS NULL AND workspace_id = ?1
              ORDER BY sort_order, name",
@@ -3560,7 +3570,7 @@ fn list_connections_for_folder(
     let mut statement = connection
         .prepare(&format!(
             "SELECT connections.id, name, tab_title, host, connections.username, port, key_path, proxy_jump, ssh_socks_proxy, ssh_socks_proxy_username, ssh_socks_proxy_inherit_defaults, auth_method, local_shell, local_startup_directory, local_startup_script, url, data_partition, use_tmux_sessions, tmux_connection_id, connection_type, serial_line, serial_speed, rdp_options, vnc_options, ftp_options, icon_color, icon_data_url, icon_background_color, terminal_opacity, terminal_background_json, password_credential_id,
-                    (SELECT username FROM url_credentials WHERE url_credentials.connection_id = connections.id ORDER BY updated_at DESC LIMIT 1), file_browser_view_options_json, file_view_open_external, ssh_port_forwardings_json, use_psmux_sessions, ssh_compression, url_proxy, url_proxy_inherit_defaults, url_user_agent, terminal_color_scheme
+                    (SELECT username FROM url_credentials WHERE url_credentials.connection_id = connections.id ORDER BY updated_at DESC LIMIT 1), file_browser_view_options_json, file_view_open_external, ssh_port_forwardings_json, use_psmux_sessions, ssh_compression, url_proxy, url_proxy_inherit_defaults, url_user_agent, terminal_color_scheme, ssh_old_protocols
              FROM connections
              WHERE {where_clause}
              ORDER BY sort_order, name",
@@ -3935,7 +3945,7 @@ fn get_connection_by_id(
     let saved_connection = connection
         .query_row(
             "SELECT connections.id, name, tab_title, host, connections.username, port, key_path, proxy_jump, ssh_socks_proxy, ssh_socks_proxy_username, ssh_socks_proxy_inherit_defaults, auth_method, local_shell, local_startup_directory, local_startup_script, url, data_partition, use_tmux_sessions, tmux_connection_id, connection_type, serial_line, serial_speed, rdp_options, vnc_options, ftp_options, icon_color, icon_data_url, icon_background_color, terminal_opacity, terminal_background_json, password_credential_id,
-                    (SELECT username FROM url_credentials WHERE url_credentials.connection_id = connections.id ORDER BY updated_at DESC LIMIT 1), file_browser_view_options_json, file_view_open_external, ssh_port_forwardings_json, use_psmux_sessions, ssh_compression, url_proxy, url_proxy_inherit_defaults, url_user_agent, terminal_color_scheme
+                    (SELECT username FROM url_credentials WHERE url_credentials.connection_id = connections.id ORDER BY updated_at DESC LIMIT 1), file_browser_view_options_json, file_view_open_external, ssh_port_forwardings_json, use_psmux_sessions, ssh_compression, url_proxy, url_proxy_inherit_defaults, url_user_agent, terminal_color_scheme, ssh_old_protocols
              FROM connections
              WHERE connections.id = ?1",
             params![connection_id],
@@ -3955,6 +3965,7 @@ fn get_connection_by_id(
                     ssh_socks_proxy_username: row.get(9)?,
                     ssh_socks_proxy_inherit_defaults: row.get(10)?,
                     ssh_compression: row.get(36)?,
+                    ssh_old_protocols: row.get(41)?,
                     auth_method: row.get(11)?,
                     local_shell: row.get(12)?,
                     local_startup_directory: row.get(13)?,
@@ -4016,6 +4027,7 @@ fn saved_connection_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<SavedC
         ssh_socks_proxy_username: row.get(9)?,
         ssh_socks_proxy_inherit_defaults: row.get(10)?,
         ssh_compression: row.get(36)?,
+        ssh_old_protocols: row.get(41)?,
         auth_method: row.get(11)?,
         local_shell: row.get(12)?,
         local_startup_directory: row.get(13)?,
@@ -4325,6 +4337,23 @@ fn normalize_ssh_compression(
         Some(value) if value == "off" || value == "fast" => Ok(Some(value)),
         Some(other) => Err(format!(
             "invalid SSH compression value '{other}': expected 'off' or 'fast'"
+        )),
+    }
+}
+
+fn normalize_ssh_old_protocols(
+    value: Option<String>,
+    connection_type: &str,
+) -> Result<Option<String>, String> {
+    if connection_type != "ssh" {
+        return Ok(None);
+    }
+    match value.map(|value| value.trim().to_lowercase()) {
+        None => Ok(None),
+        Some(value) if value.is_empty() => Ok(None),
+        Some(value) if value == "off" || value == "legacy" => Ok(Some(value)),
+        Some(other) => Err(format!(
+            "invalid SSH old protocol value '{other}': expected 'off' or 'legacy'"
         )),
     }
 }
@@ -5079,6 +5108,7 @@ fn default_ssh_settings() -> SshSettings {
         default_key_path: default_ssh_key_path(),
         default_proxy_jump: None,
         default_ssh_compression: default_ssh_compression(),
+        default_ssh_old_protocols: default_ssh_old_protocols(),
         buffer_lines: default_ssh_buffer_lines(),
         default_transparency: default_terminal_transparency(),
         default_use_tmux_sessions: default_use_tmux_sessions(),
@@ -5098,6 +5128,10 @@ fn default_ssh_buffer_lines() -> u32 {
 
 fn default_ssh_compression() -> String {
     "fast".to_string()
+}
+
+fn default_ssh_old_protocols() -> String {
+    "off".to_string()
 }
 
 fn default_terminal_transparency() -> u8 {
@@ -5815,6 +5849,16 @@ fn validate_ssh_settings(mut settings: SshSettings) -> Result<SshSettings, Strin
         "off" => "off".to_string(),
         "" | "fast" => "fast".to_string(),
         _ => return Err("SSH default compression must be off or fast".to_string()),
+    };
+    settings.default_ssh_old_protocols = match settings
+        .default_ssh_old_protocols
+        .trim()
+        .to_lowercase()
+        .as_str()
+    {
+        "legacy" => "legacy".to_string(),
+        "" | "off" => "off".to_string(),
+        _ => return Err("SSH old protocol support must be off or legacy".to_string()),
     };
     if !(100..=100_000).contains(&settings.buffer_lines) {
         return Err("SSH buffer must be between 100 and 100000 lines".to_string());
