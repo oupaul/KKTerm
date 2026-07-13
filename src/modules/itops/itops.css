@@ -5408,6 +5408,25 @@
   font-family: var(--app-mono-font-family, monospace);
   font-size: 9px;
 }
+/* Partition wall plan strokes are the wall's real thickness against the cell,
+   so they must scale with the glyph instead of staying screen-constant. */
+.itops-page .rm-object-art[data-kind="wall"] * {
+  vector-effect: none;
+}
+.itops-page .rm-art-wall-casing {
+  fill: none;
+  stroke: color-mix(in srgb, var(--obj) 58%, var(--surface));
+  stroke-width: 12.5;
+}
+.itops-page .rm-art-wall-core {
+  fill: none;
+  stroke: color-mix(in srgb, var(--obj) 16%, var(--surface));
+  stroke-width: 7.5;
+}
+.itops-page .rm-art-wall-node {
+  fill: var(--obj);
+  stroke: none;
+}
 /* Reference CSS-3D object constructions. In the live room they remain inside
    the floor plane; the detached cursor preview supplies its own projection. */
 .itops-page .rm-iso-obj-model {
@@ -5428,6 +5447,7 @@
 .itops-page .rm-iso-obj-model[data-kind="sensor"] { width: 48px; height: 38px; }
 .itops-page .rm-iso-obj-model[data-kind="smokeDetector"] { width: 45px; height: 22px; }
 .itops-page .rm-iso-obj-model[data-kind="fireExtinguisher"] { width: 38px; height: 54px; }
+.itops-page .rm-iso-obj-model[data-kind="wall"] { width: 58px; height: 122px; }
 .itops-page .rm-iso-obj-model[data-kind="kuaikuai"] { width: 42px; height: 56px; }
 .itops-page .rm-object-art-iso {
   position: relative;
@@ -5451,6 +5471,10 @@
 .itops-page .rm-object-art-iso[data-kind="camera"] .rm-ref-iso-stage { transform: scale(0.68); }
 .itops-page .rm-object-art-iso[data-kind="sensor"] .rm-ref-iso-stage { transform: scale(0.82); }
 .itops-page .rm-object-art-iso[data-kind="smokeDetector"] .rm-ref-iso-stage { transform: scale(0.86); }
+/* The wall's 88px reference run must span one 58px floor cell exactly so
+   joined cells connect flush, while its 56px reference height stretches to
+   the real 2.4 m (54U ≈ 113 plane px) so it reads taller than the cabinets. */
+.itops-page .rm-object-art-iso[data-kind="wall"] .rm-ref-iso-stage { transform: scale3d(0.66, 0.66, 2); }
 /* Keep the corrected footprint widths while independently shortening the
    CSS-3D height axis: extinguisher to 1/2, erected 乖乖 pack to 1/4. */
 .itops-page .rm-object-art-iso[data-kind="fireExtinguisher"] .rm-ref-iso-stage { transform: scale3d(0.27, 0.27, 0.5); }

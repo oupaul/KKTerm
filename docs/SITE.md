@@ -82,12 +82,12 @@ Replaces the **Host Group** entry in `CONTEXT.md`; adds the rest. Follows the
   (cell + facing per Rack), paint Racks in their cabinet shell finish (no
   status colouring) with compact utilisation/power tags, and hold
   **Room Objects**. _Avoid_: area view, region view.
-- **Room Object** — a non-rack fixture standing on the Server Room floor grid
-  (security camera, air conditioner, fire extinguisher, UPS,
-  environment sensor, smoke detector, crash cart, 乖乖). A Room Object has a
-  facing and a vertical position in rack units, so occupants can share a
-  floor cell while their vertical spans don't intersect. Resting objects
-  settle on the lowest fitting support surface, while top-hung fixtures such
+- **Room Object** — a non-rack fixture or structure on the Server Room floor
+  grid (security camera, air conditioner, fire extinguisher, UPS,
+  environment sensor, smoke detector, crash cart, partition wall, 乖乖). A
+  Room Object has a facing and a vertical position in rack units, so occupants
+  can share a floor cell while their vertical spans don't intersect. Resting
+  objects settle on the lowest fitting support surface, while top-hung fixtures such
   as cameras and detectors keep their overhead placement. A 乖乖 pack is never
   a Room Object while on a cabinet top: a rack-top drop (or a legacy rack-top
   Room Object found on load) becomes that Rack's single rack-top 乖乖 Rack
@@ -98,7 +98,9 @@ Replaces the **Host Group** entry in `CONTEXT.md`; adds the rest. Follows the
   `corner` property (clockwise 0=NW..3=SW). Larger fixtures use the exact
   one-cell proportions from `Server Room Objects.dc.html` (for example CRAC
   0.94×0.62 and UPS 0.6×0.6) and block their snapped
-  cell for stacking. Durable in
+  cell for stacking. A partition wall is a floor-standing 0.15 m × 2.4 m
+  structure that auto-connects to walls on orthogonally adjacent cells,
+  forming straight runs, corners, tees, and crosses. Durable in
   `itops_room_objects`, scoped by Site + Server Room name like racks (the
   pure model lives in `roomObjects.ts`; the pre-durable localStorage scope
   remains a legacy fallback). Rack facing is a durable `facing` column on
