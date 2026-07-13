@@ -810,6 +810,7 @@ export interface StartRdpSessionRequest {
   y: number;
   width: number;
   height: number;
+  scaleFactor?: number;
   options?: RdpSettings;
 }
 
@@ -832,6 +833,7 @@ export interface UpdateRdpBoundsRequest {
   y: number;
   width: number;
   height: number;
+  scaleFactor?: number;
   /**
    * Re-apply the remote desktop resize even when the cached size already
    * matches. Used by the post-connect settle passes; defaults to false.
@@ -846,6 +848,7 @@ export interface SetRdpVisibilityRequest {
   y: number;
   width: number;
   height: number;
+  scaleFactor?: number;
 }
 
 export interface SyncRdpDisplaySizeRequest {
@@ -854,6 +857,7 @@ export interface SyncRdpDisplaySizeRequest {
   y: number;
   width: number;
   height: number;
+  scaleFactor?: number;
 }
 
 export interface RdpDisplaySizeSync {
