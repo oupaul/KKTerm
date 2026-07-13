@@ -2,11 +2,68 @@
 // separately in RoomObjectIsoReference.tsx because they are copied from the
 // CSS-3D reference rather than drawn as SVG icons.
 
-import type { RoomObjectKind } from "./roomObjects";
+import { WALL_ARMS_DEFAULT, type RoomObjectKind, type WallArm, type WallArms } from "./roomObjects";
 
-export function RoomObjectPlanArtwork({ kind }: { kind: RoomObjectKind }) {
+// Wall endpoint along its arm's axis, in viewBox units from the cell origin:
+// joined arms run flush to the cell edge so neighbouring wall cells connect
+// seamlessly, open free ends stop short of the edge, and a missing arm ends
+// at the cell centre (the round cap overshoots slightly, like the design's
+// centre joints).
+function wallArmEnd(arm: WallArm, edge: 0 | 100): number {
+  if (arm === "joined") return edge;
+  if (arm === "open") return edge === 0 ? 7 : 93;
+  return 50;
+}
+
+function WallPlanArtwork({ arms }: { arms: WallArms }) {
+  const [south, west, north, east] = arms;
+  const lines: string[] = [];
+  if (west !== "none" || east !== "none") {
+    lines.push(`M${wallArmEnd(west, 0)} 50H${wallArmEnd(east, 100)}`);
+  }
+  if (north !== "none" || south !== "none") {
+    lines.push(`M50 ${wallArmEnd(north, 0)}V${wallArmEnd(south, 100)}`);
+  }
+  const d = lines.join("");
+  const armCount = arms.filter((arm) => arm !== "none").length;
+  const straightRun =
+    armCount === 2 && ((west !== "none" && east !== "none") || (north !== "none" && south !== "none"));
+  const nodes: Array<{ x: number; y: number }> = [];
+  if (!straightRun) nodes.push({ x: 50, y: 50 });
+  if (west === "open") nodes.push({ x: 7, y: 50 });
+  if (east === "open") nodes.push({ x: 93, y: 50 });
+  if (north === "open") nodes.push({ x: 50, y: 7 });
+  if (south === "open") nodes.push({ x: 50, y: 93 });
+  return (
+    <>
+      <path className="rm-art-wall-casing" d={d} />
+      <path className="rm-art-wall-core" d={d} />
+      {nodes.map((node) => (
+        <rect
+          key={`${node.x},${node.y}`}
+          className="rm-art-wall-node"
+          x={node.x - 4.5}
+          y={node.y - 4.5}
+          width="9"
+          height="9"
+          rx="2"
+        />
+      ))}
+    </>
+  );
+}
+
+export function RoomObjectPlanArtwork({
+  kind,
+  arms,
+}: {
+  kind: RoomObjectKind;
+  /** Wall only: resolved auto-connect arms (wallArms); defaults to a straight run. */
+  arms?: WallArms;
+}) {
   return (
     <svg className="rm-object-art rm-object-art-plan" data-kind={kind} viewBox="0 0 100 100" aria-hidden="true">
+      {kind === "wall" ? <WallPlanArtwork arms={arms ?? WALL_ARMS_DEFAULT} /> : null}
       {kind === "aircon" ? (
         <>
           <rect className="rm-art-soft" x="20" y="26" width="60" height="48" rx="5" />

@@ -772,6 +772,7 @@ const ROOM_OBJECT_KINDS: &[&str] = &[
     "sensor",
     "smokeDetector",
     "crashCart",
+    "wall",
     "kuaikuai",
 ];
 
@@ -1331,13 +1332,13 @@ mod tests {
         set_room_objects(&conn, "f1", "Room C", &[object("o3", "ups", 0)]).unwrap();
 
         // Replace-all rewrites only the addressed room.
-        set_room_objects(&conn, "f1", "Room B", &[object("o4", "aircon", 0)]).unwrap();
+        set_room_objects(&conn, "f1", "Room B", &[object("o4", "wall", 0)]).unwrap();
         let room_b = list_room_objects(&conn, "f1", "Room B").unwrap();
         assert_eq!(
             room_b,
             vec![RoomObject {
                 id: "o4".into(),
-                kind: "aircon".into(),
+                kind: "wall".into(),
                 x: 1,
                 y: 2,
                 z: 0,

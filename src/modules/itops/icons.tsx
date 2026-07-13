@@ -477,4 +477,5 @@ export const IT_ACCENTS = {
   pink: "#ff375f",
   red: "#ff3b30",
   graphite: "#5b6066",
+  steel: "#7d8791",
 } as const;

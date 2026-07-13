@@ -65,7 +65,9 @@ import {
   objectSpec,
   rackTopSupport,
   resolveDropZ,
+  wallArms,
   type RoomObject,
+  type WallArms,
 } from "./roomObjects";
 import type { FreePlacementMap, IsoFloorColor, RackFacingMap } from "./siteTreeState";
 import {
@@ -685,7 +687,11 @@ export function ServerRoomIsoView({
                     object={object}
                     rect={objectDisplayRect(object)}
                     anchor={objectDisplayAnchor(object)}
-                    facing={rotateFacingForView(object.rot, angle)}
+                    // A wall's arms already point at its joined neighbours in
+                    // grid space, so its construction turns with the view
+                    // angle only; other kinds add their stored rotation.
+                    arms={object.kind === "wall" ? wallArms(object, objects) : undefined}
+                    facing={rotateFacingForView(object.kind === "wall" ? 0 : object.rot, angle)}
                     drag={drag?.kind === "object" && drag.id === object.id ? drag : null}
                     editMode={!!editMode}
                     selected={selectedItem?.kind === "object" && selectedItem.id === object.id}
@@ -1116,6 +1122,7 @@ function IsoObject({
   object,
   rect,
   anchor,
+  arms,
   facing,
   drag,
   editMode,
@@ -1136,6 +1143,8 @@ function IsoObject({
   rect: CellRect;
   /** Display point where the sprite touches the surface, already view-rotated. */
   anchor: { x: number; y: number };
+  /** Wall only: resolved auto-connect arms toward adjacent wall cells. */
+  arms?: WallArms;
   /** Object facing after applying the current room view angle. */
   facing: Facing;
   drag: DragState | null;
@@ -1194,7 +1203,7 @@ function IsoObject({
           transform: surfaceModel(bottom, "-50%, -100%"),
         }}
       >
-        <RoomObjectIsoArtwork kind={object.kind} facing={facing} />
+        <RoomObjectIsoArtwork kind={object.kind} facing={facing} arms={arms} />
       </span>
       {editMode && selected ? (
         <span

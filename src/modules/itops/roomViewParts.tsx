@@ -32,6 +32,7 @@ export const OBJECT_ACCENTS: Record<RoomObjectKind, string> = {
   sensor: IT_ACCENTS.blue,
   smokeDetector: IT_ACCENTS.graphite,
   crashCart: IT_ACCENTS.pink,
+  wall: IT_ACCENTS.steel,
   kuaikuai: IT_ACCENTS.green,
 };
 
@@ -476,6 +477,13 @@ const OBJECT_GLYPHS: Record<RoomObjectKind, (size: number) => ReactNode> = {
       <circle cx="8.5" cy="19.5" r="1.5" />
       <circle cx="15.5" cy="19.5" r="1.5" />
       <path d="M18 5h2.5" />
+    </Svg>
+  ),
+  wall: (size) => (
+    <Svg size={size}>
+      <rect x="3" y="6" width="18" height="12" rx="1" />
+      <path d="M3 12h18" />
+      <path d="M12 6v6M8 12v6M16 12v6" />
     </Svg>
   ),
   kuaikuai: (size) => (

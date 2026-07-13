@@ -1,6 +1,6 @@
 // Server Room objects (docs/SITE.md Server Room View): non-rack room fixtures
 // — security cameras, CRAC units, fire extinguishers, UPS cabinets,
-// environment sensors, smoke detectors, crash carts, and the
+// environment sensors, smoke detectors, crash carts, partition walls, and the
 // obligatory pack of 乖乖 — placed on the same floor grid as the racks in both
 // the floor plan and the 2.5D view. Each object also has a vertical position:
 // `z` is the bottom of the object in rack units above the floor, so two
@@ -31,6 +31,7 @@ export type RoomObjectKind =
   | "sensor"
   | "smokeDetector"
   | "crashCart"
+  | "wall"
   | "kuaikuai";
 
 export const ROOM_OBJECT_KINDS: RoomObjectKind[] = [
@@ -41,6 +42,7 @@ export const ROOM_OBJECT_KINDS: RoomObjectKind[] = [
   "sensor",
   "smokeDetector",
   "crashCart",
+  "wall",
   "kuaikuai",
 ];
 
@@ -85,6 +87,8 @@ const SPECS: Record<RoomObjectKind, RoomObjectSpec> = {
   sensor: { heightU: 2, defaultZ: 40, wide: 0.24, deep: 0.24, quarter: true },
   smokeDetector: { heightU: 1, defaultZ: ROOM_CEILING_U - 1, wide: 0.3, deep: 0.3, quarter: true },
   crashCart: { heightU: 22, defaultZ: "floor", wide: 0.56, deep: 0.44 },
+  // Partition wall: 0.15 m thick against the 1200 mm cell, 2.4 m (54U) tall.
+  wall: { heightU: 54, defaultZ: "floor", wide: 1, deep: 0.125 },
   kuaikuai: { heightU: 2, defaultZ: "stack", wide: 0.36, deep: 0.28, quarter: true },
 };
 
@@ -134,6 +138,62 @@ export function objectSurfaceAnchor(
 ): { x: number; y: number } {
   const fp = objectFootprint(kind, rot, corner);
   return { x: fp.x + fp.w / 2, y: fp.y + fp.d / 2 };
+}
+
+// ── Partition walls ──
+//
+// A wall stands on one floor cell and auto-connects to walls on the four
+// orthogonally adjacent cells, forming straight runs, corners, tees, and
+// crosses (`Server Room Objects.dc.html`). Each cell renders one arm from the
+// cell centre toward every joined neighbour; an isolated wall falls back to a
+// straight run along its `rot` axis with open (capped) ends.
+
+/** One wall arm per quarter-turn direction, indexed by `Facing` numbering
+ *  (0 = +y, 1 = −x, 2 = −y, 3 = +x): absent, an open free end, or joined
+ *  flush to the cell edge where the neighbouring wall continues. */
+export type WallArm = "none" | "open" | "joined";
+export type WallArms = [WallArm, WallArm, WallArm, WallArm];
+
+/** An unconnected wall (and the picker/ghost preview) renders as a straight
+ *  open-ended run along x — grid rot 0. */
+export const WALL_ARMS_DEFAULT: WallArms = ["none", "open", "none", "open"];
+
+const ARM_DELTAS: Array<{ dx: number; dy: number }> = [
+  { dx: 0, dy: 1 }, // 0 = +y
+  { dx: -1, dy: 0 }, // 1 = −x
+  { dx: 0, dy: -1 }, // 2 = −y
+  { dx: 1, dy: 0 }, // 3 = +x
+];
+
+/** Resolve a wall's arms from its orthogonal neighbours. */
+export function wallArms(object: RoomObject, objects: RoomObject[]): WallArms {
+  const arms: WallArms = ["none", "none", "none", "none"];
+  let joined = false;
+  ARM_DELTAS.forEach((delta, dir) => {
+    const hasNeighbour = objects.some(
+      (entry) =>
+        entry.id !== object.id &&
+        entry.kind === "wall" &&
+        entry.x === object.x + delta.dx &&
+        entry.y === object.y + delta.dy,
+    );
+    if (hasNeighbour) {
+      arms[dir] = "joined";
+      joined = true;
+    }
+  });
+  if (!joined) {
+    // Isolated: a straight open-ended run along the object's rotation axis
+    // (rot 0/2 = along x, matching the footprint's un-rotated `wide` axis).
+    if (object.rot % 2 === 0) {
+      arms[1] = "open";
+      arms[3] = "open";
+    } else {
+      arms[0] = "open";
+      arms[2] = "open";
+    }
+  }
+  return arms;
 }
 
 /** One occupied vertical span in a cell: [z0, z1) in U. */

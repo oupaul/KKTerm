@@ -1,20 +1,23 @@
 import type { CSSProperties } from "react";
 import type { Facing } from "./roomIsoLayout";
-import type { RoomObjectKind } from "./roomObjects";
+import { WALL_ARMS_DEFAULT, type RoomObjectKind, type WallArm, type WallArms } from "./roomObjects";
 import { kuaiKuaiGrayscale } from "./KuaiKuaiBag";
 
 export function RoomObjectIsoArtwork({
   kind,
   facing = 0,
   expiry,
+  arms,
 }: {
   kind: RoomObjectKind;
   facing?: Facing;
   expiry?: string | null;
+  /** Wall only: resolved auto-connect arms (wallArms); defaults to a straight run. */
+  arms?: WallArms;
 }) {
   const rotation = 45 + facing * 90;
   const grayscale = kind === "kuaikuai" ? kuaiKuaiGrayscale(expiry) : 0;
-  const artwork = ARTWORK[kind]
+  const artwork = (kind === "wall" ? wallIsoArtwork(arms ?? WALL_ARMS_DEFAULT) : ARTWORK[kind])
     .split("rotateZ(45deg)").join(`rotateZ(${rotation}deg)`)
     .split("rotateZ(-45deg)").join(`rotateZ(-${rotation}deg)`);
   return (
@@ -35,10 +38,57 @@ export function RoomObjectIsoArtwork({
   );
 }
 
+// ── Partition wall ──
+//
+// Walls join adjacent wall cells, so their construction is generated from the
+// resolved arms instead of stored verbatim; every face recipe (thickness 12,
+// height 56, CMU course texture, steel base channel, cap gradient) is taken
+// unchanged from the wall card in `Server Room Objects.dc.html`.
+
+const WALL_CAP =
+  "border-radius:2px;background:linear-gradient(135deg,#e4e6e9,#c8cbd0);border:1px solid #a7acb3;box-shadow:inset 0 1px 0 rgba(255,255,255,.55)";
+const WALL_FACE =
+  "background:repeating-linear-gradient(180deg,rgba(255,255,255,.30) 0 11px,rgba(108,114,122,.34) 11px 12px),linear-gradient(180deg,#d2d5da 0 82%,#8a9099 82% 100%);border:1px solid #a7acb3";
+
+// Run extent from the cell centre in design px (cell 88, half 44): joined
+// arms reach the edge so neighbouring cells connect flush, open free ends
+// stop short like the reference STRAIGHT variant, and a missing arm ends
+// just past the centre so perpendicular runs share the corner joint.
+function wallArmExtent(arm: WallArm): number {
+  if (arm === "joined") return 44;
+  if (arm === "open") return 38;
+  return 6;
+}
+
+function wallBox(left: number, top: number, w: number, h: number): string {
+  return `
+      <div style="position:absolute;left:${left}px;top:${top}px;width:${w}px;height:${h}px;transform-style:preserve-3d">
+        <div style="position:absolute;inset:0;transform:translateZ(56px);${WALL_CAP}"></div>
+        <div style="position:absolute;left:0;top:${h - 56}px;width:${w}px;height:56px;transform-origin:50% 100%;transform:rotateX(-90deg);border-radius:2px 2px 0 0;${WALL_FACE}"></div>
+        <div style="position:absolute;top:0;left:${w - 56}px;width:56px;height:${h}px;transform-origin:100% 50%;transform:rotateY(90deg);border-radius:2px 0 0 2px;${WALL_FACE};filter:brightness(.83)"></div>
+      </div>`;
+}
+
+function wallIsoArtwork(arms: WallArms): string {
+  const [south, west, north, east] = arms;
+  const boxes: string[] = [];
+  if (west !== "none" || east !== "none") {
+    const x0 = -wallArmExtent(west);
+    boxes.push(wallBox(x0, -6, wallArmExtent(east) - x0, 12));
+  }
+  if (north !== "none" || south !== "none") {
+    const y0 = -wallArmExtent(north);
+    boxes.push(wallBox(-6, y0, 12, wallArmExtent(south) - y0));
+  }
+  return `
+    <div style="transform:rotateX(55deg) rotateZ(45deg);transform-style:preserve-3d;position:relative;width:0;height:0">${boxes.join("")}
+    </div>`;
+}
+
 // Verbatim face geometry, dimensions, colours, and animation timings from
 // `Server Room Objects.dc.html`. Only the app-owned outer stage scales and
 // bottom-anchors these standalone reference scenes onto the live room surface.
-const ARTWORK: Record<RoomObjectKind, string> = {
+const ARTWORK: Record<Exclude<RoomObjectKind, "wall">, string> = {
   aircon: `
     <div style="transform:rotateX(55deg) rotateZ(45deg);transform-style:preserve-3d;position:relative;width:0;height:0">
       <div style="position:absolute;left:-42px;top:-42px;width:84px;height:84px;background:color-mix(in srgb,#30b0c7 9%,var(--surface-muted));border:1px solid color-mix(in srgb,#30b0c7 30%,var(--border));border-radius:5px"></div>

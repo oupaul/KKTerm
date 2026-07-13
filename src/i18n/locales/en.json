@@ -1447,6 +1447,7 @@
         "sensor": "Environment sensor",
         "smokeDetector": "Smoke detector",
         "crashCart": "Crash cart",
+        "wall": "Partition wall",
         "kuaikuai": "Kuai Kuai"
       }
     },

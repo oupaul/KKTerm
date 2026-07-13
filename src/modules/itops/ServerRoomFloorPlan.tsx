@@ -31,7 +31,9 @@ import {
   objectSpec,
   rackTopSupport,
   resolveDropZ,
+  wallArms,
   type RoomObject,
+  type WallArms,
 } from "./roomObjects";
 import {
   loadRoomZoom,
@@ -449,6 +451,7 @@ export function ServerRoomFloorPlan({
                 <BlueprintObject
                   key={object.id}
                   object={object}
+                  arms={object.kind === "wall" ? wallArms(object, objects) : undefined}
                   cellW={cellW}
                   cellH={cellH}
                   editMode={!!editMode}
@@ -524,8 +527,10 @@ export function ServerRoomFloorPlan({
                           <span
                             className="rm-bp-ghost-item"
                             style={{
-                              width: Math.round(spec.wide * cellW),
-                              height: Math.round(spec.deep * cellH),
+                              // The wall glyph draws its run inside a whole
+                              // square cell; other kinds size to footprint.
+                              width: tool === "wall" ? Math.round(cellW) : Math.round(spec.wide * cellW),
+                              height: tool === "wall" ? Math.round(cellH) : Math.round(spec.deep * cellH),
                             }}
                           >
                             <RoomObjectPlanArtwork kind={tool} />
@@ -690,6 +695,7 @@ function BlueprintRack({
 
 function BlueprintObject({
   object,
+  arms,
   cellW,
   cellH,
   editMode,
@@ -705,6 +711,8 @@ function BlueprintObject({
   onDelete,
 }: {
   object: RoomObject;
+  /** Wall only: resolved auto-connect arms toward adjacent wall cells. */
+  arms?: WallArms;
   cellW: number;
   cellH: number;
   editMode: boolean;
@@ -721,7 +729,13 @@ function BlueprintObject({
   onDelete?: () => void;
 }) {
   const { t } = useTranslation();
-  const fp = objectFootprint(object.kind, object.rot, object.corner);
+  // A wall's arms already point at its joined neighbours in grid space, so
+  // its glyph covers the whole cell unrotated; other kinds keep their exact
+  // footprint box with the artwork turned to the stored rotation.
+  const isWall = object.kind === "wall";
+  const fp = isWall
+    ? { x: 0, y: 0, w: 1, d: 1 }
+    : objectFootprint(object.kind, object.rot, object.corner);
   const w = fp.w * cellW;
   const h = fp.d * cellH;
   const left = (object.x + fp.x) * cellW;
@@ -748,8 +762,11 @@ function BlueprintObject({
       onPointerUp={editMode ? onPointerUp : undefined}
       onPointerCancel={editMode ? onPointerCancel : undefined}
     >
-      <span className="rm-bp-obj-glyph" style={{ transform: `rotate(${object.rot * 90}deg)` }}>
-        <RoomObjectPlanArtwork kind={object.kind} />
+      <span
+        className="rm-bp-obj-glyph"
+        style={isWall ? undefined : { transform: `rotate(${object.rot * 90}deg)` }}
+      >
+        <RoomObjectPlanArtwork kind={object.kind} arms={arms} />
       </span>
       {editMode ? (
         <span className="rm-bp-ctl">

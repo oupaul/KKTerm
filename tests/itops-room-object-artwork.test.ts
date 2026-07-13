@@ -7,7 +7,7 @@ import {
   RoomObjectPlanArtwork,
 } from "../src/modules/itops/RoomObjectArtwork";
 import { RoomObjectIsoArtwork } from "../src/modules/itops/RoomObjectIsoReference";
-import { ROOM_OBJECT_KINDS } from "../src/modules/itops/roomObjects";
+import { ROOM_OBJECT_KINDS, type WallArms } from "../src/modules/itops/roomObjects";
 
 test("every Server Room object has distinct floor-plan and 2.5D artwork", () => {
   for (const kind of ROOM_OBJECT_KINDS) {
@@ -35,6 +35,36 @@ test("2.5D room objects render the four effective quarter-turn facings", () => {
     assert.match(iso, new RegExp(`rotateZ\\(${degrees}deg\\)`));
     assert.match(iso, new RegExp(`rotateZ\\(-${degrees}deg\\)`));
   }
+});
+
+test("wall artwork follows its resolved arms in both projections", () => {
+  // Arms are indexed by Facing direction: 0 = +y, 1 = −x, 2 = −y, 3 = +x.
+  const corner: WallArms = ["joined", "none", "none", "joined"];
+
+  // Plan: the default straight run stops short of both edges (open ends),
+  // while joined arms run flush to the cell edge to meet the neighbour.
+  const planStraight = renderToStaticMarkup(createElement(RoomObjectPlanArtwork, { kind: "wall" }));
+  const planCorner = renderToStaticMarkup(
+    createElement(RoomObjectPlanArtwork, { kind: "wall", arms: corner }),
+  );
+  assert.match(planStraight, /M7 50H93/);
+  assert.match(planCorner, /M50 50H100/);
+  assert.match(planCorner, /M50 50V100/);
+  assert.notEqual(planStraight, planCorner);
+
+  // 2.5D: the straight run keeps the reference STRAIGHT box, and a fully
+  // joined cross spans edge to edge on both axes.
+  const isoStraight = renderToStaticMarkup(createElement(RoomObjectIsoArtwork, { kind: "wall" }));
+  const isoCross = renderToStaticMarkup(
+    createElement(RoomObjectIsoArtwork, {
+      kind: "wall",
+      arms: ["joined", "joined", "joined", "joined"] as WallArms,
+    }),
+  );
+  assert.match(isoStraight, /left:-38px;top:-6px;width:76px;height:12px/);
+  assert.match(isoStraight, /translateZ\(56px\)/);
+  assert.match(isoCross, /left:-44px;top:-6px;width:88px;height:12px/);
+  assert.match(isoCross, /left:-6px;top:-44px;width:12px;height:88px/);
 });
 
 test("2.5D 乖乖 sits on the real room surface instead of a fake rack top", () => {
@@ -72,6 +102,10 @@ test("snapped 2.5D previews do not flatten the reference model", async () => {
   }
   assert.doesNotMatch(css, /\.rm-iso-obj\.ghost \{[^}]*opacity:/s);
   assert.doesNotMatch(css, /\.itops-page \.rm-iso-obj-model \{[^}]*filter:/s);
+  assert.match(
+    css,
+    /data-kind="wall"[^}]*rm-ref-iso-stage \{ transform: scale3d\(0\.66, 0\.66, 2\); \}/,
+  );
 });
 
 test("quarter-cell fire extinguisher and floor 乖乖 artwork stay within their footprints", async () => {
