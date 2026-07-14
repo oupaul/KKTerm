@@ -1,5 +1,6 @@
 import type {
   RackItem,
+  RackItemKind,
   RackItemMetadata,
   RackItemWidthFraction,
   RackNetworkPort,
@@ -8,6 +9,10 @@ import type {
   RackServerPanelStyle,
   RackSnmpHint,
 } from "../../types";
+
+export function rackItemKindSupportsFractionalWidth(kind: RackItemKind): boolean {
+  return kind === "switch" || kind === "router" || kind === "genericDevice";
+}
 
 export type NormalizedRackItemMetadata = Omit<
   RackItemMetadata,

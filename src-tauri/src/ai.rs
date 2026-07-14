@@ -4358,6 +4358,7 @@ pub(crate) fn itops_tool(app: &tauri::AppHandle, name: &str, args: Value) -> Str
                 optional_connection_id(&args),
                 &label,
                 metadata,
+                None,
             )
             .map(to_value)
             .map_err(|e| e.to_string())

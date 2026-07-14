@@ -1283,6 +1283,8 @@ type CommandMap = {
       connectionId: string | null;
       label: string;
       metadata?: RackItemMetadata;
+      startU?: number;
+      heightU?: number;
     };
     result: RackItem;
   };

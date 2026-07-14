@@ -1,4 +1,4 @@
-import type { RackItem, RackItemMetadata, RackItemWidthFraction } from "../../types";
+import type { Rack, RackItem, RackItemMetadata, RackItemWidthFraction } from "../../types";
 
 export interface ClientRectLike {
   left: number;
@@ -49,6 +49,24 @@ export function rackItemsCollide(
     a.xStart < b.xStart + b.xQuarters &&
     b.xStart < a.xStart + a.xQuarters
   );
+}
+
+/** First U row with at least the requested free horizontal capacity. Full-width
+ *  devices require all four quarters; fractional-capable pickers need one. */
+export function firstAvailableRackUnit(
+  rack: Rack,
+  minimumFreeQuarters = 4,
+): number | null {
+  const required = Math.max(1, Math.min(4, Math.trunc(minimumFreeQuarters)));
+  for (let unit = 1; unit <= rack.heightU; unit += 1) {
+    let coveredQuarters = 0;
+    for (const item of rack.items) {
+      if (unit < item.startU || unit >= item.startU + item.heightU) continue;
+      coveredQuarters += rackItemXSpan(item.metadata).xQuarters;
+    }
+    if (4 - Math.min(4, coveredQuarters) >= required) return unit;
+  }
+  return null;
 }
 
 export function isRackTopItem(item: RackItem, rackHeightU: number): boolean {

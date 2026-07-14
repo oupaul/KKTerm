@@ -67,8 +67,7 @@ export function rackFloorMetrics(rack: Rack): RackFloorMetrics {
     else online += 1;
   }
   const capacityU = Math.max(1, rack.heightU);
-  // Partially filled rows still hold hardware: report them as whole Us.
-  const usedU = Math.min(Math.ceil(used), capacityU);
+  const usedU = Math.min(used, capacityU);
   const utilization = usedU / capacityU;
   const deviceCount = rack.items.length;
 

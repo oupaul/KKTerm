@@ -58,8 +58,16 @@ import { RackStage } from "./RackStage";
 import { ServerRoomFloorPlan } from "./ServerRoomFloorPlan";
 import { ServerRoomIsoView } from "./ServerRoomIsoView";
 import { RoomObjectPicker, type RoomTool } from "./roomViewParts";
-import { collectBoundConnectionIds, rackItemSlotCount } from "./rackInventory";
-import { isRackTopItem, KUAIGUAI_TOP_CLEARANCE_U, rackItemXSpan } from "./rackPlacement";
+import {
+  collectBoundConnectionIds,
+  rackItemKindSupportsFractionalWidth,
+  rackItemSlotCount,
+} from "./rackInventory";
+import {
+  firstAvailableRackUnit,
+  isRackTopItem,
+  KUAIGUAI_TOP_CLEARANCE_U,
+} from "./rackPlacement";
 import type { DashboardBackground } from "../dashboard/types";
 import { SharedBackgroundPopover } from "../dashboard/edit/SharedBackgroundPopover";
 import { loadBackgroundImage } from "../dashboard/state/persistence";
@@ -2289,20 +2297,6 @@ function useNearestPlacementRack(
   return rackId;
 }
 
-function firstAvailableRackUnit(rack: Rack): number | null {
-  for (let unit = 1; unit <= rack.heightU; unit += 1) {
-    // A U counts as occupied only when its full width is covered: fractional
-    // devices (e.g. a half-width modem) leave slots open beside them.
-    let coveredQuarters = 0;
-    for (const item of rack.items) {
-      if (unit < item.startU || unit >= item.startU + item.heightU) continue;
-      coveredQuarters += rackItemXSpan(item.metadata).xQuarters;
-    }
-    if (coveredQuarters < 4) return unit;
-  }
-  return null;
-}
-
 function RackObjectPicker({
   racks,
   armedKind,
@@ -2318,7 +2312,8 @@ function RackObjectPicker({
   const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const q = query.trim().toLowerCase();
-  const hasFreeUnit = racks.some((rack) => firstAvailableRackUnit(rack) != null);
+  const hasFullWidthUnit = racks.some((rack) => firstAvailableRackUnit(rack, 4) != null);
+  const hasFractionalUnit = racks.some((rack) => firstAvailableRackUnit(rack, 1) != null);
   const rackTopAvailable = racks.some(
     (rack) => !rack.items.some((item) => isRackTopItem(item, rack.heightU)),
   );
@@ -2350,7 +2345,9 @@ function RackObjectPicker({
       <div className="rm-picker-grid">
         {kinds.map((kind) => {
           const label = t(`itops.racks.kind.${kind}`);
-          const available = hasFreeUnit || (kind === "kuaiguai" && rackTopAvailable);
+          const available =
+            (rackItemKindSupportsFractionalWidth(kind) ? hasFractionalUnit : hasFullWidthUnit) ||
+            (kind === "kuaiguai" && rackTopAvailable);
           return (
             <button
               key={kind}

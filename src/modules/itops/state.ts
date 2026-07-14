@@ -84,6 +84,9 @@ export interface UpdateItemInput {
   connectionId: string | null;
   label: string;
   metadata?: RackItemMetadata;
+  /** Properties editor only: validate and persist a resize in the same write. */
+  startU?: number;
+  heightU?: number;
 }
 
 export interface HostInput {

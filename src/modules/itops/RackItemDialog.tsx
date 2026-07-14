@@ -31,7 +31,11 @@ import type {
   ResolvedHost,
 } from "../../types";
 import type { KuaiKuaiStyle } from "./KuaiKuaiBag";
-import { normalizeRackItemMetadata, rackItemSlotCount } from "./rackInventory";
+import {
+  normalizeRackItemMetadata,
+  rackItemKindSupportsFractionalWidth,
+  rackItemSlotCount,
+} from "./rackInventory";
 import { RackDevice } from "./RackDevice";
 import { RackHostBindingDialog } from "./RackHostBindingDialog";
 import { useItOpsStore } from "./state";
@@ -60,11 +64,6 @@ function showsPorts(kind: RackItemKind): boolean {
 
 function showsDisks(kind: RackItemKind): boolean {
   return kind === "server" || kind === "storage" || kind === "connection";
-}
-
-// Kinds small enough to share a U row (e.g. two modems side by side).
-function showsWidthFraction(kind: RackItemKind): boolean {
-  return kind === "switch" || kind === "router" || kind === "genericDevice";
 }
 
 function splitLines(value: string): string[] | null {
@@ -125,7 +124,6 @@ export function RackItemDialog({
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
   const placeRackItem = useItOpsStore((state) => state.placeRackItem);
   const updateRackItem = useItOpsStore((state) => state.updateRackItem);
-  const moveRackItem = useItOpsStore((state) => state.moveRackItem);
   const removeRackItem = useItOpsStore((state) => state.removeRackItem);
   const refreshRackItemSnmp = useItOpsStore((state) => state.refreshRackItemSnmp);
 
@@ -209,8 +207,8 @@ export function RackItemDialog({
     vendor: vendor.trim() || null,
     formFactor: kind === "server" ? formFactor : null,
     widthFraction:
-      showsWidthFraction(kind) && widthFraction !== "full" ? widthFraction : null,
-    slot: showsWidthFraction(kind) && widthFraction !== "full" ? slot : null,
+      rackItemKindSupportsFractionalWidth(kind) && widthFraction !== "full" ? widthFraction : null,
+    slot: rackItemKindSupportsFractionalWidth(kind) && widthFraction !== "full" ? slot : null,
     serverPanelStyle: kind === "server" ? serverPanelStyle : null,
     powerW: isKuaiguai ? null : parsedPowerDraw,
     ...(isKuaiguai
@@ -285,10 +283,9 @@ export function RackItemDialog({
           connectionId: resolvedConnectionId,
           label: label.trim(),
           metadata,
+          startU: placedStartU,
+          heightU,
         });
-        if (heightU !== item!.heightU) {
-          await moveRackItem(siteId, { id: item!.id, rackId: rack.id, startU: placedStartU, heightU });
-        }
       } else {
         await placeRackItem(siteId, {
           rackId: rack.id,
@@ -378,7 +375,7 @@ export function RackItemDialog({
                       className="rack-item-preview-device"
                       style={{
                         ["--rack-item-preview-height" as string]: `${Math.min(5, Math.max(1, heightU)) * 22}px`,
-                        ...(showsWidthFraction(kind) && widthFraction !== "full"
+                        ...(rackItemKindSupportsFractionalWidth(kind) && widthFraction !== "full"
                           ? { width: widthFraction === "half" ? "50%" : "25%" }
                           : {}),
                       }}
@@ -612,7 +609,7 @@ export function RackItemDialog({
                   <Stepper value={heightU} min={1} onChange={(next) => { const clampedHeight = Math.max(1, Math.min(rack.heightU, next)); setHeightU(clampedHeight); setStartU((current) => clampStartUForHeight(current, clampedHeight, rack.heightU)); setDisks((current) => Math.min(current, clampedHeight * DISKS_PER_U)); }} ariaDecrease={t("itops.racks.itemHeightDecrease")} ariaIncrease={t("itops.racks.itemHeightIncrease")} />
                 </Field>
               )}
-              {showsWidthFraction(kind) ? (
+              {rackItemKindSupportsFractionalWidth(kind) ? (
                 <Field label={t("itops.racks.widthFractionLabel")}>
                   <Select
                     value={widthFraction}
@@ -630,7 +627,7 @@ export function RackItemDialog({
                   />
                 </Field>
               ) : null}
-              {showsWidthFraction(kind) && widthFraction !== "full" ? (
+              {rackItemKindSupportsFractionalWidth(kind) && widthFraction !== "full" ? (
                 <Field label={t("itops.racks.slotLabel")}>
                   <Select
                     value={String(slot)}

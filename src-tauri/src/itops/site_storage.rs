@@ -396,26 +396,39 @@ fn metadata_to_json(metadata: &RackItemMetadata) -> Result<String> {
         .map_err(|error| ItopsStorageError::Validation(error.to_string()))
 }
 
-fn parse_metadata(raw: &str) -> RackItemMetadata {
+fn normalize_item_metadata(kind: RackItemKind, metadata: RackItemMetadata) -> RackItemMetadata {
+    let mut metadata = normalize_metadata(metadata);
+    if !matches!(
+        kind,
+        RackItemKind::Switch | RackItemKind::Router | RackItemKind::GenericDevice
+    ) {
+        metadata.width_fraction = None;
+        metadata.slot = None;
+    }
+    metadata
+}
+
+fn parse_metadata(kind: RackItemKind, raw: &str) -> RackItemMetadata {
     serde_json::from_str(raw)
-        .map(normalize_metadata)
+        .map(|metadata| normalize_item_metadata(kind, metadata))
         .unwrap_or_default()
 }
 
 // ── Item reads ──────────────────────────────────────────────────────────────
 
 fn row_to_item(row: &rusqlite::Row<'_>) -> rusqlite::Result<RackItem> {
-    let kind: String = row.get(3)?;
+    let kind_raw: String = row.get(3)?;
+    let kind = RackItemKind::from_db_str(&kind_raw).unwrap_or(RackItemKind::Blank);
     let metadata_json: String = row.get(7)?;
     Ok(RackItem {
         id: row.get(0)?,
         rack_id: row.get(1)?,
         connection_id: row.get(2)?,
-        kind: RackItemKind::from_db_str(&kind).unwrap_or(RackItemKind::Blank),
+        kind,
         label: row.get(4)?,
         start_u: row.get(5)?,
         height_u: row.get(6)?,
-        metadata: parse_metadata(&metadata_json),
+        metadata: parse_metadata(kind, &metadata_json),
     })
 }
 
@@ -954,7 +967,7 @@ pub fn place_rack_item(
     metadata: RackItemMetadata,
 ) -> Result<RackItem> {
     let connection_id = normalize_item_connection(kind, connection_id)?;
-    let metadata = normalize_metadata(metadata);
+    let metadata = normalize_item_metadata(kind, metadata);
     let rack_height = fetch_rack_height(conn, rack_id)?;
     let existing = existing_spans(conn, rack_id)?;
     let (x_start, x_quarters) = metadata_x_span(&metadata);
@@ -993,8 +1006,8 @@ pub fn place_rack_item(
     })
 }
 
-/// Update a Rack Device's non-position fields (label, kind, connection binding,
-/// metadata). Position changes go through `move_rack_item`.
+/// Update a Rack Device's properties and, when supplied by the properties
+/// editor, its final U span in one validated database write.
 pub fn update_rack_item(
     conn: &SqliteConnection,
     id: &str,
@@ -1002,6 +1015,7 @@ pub fn update_rack_item(
     connection_id: Option<String>,
     label: &str,
     metadata: RackItemMetadata,
+    placement: Option<(u32, u32)>,
 ) -> Result<RackItem> {
     let current = fetch_item(conn, id)?;
     let rack_height = fetch_rack_height(conn, &current.rack_id)?;
@@ -1012,9 +1026,10 @@ pub fn update_rack_item(
         ));
     }
     let connection_id = normalize_item_connection(kind, connection_id)?;
-    let metadata = normalize_metadata(metadata);
-    // A width/slot change alters the face's horizontal footprint: re-validate
-    // the current position with the new metadata before storing it.
+    let metadata = normalize_item_metadata(kind, metadata);
+    let (start_u, height_u) = placement.unwrap_or((current.start_u, current.height_u));
+    // Width/slot and height changes alter the final footprint: validate the
+    // combined state before storing any part of the edit.
     let (x_start, x_quarters) = metadata_x_span(&metadata);
     let existing = existing_spans(conn, &current.rack_id)?;
     validate_item_placement(
@@ -1023,8 +1038,8 @@ pub fn update_rack_item(
         &existing,
         Some(id),
         Span {
-            start_u: current.start_u,
-            height_u: current.height_u,
+            start_u,
+            height_u,
             x_start,
             x_quarters,
         },
@@ -1032,9 +1047,18 @@ pub fn update_rack_item(
     let metadata_json = metadata_to_json(&metadata)?;
     let affected = conn.execute(
         "UPDATE itops_site_rack_items
-         SET kind = ?, connection_id = ?, label = ?, metadata_json = ?, updated_at = CURRENT_TIMESTAMP
+         SET kind = ?, connection_id = ?, label = ?, start_u = ?, height_u = ?,
+             metadata_json = ?, updated_at = CURRENT_TIMESTAMP
          WHERE id = ?",
-        params![kind.as_db_str(), connection_id, label.trim(), metadata_json, id],
+        params![
+            kind.as_db_str(),
+            connection_id,
+            label.trim(),
+            start_u,
+            height_u,
+            metadata_json,
+            id
+        ],
     )?;
     if affected == 0 {
         return Err(ItopsStorageError::NotFound);
@@ -1572,6 +1596,23 @@ mod tests {
             ..RackItemMetadata::default()
         };
 
+        // Fractional occupancy is limited to the small-device kinds exposed by
+        // the editor. Unsupported kinds normalize back to full width.
+        let server = place_rack_item(
+            &conn,
+            "server",
+            "r1",
+            None,
+            RackItemKind::Server,
+            "server",
+            7,
+            1,
+            half(1),
+        )
+        .unwrap();
+        assert_eq!(server.metadata.width_fraction, None);
+        assert_eq!(server.metadata.slot, None);
+
         // Two half-width modems share U5: left slot then right slot.
         place_rack_item(&conn, "m1", "r1", None, RackItemKind::GenericDevice, "modem-a", 5, 1, half(0)).unwrap();
         place_rack_item(&conn, "m2", "r1", None, RackItemKind::GenericDevice, "modem-b", 5, 1, half(1)).unwrap();
@@ -1607,11 +1648,43 @@ mod tests {
 
         // Updating a half to full width where the row is shared is rejected.
         assert!(matches!(
-            update_rack_item(&conn, "q1", RackItemKind::Router, None, "r", RackItemMetadata::default()),
+            update_rack_item(&conn, "q1", RackItemKind::Router, None, "r", RackItemMetadata::default(), None),
             Err(ItopsStorageError::Validation(_))
         ));
         // Widening where the row is otherwise free is allowed.
-        update_rack_item(&conn, "m2", RackItemKind::GenericDevice, None, "modem-b", RackItemMetadata::default()).unwrap();
+        update_rack_item(&conn, "m2", RackItemKind::GenericDevice, None, "modem-b", RackItemMetadata::default(), None).unwrap();
+    }
+
+    #[test]
+    fn rack_item_property_update_and_resize_are_atomic() {
+        let conn = open_test_db();
+        create_rack(&conn, "r1", "f1", "A12", "Room B", "", None, 42, 1000, None).unwrap();
+        let half = |slot: u32| RackItemMetadata {
+            width_fraction: Some("half".to_string()),
+            slot: Some(slot),
+            ..RackItemMetadata::default()
+        };
+        place_rack_item(&conn, "moving", "r1", None, RackItemKind::GenericDevice, "moving", 42, 1, half(0)).unwrap();
+        place_rack_item(&conn, "blocker", "r1", None, RackItemKind::GenericDevice, "blocker", 41, 1, half(1)).unwrap();
+
+        // The proposed slot change is valid at U42 by itself, but the combined
+        // 2U resize would collide at U41. Neither part may persist on failure.
+        assert!(matches!(
+            update_rack_item(
+                &conn,
+                "moving",
+                RackItemKind::GenericDevice,
+                None,
+                "moving",
+                half(1),
+                Some((41, 2)),
+            ),
+            Err(ItopsStorageError::Validation(_))
+        ));
+        let unchanged = fetch_item(&conn, "moving").unwrap();
+        assert_eq!(unchanged.start_u, 42);
+        assert_eq!(unchanged.height_u, 1);
+        assert_eq!(unchanged.metadata.slot, Some(0));
     }
 
     #[test]
@@ -1638,6 +1711,7 @@ mod tests {
             Some("c1".into()),
             "top switch",
             RackItemMetadata::default(),
+            None,
         )
         .unwrap();
 

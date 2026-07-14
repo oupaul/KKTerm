@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { RackItem, RackItemMetadata } from "../src/types";
-import { rackItemXSpan, snapRackPlacement } from "../src/modules/itops/rackPlacement";
+import { rackItemKindSupportsFractionalWidth } from "../src/modules/itops/rackInventory";
+import {
+  firstAvailableRackUnit,
+  rackItemXSpan,
+  snapRackPlacement,
+} from "../src/modules/itops/rackPlacement";
 
 const bayRect = { left: 200, right: 500, top: 100, bottom: 1192, width: 300, height: 1092 };
 
@@ -159,4 +164,29 @@ test("rackItemXSpan derives the quarter-unit strip from metadata", () => {
   assert.deepEqual(rackItemXSpan({ widthFraction: "quarter", slot: 3 }), { xStart: 3, xQuarters: 1 });
   // Out-of-range slots clamp to the rightmost slot for that width.
   assert.deepEqual(rackItemXSpan({ widthFraction: "half", slot: 9 }), { xStart: 2, xQuarters: 2 });
+});
+
+test("only small network and generic devices support fractional width", () => {
+  assert.equal(rackItemKindSupportsFractionalWidth("switch"), true);
+  assert.equal(rackItemKindSupportsFractionalWidth("router"), true);
+  assert.equal(rackItemKindSupportsFractionalWidth("genericDevice"), true);
+  assert.equal(rackItemKindSupportsFractionalWidth("server"), false);
+  assert.equal(rackItemKindSupportsFractionalWidth("ups"), false);
+});
+
+test("full-width picker entries stay disabled when only a fractional gap remains", () => {
+  const rack = {
+    id: "rack-1",
+    siteId: "site-1",
+    name: "A1",
+    serverRoom: "Room A",
+    rackGroup: "",
+    shell: null,
+    background: null,
+    heightU: 1,
+    sortOrder: 0,
+    items: [item(1, 1, "genericDevice", { widthFraction: "half", slot: 0 })],
+  };
+  assert.equal(firstAvailableRackUnit(rack, 4), null);
+  assert.equal(firstAvailableRackUnit(rack, 1), 1);
 });

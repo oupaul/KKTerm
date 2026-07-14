@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { Rack, RackItem, RackItemStatus } from "../src/types";
+import type { Rack, RackItem, RackItemMetadata, RackItemStatus } from "../src/types";
 import { rackFloorMetrics } from "../src/modules/itops/roomFloorPlan";
 
 function item(
@@ -8,6 +8,7 @@ function item(
   heightU: number,
   status?: RackItemStatus,
   powerW?: number,
+  metadata: RackItemMetadata = {},
 ): RackItem {
   return {
     id: `i-${startU}`,
@@ -18,7 +19,7 @@ function item(
     startU,
     heightU,
     depthMm: 1000,
-    metadata: { ...(status ? { status } : {}), ...(powerW ? { powerW } : {}) },
+    metadata: { ...metadata, ...(status ? { status } : {}), ...(powerW ? { powerW } : {}) },
   };
 }
 
@@ -65,6 +66,18 @@ test("utilisation occupies bands as the rack fills toward capacity", () => {
   assert.equal(rackFloorMetrics(rack([item(1, 34)])).utilBand, "high");
   // 40U of 42U ≈ 95% → full.
   assert.equal(rackFloorMetrics(rack([item(1, 40)])).utilBand, "full");
+});
+
+test("fractional-width devices consume fractional rack capacity", () => {
+  const half = rackFloorMetrics(rack([item(1, 1, undefined, undefined, { widthFraction: "half" })]));
+  assert.equal(half.usedU, 0.5);
+  assert.equal(half.utilization, 0.5 / 42);
+
+  const tiled = rackFloorMetrics(rack([
+    item(1, 1, undefined, undefined, { widthFraction: "half", slot: 0 }),
+    { ...item(1, 1, undefined, undefined, { widthFraction: "half", slot: 1 }), id: "i-right" },
+  ]));
+  assert.equal(tiled.usedU, 1);
 });
 
 test("power sums device draw and bands against the rack's capacity", () => {
