@@ -719,7 +719,8 @@
   overflow: visible;
 }
 
-.connection-dialog-backdrop .connection-dialog:has(.connection-icon-popover) {
+.connection-dialog-backdrop .connection-dialog:has(.connection-icon-popover),
+.connection-dialog-backdrop .connection-dialog:has(.serial-line-combobox.open) {
   overflow: visible;
 }
 
