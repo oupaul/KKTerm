@@ -263,6 +263,9 @@ export type RackItemKind =
 export type RackItemStatus = "online" | "warning" | "offline";
 
 export type RackServerFormFactor = "rack" | "tower";
+// Fractional faceplate width: several small devices (e.g. two modems) can
+// share one U row side by side. null/undefined = full width.
+export type RackItemWidthFraction = "half" | "quarter";
 export type RackServerPanelStyle = "default" | "style1" | "style2";
 
 export type RackPortSpeed = "gigabit" | "10g" | "25g" | "40g" | "100g" | "custom";
@@ -326,6 +329,11 @@ export interface RackItemMetadata {
   vendor?: string | null;
   /** Server chassis presentation. Tower servers render at half rack width. */
   formFactor?: RackServerFormFactor | null;
+  /** Fractional faceplate width; null/undefined = full rack width. */
+  widthFraction?: RackItemWidthFraction | null;
+  /** Horizontal slot for a fractional-width device, 0-based from the left in
+   *  units of its own width (half: 0–1, quarter: 0–3). null = leftmost. */
+  slot?: number | null;
   /** Server front-panel artwork; independent of shell finish and form factor. */
   serverPanelStyle?: RackServerPanelStyle | null;
 }

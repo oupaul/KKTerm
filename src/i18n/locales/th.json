@@ -1355,6 +1355,19 @@
         "style1": "รูปแบบ 1",
         "style2": "รูปแบบ 2"
       },
+      "widthFractionLabel": "ความกว้างของอุปกรณ์",
+      "widthFraction": {
+        "full": "เต็มความกว้าง",
+        "half": "ครึ่งความกว้าง",
+        "quarter": "หนึ่งในสี่ของความกว้าง"
+      },
+      "slotLabel": "ตำแหน่ง",
+      "slotPosition": {
+        "left": "ซ้าย",
+        "centerLeft": "กลางซ้าย",
+        "centerRight": "กลางขวา",
+        "right": "ขวา"
+      },
       "vendorLabel": "รุ่น",
       "vendorHint": "ใช้ Dell 740XD, HP DL380 หรือรุ่นแชสซีอื่นสำหรับตัวอย่างแบบกราฟิก",
       "expiryLabel": "วันหมดอายุ",

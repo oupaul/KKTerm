@@ -22,6 +22,7 @@ import type {
   RackItemKind,
   RackItemMetadata,
   RackItemStatus,
+  RackItemWidthFraction,
   RackNetworkPort,
   RackPortSpeed,
   RackServerFormFactor,
@@ -30,7 +31,11 @@ import type {
   ResolvedHost,
 } from "../../types";
 import type { KuaiKuaiStyle } from "./KuaiKuaiBag";
-import { normalizeRackItemMetadata } from "./rackInventory";
+import {
+  normalizeRackItemMetadata,
+  rackItemKindSupportsFractionalWidth,
+  rackItemSlotCount,
+} from "./rackInventory";
 import { RackDevice } from "./RackDevice";
 import { RackHostBindingDialog } from "./RackHostBindingDialog";
 import { useItOpsStore } from "./state";
@@ -119,7 +124,6 @@ export function RackItemDialog({
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
   const placeRackItem = useItOpsStore((state) => state.placeRackItem);
   const updateRackItem = useItOpsStore((state) => state.updateRackItem);
-  const moveRackItem = useItOpsStore((state) => state.moveRackItem);
   const removeRackItem = useItOpsStore((state) => state.removeRackItem);
   const refreshRackItemSnmp = useItOpsStore((state) => state.refreshRackItemSnmp);
 
@@ -158,6 +162,10 @@ export function RackItemDialog({
   const [formFactor, setFormFactor] = useState<RackServerFormFactor>(
     initialMetadata.formFactor ?? "rack",
   );
+  const [widthFraction, setWidthFraction] = useState<"full" | RackItemWidthFraction>(
+    initialMetadata.widthFraction ?? "full",
+  );
+  const [slot, setSlot] = useState(initialMetadata.slot ?? 0);
   const [serverPanelStyle, setServerPanelStyle] = useState<RackServerPanelStyle>(
     initialMetadata.serverPanelStyle ?? "default",
   );
@@ -198,6 +206,9 @@ export function RackItemDialog({
       : null,
     vendor: vendor.trim() || null,
     formFactor: kind === "server" ? formFactor : null,
+    widthFraction:
+      rackItemKindSupportsFractionalWidth(kind) && widthFraction !== "full" ? widthFraction : null,
+    slot: rackItemKindSupportsFractionalWidth(kind) && widthFraction !== "full" ? slot : null,
     serverPanelStyle: kind === "server" ? serverPanelStyle : null,
     powerW: isKuaiguai ? null : parsedPowerDraw,
     ...(isKuaiguai
@@ -272,10 +283,9 @@ export function RackItemDialog({
           connectionId: resolvedConnectionId,
           label: label.trim(),
           metadata,
+          startU: placedStartU,
+          heightU,
         });
-        if (heightU !== item!.heightU) {
-          await moveRackItem(siteId, { id: item!.id, rackId: rack.id, startU: placedStartU, heightU });
-        }
       } else {
         await placeRackItem(siteId, {
           rackId: rack.id,
@@ -365,6 +375,9 @@ export function RackItemDialog({
                       className="rack-item-preview-device"
                       style={{
                         ["--rack-item-preview-height" as string]: `${Math.min(5, Math.max(1, heightU)) * 22}px`,
+                        ...(rackItemKindSupportsFractionalWidth(kind) && widthFraction !== "full"
+                          ? { width: widthFraction === "half" ? "50%" : "25%" }
+                          : {}),
                       }}
                     >
                       <RackDevice
@@ -596,6 +609,39 @@ export function RackItemDialog({
                   <Stepper value={heightU} min={1} onChange={(next) => { const clampedHeight = Math.max(1, Math.min(rack.heightU, next)); setHeightU(clampedHeight); setStartU((current) => clampStartUForHeight(current, clampedHeight, rack.heightU)); setDisks((current) => Math.min(current, clampedHeight * DISKS_PER_U)); }} ariaDecrease={t("itops.racks.itemHeightDecrease")} ariaIncrease={t("itops.racks.itemHeightIncrease")} />
                 </Field>
               )}
+              {rackItemKindSupportsFractionalWidth(kind) ? (
+                <Field label={t("itops.racks.widthFractionLabel")}>
+                  <Select
+                    value={widthFraction}
+                    onChange={(event) => {
+                      const next = event.currentTarget.value as "full" | RackItemWidthFraction;
+                      setWidthFraction(next);
+                      setSlot((current) =>
+                        Math.min(current, rackItemSlotCount(next === "full" ? null : next) - 1),
+                      );
+                    }}
+                    options={(["full", "half", "quarter"] as const).map((value) => ({
+                      value,
+                      label: t(`itops.racks.widthFraction.${value}`),
+                    }))}
+                  />
+                </Field>
+              ) : null}
+              {rackItemKindSupportsFractionalWidth(kind) && widthFraction !== "full" ? (
+                <Field label={t("itops.racks.slotLabel")}>
+                  <Select
+                    value={String(slot)}
+                    onChange={(event) => setSlot(Number(event.currentTarget.value))}
+                    options={(widthFraction === "quarter"
+                      ? (["left", "centerLeft", "centerRight", "right"] as const)
+                      : (["left", "right"] as const)
+                    ).map((position, index) => ({
+                      value: String(index),
+                      label: t(`itops.racks.slotPosition.${position}`),
+                    }))}
+                  />
+                </Field>
+              ) : null}
             </div>
 
             {isKuaiguai ? null : (

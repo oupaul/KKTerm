@@ -211,13 +211,19 @@ flat Site target.
 
 ### Overlap / validation rule
 
-A rack item must not overlap another item's U span in the same rack, and must
-fit within `1..=height_u`. The sole exception is one 乖乖 package on the rack
-top, stored at the virtual position `height_u + 1`; changing the Rack height
-moves that package's virtual position with the top. Validate in
-`itops/site_storage.rs` on insert/update (pure helper, unit-tested) and
-re-check in the UI before a drag-drop commit. Keep the overlap and special
-placement rules in small pure functions so they remain testable without a DB.
+A rack item must not overlap another item's occupied area in the same rack,
+and must fit within `1..=height_u`. Occupancy is two-dimensional: besides its
+U span, each item covers a horizontal strip of the rack width in quarter
+units, derived from metadata `widthFraction` ("half" | "quarter"; unset =
+full width) and `slot` (0-based from the left in units of its own width). Two
+items collide only when both their U spans and their horizontal strips
+intersect, so two half-width devices (e.g. modems) may share one U row side
+by side. The sole exception is one 乖乖 package on the rack top, stored at the
+virtual position `height_u + 1`; changing the Rack height moves that
+package's virtual position with the top. Validate in `itops/site_storage.rs`
+on insert/update/move (pure helper, unit-tested) and re-check in the UI
+before a drag-drop commit. Keep the overlap and special placement rules in
+small pure functions so they remain testable without a DB.
 
 ### Rust types (`src-tauri/src/itops/types.rs`)
 

@@ -1,12 +1,18 @@
 import type {
   RackItem,
+  RackItemKind,
   RackItemMetadata,
+  RackItemWidthFraction,
   RackNetworkPort,
   RackPortSpeed,
   RackServerFormFactor,
   RackServerPanelStyle,
   RackSnmpHint,
 } from "../../types";
+
+export function rackItemKindSupportsFractionalWidth(kind: RackItemKind): boolean {
+  return kind === "switch" || kind === "router" || kind === "genericDevice";
+}
 
 export type NormalizedRackItemMetadata = Omit<
   RackItemMetadata,
@@ -33,6 +39,27 @@ function normalizeFormFactor(
   value: RackItemMetadata["formFactor"],
 ): RackServerFormFactor | null {
   return value === "tower" ? "tower" : value === "rack" ? "rack" : null;
+}
+
+function normalizeWidthFraction(
+  value: RackItemMetadata["widthFraction"],
+): RackItemWidthFraction | null {
+  return value === "half" || value === "quarter" ? value : null;
+}
+
+/** Slots a fractional width offers per U row (full width = 1). */
+export function rackItemSlotCount(widthFraction: RackItemWidthFraction | null | undefined): number {
+  return widthFraction === "half" ? 2 : widthFraction === "quarter" ? 4 : 1;
+}
+
+function normalizeSlot(
+  widthFraction: RackItemWidthFraction | null,
+  value: RackItemMetadata["slot"],
+): number | null {
+  if (!widthFraction) return null;
+  const slots = rackItemSlotCount(widthFraction);
+  const slot = Math.max(0, Math.min(slots - 1, Math.trunc(value ?? 0)));
+  return slot;
 }
 
 function normalizeServerPanelStyle(
@@ -96,6 +123,7 @@ export function normalizeSnmpHint(value: RackItemMetadata["snmp"]): RackSnmpHint
 }
 
 export function normalizeRackItemMetadata(metadata: RackItemMetadata): NormalizedRackItemMetadata {
+  const widthFraction = normalizeWidthFraction(metadata.widthFraction);
   return {
     ...metadata,
     tags: compact(metadata.tags ?? []),
@@ -104,6 +132,8 @@ export function normalizeRackItemMetadata(metadata: RackItemMetadata): Normalize
     snmp: normalizeSnmpHint(metadata.snmp),
     vendor: normalizeVendor(metadata.vendor),
     formFactor: normalizeFormFactor(metadata.formFactor),
+    widthFraction,
+    slot: normalizeSlot(widthFraction, metadata.slot),
     serverPanelStyle: normalizeServerPanelStyle(metadata.serverPanelStyle),
   };
 }

@@ -1283,11 +1283,13 @@ type CommandMap = {
       connectionId: string | null;
       label: string;
       metadata?: RackItemMetadata;
+      startU?: number;
+      heightU?: number;
     };
     result: RackItem;
   };
   itops_move_rack_item: {
-    args: { id: string; rackId: string; startU: number; heightU: number };
+    args: { id: string; rackId: string; startU: number; heightU: number; slot?: number };
     result: RackItem;
   };
   itops_remove_rack_item: {

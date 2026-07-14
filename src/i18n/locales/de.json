@@ -1355,6 +1355,19 @@
         "style1": "Stil 1",
         "style2": "Stil 2"
       },
+      "widthFractionLabel": "Gerätebreite",
+      "widthFraction": {
+        "full": "Volle Breite",
+        "half": "Halbe Breite",
+        "quarter": "Viertelbreite"
+      },
+      "slotLabel": "Position",
+      "slotPosition": {
+        "left": "Links",
+        "centerLeft": "Mitte links",
+        "centerRight": "Mitte rechts",
+        "right": "Rechts"
+      },
       "vendorLabel": "Modell",
       "vendorHint": "Verwenden Sie Dell 740XD, HP DL380 oder ein anderes Gehäusemodell für die grafische Vorschau.",
       "expiryLabel": "Ablauf",

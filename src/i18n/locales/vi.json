@@ -1355,6 +1355,19 @@
         "style1": "Kiểu 1",
         "style2": "Kiểu 2"
       },
+      "widthFractionLabel": "Chiều rộng thiết bị",
+      "widthFraction": {
+        "full": "Toàn bộ chiều rộng",
+        "half": "Nửa chiều rộng",
+        "quarter": "Một phần tư chiều rộng"
+      },
+      "slotLabel": "Vị trí",
+      "slotPosition": {
+        "left": "Trái",
+        "centerLeft": "Giữa bên trái",
+        "centerRight": "Giữa bên phải",
+        "right": "Phải"
+      },
       "vendorLabel": "Mẫu",
       "vendorHint": "Dùng Dell 740XD, HP DL380 hoặc mẫu khung máy khác cho bản xem trước đồ họa.",
       "expiryLabel": "Hết hạn",

@@ -4358,6 +4358,7 @@ pub(crate) fn itops_tool(app: &tauri::AppHandle, name: &str, args: Value) -> Str
                 optional_connection_id(&args),
                 &label,
                 metadata,
+                None,
             )
             .map(to_value)
             .map_err(|e| e.to_string())
@@ -4367,7 +4368,7 @@ pub(crate) fn itops_tool(app: &tauri::AppHandle, name: &str, args: Value) -> Str
             let rack_id = required_string(&args, "rackId")?;
             let start_u = required_u32(&args, "startU")?;
             let height_u = required_u32(&args, "heightU")?;
-            itops_topo::move_rack_item(conn, &id, &rack_id, start_u, height_u)
+            itops_topo::move_rack_item(conn, &id, &rack_id, start_u, height_u, None)
                 .map(to_value)
                 .map_err(|e| e.to_string())
         }

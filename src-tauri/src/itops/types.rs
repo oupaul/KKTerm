@@ -630,6 +630,13 @@ pub struct RackItemMetadata {
     /// Server chassis presentation ("rack" | "tower").
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub form_factor: Option<String>,
+    /// Fractional faceplate width ("half" | "quarter"); None = full rack width.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub width_fraction: Option<String>,
+    /// Horizontal slot for a fractional-width device, 0-based from the left in
+    /// units of its own width (half: 0–1, quarter: 0–3). None = leftmost.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub slot: Option<u32>,
     /// Server front-panel artwork ("default" | "style1" | "style2").
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub server_panel_style: Option<String>,

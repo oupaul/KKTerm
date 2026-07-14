@@ -1355,6 +1355,19 @@
         "style1": "樣式 1",
         "style2": "樣式 2"
       },
+      "widthFractionLabel": "裝置寬度",
+      "widthFraction": {
+        "full": "全寬",
+        "half": "半寬",
+        "quarter": "1/4 寬"
+      },
+      "slotLabel": "位置",
+      "slotPosition": {
+        "left": "左",
+        "centerLeft": "中左",
+        "centerRight": "中右",
+        "right": "右"
+      },
       "vendorLabel": "型號",
       "vendorHint": "使用 Dell 740XD、HP DL380 或其他機箱型號進行圖形預覽。",
       "expiryLabel": "到期",

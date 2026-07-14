@@ -36,6 +36,17 @@ pub fn normalize_metadata(mut metadata: RackItemMetadata) -> RackItemMetadata {
     metadata.form_factor = metadata
         .form_factor
         .filter(|value| matches!(value.as_str(), "rack" | "tower"));
+    trim_string(&mut metadata.width_fraction);
+    metadata.width_fraction = metadata
+        .width_fraction
+        .filter(|value| matches!(value.as_str(), "half" | "quarter"));
+    // A slot only means something on a fractional-width device; clamp it to
+    // the slots that width offers (half: 0–1, quarter: 0–3).
+    metadata.slot = match metadata.width_fraction.as_deref() {
+        Some("half") => Some(metadata.slot.unwrap_or(0).min(1)),
+        Some("quarter") => Some(metadata.slot.unwrap_or(0).min(3)),
+        _ => None,
+    };
     metadata.server_panel_style = metadata
         .server_panel_style
         .filter(|value| matches!(value.as_str(), "default" | "style1" | "style2"));

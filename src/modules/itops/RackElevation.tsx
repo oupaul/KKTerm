@@ -9,7 +9,7 @@
 // A Connection-backed item whose Connection is gone renders as a dimmed
 // "ghost". Items are drag-to-restacked onto any U slot (possibly across racks).
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import type { Rack, RackItem, RackItemStatus } from "../../types";
@@ -17,7 +17,15 @@ import { ItIcon } from "./icons";
 import { collectBoundConnectionIds, summarizeRackDeviceMetadata } from "./rackInventory";
 import { RackDevice } from "./RackDevice";
 import type { RackItemDraft } from "./RackItemDialog";
-import { isRackTopItem, snapRackPlacement, type RackPlacementSnap } from "./rackPlacement";
+import {
+  isRackTopItem,
+  rackItemsCollide,
+  rackItemXSpan,
+  snapPlacementSlot,
+  snapRackPlacement,
+  widthFractionQuarters,
+  type RackPlacementSnap,
+} from "./rackPlacement";
 
 // Pixel height of one rack unit (U) row. Kept in sync with `--rk-u` in CSS.
 export const U_PX = 26;
@@ -65,8 +73,15 @@ export function RackElevation({
   onEditRack?: (rack: Rack) => void;
   onDeleteRack?: (rack: Rack) => void;
   onRunRack?: (rack: Rack) => void;
-  /** Drag-drop a device onto a U slot (move/restack, possibly across racks). */
-  onMoveItem?: (itemId: string, targetRackId: string, startU: number) => void;
+  /** Drag-drop a device onto a U slot (move/restack, possibly across racks).
+   *  `xFraction` is the drop's horizontal position across the bay (0–1) so a
+   *  fractional-width device can land on a left/right slot. */
+  onMoveItem?: (
+    itemId: string,
+    targetRackId: string,
+    startU: number,
+    xFraction?: number,
+  ) => void;
   onDeleteItem?: (item: RackItem) => void;
   isGhost?: (item: RackItem) => boolean;
   /** Single-rack detail view: wider cabinet + a placed-device summary list. */
@@ -82,7 +97,7 @@ export function RackElevation({
   /** Armed picker placement: the configured device ghosts under the cursor,
    *  snapped to the hovered U slot, and a slot click places it there. */
   placeSpec?: RackItemDraft | null;
-  onPlaceAt?: (startU: number) => void;
+  onPlaceAt?: (startU: number, slot?: number) => void;
   /** Right-click while placing disarms (mirrors the room-view pickers). */
   onCancelPlacement?: () => void;
 }) {
@@ -101,14 +116,24 @@ export function RackElevation({
   const [pointerGhost, setPointerGhost] = useState(pointerRef.current);
 
   // Snap the armed device's span to a hovered U: the hovered unit is the
-  // bottom-most U, clamped so the span stays inside the rack.
-  function snapPlacement(u: number): { startU: number; blocked: boolean } {
+  // bottom-most U, clamped so the span stays inside the rack. `slot` is the
+  // horizontal slot for a fractional-width device (0 for full width).
+  function snapPlacement(
+    u: number,
+    slot = 0,
+  ): { startU: number; blocked: boolean; slot: number } {
     const heightU = Math.max(1, Math.min(placeSpec?.heightU ?? 1, rack.heightU));
     const startU = Math.max(1, Math.min(u, rack.heightU - heightU + 1));
-    const blocked = rack.items.some(
-      (item) => startU < item.startU + item.heightU && item.startU < startU + heightU,
+    const xQuarters = widthFractionQuarters(placeSpec?.metadata?.widthFraction);
+    const placeSpan = { startU, heightU, xStart: slot * xQuarters, xQuarters };
+    const blocked = rack.items.some((item) =>
+      rackItemsCollide(placeSpan, {
+        startU: item.startU,
+        heightU: item.heightU,
+        ...rackItemXSpan(item.metadata),
+      }),
     );
-    return { startU, blocked };
+    return { startU, blocked, slot };
   }
   useEffect(() => {
     if (!placing || !placeSpec || !onPlaceAt) return;
@@ -134,6 +159,7 @@ export function RackElevation({
         bayRect,
         rackHeightU: rack.heightU,
         placeHeightU: placeSpec.heightU,
+        placeWidthFraction: placeSpec.metadata?.widthFraction,
         items: rack.items,
         allowTop: placeSpec.kind === "kuaiguai",
       });
@@ -153,7 +179,7 @@ export function RackElevation({
       if (!snap) return;
       event.preventDefault();
       event.stopPropagation();
-      if (!snap.blocked) onPlaceAt(snap.startU);
+      if (!snap.blocked) onPlaceAt(snap.startU, snap.slot);
     };
     const cancelFromContextMenu = (event: MouseEvent) => {
       event.preventDefault();
@@ -185,6 +211,7 @@ export function RackElevation({
   const activePointer = pointerGhost?.draft === placeSpec ? pointerGhost : null;
   const placeGhost = placing && activePointer?.snap?.zone === "inside" ? activePointer.snap : null;
   const topPlaceGhost = placing && activePointer?.snap?.zone === "top" ? activePointer.snap : null;
+  const placeQuarters = widthFractionQuarters(placeSpec?.metadata?.widthFraction);
   // Top-to-bottom U numbers: heightU … 1.
   const unitNumbers = Array.from({ length: rack.heightU }, (_, i) => rack.heightU - i);
 
@@ -403,10 +430,15 @@ export function RackElevation({
                   key={`s-${u}`}
                   style={{ gridColumn: 2, gridRow: rack.heightU - u + 1 }}
                   aria-label={t("itops.racks.addAtUnit", { unit: u })}
-                  onClick={() => {
+                  onClick={(event) => {
                     if (!placing) return;
-                    const snap = snapPlacement(u);
-                    if (!snap.blocked) onPlaceAt!(snap.startU);
+                    const slot = snapPlacementSlot(
+                      event.clientX,
+                      event.currentTarget.getBoundingClientRect(),
+                      placeSpec?.metadata?.widthFraction,
+                    );
+                    const snap = snapPlacement(u, slot);
+                    if (!snap.blocked) onPlaceAt!(snap.startU, snap.slot);
                   }}
                   onDragOver={
                     canMove
@@ -421,7 +453,13 @@ export function RackElevation({
                       ? (event) => {
                           event.preventDefault();
                           const itemId = event.dataTransfer.getData("application/x-itops-rack-item");
-                          if (itemId) onMoveItem?.(itemId, rack.id, u);
+                          if (!itemId) return;
+                          const rect = event.currentTarget.getBoundingClientRect();
+                          const xFraction = Math.max(
+                            0,
+                            Math.min(0.999, (event.clientX - rect.left) / Math.max(1, rect.width)),
+                          );
+                          onMoveItem?.(itemId, rack.id, u, xFraction);
                         }
                       : undefined
                   }
@@ -446,11 +484,20 @@ export function RackElevation({
                 ? (anchor: HTMLElement) => onOpenItem!(item, anchor)
                 : () => onEditItem?.(item);
               const delay = `${(order.get(item.id) ?? 0) * 0.045}s`;
-              const style = {
+              // Fractional-width faces occupy a horizontal strip of the bay so
+              // several devices (e.g. two modems) can share one U row.
+              const xSpan = rackItemXSpan(item.metadata);
+              const style: CSSProperties = {
                 gridColumn: 2,
                 gridRow: `${itemRowStart(rack.heightU, item)} / span ${item.heightU}`,
                 animationDelay: delay,
-              } as const;
+                ...(xSpan.xQuarters < 4
+                  ? {
+                      width: `${xSpan.xQuarters * 25}%`,
+                      marginLeft: `${xSpan.xStart * 25}%`,
+                    }
+                  : {}),
+              };
               const face = (
                 <RackDevice
                   kind={item.kind}
@@ -559,6 +606,12 @@ export function RackElevation({
                 style={{
                   gridColumn: 2,
                   gridRow: `${rack.heightU - (placeGhost.startU + Math.min(placeSpec.heightU, rack.heightU) - 1) + 1} / span ${Math.min(placeSpec.heightU, rack.heightU)}`,
+                  ...(placeQuarters < 4
+                    ? {
+                        width: `${placeQuarters * 25}%`,
+                        marginLeft: `${placeGhost.slot * placeQuarters * 25}%`,
+                      }
+                    : {}),
                 }}
               >
                 <RackDevice
@@ -630,7 +683,7 @@ export function RackElevation({
               style={{
                 left: activePointer.x,
                 top: activePointer.y,
-                width: activePointer.width,
+                width: (activePointer.width * placeQuarters) / 4,
                 height: Math.max(1, placeSpec.heightU) * unitPx,
               }}
             >

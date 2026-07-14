@@ -26,7 +26,7 @@ import { showNativeContextMenu } from "../../lib/nativeContextMenu";
 import type { Rack, RackItem, RackItemStatus } from "../../types";
 import { rackFloorMetrics } from "./roomFloorPlan";
 import { RoomObjectIsoArtwork } from "./RoomObjectIsoReference";
-import { isRackTopItem } from "./rackPlacement";
+import { isRackTopItem, rackItemXSpan } from "./rackPlacement";
 import {
   ISO_ROT_DEG,
   ISO_TILT_COS,
@@ -981,6 +981,13 @@ function IsoRackSkin({ rack, axis }: { rack: Rack; axis: "y" | "x" }) {
         const topU = item.startU + item.heightU - 1;
         const offset = ((capacity - topU) / capacity) * 100;
         const size = (Math.max(1, item.heightU) / capacity) * 100;
+        // Fractional-width faces inset across the strip's cross axis so two
+        // devices sharing a U render side by side.
+        const { xStart, xQuarters } = rackItemXSpan(item.metadata);
+        const cross =
+          xQuarters < 4
+            ? { start: `${xStart * 25}%`, size: `${xQuarters * 25}%` }
+            : null;
         return (
           <i
             key={item.id}
@@ -989,8 +996,16 @@ function IsoRackSkin({ rack, axis }: { rack: Rack; axis: "y" | "x" }) {
             data-status={itemStatus(item)}
             style={
               axis === "y"
-                ? { top: `${offset}%`, height: `${size}%` }
-                : { left: `${offset}%`, width: `${size}%` }
+                ? {
+                    top: `${offset}%`,
+                    height: `${size}%`,
+                    ...(cross ? { left: cross.start, width: cross.size } : {}),
+                  }
+                : {
+                    left: `${offset}%`,
+                    width: `${size}%`,
+                    ...(cross ? { top: cross.start, height: cross.size } : {}),
+                  }
             }
           />
         );

@@ -1355,6 +1355,19 @@
         "style1": "スタイル 1",
         "style2": "スタイル 2"
       },
+      "widthFractionLabel": "デバイスの幅",
+      "widthFraction": {
+        "full": "全幅",
+        "half": "1/2 幅",
+        "quarter": "1/4 幅"
+      },
+      "slotLabel": "位置",
+      "slotPosition": {
+        "left": "左",
+        "centerLeft": "中央左",
+        "centerRight": "中央右",
+        "right": "右"
+      },
       "vendorLabel": "モデル",
       "vendorHint": "グラフィカルプレビューには Dell 740XD、HP DL380、または別のシャーシモデルを使用します。",
       "expiryLabel": "有効期限",

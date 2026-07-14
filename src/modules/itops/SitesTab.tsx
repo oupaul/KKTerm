@@ -58,8 +58,16 @@ import { RackStage } from "./RackStage";
 import { ServerRoomFloorPlan } from "./ServerRoomFloorPlan";
 import { ServerRoomIsoView } from "./ServerRoomIsoView";
 import { RoomObjectPicker, type RoomTool } from "./roomViewParts";
-import { collectBoundConnectionIds } from "./rackInventory";
-import { isRackTopItem, KUAIGUAI_TOP_CLEARANCE_U } from "./rackPlacement";
+import {
+  collectBoundConnectionIds,
+  rackItemKindSupportsFractionalWidth,
+  rackItemSlotCount,
+} from "./rackInventory";
+import {
+  firstAvailableRackUnit,
+  isRackTopItem,
+  KUAIGUAI_TOP_CLEARANCE_U,
+} from "./rackPlacement";
 import type { DashboardBackground } from "../dashboard/types";
 import { SharedBackgroundPopover } from "../dashboard/edit/SharedBackgroundPopover";
 import { loadBackgroundImage } from "../dashboard/state/persistence";
@@ -533,8 +541,14 @@ export function SitesTab({
     });
   }
 
-  // Armed picker placement: the configured Rack Device lands on the clicked U.
-  async function placeConfiguredDevice(rack: Rack, draft: RackItemDraft, startU: number) {
+  // Armed picker placement: the configured Rack Device lands on the clicked U
+  // (and, for a fractional-width device, the clicked horizontal slot).
+  async function placeConfiguredDevice(
+    rack: Rack,
+    draft: RackItemDraft,
+    startU: number,
+    slot?: number,
+  ) {
     if (!activeGroup) return;
     try {
       await placeRackItem(activeGroup.id, {
@@ -544,7 +558,10 @@ export function SitesTab({
         label: draft.label,
         startU,
         heightU: draft.heightU,
-        metadata: draft.metadata,
+        metadata:
+          draft.metadata.widthFraction && slot != null
+            ? { ...draft.metadata, slot }
+            : draft.metadata,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -552,17 +569,36 @@ export function SitesTab({
     }
   }
 
-  async function moveItem(itemId: string, targetRackId: string, startU: number) {
+  async function moveItem(
+    itemId: string,
+    targetRackId: string,
+    startU: number,
+    xFraction?: number,
+  ) {
     if (!activeGroup) return;
     const item = racks.flatMap((rack) => rack.items).find((entry) => entry.id === itemId);
     if (!item) return;
-    if (item.rackId === targetRackId && item.startU === startU) return;
+    // A fractional-width device also lands on the horizontal slot under the
+    // drop point; full-width devices ignore it.
+    const slots = rackItemSlotCount(item.metadata?.widthFraction);
+    const slot =
+      slots > 1 && xFraction != null
+        ? Math.min(slots - 1, Math.floor(Math.max(0, xFraction) * slots))
+        : null;
+    if (
+      item.rackId === targetRackId &&
+      item.startU === startU &&
+      (slot == null || slot === (item.metadata?.slot ?? 0))
+    ) {
+      return;
+    }
     try {
       await moveRackItem(activeGroup.id, {
         id: itemId,
         rackId: targetRackId,
         startU,
         heightU: item.heightU,
+        ...(slot != null ? { slot } : {}),
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -996,11 +1032,15 @@ export function SitesTab({
             onConfigureDevice={(rack, kind, arm) =>
               setItemDialog({ rack, item: null, kind, onConfigured: arm })
             }
-            onPlaceDevice={(rack, draft, startU) => void placeConfiguredDevice(rack, draft, startU)}
+            onPlaceDevice={(rack, draft, startU, slot) =>
+              void placeConfiguredDevice(rack, draft, startU, slot)
+            }
             onOpenItem={openRackItem}
             onEditItem={(rack, item) => setItemDialog({ rack, item })}
             onBindItem={setBindingsDialog}
-            onMoveItem={(itemId, targetRackId, startU) => void moveItem(itemId, targetRackId, startU)}
+            onMoveItem={(itemId, targetRackId, startU, xFraction) =>
+              void moveItem(itemId, targetRackId, startU, xFraction)
+            }
             onAddRack={(serverRoom) => {
               setRackDialog({
                 siteId: activeGroup.id,
@@ -1274,12 +1314,13 @@ function RackDrill({
   /** Picker flow: open the device dialog in configure mode; `arm` receives the
    *  configured draft so the drill can start the cursor-tracked placement. */
   onConfigureDevice: (rack: Rack, kind: RackItemKind, arm: (draft: RackItemDraft) => void) => void;
-  /** Armed placement click landed on `startU`: place the configured device. */
-  onPlaceDevice: (rack: Rack, draft: RackItemDraft, startU: number) => void;
+  /** Armed placement click landed on `startU` (and, for a fractional-width
+   *  device, the horizontal `slot`): place the configured device. */
+  onPlaceDevice: (rack: Rack, draft: RackItemDraft, startU: number, slot?: number) => void;
   onOpenItem: (item: RackItem, anchor: HTMLElement) => void;
   onEditItem: (rack: Rack, item: RackItem) => void;
   onBindItem: (item: RackItem) => void;
-  onMoveItem: (itemId: string, targetRackId: string, startU: number) => void;
+  onMoveItem: (itemId: string, targetRackId: string, startU: number, xFraction?: number) => void;
   onAddServerRoom: () => void;
   onAddRack: (serverRoom: string) => void;
   /** Picker flow: open the New Rack dialog, hand the saved rack back for a
@@ -1660,9 +1701,9 @@ function RackDrill({
         reserveTopU={KUAIGUAI_TOP_CLEARANCE_U}
         editMode={editMode}
         placeSpec={roomPlaceRackId === r.id ? placeDevice : null}
-        onPlaceAt={(startU) => {
+        onPlaceAt={(startU, slot) => {
           if (!placeDevice) return;
-          onPlaceDevice(r, placeDevice, startU);
+          onPlaceDevice(r, placeDevice, startU, slot);
           setPlaceDevice(null);
         }}
         onCancelPlacement={() => setPlaceDevice(null)}
@@ -1886,9 +1927,9 @@ function RackDrill({
               onMoveItem={editMode ? onMoveItem : undefined}
               onDeleteItem={editMode ? (item) => onDeleteItem(rack, item) : undefined}
               placeSpec={editMode ? placeDevice : null}
-              onPlaceAt={(startU) => {
+              onPlaceAt={(startU, slot) => {
                 if (!placeDevice) return;
-                onPlaceDevice(rack, placeDevice, startU);
+                onPlaceDevice(rack, placeDevice, startU, slot);
                 setPlaceDevice(null);
               }}
               onCancelPlacement={() => setPlaceDevice(null)}
@@ -2256,16 +2297,6 @@ function useNearestPlacementRack(
   return rackId;
 }
 
-function firstAvailableRackUnit(rack: Rack): number | null {
-  for (let unit = 1; unit <= rack.heightU; unit += 1) {
-    const occupied = rack.items.some(
-      (item) => unit >= item.startU && unit < item.startU + item.heightU,
-    );
-    if (!occupied) return unit;
-  }
-  return null;
-}
-
 function RackObjectPicker({
   racks,
   armedKind,
@@ -2281,7 +2312,8 @@ function RackObjectPicker({
   const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const q = query.trim().toLowerCase();
-  const hasFreeUnit = racks.some((rack) => firstAvailableRackUnit(rack) != null);
+  const hasFullWidthUnit = racks.some((rack) => firstAvailableRackUnit(rack, 4) != null);
+  const hasFractionalUnit = racks.some((rack) => firstAvailableRackUnit(rack, 1) != null);
   const rackTopAvailable = racks.some(
     (rack) => !rack.items.some((item) => isRackTopItem(item, rack.heightU)),
   );
@@ -2313,7 +2345,9 @@ function RackObjectPicker({
       <div className="rm-picker-grid">
         {kinds.map((kind) => {
           const label = t(`itops.racks.kind.${kind}`);
-          const available = hasFreeUnit || (kind === "kuaiguai" && rackTopAvailable);
+          const available =
+            (rackItemKindSupportsFractionalWidth(kind) ? hasFractionalUnit : hasFullWidthUnit) ||
+            (kind === "kuaiguai" && rackTopAvailable);
           return (
             <button
               key={kind}

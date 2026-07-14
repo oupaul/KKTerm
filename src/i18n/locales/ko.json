@@ -1355,6 +1355,19 @@
         "style1": "스타일 1",
         "style2": "스타일 2"
       },
+      "widthFractionLabel": "장치 너비",
+      "widthFraction": {
+        "full": "전체 너비",
+        "half": "1/2 너비",
+        "quarter": "1/4 너비"
+      },
+      "slotLabel": "위치",
+      "slotPosition": {
+        "left": "왼쪽",
+        "centerLeft": "중앙 왼쪽",
+        "centerRight": "중앙 오른쪽",
+        "right": "오른쪽"
+      },
       "vendorLabel": "모델",
       "vendorHint": "그래픽 미리보기에 Dell 740XD, HP DL380 또는 다른 섀시 모델을 사용하세요.",
       "expiryLabel": "만료",

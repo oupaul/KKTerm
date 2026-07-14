@@ -1355,6 +1355,19 @@
         "style1": "Estilo 1",
         "style2": "Estilo 2"
       },
+      "widthFractionLabel": "Ancho del dispositivo",
+      "widthFraction": {
+        "full": "Ancho completo",
+        "half": "Medio ancho",
+        "quarter": "Un cuarto de ancho"
+      },
+      "slotLabel": "Posición",
+      "slotPosition": {
+        "left": "Izquierda",
+        "centerLeft": "Centro izquierda",
+        "centerRight": "Centro derecha",
+        "right": "Derecha"
+      },
       "vendorLabel": "Modelo",
       "vendorHint": "Usa Dell 740XD, HP DL380 u otro modelo de chasis para la vista previa gráfica.",
       "expiryLabel": "Vencimiento",

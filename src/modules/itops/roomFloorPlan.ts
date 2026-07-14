@@ -6,6 +6,7 @@
 // colour mapping in itops.css.
 
 import type { Rack, RackItem, RackItemStatus } from "../../types";
+import { rackItemXSpan } from "./rackPlacement";
 
 // Worst-case rack health, derived from placed-device statuses. "empty" is its
 // own band so an unpopulated rack reads as neutral rather than healthy.
@@ -55,7 +56,10 @@ export function rackFloorMetrics(rack: Rack): RackFloorMetrics {
   let offline = 0;
   let powerW = 0;
   for (const item of rack.items) {
-    if (item.startU <= rack.heightU) used += Math.max(0, item.heightU);
+    // Fractional-width devices consume their share of the row, so two
+    // half-width modems in one U count that U once.
+    if (item.startU <= rack.heightU)
+      used += (Math.max(0, item.heightU) * rackItemXSpan(item.metadata).xQuarters) / 4;
     powerW += Math.max(0, item.metadata?.powerW ?? 0);
     const status = itemStatus(item);
     if (status === "warning") warning += 1;

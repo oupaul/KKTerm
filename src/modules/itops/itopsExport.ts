@@ -2,6 +2,7 @@ import { isTauriRuntime, pickAndSaveFile, type WidgetFilePickFilter } from "../.
 import type { Rack, RackItem, Site } from "../../types";
 import { groupRackTopology, topologyGroupKey } from "./rackTopology";
 import { normalizeRackItemMetadata, summarizeRackDeviceMetadata } from "./rackInventory";
+import { rackItemXSpan } from "./rackPlacement";
 
 export type ItOpsExportFormat = "pdf" | "excel";
 
@@ -118,10 +119,15 @@ function rackDrawing(
   for (const item of rack.items) {
     const itemY = y + (item.startU - 1) * unitHeight + 0.5;
     const itemHeight = Math.max(2, item.heightU * unitHeight - 1);
-    commands.push(pdfRect(bayX + 1, itemY, bayWidth - 2, itemHeight, itemColor(item), "0.08 0.10 0.14"));
+    // Fractional-width faces take their horizontal strip of the bay so
+    // side-by-side devices don't paint over each other.
+    const { xStart, xQuarters } = rackItemXSpan(item.metadata);
+    const itemX = bayX + 1 + ((bayWidth - 2) * xStart) / 4;
+    const itemWidth = ((bayWidth - 2) * xQuarters) / 4;
+    commands.push(pdfRect(itemX, itemY, itemWidth, itemHeight, itemColor(item), "0.08 0.10 0.14"));
     if (itemHeight >= 8) {
       const name = item.label || kindLabel(item.kind);
-      commands.push(pdfText(bayX + 5, itemY + Math.max(2, itemHeight / 2 - 3), Math.min(8, itemHeight - 2), truncate(name, Math.floor(bayWidth / 5.3)), "1 1 1"));
+      commands.push(pdfText(itemX + 4, itemY + Math.max(2, itemHeight / 2 - 3), Math.min(8, itemHeight - 2), truncate(name, Math.floor(itemWidth / 5.3)), "1 1 1"));
     }
   }
   commands.push(pdfText(x + 4, y + height - 9, 6, `${rack.heightU}U`, "0.72 0.77 0.84"));

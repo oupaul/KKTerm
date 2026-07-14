@@ -1355,6 +1355,19 @@
         "style1": "Gaya 1",
         "style2": "Gaya 2"
       },
+      "widthFractionLabel": "Lebar perangkat",
+      "widthFraction": {
+        "full": "Lebar penuh",
+        "half": "Setengah lebar",
+        "quarter": "Seperempat lebar"
+      },
+      "slotLabel": "Posisi",
+      "slotPosition": {
+        "left": "Kiri",
+        "centerLeft": "Tengah kiri",
+        "centerRight": "Tengah kanan",
+        "right": "Kanan"
+      },
       "vendorLabel": "Model",
       "vendorHint": "Gunakan Dell 740XD, HP DL380, atau model sasis lain untuk pratinjau grafis.",
       "expiryLabel": "Kedaluwarsa",

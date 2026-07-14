@@ -587,7 +587,14 @@ pub fn itops_update_rack_item(
     connection_id: Option<String>,
     label: String,
     metadata: Option<RackItemMetadata>,
+    start_u: Option<u32>,
+    height_u: Option<u32>,
 ) -> Result<RackItem, String> {
+    let placement = match (start_u, height_u) {
+        (Some(start_u), Some(height_u)) => Some((start_u, height_u)),
+        (None, None) => None,
+        _ => return Err("startU and heightU must be supplied together".to_string()),
+    };
     storage(&app).with_connection_infallible(|conn| {
         topo::update_rack_item(
             conn,
@@ -596,6 +603,7 @@ pub fn itops_update_rack_item(
             connection_id,
             &label,
             metadata.unwrap_or_default(),
+            placement,
         )
         .map_err(|error| error.to_string())
     })
@@ -608,9 +616,10 @@ pub fn itops_move_rack_item(
     rack_id: String,
     start_u: u32,
     height_u: u32,
+    slot: Option<u32>,
 ) -> Result<RackItem, String> {
     storage(&app).with_connection_infallible(|conn| {
-        topo::move_rack_item(conn, &id, &rack_id, start_u, height_u)
+        topo::move_rack_item(conn, &id, &rack_id, start_u, height_u, slot)
             .map_err(|error| error.to_string())
     })
 }
@@ -656,6 +665,7 @@ pub async fn itops_refresh_rack_item_snmp(app: AppHandle, id: String) -> Result<
             item.connection_id,
             &item.label,
             metadata,
+            None,
         )
         .map_err(|error| error.to_string())
     })
