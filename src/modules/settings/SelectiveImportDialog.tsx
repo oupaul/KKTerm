@@ -117,6 +117,12 @@ export function SelectiveImportDialog({
       if (result.applied.includes("dashboards")) {
         await loadDashboard();
       }
+      if (result.applied.includes("itops")) {
+        window.dispatchEvent(new CustomEvent("kkterm:itops-invalidated"));
+      }
+      if (result.applied.includes("assistant")) {
+        window.dispatchEvent(new CustomEvent("kkterm:assistant-history-invalidated"));
+      }
       showStatusBarNotice(t("settings.selectiveImportComplete", { count: result.applied.length }), {
         tone: "success",
       });

@@ -36,8 +36,8 @@ impl ItopsAutomationRuntime {
         self.disarm(registry, &automation.id);
         let mut config = automation.config.clone();
         config.name = automation.name.clone(); // keep the Watchdog label in sync
-        let summary =
-            WatchdogRegistry::create(registry, app, config).map_err(|error| format!("{error:?}"))?;
+        let summary = WatchdogRegistry::create(registry, app, config)
+            .map_err(|error| format!("{error:?}"))?;
         self.armed
             .lock()
             .unwrap()
@@ -62,6 +62,10 @@ impl ItopsAutomationRuntime {
                 (armed_watchdog == watchdog_id).then(|| automation_id.clone())
             })
     }
+
+    fn armed_automation_ids(&self) -> Vec<String> {
+        self.armed.lock().unwrap().keys().cloned().collect()
+    }
 }
 
 /// Install the WatchdogRegistry trigger hook so a firing Watchdog runs its
@@ -84,19 +88,38 @@ fn storage(app: &AppHandle) -> State<'_, crate::storage::Storage> {
 /// Runs on the async runtime so the Watchdog poll tasks spawn in a tokio context.
 pub fn hydrate_automations(app: AppHandle) {
     tauri::async_runtime::spawn(async move {
-        let automations = app
-            .state::<crate::storage::Storage>()
-            .with_connection_infallible(|conn| {
-                auto_store::list_automations(conn).unwrap_or_default()
-            });
-        let runtime = app.state::<ItopsAutomationRuntime>();
-        let registry = app.state::<Arc<WatchdogRegistry>>();
-        for automation in automations.into_iter().filter(|automation| automation.enabled) {
-            if let Err(error) = runtime.arm(&app, &registry, &automation) {
-                eprintln!("failed to arm IT Ops automation {}: {error}", automation.id);
-            }
-        }
+        reconcile_automations(&app);
     });
+}
+
+/// Match the live Watchdog runtimes to the durable Automation rows. Selective
+/// import calls this after committing IT Ops data so removed rules stop and
+/// newly imported enabled rules begin without waiting for an app restart.
+pub fn reconcile_automations(app: &AppHandle) {
+    let automations = app
+        .state::<crate::storage::Storage>()
+        .with_connection_infallible(|conn| auto_store::list_automations(conn).unwrap_or_default());
+    let runtime = app.state::<ItopsAutomationRuntime>();
+    let registry = app.state::<Arc<WatchdogRegistry>>();
+    let enabled_ids = automations
+        .iter()
+        .filter(|automation| automation.enabled)
+        .map(|automation| automation.id.as_str())
+        .collect::<std::collections::HashSet<_>>();
+
+    for automation_id in runtime.armed_automation_ids() {
+        if !enabled_ids.contains(automation_id.as_str()) {
+            runtime.disarm(&registry, &automation_id);
+        }
+    }
+    for automation in automations
+        .into_iter()
+        .filter(|automation| automation.enabled)
+    {
+        if let Err(error) = runtime.arm(app, &registry, &automation) {
+            eprintln!("failed to arm IT Ops automation {}: {error}", automation.id);
+        }
+    }
 }
 
 #[tauri::command]

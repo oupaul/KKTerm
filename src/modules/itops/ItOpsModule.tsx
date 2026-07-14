@@ -62,6 +62,17 @@ export function ItOpsModule({
     void loadAutomations();
   }, [loadSites, loadRunHistory, loadTasks, loadAutomations]);
 
+  useEffect(() => {
+    const reload = () => {
+      void loadSites();
+      void loadRunHistory();
+      void loadTasks();
+      void loadAutomations();
+    };
+    window.addEventListener("kkterm:itops-invalidated", reload);
+    return () => window.removeEventListener("kkterm:itops-invalidated", reload);
+  }, [loadSites, loadRunHistory, loadTasks, loadAutomations]);
+
   // Stream live Batch Run progress into the store.
   useEffect(() => {
     if (!isTauriRuntime()) {

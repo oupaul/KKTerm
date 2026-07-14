@@ -396,14 +396,19 @@ export function AssistantPanel({
     }
 
     let disposed = false;
-    void loadAssistantChatHistoryFromStorage().then((threads) => {
-      if (!disposed) {
-        setChatHistory(threads);
-      }
-    });
+    const reload = () => {
+      void loadAssistantChatHistoryFromStorage().then((threads) => {
+        if (!disposed) {
+          setChatHistory(threads);
+        }
+      });
+    };
+    reload();
+    window.addEventListener("kkterm:assistant-history-invalidated", reload);
 
     return () => {
       disposed = true;
+      window.removeEventListener("kkterm:assistant-history-invalidated", reload);
     };
   }, []);
 

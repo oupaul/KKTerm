@@ -27,7 +27,7 @@ use rusqlite::Connection as SqliteConnection;
 use rusqlite::types::{Value as SqlValue, ValueRef};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
-use tauri::State;
+use tauri::{AppHandle, State};
 use time::OffsetDateTime;
 use time::format_description::well_known::Rfc3339;
 use zip::{ZipArchive, ZipWriter, write::SimpleFileOptions};
@@ -150,8 +150,8 @@ fn segment_tables(segment: &str) -> Option<&'static [TableSpec]> {
         // (member_ids_json), rack items and Hosts soft-reference connections.id,
         // and Automations / run history soft-reference Sites and Tasks — all
         // handled in `rewrite_soft_references` because none carries an FK
-        // constraint. Automation config_json / actions_json bodies travel
-        // verbatim.
+        // constraint. JSON-contained references in filters, rack metadata,
+        // Automation actions, and run reports are remapped there as well.
         "itops" => Some(&[
             TableSpec {
                 name: "itops_sites",
@@ -466,6 +466,7 @@ pub fn inspect_selective_database(path: String) -> Result<SelectiveManifest, Str
 
 #[tauri::command]
 pub fn import_selective_database(
+    app: AppHandle,
     storage: State<'_, Storage>,
     secrets: State<'_, Secrets>,
     path: String,
@@ -542,6 +543,10 @@ pub fn import_selective_database(
             .map_err(|error| format!("failed to commit import: {error}"))?;
         Ok::<(), String>(())
     })?;
+
+    if applied.iter().any(|segment| segment == "itops") {
+        crate::itops::automation_commands::reconcile_automations(&app);
+    }
 
     // Write credentials into the active backend, owner ids rewritten via remap.
     if credential_action != "skip" {
@@ -768,9 +773,16 @@ fn rewrite_soft_references(
     match table {
         "itops_sites" => {
             remap_id_array(row, "member_ids_json", "connections", remap);
+            rewrite_json_column(row, "filter_json", |filter| {
+                remap_json_id(filter, "folderId", "connection_folders", remap);
+            });
         }
         "itops_site_rack_items" => {
             remap_soft_id(row, "connection_id", "connections", remap);
+            rewrite_json_column(row, "metadata_json", |metadata| {
+                remap_json_id_array(metadata, "connectionIds", "connections", remap);
+                remap_json_id(metadata, "hostId", "itops_hosts", remap);
+            });
         }
         "itops_hosts" => {
             remap_soft_id(row, "parent_host_id", "itops_hosts", remap);
@@ -778,6 +790,18 @@ fn rewrite_soft_references(
         }
         "itops_automations" => {
             remap_soft_id(row, "site_id", "itops_sites", remap);
+            rewrite_json_column(row, "actions_json", |actions| {
+                if let Some(actions) = actions.as_array_mut() {
+                    for action in actions {
+                        if action.get("kind").and_then(Value::as_str) == Some("runBatch") {
+                            remap_json_id(action, "siteId", "itops_sites", remap);
+                            if let Some(task) = action.get_mut("task") {
+                                clear_secret_owner_ids(task);
+                            }
+                        }
+                    }
+                }
+            });
         }
         "itops_run_history" => {
             remap_soft_id(row, "site_id", "itops_sites", remap);
@@ -795,6 +819,19 @@ fn rewrite_soft_references(
                     );
                 }
             }
+            rewrite_json_column(row, "report_json", |report| {
+                if let Some(hosts) = report.get_mut("hosts").and_then(Value::as_array_mut) {
+                    for host in hosts {
+                        remap_json_id(host, "connectionId", "connections", remap);
+                    }
+                }
+            });
+        }
+        "itops_tasks" => {
+            // The selective bundle does not carry IT Ops vault entries. Drop
+            // their opaque owner ids so an imported Task cannot bind to an
+            // unrelated local secret that happens to use the same identifier.
+            rewrite_json_column(row, "task_json", clear_secret_owner_ids);
         }
         "assistant_memories" => {
             // scope is "global" or "connection:<id>".
@@ -809,6 +846,75 @@ fn rewrite_soft_references(
                         Value::String(format!("connection:{new}")),
                     );
                 }
+            }
+        }
+        _ => {}
+    }
+}
+
+fn rewrite_json_column(
+    row: &mut Map<String, Value>,
+    column: &str,
+    rewrite: impl FnOnce(&mut Value),
+) {
+    let Some(text) = row.get(column).and_then(Value::as_str) else {
+        return;
+    };
+    let Ok(mut value) = serde_json::from_str::<Value>(text) else {
+        return;
+    };
+    rewrite(&mut value);
+    if let Ok(encoded) = serde_json::to_string(&value) {
+        row.insert(column.to_string(), Value::String(encoded));
+    }
+}
+
+fn remap_json_id(
+    value: &mut Value,
+    field: &str,
+    referenced: &str,
+    remap: &HashMap<(String, String), String>,
+) {
+    let Some(old) = value.get(field).and_then(Value::as_str) else {
+        return;
+    };
+    if let Some(new) = remap.get(&(referenced.to_string(), old.to_string())) {
+        if let Some(object) = value.as_object_mut() {
+            object.insert(field.to_string(), Value::String(new.clone()));
+        }
+    }
+}
+
+fn remap_json_id_array(
+    value: &mut Value,
+    field: &str,
+    referenced: &str,
+    remap: &HashMap<(String, String), String>,
+) {
+    let Some(ids) = value.get_mut(field).and_then(Value::as_array_mut) else {
+        return;
+    };
+    for id in ids {
+        let Some(old) = id.as_str() else {
+            continue;
+        };
+        if let Some(new) = remap.get(&(referenced.to_string(), old.to_string())) {
+            *id = Value::String(new.clone());
+        }
+    }
+}
+
+fn clear_secret_owner_ids(value: &mut Value) {
+    match value {
+        Value::Object(object) => {
+            object.remove("secretOwnerId");
+            for child in object.values_mut() {
+                clear_secret_owner_ids(child);
+            }
+        }
+        Value::Array(values) => {
+            for child in values {
+                clear_secret_owner_ids(child);
             }
         }
         _ => {}
@@ -1557,7 +1663,8 @@ mod tests {
         conn.execute_batch(
             "PRAGMA foreign_keys = ON;
              CREATE TABLE itops_sites (id TEXT PRIMARY KEY, name TEXT NOT NULL,
-                 sort_order INTEGER NOT NULL, member_ids_json TEXT NOT NULL DEFAULT '[]');
+                 sort_order INTEGER NOT NULL, member_ids_json TEXT NOT NULL DEFAULT '[]',
+                 filter_json TEXT);
              CREATE TABLE itops_server_rooms (id TEXT PRIMARY KEY,
                  site_id TEXT NOT NULL REFERENCES itops_sites(id) ON DELETE CASCADE,
                  name TEXT NOT NULL, sort_order INTEGER NOT NULL);
@@ -1566,7 +1673,8 @@ mod tests {
                  name TEXT NOT NULL, sort_order INTEGER NOT NULL);
              CREATE TABLE itops_site_rack_items (id TEXT PRIMARY KEY,
                  rack_id TEXT NOT NULL REFERENCES itops_site_racks(id) ON DELETE CASCADE,
-                 connection_id TEXT, kind TEXT NOT NULL, start_u INTEGER NOT NULL);
+                 connection_id TEXT, kind TEXT NOT NULL, start_u INTEGER NOT NULL,
+                 metadata_json TEXT NOT NULL DEFAULT '{}');
              CREATE TABLE itops_room_objects (id TEXT PRIMARY KEY,
                  site_id TEXT NOT NULL REFERENCES itops_sites(id) ON DELETE CASCADE,
                  kind TEXT NOT NULL, x INTEGER NOT NULL, y INTEGER NOT NULL);
@@ -1577,9 +1685,11 @@ mod tests {
              CREATE TABLE itops_tasks (id TEXT PRIMARY KEY, name TEXT NOT NULL,
                  sort_order INTEGER NOT NULL, task_json TEXT NOT NULL);
              CREATE TABLE itops_automations (id TEXT PRIMARY KEY, name TEXT NOT NULL,
-                 sort_order INTEGER NOT NULL, config_json TEXT NOT NULL, site_id TEXT);
+                 sort_order INTEGER NOT NULL, config_json TEXT NOT NULL,
+                 actions_json TEXT NOT NULL DEFAULT '[]', site_id TEXT);
              CREATE TABLE itops_run_history (id TEXT PRIMARY KEY, source TEXT NOT NULL,
-                 site_id TEXT, task_id TEXT, task_summary TEXT NOT NULL, started_at TEXT NOT NULL);",
+                 site_id TEXT, task_id TEXT, task_summary TEXT NOT NULL, started_at TEXT NOT NULL,
+                 report_json TEXT NOT NULL DEFAULT '{}');",
         )
         .expect("itops schema");
     }
@@ -1589,22 +1699,31 @@ mod tests {
         let src = SqliteConnection::open_in_memory().unwrap();
         itops_schema(&src);
         src.execute_batch(
-            "INSERT INTO itops_sites (id, name, sort_order, member_ids_json)
-                 VALUES ('s1','HQ',0,'[\"c1\",\"c-foreign\"]');
+            "INSERT INTO itops_sites (id, name, sort_order, member_ids_json, filter_json)
+                 VALUES ('s1','HQ',0,'[\"c1\",\"c-foreign\"]','{\"types\":[\"ssh\"],\"folderId\":\"f1\"}');
              INSERT INTO itops_server_rooms (id, site_id, name, sort_order) VALUES ('rm1','s1','Room A',0);
              INSERT INTO itops_site_racks (id, site_id, name, sort_order) VALUES ('rk1','s1','A12',0);
-             INSERT INTO itops_site_rack_items (id, rack_id, connection_id, kind, start_u)
-                 VALUES ('it1','rk1','c1','connection',1);
+             INSERT INTO itops_site_rack_items
+                 (id, rack_id, connection_id, kind, start_u, metadata_json)
+                 VALUES ('it1','rk1','c1','connection',1,
+                 '{\"connectionIds\":[\"c1\",\"c-foreign\"],\"hostId\":\"h1\"}');
              INSERT INTO itops_room_objects (id, site_id, kind, x, y) VALUES ('ob1','s1','camera',0,0);
              INSERT INTO itops_hosts (id, site_id, parent_host_id, hostname, connection_ids_json, sort_order)
                  VALUES ('h1','s1',NULL,'esx01','[\"c1\"]',0);
              INSERT INTO itops_hosts (id, site_id, parent_host_id, hostname, connection_ids_json, sort_order)
                  VALUES ('h2','s1','h1','vm-web','[]',1);
-             INSERT INTO itops_tasks (id, name, sort_order, task_json) VALUES ('t1','Reboot',0,'{}');
-             INSERT INTO itops_automations (id, name, sort_order, config_json, site_id)
-                 VALUES ('a1','Watch',0,'{}','s1');
-             INSERT INTO itops_run_history (id, source, site_id, task_id, task_summary, started_at)
-                 VALUES ('r1','automation:a1','s1','t1','Reboot','2026-01-01T00:00:00Z');",
+             INSERT INTO itops_tasks (id, name, sort_order, task_json) VALUES
+                 ('t1','Reboot',0,
+                 '{\"kind\":\"playbook\",\"steps\":[{\"secretOwnerId\":\"vault-1\"}]}');
+             INSERT INTO itops_automations
+                 (id, name, sort_order, config_json, actions_json, site_id) VALUES
+                 ('a1','Watch',0,'{}',
+                 '[{\"kind\":\"runBatch\",\"siteId\":\"s1\",\"task\":{\"kind\":\"playbook\",\"steps\":[{\"secretOwnerId\":\"vault-2\"}]}}]',
+                 's1');
+             INSERT INTO itops_run_history
+                 (id, source, site_id, task_id, task_summary, started_at, report_json) VALUES
+                 ('r1','automation:a1','s1','t1','Reboot','2026-01-01T00:00:00Z',
+                 '{\"ok\":1,\"failed\":0,\"total\":1,\"hosts\":[{\"connectionId\":\"c1\"}]}');",
         )
         .unwrap();
 
@@ -1623,6 +1742,10 @@ mod tests {
         remap.insert(
             ("connections".to_string(), "c1".to_string()),
             "conn-new".to_string(),
+        );
+        remap.insert(
+            ("connection_folders".to_string(), "f1".to_string()),
+            "folder-new".to_string(),
         );
         {
             let tx = dst.transaction().unwrap();
@@ -1648,6 +1771,13 @@ mod tests {
             })
             .unwrap();
         assert_eq!(members, "[\"conn-new\",\"c-foreign\"]");
+        let filter: String = dst
+            .query_row("SELECT filter_json FROM itops_sites", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(
+            serde_json::from_str::<Value>(&filter).unwrap()["folderId"],
+            "folder-new"
+        );
         // Hard FKs land on the remapped site/rack.
         let room_site: String = dst
             .query_row("SELECT site_id FROM itops_server_rooms", [], |row| {
@@ -1669,6 +1799,22 @@ mod tests {
                 .unwrap()
         );
         assert_eq!(item_conn, "conn-new");
+        let item_metadata: String = dst
+            .query_row(
+                "SELECT metadata_json FROM itops_site_rack_items",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        let item_metadata: Value = serde_json::from_str(&item_metadata).unwrap();
+        assert_eq!(item_metadata["connectionIds"][0], "conn-new");
+        assert_eq!(item_metadata["connectionIds"][1], "c-foreign");
+        assert_eq!(
+            item_metadata["hostId"],
+            *remap
+                .get(&("itops_hosts".to_string(), "h1".to_string()))
+                .unwrap()
+        );
         // The VM host re-points at its carrier host's new id.
         let parent: String = dst
             .query_row(
@@ -1690,6 +1836,18 @@ mod tests {
             })
             .unwrap();
         assert_eq!(automation_site, new_site);
+        let actions: String = dst
+            .query_row("SELECT actions_json FROM itops_automations", [], |row| {
+                row.get(0)
+            })
+            .unwrap();
+        let actions: Value = serde_json::from_str(&actions).unwrap();
+        assert_eq!(actions[0]["siteId"], new_site);
+        assert!(
+            actions[0]["task"]["steps"][0]
+                .get("secretOwnerId")
+                .is_none()
+        );
         let (run_source, run_site, run_task): (String, String, String) = dst
             .query_row(
                 "SELECT source, site_id, task_id FROM itops_run_history",
@@ -1712,6 +1870,23 @@ mod tests {
             *remap
                 .get(&("itops_tasks".to_string(), "t1".to_string()))
                 .unwrap()
+        );
+        let report: String = dst
+            .query_row("SELECT report_json FROM itops_run_history", [], |row| {
+                row.get(0)
+            })
+            .unwrap();
+        assert_eq!(
+            serde_json::from_str::<Value>(&report).unwrap()["hosts"][0]["connectionId"],
+            "conn-new"
+        );
+        let task: String = dst
+            .query_row("SELECT task_json FROM itops_tasks", [], |row| row.get(0))
+            .unwrap();
+        assert!(
+            serde_json::from_str::<Value>(&task).unwrap()["steps"][0]
+                .get("secretOwnerId")
+                .is_none()
         );
     }
 
