@@ -50,7 +50,7 @@ portable-pty = "0.9.0"
 keyring-core = "1.0.0"
 # Keep pinned until russh and IronRDP both release stable dependency lines that
 # no longer need the local RustCrypto/Dalek compatibility patches below.
-russh = { version = "=0.61.2", default-features = false, features = ["flate2", "ring", "rsa"] }
+russh = { version = "=0.61.2", default-features = false, features = ["des", "flate2", "ring", "rsa"] }
 russh-sftp = "2.3.0"
 suppaftp = { version = "10.0.0", default-features = false, features = ["tokio", "tokio-async-native-tls", "deprecated"] }
 async-native-tls = { version = "0.6", default-features = false, features = ["runtime-tokio"] }

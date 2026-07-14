@@ -2441,7 +2441,7 @@ pub(crate) fn resolve_ssh_compression(connection_value: Option<&str>, default_va
     !matches!(connection_value.unwrap_or(default_value).trim(), "off")
 }
 
-/// Effective legacy SSH key-exchange mode for a launch on the backend: the
+/// Effective legacy SSH algorithm mode for a launch on the backend: the
 /// per-Connection override (`"off"`/`"legacy"`) when set, otherwise the global
 /// SSH default. Returns `true` only for `"legacy"`. Mirrors the frontend
 /// `resolveSshOldProtocols` so backend-initiated channels (IT Ops batch runs)
@@ -2499,6 +2499,22 @@ fn native_ssh_preferred_algorithms(compression: bool, old_protocols: bool) -> ru
             }
         }
         preferred.kex = std::borrow::Cow::Owned(kex);
+
+        let mut cipher = preferred.cipher.to_vec();
+        for name in [
+            russh::cipher::AES_256_CBC,
+            russh::cipher::AES_192_CBC,
+            russh::cipher::AES_128_CBC,
+            russh::cipher::TRIPLE_DES_CBC,
+        ] {
+            if !cipher
+                .iter()
+                .any(|existing| existing.as_ref() == name.as_ref())
+            {
+                cipher.push(name);
+            }
+        }
+        preferred.cipher = std::borrow::Cow::Owned(cipher);
     }
     preferred
 }
@@ -3377,16 +3393,27 @@ mod tests {
     #[test]
     fn old_protocols_are_not_advertised_by_default() {
         let config = native_ssh_client_config(true, false);
-        let order: Vec<&str> = config
+        let kex_order: Vec<&str> = config
             .preferred
             .kex
             .iter()
             .map(|name| name.as_ref())
             .collect();
 
-        assert!(!order.contains(&"diffie-hellman-group14-sha1"));
-        assert!(!order.contains(&"diffie-hellman-group-exchange-sha1"));
-        assert!(!order.contains(&"diffie-hellman-group1-sha1"));
+        assert!(!kex_order.contains(&"diffie-hellman-group14-sha1"));
+        assert!(!kex_order.contains(&"diffie-hellman-group-exchange-sha1"));
+        assert!(!kex_order.contains(&"diffie-hellman-group1-sha1"));
+
+        let cipher_order: Vec<&str> = config
+            .preferred
+            .cipher
+            .iter()
+            .map(|name| name.as_ref())
+            .collect();
+        assert!(!cipher_order.contains(&"aes256-cbc"));
+        assert!(!cipher_order.contains(&"aes192-cbc"));
+        assert!(!cipher_order.contains(&"aes128-cbc"));
+        assert!(!cipher_order.contains(&"3des-cbc"));
     }
 
     #[test]
@@ -3413,6 +3440,32 @@ mod tests {
         );
         assert!(order.contains(&"diffie-hellman-group-exchange-sha1"));
         assert!(order.contains(&"diffie-hellman-group1-sha1"));
+    }
+
+    #[test]
+    fn legacy_mode_appends_cbc_ciphers_after_modern_defaults() {
+        let config = native_ssh_client_config(true, true);
+        let order: Vec<&str> = config
+            .preferred
+            .cipher
+            .iter()
+            .map(|name| name.as_ref())
+            .collect();
+        let modern = order
+            .iter()
+            .position(|name| *name == "aes128-ctr")
+            .expect("modern AES-CTR stays advertised");
+
+        for legacy in ["aes256-cbc", "aes192-cbc", "aes128-cbc", "3des-cbc"] {
+            let legacy_position = order
+                .iter()
+                .position(|name| *name == legacy)
+                .unwrap_or_else(|| panic!("legacy cipher {legacy} is advertised in legacy mode"));
+            assert!(
+                modern < legacy_position,
+                "legacy cipher must not outrank modern ciphers: {order:?}"
+            );
+        }
     }
 
     #[test]
