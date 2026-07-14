@@ -274,6 +274,21 @@ test("2.5D edit controls are selection-scoped and the room owns its appearance",
   assert.match(css, /\.rm-iso-nameplate/);
 });
 
+test("Server Room elevation blank space opens the shared room background picker", async () => {
+  const sites = await read("src/modules/itops/SitesTab.tsx");
+
+  assert.match(sites, /async function handleElevationContextMenu/);
+  assert.match(sites, /target\.closest\("\[data-rack-id\]"\)/);
+  assert.match(
+    sites,
+    /className="rk-elevations"[\s\S]*?onContextMenu=\{handleElevationContextMenu\}/,
+  );
+  assert.match(
+    sites,
+    /serverRoom && \(roomView === "elevation" \|\| roomView === "iso"\)/,
+  );
+});
+
 test("IT Ops free placement is local UI state for Site cards and floor tiles", async () => {
   const sites = await read("src/modules/itops/SitesTab.tsx");
   const floorPlan = await read("src/modules/itops/ServerRoomFloorPlan.tsx");

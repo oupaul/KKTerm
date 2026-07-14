@@ -1644,8 +1644,8 @@ function RackDrill({
     showStatusBarNotice(t("itops.floorPlan.objectNoSpace"), { tone: "warning" });
   }
 
-  // The background popover serves the Server Room 2.5D view and Site View;
-  // each persists to its own durable scope.
+  // The background popover serves the Server Room elevation/2.5D views and
+  // Site View; each persists to its own durable scope.
   async function saveDrillViewBackground(background: DashboardBackground | null) {
     try {
       if (serverRoom) {
@@ -1657,6 +1657,23 @@ function RackDrill({
       const message = error instanceof Error ? error.message : String(error);
       showStatusBarNotice(t("itops.errorNotice", { message }), { tone: "error" });
     }
+  }
+
+  async function handleElevationContextMenu(event: ReactMouseEvent<HTMLDivElement>) {
+    if (event.defaultPrevented) return;
+    const target = event.target as HTMLElement;
+    if (target.closest("[data-rack-id]")) return;
+    event.preventDefault();
+    await showNativeContextMenu(
+      [
+        {
+          kind: "item",
+          label: t("itops.racks.changeBackground"),
+          action: () => setBackgroundOpen(true),
+        },
+      ],
+      { x: event.clientX, y: event.clientY },
+    );
   }
 
   // Snap every Server Room card back onto the default Site View grid.
@@ -2049,7 +2066,11 @@ function RackDrill({
             </div>
           ) : (
             <div className="rk-room-layout">
-              <div className="rk-elevations" ref={roomElevationsRef}>
+              <div
+                className="rk-elevations"
+                ref={roomElevationsRef}
+                onContextMenu={handleElevationContextMenu}
+              >
                 {groupRacksByGroup(serverRoom.racks).map((g) => (
                   <div className="rk-group" key={g.key}>
                     {groupRacksByGroup(serverRoom.racks).length > 1 || g.key ? (
@@ -2102,7 +2123,9 @@ function RackDrill({
           </div>
         )}
       </ItOpsBackground>
-      {backgroundOpen && ((serverRoom && roomView === "iso") || (!serverRoom && !rack)) ? (
+      {backgroundOpen &&
+      ((serverRoom && (roomView === "elevation" || roomView === "iso")) ||
+        (!serverRoom && !rack)) ? (
         <SharedBackgroundPopover
           className="itops-bg-popover"
           background={viewBackground ?? null}
