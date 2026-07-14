@@ -393,6 +393,7 @@ export function RackItemDialog({
                         rotation={kind === "kuaiguai" ? rotation : null}
                         kuaiguaiSize={kind === "kuaiguai" ? kuaiguaiSize : null}
                         kuaiguaiStyle={kind === "kuaiguai" ? kuaiguaiStyle : null}
+                        notes={kind === "kuaiguai" ? notes : null}
                         formFactor={kind === "server" ? formFactor : null}
                         serverPanelStyle={kind === "server" ? serverPanelStyle : null}
                         heightU={heightU}

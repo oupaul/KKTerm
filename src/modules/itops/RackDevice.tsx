@@ -34,6 +34,8 @@ export interface RackDeviceProps {
   yaw?: number | null;
   kuaiguaiSize?: "small" | "regular" | "large" | null;
   kuaiguaiStyle?: KuaiKuaiStyle | null;
+  /** Device notes, scribbled onto a large 乖乖 package's white note panel. */
+  notes?: string | null;
   formFactor?: RackServerFormFactor | null;
   serverPanelStyle?: RackServerPanelStyle | null;
   /** Dense object-picker rendering that leaves more room for the faceplate name. */
@@ -108,7 +110,9 @@ export function RackDevice({
   expiry,
   rotation,
   yaw,
+  kuaiguaiSize,
   kuaiguaiStyle,
+  notes,
   formFactor,
   serverPanelStyle,
   compact = false,
@@ -150,7 +154,11 @@ export function RackDevice({
           ["--rkd-yaw" as string]: `${yaw ?? 0}deg`,
         }}
       >
-        <KuaiKuaiBag style={kuaiguaiStyle ?? "full"} expiry={expiry} />
+        <KuaiKuaiBag
+          style={kuaiguaiStyle ?? "full"}
+          expiry={expiry}
+          notes={(kuaiguaiSize ?? "large") === "large" ? notes : null}
+        />
       </div>
     );
   }

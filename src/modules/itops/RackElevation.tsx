@@ -358,6 +358,7 @@ export function RackElevation({
                   yaw={item.metadata?.yaw ?? null}
                   kuaiguaiSize={item.metadata?.kuaiguaiSize ?? null}
                   kuaiguaiStyle={item.metadata?.kuaiguaiStyle ?? null}
+                  notes={item.metadata?.notes ?? null}
                   formFactor={item.metadata?.formFactor ?? null}
                   serverPanelStyle={item.metadata?.serverPanelStyle ?? null}
                   heightU={item.heightU}
@@ -392,6 +393,7 @@ export function RackElevation({
                 yaw={placeSpec.metadata?.yaw ?? null}
                 kuaiguaiSize={placeSpec.metadata?.kuaiguaiSize ?? null}
                 kuaiguaiStyle={placeSpec.metadata?.kuaiguaiStyle ?? null}
+                notes={placeSpec.metadata?.notes ?? null}
                 formFactor={placeSpec.metadata?.formFactor ?? null}
                 serverPanelStyle={placeSpec.metadata?.serverPanelStyle ?? null}
                 heightU={placeSpec.heightU}
@@ -513,6 +515,7 @@ export function RackElevation({
                   yaw={item.metadata?.yaw ?? null}
                   kuaiguaiSize={item.metadata?.kuaiguaiSize ?? null}
                   kuaiguaiStyle={item.metadata?.kuaiguaiStyle ?? null}
+                  notes={item.metadata?.notes ?? null}
                   formFactor={item.metadata?.formFactor ?? null}
                   serverPanelStyle={item.metadata?.serverPanelStyle ?? null}
                   heightU={item.heightU}
@@ -628,6 +631,7 @@ export function RackElevation({
                   yaw={placeSpec.metadata?.yaw ?? null}
                   kuaiguaiSize={placeSpec.metadata?.kuaiguaiSize ?? null}
                   kuaiguaiStyle={placeSpec.metadata?.kuaiguaiStyle ?? null}
+                  notes={placeSpec.metadata?.notes ?? null}
                   formFactor={placeSpec.metadata?.formFactor ?? null}
                   serverPanelStyle={placeSpec.metadata?.serverPanelStyle ?? null}
                   heightU={Math.min(placeSpec.heightU, rack.heightU)}
@@ -701,6 +705,7 @@ export function RackElevation({
                 yaw={placeSpec.metadata?.yaw ?? null}
                 kuaiguaiSize={placeSpec.metadata?.kuaiguaiSize ?? null}
                 kuaiguaiStyle={placeSpec.metadata?.kuaiguaiStyle ?? null}
+                notes={placeSpec.metadata?.notes ?? null}
                 formFactor={placeSpec.metadata?.formFactor ?? null}
                 serverPanelStyle={placeSpec.metadata?.serverPanelStyle ?? null}
                 heightU={placeSpec.heightU}
