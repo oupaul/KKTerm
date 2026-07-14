@@ -3,124 +3,146 @@
 All notable changes to KKTerm are documented here.
 
 ## Direct Downloads
+
 * 💻 [Download for Windows (64-bit)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.121/kkterm-0.1.121-windows-x64-setup.exe)
 * 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.121/kkterm-0.1.121-windows-arm64-setup.exe)
 
 ## Highlights
+
 - **RDP Clipboard (macOS/Linux canvas):** Pasting now sends your **local clipboard contents** into the **remote Session** again—no more “nothing happens” after Ctrl/Cmd+V. (IronRDP-based)
-- **RDP stability & focus:** Improved handling for **Window/overlay focus** and more reliable **HWND realization**, plus better diagnostics when the canvas focus gets temperamental.
-- **Session workflow polish:** Preserved **SSH forwards** when changing **tmux** panes; improved **RDP scaling** for Windows text size.
+* **RDP stability & focus:** Improved handling for **Window/overlay focus** and more reliable **HWND realization**, plus better diagnostics when the canvas focus gets temperamental.
+* **Session workflow polish:** Preserved **SSH forwards** when changing **tmux** panes; improved **RDP scaling** for Windows text size.
 
 ## New
-- **IronRDP CLIPRDR clipboard redirection for canvas RDP** (https://github.com/ryantsai/KKTerm/pull/584)
-- **Legacy SSH key-exchange support for older servers** (https://github.com/ryantsai/KKTerm/pull/592)
-- **Server room partition wall objects** (https://github.com/ryantsai/KKTerm/pull/594)
+
+- **IronRDP CLIPRDR clipboard redirection for canvas RDP** (<https://github.com/ryantsai/KKTerm/pull/584>)
+* **Legacy SSH key-exchange support for older servers** (<https://github.com/ryantsai/KKTerm/pull/592>)
+* **Server room partition wall objects** (<https://github.com/ryantsai/KKTerm/pull/594>)
 
 ## Improved
-- **RDP input handling & diagnostics for macOS/Linux** (https://github.com/ryantsai/KKTerm/pull/590)
-- **Retry URL webview HWND realization** to avoid transient failures (https://github.com/ryantsai/KKTerm/pull/590)
-- **Fix RDP overlay handling for connection import dialog** (https://github.com/ryantsai/KKTerm/pull/589)
-- **RDP ActiveX focus repair + canvas focus diagnostics** (https://github.com/ryantsai/KKTerm/pull/591)
-- **Honor legacy SSH protocol choice in IT Ops batch runs** (https://github.com/ryantsai/KKTerm/pull/592)
-- **Preserve SSH forwards after tmux pane changes** (https://github.com/ryantsai/KKTerm/pull/586)
+
+- **RDP input handling & diagnostics for macOS/Linux** (<https://github.com/ryantsai/KKTerm/pull/590>)
+* **Retry URL webview HWND realization** to avoid transient failures (<https://github.com/ryantsai/KKTerm/pull/590>)
+* **Fix RDP overlay handling for connection import dialog** (<https://github.com/ryantsai/KKTerm/pull/589>)
+* **RDP ActiveX focus repair + canvas focus diagnostics** (<https://github.com/ryantsai/KKTerm/pull/591>)
+* **Honor legacy SSH protocol choice in IT Ops batch runs** (<https://github.com/ryantsai/KKTerm/pull/592>)
+* **Preserve SSH forwards after tmux pane changes** (<https://github.com/ryantsai/KKTerm/pull/586>)
 
 ## Fixed
-- **Paste local clipboard into remote on macOS/Linux canvas RDP** — credited to @ryantsai (https://github.com/ryantsai/KKTerm/pull/582)
-  - *Sysadmin humor:* Ctrl/Cmd+V should now behave like it’s actually plugged into the network, not just “waiting patiently” on the desktop.
-- **Fix RDP scaling with Windows text size** — credited to @ryantsai (https://github.com/ryantsai/KKTerm/pull/585)
-- **Fix RDP overlay handling for connection import dialog** — credited to @ryantsai (https://github.com/ryantsai/KKTerm/pull/589)
+
+- **Paste local clipboard into remote on macOS/Linux canvas RDP** — credited to @ryantsai (<https://github.com/ryantsai/KKTerm/pull/582>)
+  * *Sysadmin humor:* Ctrl/Cmd+V should now behave like it’s actually plugged into the network, not just “waiting patiently” on the desktop.
+* **Fix RDP scaling with Windows text size** — credited to @ryantsai (<https://github.com/ryantsai/KKTerm/pull/585>)
+* **Fix RDP overlay handling for connection import dialog** — credited to @ryantsai (<https://github.com/ryantsai/KKTerm/pull/589>)
 
 ## Internal
+
 - Bumped/updated dependencies and code quality improvements (rusqlite, sha2, aes-gcm, and more), plus installer-related adjustments and refactors in RDP/SSH-related modules.  
-- Merge commits included in this release: #582–#594 (see changelog link: https://github.com/ryantsai/KKTerm/compare/v0.1.120...v0.1.121)
+* Merge commits included in this release: #582–#594 (see changelog link: <https://github.com/ryantsai/KKTerm/compare/v0.1.120...v0.1.121>)
 
 ---
 
 ## Highlights（重點）
+
 - **RDP 剪貼簿（macOS/Linux 的 Canvas）**：現在重新把**本機剪貼簿內容**送到**遠端 Session** 了；不再出現按下 Ctrl/Cmd+V 後**什麼都沒發生**的情況。（基於 IronRDP）
-- **RDP 穩定性與焦點**：改善 **Window/overlay 焦點**處理、讓 **HWND realization** 更可靠，並加強在 Canvas 焦點變得難搞時的**診斷資訊**。
-- **工作流程微調**：tmux 分割視窗切換後會保留 **SSH forwards**；也修正了 Windows 字體大小導致的 **RDP 縮放**問題。
+* **RDP 穩定性與焦點**：改善 **Window/overlay 焦點**處理、讓 **HWND realization** 更可靠，並加強在 Canvas 焦點變得難搞時的**診斷資訊**。
+* **工作流程微調**：tmux 分割視窗切換後會保留 **SSH forwards**；也修正了 Windows 字體大小導致的 **RDP 縮放**問題。
 
 ## New（新增）
-- **IronRDP CLIPRDR 剪貼簿重新導向（Canvas RDP）**（https://github.com/ryantsai/KKTerm/pull/584）
-- **支援較舊伺服器的 Legacy SSH key-exchange**（https://github.com/ryantsai/KKTerm/pull/592）
-- **伺服器機房分隔牆物件**（https://github.com/ryantsai/KKTerm/pull/594）
+
+- **IronRDP CLIPRDR 剪貼簿重新導向（Canvas RDP）**（<https://github.com/ryantsai/KKTerm/pull/584）>
+* **支援較舊伺服器的 Legacy SSH key-exchange**（<https://github.com/ryantsai/KKTerm/pull/592）>
+* **伺服器機房分隔牆物件**（<https://github.com/ryantsai/KKTerm/pull/594）>
 
 ## Improved（改善）
-- **macOS/Linux 的 RDP 輸入處理與診斷**（https://github.com/ryantsai/KKTerm/pull/590）
-- **重試 URL webview 的 HWND realization**，避免短暫失敗（https://github.com/ryantsai/KKTerm/pull/590）
-- **修正連線匯入對話框的 RDP overlay 處理**（https://github.com/ryantsai/KKTerm/pull/589）
-- **RDP ActiveX 焦點修復 + Canvas 焦點診斷**（https://github.com/ryantsai/KKTerm/pull/591）
-- **IT Ops 批次作業中遵守 Legacy SSH 協定選項**（https://github.com/ryantsai/KKTerm/pull/592）
-- **tmux 分割視窗切換後保留 SSH forwards**（https://github.com/ryantsai/KKTerm/pull/586）
+
+- **macOS/Linux 的 RDP 輸入處理與診斷**（<https://github.com/ryantsai/KKTerm/pull/590）>
+* **重試 URL webview 的 HWND realization**，避免短暫失敗（<https://github.com/ryantsai/KKTerm/pull/590）>
+* **修正連線匯入對話框的 RDP overlay 處理**（<https://github.com/ryantsai/KKTerm/pull/589）>
+* **RDP ActiveX 焦點修復 + Canvas 焦點診斷**（<https://github.com/ryantsai/KKTerm/pull/591）>
+* **IT Ops 批次作業中遵守 Legacy SSH 協定選項**（<https://github.com/ryantsai/KKTerm/pull/592）>
+* **tmux 分割視窗切換後保留 SSH forwards**（<https://github.com/ryantsai/KKTerm/pull/586）>
 
 ## Fixed（修正）
-- **macOS/Linux Canvas RDP：把本機剪貼簿貼到遠端** — 感謝 @ryantsai（https://github.com/ryantsai/KKTerm/pull/582）
-  - *小小系統工程師冷笑話：*現在 Ctrl/Cmd+V 真的會把內容送上網，不再只是「在桌面上乖乖等著」。  
-- **修正 Windows 字體大小造成的 RDP 縮放** — 感謝 @ryantsai（https://github.com/ryantsai/KKTerm/pull/585）
-- **修正連線匯入對話框的 RDP overlay 處理** — 感謝 @ryantsai（https://github.com/ryantsai/KKTerm/pull/589）
+
+- **macOS/Linux Canvas RDP：把本機剪貼簿貼到遠端** — 感謝 @ryantsai（<https://github.com/ryantsai/KKTerm/pull/582）>
+  * *小小系統工程師冷笑話：*現在 Ctrl/Cmd+V 真的會把內容送上網，不再只是「在桌面上乖乖等著」。  
+* **修正 Windows 字體大小造成的 RDP 縮放** — 感謝 @ryantsai（<https://github.com/ryantsai/KKTerm/pull/585）>
+* **修正連線匯入對話框的 RDP overlay 處理** — 感謝 @ryantsai（<https://github.com/ryantsai/KKTerm/pull/589）>
 
 ## Internal（內部）
+
 - 更新/調整相依套件與程式碼品質（rusqlite、sha2、aes-gcm 等），以及在 RDP/SSH 相關模組中的 refactor 與安裝器調整。  
-- 本版包含的 merge commit：#582–#594（完整差異見：https://github.com/ryantsai/KKTerm/compare/v0.1.120...v0.1.121）
+* 本版包含的 merge commit：#582–#594（完整差異見：<https://github.com/ryantsai/KKTerm/compare/v0.1.120...v0.1.121）>
 
 ## Direct Downloads
+
 * 💻 [Download for Windows (64-bit)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.120/kkterm-0.1.120-windows-x64-setup.exe)
 * 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.120/kkterm-0.1.120-windows-arm64-setup.exe)
 
 ## Highlights
+
 - **Settings keyboard shortcuts are now customizable** (and your key presses should route correctly this time—no more “terminal ate my shortcut”).  
-- **IT Ops Module** is **shown by default** on the Activity Rail for new installs (and revealed for upgrades), so you don’t have to hunt for it like a lost network cable.
-- **AI assistant skill list** no longer forces **horizontal overflow** in Settings.
+* **IT Ops Module** is **shown by default** on the Activity Rail for new installs (and revealed for upgrades), so you don’t have to hunt for it like a lost network cable.
+* **AI assistant skill list** no longer forces **horizontal overflow** in Settings.
 
 ## New
+
 - **Customizable keyboard shortcut settings** in **Settings → Shortcuts**. (PR #574 by @ryantsai)
-- **Show IT Ops Module on Activity Rail by default**. (PR #580 by @ryantsai)
+* **Show IT Ops Module on Activity Rail by default**. (PR #580 by @ryantsai)
 
 ## Improved
+
 - **IT Ops**: The rack storage disk array is kept within device bounds (render as a fixed-size grid). (PR #577 by @ryantsai)
-- **IT Ops**: Icon picker popover no longer gets clipped in Sheet-based dialogs (e.g., IT Ops “Edit Site” / “Edit Server Room”). (PR #578 by @ryantsai)
-- **IT Ops**: Rack item dialog header styling improvements. (sha: 15d9314)
+* **IT Ops**: Icon picker popover no longer gets clipped in Sheet-based dialogs (e.g., IT Ops “Edit Site” / “Edit Server Room”). (PR #578 by @ryantsai)
+* **IT Ops**: Rack item dialog header styling improvements. (sha: 15d9314)
 
 ## Fixed
+
 - **Shortcut event routing regressions** are fixed. (PR #575 by @ryantsai)
-- **Stop sudo playbook leaking password and skipping later nodes** by redacting sudo secrets and preventing echoed command mismatches. (PR #576 by @ryantsai)
-- **Settings**: AI assistant skill list no longer overflows horizontally. (PR #579 by @ryantsai)
+* **Stop sudo playbook leaking password and skipping later nodes** by redacting sudo secrets and preventing echoed command mismatches. (PR #576 by @ryantsai)
+* **Settings**: AI assistant skill list no longer overflows horizontally. (PR #579 by @ryantsai)
 
 ## Internal
+
 - IT Ops PDF export improvements (non-ASCII handling, room zoom fitting, graphical rack representations, and related tests). (sha: 5f03d3f, sha: f62cf7d)
-- IT Ops: Enhance Task Library (new columns, edge picker, OS/task display improvements, localization, and tests). (sha: 45c5067, sha: dc8c37c)
-- Rack item tools enhanced for `kuaiguai` kind (metadata/validation). (sha: a857949)
-- Updated translations/documentation for IT Ops task status columns across multiple languages. (sha: e45c634)
-- Additional test coverage for agent tool subturn limits and notice messages. (sha: 200f566)
+* IT Ops: Enhance Task Library (new columns, edge picker, OS/task display improvements, localization, and tests). (sha: 45c5067, sha: dc8c37c)
+* Rack item tools enhanced for `kuaiguai` kind (metadata/validation). (sha: a857949)
+* Updated translations/documentation for IT Ops task status columns across multiple languages. (sha: e45c634)
+* Additional test coverage for agent tool subturn limits and notice messages. (sha: 200f566)
 
 ---
 
 ## 重點摘要
+
 - **「設定」中的鍵盤快捷鍵現在可自訂**（而且快捷鍵分發也修好了——這次不會再發生「終端機把我的快捷鍵吃了」這種事）。  
-- **IT Ops 模組**會在 **活動軌道（Activity Rail）預設顯示**：新安裝預設開啟，升級則會揭示出來，免得你像在找散落的網路線那樣到處翻。  
-- **設定裡的 AI 助理技能清單**不再強制橫向溢出。
+* **IT Ops 模組**會在 **活動軌道（Activity Rail）預設顯示**：新安裝預設開啟，升級則會揭示出來，免得你像在找散落的網路線那樣到處翻。  
+* **設定裡的 AI 助理技能清單**不再強制橫向溢出。
 
 ## 新增
+
 - **設定可自訂鍵盤快捷鍵**：**設定 → 快捷鍵（Shortcuts）**。 (PR #574 by @ryantsai)
-- **預設在活動軌道顯示 IT Ops 模組**。 (PR #580 by @ryantsai)
+* **預設在活動軌道顯示 IT Ops 模組**。 (PR #580 by @ryantsai)
 
 ## 改善
-- **IT Ops**：機架儲存磁碟陣列會保持在裝置範圍內（以固定大小網格呈現）。 (PR #577 by @ryantsai)
-- **IT Ops**：圖示選擇器（icon picker）彈出視窗不再被 Sheet 型對話框裁切（例如 IT Ops「編輯站點 / 編輯機房」）。 (PR #578 by @ryantsai)
-- **IT Ops**：機架項目對話框標題樣式調整。 (sha: 15d9314)
+
+- **IT Ops**：機櫃儲存磁碟陣列會保持在裝置範圍內（以固定大小網格呈現）。 (PR #577 by @ryantsai)
+* **IT Ops**：圖示選擇器（icon picker）彈出視窗不再被 Sheet 型對話框裁切（例如 IT Ops「編輯站點 / 編輯機房」）。 (PR #578 by @ryantsai)
+* **IT Ops**：機櫃項目對話框標題樣式調整。 (sha: 15d9314)
 
 ## 修正
+
 - **修復快捷鍵事件路由的回歸問題**。 (PR #575 by @ryantsai)
-- **停止 sudo playbook 洩漏密碼並跳過後續節點**（包含遮罩/清除 sudo 秘密與避免回顯命令比對錯誤）。 (PR #576 by @ryantsai)
-- **設定**：AI 助理技能清單不再橫向溢出。 (PR #579 by @ryantsai)
+* **停止 sudo playbook 洩漏密碼並跳過後續節點**（包含遮罩/清除 sudo 秘密與避免回顯命令比對錯誤）。 (PR #576 by @ryantsai)
+* **設定**：AI 助理技能清單不再橫向溢出。 (PR #579 by @ryantsai)
 
 ## Internal
-- IT Ops PDF 匯出改進（非 ASCII 處理、房間縮放適配、圖形化機架呈現與相關測試）。 (sha: 5f03d3f, sha: f62cf7d)
-- IT Ops：強化 Task Library（新增欄位、邊緣插入選擇器、OS/任務顯示改善、在地化與測試）。 (sha: 45c5067, sha: dc8c37c)
-- 機架項目工具支援 `kuaiguai` 種類（更新中繼資料/驗證）。 (sha: a857949)
-- 多語言更新任務狀態欄位翻譯與文件。 (sha: e45c634)
-- 針對 agent 工具 subturn limits 與通知訊息增加測試覆蓋。 (sha: 200f566)
+
+- IT Ops PDF 匯出改進（非 ASCII 處理、房間縮放適配、圖形化機櫃呈現與相關測試）。 (sha: 5f03d3f, sha: f62cf7d)
+* IT Ops：強化 Task Library（新增欄位、邊緣插入選擇器、OS/任務顯示改善、在地化與測試）。 (sha: 45c5067, sha: dc8c37c)
+* 機櫃項目工具支援 `kuaiguai` 種類（更新中繼資料/驗證）。 (sha: a857949)
+* 多語言更新任務狀態欄位翻譯與文件。 (sha: e45c634)
+* 針對 agent 工具 subturn limits 與通知訊息增加測試覆蓋。 (sha: 200f566)
 
 ## Direct Downloads
 
@@ -129,28 +151,32 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights
 
-- **Connection:** Left-aligned the “no active session” connection hint links so they don’t look like they took a wrong turn in the layout. (PR #568 by @ryantsai)
+* **Connection:** Left-aligned the “no active session” connection hint links so they don’t look like they took a wrong turn in the layout. (PR #568 by @ryantsai)
+
 * **VNC:** Improved VNC Connection security-type negotiation by skipping unknown security types, helping **UltraVNC** servers connect. (PR #570 by @ryantsai; issue reported by @qazq in #569)
 
 ## New
 
-- **IT Ops:** The IT Ops Module is now officially released and shows on the Activity Rail by default. Fresh installs and upgrades reveal it automatically; anyone who prefers it hidden can still turn it off in **Settings → IT Ops**. (by @ryantsai)
-- **IT Ops:** Exposed IT Ops topology tools to the AI assistant and the built-in MCP server. (PR #573 by @ryantsai)
+* **IT Ops:** The IT Ops Module is now officially released and shows on the Activity Rail by default. Fresh installs and upgrades reveal it automatically; anyone who prefers it hidden can still turn it off in **Settings → IT Ops**. (by @ryantsai)
+* **IT Ops:** Exposed IT Ops topology tools to the AI assistant and the built-in MCP server. (PR #573 by @ryantsai)
 
 ## Improved
 
-- **IT Ops:** Server Room elevations edit mode now uses the shared device picker (same feel as Rack view, minus the extra detours). (PR #571 by @ryantsai)
+* **IT Ops:** Server Room elevations edit mode now uses the shared device picker (same feel as Rack view, minus the extra detours). (PR #571 by @ryantsai)
+
 * **IT Ops:** Server Room room elevations edit mode now renders the device picker correctly (no more empty picker card grid). (PR #572 by @ryantsai)
 
 ## Fixed
 
-- **Connection:** Left-align connection hint links in empty workspace. (PR #568 by @ryantsai)
+* **Connection:** Left-align connection hint links in empty workspace. (PR #568 by @ryantsai)
+
 * **VNC:** Skip unknown security types during handshake so UltraVNC servers can connect. (PR #570 by @ryantsai; issue reported by @qazq in #569)
 * **IT Ops:** Room elevations device picker rendered empty. (PR #572 by @ryantsai)
 
 ## Internal
 
-- Updated connection handling test assertions. (190ee88)
+* Updated connection handling test assertions. (190ee88)
+
 * Added/updated localization content for multiple UI strings and empty hints across languages. (5609022, 1344f58, 8b1375b, 4e96961, a4c4d90, a80236b)  
 * Merge / reconcile updates across main branches. (11c63e3, 3eb4eca, 2a84a42, e90f512, f080828, 6?8b?/* see context commits)
 
@@ -161,14 +187,16 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights
 
-- **IT Ops:** Host inventory now supports **hostname import**, **connectivity scan**, and **rack callouts**.
+* **IT Ops:** Host inventory now supports **hostname import**, **connectivity scan**, and **rack callouts**.
+
 * **IT Ops:** Rack View placement got more “cursor-aware” — with **armed device placement** and improved picker preview cards.
 * **Terminal:** WezTerm-inspired terminal features landed, but **prompt navigation + copy-last-command-output UI are hidden** until shell integration can be injected (otherwise the menu would be a ghost on a LAN).  
 
 ## New
 
-- **IT Ops Host inventory**: add Host inventory with hostname import, connectivity scan, and rack callouts (**#560** by @ryantsai)  
+* **IT Ops Host inventory**: add Host inventory with hostname import, connectivity scan, and rack callouts (**#560** by @ryantsai)  
   <https://github.com/ryantsai/KKTerm/pull/560>
+
 * **IT Ops Terminal room/isometric placement foundations** (isoPlacementCells + edit-mode placement targets) (**#561** landed as part of the WezTerm-inspired work stream)  
 * **Object Picker preview cards**: full-width preview cards for IT Ops object picker (**#564** by @ryantsai)  
   <https://github.com/ryantsai/KKTerm/pull/564>
@@ -182,8 +210,9 @@ All notable changes to KKTerm are documented here.
 
 ## Improved
 
-- **Rack View picker UX**: full-width picker cards and placement cursor ghost fixes (**#564** by @ryantsai)  
+* **Rack View picker UX**: full-width picker cards and placement cursor ghost fixes (**#564** by @ryantsai)  
   <https://github.com/ryantsai/KKTerm/pull/564>
+
 * **Rack item dialog layout & server panel style options** (**#5443d12 / #5443d12 commit series**)  
 * **Rack-top Kuai Kuai consistency across views** + **fade toward expiry** (**#567** by @ryantsai)  
   <https://github.com/ryantsai/KKTerm/pull/567>
@@ -191,15 +220,17 @@ All notable changes to KKTerm are documented here.
 
 ## Fixed
 
-- **IT Ops Site View dot grid** and **off-screen Rack Device dialog**, plus **cursor-tracked device placement** (**#563** by @ryantsai)  
+* **IT Ops Site View dot grid** and **off-screen Rack Device dialog**, plus **cursor-tracked device placement** (**#563** by @ryantsai)  
   <https://github.com/ryantsai/KKTerm/pull/563>
+
 * **Cursor-tracked device placement preview issues** and **off-screen cursor ghost** were addressed alongside the picker improvements (**#564** by @ryantsai; contributor credited in PR history as Claude Fable)  
   <https://github.com/ryantsai/KKTerm/pull/564>
 * **Terminal menu/source guard**: realign stale Document Connection menu source guard (**#49b113a**)
 
 ## Internal
 
-- Removed outdated localization entries/files related to IT Ops and Terminal settings (**d9caef8 / 64e789f / 3f574b4 series**).
+* Removed outdated localization entries/files related to IT Ops and Terminal settings (**d9caef8 / 64e789f / 3f574b4 series**).
+
 * Installer: enhanced Krita detection and improved installer list layout (**2a1940f**).
 * AI model defaults updated to GPT-5.6 Luna and Grok 4.5 support (**eafb382**).
 * **Internal prompt navigation + terminal integration groundwork** (pre-UI removal/visibility changes) (**3f574b4**, PR **#566** by @ryantsai)  
@@ -209,14 +240,16 @@ All notable changes to KKTerm are documented here.
 
 ## 亮點
 
-- **IT Ops：** 主機清單（Host inventory）新增 **主機名稱匯入**、**連線/連通性掃描**，以及 **機櫃（Rack）位置呼叫**。
+* **IT Ops：** 主機清單（Host inventory）新增 **主機名稱匯入**、**連線/連通性掃描**，以及 **機櫃（Rack）位置呼叫**。
+
 * **IT Ops：** Rack View 的放置流程更「跟得上游標」—提供 **已啟用（armed）的設備放置**與更好的選擇器預覽卡。
 * **Terminal：** 已加入類 WezTerm 的終端功能，但 **提示導覽（prompt navigation）與「複製上一筆指令輸出」的 UI 先隱藏**，直到可注入 shell integration（不然選單就會變成網路上的幽靈）。  
 
 ## 新增
 
-- **IT Ops 主機清單（Host inventory）**：支援主機名稱匯入、連通性掃描、以及 Rack 呼叫（**#560**，作者 @ryantsai）  
+* **IT Ops 主機清單（Host inventory）**：支援主機名稱匯入、連通性掃描、以及 Rack 呼叫（**#560**，作者 @ryantsai）  
   <https://github.com/ryantsai/KKTerm/pull/560>
+
 * **IT Ops：室內/等距放置基礎**（isoPlacementCells + 編輯模式放置目標）  
 * **物件選擇器預覽卡**：IT Ops 物件選擇器改為**全寬預覽卡**（**#564**，作者 @ryantsai）  
   <https://github.com/ryantsai/KKTerm/pull/564>
@@ -230,8 +263,9 @@ All notable changes to KKTerm are documented here.
 
 ## 改進
 
-- **Rack View 選擇器體驗**：全寬卡片與放置游標幽靈修正（**#564**，作者 @ryantsai）  
+* **Rack View 選擇器體驗**：全寬卡片與放置游標幽靈修正（**#564**，作者 @ryantsai）  
   <https://github.com/ryantsai/KKTerm/pull/564>
+
 * **Rack 物件對話框與伺服器面板樣式選項**（**#5443d12 / #5443d12 commit series**）
 * **各視圖一致的 Rack-top Kuai Kuai** + **期限淡出**（**#567**，作者 @ryantsai）  
   <https://github.com/ryantsai/KKTerm/pull/567>
@@ -239,15 +273,17 @@ All notable changes to KKTerm are documented here.
 
 ## 修正
 
-- **IT Ops：** Site View 點狀網格、**Rack Device 對話框跑到畫面外**、以及**跟隨游標的設備放置**（**#563**，作者 @ryantsai）  
+* **IT Ops：** Site View 點狀網格、**Rack Device 對話框跑到畫面外**、以及**跟隨游標的設備放置**（**#563**，作者 @ryantsai）  
   <https://github.com/ryantsai/KKTerm/pull/563>
+
 * **選擇器相關的游標跟隨預覽問題**與**畫面外游標幽靈**已一併隨選擇器改進處理（**#564**，作者 @ryantsai；PR 歷史中註記 contributor 為 Claude Fable）  
   <https://github.com/ryantsai/KKTerm/pull/564>
 * **Terminal 選單/來源保護（guard）**：修正 Document Connection 選單來源保護的舊對應（**#49b113a**）
 
 ## Internal
 
-- 清理過時的在地化（localization）條目/檔案（IT Ops 與 Terminal 設定相關）（**d9caef8 / 64e789f / 3f574b4 series**）。
+* 清理過時的在地化（localization）條目/檔案（IT Ops 與 Terminal 設定相關）（**d9caef8 / 64e789f / 3f574b4 series**）。
+
 * Installer：強化 Krita 偵測並改善安裝程式清單佈局（**2a1940f**）。
 * AI 模型預設更新為 GPT-5.6 Luna，並加入 Grok 4.5 支援（**eafb382**）。
 * **Terminal 提示導覽與整合底層準備**（配合 UI 可見性調整前的內部工作）（**3f574b4**，PR **#566**，作者 @ryantsai）  
@@ -260,28 +296,32 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights
 
-- **SFTP / FTP starting folders:** The SSH SFTP browser popup is larger, and standalone FTP/FTPS/SFTP connections can now remember both **Local start path** and **Remote start path** options. (PR #555, #556)
+* **SFTP / FTP starting folders:** The SSH SFTP browser popup is larger, and standalone FTP/FTPS/SFTP connections can now remember both **Local start path** and **Remote start path** options. (PR #555, #556)
+
 * **Activity Rail Session reuse fixed:** Clicking a connected **Connection** in the Activity Rail while another **Workspace** is active now **returns to the cross-Workspace Session** instead of spawning a new one. (PR #559)
 
 ## New
 
-- **IT Ops Site View segments:** Added **Batch Runs** and **Automations** segments to the **Site View** drill toolbar, reusing the appropriate Tab behavior scoped to the selected Site. (PR #557)
+* **IT Ops Site View segments:** Added **Batch Runs** and **Automations** segments to the **Site View** drill toolbar, reusing the appropriate Tab behavior scoped to the selected Site. (PR #557)
+
 * **Automations Site binding:** Automations on a Site now support a durable Site binding (including editor selection and segment filtering). (PR #558)
 * **SFTP browser + configurable start folders:** Enlarged SSH SFTP popup and added configurable start folder options for standalone FTP/FTPS/SFTP connections. (PR #555)
 
 ## Improved
 
-- **Dashboard AI coding usage:** Refreshed hybrid local-first Codex usage behavior and hardened Claude usage rate-limiting to reduce overly aggressive calls. (PR #558)
+* **Dashboard AI coding usage:** Refreshed hybrid local-first Codex usage behavior and hardened Claude usage rate-limiting to reduce overly aggressive calls. (PR #558)
+
 * **Connection icon handling & localization:** Enhanced connection icon normalization (including `reicon:` references) and updated IT Ops UI/localization accessibility text. (PR #556)
 * **Docs alignment:** Realigned AGENTS, CONTEXT, ARCHITECTURE, and the manual with the current codebase. (PR #556)
 
 ## Fixed
 
-- **Activity Rail cross-Workspace Session reuse:** Prevented Activity Rail Connection clicks from spawning new Sessions when a different Workspace was active; reuse now properly scopes the stored Child Connection lookup to the active Workspace, and activating an existing Tab is preferred. (PR #559 — Claude Fable 5)
+* **Activity Rail cross-Workspace Session reuse:** Prevented Activity Rail Connection clicks from spawning new Sessions when a different Workspace was active; reuse now properly scopes the stored Child Connection lookup to the active Workspace, and activating an existing Tab is preferred. (PR #559 — Claude Fable 5)
 
 ## Internal
 
-- **SFTP start-path preservation:** Preserved standalone start paths for SFTP/related protocol flows. (PR #555)
+* **SFTP start-path preservation:** Preserved standalone start paths for SFTP/related protocol flows. (PR #555)
+
 * **Tooling/testing:** Made Windows-focused Rust tests pass on non-Windows hosts. (commit 65d e5f3)
 * **Docs/content:** Removed deprecated localization files for FTP/SFTP connections and IT Ops. (commit e78f936)
 * **Installer / IT Ops enhancements (non-user-facing items included under this release context):** Improved installer process output details and updated layout CSS for IT Ops. (PRs tied to the same v0.1.117 changeset)
@@ -290,28 +330,32 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights（重點）
 
-- **SFTP / FTP 起始資料夾：** SSH 的 SFTP 瀏覽器彈窗變大；而獨立的 FTP/FTPS/SFTP 連線現在可以記住 **本機起始路徑（Local start path）** 與 **遠端起始路徑（Remote start path）** 的選項。 （PR #555、#556）
+* **SFTP / FTP 起始資料夾：** SSH 的 SFTP 瀏覽器彈窗變大；而獨立的 FTP/FTPS/SFTP 連線現在可以記住 **本機起始路徑（Local start path）** 與 **遠端起始路徑（Remote start path）** 的選項。 （PR #555、#556）
+
 * **活動列（Activity Rail）Session 重用修正：** 當另一個 **Workspace** 已啟用時，在 Activity Rail 點選已連線的 **Connection**，現在會**回到跨 Workspace 的 Session**，而不是再生成一個新的 Session。 （PR #559）
 
 ## New（新增）
 
-- **IT Ops Site View 分段：** 在 **Site View** 的 drill 工具列加入 **Batch Runs** 與 **Automations** 分段，並沿用對應的 Tab 行為，且會依所選 Site 進行範圍限制。 （PR #557）
+* **IT Ops Site View 分段：** 在 **Site View** 的 drill 工具列加入 **Batch Runs** 與 **Automations** 分段，並沿用對應的 Tab 行為，且會依所選 Site 進行範圍限制。 （PR #557）
+
 * **Automations Site 綁定：** Site 的 Automations 現在支援耐久的 Site 綁定（包含編輯器選擇與分段篩選）。 （PR #558）
 * **SFTP 瀏覽器 + 可設定起始資料夾：** 放大 SSH SFTP 彈窗，並為獨立 FTP/FTPS/SFTP 連線加入可設定的起始資料夾選項。 （PR #555）
 
 ## Improved（改進）
 
-- **Dashboard AI 程式碼使用量：** 更新 hybrid local-first Codex 行為，並強化 Claude 使用量的 rate-limit，避免過度頻繁的呼叫。 （PR #558）
+* **Dashboard AI 程式碼使用量：** 更新 hybrid local-first Codex 行為，並強化 Claude 使用量的 rate-limit，避免過度頻繁的呼叫。 （PR #558）
+
 * **連線圖示處理與在地化：** 強化連線圖示的正規化（支援 `reicon:` 參照），並更新 IT Ops 介面與可近用性的文字（accessibility）。 （PR #556）
 * **文件對齊：** 讓 AGENTS、CONTEXT、ARCHITECTURE 與手冊內容與目前程式碼重新對齊。 （PR #556）
 
 ## Fixed（修正）
 
-- **活動列跨 Workspace 的 Session 重用：** 避免在另一個 Workspace 啟用時，Activity Rail 的 Connection 點擊會不必要地生成新的 Session；現已正確把已儲存的 Child Connection 查找範圍限制在「目前啟用的 Workspace」，並在存在既有 Tab 時會優先切換。 （PR #559 — Claude Fable 5）
+* **活動列跨 Workspace 的 Session 重用：** 避免在另一個 Workspace 啟用時，Activity Rail 的 Connection 點擊會不必要地生成新的 Session；現已正確把已儲存的 Child Connection 查找範圍限制在「目前啟用的 Workspace」，並在存在既有 Tab 時會優先切換。 （PR #559 — Claude Fable 5）
 
 ## Internal（內部）
 
-- **SFTP 起始路徑保留：** 保留獨立（standalone）起始路徑以符合 SFTP/相關流程行為。 （PR #555）
+* **SFTP 起始路徑保留：** 保留獨立（standalone）起始路徑以符合 SFTP/相關流程行為。 （PR #555）
+
 * **工具/測試：** 讓原本偏 Windows 的 Rust 測試能在非 Windows 主機上通過。 （commit 65d e5f3）
 * **文件/內容：** 移除已廢棄的 FTP/SFTP 連線與 IT Ops 相關在地化檔案。 （commit e78f936）
 * **安裝程式 / IT Ops 改善（依本次 release context 放在內部項下）：** 改善安裝程式的程序輸出細節，並更新 IT Ops 版面 CSS。 （與 v0.1.117 相同變更集關聯的 PR）
@@ -323,49 +367,53 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights
 
-- Fixed SSH port-forwarding loopback-port discovery to reuse the live SSH **Session**, avoiding an extra SSH login that could reset/re-login your original **Terminal** session. (Closes #551 — thanks catyku; PR #552 by @ryantsai)
+* Fixed SSH port-forwarding loopback-port discovery to reuse the live SSH **Session**, avoiding an extra SSH login that could reset/re-login your original **Terminal** session. (Closes #551 — thanks catyku; PR #552 by @ryantsai)
+
 * Fixed install helper **winget** UAC handling. (PR #549 by @ryantsai)
 
 ## New
 
-- N/A
+* N/A
 
 ## Improved
 
-- N/A
+* N/A
 
 ## Fixed
 
-- **SSH Session reuse for port-forwarding**: Loopback-port discovery now routes through the existing live **Session** instead of creating a second one-shot SSH connection. This prevents network-appliance “one login at a time” behavior from kicking your original session. (Closes #551; PR #552 — @ryantsai; linked reporter: catyku)
+* **SSH Session reuse for port-forwarding**: Loopback-port discovery now routes through the existing live **Session** instead of creating a second one-shot SSH connection. This prevents network-appliance “one login at a time” behavior from kicking your original session. (Closes #551; PR #552 — @ryantsai; linked reporter: catyku)
+
 * **Installer (winget) UAC handling**: Improved **winget** UAC behavior in the install helper. (PR #549 — @ryantsai)
 
 ## Internal
 
-- N/A
+* N/A
 
 ---
 
 ## 精華重點
 
-- 修正 SSH 連線的埠轉送（port-forwarding）環回埠（loopback-port）偵測：會重用現有的即時 SSH **Session**，避免額外開啟第二次 SSH 登入，從而避免把你原本的 **Terminal** 工作階段踢掉/重登。 （關閉 #551 — 感謝 catyku；PR #552 由 @ryantsai 貢獻）
+* 修正 SSH 連線的埠轉送（port-forwarding）環回埠（loopback-port）偵測：會重用現有的即時 SSH **Session**，避免額外開啟第二次 SSH 登入，從而避免把你原本的 **Terminal** 工作階段踢掉/重登。 （關閉 #551 — 感謝 catyku；PR #552 由 @ryantsai 貢獻）
+
 * 修正安裝助手中的 **winget** UAC 處理。 (PR #549 — @ryantsai)
 
 ## 新增
 
-- N/A
+* N/A
 
 ## 改善
 
-- N/A
+* N/A
 
 ## 修正
 
-- **SSH Session 重用（埠轉送環回埠偵測）**：環回埠偵測改為透過已存在的即時 **Session** 執行，而不是再建立一個額外的 one-shot SSH 連線。這能避免在常見的網路設備上因「同一帳號同時登入次數限制」而導致你原本的工作階段被踢掉。（關閉 #551；PR #552 — @ryantsai；連結的回報者：catyku）
+* **SSH Session 重用（埠轉送環回埠偵測）**：環回埠偵測改為透過已存在的即時 **Session** 執行，而不是再建立一個額外的 one-shot SSH 連線。這能避免在常見的網路設備上因「同一帳號同時登入次數限制」而導致你原本的工作階段被踢掉。（關閉 #551；PR #552 — @ryantsai；連結的回報者：catyku）
+
 * **安裝器（winget）UAC 處理**：改善安裝助手中的 **winget** UAC 行為。 (PR #549 — @ryantsai)
 
 ## 內部
 
-- N/A
+* N/A
 
 ## Direct Downloads
 
@@ -374,43 +422,47 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights
 
-- Added new Dashboard dynamic backgrounds: **Circuit**, **Halftone**, **Orbitals**, **Ink**, and **Crystals**. (Your Tab/Panes now have more “network-ready” vibes.)
+* Added new Dashboard dynamic backgrounds: **Circuit**, **Halftone**, **Orbitals**, **Ink**, and **Crystals**. (Your Tab/Panes now have more “network-ready” vibes.)
 
 ## New
 
-- **Dashboard dynamic backgrounds**: Circuit, Halftone, Orbitals, Ink, Crystals.
+* **Dashboard dynamic backgrounds**: Circuit, Halftone, Orbitals, Ink, Crystals.
+
 * **Localization**: Added i18n localization entries to support the new dynamic backgrounds across languages.
 
 ## Improved
 
-- Updated the dynamic backgrounds **registry** to include the new backgrounds.
+* Updated the dynamic backgrounds **registry** to include the new backgrounds.
+
 * Refreshed **tests** to validate the presence and functionality of the new backgrounds.
 * Improved code organization by introducing **abstract dynamic backgrounds** for the dynamic background implementation.
 
 ## Internal
 
-- Documentation and localization TODO cleanup for dynamic backgrounds (removed unused localization files for dynamic backgrounds).
+* Documentation and localization TODO cleanup for dynamic backgrounds (removed unused localization files for dynamic backgrounds).
 
 ---
 
 ## 亮點（Highlights）
 
-- 新增 Dashboard 動態背景：**Circuit（電路）**、**Halftone（半色調）**、**Orbitals（軌道）**、**Ink（墨水）**、**Crystals（水晶）**。 （你的 Tab/Panes 現在更有「網路就緒」的氛圍。）
+* 新增 Dashboard 動態背景：**Circuit（電路）**、**Halftone（半色調）**、**Orbitals（軌道）**、**Ink（墨水）**、**Crystals（水晶）**。 （你的 Tab/Panes 現在更有「網路就緒」的氛圍。）
 
 ## 新增（New）
 
-- **Dashboard 動態背景**：Circuit、Halftone、Orbitals、Ink、Crystals。
+* **Dashboard 動態背景**：Circuit、Halftone、Orbitals、Ink、Crystals。
+
 * **在地化（Localization）**：為新增的動態背景加入 i18n 對應內容，支援多語系。
 
 ## 改善（Improved）
 
-- 更新動態背景 **註冊表（registry）**，納入新的背景。
+* 更新動態背景 **註冊表（registry）**，納入新的背景。
+
 * 更新 **測試（tests）**，驗證新動態背景的存在性與功能。
 * 透過引入 **抽象動態背景（abstract dynamic backgrounds）**，改善動態背景實作的程式碼組織。
 
 ## Internal
 
-- 清理動態背景相關的文件與在地化 TODO（移除未使用的動態背景在地化檔案）。
+* 清理動態背景相關的文件與在地化 TODO（移除未使用的動態背景在地化檔案）。
 
 ## Direct Downloads
 
@@ -419,49 +471,49 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights
 
-- **Configurable URL user-agent support** (DB, backend, and UI) so your Connection can present the web identity you intend. (PR #548)
+* **Configurable URL user-agent support** (DB, backend, and UI) so your Connection can present the web identity you intend. (PR #548)
 
 ## New
 
-- Add **configurable URL user-agent** setting across the app (DB, backend, and UI).  
+* Add **configurable URL user-agent** setting across the app (DB, backend, and UI).  
   <https://github.com/ryantsai/KKTerm/pull/548>
 
 ## Improved
 
-- Added/updated **localized strings** for the URL user-agent setting in multiple languages. (7307c0d)
+* Added/updated **localized strings** for the URL user-agent setting in multiple languages. (7307c0d)
 
 ## Fixed
 
-- **WebKit view issues on macOS**. (PR #548, merged via 54a8b53)  
+* **WebKit view issues on macOS**. (PR #548, merged via 54a8b53)  
   <https://github.com/ryantsai/KKTerm/pull/548>
 
 ## Internal
 
-- Add tests for **dashboard dynamic backgrounds** registration/validation coverage. (64cef41)
+* Add tests for **dashboard dynamic backgrounds** registration/validation coverage. (64cef41)
 
 ---
 
 ## 亮點
 
-- **支援可自訂 URL User-Agent**（DB、後端與 UI），讓你的 **Connection** 能以你想要的網路身分呈現。 (PR #548)
+* **支援可自訂 URL User-Agent**（DB、後端與 UI），讓你的 **Connection** 能以你想要的網路身分呈現。 (PR #548)
 
 ## 新增
 
-- 新增 **可自訂 URL User-agent** 設定，覆蓋整個應用（DB、後端與 UI）。  
+* 新增 **可自訂 URL User-agent** 設定，覆蓋整個應用（DB、後端與 UI）。  
   <https://github.com/ryantsai/KKTerm/pull/548>
 
 ## 改善
 
-- 對 URL User-agent 設定的**多語系在地化字串**進行新增/更新。 (7307c0d)
+* 對 URL User-agent 設定的**多語系在地化字串**進行新增/更新。 (7307c0d)
 
 ## 修正
 
-- **修正 macOS 上 WebKit View 的問題**。 (PR #548，透過 54a8b53 合併)  
+* **修正 macOS 上 WebKit View 的問題**。 (PR #548，透過 54a8b53 合併)  
   <https://github.com/ryantsai/KKTerm/pull/548>
 
 ## Internal
 
-- 新增測試，覆蓋 Dashboard **動態背景** 的註冊/驗證流程。 (64cef41)
+* 新增測試，覆蓋 Dashboard **動態背景** 的註冊/驗證流程。 (64cef41)
 
 ## Direct Downloads
 
@@ -470,21 +522,23 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights
 
-- **IT Ops Server Room views**: Improved how racks/room objects sit in both the floor plan and 2.5D views—no more “floating beside the rack” vibes.
+* **IT Ops Server Room views**: Improved how racks/room objects sit in both the floor plan and 2.5D views—no more “floating beside the rack” vibes.
+
 * **Linux stability**: Fixed AppImage build/signing conflicts and stopped AppImage environment variables from leaking into spawned host processes.
 * **Remote Desktop / Codex**: Routed IronRDP canvas assistant controls correctly.
 
 ## New
 
-- Added **Reicon icon names** (including fallback/legacy names) to the icon catalog picker.
+* Added **Reicon icon names** (including fallback/legacy names) to the icon catalog picker.
 
 ## Improved
 
-- **IT Ops**: Added more physically grounded rendering for **Dashboard Widget Instance** server room visuals—rack footprints and room objects now better reflect depth/size expectations in Server Room views.
+* **IT Ops**: Added more physically grounded rendering for **Dashboard Widget Instance** server room visuals—rack footprints and room objects now better reflect depth/size expectations in Server Room views.
 
 ## Fixed
 
-- **Linux (AppImage)**: Resolve conflicting signer private-key args during AppImage build. (by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/538>, short SHA: ee7e769)
+* **Linux (AppImage)**: Resolve conflicting signer private-key args during AppImage build. (by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/538>, short SHA: ee7e769)
+
 * **Linux (AppImage runtime)**: Stop AppImage env leaking into spawned host processes, fixing issues like host VM detection and mis-loaded libraries. (by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/539>, short SHA: 75f84cb)
 * **IT Ops**: Settle room objects against resolved rack cells; remove iso debug telemetry. (by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/542>, short SHA: 20173b3)
 * **IT Ops**: Keep elevated 2.5D object sprites visually planted on their support. *(Issue reporter: @Claude Fable 5, via Co-Authored-By)* (by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/543>, short SHA: 462cbe2)
@@ -495,7 +549,8 @@ All notable changes to KKTerm are documented here.
 
 ## Internal
 
-- Installer/UI polish: share Install Helper module icon. (short SHA: 8a87c38)
+* Installer/UI polish: share Install Helper module icon. (short SHA: 8a87c38)
+
 * Icon plumbing: refactor/adjust IT Ops icon references and styles for consistent Reicon usage. (short SHA: 7162948)
 * IT Ops correctness work: adjust site and rack Reicon defaults + related icon catalog test coverage. (short SHA: 038e2e4)
 * Tests/tooling: add/adjust tests for lazy boundaries, platform runtime, and icon catalog integration. (short SHAs: 16d3fbe, tests listed in context)
@@ -505,21 +560,23 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights
 
-- **IT Ops 机房视图**：改善机架/房间物件在平面与 2.5D 视图中的摆放效果——不再出现「明明贴着机架却像飄在旁边」的尴尬。
+* **IT Ops 机房视图**：改善机架/房间物件在平面与 2.5D 视图中的摆放效果——不再出现「明明贴着机架却像飄在旁边」的尴尬。
+
 * **Linux 稳定性**：修正 AppImage 打包/签名时的私钥参数冲突，并阻止 AppImage 的环境变量外泄到 KKTerm 生成的主机进程。
 * **远端桌面 / Codex**：已正确路由 IronRDP 的画布助理控制項。
 
 ## New
 
-- 在图示目录选择器中加入 **Reicon 图示名称**（包含备用/旧版名称）。
+* 在图示目录选择器中加入 **Reicon 图示名称**（包含备用/旧版名称）。
 
 ## Improved
 
-- **IT Ops**：让 Server Room 的渲染更贴近物理深度与尺寸预期——机架足迹与房间物件在 Server Room 视图中的深度/大小表现更一致，适合放进你的 **Dashboard Widget Instance** 里当好视觉证据。
+* **IT Ops**：让 Server Room 的渲染更贴近物理深度与尺寸预期——机架足迹与房间物件在 Server Room 视图中的深度/大小表现更一致，适合放进你的 **Dashboard Widget Instance** 里当好视觉证据。
 
 ## Fixed
 
-- **Linux（AppImage 打包）**：解决 AppImage 签名器私钥参数冲突。（@ryantsai： <https://github.com/ryantsai/KKTerm/pull/538，短> SHA：ee7e769）
+* **Linux（AppImage 打包）**：解决 AppImage 签名器私钥参数冲突。（@ryantsai： <https://github.com/ryantsai/KKTerm/pull/538，短> SHA：ee7e769）
+
 * **Linux（AppImage 執行期）**：阻止 AppImage 環境外泄到被生成的主机进程，修复如主机 VM 判定与套件库误加载等问题。*(“网路像宇宙”一样，环境变量也得管好)*（@ryantsai： <https://github.com/ryantsai/KKTerm/pull/539，短> SHA：75f84cb）
 * **IT Ops**：让房间物件对齐到已解析的机架格子；移除 iso 偵錯遥测。（@ryantsai： <https://github.com/ryantsai/KKTerm/pull/542，短> SHA：20173b3）
 * **IT Ops**：让抬高状态的 2.5D 物件精灵视觉上保持贴在支撑物上。*(Issue 回报者：@Claude Fable 5，透過 Co-Authored-By)*（@ryantsai： <https://github.com/ryantsai/KKTerm/pull/543，短> SHA：462cbe2）
@@ -530,7 +587,8 @@ All notable changes to KKTerm are documented here.
 
 ## Internal
 
-- 安装/界面细节：共享 Install Helper 模块图示。 （短 SHA：8a87c38）
+* 安装/界面细节：共享 Install Helper 模块图示。 （短 SHA：8a87c38）
+
 * 图示管线整理：重构/调整 IT Ops 图示引用与样式，以一致使用 Reicon。 （短 SHA：7162948）
 * IT Ops 正确性与默认值：调整站点与机架的 Reicon 默认值，并补充相关图示目录测试覆盖。 （短 SHA：038e2e4）
 * 测试/工具：加入或调整懒加载、平台运行期与图示目录整合相关测试。 （短 SHAs：16d3fbe，context 中列出的 tests）
@@ -543,14 +601,16 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights
 
-- **IT Ops Server Room views:** hover detail cards, solid selectable **2.5D floor colours**, and the **rotate stepper relocated under the zoom ruler**.  
+* **IT Ops Server Room views:** hover detail cards, solid selectable **2.5D floor colours**, and the **rotate stepper relocated under the zoom ruler**.  
   PR #535 by @ryantsai (short SHA: `99c2e99`)
+
 * **IT Ops drill + Site View:** full-bleed drill pane views, free-form **Site View** with **Auto Organize**, and clearer 2.5D readability (no floating kind chips).  
   PR #536 by @ryantsai (short SHA: `d3451cf`)
 
 ## New
 
-- **Background media:** added support for **SVG files** in background media handling. (short SHA: `b4e2eb1`)
+* **Background media:** added support for **SVG files** in background media handling. (short SHA: `b4e2eb1`)
+
 * **Server Room views:** selection + context menu support, plus updated rack/object property handling. (short SHA: `c629842`)
 * **Cursor-tracked placement preview:** added right-click **cancel** functionality in Server Room views. (short SHA: `1e1390a`)
 * **SitesTab:** enhanced with expandable tree controls and sidebar actions. (short SHA: `875ae0a`)
@@ -558,7 +618,8 @@ All notable changes to KKTerm are documented here.
 
 ## Improved
 
-- **Quick Connect:** refactored the Quick Connect menu to use native menu items and updated localization strings; also flattened local shell menu options and removed nested submenu styling. (short SHA: `1c705bd`, `28e7598`)
+* **Quick Connect:** refactored the Quick Connect menu to use native menu items and updated localization strings; also flattened local shell menu options and removed nested submenu styling. (short SHA: `1c705bd`, `28e7598`)
+
 * **Recent connections:** added pagination for recent connections and updated localization strings. (short SHA: `79c0df0`)
 * **Server Room floor plan (2.5D):** moved rack-unit figures off the view itself and into **hover detail cards**. (short SHA: `5cdbfe5`)
 * **Server Room floor plan / Site calculations:** improved state management and optimized server room calculations in SitesTab. (short SHA: `d53b72d`)
@@ -566,13 +627,14 @@ All notable changes to KKTerm are documented here.
 
 ## Fixed
 
-- **Linux AppImage:** fixed blank window on other hosts caused by bundled `libwayland-*` conflicting with the target machine, plus WebKit DMA-BUF renderer issues on virtualized graphics stacks.  
+* **Linux AppImage:** fixed blank window on other hosts caused by bundled `libwayland-*` conflicting with the target machine, plus WebKit DMA-BUF renderer issues on virtualized graphics stacks.  
   PR #537 by @ryantsai (short SHA: `aca963f`) — reported and fixed by **@ryantsai**. (Yes, the sysadmin gremlins were on both ends of the wire.)
   * Resources updated: `docs/LINUX_PORT.md`, `scripts/package-linux.sh`, `src-tauri/src/main.rs`
 
 ## Internal
 
-- **Developer experience:** bound Vite and Tailwind source scans to avoid large diagnostic artifacts stalling debug launch. (short SHA: `4bc6e16`)
+* **Developer experience:** bound Vite and Tailwind source scans to avoid large diagnostic artifacts stalling debug launch. (short SHA: `4bc6e16`)
+
 * **Input tests:** enhanced input-autocorrect policy tests for Quick Connect fields. (short SHA: `67ce515`)
 * **Localization workflow:** updated localization guidelines for handling new/changed keys. (short SHA: `c6d0801`)
 
@@ -580,14 +642,16 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights（繁體中文-台灣）
 
-- **IT Ops 機櫃機房（Server Room）檢視：** 顯示滑入細節卡（hover detail cards）、可選的**實心 2.5D 地板顏色（solid 2.5D floor colours）**，以及**旋轉步進器（rotate stepper）改到縮放尺（zoom ruler）下方**。  
+* **IT Ops 機櫃機房（Server Room）檢視：** 顯示滑入細節卡（hover detail cards）、可選的**實心 2.5D 地板顏色（solid 2.5D floor colours）**，以及**旋轉步進器（rotate stepper）改到縮放尺（zoom ruler）下方**。  
   PR #535 由 @ryantsai（短 SHA：`99c2e99`）
+
 * **IT Ops 鑽取（drill）+ Site View：** 全寬（full-bleed）的 drill 面板檢視、支援**自由擺放的 Site View**（含 **Auto Organize**），並提升 2.5D 可讀性（移除漂浮的物件種類標籤）。  
   PR #536 由 @ryantsai（短 SHA：`d3451cf`）
 
 ## New（新增）
 
-- **背景媒體：** 背景媒體處理新增 **SVG 檔支援**。 （短 SHA：`b4e2eb1`）
+* **背景媒體：** 背景媒體處理新增 **SVG 檔支援**。 （短 SHA：`b4e2eb1`）
+
 * **Server Room 檢視：** 新增選取狀態與情境選單（context menu），並更新機櫃/物件屬性處理方式。 （短 SHA：`c629842`）
 * **游標追蹤擺放預覽：** 在 Server Room 檢視加入右鍵**取消**功能。 （短 SHA：`1e1390a`）
 * **SitesTab：** 增強為支援可展開的樹狀控制項與側邊欄動作。 （短 SHA：`875ae0a`）
@@ -595,7 +659,8 @@ All notable changes to KKTerm are documented here.
 
 ## Improved（改進）
 
-- **Quick Connect：** 重構 Quick Connect 選單改用原生選單項，並更新在地化字串；同時也展平本機 shell 選單選項、移除巢狀子選單的樣式。 （短 SHA：`1c705bd`、`28e7598`）
+* **Quick Connect：** 重構 Quick Connect 選單改用原生選單項，並更新在地化字串；同時也展平本機 shell 選單選項、移除巢狀子選單的樣式。 （短 SHA：`1c705bd`、`28e7598`）
+
 * **最近連線（recent connections）：** 新增近期連線分頁（pagination），並更新在地化字串。 （短 SHA：`79c0df0`）
 * **Server Room 地板平面 / 2.5D：** 將機櫃單位高度（rack-unit figures）從檢視本體移除，改由**滑入細節卡（hover detail cards）**呈現。 （短 SHA：`5cdbfe5`）
 * **SitesTab 計算/狀態：** 改善狀態管理並最佳化 SitesTab 中的 server room 計算。 （短 SHA：`d53b72d`）
@@ -603,13 +668,14 @@ All notable changes to KKTerm are documented here.
 
 ## Fixed（修正）
 
-- **Linux AppImage：** 修正其他主機上啟動後出現空白視窗的問題：原因是 AppImage 內建的 `libwayland-*` 與目標主機的環境衝突，另外也修正虛擬化圖形堆疊上的 WebKit DMA-BUF 繪製問題。  
+* **Linux AppImage：** 修正其他主機上啟動後出現空白視窗的問題：原因是 AppImage 內建的 `libwayland-*` 與目標主機的環境衝突，另外也修正虛擬化圖形堆疊上的 WebKit DMA-BUF 繪製問題。  
   PR #537 由 @ryantsai（短 SHA：`aca963f`）— **@ryantsai** 既是回報者也是修正者。（是的，資深系統工程師也會遇到「兩端同時壞掉」的網路妖精。）  
   * 相關文件更新：`docs/LINUX_PORT.md`、`scripts/package-linux.sh`、`src-tauri/src/main.rs`
 
 ## Internal（內部）
 
-- **開發體驗：** 綁定 Vite 與 Tailwind 的來源掃描範圍，避免大型除錯診斷產物卡住 debug 啟動。 （短 SHA：`4bc6e16`）
+* **開發體驗：** 綁定 Vite 與 Tailwind 的來源掃描範圍，避免大型除錯診斷產物卡住 debug 啟動。 （短 SHA：`4bc6e16`）
+
 * **輸入測試：** 強化 Quick Connect 欄位的輸入自動更正政策測試。 （短 SHA：`67ce515`）
 * **在地化流程：** 更新在地化規範以處理新增/變更的 key。 （短 SHA：`c6d0801`）
 
@@ -620,30 +686,34 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights
 
-- **Server Room floor plan & 2.5D view overhaul**: shared grid/facing/view angles, full-height sizing, and room objects in the views. (PRs **#522**, **#526**, **#527** by @ryantsai)  
+* **Server Room floor plan & 2.5D view overhaul**: shared grid/facing/view angles, full-height sizing, and room objects in the views. (PRs **#522**, **#526**, **#527** by @ryantsai)  
+
 * **Terminal reliability wins**: copy-on-select focus/clipboard fallbacks fixed, and terminal focus restored after multiline paste. (PRs **#529**, **#530** by @ryantsai; issue reports by **truedano**/**catyku**)  
 * **RDP on older Windows**: add a legacy TLS fallback to reduce “TLS handshake failed” connection issues. (Issue **#344**, PR **#532** by @ryantsai; reporter **BossTsai**)
 
 ## New
 
-- **IT Ops: Reworked Server Room View controls** and **full-height searchable object picker** for editing. (PR **#531** by @ryantsai)
+* **IT Ops: Reworked Server Room View controls** and **full-height searchable object picker** for editing. (PR **#531** by @ryantsai)
 
 ## Improved
 
-- **Server Room floor plan & 2.5D view**: window-filling grids, zoom levels, and panning for a better “fill the pane, not the void” experience. (PR **#526** by @ryantsai)
+* **Server Room floor plan & 2.5D view**: window-filling grids, zoom levels, and panning for a better “fill the pane, not the void” experience. (PR **#526** by @ryantsai)
+
 * **Room-view racks**: painted in their **shell finish** (instead of status colors) for a cleaner visual separation. (PR **#528** by @ryantsai)
 * **Server Room floor plan & 2.5D view**: shared grid, facing, view angles, and room objects between the two spatial views. (PR **#522** by @ryantsai)
 
 ## Fixed
 
-- **Server Room floor plan / 2.5D view**: taking the **full pane height**. (PR **#527** by @ryantsai)
+* **Server Room floor plan / 2.5D view**: taking the **full pane height**. (PR **#527** by @ryantsai)
+
 * **[codex] Terminal copy-on-select clipboard fallback**. (PR **#529** by @ryantsai; reporter **truedano**)
 * **Terminal focus restored** after the multiline paste confirmation closes. (PR **#530** by @ryantsai; reporter **catyku**)
 * **[rdp] Legacy TLS fallback** via native-tls for old Windows hosts. (Issue **#344**, PR **#532** by @ryantsai; reporter **BossTsai**)
 
 ## Internal
 
-- TypeScript/Vite configuration updates (PR/commit: `c12b67b`)
+* TypeScript/Vite configuration updates (PR/commit: `c12b67b`)
+
 * Installer provider handling + installer button UI style updates (commit `842618d`)
 * URL address bar security state indicators and styling updates (commit `0bee5a4`, `ffe2093` indirectly via context)
 * URL credential management UI improvements + tests (commit `ada83dc`, `65a7a2e`)
@@ -654,30 +724,34 @@ All notable changes to KKTerm are documented here.
 
 ## 亮點
 
-- **機房平面圖與 2.5D 檢視大改版**：共享格狀配置/朝向/視角，並確保視圖能滿版高度，同時在檢視中顯示機房物件。（PR **#522**、**#526**、**#527**，作者 @ryantsai）
+* **機房平面圖與 2.5D 檢視大改版**：共享格狀配置/朝向/視角，並確保視圖能滿版高度，同時在檢視中顯示機房物件。（PR **#522**、**#526**、**#527**，作者 @ryantsai）
+
 * **終端機可靠性提升**：修正複製選取（copy-on-select）相關的焦點/剪貼簿 fallback，以及多行貼上確認後的終端機焦點回復。（PR **#529**、**#530**，作者 @ryantsai；問題回報者 **truedano**/**catyku**）
 * **舊版 Windows 的 RDP**：加入 legacy TLS fallback，降低遇到「TLS handshake failed」連線問題的機率。（Issue **#344**，PR **#532**，作者 @ryantsai；回報者 **BossTsai**）
 
 ## 新增
 
-- **IT Ops：機房檢視控制項重做**，以及編輯用的**全高可搜尋物件選擇器**。（PR **#531**，作者 @ryantsai）
+* **IT Ops：機房檢視控制項重做**，以及編輯用的**全高可搜尋物件選擇器**。（PR **#531**，作者 @ryantsai）
 
 ## 改善
 
-- **機房平面圖與 2.5D 檢視**：格狀配置可填滿視窗、支援縮放等級與平移，讓體驗更像是「填滿 Pane，不是留下空洞」。（PR **#526**，作者 @ryantsai）
-* **機房檢視的機架（racks）**：改以 **機架外殼（shell）質感**上色（取代狀態色），視覺更乾淨。（PR **#528**，作者 @ryantsai）
+* **機房平面圖與 2.5D 檢視**：格狀配置可填滿視窗、支援縮放等級與平移，讓體驗更像是「填滿 Pane，不是留下空洞」。（PR **#526**，作者 @ryantsai）
+
+* **機房檢視的機櫃（racks）**：改以 **機櫃外殼（shell）質感**上色（取代狀態色），視覺更乾淨。（PR **#528**，作者 @ryantsai）
 * **機房平面圖與 2.5D 檢視**：共享格狀配置、朝向與視角，並讓兩個空間檢視之間的機房物件一致。（PR **#522**，作者 @ryantsai）
 
 ## 修正
 
-- **機房平面圖 / 2.5D 檢視**：能套用**完整的 Pane 高度**。（PR **#527**，作者 @ryantsai）
+* **機房平面圖 / 2.5D 檢視**：能套用**完整的 Pane 高度**。（PR **#527**，作者 @ryantsai）
+
 * **[codex] 終端機複製選取（copy-on-select）剪貼簿 fallback**。（PR **#529**，作者 @ryantsai；回報者 **truedano**）
 * **多行貼上確認視窗關閉後回復焦點**。（PR **#530**，作者 @ryantsai；回報者 **catyku**）
 * **[rdp] 舊版 Windows 的 native-tls legacy TLS fallback**。（Issue **#344**，PR **#532**，作者 @ryantsai；回報者 **BossTsai**）
 
 ## Internal
 
-- TypeScript/Vite 設定更新（`c12b67b`）
+* TypeScript/Vite 設定更新（`c12b67b`）
+
 * 安裝程式（installer）提供者處理與按鈕 UI 樣式更新（`842618d`）
 * URL 位址列安全狀態指示與樣式更新（`0bee5a4`；另含背景提及 `ffe2093`）
 * URL 憑證管理 UI 改善與測試（`ada83dc`、`65a7a2e`）
@@ -691,30 +765,34 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights
 
-- New **2.5D Server Room View** with rack cabinet placement, next to Elevations and Floor plan—because your data center deserves a little perspective. 😄
+* New **2.5D Server Room View** with rack cabinet placement, next to Elevations and Floor plan—because your data center deserves a little perspective. 😄
+
 * Improved Connection management in IT Ops: **rack-device click-to-connect** for bound Connections and a smoother Connection Tree search experience.
 * Fixed AI and UI issues: the **Stop** button no longer leaves the Assistant work panel stuck “thinking”, and **PC Info** non-English values are readable again.
 
 ## New
 
-- **2.5D Server Room View** with rack cabinet placement (PR #514).
+* **2.5D Server Room View** with rack cabinet placement (PR #514).
+
 * **Connection Tree**: added a **clear button** to the search box (PR #517).
 * **Rack-device connect popover** with click-to-connect for bound Connections (PR #518).
 
 ## Improved
 
-- **Open connection icon** foreground color picker adjusted to avoid clipping (PR #515).
+* **Open connection icon** foreground color picker adjusted to avoid clipping (PR #515).
+
 * **macOS**: implemented per-WebView certificate bypass for URL Sessions and documented `ignoreCertificateErrors` behavior (PR #519).
 * **ACP / AI**: improved handling for ACP bridge protocol issues and streamed CLI agent progress (PR #520).
 
 ## Fixed
 
-- **AI Stop button** no longer leaves the work panel stuck thinking (PR #511).
+* **AI Stop button** no longer leaves the work panel stuck thinking (PR #511).
+
 * **PC Info widget**: corrected garbled non-English values (PR #512).
   
 ## Internal
 
-- Added **KKTerm landing page** and a manual Cloudflare deploy workflow (PR #513).
+* Added **KKTerm landing page** and a manual Cloudflare deploy workflow (PR #513).
 
 ---
 
@@ -722,30 +800,34 @@ All notable changes to KKTerm are documented here.
 
 ## 重點
 
-- 新增 **2.5D 機房視圖**，支援機櫃擺放（在 Elevations 與平面圖旁邊一起出現），讓你的資料中心多一點「空間感」。😄
+* 新增 **2.5D 機房視圖**，支援機櫃擺放（在 Elevations 與平面圖旁邊一起出現），讓你的資料中心多一點「空間感」。😄
+
 * IT Ops 的 Connection 管理更順：**機櫃裝置點擊連線（click-to-connect）**（針對已綁定的 Connections），以及 Connection Tree 搜尋體驗改善。
 * 修正 AI 與介面問題：**Stop** 按鈕不再讓助理的工作面板卡在「思考中」，以及 **PC Info** 的非英文內容不再變亂碼。
 
 ## 新增
 
-- **2.5D 機房視圖**（含機櫃擺放）（PR #514）。
+* **2.5D 機房視圖**（含機櫃擺放）（PR #514）。
+
 * **Connection Tree**：在搜尋框加入 **清除（clear）按鈕**（PR #517）。
 * **機櫃裝置連線彈出視窗**：支援對已綁定的 Connections 進行點擊連線（PR #518）。
 
 ## 改善
 
-- **連線圖示（Open connection icon）**：前景色選擇器調整位置，避免被裁切（PR #515）。
+* **連線圖示（Open connection icon）**：前景色選擇器調整位置，避免被裁切（PR #515）。
+
 * **macOS**：針對 URL Sessions 實作每個 WebView 的憑證繞過，並補充 `ignoreCertificateErrors` 行為說明（PR #519）。
 * **ACP / AI**：改善 ACP bridge 協定問題與 CLI 代理的串流進度顯示（PR #520）。
 
 ## 修正
 
-- **AI Stop 按鈕**：不再讓工作面板卡在「思考中」（PR #511）。
+* **AI Stop 按鈕**：不再讓工作面板卡在「思考中」（PR #511）。
+
 * **PC Info 小工具**：修正非英文數值顯示為亂碼的問題（PR #512）。
 
 ## 內部
 
-- 新增 **KKTerm landing page** 與手動 Cloudflare 部署工作流程（PR #513）。
+* 新增 **KKTerm landing page** 與手動 Cloudflare 部署工作流程（PR #513）。
 
 ## Direct Downloads
 
@@ -754,13 +836,14 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights
 
-- Improved **PC Info** Dashboard Widget Instance with more system details (manufacturer/model/family/SKU/serial/UUID, etc.) and updated localization keys.  
+* Improved **PC Info** Dashboard Widget Instance with more system details (manufacturer/model/family/SKU/serial/UUID, etc.) and updated localization keys.  
+
 * Better large file viewing in the workspace: **FileViewer** now benefits from virtualized **LargeTextViewer** with status-bar progress (so your terminal-sized text blocks don’t feel as heavy).  
 * Enhanced **IT Ops** rack workflows: rack depth options + validation, along with updated **RackDialog** UI and localization.
 
 ## New
 
-- **Server Room** management and **Rack Item ↔ Connection** bindings:
+* **Server Room** management and **Rack Item ↔ Connection** bindings:
   * Added Server Room creation/management in **ServerRoomDialog** and **SitesTab**
   * Introduced **RackItemBindingsDialog** to manage connections associated with Rack Items
   * Updated **RackStage** to support binding items to connections
@@ -768,17 +851,19 @@ All notable changes to KKTerm are documented here.
 
 ## Improved
 
-- **PC Info** Dashboard Widget Instance: added additional system information fields and localization updates (e.g., `dashboard.pcInfoField.pcModel`).
+* **PC Info** Dashboard Widget Instance: added additional system information fields and localization updates (e.g., `dashboard.pcInfoField.pcModel`).
+
 * Rack inventory UI: rack depth options (presets + custom input) and updated **RackDialog**.
 * More robust rack/depth handling in IT Ops (including related UI/logic updates).
 
 ## Fixed
 
-- Improved large text viewing in **FileViewer** by adding virtualized **LargeTextViewer** and status-bar progress (PR #510 by @ryantsai).  
+* Improved large text viewing in **FileViewer** by adding virtualized **LargeTextViewer** and status-bar progress (PR #510 by @ryantsai).  
 
 ## Internal
 
-- Updated localization docs and translations for new/updated labels (including PC model and server room/rack depth related text).
+* Updated localization docs and translations for new/updated labels (including PC model and server room/rack depth related text).
+
 * Refactored vendor string handling and updated related IT Ops tests.
 * Removed audit/relationship metadata from **RackItemDialog** and related components, and updated affected tests.
 * Removed `scope` option from recipes and updated installer tests for machine-scope entries.  
@@ -787,13 +872,14 @@ All notable changes to KKTerm are documented here.
 
 ## 重要內容
 
-- 改善 **PC Info** Dashboard Widget Instance，補上更多系統資訊（廠商/型號/系列/SKU/序號/UUID 等），並同步更新在地化字串。
+* 改善 **PC Info** Dashboard Widget Instance，補上更多系統資訊（廠商/型號/系列/SKU/序號/UUID 等），並同步更新在地化字串。
+
 * 工作區的大型檔案顯示體驗更好：**FileViewer** 已支援虛擬化的 **LargeTextViewer**，並在狀態列顯示進度（讓那種終端機等級的巨量文字不至於「卡到像網路斷線一樣」）。
 * **IT Ops** 機櫃流程更完整：新增機櫃深度選項與驗證，並更新 **RackDialog** 介面與在地化。
 
 ## 新增
 
-- **Server Room** 管理與 **Rack Item ↔ Connection** 綁定：
+* **Server Room** 管理與 **Rack Item ↔ Connection** 綁定：
   * 在 **ServerRoomDialog** 與 **SitesTab** 新增/管理 Server Room
   * 新增 **RackItemBindingsDialog**，用來管理與 Rack Items 關聯的連線
   * 更新 **RackStage**，支援將項目綁定到連線
@@ -801,17 +887,19 @@ All notable changes to KKTerm are documented here.
 
 ## 改善
 
-- **PC Info** Dashboard Widget Instance：新增更多系統資訊欄位與在地化更新（例如 `dashboard.pcInfoField.pcModel`）。
+* **PC Info** Dashboard Widget Instance：新增更多系統資訊欄位與在地化更新（例如 `dashboard.pcInfoField.pcModel`）。
+
 * 機櫃盤點/建立介面：支援機櫃深度選項（預設 + 自訂輸入）與更新 **RackDialog**。
 * IT Ops 的機櫃/深度處理更完善（包含相關 UI/流程更新）。
 
 ## 修正
 
-- 改善 **FileViewer** 的大型文字檔顯示：加入虛擬化 **LargeTextViewer** 與狀態列進度（PR #510，作者 @ryantsai）。  
+* 改善 **FileViewer** 的大型文字檔顯示：加入虛擬化 **LargeTextViewer** 與狀態列進度（PR #510，作者 @ryantsai）。  
 
 ## Internal
 
-- 更新在地化文件與多語系翻譯（包含 PC model、server room、機櫃深度等相關字串）。
+* 更新在地化文件與多語系翻譯（包含 PC model、server room、機櫃深度等相關字串）。
+
 * 重構供應商字串處理方式，並更新對應 IT Ops 測試。
 * 從 **RackItemDialog** 與相關元件移除稽核/關聯中繼資料，並更新受影響測試。
 * 移除配方（recipes）的 `scope` 選項，並更新安裝器機器範圍測試。
@@ -823,25 +911,26 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights
 
-- **Connection search now beats the “Show Connected” filter** (so you’ll actually find the connection you typed). 🫡  
+* **Connection search now beats the “Show Connected” filter** (so you’ll actually find the connection you typed). 🫡  
+
 * **Dashboard PC Info widget gets an animated refresh** and richer macOS/Linux details.  
 * **Server Room View adds a top-down floor-plan layout** with health/utilization metrics.
 
 ## New
 
-- **Server Room View:** Added a **top-down floor-plan** layout (tiles by rack, with legend and persisted metric choice).  
+* **Server Room View:** Added a **top-down floor-plan** layout (tiles by rack, with legend and persisted metric choice).  
   * PR #506 (see also #506 in highlights below context)
 
 ## Improved
 
-- **Dashboard (PC Info):** Updated to an **animated PC Info widget** with per-section transitions/graphics and macOS/Linux enrichment.
+* **Dashboard (PC Info):** Updated to an **animated PC Info widget** with per-section transitions/graphics and macOS/Linux enrichment.
 
 * **IT Ops dialogs:** Moved the **icon foreground palette into the selector popover** so it fits the recolor-capable icons flow better.  
   * PR #501
 
 ## Fixed
 
-- **Connections:** **Search overrides the “Show Connected” filter**, surfacing matching connections by name even when the live-status toggle would otherwise hide them.  
+* **Connections:** **Search overrides the “Show Connected” filter**, surfacing matching connections by name even when the live-status toggle would otherwise hide them.  
   * PR #503
 
 * **Dashboard:** **Fix URL widget webviews covering overlays** when Dashboard overlays are open.  
@@ -851,7 +940,8 @@ All notable changes to KKTerm are documented here.
 
 ## Internal
 
-- Updated stale docs and usage counts across localized READMEs. PR #500  
+* Updated stale docs and usage counts across localized READMEs. PR #500  
+
 * Rename IT Ops terminology from **“Fleet” to “Site”** globally (product-vocabulary + related i18n/docs/schema renames). PR #504  
 * Installer catalog updates for additional app entries (including Blender / ComfyUI / LM Studio, plus other design/AI tools). PR #506–#509 PR list in generated notes.  
 * Various localization/doc updates for UI consistency and terminology. (Includes PC Info i18n cleanup and i18n additions.)
@@ -860,25 +950,26 @@ All notable changes to KKTerm are documented here.
 
 ## 0.1.108 亮點（Highlights）
 
-- **連線搜尋現在會覆蓋「只顯示已連線（Show Connected）」篩選**（不然你打字找不到，就很像在終端機裡迷路）。🫡  
+* **連線搜尋現在會覆蓋「只顯示已連線（Show Connected）」篩選**（不然你打字找不到，就很像在終端機裡迷路）。🫡  
+
 * **儀表板的 PC Info Widget 改版為動畫風格**，並增加 macOS/Linux 的資訊內容。  
 * **機房（Server Room）檢視新增俯視平面圖**，可顯示健康度/使用率指標。
 
 ## 新增（New）
 
-- **機房檢視（Server Room View）：** 新增 **俯視的平面圖（floor-plan）布局**（用磚塊呈現機架，並附圖例與指標選擇的保留設定）。  
+* **機房檢視（Server Room View）：** 新增 **俯視的平面圖（floor-plan）布局**（用磚塊呈現機櫃，並附圖例與指標選擇的保留設定）。  
   * PR #506
 
 ## 改善（Improved）
 
-- **儀表板（Dashboard / PC Info）：** 將 **PC Info Widget 更新為動畫版本**，包含各分段的切換/圖形動效，並強化 macOS/Linux 的資料整理。
+* **儀表板（Dashboard / PC Info）：** 將 **PC Info Widget 更新為動畫版本**，包含各分段的切換/圖形動效，並強化 macOS/Linux 的資料整理。
 
 * **IT Ops 對話框：** 將 **圖示前景色（icon foreground）調色盤**移到「圖示選擇器（selector popover）」內，讓可重新上色的圖示流程更順。  
   * PR #501
 
 ## 修正（Fixed）
 
-- **連線（Connections）：** **搜尋會優先於「只顯示已連線」**，即使切換已連線篩選，輸入的連線名稱仍會被找出。  
+* **連線（Connections）：** **搜尋會優先於「只顯示已連線」**，即使切換已連線篩選，輸入的連線名稱仍會被找出。  
   * PR #503
 
 * **儀表板（Dashboard）：** 修正 **URL Widget 的 WebView 會蓋住 Dashboard overlay** 的問題。  
@@ -888,7 +979,8 @@ All notable changes to KKTerm are documented here.
 
 ## 內部（Internal）
 
-- 更新各語系 README 的舊文件與使用數據。PR #500  
+* 更新各語系 README 的舊文件與使用數據。PR #500  
+
 * 將 IT Ops 用語全面從 **「Fleet」改為「Site」**（包含產品用語/i18n/文件與相關命名）。PR #504  
 * 安裝程式（Installer）目錄新增/更新應用條目（包含 Blender / ComfyUI / LM Studio 等）。PR #506–#509（依 GitHub 自動彙整清單）。  
 * 其他語系/文件更新以提升 UI 一致性與用語正確性（包含 PC Info 的 i18n 清理與新增）。
@@ -900,32 +992,37 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights
 
-- **Beyond Compare-style folder compare** is now available, with a collapsible tree view and copy/delete actions between panes. ([#491](https://github.com/ryantsai/KKTerm/pull/491))
+* **Beyond Compare-style folder compare** is now available, with a collapsible tree view and copy/delete actions between panes. ([#491](https://github.com/ryantsai/KKTerm/pull/491))
+
 * **File compare got character-level diffs**, making it much easier to spot exactly which characters changed (and **fixes folder compare hangs on macOS**). ([#493](https://github.com/ryantsai/KKTerm/pull/493), [#495](https://github.com/ryantsai/KKTerm/pull/495))
 * New **built-in “PC Info” Dashboard Widget Instance**: deep hardware details across all sections. ([#494](https://github.com/ryantsai/KKTerm/pull/494), [#498](https://github.com/ryantsai/KKTerm/pull/498), [#499](https://github.com/ryantsai/KKTerm/pull/499))
 * **Differences/Same filters** now use collapsible “filtered lines” folds (so your diff doesn’t get lost in the weeds). ([#496](https://github.com/ryantsai/KKTerm/pull/496))
 
 ## New
 
-- **Beyond Compare-style folder compare** (two-pane directory diff) opened from the folder compare workflow. ([#491](https://github.com/ryantsai/KKTerm/pull/491))
+* **Beyond Compare-style folder compare** (two-pane directory diff) opened from the folder compare workflow. ([#491](https://github.com/ryantsai/KKTerm/pull/491))
+
 * **PC Info built-in Dashboard widget**. ([#494](https://github.com/ryantsai/KKTerm/pull/494))
 * **IT Ops rack device metadata** expanded, including a new `kuaiguai` device type. ([#490](https://github.com/ryantsai/KKTerm/pull/490))
 * [codex] **Complete rack inventory metadata**. ([#492](https://github.com/ryantsai/KKTerm/pull/492))
 
 ## Improved
 
-- **Beyond Compare-style intra-line diff cleanup** (cleaner intra-line rendering for modified content). ([#495](https://github.com/ryantsai/KKTerm/pull/495))
+* **Beyond Compare-style intra-line diff cleanup** (cleaner intra-line rendering for modified content). ([#495](https://github.com/ryantsai/KKTerm/pull/495))
+
 * **“Filtered lines” folds** are now collapsible in Differences/Same modes. ([#496](https://github.com/ryantsai/KKTerm/pull/496))
 * PC Info: **deep hardware detail across all sections**. ([#498](https://github.com/ryantsai/KKTerm/pull/498), [#499](https://github.com/ryantsai/KKTerm/pull/499))
 
 ## Fixed
 
-- **Folder compare hang on macOS** during large tree comparisons is fixed. (Includes the character-level diff work.) ([#493](https://github.com/ryantsai/KKTerm/pull/493))
+* **Folder compare hang on macOS** during large tree comparisons is fixed. (Includes the character-level diff work.) ([#493](https://github.com/ryantsai/KKTerm/pull/493))
+
 * **Cleaned Beyond Compare-style intra-line diff** output. (So the red/green blocks behave better.) ([#495](https://github.com/ryantsai/KKTerm/pull/495))
 
 ## Internal
 
-- Keep file compare responsive for large files. ([#489](https://github.com/ryantsai/KKTerm/pull/489))
+* Keep file compare responsive for large files. ([#489](https://github.com/ryantsai/KKTerm/pull/489))
+
 * docs(readme): update stale installer size to under 20 MB. ([#497](https://github.com/ryantsai/KKTerm/pull/497))
 * feat(compare): **Beyond Compare-style folder compare** and compare enhancements. ([#491](https://github.com/ryantsai/KKTerm/pull/491), [#490](https://github.com/ryantsai/KKTerm/pull/490))
 * feat: implement normalization and parsing for PC Info snapshot cache. (Includes tests.) (Commit: 89b13d3)
@@ -935,32 +1032,37 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights（重點）
 
-- **Beyond Compare 風格的資料夾比較**已加入：支援可折疊樹狀檢視，並可在兩個 Pane 之間進行複製/刪除操作。([#491](https://github.com/ryantsai/KKTerm/pull/491))
+* **Beyond Compare 風格的資料夾比較**已加入：支援可折疊樹狀檢視，並可在兩個 Pane 之間進行複製/刪除操作。([#491](https://github.com/ryantsai/KKTerm/pull/491))
+
 * **檔案比較現在支援逐字元差異**，更容易看出究竟是哪些字元改了（同時**修正 macOS 上資料夾比較卡住**）。([#493](https://github.com/ryantsai/KKTerm/pull/493)、[#495](https://github.com/ryantsai/KKTerm/pull/495))
 * 新增 **「PC Info」內建 Dashboard Widget Instance**：在所有區段提供更深的硬體資訊。([#494](https://github.com/ryantsai/KKTerm/pull/494)、[#498](https://github.com/ryantsai/KKTerm/pull/498)、[#499](https://github.com/ryantsai/KKTerm/pull/499))
 * **Differences/Same** 篩選現在改用可折疊的「filtered lines」折疊區（避免 diff 被你我一起淹沒在細節裡）。([#496](https://github.com/ryantsai/KKTerm/pull/496))
 
 ## New（新增）
 
-- **Beyond Compare 風格的資料夾比較**（雙 Pane 目錄差異）：從資料夾比較流程開啟。([#491](https://github.com/ryantsai/KKTerm/pull/491))
+* **Beyond Compare 風格的資料夾比較**（雙 Pane 目錄差異）：從資料夾比較流程開啟。([#491](https://github.com/ryantsai/KKTerm/pull/491))
+
 * **PC Info 內建 Dashboard widget**。([#494](https://github.com/ryantsai/KKTerm/pull/494))
-* **IT Ops 機架裝置中繼資料**擴充，新增 `kuaiguai` 裝置類型。([#490](https://github.com/ryantsai/KKTerm/pull/490))
-* [codex] **完成機架盤點（rack inventory）中繼資料**。([#492](https://github.com/ryantsai/KKTerm/pull/492))
+* **IT Ops 機櫃裝置中繼資料**擴充，新增 `kuaiguai` 裝置類型。([#490](https://github.com/ryantsai/KKTerm/pull/490))
+* [codex] **完成機櫃盤點（rack inventory）中繼資料**。([#492](https://github.com/ryantsai/KKTerm/pull/492))
 
 ## Improved（改善）
 
-- **Beyond Compare 風格的行內差異**清理/優化（讓行內呈現更乾淨）。([#495](https://github.com/ryantsai/KKTerm/pull/495))
+* **Beyond Compare 風格的行內差異**清理/優化（讓行內呈現更乾淨）。([#495](https://github.com/ryantsai/KKTerm/pull/495))
+
 * Differences/Same 模式的 **「filtered lines」折疊**改為可折疊。([#496](https://github.com/ryantsai/KKTerm/pull/496))
 * PC Info：在 **所有區段提供更深的硬體細節**。([#498](https://github.com/ryantsai/KKTerm/pull/498)、[#499](https://github.com/ryantsai/KKTerm/pull/499))
 
 ## Fixed（修正）
 
-- **修正 macOS 上大型資料夾樹比較會卡住**的問題。（包含逐字元差異相關改動。）([#493](https://github.com/ryantsai/KKTerm/pull/493))
+* **修正 macOS 上大型資料夾樹比較會卡住**的問題。（包含逐字元差異相關改動。）([#493](https://github.com/ryantsai/KKTerm/pull/493))
+
 * **修正/清理 Beyond Compare 風格的行內差異**呈現。（讓紅綠區塊更符合預期。）([#495](https://github.com/ryantsai/KKTerm/pull/495))
 
 ## Internal（內部）
 
-- 讓檔案比較在大型檔案時保持回應速度。([#489](https://github.com/ryantsai/KKTerm/pull/489))
+* 讓檔案比較在大型檔案時保持回應速度。([#489](https://github.com/ryantsai/KKTerm/pull/489))
+
 * docs(readme): 更新過期的安裝包大小描述為「低於 20 MB」。([#497](https://github.com/ryantsai/KKTerm/pull/497))
 * feat(compare)：Beyond Compare 風格資料夾比較與相關比較功能。([#491](https://github.com/ryantsai/KKTerm/pull/491)、[#490](https://github.com/ryantsai/KKTerm/pull/490))
 * feat：實作 PC Info 快照快取的正規化與解析（含測試）。(提交：89b13d3)
@@ -973,15 +1075,17 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights
 
-- **File Compare in File Explorer & SFTP browser**: select a left file, then compare to a second file (Text / Image / Hex).
+* **File Compare in File Explorer & SFTP browser**: select a left file, then compare to a second file (Text / Image / Hex).
+
 * **Resizable Git Browser + Worktrees**: resize the diff UI, switch/pick worktrees, and run sync + branch actions.
 * **AI: Ollama Cloud + Ollama local auth support**: add a new `ollama-cloud` provider, plus optional API key/custom headers for local Ollama behind proxies.
 * **New Dashboard Widget**: **PC Info** (Speccy-style system inventory snapshot) with updated i18n.
 
 ## New
 
-- **PC Info Dashboard Widget**: show OS/CPU/memory/motherboard/graphics/storage/network/audio in a tabbed **Dashboard Widget Instance**.
+* **PC Info Dashboard Widget**: show OS/CPU/memory/motherboard/graphics/storage/network/audio in a tabbed **Dashboard Widget Instance**.
   * PR: <https://github.com/ryantsai/KKTerm/pull/481> (SHA: `2099cdf`)
+
 * **File Compare** in File Explorer & SFTP browser (Text/Image/Hex).
   * PR: <https://github.com/ryantsai/KKTerm/pull/484> (SHA: `983ccff`)
 * **Ollama Cloud provider (`ollama-cloud`)** for direct cloud access.
@@ -992,8 +1096,9 @@ All notable changes to KKTerm are documented here.
 
 ## Improved
 
-- **Git Browser**: resizable window/panes, **Worktrees** sidebar actions, and sync + branch/reset actions.
+* **Git Browser**: resizable window/panes, **Worktrees** sidebar actions, and sync + branch/reset actions.
   * PR: <https://github.com/ryantsai/KKTerm/pull/477> (SHA: `939635c`)
+
 * **Compare viewer**: resizable diff window + word-wrap toggle to reduce the “giant horizontal scrollbar” pain.
   * PR: <https://github.com/ryantsai/KKTerm/pull/486> (SHA: `b3b9718`)
 * **Connections UI**: when a parent Connection has only one child, the child collapses into the parent row (less redundant clutter).
@@ -1005,7 +1110,7 @@ All notable changes to KKTerm are documented here.
 
 ## Fixed
 
-- **SFTP context menu positioning**: clamp the file context menu so it opens above the status bar.
+* **SFTP context menu positioning**: clamp the file context menu so it opens above the status bar.
   * PR: <https://github.com/ryantsai/KKTerm/pull/487> (SHA: `eabe08b`)
 
 * **MCP tool surface / ConPTY UB / i18n consistency cleanup**: align MCP tool catalog and fix ConPTY undefined behavior; plus i18n consistency cleanup.
@@ -1014,21 +1119,23 @@ All notable changes to KKTerm are documented here.
 
 ## Internal
 
-- *(No internal-only changes were provided in the supplied release context.)*
+* *(No internal-only changes were provided in the supplied release context.)*
 
 ---
 
 ## Highlights（重點）
 
-- **檔案比較（File Explorer 與 SFTP 瀏覽器）**：先選左邊檔案，再選右邊檔案比較（Text / Image / Hex）。
+* **檔案比較（File Explorer 與 SFTP 瀏覽器）**：先選左邊檔案，再選右邊檔案比較（Text / Image / Hex）。
+
 * **Git Browser 可調大小 + Worktrees**：調整 diff 介面大小、切換/管理 worktrees，並可進行 Sync + 分支操作。
 * **AI：Ollama Cloud + 本機 Ollama 的授權支援**：新增 `ollama-cloud` provider，並讓本機 Ollama 可選填 API key / 自訂 headers（用在反向代理情境）。
 * **新 Dashboard Widget**：**PC Info**（類 Speccy 的系統盤點快照），並更新 i18n。
 
 ## New（新增）
 
-- **PC Info Dashboard Widget**：在 Dashboard Widget Instance 中以分頁方式呈現 OS/CPU/記憶體/主機板/顯示卡/儲存/網路/音訊。
+* **PC Info Dashboard Widget**：在 Dashboard Widget Instance 中以分頁方式呈現 OS/CPU/記憶體/主機板/顯示卡/儲存/網路/音訊。
   * PR: <https://github.com/ryantsai/KKTerm/pull/481> (SHA: `2099cdf`)
+
 * **檔案比較**：File Explorer 與 SFTP 瀏覽器支援（Text/Image/Hex）。
   * PR: <https://github.com/ryantsai/KKTerm/pull/484> (SHA: `983ccff`)
 * **Ollama Cloud provider (`ollama-cloud`)**：直接存取 Ollama Cloud。
@@ -1039,8 +1146,9 @@ All notable changes to KKTerm are documented here.
 
 ## Improved（改善）
 
-- **Git Browser**：可調大小的視窗/分割區、**Worktrees** 側邊欄操作，以及 Sync + branch/reset 動作。
+* **Git Browser**：可調大小的視窗/分割區、**Worktrees** 側邊欄操作，以及 Sync + branch/reset 動作。
   * PR: <https://github.com/ryantsai/KKTerm/pull/477> (SHA: `939635c`)
+
 * **Compare viewer**：diff 視窗可調整大小 + 支援 word-wrap，減少「超長橫向捲動條」的痛點。
   * PR: <https://github.com/ryantsai/KKTerm/pull/486> (SHA: `b3b9718`)
 * **Connections 介面**：當父 Connection 只有一個子 Connection 時，子列會折疊到父列（減少重複資訊）。
@@ -1052,7 +1160,7 @@ All notable changes to KKTerm are documented here.
 
 ## Fixed（修正）
 
-- **SFTP 檔案情境選單定位**：讓檔案右鍵選單會開在狀態列之上。
+* **SFTP 檔案情境選單定位**：讓檔案右鍵選單會開在狀態列之上。
   * PR: <https://github.com/ryantsai/KKTerm/pull/487> (SHA: `eabe08b`)
 
 * **MCP 工具介面 / ConPTY 未定義行為 / i18n 一致性清理**：對齊 MCP 工具目錄並修正 ConPTY 未定義行為，同時做 i18n 一致性整理。
@@ -1061,7 +1169,7 @@ All notable changes to KKTerm are documented here.
 
 ## Internal（內部）
 
-- *(提供的 release context 中未包含純內部變更。)*
+* *(提供的 release context 中未包含純內部變更。)*
 
 ## Direct Downloads
 
@@ -1070,25 +1178,28 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights
 
-- Fix **Proxy settings** layout/labels so the page doesn’t repeat “Proxy” three times like it’s trying to debug itself.
+* Fix **Proxy settings** layout/labels so the page doesn’t repeat “Proxy” three times like it’s trying to debug itself.
+
 * Fix **Import browser bookmarks** so its **Tab** won’t get stuck on “Looking for browser bookmark sources…” forever.
 
 ## New
 
-- Connection Import: add support for **HTTP/HTTPS ports** and improve the **port selection** UI. (PR #451)
+* Connection Import: add support for **HTTP/HTTPS ports** and improve the **port selection** UI. (PR #451)
 
 ## Improved
 
-- (Dashboard) App launcher widget styling and icon rendering improvements for macOS. (PR #1705c2b, PR #b5ed7a8, PR #7d6a5cf)
+* (Dashboard) App launcher widget styling and icon rendering improvements for macOS. (PR #1705c2b, PR #b5ed7a8, PR #7d6a5cf)
 
 ## Fixed
 
-- Settings: tidy **Proxy settings** layout and label. (PR #473, @ryantsai)
+* Settings: tidy **Proxy settings** layout and label. (PR #473, @ryantsai)
+
 * Connections: stop **Import browser bookmarks** from hanging indefinitely. (PR #474, @ryantsai)
 
 ## Internal
 
-- Localization work for admin-related Chocolatey messages across multiple languages. (6c2d445)  
+* Localization work for admin-related Chocolatey messages across multiple languages. (6c2d445)  
+
 * Import dialog/bookmark handling refactor (UI components). (7fcd826)
 * Enhance file picker filters for platform-specific app selection. (0fb8c93)
 
@@ -1096,25 +1207,28 @@ All notable changes to KKTerm are documented here.
 
 ## 重點摘要
 
-- 修正 **Proxy 設定** 的版面/標籤，讓頁面不再像在自我除錯一樣重複顯示「Proxy」三次。
+* 修正 **Proxy 設定** 的版面/標籤，讓頁面不再像在自我除錯一樣重複顯示「Proxy」三次。
+
 * 修正「**匯入瀏覽器書籤**」的 **Tab**，避免卡在「Looking for browser bookmark sources…」永遠不結束。
 
 ## 新增
 
-- 連線匯入：支援 **HTTP/HTTPS 埠**，並強化**埠選擇**介面。(PR #451)
+* 連線匯入：支援 **HTTP/HTTPS 埠**，並強化**埠選擇**介面。(PR #451)
 
 ## 改進
 
-- （Dashboard）macOS 的 App launcher 小工具樣式與圖示呈現最佳化。(PR #1705c2b、PR #b5ed7a8、PR #7d6a5cf)
+* （Dashboard）macOS 的 App launcher 小工具樣式與圖示呈現最佳化。(PR #1705c2b、PR #b5ed7a8、PR #7d6a5cf)
 
 ## 修正
 
-- 設定：整理 **Proxy 設定**版面與標籤。(PR #473，@ryantsai)
+* 設定：整理 **Proxy 設定**版面與標籤。(PR #473，@ryantsai)
+
 * 連線：修正「**匯入瀏覽器書籤**」可能無限卡住。(PR #474，@ryantsai)
 
 ## 內部
 
-- 多語系更新：與 Chocolatey 管理員相關的訊息。(6c2d445)
+* 多語系更新：與 Chocolatey 管理員相關的訊息。(6c2d445)
+
 * 匯入對話框/書籤處理流程重構（UI 元件）。(7fcd826)
 * 強化平台專用應用選擇的檔案選取篩選。(0fb8c93)
 
@@ -1125,23 +1239,27 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights
 
-- **Global Proxy for the whole app**: choose **System / No Proxy / Manual (HTTP/HTTPS/SOCKS5)** in **Settings → General**. (PR #461)
+* **Global Proxy for the whole app**: choose **System / No Proxy / Manual (HTTP/HTTPS/SOCKS5)** in **Settings → General**. (PR #461)
+
 * **Global SSH zlib compression default now persists**: your chosen default is saved and applied on reload. (PR #462)
 * **RDP overlay keyboard focus fixed**: clicks/keyboard focus now properly route into the RDP ActiveX overlay instead of forcing extra “tab dancing.” (PR #471, fixes #460)
 
 ## New
 
-- **Proxy moved to its own top-level Settings section**: **Settings → Proxy** with a dedicated Proxy UI. (PR #464)
+* **Proxy moved to its own top-level Settings section**: **Settings → Proxy** with a dedicated Proxy UI. (PR #464)
+
 * **Installer improvements: Sysinternals quick launcher** plus **Bun recipe** and a new **Package Managers** section. (PR #467, PR #468)
 
 ## Improved
 
-- **Sysinternals quick launcher is now searchable** (GUI launch + CLI list). (PR #468)
+* **Sysinternals quick launcher is now searchable** (GUI launch + CLI list). (PR #468)
+
 * **Softened drop shadows** that previously bled on light backgrounds across shared UI surfaces. (PR #463)
 
 ## Fixed
 
-- **RDP ActiveX overlay keyboard focus** when clicking the overlay (proper fix for #460 using a thread-local mouse hook). (PR #471)  
+* **RDP ActiveX overlay keyboard focus** when clicking the overlay (proper fix for #460 using a thread-local mouse hook). (PR #471)  
+
 * **RDP overlay click now grabs keyboard focus** (initial focus handling update). (PR #465)
 * **Installer: Sysinternals tools launch elevated**, and **“Open elevated PowerShell”** is used consistently. (PR #470)
 * **Installer: Chocolatey operations now run elevated (UAC) and machine-wide** so installs/upgrades/uninstalls behave as expected. (PR #472)  
@@ -1150,7 +1268,8 @@ All notable changes to KKTerm are documented here.
 
 ## Internal
 
-- Global app proxy work and docs/UI updates (PR #461, #464)
+* Global app proxy work and docs/UI updates (PR #461, #464)
+
 * Persist global SSH zlib compression default with settings validation + test coverage (PR #462)
 * Installer tooling & localization updates for Sysinternals/Bun/Package Managers (PR #467, #468, #470, #472)
 * RDP focus-policy updates and related tests (PR #465, #471)
@@ -1160,23 +1279,27 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights（重點）
 
-- **全域 Proxy 控制應用程式整體網路流量**：在 **設定 → 一般** 選擇 **系統 / 不使用 Proxy / 手動（HTTP/HTTPS/SOCKS5）**。 (PR #461)
+* **全域 Proxy 控制應用程式整體網路流量**：在 **設定 → 一般** 選擇 **系統 / 不使用 Proxy / 手動（HTTP/HTTPS/SOCKS5）**。 (PR #461)
+
 * **全域 SSH zlib 壓縮預設值會被保留**：你選的預設會被儲存並在重新載入後生效。 (PR #462)
 * **已修正 RDP overlay 的鍵盤焦點**：點擊/鍵盤輸入會正確導入 RDP ActiveX overlay，不用再額外切換分頁才聽話。 (PR #471，修正 #460)
 
 ## New（新增）
 
-- **Proxy 搬到獨立的頂層設定頁**：**設定 → Proxy**，提供專屬的 Proxy 介面。 (PR #464)
+* **Proxy 搬到獨立的頂層設定頁**：**設定 → Proxy**，提供專屬的 Proxy 介面。 (PR #464)
+
 * **安裝程式改進**：新增 **Sysinternals 快速啟動器**，加入 **Bun recipe**，並新增 **Package Managers** 分類。 (PR #467, PR #468)
 
 ## Improved（改善）
 
-- **Sysinternals 快速啟動器支援搜尋**（GUI 直接啟動 + CLI 清單）。 (PR #468)
+* **Sysinternals 快速啟動器支援搜尋**（GUI 直接啟動 + CLI 清單）。 (PR #468)
+
 * **弱化在淺色背景上會外溢的陰影**，改善多處共用 UI 表面。 (PR #463)
 
 ## Fixed（修正）
 
-- **RDP ActiveX overlay 鍵盤焦點**：點擊 overlay 時會正確導入（#460 的正確修正，使用 thread-local 滑鼠 hook）。 (PR #471)
+* **RDP ActiveX overlay 鍵盤焦點**：點擊 overlay 時會正確導入（#460 的正確修正，使用 thread-local 滑鼠 hook）。 (PR #471)
+
 * **點擊 RDP overlay 時會抓到鍵盤焦點**（焦點處理的初步更新）。 (PR #465)
 * **安裝程式：Sysinternals 工具改為以提升權限（elevated）啟動**，並一致使用 **「開啟提升權限的 PowerShell」**。 (PR #470)
 * **安裝程式：Chocolatey 相關操作改為提升權限（UAC）且以整台機器範圍執行**，讓安裝/升級/解除安裝更符合預期。 (PR #472)
@@ -1185,7 +1308,8 @@ All notable changes to KKTerm are documented here.
 
 ## Internal（內部）
 
-- 全域 Proxy、文件與 UI 更新（PR #461、#464）
+* 全域 Proxy、文件與 UI 更新（PR #461、#464）
+
 * 保留全域 SSH zlib 壓縮預設值：設定驗證與測試覆蓋（PR #462）
 * 安裝程式工具與在地化更新：Sysinternals/Bun/Package Managers（PR #467、#468、#470、#472）
 * RDP 焦點策略更新與相關測試（PR #465、#471）
@@ -1198,24 +1322,27 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights
 
-- Connection-tree folder nodes now use the default folder glyph (less “mystery icon,” more “that’s a folder”).  
+* Connection-tree folder nodes now use the default folder glyph (less “mystery icon,” more “that’s a folder”).  
+
 * Terminal display is better aligned when emoji appear (Unicode 11 cell widths).  
 * Assistant code sends won’t steal your focus from the terminal—your Session stays ready.  
 
 ## New
 
-- Enhance status popup message styling to support multi-line wrapping.
+* Enhance status popup message styling to support multi-line wrapping.
 
 ## Improved
 
-- SSH Port Forwarding now warns when saved port forwards fail to start (instead of only logging a transient notice), including amber toolbar state and clearer dialog rows.
+* SSH Port Forwarding now warns when saved port forwards fail to start (instead of only logging a transient notice), including amber toolbar state and clearer dialog rows.
+
 * SSH Port Forwarding rules are persisted more reliably: durable rules are saved even if there’s no active/healthy Session when you add them.
 * Explain outdated GitHub Copilot CLI with actionable guidance instead of surfacing a raw serde error.
 * Connection import dialog refactor and styling updates (including refreshed test coverage and i18n resources).
 
 ## Fixed
 
-- Persist the global SSH zlib compression default so setting it to “off” actually takes effect; previously the backend dropped the unknown field on save and connections that inherit defaults always fell back to “fast”.
+* Persist the global SSH zlib compression default so setting it to “off” actually takes effect; previously the backend dropped the unknown field on save and connections that inherit defaults always fell back to “fast”.
+
 * Honor the resolved SSH compression setting on every SSH-backed channel, not just terminals: SFTP file browsing/transfers, tmux session management, batch IT-Ops runs, and SSH key installs no longer hard-code compression on.
 * Fix emoji column misalignment in the terminal by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/455> (Fixes #454)  
   *Also reported by:* **JosephCLJ** (Issue #454, PR #455) — “[Windows] 圖形顯示問題”
@@ -1227,7 +1354,8 @@ All notable changes to KKTerm are documented here.
 
 ## Internal
 
-- Add scrcpy tool for Android screen mirroring and control.
+* Add scrcpy tool for Android screen mirroring and control.
+
 * Update/adjust import-dialog-related assets, CSS, locales, and associated tests.
 * Update .gitignore to include brag-output and ensure proper newline.
 
@@ -1235,25 +1363,28 @@ All notable changes to KKTerm are documented here.
 
 ## 亮點
 
-- 連線樹（Connection-tree）資料夾節點改用預設資料夾圖示（少一點「這到底是什麼」）。  
+* 連線樹（Connection-tree）資料夾節點改用預設資料夾圖示（少一點「這到底是什麼」）。  
+
 * 終端機（Terminal）在出現 emoji 時的排版更準確（Unicode 11 的字元寬度）。  
 * 助理（Assistant）送出程式碼後不再奪走終端機焦點——你的 Session 依然保持就緒。  
 
 ## 新增
 
-- 強化狀態彈出視窗（status popup）樣式，支援多行自動換行。
+* 強化狀態彈出視窗（status popup）樣式，支援多行自動換行。
 
 ## 改進
 
-- SSH 連接埠轉送（SSH Port Forwarding）當「儲存的轉送規則無法啟動」時會明確提醒：包含工具列琥珀色狀態與對話框更清楚的列狀態。
+* SSH 連接埠轉送（SSH Port Forwarding）當「儲存的轉送規則無法啟動」時會明確提醒：包含工具列琥珀色狀態與對話框更清楚的列狀態。
+
 * SSH 連接埠轉送規則持久化更可靠：即使當下沒有可用/健康的 Session 也會先確實保存「耐久（durable）規則」。
 * 當 GitHub Copilot CLI 太舊導致 SDK 啟動失敗時，改為提供可操作的更新建議，而不是直接顯示原始 serde 錯誤。
 * 連線匯入對話框（Connection import dialog）重構與樣式更新（包含更新測試與 i18n 資源）。
 
 ## 修正
 
-- 修正終端機 emoji 欄位錯位（Unicode 11 字元寬度）by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/455（Fixes> #454）  
+* 修正終端機 emoji 欄位錯位（Unicode 11 字元寬度）by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/455（Fixes> #454）  
   *同時被回報：* **JosephCLJ**（Issue #454, PR #455）— “[Windows] 圖形顯示問題”
+
 * 助理送出程式碼後恢復終端機焦點 by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/459>
 * 修正 SSH 連接埠轉送規則持久化順序 by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/458>
 * 連線樹資料夾改用預設資料夾圖示 by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/453>
@@ -1262,7 +1393,8 @@ All notable changes to KKTerm are documented here.
 
 ## 內部
 
-- 新增 scrcpy 工具，用於 Android 螢幕鏡像與控制。
+* 新增 scrcpy 工具，用於 Android 螢幕鏡像與控制。
+
 * 更新/調整匯入對話框相關資源、CSS、語系檔與對應測試。
 * 更新 .gitignore：加入 brag-output 並確保換行正確。
 
@@ -1273,22 +1405,25 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights
 
-- Improved SSH startup script behavior for Connections, including editor support, per-connection option, and more robust tmux handling (PR #451, PR #449; commits include `bc40ace`, `163927d`, `200db90`, `60a69d3`, `3eee2ae`, `3e63a63`).
+* Improved SSH startup script behavior for Connections, including editor support, per-connection option, and more robust tmux handling (PR #451, PR #449; commits include `bc40ace`, `163927d`, `200db90`, `60a69d3`, `3eee2ae`, `3e63a63`).
+
 * Updated russh with vendored IronRDP crypto patches (PR #452; commit `d4502c9`).
 
 ## Improved
 
-- SSH startup script UI/UX: updated editor and SSH connection options layout and translations across multiple languages (PR #451; commits `60a69d3`, `3eee2ae`, `3e63a63`).
+* SSH startup script UI/UX: updated editor and SSH connection options layout and translations across multiple languages (PR #451; commits `60a69d3`, `3eee2ae`, `3e63a63`).
+
 * SSH startup script fallback without tmux so Connections can still start in environments without tmux (PR #451; commit `bc40ace`).
 
 ## Fixed
 
-- Resolved all ESLint warnings so the lint gate only flags new problems (PR #449; commit `ecbd0f5`).
+* Resolved all ESLint warnings so the lint gate only flags new problems (PR #449; commit `ecbd0f5`).
   * Thanks to Claude Opus 4.8 (Co-Authored-By in commit `ecbd0f5`)!
 
 ## Internal
 
-- Upgrade russh with vendored IronRDP crypto patches (PR #452; commit `d4502c9`, SHA `200db90`).
+* Upgrade russh with vendored IronRDP crypto patches (PR #452; commit `d4502c9`, SHA `200db90`).
+
 * Type/compatibility and UI layout updates related to the SSH startup script editor and options (PR #451; `60a69d3`, `3eee2ae`, `3e63a63`, `bc40ace`).
 * Lint-only cleanup (PR #449; `ecbd0f5`).  
 
@@ -1296,22 +1431,25 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights（重點）
 
-- 改善 SSH 啟動腳本在「Connection」層級的行為：支援編輯器（editor）、每個連線（per-connection）選項，以及更穩健的 tmux 處理（PR #451、PR #449；相關提交包含 `bc40ace`、`163927d`、`200db90`、`60a69d3`、`3eee2ae`、`3e63a63`）。
+* 改善 SSH 啟動腳本在「Connection」層級的行為：支援編輯器（editor）、每個連線（per-connection）選項，以及更穩健的 tmux 處理（PR #451、PR #449；相關提交包含 `bc40ace`、`163927d`、`200db90`、`60a69d3`、`3eee2ae`、`3e63a63`）。
+
 * 更新 russh，套用附帶 IronRDP 的加密修補程式（PR #452；提交 `d4502c9`）。
 
 ## Improved（改進）
 
-- SSH 啟動腳本使用者體驗：更新編輯器與 SSH 連線選項的版面，並擴充多語系翻譯（PR #451；提交 `60a69d3`、`3eee2ae`、`3e63a63`）。
+* SSH 啟動腳本使用者體驗：更新編輯器與 SSH 連線選項的版面，並擴充多語系翻譯（PR #451；提交 `60a69d3`、`3eee2ae`、`3e63a63`）。
+
 * SSH 啟動腳本在「沒有 tmux」的環境下也能正常回退啟動，避免只在有 tmux 才工作（PR #451；提交 `bc40ace`）。
 
 ## Fixed（修正）
 
-- 修正所有 ESLint 警告，讓 lint gate 只會標記新的問題（PR #449；提交 `ecbd0f5`）。
+* 修正所有 ESLint 警告，讓 lint gate 只會標記新的問題（PR #449；提交 `ecbd0f5`）。
   * 特別感謝 Claude Opus 4.8（在提交 `ecbd0f5` 的 Co-Authored-By 註記中）！
 
 ## Internal（內部）
 
-- 升級 russh 並套用附帶 IronRDP 加密修補程式（PR #452；`d4502c9`、`200db90`）。
+* 升級 russh 並套用附帶 IronRDP 加密修補程式（PR #452；`d4502c9`、`200db90`）。
+
 * 與 SSH 啟動腳本編輯器/選項相關的 UI 版面調整（PR #451；`60a69d3`、`3eee2ae`、`3e63a63`、`bc40ace`）。
 * 只屬於 lint 清理的變更（PR #449；`ecbd0f5`）。
 
@@ -1322,22 +1460,26 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights
 
-- **Git Browser overlay**: A full in-app Git Browser (commit graph + full git client) is now available from terminal pane toolbars and the File Explorer toolbar when you’re in a git repo.  
+* **Git Browser overlay**: A full in-app Git Browser (commit graph + full git client) is now available from terminal pane toolbars and the File Explorer toolbar when you’re in a git repo.  
+
 * **Serial connections (macOS + cross-platform)**: Detect serial ports and make the **Line** field an editable dropdown.
 
 ## New
 
-- **Git Browser overlay** (commit graph + full git client) — opened from a **Terminal** pane toolbar or **File Explorer** toolbar when inside a git work tree. ([#428](https://github.com/ryantsai/KKTerm/pull/428), [#427](https://github.com/ryantsai/KKTerm/pull/427) for psmux refresh context: local terminals)
+* **Git Browser overlay** (commit graph + full git client) — opened from a **Terminal** pane toolbar or **File Explorer** toolbar when inside a git work tree. ([#428](https://github.com/ryantsai/KKTerm/pull/428), [#427](https://github.com/ryantsai/KKTerm/pull/427) for psmux refresh context: local terminals)
+
 * **GLM-5.2** added as a curated **OpenCode** model. ([#443](https://github.com/ryantsai/KKTerm/pull/443))
 
 ## Improved
 
-- **Serial connection “Line” field** is now an editable dropdown populated from detected serial ports (instead of a Windows-only default). ([#432](https://github.com/ryantsai/KKTerm/pull/432), reported by @tzchang in #429)
+* **Serial connection “Line” field** is now an editable dropdown populated from detected serial ports (instead of a Windows-only default). ([#432](https://github.com/ryantsai/KKTerm/pull/432), reported by @tzchang in #429)
+
 * **macOS serial Line dropdown arrow** is shown properly in WKWebView. ([#434](https://github.com/ryantsai/KKTerm/pull/434), reporter credit: @tzchang)
 
 ## Fixed
 
-- **Activity rail opening now switches to the correct Connection parent workspace**, so your **Session** doesn’t get “lost” in the wrong workspace. ([#440](https://github.com/ryantsai/KKTerm/pull/440), [#441](https://github.com/ryantsai/KKTerm/pull/441), PRs by @ryantsai)
+* **Activity rail opening now switches to the correct Connection parent workspace**, so your **Session** doesn’t get “lost” in the wrong workspace. ([#440](https://github.com/ryantsai/KKTerm/pull/440), [#441](https://github.com/ryantsai/KKTerm/pull/441), PRs by @ryantsai)
+
 * **Connection tree follows the active workspace** when opening/activating from the rail. ([#441](https://github.com/ryantsai/KKTerm/pull/441))
 * **CLI auth terminal** now uses a verbatim `cmd.exe` command line (avoids nvm `.cmd` shimming issues). ([#442](https://github.com/ryantsai/KKTerm/pull/442), [#442](https://github.com/ryantsai/KKTerm/pull/442) by @ryantsai)
 * **Copilot CLI integration**: resolve Copilot CLI externally instead of bundling it. (Prevents “could not find copilot” in distributed builds.) ([#435](https://github.com/ryantsai/KKTerm/pull/435))
@@ -1352,7 +1494,8 @@ All notable changes to KKTerm are documented here.
 
 ## Internal
 
-- Re-align quarantined test guards and update related assertions after refactors. (Commit: `8f2ab21`)
+* Re-align quarantined test guards and update related assertions after refactors. (Commit: `8f2ab21`)
+
 * Miscellaneous doc/localization cleanup and styling tweaks (no user-facing claims).
 
 ## Direct Downloads
@@ -1425,35 +1568,39 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights
 
-- Refreshes the current **PATH** into **psmux** panes so newly created **Sessions** can see tools added after the **Connection** started (goodbye, mysterious “command not found” gremlins).
+* Refreshes the current **PATH** into **psmux** panes so newly created **Sessions** can see tools added after the **Connection** started (goodbye, mysterious “command not found” gremlins).
+
 * Aligns the **psmux** toggle correctly for a cleaner **Tab/Panes** control layout.
 
 ## Fixed
 
-- **psmux Session PATH refresh**: ensure new **Sessions** receive an up-to-date **PATH** via `new-session -e PATH=<value>`; also right-align the **psmux** toggle. Credits: @ryantsai in <https://github.com/ryantsai/KKTerm/pull/410>.  
+* **psmux Session PATH refresh**: ensure new **Sessions** receive an up-to-date **PATH** via `new-session -e PATH=<value>`; also right-align the **psmux** toggle. Credits: @ryantsai in <https://github.com/ryantsai/KKTerm/pull/410>.  
+
 * **Workspace edit dialog cleanup**: simplify the workspace icon section by removing the workspace name title and the “Icon” caption, leaving the icon edit button and color palette. Credits: @ryantsai in <https://github.com/ryantsai/KKTerm/pull/411>.
 * **Windows local-shell environment**: local **PowerShell**/pwsh **Sessions** now see the same environment as a directly launched shell, including user-defined variables set via `setx` (e.g. `ANTHROPIC_BASE_URL`). KKTerm rebuilds the child environment from the registry with `CreateEnvironmentBlock` instead of forwarding only a curated allowlist of its own (possibly stale) process variables. Credits: @JosephCLJ in <https://github.com/ryantsai/KKTerm/issues/419>.
 
 ## Internal
 
-- (No internal-only changes provided in the release context.)
+* (No internal-only changes provided in the release context.)
 
 ---
 
 ## 亮點
 
-- 會將目前的 **PATH** 重新灌入 **psmux** 的 **Pane**，讓在 **Connection** 啟動之後新增的工具，能被後續建立的 **Session** 正確使用（告別那種「明明裝了怎麼找不到指令」的小惡魔）。
+* 會將目前的 **PATH** 重新灌入 **psmux** 的 **Pane**，讓在 **Connection** 啟動之後新增的工具，能被後續建立的 **Session** 正確使用（告別那種「明明裝了怎麼找不到指令」的小惡魔）。
+
 * 修正 **psmux** 開關的對齊方式，讓 **Tab / Panes** 的控制區更整齊。
 
 ## 修正
 
-- **psmux Session PATH 更新**：確保新的 **Session** 會透過 `new-session -e PATH=<value>` 拿到最新的 **PATH**；並同時將 **psmux** 開關右對齊。致謝：@ryantsai，<https://github.com/ryantsai/KKTerm/pull/410。>  
+* **psmux Session PATH 更新**：確保新的 **Session** 會透過 `new-session -e PATH=<value>` 拿到最新的 **PATH**；並同時將 **psmux** 開關右對齊。致謝：@ryantsai，<https://github.com/ryantsai/KKTerm/pull/410。>  
+
 * **工作區編輯對話框整理**：精簡工作區圖示區塊，移除工作區名稱標題與「Icon」註記，只保留圖示編輯按鈕與顏色調色盤。致謝：@ryantsai，<https://github.com/ryantsai/KKTerm/pull/411。>
 * **Windows 本機 Shell 環境變數**：本機 **PowerShell**/pwsh **Session** 現在會拿到與直接啟動 Shell 相同的環境，包含使用者透過 `setx` 設定的變數（例如 `ANTHROPIC_BASE_URL`）。KKTerm 改以 `CreateEnvironmentBlock` 從登錄檔重建子行程環境，不再只轉送自身（可能已過時）行程中一份固定的允許清單。致謝：@JosephCLJ，<https://github.com/ryantsai/KKTerm/issues/419。>
 
 ## Internal
 
-- （此版釋出內容中未提供純內部變更。）
+* （此版釋出內容中未提供純內部變更。）
 
 ## Direct Downloads
 
@@ -1464,15 +1611,17 @@ All notable changes to KKTerm are documented here.
 
 ### Highlights
 
-- **IT Ops:** Enjoy *live* Batch Run output, a **Run Report** viewer for finished runs, and an **n8n-style Automation editor** (PR #408 by @ryantsai): more signal, fewer SSH “wait… it’s buffering… right?” moments.
+* **IT Ops:** Enjoy *live* Batch Run output, a **Run Report** viewer for finished runs, and an **n8n-style Automation editor** (PR #408 by @ryantsai): more signal, fewer SSH “wait… it’s buffering… right?” moments.
+
 * **PowerShell Sessions:** Add **psmux session management** for **local PowerShell / PowerShell 7** connections via an opt-in toggle (PR #409 by @ryantsai).
 
 ### New
 
-- **IT Ops module upgrades (PR #408):**
+* **IT Ops module upgrades (PR #408):**
   * Live per-host stdout/stderr streaming during Batch Runs, with automatic reveal as it runs.
   * Persist per-host output (capped) and open a read-only **Run Report viewer** from recent runs.
   * Keep streamed output visible on the live grid when a host times out.
+
 * **Automation editor (PR #408):**
   * Replace the create dialog with an **n8n-style node editor** (draggable trigger → condition → action canvas), including ping/TCP triggers.
   * Add a **Test** action to sample the trigger once, report whether the condition would fire, and dry-run actions (no email/webhook and no Batch Run start).
@@ -1482,19 +1631,21 @@ All notable changes to KKTerm are documented here.
 
 ### Improved
 
-- **UI consistency work** across module headers/top bars and related components (e.g., shared compact module header).
+* **UI consistency work** across module headers/top bars and related components (e.g., shared compact module header).
+
 * **Dashboard Widget Instance color customization (PRs leading to v0.1.98):**
   * Custom color picker for dashboard/connection settings with strict six-digit hex validation.
 * **AI Assistant layout** improvements for more responsive behavior.
 
 ### Fixed
 
-- **psmux session isolation & command errors (PR #409 includes related fix):**
+* **psmux session isolation & command errors (PR #409 includes related fix):**
   * Improved **psmux Session** isolation and reduced command error cases affecting local session behavior.
 
 ### Internal
 
-- Documentation, localization, and UI styling refinements (including translations across many locales for IT Ops-related strings).
+* Documentation, localization, and UI styling refinements (including translations across many locales for IT Ops-related strings).
+
 * Release workflow/tooling documentation updates (e.g., Linux build dependency mention).
 
 ---
@@ -1503,15 +1654,17 @@ All notable changes to KKTerm are documented here.
 
 ### Highlights
 
-- **IT Ops：** 支援 **Batch Run 即時輸出**、可在結束後開啟 **Run Report** 瀏覽器，並提供 **n8n 風格 Automation 編輯器**（PR #408，@ryantsai）：資訊更到位，少點「等一下…是不是卡在緩衝區？」的網路線上折磨。
+* **IT Ops：** 支援 **Batch Run 即時輸出**、可在結束後開啟 **Run Report** 瀏覽器，並提供 **n8n 風格 Automation 編輯器**（PR #408，@ryantsai）：資訊更到位，少點「等一下…是不是卡在緩衝區？」的網路線上折磨。
+
 * **PowerShell Session：** 為 **本機 PowerShell / PowerShell 7 連線**加入 **psmux Session 管理**（可透過選項開啟）（PR #409，@ryantsai）。
 
 ### New
 
-- **IT Ops 模組強化（PR #408）：**
+* **IT Ops 模組強化（PR #408）：**
   * Batch Run 執行期間，**逐主機**串流 stdout/stderr，即時自動揭露正在跑的內容。
   * 為每個主機的輸出做持久化（有上限），並可從最近的執行清單開啟唯讀 **Run Report**。
   * 當主機逾時時，保留直播網格上的串流輸出，不會直接空白掉。
+
 * **Automation 編輯器（PR #408）：**
   * 用 **n8n 風格節點編輯器**取代原本的建立對話框（可拖曳的觸發 → 條件 → 動作畫布），支援 ping/TCP 觸發。
   * 提供 **Test**：抽樣一次觸發、回報條件是否會觸發，並在**不會送出 email/webhook、也不會啟動 Batch Run** 的前提下進行動作乾跑（dry-run）。
@@ -1521,19 +1674,21 @@ All notable changes to KKTerm are documented here.
 
 ### Improved
 
-- 針對模組標題 / 上方列等介面一致性調整（包含共享的精簡模組標題）。
+* 針對模組標題 / 上方列等介面一致性調整（包含共享的精簡模組標題）。
+
 * **Dashboard Widget Instance 自訂顏色（相關 PR 進入本版）：**
   * 提供自訂色彩選擇器，並在輸入驗證上要求嚴格的六位十六進位色碼格式。
 * **AI 助理版面**調整為更符合響應式需求。
 
 ### Fixed
 
-- **psmux Session 隔離與命令錯誤（PR #409 含相關修正）：**
+* **psmux Session 隔離與命令錯誤（PR #409 含相關修正）：**
   * 強化 **psmux Session** 的隔離，改善影響本機 Session 行為的部分命令錯誤情況。
 
 ### Internal
 
-- 文件與在地化、以及 UI 樣式微調（包含 IT Ops 相關字串在多個語系的翻譯）。
+* 文件與在地化、以及 UI 樣式微調（包含 IT Ops 相關字串在多個語系的翻譯）。
+
 * 發行流程／工具文件更新（例如在 Linux 建置流程中提到的套件依賴說明）。
 
 ## Direct Downloads
@@ -1543,26 +1698,29 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights
 
-- Smoother UI transitions across Connection and AI panels (less “jumpy” focus and panel motion—your Tab switching should feel less like herding mice in a dark terminal).
+* Smoother UI transitions across Connection and AI panels (less “jumpy” focus and panel motion—your Tab switching should feel less like herding mice in a dark terminal).
 
 ## New
 
-- Connection/AI panel transitions: animation classes added for panel transitions. (`9e630b7`, `804c1d1`)
+* Connection/AI panel transitions: animation classes added for panel transitions. (`9e630b7`, `804c1d1`)
+
 * Dialog styling updates: dialog backdrop and z-index adjusted to ensure proper stacking over the Activity Rail. (`3eb1364`)
 
 ## Improved
 
-- Assistant Panel focus behavior: added `focusWithoutScrolling` to prevent unwanted scroll behavior. (`9e630b7`)
+* Assistant Panel focus behavior: added `focusWithoutScrolling` to prevent unwanted scroll behavior. (`9e630b7`)
+
 * Panel animations and layout management: improved panel animation + layout management for AI and connection panels. (`a3292ee`)
 * App shell styles: removed min-width and disabled animation during panel transitions. (`b0d9986`)
 
 ## Fixed
 
-- Installer handoff on Windows: updated and refactored the installer handoff command to improve process handling and cleanup logic. (`94be613`, `294ee13`)
+* Installer handoff on Windows: updated and refactored the installer handoff command to improve process handling and cleanup logic. (`94be613`, `294ee13`)
 
 ## Internal
 
-- Updated UI/behavior coverage with related tests (assistant panel focus + titlebar theme, dialog portal policy). (`9e630b7`, `3eb1364`, `b0d9986`)
+* Updated UI/behavior coverage with related tests (assistant panel focus + titlebar theme, dialog portal policy). (`9e630b7`, `3eb1364`, `b0d9986`)
+
 * Merged changes from `main` (release content consolidation). (`52b2deb`, `513ddc5`)
 * Documentation updates for installer/settings related areas. (`294ee13`)
 
@@ -1570,26 +1728,29 @@ All notable changes to KKTerm are documented here.
 
 ## 亮點
 
-- Connection 與 AI 面板的介面切換更順了（減少「焦點亂跳」與面板動作帶來的干擾——Tab 切換體感更像順暢的終端機，而不是在黑暗中抓老鼠）。
+* Connection 與 AI 面板的介面切換更順了（減少「焦點亂跳」與面板動作帶來的干擾——Tab 切換體感更像順暢的終端機，而不是在黑暗中抓老鼠）。
 
 ## 新增
 
-- Connection/AI 面板切換動畫：加入面板過渡的動畫類別。 (`9e630b7`, `804c1d1`)
+* Connection/AI 面板切換動畫：加入面板過渡的動畫類別。 (`9e630b7`, `804c1d1`)
+
 * 對話框樣式更新：更新對話框遮罩（backdrop）與 z-index，確保層級正確並覆蓋在 Activity Rail 之上。 (`3eb1364`)
 
 ## 改善
 
-- Assistant 面板焦點行為：新增 `focusWithoutScrolling`，避免不必要的捲動。 (`9e630b7`)
+* Assistant 面板焦點行為：新增 `focusWithoutScrolling`，避免不必要的捲動。 (`9e630b7`)
+
 * 面板動畫與版面管理：強化 AI 與連線（connection）面板的動畫與版面管理。 (`a3292ee`)
 * App shell 樣式：移除 min-width，並在面板切換時停用動畫。 (`b0d9986`)
 
 ## 修正
 
-- Windows 安裝程式交接（handoff）：更新並重構安裝程式交接指令，以改善程序處理與清理邏輯。 (`94be613`, `294ee13`)
+* Windows 安裝程式交接（handoff）：更新並重構安裝程式交接指令，以改善程序處理與清理邏輯。 (`94be613`, `294ee13`)
 
 ## Internal
 
-- 補強相關測試（Assistant 面板焦點、標題列主題、對話框 portal policy）。 (`9e630b7`, `3eb1364`, `b0d9986`)
+* 補強相關測試（Assistant 面板焦點、標題列主題、對話框 portal policy）。 (`9e630b7`, `3eb1364`, `b0d9986`)
+
 * 合併 `main` 分支內容（針對發版彙整）。 (`52b2deb`, `513ddc5`)
 * 文件更新（與安裝程式/設定相關）。 (`294ee13`)
 
@@ -1600,63 +1761,71 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights
 
-- **Theme preview grid**: pick your Connection/Tab/terminal colors from a live, tappable preview grid (no more “trust me bro” dropdown).
+* **Theme preview grid**: pick your Connection/Tab/terminal colors from a live, tappable preview grid (no more “trust me bro” dropdown).
+
 * **Folder power moves**: open *all* connections in a folder (as **Tabs** or split **Panes**), plus a **Close all connections** folder action.
 * **Sync input to all terminals**: mirror keystrokes from the focused terminal Pane to every other open terminal Pane.
 
 ## New
 
-- **Open all connections in a folder** (with Tabs or Panorama split-Panes options) — **#404** (reported by **Chien096**), thanks for the request! <https://github.com/ryantsai/KKTerm/pull/404>  
+* **Open all connections in a folder** (with Tabs or Panorama split-Panes options) — **#404** (reported by **Chien096**), thanks for the request! <https://github.com/ryantsai/KKTerm/pull/404>  
+
 * **Close all connections** from a folder context menu — **#405** <https://github.com/ryantsai/KKTerm/pull/405>  
 * **IT Ops Module (Host Groups, SSH Batch Runs & durable Automations, Phases 0–5)** — **#402** <https://github.com/ryantsai/KKTerm/pull/402>  
 * **Cross-platform built-in MCP bridge + universal window screenshot tooling** — **#401** <https://github.com/ryantsai/KKTerm/pull/401>  
 
 ## Improved
 
-- **Color scheme selection UI**: replace the color scheme dropdown with a live preview grid — **#407** <https://github.com/ryantsai/KKTerm/pull/407>  
+* **Color scheme selection UI**: replace the color scheme dropdown with a live preview grid — **#407** <https://github.com/ryantsai/KKTerm/pull/407>  
+
 * **Activity Rail management & visibility controls**: drag-to-reorder and improve layout/controls for Activity Rail items.
 * **IT Ops Batch Runs — live output & Run Reports**: per-host output now **streams live** during a run (auto-revealed, no clicking needed), and finished runs save their full per-host output so the recent-runs list opens a reopenable **Run Report**.
 * **IT Ops Automations — visual node editor**: create and edit Automations on an n8n-style draggable **trigger → condition → action** canvas with a per-node side panel and a **Test** button that samples the trigger and dry-runs the actions (nothing is actually sent).
 
 ## Fixed
 
-- **Sync input fixes**: stop mouse garbling, move the sync-input toggle to the terminal Pane toolbar, and clamp native tooltip to the monitor work area — **#406** <https://github.com/ryantsai/KKTerm/pull/406>  
+* **Sync input fixes**: stop mouse garbling, move the sync-input toggle to the terminal Pane toolbar, and clamp native tooltip to the monitor work area — **#406** <https://github.com/ryantsai/KKTerm/pull/406>  
+
 * **Connection status indicators** update in child Connection Tab rows.
 * **Sync input behavior**: disable when closing terminal panes.
 
 ## Internal
 
-- Roadmap doc sync + clarification for MCP platform support — **#400** <https://github.com/ryantsai/KKTerm/pull/400>
+* Roadmap doc sync + clarification for MCP platform support — **#400** <https://github.com/ryantsai/KKTerm/pull/400>
 
 ---
 
 ## 亮點
 
-- **主題預覽網格**：在即時可點選的預覽網格中選擇配色（涵蓋 Connection / Tab / 終端機效果），不再只靠「下拉框你就信了吧」。
+* **主題預覽網格**：在即時可點選的預覽網格中選擇配色（涵蓋 Connection / Tab / 終端機效果），不再只靠「下拉框你就信了吧」。
+
 * **資料夾的強力操作**：可在資料夾中一次打開所有連線（選擇 **Tabs** 或拆成 **分割 Panes**），並新增 **資料夾「關閉所有連線」**動作。
 * **同步輸入到所有終端機**：將聚焦的終端機 Pane 輸入內容，鏡像到所有已開啟的終端機 Panes。
 
 ## 新增
 
-- **在資料夾中打開所有連線**（支援以 Tabs 或全局分割 Panes 呈現）— **#404**（由 **Chien096** 提出需求），感謝你！ <https://github.com/ryantsai/KKTerm/pull/404>  
+* **在資料夾中打開所有連線**（支援以 Tabs 或全局分割 Panes 呈現）— **#404**（由 **Chien096** 提出需求），感謝你！ <https://github.com/ryantsai/KKTerm/pull/404>  
+
 * **資料夾情境選單：關閉所有連線** — **#405** <https://github.com/ryantsai/KKTerm/pull/405>  
 * **IT Ops Module（Host Groups、SSH Batch Runs 與可持久 Automations，Phases 0–5）** — **#402** <https://github.com/ryantsai/KKTerm/pull/402>  
 * **跨平台內建 MCP bridge + 通用視窗擷取工具** — **#401** <https://github.com/ryantsai/KKTerm/pull/401>  
 
 ## 改進
 
-- **配色方案選擇介面**：將配色下拉選單改為「即時預覽網格」— **#407** <https://github.com/ryantsai/KKTerm/pull/407>  
+* **配色方案選擇介面**：將配色下拉選單改為「即時預覽網格」— **#407** <https://github.com/ryantsai/KKTerm/pull/407>  
+
 * **Activity Rail 管理與可見性控制**：支援拖曳重新排序，並強化 Activity Rail 的佈局與控制項。
 
 ## 修正
 
-- **同步輸入修正**：修正滑鼠造成的亂碼、將同步輸入切換移到終端機 Pane 工具列，並將原生提示（tooltip）限制在螢幕工作區內 — **#406** <https://github.com/ryantsai/KKTerm/pull/406>  
+* **同步輸入修正**：修正滑鼠造成的亂碼、將同步輸入切換移到終端機 Pane 工具列，並將原生提示（tooltip）限制在螢幕工作區內 — **#406** <https://github.com/ryantsai/KKTerm/pull/406>  
+
 * **子 Connection 分頁（Child Connection Tab）**：更新連線狀態指示器顯示。
 * **同步輸入行為**：在關閉終端機 Panes 時會停用同步輸入。
 
 ## Internal
 
-- Roadmap 文件同步與 MCP 平台支援說明釐清 — **#400** <https://github.com/ryantsai/KKTerm/pull/400>
+* Roadmap 文件同步與 MCP 平台支援說明釐清 — **#400** <https://github.com/ryantsai/KKTerm/pull/400>
 
 ## Direct Downloads
 
@@ -1665,30 +1834,30 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights
 
-- Improved handling for update asset URLs and added checksum validation logic (so your updates behave a bit less like “mystery network traffic”).  
+* Improved handling for update asset URLs and added checksum validation logic (so your updates behave a bit less like “mystery network traffic”).  
 
 ## Improved
 
-- Refactored update asset URL handling and checksum validation logic.  
+* Refactored update asset URL handling and checksum validation logic.  
 
 ## Internal
 
-- Updated update-related logic in `src-tauri/src/app_updates.rs` and refreshed documentation (`docs/ARCHITECTURE.md`, `docs/RELEASE.md`, `docs/manual/15-settings.md`).  
+* Updated update-related logic in `src-tauri/src/app_updates.rs` and refreshed documentation (`docs/ARCHITECTURE.md`, `docs/RELEASE.md`, `docs/manual/15-settings.md`).  
   * Commit: `c7f62c9` — “refactor: enhance update asset URL handling and checksum validation logic”  
 
 ---
 
 ## 精選重點
 
-- 改善更新資產（update asset）URL 的處理方式，並新增檢查碼（checksum）驗證邏輯（讓更新別再那麼像「神秘網路流量」）。  
+* 改善更新資產（update asset）URL 的處理方式，並新增檢查碼（checksum）驗證邏輯（讓更新別再那麼像「神秘網路流量」）。  
 
 ## 改善
 
-- 重構更新資產 URL 的處理流程，並加入 checksum 驗證邏輯。  
+* 重構更新資產 URL 的處理流程，並加入 checksum 驗證邏輯。  
 
 ## 內部
 
-- 於 `src-tauri/src/app_updates.rs` 更新相關邏輯，並同步更新文件（`docs/ARCHITECTURE.md`、`docs/RELEASE.md`、`docs/manual/15-settings.md`）。  
+* 於 `src-tauri/src/app_updates.rs` 更新相關邏輯，並同步更新文件（`docs/ARCHITECTURE.md`、`docs/RELEASE.md`、`docs/manual/15-settings.md`）。  
   * 提交：`c7f62c9` — 「refactor: enhance update asset URL handling and checksum validation logic」
 
 ## Direct Downloads
@@ -1700,33 +1869,38 @@ All notable changes to KKTerm are documented here.
 
 ### Highlights
 
-- Improved SSH port forwarding UX in the Connection → Terminal flow: saved forwards now start on connect, and remote listener presentation/status notifications have been streamlined via the Status Bar. (No more “where did that message go?” moments.)
+* Improved SSH port forwarding UX in the Connection → Terminal flow: saved forwards now start on connect, and remote listener presentation/status notifications have been streamlined via the Status Bar. (No more “where did that message go?” moments.)
+
 * More consistent dialog footer actions across platforms, so Pane-and-dialog button placement won’t play whack-a-mole with your muscle memory.
 
 ### New
 
-- SSH forwarding: add **GatewayPorts forwarding reminder** for clarity during setup. (172046b, c0c2be6)
+* SSH forwarding: add **GatewayPorts forwarding reminder** for clarity during setup. (172046b, c0c2be6)
+
 * SSH forwarding: **remote network address discovery for SSH connections**. (5299882)
 
 ### Improved
 
-- SSH port forwarding dialog redesign:
+* SSH port forwarding dialog redesign:
   * Status Bar is the sole transient notification surface (info/success/warning/error tones).
   * Clearer visuals for saved mappings (including third-host target fans) and grouped non-loopback destinations by host. (c337534)
+
 * Dialog footer actions are standardized across platforms using a shared `LegacyDialogActions` approach. (c648975, 7d7c018)
 * Local listener discovery for SSH forwarding runs off the command thread. (ac38c29)
 * SSH forwarding listener/status visuals updated (green listener status). (77f5027)
 
 ### Fixed
 
-- SSH port forwarding: **start saved SSH forwards on connect**. (f90d41a)
+* SSH port forwarding: **start saved SSH forwards on connect**. (f90d41a)
+
 * SSH port forwarding: **present and open SSH remote listeners correctly**. (0825c88)
 * SSH port forwarding: **define SSH remote forward presentation rules**. (fffad7c)
 * SSH remote gateway ports hint updated for clarity (Traditional Chinese update). (d3310c7)
 
 ### Internal
 
-- macOS-specific handling for URL overlay visibility in the webview, including lifecycle test coverage. (172046b)
+* macOS-specific handling for URL overlay visibility in the webview, including lifecycle test coverage. (172046b)
+
 * Added/updated tests for dialog footer policy and SSH port forwarding behaviors. (c648975, 7d7c018, c337534, ac38c29, 0825c88, fffad7c)
 * Internal refactors and merging activity included as part of this release. (8c32246)
 
@@ -1736,33 +1910,38 @@ All notable changes to KKTerm are documented here.
 
 ### Highlights
 
-- 在 Connection → Terminal 的 SSH 轉送流程中，體驗更完整：**已保存的轉送會在連線時自動啟動**，而且遠端監聽器的呈現與通知也改由 Status Bar 統一處理。（至少不會再發生「訊息跑哪去了？」的迷路時刻。）
+* 在 Connection → Terminal 的 SSH 轉送流程中，體驗更完整：**已保存的轉送會在連線時自動啟動**，而且遠端監聽器的呈現與通知也改由 Status Bar 統一處理。（至少不會再發生「訊息跑哪去了？」的迷路時刻。）
+
 * 各平台的對話框頁尾按鈕動作更一致：Pane 與對話框的按鈕擺放不再跟你的手感玩躲貓貓。
 
 ### New
 
-- SSH 轉送：加入 **GatewayPorts 轉送提醒**，讓設定更清楚。（172046b, c0c2be6）
+* SSH 轉送：加入 **GatewayPorts 轉送提醒**，讓設定更清楚。（172046b, c0c2be6）
+
 * SSH 轉送：**遠端網路位址（remote network address）探索**支援。（5299882）
 
 ### Improved
 
-- SSH 轉送對話框重新整理：
+* SSH 轉送對話框重新整理：
   * Status Bar 成為唯一的短暫通知面板（info/success/warning/error），並套用對應語氣。
   * 已保存映射的視覺更清楚（包含第三方主機 target fans），並依主機群組化不同的非迴圈目的地。 (c337534)
+
 * 各平台對話框頁尾動作已標準化：使用共用 `LegacyDialogActions` 做一致化。 (c648975, 7d7c018)
 * SSH 轉送的本機監聽器探索不再佔用命令執行緒。 (ac38c29)
 * SSH 轉送監聽器狀態視覺更新（綠色監聽狀態）。 (77f5027)
 
 ### Fixed
 
-- SSH 轉送：**連線時啟動已保存的 SSH 轉送**。 (f90d41a)
+* SSH 轉送：**連線時啟動已保存的 SSH 轉送**。 (f90d41a)
+
 * SSH 轉送：**正確呈現並開啟遠端 SSH listeners**。 (0825c88)
 * SSH 轉送：**定義遠端轉送的呈現規則**。 (fffad7c)
 * SSH 遠端 gateway ports 提示文字更新以提升清楚度（僅繁體中文內容更新）。 (d3310c7)
 
 ### Internal
 
-- macOS：webview 的 URL overlay 可見性加入特定處理，並補上生命週期測試。 (172046b)
+* macOS：webview 的 URL overlay 可見性加入特定處理，並補上生命週期測試。 (172046b)
+
 * 增修 dialog footer 政策與 SSH 轉送行為的測試。 (c648975, 7d7c018, c337534, ac38c29, 0825c88, fffad7c)
 * 本版包含內部重構與合併活動。 (8c32246)
 
@@ -1773,27 +1952,31 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights
 
-- Added an **increment_version** option to the Release workflow (default: **on**)—handy for release-engineering when you just want the notes, not the version bump.
+* Added an **increment_version** option to the Release workflow (default: **on**)—handy for release-engineering when you just want the notes, not the version bump.
+
 * SSH Port Forwarding dialog improvements: editable dropdown inputs, enhanced suggestions, and updated tests—less “what port name was that again?” energy.
 
 ## New
 
-- **Installer:** Improved installer helper with a **WSL distro manager**, added **Oh My Posh** to the Utilities section, and fixed **portable winget detection**. (by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/397>, also co-authored by @Claude Opus 4.8)
+* **Installer:** Improved installer helper with a **WSL distro manager**, added **Oh My Posh** to the Utilities section, and fixed **portable winget detection**. (by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/397>, also co-authored by @Claude Opus 4.8)
+
 * **Release:** Added **increment_version** workflow_dispatch option (default on) to the Release workflow. (by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/399>)
 
 ## Improved
 
-- **Workspace:** Full-width toolbar for docked **Document viewer** tabs/panes. (by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/398>, also co-authored by @Claude Opus 4.8)
+* **Workspace:** Full-width toolbar for docked **Document viewer** tabs/panes. (by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/398>, also co-authored by @Claude Opus 4.8)
+
 * **Connections (SSH):** Enhanced editable dropdowns for SSH forwarding fields (common port names) and improved styling. (by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/397>)
 * **Connections (SSH):** Implemented editable dropdown inputs for SSH forwarding fields, plus enhanced suggestions and tests. (by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/397>; PR merge activity includes implementation + tests)
 
 ## Fixed
 
-- **Installer (portable tools):** Fixed portable winget detection so tools installed via portable winget are detected correctly (e.g., no more “not installed” after a successful install). (by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/397>, also co-authored by @Claude Opus 4.8)
+* **Installer (portable tools):** Fixed portable winget detection so tools installed via portable winget are detected correctly (e.g., no more “not installed” after a successful install). (by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/397>, also co-authored by @Claude Opus 4.8)
 
 ## Internal
 
-- Updated release workflow configurations for Windows/macOS releases. (<https://github.com/ryantsai/KKTerm/compare/v0.1.92...v0.1.93>)
+* Updated release workflow configurations for Windows/macOS releases. (<https://github.com/ryantsai/KKTerm/compare/v0.1.92...v0.1.93>)
+
 * Mirrored releases through **Cloudflare** (including worker + related scripts/tests/docs).  
 * Fixed font handling on macOS, added **JetBrains Mono** as a fallback font and default on Linux.  
 * Windows: enhanced PowerShell module path handling for documents folder.  
@@ -1803,27 +1986,31 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights（重點）
 
-- 在 Release 工作流程新增 **increment_version** 選項（預設：**開啟**）—方便你在釋出時只想要「更新說明」，不想再多 bump 版本號（release-engineering 小確幸）。
+* 在 Release 工作流程新增 **increment_version** 選項（預設：**開啟**）—方便你在釋出時只想要「更新說明」，不想再多 bump 版本號（release-engineering 小確幸）。
+
 * SSH Port Forwarding 對話框改進：可編輯下拉輸入、強化建議與更新測試—少一點「那個 port 名稱叫什麼來著？」的困擾。
 
 ## New（新增）
 
-- **安裝器（Installer）：** 改善安裝助手：新增 **WSL 發行版管理員**、把 **Oh My Posh** 加到 Utilities，並修正 **portable winget 偵測**。 (by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/397>, also co-authored by @Claude Opus 4.8)
+* **安裝器（Installer）：** 改善安裝助手：新增 **WSL 發行版管理員**、把 **Oh My Posh** 加到 Utilities，並修正 **portable winget 偵測**。 (by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/397>, also co-authored by @Claude Opus 4.8)
+
 * **Release：** Release 工作流程加入 **increment_version** 選項（預設開啟）。 (by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/399>)
 
 ## Improved（改善）
 
-- **Workspace：** 讓靠泊（docked）的 **文件檢視器（Document viewer）**工具列成為全寬顯示。 (by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/398>, also co-authored by @Claude Opus 4.8)
+* **Workspace：** 讓靠泊（docked）的 **文件檢視器（Document viewer）**工具列成為全寬顯示。 (by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/398>, also co-authored by @Claude Opus 4.8)
+
 * **連線（Connections）—SSH：** 強化 SSH forwarding 欄位的可編輯下拉（包含常見 port 名稱）並改進樣式。 (by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/397>)
 * **連線（Connections）—SSH：** 實作 SSH forwarding 欄位的可編輯下拉輸入，並強化建議與測試。 (by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/397；合併過程包含實作與測試>)
 
 ## Fixed（修正）
 
-- **安裝器（Installer）：** 修正 portable winget 偵測，確保可攜式 winget 安裝的工具能被正確辨識（避免成功安裝後仍顯示「not installed」）。 (by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/397>, also co-authored by @Claude Opus 4.8)
+* **安裝器（Installer）：** 修正 portable winget 偵測，確保可攜式 winget 安裝的工具能被正確辨識（避免成功安裝後仍顯示「not installed」）。 (by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/397>, also co-authored by @Claude Opus 4.8)
 
 ## Internal（內部）
 
-- 更新 Windows/macOS 釋出用的 release 工作流程設定。 (<https://github.com/ryantsai/KKTerm/compare/v0.1.92...v0.1.93>)
+* 更新 Windows/macOS 釋出用的 release 工作流程設定。 (<https://github.com/ryantsai/KKTerm/compare/v0.1.92...v0.1.93>)
+
 * 透過 **Cloudflare** 進行 Release mirror（包含 worker、相關腳本、測試與文件）。  
 * 修正 macOS 字型處理，加入 **JetBrains Mono** 作為備援字型，並在 Linux 設為預設。  
 * Windows：強化 PowerShell 模組路徑處理（documents 資料夾）。  
@@ -1836,54 +2023,60 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights
 
-- Improved terminal font handling, including detection/normalization for monospace fonts and enhanced custom font support with refresh mechanisms (because cached glyphs are fun until they aren’t).
+* Improved terminal font handling, including detection/normalization for monospace fonts and enhanced custom font support with refresh mechanisms (because cached glyphs are fun until they aren’t).
+
 * Added font atlas refresh diagnostics for terminal renderers to help track terminal rendering font behavior (your sysadmin brain will thank you).
 
 **Full Changelog**: <https://github.com/ryantsai/KKTerm/compare/v0.1.91...v0.1.92>
 
 ## New
 
-- Font catalog enhancements: custom font support plus refresh mechanism.
+* Font catalog enhancements: custom font support plus refresh mechanism.
 
 ## Improved
 
-- Enhanced terminal font handling:
+* Enhanced terminal font handling:
   * Monospace detection and font normalization.
   * Refresh mechanism for custom fonts and terminal rendering font family updates.
+
 * Font atlas refresh mechanism and diagnostics for terminal renderers.
 
 ## Fixed
 
 ## Internal
 
-- Documentation and tests added/updated for terminal font atlas refresh, font catalog, and custom font refresh behavior.
+* Documentation and tests added/updated for terminal font atlas refresh, font catalog, and custom font refresh behavior.
+
 * Terminal/font refresh logic updates across terminal renderer and settings modules.
 
 ---
 
 ## 亮點（Highlights）
 
-- 強化終端機字型處理：包含等寬字型的偵測/正規化，以及自訂字型的支援與更新機制（字型快取有時候很香，有時候就…不太行）。
+* 強化終端機字型處理：包含等寬字型的偵測/正規化，以及自訂字型的支援與更新機制（字型快取有時候很香，有時候就…不太行）。
+
 * 為終端機渲染器加入字型圖集（font atlas）更新診斷，協助追蹤終端機字型行為（讓你的系統管理員腦袋少一點猜測）。
 
 **完整變更紀錄**：<https://github.com/ryantsai/KKTerm/compare/v0.1.91...v0.1.92>
 
 ## 新增（New）
 
-- 字型目錄（Font Catalog）強化：支援自訂字型，並加入更新機制。
+* 字型目錄（Font Catalog）強化：支援自訂字型，並加入更新機制。
 
 ## 改進（Improved）
 
-- 強化終端機字型處理：
+* 強化終端機字型處理：
   * 等寬字型偵測與字型正規化。
   * 自訂字型與終端機字型族更新的更新機制。
+
 * 終端機渲染器字型圖集更新機制與診斷。
 
 ## 修正（Fixed）
 
 ## 內部（Internal）
 
-- 更新/新增文件與測試：涵蓋終端機字型圖集更新、自訂字型更新、與字型目錄行為等測試。
+* 更新/新增文件與測試：涵蓋終端機字型圖集更新、自訂字型更新、與字型目錄行為等測試。
+
 * 終端機渲染器與設定模組中的字型更新邏輯調整。
 
 ## Direct Downloads
@@ -1893,29 +2086,32 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights
 
-- Refreshable **system font** list now appears in **App UI** and **Terminal** font pickers (so your dropdown doesn’t feel like a stale network route).
+* Refreshable **system font** list now appears in **App UI** and **Terminal** font pickers (so your dropdown doesn’t feel like a stale network route).
+
 * Improved **credential unlock** flow for **Connection** management, with clearer related error handling.
 * Status bar **notification/status popups** received updated progress styling and layout.
 
 ## New
 
-- **System font refresh dropdown** for **App UI** and **Terminal fonts**.  
+* **System font refresh dropdown** for **App UI** and **Terminal fonts**.  
   * Options are organized as: **custom fonts** → **curated list** → **detected system fonts** (with deduping).
 
 ## Improved
 
-- **Font picker wording & grouping clarity** (manual and translations updated).
+* **Font picker wording & grouping clarity** (manual and translations updated).
+
 * **System font refresh wording** clarified in the docs.
 * **Status popup** progress styling/layout updated.
 * **Notification duration behavior** adjusted as part of status bar work.
 
 ## Fixed
 
-- **Prefer English system family names** for system fonts (backend behavior).
+* **Prefer English system family names** for system fonts (backend behavior).
 
 ## Internal
 
-- Replaced WebView-only system font access with a cross-platform Rust backend approach (`list_system_fonts`) and kept caching behavior in the frontend.
+* Replaced WebView-only system font access with a cross-platform Rust backend approach (`list_system_fonts`) and kept caching behavior in the frontend.
+
 * Tests updated/refactored for status bar notice tones and popup behavior.
 * Localization cleanup: removed deprecated font-related localization keys and refreshed translations.
 * Docs updates related to system font refresh wording and settings font picker clarity.
@@ -1924,29 +2120,32 @@ All notable changes to KKTerm are documented here.
 
 ## 0.1.91 亮點
 
-- **系統字型**清單現在可在 **App UI** 與 **Terminal** 字型選單中「重新整理」——不會再像是網路路由一樣卡住不動。
+* **系統字型**清單現在可在 **App UI** 與 **Terminal** 字型選單中「重新整理」——不會再像是網路路由一樣卡住不動。
+
 * **Connection** 管理的 **憑證解鎖**流程得到強化，並改善相關錯誤處理。
 * 狀態列的 **通知/狀態彈出視窗**更新了進度顯示樣式與版面。
 
 ## 新增
 
-- **App UI** 與 **Terminal 字型**支援「系統字型重新整理」的下拉選單。  
+* **App UI** 與 **Terminal 字型**支援「系統字型重新整理」的下拉選單。  
   * 選項排序：**自訂字型** → **精選清單** → **偵測到的系統字型**（自動去除重複）。
 
 ## 改善
 
-- **字型選擇器**的文字與分組更清楚（已更新手冊與翻譯）。
+* **字型選擇器**的文字與分組更清楚（已更新手冊與翻譯）。
+
 * 文件中已釐清 **系統字型重新整理**用語。
 * 已更新 **狀態彈出視窗**的進度樣式/版面。
 * 狀態列通知相關的 **通知時間行為**一併調整。
 
 ## 修正
 
-- 系統字型偏好使用**英文 family name**（後端行為）。
+* 系統字型偏好使用**英文 family name**（後端行為）。
 
 ## 內部
 
-- 用跨平台 Rust 後端的方式取代 WebView-only 的系統字型存取（`list_system_fonts`），並維持前端快取行為。
+* 用跨平台 Rust 後端的方式取代 WebView-only 的系統字型存取（`list_system_fonts`），並維持前端快取行為。
+
 * 更新/調整測試以反映狀態列通知音色與彈出行為變更。
 * 本地化清理：移除已棄用的字型相關翻譯 key，並刷新翻譯內容。
 * 文件更新：包含系統字型重新整理用語與設定頁「字型選擇器清晰度」相關內容。
@@ -1958,48 +2157,54 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights
 
-- Dock onto all Connection tabs (no more “where did that Pane go?” surprises).
+* Dock onto all Connection tabs (no more “where did that Pane go?” surprises).
 
 ## New
 
-- Enhanced **New Workspace** dialog: added selection buttons for importing connections.
+* Enhanced **New Workspace** dialog: added selection buttons for importing connections.
+
 * Document viewer **soft wrap** with persisted state in the Session storage.
 * Terminal settings: support for **custom shell profiles** (add/edit/remove) with fallback to platform defaults when deleted.
 
 ## Improved
 
-- Terminal settings custom shell presets: improved validation for local shell command lines.
+* Terminal settings custom shell presets: improved validation for local shell command lines.
+
 * Updated localization content for custom shell settings across multiple languages.
 
 ## Fixed
 
 ## Internal
 
-- Updated asset protocol scopes for user-writable media.
+* Updated asset protocol scopes for user-writable media.
+
 * Removed outdated localization files and refreshed translations for custom shell settings.
 
 ---
 
 ## 亮點
 
-- 可以停靠到所有「Connection」分頁（不用再遇到「這個 Pane 到哪去了？」的驚嚇）。
+* 可以停靠到所有「Connection」分頁（不用再遇到「這個 Pane 到哪去了？」的驚嚇）。
 
 ## 新增
 
-- 強化 **新增工作區（New Workspace）**：加入匯入連線的選擇按鈕。
+* 強化 **新增工作區（New Workspace）**：加入匯入連線的選擇按鈕。
+
 * 文件檢視器 **文字自動換行（soft wrap）**，並將狀態存到 Session storage。
 * 終端機設定新增 **自訂 Shell 方案（custom shell profiles）**：支援新增/編輯/移除；刪除後會回退到平台預設值。
 
 ## 改善
 
-- 終端機設定的自訂 shell presets：加強本機 shell 指令列的驗證。
+* 終端機設定的自訂 shell presets：加強本機 shell 指令列的驗證。
+
 * 多語系更新：針對自訂 shell 設定的在地化內容同步更新。
 
 ## 修正
 
 ## Internal
 
-- 更新資產（asset）協定的權限範圍：針對使用者可寫入的媒體。
+* 更新資產（asset）協定的權限範圍：針對使用者可寫入的媒體。
+
 * 移除過期的在地化檔案，並刷新自訂 shell 設定相關翻譯。
 
 ## Direct Downloads
@@ -2009,26 +2214,30 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights
 
-- Prevent an **AI widget** crash caused by `localStorage` access in sandboxed **Tabs**/**Panes** (your terminal won’t faceplant just because a widget wanted to remember something).
+* Prevent an **AI widget** crash caused by `localStorage` access in sandboxed **Tabs**/**Panes** (your terminal won’t faceplant just because a widget wanted to remember something).
+
 * Improve **file viewer** usability by adding **log parser selection**, so log formats can be matched more accurately when viewing in a **Session**.
 
 ## New
 
-- Add **log parser selection** to the **file viewer**. ([#394](https://github.com/ryantsai/KKTerm/pull/394), [#392](https://github.com/ryantsai/KKTerm/pull/392), [#393](https://github.com/ryantsai/KKTerm/pull/393) via bundled work on the same release)
+* Add **log parser selection** to the **file viewer**. ([#394](https://github.com/ryantsai/KKTerm/pull/394), [#392](https://github.com/ryantsai/KKTerm/pull/392), [#393](https://github.com/ryantsai/KKTerm/pull/393) via bundled work on the same release)
 
 ## Improved
 
-- Stop truncating large custom UI fonts to ~**1 MB**, so large fonts (including CJK) display correctly instead of falling back. ([#392](https://github.com/ryantsai/KKTerm/pull/392))
+* Stop truncating large custom UI fonts to ~**1 MB**, so large fonts (including CJK) display correctly instead of falling back. ([#392](https://github.com/ryantsai/KKTerm/pull/392))
+
 * Document **MCP** and **AI assistant** behavior changes to set clearer expectations for **Dashboard Widget Instance** behavior. ([#393](https://github.com/ryantsai/KKTerm/pull/393))
 
 ## Fixed
 
-- Fix **SecurityError** crash when **AI widgets** touch `localStorage`. ([#391](https://github.com/ryantsai/KKTerm/pull/391))
+* Fix **SecurityError** crash when **AI widgets** touch `localStorage`. ([#391](https://github.com/ryantsai/KKTerm/pull/391))
+
 * Fix (fonts): stop truncating large custom UI fonts to ~**1 MB**. (Referenced in **Improved**; PR [#392](https://github.com/ryantsai/KKTerm/pull/392))
 
 ## Internal
 
-- Update asset protocol configuration for font file access and add related test. (`1efaf1d`)
+* Update asset protocol configuration for font file access and add related test. (`1efaf1d`)
+
 * Update dashboard catalog dialog styles and add related test. (`c7002f0`)
 * Refactor context usage styles for compact design and update tests for new layout. (`5f46fb5`)
 * Update log row layout to use content-sized columns in file viewer and add related test. (`0e28885`)
@@ -2040,26 +2249,30 @@ All notable changes to KKTerm are documented here.
 
 ## 特色亮點
 
-- 修正 **AI Widget** 在嘗試存取 `localStorage` 時造成的崩潰問題（讓你的終端機不要因為 Widget 想「順便記一下狀態」就當機）。
+* 修正 **AI Widget** 在嘗試存取 `localStorage` 時造成的崩潰問題（讓你的終端機不要因為 Widget 想「順便記一下狀態」就當機）。
+
 * 提升**檔案檢視器**的使用體驗：加入 **Log Parser 選擇**，讓你在**連線/Session**中查看不同格式的 log 時更貼近正確解析。
 
 ## 新功能
 
-- 為**檔案檢視器**加入 **Log Parser 選擇**。([#394](https://github.com/ryantsai/KKTerm/pull/394), [#392](https://github.com/ryantsai/KKTerm/pull/392), [#393](https://github.com/ryantsai/KKTerm/pull/393) 於本版整合的相關工作)
+* 為**檔案檢視器**加入 **Log Parser 選擇**。([#394](https://github.com/ryantsai/KKTerm/pull/394), [#392](https://github.com/ryantsai/KKTerm/pull/392), [#393](https://github.com/ryantsai/KKTerm/pull/393) 於本版整合的相關工作)
 
 ## 改善
 
-- 停止將大型自訂 UI 字型截斷到約 **1 MB**，讓大型字型（包含 CJK）能正常顯示，而不再回退到系統字型。([#392](https://github.com/ryantsai/KKTerm/pull/392))
+* 停止將大型自訂 UI 字型截斷到約 **1 MB**，讓大型字型（包含 CJK）能正常顯示，而不再回退到系統字型。([#392](https://github.com/ryantsai/KKTerm/pull/392))
+
 * 文件化 **MCP** 與 **AI assistant** 的行為變更，讓你對 **Dashboard Widget Instance** 的行為有更清楚的預期。([#393](https://github.com/ryantsai/KKTerm/pull/393))
 
 ## 修正
 
-- 修正 **AI widgets** 觸及 `localStorage` 時的 **SecurityError** 崩潰。([#391](https://github.com/ryantsai/KKTerm/pull/391))
+* 修正 **AI widgets** 觸及 `localStorage` 時的 **SecurityError** 崩潰。([#391](https://github.com/ryantsai/KKTerm/pull/391))
+
 * 修正（字型）：停止將大型自訂 UI 字型截斷到約 **1 MB**。（已在**改善**中列出；PR [#392](https://github.com/ryantsai/KKTerm/pull/392)）
 
 ## Internal
 
-- 更新資產協定設定以支援字型檔案存取，並新增相關測試。(`1efaf1d`)
+* 更新資產協定設定以支援字型檔案存取，並新增相關測試。(`1efaf1d`)
+
 * 更新 Dashboard catalog 對話框樣式並新增相關測試。(`c7002f0`)
 * 針對精簡設計重構 context usage 樣式，並更新測試以符合新佈局。(`5f46fb5`)
 * 更新檔案檢視器的 log 列佈局，改用內容大小欄位，並新增相關測試。(`0e28885`)
@@ -2145,13 +2358,15 @@ All notable changes to KKTerm are documented here.
 
 ### Highlights
 
-- Document Connections (fileView) now have a **global Status Bar** status (kind, size, per-mode facts, encoding, editable badge), so you don’t have to hunt for the right footer like it’s a lost SSH key.
+* Document Connections (fileView) now have a **global Status Bar** status (kind, size, per-mode facts, encoding, editable badge), so you don’t have to hunt for the right footer like it’s a lost SSH key.
+
 * More consistent handling when splitting panes—dragging/splitting a Document should no longer accidentally show an SFTP browser.
 
 ### New
 
-- **Credential secret store management**:
+* **Credential secret store management**:
   * Manage encrypted credential store status and **lock/unlock** behavior (including an unlock dialog).
+
 * **Document viewer upgrades** (fileView):
   * Unknown file types open in the **editable Text/Code editor**; only recognized binary containers (zip/gzip/sqlite) fall back to **read-only Hex** (still accessible from the mode switcher).
   * Add a **Font & Encoding** hamburger menu on text-based modes.
@@ -2160,18 +2375,21 @@ All notable changes to KKTerm are documented here.
 
 ### Improved
 
-- Document viewer status moved from per-Document footer into the app **global Status Bar** via a documentStatusSlot (single status surface).
+* Document viewer status moved from per-Document footer into the app **global Status Bar** via a documentStatusSlot (single status surface).
+
 * Embedded pane dispatch is guarded more exhaustively so future Pane kinds don’t silently render the wrong surface.
 
 ### Fixed
 
-- **[#386](https://github.com/ryantsai/KKTerm/pull/386)**: Fix dragging a Document onto another Pane to split by spawning an **SFTP browser**—EmbeddedConnectionPane now dispatches **fileViewer** for document splits.  
+* **[#386](https://github.com/ryantsai/KKTerm/pull/386)**: Fix dragging a Document onto another Pane to split by spawning an **SFTP browser**—EmbeddedConnectionPane now dispatches **fileViewer** for document splits.  
   Credit: @ryantsai (PR #386) and the co-author noted in the change (Claude Opus 4.8).
+
 * i18n: Traditional Chinese translation updates related to encrypted secret store and file viewer UI expectations.
 
 ### Internal
 
-- Localization: remove obsolete credential store localization files and update translations.
+* Localization: remove obsolete credential store localization files and update translations.
+
 * File viewer CSS/display assertions added/updated in tests (file explorer + viewer behavior).
 
 ---
@@ -2180,13 +2398,15 @@ All notable changes to KKTerm are documented here.
 
 ### Highlights
 
-- 文件連線（fileView）現在會把狀態集中到**全域 Status Bar**：包含 kind、size、各模式資訊、encoding、是否可編輯提示——不必再到處找文件底部 footer，就像找不到 SSH key 一樣。
+* 文件連線（fileView）現在會把狀態集中到**全域 Status Bar**：包含 kind、size、各模式資訊、encoding、是否可編輯提示——不必再到處找文件底部 footer，就像找不到 SSH key 一樣。
+
 * 分割 Pane 時的行為更一致：拖曳/分割文件時，不該再意外跳出 SFTP 瀏覽器。
 
 ### New
 
-- **憑證加密 secret store 管理**：
+* **憑證加密 secret store 管理**：
   * 管理加密憑證儲存的狀態，以及**鎖定/解鎖**行為（包含解鎖對話框）。
+
 * **文件檢視器升級**（fileView）：
   * 未知檔案類型改用**可編輯 Text/Code 編輯器**開啟；只有辨識為二進位容器（zip/gzip/sqlite）才會退回**唯讀 Hex**（仍可從模式切換器切回）。
   * 在文字模式加入**字型與編碼 Font & Encoding**「漢堡選單」。
@@ -2195,18 +2415,21 @@ All notable changes to KKTerm are documented here.
 
 ### Improved
 
-- 文件狀態從每個文件的 footer 移到 app 的**全域 Status Bar**（透過 documentStatusSlot），變成單一狀態介面。
+* 文件狀態從每個文件的 footer 移到 app 的**全域 Status Bar**（透過 documentStatusSlot），變成單一狀態介面。
+
 * Embedded pane 分派保護更完整，避免未來 Pane kind 造成「靜默渲染到錯的畫面」。
 
 ### Fixed
 
-- **[#386](https://github.com/ryantsai/KKTerm/pull/386)**：修正將文件拖到其他 Pane 以進行分割時，會**錯誤產生 SFTP 瀏覽器**的問題——EmbeddedConnectionPane 現在分割文件會正確派發 **fileViewer**。  
+* **[#386](https://github.com/ryantsai/KKTerm/pull/386)**：修正將文件拖到其他 Pane 以進行分割時，會**錯誤產生 SFTP 瀏覽器**的問題——EmbeddedConnectionPane 現在分割文件會正確派發 **fileViewer**。  
   致謝：@ryantsai（PR #386）以及該變更中註明的共同作者（Claude Opus 4.8）。
+
 * i18n：更新與加密 secret store 及文件檢視器 UI 相關的繁體中文翻譯。
 
 ### Internal
 
-- Localization：移除過時的憑證儲存本地化檔並更新翻譯。
+* Localization：移除過時的憑證儲存本地化檔並更新翻譯。
+
 * 測試：加入/更新檔案總管與檢視器行為相關的 CSS/顯示斷言。
 
 ## Direct Downloads
@@ -2216,60 +2439,70 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights
 
-- Create `Connections` faster: drop files/folders onto the **Connection Tree** to create the right **Session** types automatically (Document / File Explorer).
+* Create `Connections` faster: drop files/folders onto the **Connection Tree** to create the right **Session** types automatically (Document / File Explorer).
+
 * Dashboard data portability: **widget export/import** and **selective database export/import** for backups you can actually move around.
 
 ## New
 
-- **Connections:** Create Connections by dropping OS files/folders onto the **Connection Tree** (files → Document Connection, folders → File Explorer Connection), with drag highlighting and multi-drop. (#382, @ryantsai in <https://github.com/ryantsai/KKTerm/pull/385> — also references the earlier #382 work)
+* **Connections:** Create Connections by dropping OS files/folders onto the **Connection Tree** (files → Document Connection, folders → File Explorer Connection), with drag highlighting and multi-drop. (#382, @ryantsai in <https://github.com/ryantsai/KKTerm/pull/385> — also references the earlier #382 work)
+
 * **Dashboard:** Widget export/import (`.kkwidget` JSON) and selective database export/import (`.kkbackup`).  
   (#378 reported by @Androwei; PR <https://github.com/ryantsai/KKTerm/pull/381>)
 
 ## Improved
 
-- **Document viewer:** Redesign with a unified toolbar and a status footer. (<https://github.com/ryantsai/KKTerm/pull/384>)
+* **Document viewer:** Redesign with a unified toolbar and a status footer. (<https://github.com/ryantsai/KKTerm/pull/384>)
+
 * **Installer Helper:** House-style redesign of the Installer Helper page, plus folding its footer status into the global status bar. (<https://github.com/ryantsai/KKTerm/pull/373>, <https://github.com/ryantsai/KKTerm/pull/380>)
 * **Document/File viewer:** Introduced a redesigned universal file viewer analysis and supporting UI/docs updates. (<https://github.com/ryantsai/KKTerm/pull/374>)
 * **Docs:** Fix stale references across README, ROADMAP, CONTRIBUTING, ADRs, and manual. (<https://github.com/ryantsai/KKTerm/pull/379>)
 
 ## Fixed
 
-- **Installer Helper footer:** Folded the Installer Helper footer into the global status bar to avoid duplicate status lines. (<https://github.com/ryantsai/KKTerm/pull/380>)
+* **Installer Helper footer:** Folded the Installer Helper footer into the global status bar to avoid duplicate status lines. (<https://github.com/ryantsai/KKTerm/pull/380>)
+
 * **i18n:** Corrected traditional Chinese translations for error messages. (sha `d0845ae`)
 
 ## Internal
 
-- Added tests/guardrails around new behaviors (including Install Helper localization coverage and local files connection drop).
+* Added tests/guardrails around new behaviors (including Install Helper localization coverage and local files connection drop).
+
 * Various docs/localization maintenance and cleanup of obsolete localization files.
 
 ---
 
 ## Highlights（重點）
 
-- 更快建立 `Connections`：把檔案/資料夾拖放到 **Connection Tree**，系統會自動建立符合的 **Session** 類型（文件 / 檔案總管）。
+* 更快建立 `Connections`：把檔案/資料夾拖放到 **Connection Tree**，系統會自動建立符合的 **Session** 類型（文件 / 檔案總管）。
+
 * Dashboard 資料可攜性：**Widget 匯出/匯入**與**選擇性資料庫匯出/匯入**，讓備份更好搬家。
 
 ## New（新增）
 
-- **Connections：** 透過把作業系統的檔案/資料夾拖放到 **Connection Tree** 來建立 Connections（檔案 → 文件連線、資料夾 → 檔案總管連線），支援拖曳高亮與一次丟多個。 (#382, @ryantsai in <https://github.com/ryantsai/KKTerm/pull/385> — 也延續先前 #382 的工作)
+* **Connections：** 透過把作業系統的檔案/資料夾拖放到 **Connection Tree** 來建立 Connections（檔案 → 文件連線、資料夾 → 檔案總管連線），支援拖曳高亮與一次丟多個。 (#382, @ryantsai in <https://github.com/ryantsai/KKTerm/pull/385> — 也延續先前 #382 的工作)
+
 * **Dashboard：** Widget 匯出/匯入（`.kkwidget` JSON）與選擇性資料庫匯出/匯入（`.kkbackup`）。  
   （#378 由 @Androwei 提出；PR <https://github.com/ryantsai/KKTerm/pull/381）>
 
 ## Improved（改進）
 
-- **文件檢視器：** 統一工具列 + 狀態頁尾重新設計。 (<https://github.com/ryantsai/KKTerm/pull/384>)
+* **文件檢視器：** 統一工具列 + 狀態頁尾重新設計。 (<https://github.com/ryantsai/KKTerm/pull/384>)
+
 * **Installer Helper：** Installer Helper 版面 house-style 重新設計，並把其頁尾狀態折疊到全域狀態列。 (<https://github.com/ryantsai/KKTerm/pull/373>, <https://github.com/ryantsai/KKTerm/pull/380>)
 * **文件/檔案檢視：** 通用檔案檢視器（含輕量編輯）分析的重新整理與配套 UI/文件更新。 (<https://github.com/ryantsai/KKTerm/pull/374>)
 * **文件：** 修正 README、ROADMAP、CONTRIBUTING、ADRs 與手冊中的過期引用。 (<https://github.com/ryantsai/KKTerm/pull/379>)
 
 ## Fixed（修正）
 
-- **Installer Helper 頁尾：** 把 Installer Helper 頁尾狀態整合到全域狀態列，避免重複的狀態列顯示。 (<https://github.com/ryantsai/KKTerm/pull/380>)
+* **Installer Helper 頁尾：** 把 Installer Helper 頁尾狀態整合到全域狀態列，避免重複的狀態列顯示。 (<https://github.com/ryantsai/KKTerm/pull/380>)
+
 * **i18n：** 修正錯誤訊息的繁體中文翻譯。 (sha `d0845ae`)
 
 ## Internal（內部）
 
-- 新行為的測試與防呆機制（例如 Install Helper 翻譯完整性測試、以及本機檔案拖放建立 Connections 的測試）。
+* 新行為的測試與防呆機制（例如 Install Helper 翻譯完整性測試、以及本機檔案拖放建立 Connections 的測試）。
+
 * 各種文件/在地化維護與清理既有的過期在地化檔。
 
 ## Direct Downloads
@@ -2279,13 +2512,15 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights
 
-- **Status bar polish:** Anchor the assistant working spinner to the right of the status bar (no more center-screen “mystery spinner”).
+* **Status bar polish:** Anchor the assistant working spinner to the right of the status bar (no more center-screen “mystery spinner”).
+
 * **URL Connection reliability:** Stop native WebView status notice popups from being clipped behind the embedded browser.
 * **SFTP Pane controls:** Add **per-pane view-options** (zoom + content-view background) for each file pane in an SFTP/FTP Connection.
 
 ## New
 
-- **Dashboard:** **Export & import AI widgets** — export a single custom widget, **Export All**, or **Import** portable `.kkwidget` files from the Add Widget popup. Import is additive and never overwrites existing widgets. ([#378](https://github.com/ryantsai/KKTerm/issues/378))
+* **Dashboard:** **Export & import AI widgets** — export a single custom widget, **Export All**, or **Import** portable `.kkwidget` files from the Add Widget popup. Import is additive and never overwrites existing widgets. ([#378](https://github.com/ryantsai/KKTerm/issues/378))
+
 * **Settings (Data):** **Selective export/import** — choose which categories (Connections, Workspaces, Dashboards & Widgets, Settings, MCP servers) to put in a `.kkbackup` file, with per-category **Skip / Add / Replace** on import. Sharing Connections **excludes passwords by default**; opt-in passwords are passphrase-encrypted. ([#378](https://github.com/ryantsai/KKTerm/issues/378))
 * **SFTP:** Per-pane view-options menu (item zoom + content-view background) for Dashboard Widget Instance-style pane UX—each pane can look different and keeps its own settings. ([#372](https://github.com/ryantsai/KKTerm/pull/372) — by @ryantsai)
 * **Installer:** Add **Git for Windows** to the **Development** section. ([#365](https://github.com/ryantsai/KKTerm/pull/365) — by @ryantsai)
@@ -2293,7 +2528,8 @@ All notable changes to KKTerm are documented here.
 
 ## Improved
 
-- **Dashboard AI Widgets:** More deterministic widget creation via a deterministic source normalizer + placeholder guard. ([#363](https://github.com/ryantsai/KKTerm/pull/363) — by @ryantsai)
+* **Dashboard AI Widgets:** More deterministic widget creation via a deterministic source normalizer + placeholder guard. ([#363](https://github.com/ryantsai/KKTerm/pull/363) — by @ryantsai)
+
 * **Connection (Terminal):** Persist the terminal toolbar font size across launches. ([#367](https://github.com/ryantsai/KKTerm/pull/367) — by @ryantsai)
 * **SFTP/Recents UI:** Refine recents list and soften popover shadows for a cleaner look. ([#369](https://github.com/ryantsai/KKTerm/pull/369) — by @ryantsai)
 * **URL Connections:** Generalize “Save password” to full **form-data** capture/restore (text inputs, selects, checkboxes/radios, etc.). ([#371](https://github.com/ryantsai/KKTerm/pull/371) — by @ryantsai)
@@ -2301,14 +2537,16 @@ All notable changes to KKTerm are documented here.
 
 ## Fixed
 
-- **Status bar:** Anchor assistant working spinner to the right of the status bar. ([#362](https://github.com/ryantsai/KKTerm/pull/362) — by @ryantsai)
+* **Status bar:** Anchor assistant working spinner to the right of the status bar. ([#362](https://github.com/ryantsai/KKTerm/pull/362) — by @ryantsai)
+
 * **URL Connection:** Stop native browser from clipping status notice popups. ([#364](https://github.com/ryantsai/KKTerm/pull/364) — by @ryantsai)
 * **UI (SOCKS proxy fields):** Enable SOCKS proxy fields based on the displayed SOCKS server value. (by commit `aca6d2a`)
 * **URL Connection:** Status notices now render above the native surface when active (no more “behind the WebView” notices). (by commit `ff32dfa`)
 
 ## Internal
 
-- **GitHub repo hygiene:** Add project PR template. ([#370](https://github.com/ryantsai/KKTerm/pull/370) — by @ryantsai)
+* **GitHub repo hygiene:** Add project PR template. ([#370](https://github.com/ryantsai/KKTerm/pull/370) — by @ryantsai)
+
 * **Webview/overlay work:** Improve Windows overlay handling by stripping non-client chrome and adding configuration + tests. (by commits `bf33d8f`, `561e800`, `71596af`)
 * **Logging:** Add URL Connection debug logging, plus SSH debug logging for connection events/errors. (by commits `1b9e3e1`, `03ff876`)
 * **RDP:** Enhance debug logging for connection lifecycle and payloads. (by commit `b703082`)
@@ -2320,19 +2558,22 @@ All notable changes to KKTerm are documented here.
 
 ## 亮點（Highlights）
 
-- **狀態列微調：** 將助理運作中的 spinner 固定在狀態列最右側（不再跑到畫面中央當迷你占位符）。
+* **狀態列微調：** 將助理運作中的 spinner 固定在狀態列最右側（不再跑到畫面中央當迷你占位符）。
+
 * **URL 連線可靠性：** 停止原生 WebView 的狀態通知彈窗被剪裁到嵌入式瀏覽器後面。
 * **SFTP 分頁控制：** 為每個檔案 Pane 新增 **每 Pane 的檢視選項**（縮放 + 內容背景），在 SFTP/FTP Connection 裡可分別設定。
 
 ## 新增（New）
 
-- **SFTP：** 每 Pane 的檢視選單（項目縮放 + content-view 背景），讓每個檔案 Pane 的外觀可彼此不同，並保留其設定。([#372](https://github.com/ryantsai/KKTerm/pull/372) — by @ryantsai)
+* **SFTP：** 每 Pane 的檢視選單（項目縮放 + content-view 背景），讓每個檔案 Pane 的外觀可彼此不同，並保留其設定。([#372](https://github.com/ryantsai/KKTerm/pull/372) — by @ryantsai)
+
 * **安裝程式：** 將 **Git for Windows** 移到 **Development** 區塊。([#365](https://github.com/ryantsai/KKTerm/pull/365) — by @ryantsai)
 * **安裝程式：** 讓 BentoPDF 的 **NSSM service helper** 改為 **按需安裝**。([#366](https://github.com/ryantsai/KKTerm/pull/366) — by @ryantsai)
 
 ## 改進（Improved）
 
-- **Dashboard AI Widgets：** 用「確定性」方式提升小工具建立：確定性 source normalizer + placeholder guard。([#363](https://github.com/ryantsai/KKTerm/pull/363) — by @ryantsai)
+* **Dashboard AI Widgets：** 用「確定性」方式提升小工具建立：確定性 source normalizer + placeholder guard。([#363](https://github.com/ryantsai/KKTerm/pull/363) — by @ryantsai)
+
 * **Connection（終端機）：** 終端機工具列字型大小可跨啟動保存。([#367](https://github.com/ryantsai/KKTerm/pull/367) — by @ryantsai)
 * **SFTP/最近使用清單 UI：** 精煉最近清單並柔化彈出視窗陰影。([#369](https://github.com/ryantsai/KKTerm/pull/369) — by @ryantsai)
 * **URL Connections：** 「儲存密碼」改為支援完整 **form-data** 擷取/還原（文字輸入、選單、checkbox/radio 等）。([#371](https://github.com/ryantsai/KKTerm/pull/371) — by @ryantsai)
@@ -2340,14 +2581,16 @@ All notable changes to KKTerm are documented here.
 
 ## 修正（Fixed）
 
-- **狀態列：** 將助理運作中的 spinner 固定在狀態列最右側。([#362](https://github.com/ryantsai/KKTerm/pull/362) — by @ryantsai)
+* **狀態列：** 將助理運作中的 spinner 固定在狀態列最右側。([#362](https://github.com/ryantsai/KKTerm/pull/362) — by @ryantsai)
+
 * **URL 連線：** 停止原生瀏覽器剪裁狀態通知彈窗。([#364](https://github.com/ryantsai/KKTerm/pull/364) — by @ryantsai)
 * **UI（SOCKS proxy 欄位）：** 依照畫面上顯示的 SOCKS server 值啟用 SOCKS proxy 欄位。([由 commit `aca6d2a`）
 * **URL 連線：** 啟用狀態通知時，通知會在原生表面之上顯示（不再被 WebView 遮住）。([由 commit `ff32dfa`)
 
 ## 內部（Internal）
 
-- **GitHub：** 新增專案 PR 範本。([#370](https://github.com/ryantsai/KKTerm/pull/370) — by @ryantsai)
+* **GitHub：** 新增專案 PR 範本。([#370](https://github.com/ryantsai/KKTerm/pull/370) — by @ryantsai)
+
 * **Webview/overlay：** 改善 Windows overlay 處理（移除非 client chrome、加入設定）並附測試。([由 commits `bf33d8f`, `561e800`, `71596af`）
 * **Logging：** 新增 URL Connection debug logging，以及 SSH 連線事件/錯誤的 debug logging。([由 commits `1b9e3e1`, `03ff876`）
 * **RDP：** 強化連線生命週期與 payload 的除錯記錄。([由 commit `b703082`）
@@ -2364,27 +2607,29 @@ All notable changes to KKTerm are documented here.
 
 ### Highlights
 
-- **RDP reliability fix:** Stop the status notice popup from “parking” the RDP Session so the remote desktop shows up again.
+* **RDP reliability fix:** Stop the status notice popup from “parking” the RDP Session so the remote desktop shows up again.
+
 * **Connection UI polish:** Better inheritance for child connection icons and improved SSH OS icon detection.
 
 ### New
 
-- None.
+* None.
 
 ### Improved
 
-- **Child Connection icons:** Child connection Tabs can inherit parent icons (rather than snapshotting), while keeping explicit icon overrides during parent metadata refresh.
+* **Child Connection icons:** Child connection Tabs can inherit parent icons (rather than snapshotting), while keeping explicit icon overrides during parent metadata refresh.
+
 * **SSH OS icon detection:** Mark SSH OS icon detection as complete after one established probe attempt.
 * **Icon styling:** Update connection icon backgrounds to use rounded rectangles instead of circular badges.
 
 ### Fixed
 
-- **RDP:** Prevent the status notice popup from permanently blocking the RDP ActiveX surface visibility (stop overlay “sticking” off-screen), fixing the case where the remote desktop never returns.
+* **RDP:** Prevent the status notice popup from permanently blocking the RDP ActiveX surface visibility (stop overlay “sticking” off-screen), fixing the case where the remote desktop never returns.
   * PR #361 by @ryantsai (claude/rdp-popup-visibility-s4y8no) — <https://github.com/ryantsai/KKTerm/pull/361>
 
 ### Internal
 
-- None.
+* None.
 
 ---
 
@@ -2392,27 +2637,29 @@ All notable changes to KKTerm are documented here.
 
 ### 重點
 
-- **RDP 穩定性修正：** 修正狀態提示視窗把 RDP Session「停車」住的問題，讓遠端桌面能再次正常顯示。
+* **RDP 穩定性修正：** 修正狀態提示視窗把 RDP Session「停車」住的問題，讓遠端桌面能再次正常顯示。
+
 * **連線介面微調：** 改善子連線分頁的圖示繼承，以及 SSH 作業系統圖示偵測。
 
 ### 新增
 
-- 無。
+* 無。
 
 ### 改善
 
-- **子連線圖示：** 子連線 Tab 會繼承父層圖示（不再是快照），且在父層中繼資料更新時會保留明確指定的圖示覆寫。
+* **子連線圖示：** 子連線 Tab 會繼承父層圖示（不再是快照），且在父層中繼資料更新時會保留明確指定的圖示覆寫。
+
 * **SSH 作業系統圖示偵測：** 當完成一次已建立的探測嘗試後，將 SSH OS 圖示偵測標記為完成。
 * **圖示樣式：** 連線圖示背景改用圓角矩形，而不是圓形徽章。
 
 ### 修正
 
-- **RDP：** 修正狀態提示視窗造成 RDP ActiveX 表面長期被遮住/被「停車」導致遠端桌面不再回來顯示的情況。
+* **RDP：** 修正狀態提示視窗造成 RDP ActiveX 表面長期被遮住/被「停車」導致遠端桌面不再回來顯示的情況。
   * PR #361 by @ryantsai（claude/rdp-popup-visibility-s4y8no）— <https://github.com/ryantsai/KKTerm/pull/361>
 
 ### Internal
 
-- 無。
+* 無。
 
 ## Direct Downloads
 
@@ -2421,25 +2668,28 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights
 
-- **SSH Connections**: You can now set a **double-click requirement** for opening Connections via the Workspace setting `doubleClickOpensConnection`.
+* **SSH Connections**: You can now set a **double-click requirement** for opening Connections via the Workspace setting `doubleClickOpensConnection`.
+
 * **SSH SOCKS proxy**: Add **authenticated SOCKS SSH proxy support** and make the SOCKS proxy handling **native** (no more external `ssh + nc` dance).
 * **Connections tree reliability**: Selection/opening in the Connection tree is more consistent—click targets cover the whole row, and double-click behavior is respected for child Connections.
 * **URL Connection UI cleanup**: The URL Connection browser has been redesigned with an Apple-esque File Explorer-like UI, and the **status footer** was removed.
 
 ## New
 
-- **Workspace setting `doubleClickOpensConnection`**: Require double-click to open Connections (instead of single-click). ([@ryantsai](https://github.com/ryantsai/KKTerm) in #346)
+* **Workspace setting `doubleClickOpensConnection`**: Require double-click to open Connections (instead of single-click). ([@ryantsai](https://github.com/ryantsai/KKTerm) in #346)
 
 ## Improved
 
-- **Native, cross-platform SSH SOCKS proxy** with fixes to migration/readback and ensured proxy coverage. (PR #340)
+* **Native, cross-platform SSH SOCKS proxy** with fixes to migration/readback and ensured proxy coverage. (PR #340)
+
 * **SSH remote OS icon auto-detection**: better detection across more Unix-like systems and correct distro/OS icon mapping. (PR #348)
 * **URL Connection browser** redesigned to a File Explorer Apple-esque UI. (PR #350)
 * **Connection selection click behavior**: tree row is now the click target for selection. (PR #355)
 
 ## Fixed
 
-- **AI settings secret-save failures** are now clarified so credential save issues don’t silently abort the rest of the save. (PR #338, reported/author: @ryantsai)
+* **AI settings secret-save failures** are now clarified so credential save issues don’t silently abort the rest of the save. (PR #338, reported/author: @ryantsai)
+
 * **Gemini AI provider settings validation** fix. (PR #347)
 * **Gemini & NVIDIA AI providers** now use **Chat Completions** for compatibility. (PR #353)
 * **Connections tree click reliability amid drag detection** improved. (PR #352)
@@ -2454,7 +2704,8 @@ All notable changes to KKTerm are documented here.
 
 ## Internal
 
-- **MCP tools catalog**: share one tool catalog and expand the built-in MCP surface. (PR #333)
+* **MCP tools catalog**: share one tool catalog and expand the built-in MCP surface. (PR #333)
+
 * **Update localization for SSH SOCKS proxy** strings/hints across multiple languages. (PR #340 / related work; short SHA: d2c603c)
 * **Test reliability**: fixes to make backend tests pass across platforms. (PR #340; includes PR review-related work)
 * **Other internal UI polish / styling work** (e.g., status notice popup tones/animations). (PR #357, PR #336 reviewed work)
@@ -2464,25 +2715,28 @@ All notable changes to KKTerm are documented here.
 
 ## 重點
 
-- **SSH 連線（Connection）**：新增 Workspace 設定 `doubleClickOpensConnection`，可改為需要**雙擊**才會開啟 Connection。
+* **SSH 連線（Connection）**：新增 Workspace 設定 `doubleClickOpensConnection`，可改為需要**雙擊**才會開啟 Connection。
+
 * **SSH SOCKS Proxy**：加入**支援驗證（authenticated）的 SOCKS SSH Proxy**，並讓 SOCKS Proxy 處理改為**原生（native）**（不用再做 `ssh + nc` 那種外部指揮操作）。
 * **Connection 樹狀清單可靠度**：選取/開啟行為更一致——整列都可點選、且子 Connection 會正確遵循雙擊規則。
 * **URL Connection 瀏覽器**：重新設計為類 File Explorer 的 Apple 風格 UI，並移除 **狀態頁尾（status footer）**。
 
 ## 新增
 
-- **Workspace 設定 `doubleClickOpensConnection`**：啟用後需雙擊才能開啟 Connections（取代單擊開啟）。（#346，[@ryantsai](https://github.com/ryantsai/KKTerm)）
+* **Workspace 設定 `doubleClickOpensConnection`**：啟用後需雙擊才能開啟 Connections（取代單擊開啟）。（#346，[@ryantsai](https://github.com/ryantsai/KKTerm)）
 
 ## 改進
 
-- **原生且跨平台的 SSH SOCKS Proxy**，並修正 migration/readback 相關問題，且確保 proxy 作用範圍一致。 （#340）
+* **原生且跨平台的 SSH SOCKS Proxy**，並修正 migration/readback 相關問題，且確保 proxy 作用範圍一致。 （#340）
+
 * **SSH 遠端作業系統（remote OS）圖示自動偵測**：涵蓋更多類 Unix 系統，並正確套用 distro/OS 圖示。 （#348）
 * **URL Connection 瀏覽器**改版：採用類 File Explorer 的 Apple-esque UI。 （#350）
 * **Connection 選取點擊範圍**：樹狀清單的整列都可作為選取點擊目標。 （#355）
 
 ## 修正
 
-- **AI 設定祕鑰（secret）儲存失敗**：現在會提供更清楚的錯誤回饋，避免儲存失敗時整批儲存被靜默中止。 （#338，回報/作者：@ryantsai）
+* **AI 設定祕鑰（secret）儲存失敗**：現在會提供更清楚的錯誤回饋，避免儲存失敗時整批儲存被靜默中止。 （#338，回報/作者：@ryantsai）
+
 * **Gemini AI provider 設定驗證**修正。 （#347）
 * **Gemini & NVIDIA AI provider**：改用 **Chat Completions** 以提升相容性。 （#353）
 * **Connection 樹狀清單**：拖曳偵測干擾點擊的情況修正。 （#352）
@@ -2497,7 +2751,8 @@ All notable changes to KKTerm are documented here.
 
 ## Internal
 
-- **MCP 工具目錄（tool catalog）**：共用單一工具目錄並擴充內建 MCP surface。 （#333）
+* **MCP 工具目錄（tool catalog）**：共用單一工具目錄並擴充內建 MCP surface。 （#333）
+
 * **SSH SOCKS Proxy 多語系在地化更新**（strings/hints）。 （#340 相關工作；short SHA：d2c603c）
 * **測試可靠度**：修正後端測試讓其能跨平台通過。 （#340；包含 PR review 相關工作）
 * **其他內部 UI 佈景/樣式**（例如狀態提示（status notice）語氣與動畫）。 （#357、#336 相關 review 工作）
@@ -2510,23 +2765,27 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights
 
-- **Drag-and-drop docking for Connection layouts**: drop a Connection onto the Workspace Canvas and dock it with an animated overlay.
+* **Drag-and-drop docking for Connection layouts**: drop a Connection onto the Workspace Canvas and dock it with an animated overlay.
+
 * **File Browser polish**: Explorer sidebar improvements, including collapsible sections and current-folder search.
 * **Docking fixes for SFTP / FTP / Pane behavior**: docked/saved SFTP panes now rehydrate as file browsers, and embedded file-browser panes correctly fill their space (no more “half-empty Split Cell” vibes).
 
 ## New
 
-- **Drag-and-drop docking for connection layouts** (PR #329, by @ryantsai / Claude Opus 4.8): drag a Connection from the Connection Tree onto the Workspace Canvas to dock and split Panes; dropping on empty canvas opens a new Tab.
+* **Drag-and-drop docking for connection layouts** (PR #329, by @ryantsai / Claude Opus 4.8): drag a Connection from the Connection Tree onto the Workspace Canvas to dock and split Panes; dropping on empty canvas opens a new Tab.
+
 * **Collapsible explorer sidebar + current-folder search** (PR #326, by @ryantsai / Claude Opus 4.8): Finder/Explorer-style sidebar with Favorites, Common, Locations, plus a search box scoped to the current folder.
 
 ## Improved
 
-- **File Browser remote search, status bar, connected explorer, and icon fixes** (PR #328, by @ryantsai / Claude Opus 4.8)
+* **File Browser remote search, status bar, connected explorer, and icon fixes** (PR #328, by @ryantsai / Claude Opus 4.8)
+
 * **Explorer sidebar adjustments**: rename “Common Folders” → “Common”, favorites drop-to-add, and remove the incorrect hide/show hover hint (PR #327, by @ryantsai / Claude Opus 4.8)
 
 ## Fixed
 
-- **Settings dialog height**: fixed 80% height so it doesn’t over-stretch on larger screens (PR #323, by @ryantsai / Claude Opus 4.8)
+* **Settings dialog height**: fixed 80% height so it doesn’t over-stretch on larger screens (PR #323, by @ryantsai / Claude Opus 4.8)
+
 * **Icon Search layout**: keep the icon-search input beside the magnifier (PR #325, by @ryantsai / Claude Opus 4.8)
 * **Connection tree icon alignment & search consistency** (PR #324, by @ryantsai / Claude Opus 4.8)
 * **Dock overlay alignment with panes**: dragging to dock now highlights the correct Pane target (PR #330, by @ryantsai / Claude Opus 4.8)
@@ -2535,7 +2794,8 @@ All notable changes to KKTerm are documented here.
 
 ## Internal
 
-- docs(linux): Linux/AppImage port plan + manual-trigger release CD (PR #322, by @ryantsai / Claude Opus 4.8)
+* docs(linux): Linux/AppImage port plan + manual-trigger release CD (PR #322, by @ryantsai / Claude Opus 4.8)
+
 * i18n updates (including Traditional Chinese consistency) and various translation/localization follow-ups (e.g., i18n changes for settings/UI strings)
 * Test coverage and docs updates related to docking and file-browser/Panes behavior
 * Linux packaging/release-script and updater-related internal improvements
@@ -2545,23 +2805,27 @@ All notable changes to KKTerm are documented here.
 
 ## 精選重點
 
-- **支援拖放停靠（Connection 佈局）**：把 Connection 從 Connection Tree 拖到 Workspace Canvas，並在停靠時顯示動畫提示。
+* **支援拖放停靠（Connection 佈局）**：把 Connection 從 Connection Tree 拖到 Workspace Canvas，並在停靠時顯示動畫提示。
+
 * **檔案瀏覽器細節打磨**：Explorer 側欄調整、可折疊區塊與「目前資料夾」搜尋。
 * **Docking 相關修正（SFTP / FTP / Pane 行為）**：停靠/儲存後的 SFTP Pane 現會正確以「檔案瀏覽器」重新載入，且內嵌的檔案瀏覽器子 Pane 會填滿空間（終於不再出現 Split Cell 像半碗空氣的情況）。
 
 ## 新增
 
-- **拖放停靠 Connection 佈局**（PR #329，@ryantsai / Claude Opus 4.8）：把 Connection 從 Connection Tree 拖到 Workspace Canvas 來停靠與分割 Pane；拖到空白區則會開啟新的 Tab。
+* **拖放停靠 Connection 佈局**（PR #329，@ryantsai / Claude Opus 4.8）：把 Connection 從 Connection Tree 拖到 Workspace Canvas 來停靠與分割 Pane；拖到空白區則會開啟新的 Tab。
+
 * **可折疊的瀏覽器側欄 + 目前資料夾搜尋**（PR #326，@ryantsai / Claude Opus 4.8）：Finder/Explorer 風格側欄（Favorites / Common / Locations），並提供僅針對目前資料夾的搜尋框。
 
 ## 改進
 
-- **檔案瀏覽器：遠端搜尋、狀態列、已連線的 Explorer 與圖示修正**（PR #328，@ryantsai / Claude Opus 4.8）
+* **檔案瀏覽器：遠端搜尋、狀態列、已連線的 Explorer 與圖示修正**（PR #328，@ryantsai / Claude Opus 4.8）
+
 * **Explorer 側欄調整**：把「Common Folders」改為「Common」、Favorites 支援拖曳放入新增，以及移除錯誤的隱藏/顯示懸浮提示（PR #327，@ryantsai / Claude Opus 4.8）
 
 ## 修正
 
-- **設定視窗高度**：固定為 80% 高度，避免大螢幕上過度拉高（PR #323，@ryantsai / Claude Opus 4.8）
+* **設定視窗高度**：固定為 80% 高度，避免大螢幕上過度拉高（PR #323，@ryantsai / Claude Opus 4.8）
+
 * **圖示搜尋配置**：讓 icon-search 輸入框維持在放大鏡**旁邊**（PR #325，@ryantsai / Claude Opus 4.8）
 * **連線樹（Connection tree）圖示對齊與搜尋一致性**（PR #324，@ryantsai / Claude Opus 4.8）
 * **拖放停靠覆蓋層（Dock overlay）對齊 Pane**：拖曳停靠時的高亮現在會對到正確的目標 Pane（PR #330，@ryantsai / Claude Opus 4.8）
@@ -2570,7 +2834,8 @@ All notable changes to KKTerm are documented here.
 
 ## Internal
 
-- docs(linux)：Linux/AppImage 佈署計畫 + 手動觸發的釋出 CD（PR #322，@ryantsai / Claude Opus 4.8）
+* docs(linux)：Linux/AppImage 佈署計畫 + 手動觸發的釋出 CD（PR #322，@ryantsai / Claude Opus 4.8）
+
 * 多國語系（含繁中一致性）與各種在地化/翻譯後續整理（例如設定/介面字串）
 * 與拖放停靠、檔案瀏覽器與 Pane 行為相關的測試與文件更新
 * Linux 打包/釋出腳本與更新器（updater）相關內部改進
@@ -2583,31 +2848,35 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights
 
-- Redesigned the Quick Commands dialogs to better match KKTerm’s design language (Manage / Add/Edit / Library).
+* Redesigned the Quick Commands dialogs to better match KKTerm’s design language (Manage / Add/Edit / Library).
+
 * Updated Settings dialog styling: colored navigation icons, tighter typography, and a narrower dialog layout.
 * Disabled autocorrect for technical inputs (so your commands stay command-like, not “helpfully” mangled).
 * Fixed Delete Workspace confirmation so it uses the shared `ConfirmSheet` (danger tone) and renders consistently.
 
 ## New
 
-- Improved workspace icon functionality and styling (including icon catalog utilities and icon color/selection support in workspace properties).
+* Improved workspace icon functionality and styling (including icon catalog utilities and icon color/selection support in workspace properties).
 
 ## Improved
 
-- Settings: grouped related settings rows and improved overall layout for readability; includes Windows performance settings visibility improvements.
+* Settings: grouped related settings rows and improved overall layout for readability; includes Windows performance settings visibility improvements.
+
 * Connections/Terminal UI polish:
   * Added styles for the Connection Session toggle and connection dialog input button height.
   * Updated box-shadow for the active session hint for improved visibility.
 
 ## Fixed
 
-- Workspace: Use `ConfirmSheet` for Delete Workspace dialog (PR #321 by @ryantsai).
+* Workspace: Use `ConfirmSheet` for Delete Workspace dialog (PR #321 by @ryantsai).
+
 * Quick Commands dialogs now follow the shared dialog kit styling language more consistently (PR #318 by @ryantsai).
 * Settings dialog redesign improvements (PR #320 by @ryantsai).
 
 ## Internal
 
-- Enforced dialog footer policy by banning the dead `connection-dialog-footer` class and locking Delete Workspace to `ConfirmSheet` via a guard test.
+* Enforced dialog footer policy by banning the dead `connection-dialog-footer` class and locking Delete Workspace to `ConfirmSheet` via a guard test.
+
 * Added tests for material icon catalog utilities and related icon picker behavior.
 * Updated input autocorrect policy test coverage for technical inputs.
 
@@ -2615,31 +2884,35 @@ All notable changes to KKTerm are documented here.
 
 ## 亮點
 
-- 重新設計了「快速指令（Quick Commands）」的對話框，讓 Manage / Add/Edit / Library 更符合 KKTerm 的設計語言。
+* 重新設計了「快速指令（Quick Commands）」的對話框，讓 Manage / Add/Edit / Library 更符合 KKTerm 的設計語言。
+
 * 更新了「設定（Settings）」對話框的視覺風格：彩色導覽圖示、更緊湊的字體排版，以及更窄的對話框版面。
 * 已針對技術輸入停用自動修正，讓你的指令別被「好心」改到面目全非。
 * 修正「刪除 Workspace」的確認流程：改用共用的 `ConfirmSheet`（danger 樣式），並確保呈現一致。
 
 ## 新功能
 
-- 強化 Workspace 圖示的功能與樣式（包含圖示目錄工具，並支援在 Workspace 屬性中選擇圖示顏色／圖示）。
+* 強化 Workspace 圖示的功能與樣式（包含圖示目錄工具，並支援在 Workspace 屬性中選擇圖示顏色／圖示）。
 
 ## 改進
 
-- 設定：將相關設定列做更好的分組，並改善整體版面可讀性；同時包含對 Windows 效能設定可見性的改進。
+* 設定：將相關設定列做更好的分組，並改善整體版面可讀性；同時包含對 Windows 效能設定可見性的改進。
+
 * 連線／終端（Connections/Terminal）介面微調：
   * 為「連線 Session 切換（Connection Session toggle）」以及連線對話框的輸入按鈕高度新增樣式。
   * 更新「作用中的 Session」提示的 box-shadow，提升可視性。
 
 ## 修正
 
-- Workspace：將「刪除 Workspace」確認對話框改為使用 `ConfirmSheet`（danger tone）。（PR #321，作者 @ryantsai）
+* Workspace：將「刪除 Workspace」確認對話框改為使用 `ConfirmSheet`（danger tone）。（PR #321，作者 @ryantsai）
+
 * 「快速指令」對話框現在更一致地套用共用對話框套件（PR #318，作者 @ryantsai）。
 * 設定對話框重新設計相關改進（PR #320，作者 @ryantsai）。
 
 ## 內部
 
-- 透過測試強化對話框頁尾政策：禁止已失效的 `connection-dialog-footer` 類別，並用守護測試確保「刪除 Workspace」固定走 `ConfirmSheet`。
+* 透過測試強化對話框頁尾政策：禁止已失效的 `connection-dialog-footer` 類別，並用守護測試確保「刪除 Workspace」固定走 `ConfirmSheet`。
+
 * 新增「材質圖示目錄（material icon catalog）」相關測試，以及圖示選擇器行為測試。
 * 更新技術輸入停用自動修正的政策測試覆蓋範圍。
 
@@ -2650,26 +2923,30 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights
 
-- Redesigned SFTP browser + connection dialogs using the Apple/Finder-inspired design language (plus follow-up fixes to titlebar height, Finder glyphs, toolbar layout, and field styling).
+* Redesigned SFTP browser + connection dialogs using the Apple/Finder-inspired design language (plus follow-up fixes to titlebar height, Finder glyphs, toolbar layout, and field styling).
+
 * Added local **File Explorer** connection type and introduced **multiple Workspaces**, so Sessions and Tab/Panes can be scoped to the active Workspace.
 * SFTP: added cut/copy/paste with local file clipboard support, plus file open actions (double-click/context menu).
 
 ## New
 
-- Multiple Workspaces + local File Explorer connection type (PR #310, PR #309, PR #312, PR #313, PR #314, PR #315, PR #316 listed below as part of the v0.1.80 changeset).
+* Multiple Workspaces + local File Explorer connection type (PR #310, PR #309, PR #312, PR #313, PR #314, PR #315, PR #316 listed below as part of the v0.1.80 changeset).
+
 * SFTP: single-row titlebar inside the browser (kind glyph + centered host) and queued errors shown in the titlebar / transfer activity (PR #315).
 * SFTP: cut, copy, paste with local file clipboard support (shown in PR #?? via change list; see compare links below).
 * SFTP: file open actions for double-click and context menu.
 
 ## Improved
 
-- Connection Add/Edit dialogs aligned to the design language (PR #317).
+* Connection Add/Edit dialogs aligned to the design language (PR #317).
+
 * Finder-style glyphs and SFTP UI polish after the design-language merge (PR #313).
 * Connection dialog surface styling consistency improvements (PR #314).
 
 ## Fixed
 
-- SFTP Finder glyphs, toolbar pill placement, and grey Default field (PR #313).
+* SFTP Finder glyphs, toolbar pill placement, and grey Default field (PR #313).
+
 * Consistent dialog backgrounds, flat status pill, and close-button margin (PR #314).
 * Reduced the single-row SFTP titlebar height (PR #316).
 * Removed screenshot/send-to-AI action from SFTP and File Explorer toolbars (PR #?).
@@ -2677,7 +2954,8 @@ All notable changes to KKTerm are documented here.
 
 ## Internal
 
-- README rewrites to focus on user-facing features (PR #309).
+* README rewrites to focus on user-facing features (PR #309).
+
 * i18n/localization updates and localization file cleanup for SFTP-related UI elements.
 * Windows filesystem-path opener improvements (PR #?; see change list in compare).
 * Native context-menu template icon/test updates (PR #?; see compare).
@@ -2691,26 +2969,30 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights
 
-- 使用 Apple/Finder 風格的設計語言，重新打造 **SFTP 瀏覽器**與**連線對話框**；並在後續加入針對「標題列高度、Finder 圖示、工具列配置、欄位樣式」的修正。
+* 使用 Apple/Finder 風格的設計語言，重新打造 **SFTP 瀏覽器**與**連線對話框**；並在後續加入針對「標題列高度、Finder 圖示、工具列配置、欄位樣式」的修正。
+
 * 新增本機 **檔案總管（File Explorer）** 連線類型，並導入 **多個 Workspaces**：讓 Session 與 Tab / Pane 能依「目前的 Workspace」進行範圍化管理。
 * SFTP：加入支援本機剪貼簿的 cut/copy/paste，並提供檔案開啟動作（雙擊 / 內容選單）。
 
 ## New
 
-- 多個 Workspaces + 本機檔案總管連線類型（v0.1.80 變更集中包含 PR #310、以及其他對應 PR）。
+* 多個 Workspaces + 本機檔案總管連線類型（v0.1.80 變更集中包含 PR #310、以及其他對應 PR）。
+
 * SFTP：瀏覽器內單列標題列（kind 圖示 + 中央主機），以及佇列中的錯誤顯示在標題列 / 傳輸活動列中（PR #315）。
 * SFTP：支援本機剪貼簿的 cut、copy、paste。
 * SFTP：支援雙擊與內容選單開啟檔案。
 
 ## Improved
 
-- 連線新增/編輯（Add/Edit）對話框，改以設計語言一致化（PR #317）。
+* 連線新增/編輯（Add/Edit）對話框，改以設計語言一致化（PR #317）。
+
 * 設計語言合併後的 Finder 圖示與 SFTP 介面微調（PR #313）。
 * 對話框外觀一致性（PR #314）。
 
 ## Fixed
 
-- 修正 SFTP 的 Finder 圖示、工具列 pill 配置、以及灰色 Default 欄位（PR #313）。
+* 修正 SFTP 的 Finder 圖示、工具列 pill 配置、以及灰色 Default 欄位（PR #313）。
+
 * 修正對話框背景一致性、狀態 pill 扁平化、以及關閉按鈕邊距（PR #314）。
 * 修正單列 SFTP 標題列高度（PR #316）。
 * 移除 SFTP 與檔案總管（File Explorer）工具列中的截圖/送去 AI 動作（PR #?）。
@@ -2718,7 +3000,8 @@ All notable changes to KKTerm are documented here.
 
 ## Internal
 
-- README 內容重寫，聚焦使用者可見的功能（PR #309）。
+* README 內容重寫，聚焦使用者可見的功能（PR #309）。
+
 * SFTP 相關 i18n/在地化更新與清理。
 * Windows 檔案路徑開啟處理改善（PR #?；見比對清單）。
 * 原生內容選單（context menu）範本圖示與測試更新（PR #?；見比對清單）。
@@ -2732,30 +3015,34 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights
 
-- **New “Match OS” color scheme** with **system accent color** integration—so your Dashboard colors can finally keep up with your desktop theme.
+* **New “Match OS” color scheme** with **system accent color** integration—so your Dashboard colors can finally keep up with your desktop theme.
+
 * **Dashboard edit mode gains better handling**: drag handles and resize functionality for Dashboard Widget Instances.
 * **Speedtest widget upgrades**: enhanced target selection and improvements to related target handling.
 
 ## New
 
-- **Add “Match OS” color scheme option** and integrate **system accent color**. (**a**0193d5, **2**9998b6d)
+* **Add “Match OS” color scheme option** and integrate **system accent color**. (**a**0193d5, **2**9998b6d)
+
 * **LibreSpeed targets for speed tests** (with updated/related tests). (**2**015c21)
 * **Selectable speedtest targets** with regional options (including translations and updated manual docs). (**b**a45297)
 * **Enhance QR code widget** with **dynamic canvas sizing**. (**d**375d54)
 
 ## Improved
 
-- **Dashboard edit mode drag handle & resize** for Dashboard Widget Instances. (**2**daff9d, **b**8fad3a)
+* **Dashboard edit mode drag handle & resize** for Dashboard Widget Instances. (**2**daff9d, **b**8fad3a)
+
 * **Script widget iframe styling enforcement** for color-scheme and background styling. (**1**955b49)
 * **Localization updates** for speedtest target labels across multiple languages. (**6**2babbb)
 
 ## Fixed
 
-- Simplify BOOL usage in `system_accent_color` function. (**a**0193d5)
+* Simplify BOOL usage in `system_accent_color` function. (**a**0193d5)
 
 ## Internal
 
-- Update source-of-truth docs for the AI harness changes. (PR from **#308**, **d**1ce349)
+* Update source-of-truth docs for the AI harness changes. (PR from **#308**, **d**1ce349)
+
 * Update release script variable naming for clarity and align tests. (**b**3e327e)
 * Update macOS packaging scripts for base64-wrapped Minisign keys, key normalization/extraction, and signing key handling. (**0**acb095, **c**ceea67, **b**fa5778)
 * Remove obsolete localization files and update translations for work plan title. (**f**ced0e8)
@@ -2765,30 +3052,34 @@ All notable changes to KKTerm are documented here.
 
 ## 重點摘要
 
-- 新增 **「依系統」(Match OS)** 色彩方案，並整合 **系統強調色**——讓你的 Dashboard 也能跟上桌面主題的節奏。
+* 新增 **「依系統」(Match OS)** 色彩方案，並整合 **系統強調色**——讓你的 Dashboard 也能跟上桌面主題的節奏。
+
 * Dashboard 編輯模式更好用：為 **Dashboard Widget Instance** 提供拖曳把手與調整大小功能。
 * Speedtest 小工具也有升級：強化測試目標選擇與相關目標處理。
 
 ## 新增
 
-- 新增 **「依系統」(Match OS)** 色彩方案選項，並整合 **系統強調色**。(**a**0193d5, **2**9998b6d)
+* 新增 **「依系統」(Match OS)** 色彩方案選項，並整合 **系統強調色**。(**a**0193d5, **2**9998b6d)
+
 * **LibreSpeed 測速目標**（並更新/補強相關測試）。(**2**015c21)
 * **支援可選擇的 speedtest 目標與區域選項**（含翻譯與更新手冊文件）。(**b**a45297)
 * **強化 QR Code 小工具**：支援 **動態 canvas 尺寸**。(**d**375d54)
 
 ## 改善
 
-- Dashboard 編輯模式新增 **拖曳把手**與 **調整大小**，用於 **Dashboard Widget Instance**。(**2**daff9d, **b**8fad3a)
+* Dashboard 編輯模式新增 **拖曳把手**與 **調整大小**，用於 **Dashboard Widget Instance**。(**2**daff9d, **b**8fad3a)
+
 * Script 小工具的 iframe 強制套用 **color-scheme** 與 **背景樣式**。(**1**955b49)
 * 多語系更新 **speedtest 目標標籤**在翻譯內容。(**6**2babbb)
 
 ## 修正
 
-- `system_accent_color` 函式中簡化 BOOL 用法。(**a**0193d5)
+* `system_accent_color` 函式中簡化 BOOL 用法。(**a**0193d5)
 
 ## 內部
 
-- 更新 AI harness 變更的「單一真相來源」文件。（PR **#308**，**d**1ce349）
+* 更新 AI harness 變更的「單一真相來源」文件。（PR **#308**，**d**1ce349）
+
 * 更新釋出腳本中的變數命名以提升清晰度，並對齊測試。(**b**3e327e)
 * 更新 macOS 打包腳本：支援 base64 包裝的 Minisign keys、進行 key 正規化/擷取，以及 signing key 處理。(**0**acb095, **c**ceea67, **b**fa5778)
 * 移除過時的在地化檔案，並更新工作計畫標題的翻譯。(**f**ced0e8)
@@ -2801,28 +3092,32 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights
 
-- Smarter assistant memory, work plans, and streaming harness—plus less “mystery meat” behavior in tool approvals. (PRs #307, #306)
+* Smarter assistant memory, work plans, and streaming harness—plus less “mystery meat” behavior in tool approvals. (PRs #307, #306)
+
 * Dashboard script widgets now render cleanly without the opaque black backdrop border on dark backgrounds.
 
 ## New
 
-- **Persistent per-Connection assistant memory** (global + `connection:<id>` scoped). Includes remember/recall/forget tools and Connection-aware context injection.
+* **Persistent per-Connection assistant memory** (global + `connection:<id>` scoped). Includes remember/recall/forget tools and Connection-aware context injection.
+
 * **Model-driven work plans** via a new always-on `update_plan` tool. The Work panel can display per-step status and persist with the chat thread.
 * **Network Tools and Generators** built-in widgets (subnet calculator, DNS lookup, speedtest, QR/barcode, cron builder, password generator, timestamp converter, hash & encoding workbench).
 
 ## Improved
 
-- **Tool approval card risk reasons**: the approval UI can show the red warning block with specific risk notes (plus watchdog “standing-permission” note).
+* **Tool approval card risk reasons**: the approval UI can show the red warning block with specific risk notes (plus watchdog “standing-permission” note).
+
 * **AI assistant harness safety & context discipline** improvements for Stop/approval/risk flows and MCP tool listing (to avoid hallucinated tool calls).
 * **Dashboard widget contracts**: reduce duplicate widget contract token emission by sending each contract only once (attached to its governed tool).
 
 ## Fixed
 
-- **Dashboard**: removed the opaque black backdrop border behind AI script widgets by aligning the iframe `color-scheme` with the host theme. (PR #306 by @ryantsai)
+* **Dashboard**: removed the opaque black backdrop border behind AI script widgets by aligning the iframe `color-scheme` with the host theme. (PR #306 by @ryantsai)
 
 ## Internal
 
-- Added a **replay-based eval harness** for provider streams to ensure consistent parsing across live streaming vs replay fixture runs (no network call). (PR #307 by @ryantsai)
+* Added a **replay-based eval harness** for provider streams to ensure consistent parsing across live streaming vs replay fixture runs (no network call). (PR #307 by @ryantsai)
+
 * Strengthened AI streaming/tool dispatch/testing structure (including accumulator/refactor and fixture coverage for tool-call argument fragments and reasoning).
 
 ## Direct Downloads
@@ -2832,12 +3127,14 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights
 
-- macOS: Start RDP-to-Windows sessions via IronRDP (canvas client + IME keyboard), and improve how RDP Unicode text input is handled. (PR #304)
+* macOS: Start RDP-to-Windows sessions via IronRDP (canvas client + IME keyboard), and improve how RDP Unicode text input is handled. (PR #304)
+
 * macOS: Fixed RDP CredSSP authentication parsing by properly splitting `DOMAIN\\user` and surfacing the real connection error. (PR #305)
 
 ## New
 
-- macOS: Added RDP canvas view with hybrid IME keyboard handling for macOS RDP connections. (PR #304)
+* macOS: Added RDP canvas view with hybrid IME keyboard handling for macOS RDP connections. (PR #304)
+
 * macOS: Added an RDP Unicode text input path for IME/multilingual typing. (PR #304)
 * macOS: Enabled macOS RDP plumbing (typed `rdp_client` commands + session manager state wiring). (PR #304)
 * SFTP: Allow OS file and folder drops to the remote pane for uploads. (PR(s) in this release: installer/docs/UI were updated along with SFTP changes)
@@ -2845,18 +3142,21 @@ All notable changes to KKTerm are documented here.
 
 ## Improved
 
-- Dashboard: Adjusted button styles for improved visibility and consistency.
+* Dashboard: Adjusted button styles for improved visibility and consistency.
+
 * Remote Desktop (macOS): Enhanced RDP screenshot handling and improved canvas integration.
 * Quick Command dialogs: Updated Quick Command subdialog backdrop styles for improved visibility.
 
 ## Fixed
 
-- macOS RDP CredSSP: Properly split `DOMAIN\\user` for RDP CredSSP and surface the underlying error instead of a generic “CredSSP” failure. Credits: @ryantsai. (PR #305)
+* macOS RDP CredSSP: Properly split `DOMAIN\\user` for RDP CredSSP and surface the underlying error instead of a generic “CredSSP” failure. Credits: @ryantsai. (PR #305)
+
 * macOS RDP CredSSP: If your keyboard/network gods demand clarity, the error chain is now less likely to swallow the underlying NTLM reason (e.g., logon failure). Credits: Claude Opus (co-author), and @ryantsai for the PR. (PR #305)
 
 ## Internal
 
-- macOS release tooling: Added a macOS DMG release helper and updated release notes patching.
+* macOS release tooling: Added a macOS DMG release helper and updated release notes patching.
+
 * Tests: Reorganized RDP support tests for clarity and accuracy.
 * i18n: Updated Indonesian translations for connection-related labels.
 
@@ -2864,12 +3164,14 @@ All notable changes to KKTerm are documented here.
 
 ## 重點摘要
 
-- macOS：透過 IronRDP（canvas 端＋IME 鍵盤）開始連線到 Windows 的 RDP，並提升 RDP Unicode 文字輸入的處理方式。（PR #304）
+* macOS：透過 IronRDP（canvas 端＋IME 鍵盤）開始連線到 Windows 的 RDP，並提升 RDP Unicode 文字輸入的處理方式。（PR #304）
+
 * macOS：修正 RDP CredSSP 驗證：正確拆分 `DOMAIN\\user`，並能顯示真正的連線錯誤。（PR #305）
 
 ## 新增
 
-- macOS：加入 RDP canvas 視圖，並提供適用於 macOS RDP 連線的「混合 IME 鍵盤」處理。（PR #304）
+* macOS：加入 RDP canvas 視圖，並提供適用於 macOS RDP 連線的「混合 IME 鍵盤」處理。（PR #304）
+
 * macOS：加入 RDP Unicode 文字輸入路徑，支援 IME/多語系輸入。（PR #304）
 * macOS：啟用 macOS RDP 相關連線處理（註冊型別的 `rdp_client` 命令與 session manager 狀態串接）。（PR #304）
 * SFTP：允許從作業系統直接把檔案/資料夾拖到遠端 Pane 進行上傳。
@@ -2877,18 +3179,21 @@ All notable changes to KKTerm are documented here.
 
 ## 改進
 
-- Dashboard：調整按鈕樣式，提升可視性與一致性。
+* Dashboard：調整按鈕樣式，提升可視性與一致性。
+
 * 遠端桌面（macOS）：強化 RDP 截圖處理並改善 canvas 整合。
 * 快速指令（Quick Command）對話框：更新子對話框的背景樣式，提升可視性。
 
 ## 修正
 
-- macOS RDP CredSSP：正確拆分 `DOMAIN\\user` 用於 RDP CredSSP，並顯示底層真正的連線錯誤（避免只看到泛用的 “CredSSP” 失敗）。致謝：@ryantsai。（PR #305）
+* macOS RDP CredSSP：正確拆分 `DOMAIN\\user` 用於 RDP CredSSP，並顯示底層真正的連線錯誤（避免只看到泛用的 “CredSSP” 失敗）。致謝：@ryantsai。（PR #305）
+
 * macOS RDP CredSSP：錯誤鏈不再那麼容易被吞掉——現在比較不會只剩一個泛化的「CredSSP」訊息，而能看見更貼近實因的 NTLM 錯誤（例如登入失敗）。致謝：Claude Opus（共同作者）與 @ryantsai（PR）（PR #305）
 
 ## Internal
 
-- macOS 發佈流程：加入 macOS DMG 發佈輔助工具，並更新發佈說明的修補流程。
+* macOS 發佈流程：加入 macOS DMG 發佈輔助工具，並更新發佈說明的修補流程。
+
 * 測試：重新整理 RDP 相關測試，讓內容更清楚且更精準。
 * i18n：更新連線相關標籤的印尼文翻譯。
 
@@ -2899,25 +3204,27 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights
 
-- Refined Connection Tree behavior so visible connections stay in the expected order.
+* Refined Connection Tree behavior so visible connections stay in the expected order.
+
 * Added a source-correctness contract and refreshed related tests (because terminals deserve receipts too).
 
 ## New
 
-- **Connection Tree**: Enhanced functionality to preserve order in visible connections.
+* **Connection Tree**: Enhanced functionality to preserve order in visible connections.
 
 ## Improved
 
-- **Contracting for AI inputs**: Added a source-correctness contract and updated related tests.
+* **Contracting for AI inputs**: Added a source-correctness contract and updated related tests.
   (PR not specified)
 
 ## Fixed
 
-- No user-facing fixes were listed in this release context.
+* No user-facing fixes were listed in this release context.
 
 ## Internal
 
-- Updated AI prompt contracts and tests (`src-tauri/src/ai.rs`, `src-tauri/src/ai/prompt_contracts.rs`, `src-tauri/src/ai/tests.rs`).
+* Updated AI prompt contracts and tests (`src-tauri/src/ai.rs`, `src-tauri/src/ai/prompt_contracts.rs`, `src-tauri/src/ai/tests.rs`).
+
 * Improved Connection Tree filtering/context-menu coverage in tests (`tests/connection-tree-connected-filter.test.ts`, `tests/connection-tree-context-menu.test.mjs`).
 
 **Full Changelog**: <https://github.com/ryantsai/KKTerm/compare/v0.1.75...v0.1.76>
@@ -2926,25 +3233,27 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights（繁體中文 - 台灣）
 
-- 精進 **連線樹（Connection Tree）** 的行為，讓在畫面上可見的連線維持預期順序。
+* 精進 **連線樹（Connection Tree）** 的行為，讓在畫面上可見的連線維持預期順序。
+
 * 新增「來源正確性（source-correctness）」合約並更新相關測試——畢竟終端機也要有憑有據。
 
 ## New（新增）
 
-- **連線樹（Connection Tree）**：強化功能，讓「可見連線」在排序上保持正確順序。
+* **連線樹（Connection Tree）**：強化功能，讓「可見連線」在排序上保持正確順序。
 
 ## Improved（改善）
 
-- **AI 輸入的合約約束**：新增「來源正確性」合約並更新相關測試。
+* **AI 輸入的合約約束**：新增「來源正確性」合約並更新相關測試。
  （本次釋出內容未提供 PR 編號）
 
 ## Fixed（修正）
 
-- 本次版本釋出內容中未列出使用者可見的修正項目。
+* 本次版本釋出內容中未列出使用者可見的修正項目。
 
 ## Internal（內部）
 
-- 更新 AI 提示合約與測試（`src-tauri/src/ai.rs`、`src-tauri/src/ai/prompt_contracts.rs`、`src-tauri/src/ai/tests.rs`）。
+* 更新 AI 提示合約與測試（`src-tauri/src/ai.rs`、`src-tauri/src/ai/prompt_contracts.rs`、`src-tauri/src/ai/tests.rs`）。
+
 * 強化連線樹篩選/內容選單相關測試（`tests/connection-tree-connected-filter.test.ts`、`tests/connection-tree-context-menu.test.mjs`）。
 
 **完整變更紀錄（Full Changelog）**: <https://github.com/ryantsai/KKTerm/compare/v0.1.75...v0.1.76>
@@ -2956,29 +3265,32 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights
 
-- Added a **“Show Connected”** filter to the Connection Tree so you can focus on connections with an active Session.
+* Added a **“Show Connected”** filter to the Connection Tree so you can focus on connections with an active Session.
+
 * When deleting a connection, KKTerm will now **close any open Tab(s) and Pane(s)** tied to it—less “stale terminal” energy, more clean state.
 
 ## New
 
-- **Connection Tree:** Added **“Show Connected”** filter (session-only, not persisted) in the control row next to the tree view actions.
+* **Connection Tree:** Added **“Show Connected”** filter (session-only, not persisted) in the control row next to the tree view actions.
   * PR #303 — by @ryantsai (codex) · <https://github.com/ryantsai/KKTerm/pull/303> (includes fix: Hide Folders duplication)
 
 ## Improved
 
-- **Connection Tree rendering clarity:** “Show All” was renamed to **“Hide Folders”** for clarity, and the related localization keys were updated (including **connections.hideFolders** and **connections.showConnected**).
+* **Connection Tree rendering clarity:** “Show All” was renamed to **“Hide Folders”** for clarity, and the related localization keys were updated (including **connections.hideFolders** and **connections.showConnected**).
   * PR #303 — @ryantsai · <https://github.com/ryantsai/KKTerm/pull/303>
 
 ## Fixed
 
-- **Connection Tree duplicate roots in flat view:** Fixed a bug where root-level connections could be rendered twice when using the tree/flat combinations.
+* **Connection Tree duplicate roots in flat view:** Fixed a bug where root-level connections could be rendered twice when using the tree/flat combinations.
   * PR #303 — @ryantsai · <https://github.com/ryantsai/KKTerm/pull/303>
+
 * **Deleting a connection:** Fixed lingering UI by **closing open Tabs and Panes** associated with the deleted Connection.
   * (sha: e938cb5)
 
 ## Internal
 
-- Adjusted z-index and added related tests for the **Quick Command** subdialog backdrop. (sha: 26b64a0)
+* Adjusted z-index and added related tests for the **Quick Command** subdialog backdrop. (sha: 26b64a0)
+
 * Localization updates/todo entries across locales. (sha: aa4676f)
 
 ## Direct Downloads
@@ -2990,13 +3302,15 @@ All notable changes to KKTerm are documented here.
 
 ### Highlights
 
-- **Fix SSH + tmux label visibility**: PTY echo no longer hides the **Pane** tmux session label when tmux is actually running.
+* **Fix SSH + tmux label visibility**: PTY echo no longer hides the **Pane** tmux session label when tmux is actually running.
+
 * **Quick Connect now persists**: Quick Connect always creates/updates a saved **Connection** and opens it, instead of leaving the **Tab** backed by ephemeral state.
 * **PowerShell 7 (pwsh) support**: Added as a Windows local shell option with an installer recipe and launch gating.
 
 ### New
 
-- **Settings**: Renamed **Settings > General** section to **Window** and tidied the card layout. ([#298](https://github.com/ryantsai/KKTerm/pull/298))
+* **Settings**: Renamed **Settings > General** section to **Window** and tidied the card layout. ([#298](https://github.com/ryantsai/KKTerm/pull/298))
+
 * **macOS**: Added **Don’t Sleep** monitoring.
 * **PowerShell 7 (pwsh)** support:
   * Shell option in Terminal settings
@@ -3007,17 +3321,19 @@ All notable changes to KKTerm are documented here.
 
 ### Improved
 
-- **Quick Connect**: Always saves (reuse-or-create) and opens the persisted **Connection**. ([#300](https://github.com/ryantsai/KKTerm/pull/300))
+* **Quick Connect**: Always saves (reuse-or-create) and opens the persisted **Connection**. ([#300](https://github.com/ryantsai/KKTerm/pull/300))
+
 * **Terminal/PowerShell**: `pwsh` launch is gated behind install-or-fallback pre-flight.
 * **SSH / tmux UX**: Prevented a false-positive scenario that could hide the tmux session label on reconnect.
 
 ### Fixed
 
-- **SSH**: Stop PTY echo from hiding the tmux session label. ([#297](https://github.com/ryantsai/KKTerm/pull/297), by @ryantsai)
+* **SSH**: Stop PTY echo from hiding the tmux session label. ([#297](https://github.com/ryantsai/KKTerm/pull/297), by @ryantsai)
 
 ### Internal
 
-- Implemented a **rollback mechanism for failed releases** and validated source before mutations.
+* Implemented a **rollback mechanism for failed releases** and validated source before mutations.
+
 * Build tooling update: release script + installer smoke coverage updates.
 
 ---
@@ -3026,13 +3342,15 @@ All notable changes to KKTerm are documented here.
 
 ### 重點
 
-- **修正 SSH + tmux 標籤可見性**：PTY 回顯不再在 **Pane** 的 tmux session 標籤被「遮住」——前提是 tmux 的確有在跑。
+* **修正 SSH + tmux 標籤可見性**：PTY 回顯不再在 **Pane** 的 tmux session 標籤被「遮住」——前提是 tmux 的確有在跑。
+
 * **Quick Connect 會永久保存**：Quick Connect 會固定建立/更新已保存的 **Connection**，並打開它；不再讓 **Tab** 落在臨時狀態上。
 * **支援 PowerShell 7（pwsh）**：新增為 Windows 本機殼層選項，並提供安裝規格與啟動門檻。
 
 ### 新增
 
-- **設定**：將 **Settings > General** 改名為 **Window**，並整理卡片版面。([#298](https://github.com/ryantsai/KKTerm/pull/298))
+* **設定**：將 **Settings > General** 改名為 **Window**，並整理卡片版面。([#298](https://github.com/ryantsai/KKTerm/pull/298))
+
 * **macOS**：新增 **防止螢幕/系統休眠（Don’t Sleep）監控**。
 * **PowerShell 7（pwsh）支援**：
   * Terminal 設定中的殼層選項
@@ -3043,17 +3361,19 @@ All notable changes to KKTerm are documented here.
 
 ### 改善
 
-- **Quick Connect**：固定儲存（reuse-or-create），並打開已持久化的 **Connection**。([#300](https://github.com/ryantsai/KKTerm/pull/300))
+* **Quick Connect**：固定儲存（reuse-or-create），並打開已持久化的 **Connection**。([#300](https://github.com/ryantsai/KKTerm/pull/300))
+
 * **Terminal/PowerShell**：`pwsh` 啟動會先經過 install-or-fallback 的預檢。
 * **SSH / tmux UX**：避免在重新連線時出現會「誤判」並隱藏 tmux 標籤的情境。
 
 ### 修正
 
-- **SSH**：停止 PTY 回顯造成 tmux session 標籤消失的問題。([#297](https://github.com/ryantsai/KKTerm/pull/297)，作者 @ryantsai)
+* **SSH**：停止 PTY 回顯造成 tmux session 標籤消失的問題。([#297](https://github.com/ryantsai/KKTerm/pull/297)，作者 @ryantsai)
 
 ### Internal
 
-- 新增 **釋出失敗回滾機制**，並在變更前先驗證來源。
+* 新增 **釋出失敗回滾機制**，並在變更前先驗證來源。
+
 * 建置/發布工具更新：更新釋出腳本與安裝煙霧測試覆蓋。
 
 ## Direct Downloads
@@ -3063,26 +3383,29 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights
 
-- **Stable SSH Session keepalives**: Idle native SSH connections behind NAT/stateful firewalls are less likely to freeze—closing and reconnecting is no longer the only escape hatch.
+* **Stable SSH Session keepalives**: Idle native SSH connections behind NAT/stateful firewalls are less likely to freeze—closing and reconnecting is no longer the only escape hatch.
+
 * **macOS arm64 support**: macOS builds are updated with platform-specific behavior and native overlay title bar handling.
 
 ## New
 
-- **(macOS) Platform-specific features** to support macOS arm64 builds, including macOS keychain integration and conditional settings rendering.
+* **(macOS) Platform-specific features** to support macOS arm64 builds, including macOS keychain integration and conditional settings rendering.
 
 ## Improved
 
-- **“The Big Refactor” landing across the codebase** (docs + architecture + command grouping), keeping the **Connection / Session / Tab / Pane**-related surfaces organized and easier to navigate.
+* **“The Big Refactor” landing across the codebase** (docs + architecture + command grouping), keeping the **Connection / Session / Tab / Pane**-related surfaces organized and easier to navigate.
+
 * **Dashboard security validation coverage** expanded with behavioral frontend tests for script widget permissions/CSP and schema validation.
 * **Test auto-discovery & ESLint gate**: `npm run check` now auto-discovers tests and uses an ESLint config wired into the check pipeline.
 
 ## Fixed
 
-- **SSH keepalives for idle Sessions** (#294, by @ryantsai) — prevents idle native SSH sessions from freezing; credited from the PR’s co-author **Claude Opus 4.8**.
+* **SSH keepalives for idle Sessions** (#294, by @ryantsai) — prevents idle native SSH sessions from freezing; credited from the PR’s co-author **Claude Opus 4.8**.
 
 ## Internal
 
-- Major internal refactors and test infrastructure work (e.g., storage/ai/module decomposition and test runners) under **The Big Refactor**.
+* Major internal refactors and test infrastructure work (e.g., storage/ai/module decomposition and test runners) under **The Big Refactor**.
+
 * CI/test/tooling tweaks (Rust test gating and markdown sanitization before `dangerouslySetInnerHTML`).
 * Docs/architecture updates to reflect the new backend/frontend organization.
 
@@ -3090,26 +3413,29 @@ All notable changes to KKTerm are documented here.
 
 ## 亮點
 
-- **穩定的 SSH Session Keepalives**：在 NAT / 有狀態防火牆之後的閒置原生 SSH 連線比較不容易凍結——不用再只靠「關掉 Tab 然後重連」才能救回來。
+* **穩定的 SSH Session Keepalives**：在 NAT / 有狀態防火牆之後的閒置原生 SSH 連線比較不容易凍結——不用再只靠「關掉 Tab 然後重連」才能救回來。
+
 * **macOS arm64 支援**：更新 macOS 版的平台特定行為與原生 overlay 標題列處理。
 
 ## 新增
 
-- **（macOS）平台特定功能**：支援 macOS arm64 建置，包括 macOS 鑰匙圈整合，以及依平台進行設定選項的條件渲染。
+* **（macOS）平台特定功能**：支援 macOS arm64 建置，包括 macOS 鑰匙圈整合，以及依平台進行設定選項的條件渲染。
 
 ## 改善
 
-- **「The Big Refactor」在整個程式碼庫落地**（含文件與架構、指令分組等），讓與 **Connection / Session / Tab / Pane** 相關的介面更好維護與理解。
+* **「The Big Refactor」在整個程式碼庫落地**（含文件與架構、指令分組等），讓與 **Connection / Session / Tab / Pane** 相關的介面更好維護與理解。
+
 * **Dashboard 安全性驗證覆蓋率擴充**：加入行為式前端測試，涵蓋 script widget 權限/CSP 與 schema 驗證。
 * **測試自動發現與 ESLint gate**：`npm run check` 現在會自動發現測試，並把 ESLint 設定接到檢查流程。
 
 ## 修復
 
-- **修正閒置 Session 的 SSH keepalives** (#294，作者 @ryantsai) — 避免閒置的原生 SSH Session 凍結；並依 PR 訊息同時致謝 **Claude Opus 4.8**（共同作者）。
+* **修正閒置 Session 的 SSH keepalives** (#294，作者 @ryantsai) — 避免閒置的原生 SSH Session 凍結；並依 PR 訊息同時致謝 **Claude Opus 4.8**（共同作者）。
 
 ## Internal
 
-- 內部大量重構與測試/基礎設施調整（例如 storage/ai/module 拆分與測試執行器）屬於 **The Big Refactor** 的範圍。
+* 內部大量重構與測試/基礎設施調整（例如 storage/ai/module 拆分與測試執行器）屬於 **The Big Refactor** 的範圍。
+
 * CI/測試/工具鏈調整（例如 Rust 測試的 CI 門檻、在 `dangerouslySetInnerHTML` 前先做 markdown sanitization）。
 * 更新文件/架構以反映新的後端/前端組織方式。
 
@@ -3120,32 +3446,36 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights
 
-- Fixed a WebView URL overlay that could fail to show on a retry (no more “it worked… after I made a dialog do it” vibes).
+* Fixed a WebView URL overlay that could fail to show on a retry (no more “it worked… after I made a dialog do it” vibes).
 
 ## Fixed
 
-- **Webview URL overlay visibility retry:** Added a bounded retry so the overlay show request waits until the underlying HWND is ready, preventing intermittent “underlying handle not available” failures. *(by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/292>; SHA: 176cd97)*
+* **Webview URL overlay visibility retry:** Added a bounded retry so the overlay show request waits until the underlying HWND is ready, preventing intermittent “underlying handle not available” failures. *(by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/292>; SHA: 176cd97)*
+
 * **Webview URL overlay anchoring:** Anchored the overlay to the correct client origin using Win32 `ClientToScreen({0,0})`, avoiding pixel gaps beside the Pane on certain resizable/borderless Windows frames.
 
 ## Internal
 
-- Added `.gitattributes` to enforce LF for text files, reducing CRLF-vs-LF churn that could affect tests.
+* Added `.gitattributes` to enforce LF for text files, reducing CRLF-vs-LF churn that could affect tests.
+
 * Logging: Added `KKTERM_WEBVIEW_DEBUG` output for the computed overlay rect.
 
 ---
 
 ## 亮點
 
-- 修正 WebView 的「URL 覆蓋層」在重試時可能不會正常顯示的問題（不再需要像是「我先叫一個對話框逼它重來」那樣）。
+* 修正 WebView 的「URL 覆蓋層」在重試時可能不會正常顯示的問題（不再需要像是「我先叫一個對話框逼它重來」那樣）。
 
 ## 修正
 
-- **Webview URL 覆蓋層顯示重試：** 在 HWND 就緒之前加入有界重試，讓「顯示覆蓋層」的要求不會因偶發的底層手把尚未可用而失敗。*(由 @ryantsai 於 <https://github.com/ryantsai/KKTerm/pull/292；SHA：176cd97>)*
+* **Webview URL 覆蓋層顯示重試：** 在 HWND 就緒之前加入有界重試，讓「顯示覆蓋層」的要求不會因偶發的底層手把尚未可用而失敗。*(由 @ryantsai 於 <https://github.com/ryantsai/KKTerm/pull/292；SHA：176cd97>)*
+
 * **Webview URL 覆蓋層定位：** 透過 Win32 `ClientToScreen({0,0})` 來錨定到正確的 client origin，避免特定無邊框/可調整大小的 Windows 視窗框架下，在 Pane 旁出現幾個像素的縫隙。
 
 ## 內部
 
-- 新增 `.gitattributes` 以強制文字檔使用 LF，降低 CRLF-vs-LF 抖動影響測試的風險。
+* 新增 `.gitattributes` 以強制文字檔使用 LF，降低 CRLF-vs-LF 抖動影響測試的風險。
+
 * 記錄輸出：加入 `KKTERM_WEBVIEW_DEBUG`，顯示計算後的覆蓋層矩形資訊。
 
 ## Direct Downloads
@@ -3155,53 +3485,57 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights
 
-- Fix a crash when using terminal search decorations—no more “black screen and pray” vibes.
+* Fix a crash when using terminal search decorations—no more “black screen and pray” vibes.
+
 * Improve URL webview behavior by removing an unstable Tauri webview dependency and updating how `target=_blank` opens in new Tabs.
 * Fix follow-up terminal focus documentation for the URL connection flow.
 
 ## New
 
-- Webview: opening URLs with `target=_blank` now opens in a new Tab.
+* Webview: opening URLs with `target=_blank` now opens in a new Tab.
 
 ## Improved
 
-- Webview: updated lifecycle/overlay positioning logic tied to native window move/resize events.
+* Webview: updated lifecycle/overlay positioning logic tied to native window move/resize events.
 
 ## Fixed
 
-- Terminal: fix crash related to terminal search decorations (#289 by @ryantsai).
+* Terminal: fix crash related to terminal search decorations (#289 by @ryantsai).
+
 * Webview: remove unstable Tauri webview dependency (#290 by @ryantsai).
 * Docs: fix followup terminal focus fix URL connection docs (#291 by @ryantsai).
 
 ## Internal
 
-- Webview/overlay handling updates included in the release (including related tests).
+* Webview/overlay handling updates included in the release (including related tests).
 
 ---
 
 ## 重點摘要
 
-- 修正終端機搜尋的裝飾（decorations）導致的當機問題——不再有「螢幕一黑就祈禱」的尷尬感。
+* 修正終端機搜尋的裝飾（decorations）導致的當機問題——不再有「螢幕一黑就祈禱」的尷尬感。
+
 * 改善 URL 的 Webview 行為：移除不穩定的 Tauri Webview 相依，並更新 `target=_blank` 的開新分頁（Tab）方式。
 * 修正「後續的終端機焦點」相關文件，涵蓋 URL 連線流程。
 
 ## 新增
 
-- Webview：當連結使用 `target=_blank` 時，現在會在新的 Tab 中開啟。
+* Webview：當連結使用 `target=_blank` 時，現在會在新的 Tab 中開啟。
 
 ## 改進
 
-- Webview：更新了與原生視窗移動/縮放事件相關的生命週期與遮罩（overlay）定位邏輯。
+* Webview：更新了與原生視窗移動/縮放事件相關的生命週期與遮罩（overlay）定位邏輯。
 
 ## 修正
 
-- 終端機：修正與終端機搜尋裝飾相關的當機問題（#289，@ryantsai）。
+* 終端機：修正與終端機搜尋裝飾相關的當機問題（#289，@ryantsai）。
+
 * Webview：移除不穩定的 Tauri Webview 相依（#290，@ryantsai）。
 * 文件：修正「後續的終端機焦點」的 URL 連線文件（#291，@ryantsai）。
 
 ## Internal
 
-- 本次釋出包含 Webview/遮罩處理的內部更新（並附帶相關測試）。
+* 本次釋出包含 Webview/遮罩處理的內部更新（並附帶相關測試）。
 
 ## Direct Downloads
 
@@ -3210,15 +3544,15 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights
 
-- Terminal keyboard focus should no longer get “stolen” when using the drag/resize frame—your Session should keep responding like a good terminal should. (Small sysadmin joke: the window finally stops grabbing the keyboard like a rogue `sudo`.)
+* Terminal keyboard focus should no longer get “stolen” when using the drag/resize frame—your Session should keep responding like a good terminal should. (Small sysadmin joke: the window finally stops grabbing the keyboard like a rogue `sudo`.)
 
 ## Fixed
 
-- Prevented the `TAURI_DRAG_RESIZE_WINDOW` helper from stealing terminal keyboard focus, so Tabs/Session interaction won’t break on re-activation. PR #287 by @ryantsai (<https://github.com/ryantsai/KKTerm/pull/287>, c59be44 / 384b091).
+* Prevented the `TAURI_DRAG_RESIZE_WINDOW` helper from stealing terminal keyboard focus, so Tabs/Session interaction won’t break on re-activation. PR #287 by @ryantsai (<https://github.com/ryantsai/KKTerm/pull/287>, c59be44 / 384b091).
 
 ## Internal
 
-- Updated window effect behavior to keep focus handling from interfering with terminal input (WS_EX_NOACTIVATE applied to the helper window).
+* Updated window effect behavior to keep focus handling from interfering with terminal input (WS_EX_NOACTIVATE applied to the helper window).
 
 ## Direct Downloads
 
@@ -3227,53 +3561,57 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights
 
-- More reliable keyboard focus for terminal input after app switching (your Alt+Tab should stop feeling like a tiny gremlin).
+* More reliable keyboard focus for terminal input after app switching (your Alt+Tab should stop feeling like a tiny gremlin).
+
 * Settings UI cleanup: URL WebView toolbar tidy-up and Workspace moved above Dashboard in the Settings nav.
 
 ## New
 
-- Implement save registration and unsaved changes handling for the Settings page (including a confirmation dialog when closing with unsaved changes).
+* Implement save registration and unsaved changes handling for the Settings page (including a confirmation dialog when closing with unsaved changes).
 
 ## Improved
 
-- Tidy URL WebView toolbar and adjust Settings navigation order (Workspace above Dashboard).
+* Tidy URL WebView toolbar and adjust Settings navigation order (Workspace above Dashboard).
 
 ## Fixed
 
-- Restore terminal focus after app switch (e.g., Alt+Tab) via improved focus restore timing and window/visibility reactivation by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/280>.
+* Restore terminal focus after app switch (e.g., Alt+Tab) via improved focus restore timing and window/visibility reactivation by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/280>.
+
 * Hide tmux toolbar when SSH tmux negotiation falls back to normal shell by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/282>.
 * Fix duplicated local terminal buffer after tab switch by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/283>.
 * Fix terminal focus restore by using WebView2 MoveFocus (MoveFocus / focusCurrentWebview) instead of raising the frame by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/286>.
 
 ## Internal
 
-- N/A
+* N/A
 
 ---
 
 ## 精選重點
 
-- 讓終端機（Terminal）輸入的鍵盤焦點更可靠：切換到其他程式再回來後，鍵盤輸入不再那麼容易失聯（Alt+Tab 不該變成小小的惡作劇）。
+* 讓終端機（Terminal）輸入的鍵盤焦點更可靠：切換到其他程式再回來後，鍵盤輸入不再那麼容易失聯（Alt+Tab 不該變成小小的惡作劇）。
+
 * 設定頁面小整理：URL WebView 工具列排版更乾淨，且在設定導覽中把「Workspace」移到「Dashboard」上方。
 
 ## 新增
 
-- 為設定頁面加入「儲存狀態登錄（save registration）」與「未儲存變更處理」：在關閉設定頁且仍有未儲存變更時會出現提示對話框。
+* 為設定頁面加入「儲存狀態登錄（save registration）」與「未儲存變更處理」：在關閉設定頁且仍有未儲存變更時會出現提示對話框。
 
 ## 改進
 
-- 整理 URL WebView 工具列，並調整設定導覽順序（Workspace 位於 Dashboard 之上）。
+* 整理 URL WebView 工具列，並調整設定導覽順序（Workspace 位於 Dashboard 之上）。
 
 ## 修正
 
-- 修復切換應用程式後終端機焦點無法正常回復（例如 Alt+Tab），透過更可靠的焦點回復時機與視窗/可見性重新啟用處理，由 @ryantsai 在 <https://github.com/ryantsai/KKTerm/pull/280> 提交。
+* 修復切換應用程式後終端機焦點無法正常回復（例如 Alt+Tab），透過更可靠的焦點回復時機與視窗/可見性重新啟用處理，由 @ryantsai 在 <https://github.com/ryantsai/KKTerm/pull/280> 提交。
+
 * 當 SSH 的 tmux 協商失敗改為一般 shell 時，隱藏 tmux 工具列，由 @ryantsai 在 <https://github.com/ryantsai/KKTerm/pull/282> 提交。
 * 修復切換分頁（Tab）後本機終端機緩衝（buffer）重複的問題，由 @ryantsai 在 <https://github.com/ryantsai/KKTerm/pull/283> 提交。
 * 修復終端機焦點回復方式：改用 WebView2 的 MoveFocus（MoveFocus / focusCurrentWebview）而不是先把視窗框架提到最上層，由 @ryantsai 在 <https://github.com/ryantsai/KKTerm/pull/286> 提交。
 
 ## 內部
 
-- N/A
+* N/A
 
 ## Direct Downloads
 
@@ -3282,50 +3620,54 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights
 
-- Fixed saving **Connection** properties when the same name appears more than once (duplicate-name rows).
+* Fixed saving **Connection** properties when the same name appears more than once (duplicate-name rows).
+
 * Refined the **Notes** widget into a skeuomorphic sticky note—because dashboards deserve a little desk clutter.
 * Improved the **Settings** popup “App Update” section layout/padding for more consistent placement.
 
 ## New
 
-- Enhanced **Connection** and Connection folder management (create/rename/delete/move, plus update tools).
+* Enhanced **Connection** and Connection folder management (create/rename/delete/move, plus update tools).
 
 ## Improved
 
-- Refined **Settings** popup “App Update” controls and placement.
+* Refined **Settings** popup “App Update” controls and placement.
 
 ## Fixed
 
-- **Connection** properties save now works for duplicate-name rows. (via [#276](https://github.com/ryantsai/KKTerm/pull/276) by @ryantsai — reported/credited alongside the fix)
+* **Connection** properties save now works for duplicate-name rows. (via [#276](https://github.com/ryantsai/KKTerm/pull/276) by @ryantsai — reported/credited alongside the fix)
 
 ## Internal
 
-- Refined note styling and settings popup layout via test coverage updates.
+* Refined note styling and settings popup layout via test coverage updates.
+
 * Added tests for AI CLI status persistence.
 
 ---
 
 ## 精選重點
 
-- 修正當同名的 **Connection** 設定列出現重複時，**Connection** 內容無法正確儲存的問題（重複名稱的列）。
+* 修正當同名的 **Connection** 設定列出現重複時，**Connection** 內容無法正確儲存的問題（重複名稱的列）。
+
 * 將 **Notes** 小工具改造成擬真便利貼風格——讓儀表板也來點辦公桌的雜物感。
 * 改善 **Settings** 彈出視窗中的「App Update」區塊版面/內距，讓顯示位置更一致。
 
 ## 新增
 
-- 強化 **Connection** 與 Connection 資料夾管理：新增/更新（工具）、重新命名、刪除、移動等操作。
+* 強化 **Connection** 與 Connection 資料夾管理：新增/更新（工具）、重新命名、刪除、移動等操作。
 
 ## 改善
 
-- 精修 **Settings** 彈出視窗「App Update」控制項與顯示位置。
+* 精修 **Settings** 彈出視窗「App Update」控制項與顯示位置。
 
 ## 修正
 
-- **Connection** 內容儲存：修正重複名稱列的儲存問題。([#276](https://github.com/ryantsai/KKTerm/pull/276) by @ryantsai — 依修正內容進行通報/署名)
+* **Connection** 內容儲存：修正重複名稱列的儲存問題。([#276](https://github.com/ryantsai/KKTerm/pull/276) by @ryantsai — 依修正內容進行通報/署名)
 
 ## Internal
 
-- 透過測試與樣式微調精修筆記樣式與設定彈出視窗版面。
+* 透過測試與樣式微調精修筆記樣式與設定彈出視窗版面。
+
 * 新增 AI CLI 狀態持久化的測試。
 
 ## Direct Downloads
@@ -3335,49 +3677,53 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights
 
-- Terminal paste is now routed through xterm handling, reducing surprise behavior when pasting into a **Pane** (PR #274, by @ryantsai).
+* Terminal paste is now routed through xterm handling, reducing surprise behavior when pasting into a **Pane** (PR #274, by @ryantsai).
+
 * Improved **RDP Connection** debug logging sizing by tracking RDP connection state (PR #275, by @ryantsai). Your logs should fit a little better—like a well-sized TTY window. 😄
 
 ## New
 
-- None
+* None
 
 ## Improved
 
-- **Terminal** paste now goes through **xterm** paste handling (PR #274, @ryantsai).
+* **Terminal** paste now goes through **xterm** paste handling (PR #274, @ryantsai).
+
 * **RDP Connection** state is now included to resize debug logs (PR #275, @ryantsai).
 
 ## Fixed
 
-- Fixed terminal paste handling for line breaks by routing paste through xterm (PR #274, @ryantsai).
+* Fixed terminal paste handling for line breaks by routing paste through xterm (PR #274, @ryantsai).
 
 ## Internal
 
-- None
+* None
 
 ---
 
 ## 重點摘要
 
-- 現在會將「終端機貼上」導入 **xterm** 的處理流程，讓你在 **Pane** 裡貼上時較不會遇到令人意外的行為（PR #274，@ryantsai）。
+* 現在會將「終端機貼上」導入 **xterm** 的處理流程，讓你在 **Pane** 裡貼上時較不會遇到令人意外的行為（PR #274，@ryantsai）。
+
 * 改善 **RDP 連線（Connection）** 的除錯日誌大小：透過追蹤 RDP 連線狀態來調整（PR #275，@ryantsai）。日誌應該更好塞進去一點——就像剛好合適的 TTY 視窗。😄
 
 ## 新增
 
-- 無
+* 無
 
 ## 改善
 
-- **終端機（Terminal）** 貼上現在透過 **xterm** 的貼上處理（PR #274，@ryantsai）。
+* **終端機（Terminal）** 貼上現在透過 **xterm** 的貼上處理（PR #274，@ryantsai）。
+
 * 在 **RDP 連線（RDP Connection）** 中加入狀態資訊，以調整除錯日誌大小（PR #275，@ryantsai）。
 
 ## 修正
 
-- 修正終端機貼上時的換行問題：改為走 xterm 貼上處理（PR #274，@ryantsai）。
+* 修正終端機貼上時的換行問題：改為走 xterm 貼上處理（PR #274，@ryantsai）。
 
 ## Internal
 
-- 無
+* 無
 
 ## Direct Downloads
 
@@ -3386,29 +3732,29 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights
 
-- Improved Terminal paste handling by routing pastes through xterm handling (so your text doesn’t randomly decide to take the scenic route).
+* Improved Terminal paste handling by routing pastes through xterm handling (so your text doesn’t randomly decide to take the scenic route).
 
 ## Improved
 
-- Route Terminal paste through xterm paste handling, fixing paste formatting/line breaks in Terminal sessions. (PR #274, @ryantsai; short SHA: `5b88126`)
+* Route Terminal paste through xterm paste handling, fixing paste formatting/line breaks in Terminal sessions. (PR #274, @ryantsai; short SHA: `5b88126`)
 
 ## Internal
 
-- Updated app slogan translations across multiple languages. (short SHA: `5b7c5c7`)
+* Updated app slogan translations across multiple languages. (short SHA: `5b7c5c7`)
 
 ---
 
 ## 精選亮點
 
-- 改進 Terminal 貼上處理：將貼上內容導回 xterm 處理流程（避免你的文字在 Terminal 裡突然改走「風景路線」）。
+* 改進 Terminal 貼上處理：將貼上內容導回 xterm 處理流程（避免你的文字在 Terminal 裡突然改走「風景路線」）。
 
 ## 改進
 
-- 透過 xterm paste handling 轉送 Terminal 貼上內容，修正 Terminal 會出現的貼上格式/換行問題。 (PR #274，@ryantsai；短 SHA：`5b88126`)
+* 透過 xterm paste handling 轉送 Terminal 貼上內容，修正 Terminal 會出現的貼上格式/換行問題。 (PR #274，@ryantsai；短 SHA：`5b88126`)
 
 ## Internal（內部）
 
-- 更新多語系的應用程式標語翻譯。 (short SHA：`5b7c5c7`)
+* 更新多語系的應用程式標語翻譯。 (short SHA：`5b7c5c7`)
 
 ## Direct Downloads
 
@@ -3417,43 +3763,45 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights
 
-- Added a **“Don’t Sleep”** feature to help prevent your system from sleeping while KKTerm is running.
+* Added a **“Don’t Sleep”** feature to help prevent your system from sleeping while KKTerm is running.
+
 * Improved **child connection Tab** behavior to better preserve the currently focused **Pane** state and restore layouts.
 
 ## New
 
-- **“Don’t Sleep”** settings section (including a foreground-only mode) and updated UI labels/tooltips for its state.
+* **“Don’t Sleep”** settings section (including a foreground-only mode) and updated UI labels/tooltips for its state.
 
 ## Improved
 
-- Enhanced child **Connection** Tab behavior to preserve the focused **Pane** state and improve layout restoration.
+* Enhanced child **Connection** Tab behavior to preserve the focused **Pane** state and improve layout restoration.
 
 ## Fixed
 
 ## Internal
 
-- Removed obsolete localization TODO docs and updated translations related to **“Don’t Sleep”** across multiple languages.
+* Removed obsolete localization TODO docs and updated translations related to **“Don’t Sleep”** across multiple languages.
 
 ---
 
 ## v0.1.65 亮點
 
-- 新增 **「不要睡眠（Don’t Sleep）」**功能：在 KKTerm 運行時，協助避免系統進入睡眠。
+* 新增 **「不要睡眠（Don’t Sleep）」**功能：在 KKTerm 運行時，協助避免系統進入睡眠。
+
 * 改善「子連線（child Connection）」的 **Tab** 行為：更能保留目前聚焦的 **Pane** 狀態，並讓版面還原更穩定。
 
 ## 新增
 
-- **「不要睡眠」**設定頁面（含「僅前景（foreground-only）」模式），並同步更新介面標籤與狀態提示（tooltips）。
+* **「不要睡眠」**設定頁面（含「僅前景（foreground-only）」模式），並同步更新介面標籤與狀態提示（tooltips）。
 
 ## 改善
 
-- 強化子連線的 **Connection Tab** 行為：保留聚焦 **Pane** 狀態、改善版面還原效果。
+* 強化子連線的 **Connection Tab** 行為：保留聚焦 **Pane** 狀態、改善版面還原效果。
 
 ## 修正
 
 ## Internal
 
-- 移除過期的在地化 TODO 文件，並更新多語言中的「不要睡眠（Don’t Sleep）」相關翻譯。
+* 移除過期的在地化 TODO 文件，並更新多語言中的「不要睡眠（Don’t Sleep）」相關翻譯。
 
 **（小小網管笑話）**：系統要睡前，KKTerm 先把網路線按住——不然它老愛自己「晚安」。
 
@@ -3464,20 +3812,22 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights
 
-- Terminal Session focus restoration improvements for when you switch back to KKTerm—no more “I swear I clicked” moments. 🖥️😅
+* Terminal Session focus restoration improvements for when you switch back to KKTerm—no more “I swear I clicked” moments. 🖥️😅
 
 ## New
 
-- Add an “Open log folder” command in Settings (with translations updated).
+* Add an “Open log folder” command in Settings (with translations updated).
 
 ## Improved
 
-- Preserve focused Pane when the Tab refreshes within a child Connection layout.
+* Preserve focused Pane when the Tab refreshes within a child Connection layout.
+
 * Color scheme updates and localization updates, including adding the **blue-green-white** color scheme.
 
 ## Fixed
 
-- Connection Tree: Parent Child Connection Tab panoramas no longer select a child row when opened.
+* Connection Tree: Parent Child Connection Tab panoramas no longer select a child row when opened.
+
 * Terminal: Prevent a reactivation-focused button from blocking focus restore (fix by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/268>, small terminal gremlin avoided).
 * Terminal: Restore keyboard input by calling `SetFocus` on the WebView2 content HWND (fix by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/269>).
 * Win32 WebView2 focus restore: Correct the `SetFocus` import path (fix by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/270>).
@@ -3485,7 +3835,8 @@ All notable changes to KKTerm are documented here.
 
 ## Internal
 
-- Terminal: Refactor focus handling and improve terminal focus restore tests.
+* Terminal: Refactor focus handling and improve terminal focus restore tests.
+
 * Dashboard/library/code cleanup and other refactors.
 * Move GitHub download badge into the README badge row.
 
@@ -3496,24 +3847,26 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights
 
-- Fixed a keyboard focus issue for **Terminal** Sessions after app/window activation: keystrokes now reach the right **Pane** without an extra click.
+* Fixed a keyboard focus issue for **Terminal** Sessions after app/window activation: keystrokes now reach the right **Pane** without an extra click.
+
 * Improved **RDP** debug logging so sensitive fields are redacted while keeping useful diagnostics, and surfaced **RDP** errors in the **Status Bar** regardless of debug settings.
 
 ## New
 
-- Added **ui.debug.log** support for Terminal focus tracing (records focus restore stages and related document state when enabled).
+* Added **ui.debug.log** support for Terminal focus tracing (records focus restore stages and related document state when enabled).
   PR #9481b70
 
 ## Improved
 
-- Enhanced **RDP** debug logging details while keeping sensitive values out of logs.
+* Enhanced **RDP** debug logging details while keeping sensitive values out of logs.
   PR #1994e86
+
 * Updated documentation/manifests for the above debug logging and related settings language entries.
   PR #8c90114, #1994e86
 
 ## Fixed
 
-- **Terminal** keyboard focus restoration:
+* **Terminal** keyboard focus restoration:
   * Stopped the focus-restore loop and ensured native OS-level focus is routed into the WebView content when the Terminal **Session** becomes active.
     PR #265 (commit(s): `9769472`, `9e37a0a`)
   * Re-established input focus after app switch by restoring focus at the OS webview level (and re-acquiring the textarea focus path).
@@ -3522,6 +3875,7 @@ All notable changes to KKTerm are documented here.
     PR #267 (commit(s): `060719c`, `98ecdd7`)
   * Renamed `focus_main_window` to `restore_main_window` for clarity.
     PR #? (`3857b77`)
+
 * **RDP** error visibility:
   * **Status Bar** now shows `remoteDesktop.rdpErrorStatus` for RDP errors regardless of debug settings.
     PR #1994e86
@@ -3530,8 +3884,9 @@ All notable changes to KKTerm are documented here.
 
 ## Internal
 
-- Refreshed architecture/release docs and manual pages for the improved debug logging and settings behavior.
+* Refreshed architecture/release docs and manual pages for the improved debug logging and settings behavior.
   PR #8c90114, #1994e86
+
 * Continued locale/i18n updates for the new/changed strings and debug UI support.
   PR #1994e86
 
@@ -3542,25 +3897,28 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights
 
-- URL layout controls moved to the **Connection** context menu, and terminal focus restore is improved (PR [#261](https://github.com/ryantsai/KKTerm/pull/261) by @ryantsai).
+* URL layout controls moved to the **Connection** context menu, and terminal focus restore is improved (PR [#261](https://github.com/ryantsai/KKTerm/pull/261) by @ryantsai).
+
 * Script-widget iframe startup is deferred/staggered so Dashboard UI stalls are reduced (PR [#262](https://github.com/ryantsai/KKTerm/pull/262) by @ryantsai). Your Dashboard gets to breathe—like a terminal waiting for the prompt.
 
 ## New
 
-- None.
+* None.
 
 ## Improved
 
-- URL layout controls are now in the **Connection** context menu (PR [#261](https://github.com/ryantsai/KKTerm/pull/261)).
+* URL layout controls are now in the **Connection** context menu (PR [#261](https://github.com/ryantsai/KKTerm/pull/261)).
+
 * Better terminal focus restore using WebView focus (PR [#261](https://github.com/ryantsai/KKTerm/pull/261)).
 
 ## Fixed
 
-- None.
+* None.
 
 ## Internal
 
-- Reduced Dashboard **Dashboard Widget Instance** stalls by deferring and staggering script-widget iframe startup (PR [#262](https://github.com/ryantsai/KKTerm/pull/262)).
+* Reduced Dashboard **Dashboard Widget Instance** stalls by deferring and staggering script-widget iframe startup (PR [#262](https://github.com/ryantsai/KKTerm/pull/262)).
+
 * Script widgets are gated by viewport intersection so off-screen script-widget iframes run less JavaScript until scrolled into view (PR [#262](https://github.com/ryantsai/KKTerm/pull/262)).
 * Monitoring widgets are exempt from viewport gating so periodic/realtime widgets keep updating while off-screen (PR [#262](https://github.com/ryantsai/KKTerm/pull/262)).
 
@@ -3568,25 +3926,28 @@ All notable changes to KKTerm are documented here.
 
 ## 亮點
 
-- 已將 **URL 佈局**控制項移到 **Connection（連線）**的內容選單，同時也強化了終端機（terminal）回復焦點的體驗（PR [#261](https://github.com/ryantsai/KKTerm/pull/261) 由 @ryantsai 貢獻）。
+* 已將 **URL 佈局**控制項移到 **Connection（連線）**的內容選單，同時也強化了終端機（terminal）回復焦點的體驗（PR [#261](https://github.com/ryantsai/KKTerm/pull/261) 由 @ryantsai 貢獻）。
+
 * Script-widget 的 iframe 啟動改為延後/分批，降低 Dashboard UI 卡頓（PR [#262](https://github.com/ryantsai/KKTerm/pull/262) 由 @ryantsai 貢獻）。Dashboard 終於能喘口氣——就像終端機在等提示字元。
 
 ## 新增
 
-- 無。
+* 無。
 
 ## 改善
 
-- **URL 佈局**控制項改放到 **Connection** 的內容選單（PR [#261](https://github.com/ryantsai/KKTerm/pull/261)）。
+* **URL 佈局**控制項改放到 **Connection** 的內容選單（PR [#261](https://github.com/ryantsai/KKTerm/pull/261)）。
+
 * 終端機焦點回復改用 WebView focus，體驗更穩定（PR [#261](https://github.com/ryantsai/KKTerm/pull/261)）。
 
 ## 修正
 
-- 無。
+* 無。
 
 ## Internal
 
-- 透過延後與分批啟動 script-widget iframe，降低 Dashboard 的 **Dashboard Widget Instance** 卡頓（PR [#262](https://github.com/ryantsai/KKTerm/pull/262)）。
+* 透過延後與分批啟動 script-widget iframe，降低 Dashboard 的 **Dashboard Widget Instance** 卡頓（PR [#262](https://github.com/ryantsai/KKTerm/pull/262)）。
+
 * 依視窗交會（viewport intersection）對 script-widget iframe 進行上屏/延後處理：離屏時先不必啟動過多 JavaScript，直到使用者捲入（PR [#262](https://github.com/ryantsai/KKTerm/pull/262)）。
 * 偵測用（monitoring）widgets 不套用離屏閘門：定期（periodic）/即時（realtime）widgets 即使離屏也能持續更新（PR [#262](https://github.com/ryantsai/KKTerm/pull/262)）。
 
@@ -3597,41 +3958,45 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights
 
-- Refined URL Connection controls and moved layout options into the actions menu—no more fighting the toolbar like it’s a flaky terminal prompt.
+* Refined URL Connection controls and moved layout options into the actions menu—no more fighting the toolbar like it’s a flaky terminal prompt.
+
 * Improved the Notes Dashboard Widget instance to better match paper-like corners and realism.
 
 ## New
 
-- Added **Send to AI** for **URL Connections**. ([#259](https://github.com/ryantsai/KKTerm/pull/259) by @ryantsai)
+* Added **Send to AI** for **URL Connections**. ([#259](https://github.com/ryantsai/KKTerm/pull/259) by @ryantsai)
 
 ## Improved
 
-- Refined URL toolbar actions by moving URL layout controls into the **actions menu**. ([#259](https://github.com/ryantsai/KKTerm/pull/259) by @ryantsai)
+* Refined URL toolbar actions by moving URL layout controls into the **actions menu**. ([#259](https://github.com/ryantsai/KKTerm/pull/259) by @ryantsai)
+
 * Updated the Notes widget styling: squarer corners and a more realistic folded-corner curl. ([#260](https://github.com/ryantsai/KKTerm/pull/260) by @ryantsai)
 
 ## Internal
 
-- Updated dashboard CSS for notes/table appearance and paper-corner realism. (`e5eb42d`, `6dd1545`, `700954f`)
+* Updated dashboard CSS for notes/table appearance and paper-corner realism. (`e5eb42d`, `6dd1545`, `700954f`)
 
 ---
 
 ## Highlights（繁體中文／台灣）
 
-- 強化 **URL Connection** 的控制方式：把「版面配置」選項移到 **actions menu** 裡，讓你不用再跟工具列互相猜謎（就像終端機提示符偶爾會抽風一樣）。
+* 強化 **URL Connection** 的控制方式：把「版面配置」選項移到 **actions menu** 裡，讓你不用再跟工具列互相猜謎（就像終端機提示符偶爾會抽風一樣）。
+
 * 改進「筆記」Dashboard Widget Instance 的外觀，讓紙感角落更逼真。
 
 ## New（新增）
 
-- 為 **URL Connections** 新增 **Send to AI** 功能。([#259](https://github.com/ryantsai/KKTerm/pull/259) by @ryantsai)
+* 為 **URL Connections** 新增 **Send to AI** 功能。([#259](https://github.com/ryantsai/KKTerm/pull/259) by @ryantsai)
 
 ## Improved（改進）
 
-- 改良 URL 工具列操作：將 URL 版面配置控制項移到 **actions menu**。([#259](https://github.com/ryantsai/KKTerm/pull/259) by @ryantsai)
+* 改良 URL 工具列操作：將 URL 版面配置控制項移到 **actions menu**。([#259](https://github.com/ryantsai/KKTerm/pull/259) by @ryantsai)
+
 * 更新「筆記」Widget 樣式：角落更方、更像折角紙的自然捲曲感。([#260](https://github.com/ryantsai/KKTerm/pull/260) by @ryantsai)
 
 ## Internal（內部）
 
-- 更新 Dashboard CSS，用於筆記/表格呈現與更逼真的紙角效果。(`e5eb42d`, `6dd1545`, `700954f`)
+* 更新 Dashboard CSS，用於筆記/表格呈現與更逼真的紙角效果。(`e5eb42d`, `6dd1545`, `700954f`)
 
 ## Direct Downloads
 
@@ -3640,13 +4005,14 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights
 
-- **Notes Dashboard Widget:** Add fold-corner placement and **Markdown rendering** options for note text.
+* **Notes Dashboard Widget:** Add fold-corner placement and **Markdown rendering** options for note text.
+
 * **Remote Desktop (RDP/VNC) View Mode:** New toolbar controls plus **per-Connection persistence** and settings.
 * **AI Providers:** Updated model recommendation catalog for several providers.
 
 ## New
 
-- **Notes widget options:**
+* **Notes widget options:**
   * **Fold corner** position selection
   * **Markdown enabled** toggle for note text rendering
 
@@ -3654,15 +4020,15 @@ All notable changes to KKTerm are documented here.
 
 ## Improved
 
-- **AI model recommendations:** Updated catalog entries for **Claude Opus 4.8**, **GPT-5.5**, **Gemini 3.5**, **Gemma 4**, and **NVIDIA Nemotron 3**.
+* **AI model recommendations:** Updated catalog entries for **Claude Opus 4.8**, **GPT-5.5**, **Gemini 3.5**, **Gemma 4**, and **NVIDIA Nemotron 3**.
 
 ## Fixed
 
-- Remote Desktop view mode localization updates to match current UI labels/descriptions (light “don’t leave dangling i18n strings on the floor” energy).
+* Remote Desktop view mode localization updates to match current UI labels/descriptions (light “don’t leave dangling i18n strings on the floor” energy).
 
 ## Internal
 
-- Terminal focus behavior improvements to restore input after switching apps, including a main window focus change listener in `TerminalWorkspace`.
+* Terminal focus behavior improvements to restore input after switching apps, including a main window focus change listener in `TerminalWorkspace`.
 
 ---
 
@@ -3670,13 +4036,14 @@ All notable changes to KKTerm are documented here.
 
 ## 重點
 
-- **Notes（筆記）Dashboard Widget：** 新增摺紙角落位置與 **Markdown 文字渲染**選項。
+* **Notes（筆記）Dashboard Widget：** 新增摺紙角落位置與 **Markdown 文字渲染**選項。
+
 * **遠端桌面（RDP/VNC）檢視模式：** 新增工具列控制，並提供 **以每個 Connection（連線）為單位的保存**與設定。
 * **AI 供應商：** 更新多家供應商的模型推薦清單。
 
 ## 新增
 
-- **Notes 小工具選項：**
+* **Notes 小工具選項：**
   * **摺紙角落（fold corner）**位置選擇
   * **Markdown 啟用**切換，用於筆記文字渲染
 
@@ -3684,15 +4051,15 @@ All notable changes to KKTerm are documented here.
 
 ## 改進
 
-- **AI 模型推薦：** 更新 **Claude Opus 4.8**、**GPT-5.5**、**Gemini 3.5**、**Gemma 4**、**NVIDIA Nemotron 3** 的推薦清單。
+* **AI 模型推薦：** 更新 **Claude Opus 4.8**、**GPT-5.5**、**Gemini 3.5**、**Gemma 4**、**NVIDIA Nemotron 3** 的推薦清單。
 
 ## 修正
 
-- 遠端桌面檢視模式的在地化（i18n）內容更新，對齊目前的 UI 標籤與描述（小小提醒：別把多餘的 i18n 字串丟在地板上）。
+* 遠端桌面檢視模式的在地化（i18n）內容更新，對齊目前的 UI 標籤與描述（小小提醒：別把多餘的 i18n 字串丟在地板上）。
 
 ## Internal
 
-- 改進 Terminal 的焦點行為：在切換到其他應用後可恢復輸入；並在 `TerminalWorkspace` 加入主視窗焦點變更的事件監聽。
+* 改進 Terminal 的焦點行為：在切換到其他應用後可恢復輸入；並在 `TerminalWorkspace` 加入主視窗焦點變更的事件監聽。
 
 ## Direct Downloads
 
@@ -3701,29 +4068,29 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights
 
-- Status Bar now reflects managed X server settings, and stops polling for X server status—less “network weather forecasting”, more signal.
+* Status Bar now reflects managed X server settings, and stops polling for X server status—less “network weather forecasting”, more signal.
 
 ## Improved
 
-- Updated the Status Bar to align with managed X server configuration changes.
+* Updated the Status Bar to align with managed X server configuration changes.
 
 ## Internal
 
-- Refreshed related context/docs and implementation to support the new Status Bar behavior.
+* Refreshed related context/docs and implementation to support the new Status Bar behavior.
 
 ---
 
 ## 重點摘要
 
-- 狀態列現在會反映「已管理的 X Server」設定，並停止輪詢 X Server 狀態—少一點「網路天氣預報」，多一點確定的訊號。
+* 狀態列現在會反映「已管理的 X Server」設定，並停止輪詢 X Server 狀態—少一點「網路天氣預報」，多一點確定的訊號。
 
 ## 改善
 
-- 更新狀態列，讓它能對應已管理的 X Server 設定變更。
+* 更新狀態列，讓它能對應已管理的 X Server 設定變更。
 
 ## 內部
 
-- 同步更新相關的說明文件與實作，以支援新的狀態列行為。
+* 同步更新相關的說明文件與實作，以支援新的狀態列行為。
 
 ## Direct Downloads
 
@@ -3732,30 +4099,35 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights
 
-- Smoother SFTP path controls in your Connection: autocomplete, recent paths, and improved inline-toolbar behavior (PR #252).
+* Smoother SFTP path controls in your Connection: autocomplete, recent paths, and improved inline-toolbar behavior (PR #252).
+
 * Clearer `winget` error output by decoding exit codes and adding verbose logs for installer-related actions (PR #253).
 * Better handling of rejected SSH X11 forwarding status in SSH panes, so the Session doesn’t silently “faceplant” (PR #255).
 
 ## New
 
-- Direct AI attachment submit flow to send context with fewer steps from the Assistant Panel (PR #256).
+* Direct AI attachment submit flow to send context with fewer steps from the Assistant Panel (PR #256).
+
 * Localized support for direct attachment prompts and improved related translations (PR #256, commit `9f13659`).
 
 ## Improved
 
-- Improve SFTP path controls: autocomplete, recent paths, and inline-toolbar behavior (PR #252).
+* Improve SFTP path controls: autocomplete, recent paths, and inline-toolbar behavior (PR #252).
+
 * Decode `winget` exit codes and enable verbose logging for install/managed-Ollama/uninstall flows to surface more actionable details (PR #253).
 * Handle rejected SSH X11 forwarding status in SSH panes using server reply status (PR #255).
 * X Server: improved management/wording in localization strings and UI network tool descriptions (commit `294054d`, plus PRs contributing to X Server work).
 
 ## Fixed
 
-- Handle rejected SSH X11 forwarding status in SSH panes (PR #255).
+* Handle rejected SSH X11 forwarding status in SSH panes (PR #255).
+
 * Decode `winget` exit codes so installer failures show readable meaning instead of raw HRESULT integers (PR #253).
 
 ## Internal
 
-- Normalize locale JSON key order with a new script to match source locale order (commit `36a6839`).
+* Normalize locale JSON key order with a new script to match source locale order (commit `36a6839`).
+
 * Localization and translation updates for new/updated UI strings (including direct attachment prompt strings and X Server-related strings; commits `9f13659`, `294054d`).
 * Workspace/assistant wiring, and various related refactors and merges (commits including `4dfc31b`, `4068e08`, `b60bafb`, `c547f34`).
 * Desktop wallpaper functionality was removed along with related UI/options/tests (commit `3da255b`).
@@ -3764,30 +4136,35 @@ All notable changes to KKTerm are documented here.
 
 ## 亮點
 
-- 在你的 **Connection** 裡，SFTP 路徑控制更順手：支援自動完成（autocomplete）、最近路徑（recent paths），並改善 inline-toolbar 行為（PR #252）。
+* 在你的 **Connection** 裡，SFTP 路徑控制更順手：支援自動完成（autocomplete）、最近路徑（recent paths），並改善 inline-toolbar 行為（PR #252）。
+
 * `winget` 錯誤訊息更清楚：解碼 exit code，並在安裝相關流程加入 verbose logs（PR #253）。
 * 當 SSH 的 X11 forwarding 被伺服器拒絕時，SSH **pane** 會更正確處理，避免 **Session** 直接「靜靜地壞掉」(PR #255)。
 
 ## 新功能
 
-- 新增直接提交 AI 附件（Direct AI attachment submit）流程：從 Assistant Panel 更少步驟就能帶上上下文（PR #256）。
+* 新增直接提交 AI 附件（Direct AI attachment submit）流程：從 Assistant Panel 更少步驟就能帶上上下文（PR #256）。
+
 * 新增直接附件提示（direct attachment prompt）的多語系支援，並改善相關翻譯（PR #256，commit `9f13659`）。
 
 ## 改進
 
-- 改進 SFTP 路徑控制：autocomplete、recent paths、inline-toolbar 行為（PR #252）。
+* 改進 SFTP 路徑控制：autocomplete、recent paths、inline-toolbar 行為（PR #252）。
+
 * 解碼 `winget` exit codes，並在安裝/managed-Ollama/卸載流程啟用 verbose logs，讓失敗時更容易追到原因（PR #253）。
 * 依據伺服器回覆狀態處理被拒絕的 SSH X11 forwarding，在 SSH pane 中呈現更合理的行為（PR #255）。
 * X Server：在多語系字串與 UI 說明（網路管理工具描述等）上做了文字/體驗面向的改進（commit `294054d`，以及參與 X Server 的相關 PR）。
 
 ## 修正
 
-- 修正/改善被拒絕的 SSH X11 forwarding 狀態在 SSH pane 的處理（PR #255）。
+* 修正/改善被拒絕的 SSH X11 forwarding 狀態在 SSH pane 的處理（PR #255）。
+
 * 修正 `winget` 安裝失敗時顯示原始 HRESULT 整數不易理解的問題；現在會顯示可讀的錯誤意義（PR #253）。
 
 ## Internal
 
-- 新增腳本用來把 locale JSON 的 key 順序規範成與來源 locale 相同（commit `36a6839`）。
+* 新增腳本用來把 locale JSON 的 key 順序規範成與來源 locale 相同（commit `36a6839`）。
+
 * 多語系/翻譯更新（包含 direct attachment prompt 與 X Server 相關字串；commits `9f13659`, `294054d`）。
 * 相關工作區/助理串接、以及各種重構與合併（commits 包含 `4dfc31b`, `4068e08`, `b60bafb`, `c547f34`）。
 * 移除桌面壁紙（desktop wallpaper）功能與相關 UI/選項/測試（commit `3da255b`）。
@@ -3799,19 +4176,22 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights
 
-- Improve SSH “changed host key” handling with a clear warning and an explicit opt-in replacement flow.
+* Improve SSH “changed host key” handling with a clear warning and an explicit opt-in replacement flow.
+
 * Better SFTP path input and restore terminal focus after popup interactions.
 
 ## New
 
-- Dashboard design, visualization, and accessibility Assistant Skills.
+* Dashboard design, visualization, and accessibility Assistant Skills.
+
 * Custom assistant skills folder toggle, including optional custom skills folder + settings UI.
 * Enable AI assistant network tools by default.
 * Add fallback flow to replace a changed SSH host key (with explicit confirmation).
 
 ## Improved
 
-- Reduce workspace connection frame padding (for all connection types).
+* Reduce workspace connection frame padding (for all connection types).
+
 * Open Windows Task Manager from status metrics.
 * Reduce/troubleshoot popup dialog dismissal control inconsistencies across dialogs.
 * SFTP: make the path input editable (and restore terminal focus after popup).
@@ -3821,11 +4201,12 @@ All notable changes to KKTerm are documented here.
 
 ## Fixed
 
-- Align “changed SSH host key” replacement/rotation expectations in host-key replace tests by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/251> (short SHA: 66ce06e).
+* Align “changed SSH host key” replacement/rotation expectations in host-key replace tests by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/251> (short SHA: 66ce06e).
 
 ## Internal
 
-- Derive `Debug` for `SshHostKeyPreview` so host-key tests compile by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/249> (short SHA: 62c93b7).
+* Derive `Debug` for `SshHostKeyPreview` so host-key tests compile by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/249> (short SHA: 62c93b7).
+
 * Derive `Debug` for SSH host key preview (test compilation unblock) by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/249> (short SHA: 71fbcfc).
 * Docs / architecture / i18n alignment work items (including Watchdog terminology and source map documentation) by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/237> (short SHA: c61a740), <https://github.com/ryantsai/KKTerm/pull/240> (short SHA: 539cf03), and <https://github.com/ryantsai/KKTerm/pull/235> (short SHA: d04aed7).
 
@@ -3833,20 +4214,23 @@ All notable changes to KKTerm are documented here.
 
 ## 精選重點
 
-- 修正來自工作列/托盤的桌布彈出視窗託管問題，並調整桌布相關的 Connection 行為（不再讓 popup 行為像網路問題一樣「玄學」）。
+* 修正來自工作列/托盤的桌布彈出視窗託管問題，並調整桌布相關的 Connection 行為（不再讓 popup 行為像網路問題一樣「玄學」）。
+
 * 強化 SSH「主機金鑰已變更」處理：提供清楚警告，並且需要使用者明確確認後才會替換。
 * 改善 SFTP 路徑輸入，並在彈出視窗互動後恢復終端機焦點。
 
 ## 新功能
 
-- Dashboard 設計、視覺化與無障礙 Assistant Skills。
+* Dashboard 設計、視覺化與無障礙 Assistant Skills。
+
 * 自訂 assistant skills 資料夾切換：包含選用自訂 skills 資料夾與設定 UI。
 * 預設啟用 AI assistant 網路工具（network tools）。
 * 新增「變更後 SSH 主機金鑰替換」的備援流程（需要明確確認）。
 
 ## 改善
 
-- 減少所有連線類型（workspace connection）的框架內距。
+* 減少所有連線類型（workspace connection）的框架內距。
+
 * 在 Windows 狀態指標中直接開啟工作管理員（Task Manager）。
 * 統一/對齊多個彈出對話框的關閉控制行為。
 * SFTP：讓路徑輸入可編輯（並在彈出視窗後恢復終端機焦點）。
@@ -3856,13 +4240,15 @@ All notable changes to KKTerm are documented here.
 
 ## 修正
 
-- 修正托盤桌布彈出視窗託管問題：@ryantsai，<https://github.com/ryantsai/KKTerm/pull/233（短> SHA: a9b9521）。
+* 修正托盤桌布彈出視窗託管問題：@ryantsai，<https://github.com/ryantsai/KKTerm/pull/233（短> SHA: a9b9521）。
+
 * 建立桌布 WebView 時避免使用 no-activate parent：@ryantsai，<https://github.com/ryantsai/KKTerm/pull/234（短> SHA: 3d5335b）。
 * 調整 SSH 主機金鑰替換/輪替後的測試預期（host-key replace 測試）：@ryantsai，<https://github.com/ryantsai/KKTerm/pull/251（短> SHA: 66ce06e）。
 
 ## Internal
 
-- 為 `SshHostKeyPreview` 衍生 `Debug`，以讓 host-key 測試能編譯通過：@ryantsai，<https://github.com/ryantsai/KKTerm/pull/249（短> SHA: 62c93b7）。
+* 為 `SshHostKeyPreview` 衍生 `Debug`，以讓 host-key 測試能編譯通過：@ryantsai，<https://github.com/ryantsai/KKTerm/pull/249（短> SHA: 62c93b7）。
+
 * 衍生 SSH 主機金鑰預覽的 `Debug`（用於測試編譯修正）：@ryantsai，<https://github.com/ryantsai/KKTerm/pull/249（短> SHA: 71fbcfc）。
 * 文件 / 架構 / i18n 的對齊工作項目（包含 Watchdog 用語與 source map 文件）：@ryantsai，<https://github.com/ryantsai/KKTerm/pull/237（短> SHA: c61a740）、<https://github.com/ryantsai/KKTerm/pull/240（短> SHA: 539cf03）、以及 <https://github.com/ryantsai/KKTerm/pull/235（短> SHA: d04aed7）。
 
@@ -3873,30 +4259,35 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights
 
-- **Dashboard Notes widget**: random rotation per **Dashboard Widget Instance**, configurable rotation, and multi-page notes with tear animation.
+* **Dashboard Notes widget**: random rotation per **Dashboard Widget Instance**, configurable rotation, and multi-page notes with tear animation.
+
 * **Terminal appearance**: per-**Connection** terminal background + transparency improvements, including separate split-pane background support. (If your terminals could talk, they’d probably ask for a color palette.)
 * **UI load smoothing**: lazy-mount dashboard views so you don’t pay the “mount everything now” tax.
 
 ## New
 
-- **Notes widget**: per-instance random rotation, configurable rotation, and multi-page notes with tear animation. by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/227>
+* **Notes widget**: per-instance random rotation, configurable rotation, and multi-page notes with tear animation. by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/227>
+
 * **Separate split terminal backgrounds** setting. by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/>??? (included in v0.1.56 changes via background-related commits)
 
 ## Improved
 
-- **Avoid blocking UI during MCP bridge startup**. by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/226>
+* **Avoid blocking UI during MCP bridge startup**. by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/226>
+
 * **Lazy-mount dashboard views** to avoid mounting all views at once. by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/228>
 * **Per-connection terminal opacity & background picker** (UI + persistence + storage/command plumbing). by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/229>
 * **Folder drag-and-drop**: improved behavior and added a visible root drop target. by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/230>
 
 ## Fixed
 
-- **Installer (winget bootstrap)**: fixed install helper winget bootstrap and preserved failure logs in the stepper. by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/225>
+* **Installer (winget bootstrap)**: fixed install helper winget bootstrap and preserved failure logs in the stepper. by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/225>
+
 * **Terminal appearance rendering**: improved background transparency handling for terminal renderer. (Included in v0.1.56 changes via terminal background/transparency commits)
 
 ## Internal
 
-- Release note generation docs/tooling updates for direct download links in README files. edc2419
+* Release note generation docs/tooling updates for direct download links in README files. edc2419
+
 * App navigation persistence and workspace layout management improvements. 10b794d
 * MCP bridge startup behavior docs/implementation updates. 582eacc
 * Dashboard background popover style/structure updates. 9c84cb7
@@ -3908,30 +4299,35 @@ All notable changes to KKTerm are documented here.
 
 ## 亮點
 
-- **儀表板 Notes 小工具**：每個 **Dashboard Widget Instance** 都有隨機旋轉、可設定旋轉角度，並支援多頁筆記與「撕裂」動畫效果。
+* **儀表板 Notes 小工具**：每個 **Dashboard Widget Instance** 都有隨機旋轉、可設定旋轉角度，並支援多頁筆記與「撕裂」動畫效果。
+
 * **終端機外觀**：讓每個 **Connection** 的終端背景與透明度（transparency）更完善，包含分割終端（split pane）可分開套用背景設定。（如果終端機會說話，大概會先問你要什麼配色。）
 * **介面載入更順**：延遲掛載儀表板視圖，避免一次把所有東西都掛上去。
 
 ## 新增
 
-- **Notes 小工具**：每個實例隨機旋轉、可設定旋轉角度、支援多頁筆記與撕裂動畫。by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/227>
+* **Notes 小工具**：每個實例隨機旋轉、可設定旋轉角度、支援多頁筆記與撕裂動畫。by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/227>
+
 * **分割終端可分開背景**設定。by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/???（v0.1.56> 內的背景相關改動一併涵蓋）
 
 ## 改進
 
-- **避免在 MCP bridge 啟動時阻塞 UI**。by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/226>
+* **避免在 MCP bridge 啟動時阻塞 UI**。by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/226>
+
 * **延遲掛載儀表板視圖**：避免一次掛載所有視圖。by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/228>
 * **每個連線（Connection）的終端透明度與背景選擇器**（UI + 持久化 + 儲存/指令串接）。by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/229>
 * **資料夾拖曳**：改進拖放行為並加入清楚可見的根目錄（root）放置目標。by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/230>
 
 ## 修正
 
-- **安裝程式（winget bootstrap）**：修正安裝程式助手 winget bootstrap，並在 stepper 中保留失敗時的日誌。by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/225>
+* **安裝程式（winget bootstrap）**：修正安裝程式助手 winget bootstrap，並在 stepper 中保留失敗時的日誌。by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/225>
+
 * **終端機外觀渲染**：改進終端渲染器的背景透明度處理。（v0.1.56 內的終端背景/透明度相關改動已涵蓋）
 
 ## Internal
 
-- 發版說明（release note）生成與文件更新：在 README 加入 Windows 安裝程式直接下載連結相關。edc2419
+* 發版說明（release note）生成與文件更新：在 README 加入 Windows 安裝程式直接下載連結相關。edc2419
+
 * App 導覽（navigation）持久化與工作區（workspace）版面管理改進。10b794d
 * MCP bridge 啟動相關文件/實作更新。582eacc
 * 儀表板背景彈出視窗（background popover）樣式與結構更新。9c84cb7
@@ -3942,63 +4338,69 @@ All notable changes to KKTerm are documented here.
 
 ## Highlights
 
-- **More reliable tutorials navigation**: fixed tutorial match iterator handling so Tab/Pane navigation during the tutorial behaves predictably (PR #218 by @ryantsai).
+* **More reliable tutorials navigation**: fixed tutorial match iterator handling so Tab/Pane navigation during the tutorial behaves predictably (PR #218 by @ryantsai).
+
 * **Safer MCP bridge descriptor access**: hardened MCP bridge descriptor ACLs so other local users can’t read the descriptor on Windows (PR #220 by @ryantsai).
 
 ## New
 
-- **Double-click header toggles** for **Connections** and **AI Assistant** panels—double-click the panel header to hide/show the panel (PR #223 by @ryantsai).
+* **Double-click header toggles** for **Connections** and **AI Assistant** panels—double-click the panel header to hide/show the panel (PR #223 by @ryantsai).
 
 ## Improved
 
-- **Install Helper utilities** now include **Coreutils (Microsoft.Coreutils)** for winget + download provider (PR #224 by @ryantsai).
+* **Install Helper utilities** now include **Coreutils (Microsoft.Coreutils)** for winget + download provider (PR #224 by @ryantsai).
+
 * **WebView screenshot region layering** improvements for URL WebView so the screenshot region isn’t layered incorrectly (PR #222 by @ryantsai).
 
 ## Fixed
 
-- **Tutorial navigation test match iterator handling** (PR #218 by @ryantsai).
+* **Tutorial navigation test match iterator handling** (PR #218 by @ryantsai).
+
 * **URL WebView screenshot region layering** (PR #222 by @ryantsai).
 * **Harden MCP bridge descriptor ACLs** (PR #220 by @ryantsai).
 
 ## Internal
 
-- **Docs sync** release and roadmap status (PR #219 by @ryantsai).
+* **Docs sync** release and roadmap status (PR #219 by @ryantsai).
 
 ---
 
 ## Highlights（重點）
 
-- **教學導覽更可靠**：修正教學比對的 iterator 處理，讓教學過程中的 Tab/Pane 導覽行為更一致（PR #218，@ryantsai）。
+* **教學導覽更可靠**：修正教學比對的 iterator 處理，讓教學過程中的 Tab/Pane 導覽行為更一致（PR #218，@ryantsai）。
+
 * **MCP 連線橋接更安全**：強化 MCP bridge descriptor 的 ACL，避免 Windows 上其他本機使用者讀取 descriptor（PR #220，@ryantsai）。
 
 ## New（新增）
 
-- **Connections 與 AI Assistant 面板**支援「標題列雙擊切換」：雙擊面板標題即可隱藏/顯示面板（PR #223，@ryantsai）。
+* **Connections 與 AI Assistant 面板**支援「標題列雙擊切換」：雙擊面板標題即可隱藏/顯示面板（PR #223，@ryantsai）。
 
 ## Improved（改進）
 
-- **Install Helper 工具**加入 **Coreutils（Microsoft.Coreutils）**：使用 winget + download provider（PR #224，@ryantsai）。
+* **Install Helper 工具**加入 **Coreutils（Microsoft.Coreutils）**：使用 winget + download provider（PR #224，@ryantsai）。
+
 * **URL WebView 截圖區塊**的層級（layering）更正確，避免區塊被錯誤疊到（PR #222，@ryantsai）。
 
 ## Fixed（修正）
 
-- **教學導覽測試比對 iterator 處理**（PR #218，@ryantsai）。
+* **教學導覽測試比對 iterator 處理**（PR #218，@ryantsai）。
+
 * **URL WebView 截圖區塊層級**（PR #222，@ryantsai）。
 * **強化 MCP bridge descriptor ACLs**（PR #220，@ryantsai）。
 
 ## Internal（內部）
 
-- **文件同步**：更新 release 與 roadmap 狀態（PR #219，@ryantsai）。
+* **文件同步**：更新 release 與 roadmap 狀態（PR #219，@ryantsai）。
 
 ## v0.1.54
 
 ## Highlights
 
-- App update download & installation is now supported in KKTerm (with user-facing update status prompts). Like a good terminal session, it tells you what’s happening—before it happens.
+* App update download & installation is now supported in KKTerm (with user-facing update status prompts). Like a good terminal session, it tells you what’s happening—before it happens.
 
 ## New
 
-- **App update download & installation functionality**
+* **App update download & installation functionality**
   * Adds UI prompts and the underlying update flow, including localized update-related strings.
 
 * **Release script improvements**
@@ -4006,7 +4408,8 @@ All notable changes to KKTerm are documented here.
 
 ## Internal
 
-- Updated/added localization tasks and translation strings related to app update status and prompts.
+* Updated/added localization tasks and translation strings related to app update status and prompts.
+
 * Updated release documentation and Tauri-side update implementation files.
 * Added tests for app updates model and release GitHub script behavior.
 
@@ -4014,11 +4417,11 @@ All notable changes to KKTerm are documented here.
 
 ## 亮點
 
-- KKTerm 現已支援**下載並安裝程式更新**（搭配使用者可見的更新狀態提示）。就像一個可靠的終端機工作階段：在事情發生前就先告訴你。
+* KKTerm 現已支援**下載並安裝程式更新**（搭配使用者可見的更新狀態提示）。就像一個可靠的終端機工作階段：在事情發生前就先告訴你。
 
 ## 新增
 
-- **程式更新下載與安裝功能**
+* **程式更新下載與安裝功能**
   * 提供更新提示 UI 與底層更新流程，並包含更新相關的在地化字串。
 
 * **發佈腳本改進**
@@ -4026,7 +4429,8 @@ All notable changes to KKTerm are documented here.
 
 ## Internal（內部）
 
-- 更新/新增與程式更新狀態與提示相關的在地化任務與翻譯字串。
+* 更新/新增與程式更新狀態與提示相關的在地化任務與翻譯字串。
+
 * 更新發佈文件以及 Tauri 端的更新實作檔案。
 * 新增 app updates model 與 release GitHub 腳本行為的測試。
 
@@ -4200,28 +4604,31 @@ Compare: <https://github.com/ryantsai/KKTerm/compare/v0.1.48...v0.1.49>
 
 ## Highlights
 
-- Hermes Agent 與 OpenClaw 在 Install Helper（已安裝狀態）新增 **Run** 與 **Add to workspace**：用起來像把「開終端機」與「把 Session 存成預設」一起打包了——系統也比較不會睡過頭。
+* Hermes Agent 與 OpenClaw 在 Install Helper（已安裝狀態）新增 **Run** 與 **Add to workspace**：用起來像把「開終端機」與「把 Session 存成預設」一起打包了——系統也比較不會睡過頭。
+
 * 安裝流程的 i18n：將 Installer 相關的 **9 個待翻譯 key** 完整翻到 **13 個非英文 locale**。
 
 ## New
 
-- Install Helper：Hermes Agent、OpenClaw（已安裝狀態）新增兩個動作按鈕
+* Install Helper：Hermes Agent、OpenClaw（已安裝狀態）新增兩個動作按鈕
   * **Run**：開啟新 PowerShell console（Hermes venv 啟用 / OpenClaw 設定本地 npm exec alias），並在互動提示先填好指令名稱
   * **Add to workspace**：在 Connections 側邊欄新增一筆本機的 Connection（「Hermes Agent」或「OpenClaw」），每次開啟時自動啟用 venv / alias 與顯示提示
 
 ## Improved
 
-- OpenClaw：改為 **app-local 安裝**（由 KKTerm 管理到 `%LOCALAPPDATA%\KKTerm\installer\apps\openclaw`），讓 KKTerm 對安裝、偵測與解除安裝有更直接的控制。
+* OpenClaw：改為 **app-local 安裝**（由 KKTerm 管理到 `%LOCALAPPDATA%\KKTerm\installer\apps\openclaw`），讓 KKTerm 對安裝、偵測與解除安裝有更直接的控制。
 
 ## Fixed
 
-- 修正 Install Helper 的 agent 啟動流程與 web-UI launcher 問題。
+* 修正 Install Helper 的 agent 啟動流程與 web-UI launcher 問題。
+
 * 修正與「npm + 新安裝 nvm-windows」的情境相關的偵測/啟動問題：讓受管的 managed apps 的 npm 探測與啟動使用更新後的 PATH。
 * 偵測流程：在需要時改用「已更新/持久化 Windows PATH」進行 node/npm 探測，並加入回歸測試。
 
 ## Internal
 
-- Installer i18n：翻譯 9 個 Installer 相關 key 至所有 13 個非英文 locale（含刪除 localization_todo backlog 檔），並確認 `npm run i18n:check` 通過。
+* Installer i18n：翻譯 9 個 Installer 相關 key 至所有 13 個非英文 locale（含刪除 localization_todo backlog 檔），並確認 `npm run i18n:check` 通過。
+
 * Install Helper：把安裝/偵測等工作移出 UI thread（避免像在同一個 Pane 裡又跑編譯又跑渲染那樣卡頓）。
 * 多項 Install Helper 與安裝器相關的偵測/文件/測試調整（含架構與手冊更新）。
 * 版本變更（整理順序/分類等）與相關測試更新。
@@ -4232,28 +4639,31 @@ Compare: <https://github.com/ryantsai/KKTerm/compare/v0.1.48...v0.1.49>
 
 ## 精選重點
 
-- Hermes Agent 與 OpenClaw 在 Install Helper（已安裝狀態）新增 **Run** 與 **Add to workspace**：把「開終端機」和「把 Session 存成預設」一起打包，讓網路與終端工作流程更不容易卡住——就像系統比較不會半夜裝睡。
+* Hermes Agent 與 OpenClaw 在 Install Helper（已安裝狀態）新增 **Run** 與 **Add to workspace**：把「開終端機」和「把 Session 存成預設」一起打包，讓網路與終端工作流程更不容易卡住——就像系統比較不會半夜裝睡。
+
 * 安裝相關 i18n：將 Installer 相關 **9 個待翻譯 key** 完整翻到 **13 個非英文 locale**。
 
 ## 新增
 
-- Install Helper：Hermes Agent、OpenClaw（已安裝狀態）新增兩個動作按鈕
+* Install Helper：Hermes Agent、OpenClaw（已安裝狀態）新增兩個動作按鈕
   * **Run**：開啟新的 PowerShell console（Hermes venv 啟用 / OpenClaw 設定本地 npm exec alias），並在互動提示先填好指令名稱
   * **Add to workspace**：在 Connections 側邊欄新增一筆本機 Connection（「Hermes Agent」或「OpenClaw」），每次開啟時自動啟用 venv / alias 與顯示提示
 
 ## 改進
 
-- OpenClaw：改為 **app-local 安裝**（由 KKTerm 管理到 `%LOCALAPPDATA%\KKTerm\installer\apps\openclaw`），讓 KKTerm 對安裝、偵測與解除安裝有更直接的控制。
+* OpenClaw：改為 **app-local 安裝**（由 KKTerm 管理到 `%LOCALAPPDATA%\KKTerm\installer\apps\openclaw`），讓 KKTerm 對安裝、偵測與解除安裝有更直接的控制。
 
 ## 修正
 
-- 修正 Install Helper 的 agent 啟動流程與 web-UI launcher 問題。
+* 修正 Install Helper 的 agent 啟動流程與 web-UI launcher 問題。
+
 * 修正與「npm + 新安裝 nvm-windows」情境相關的偵測/啟動問題：讓受管的 managed apps 的 npm 探測與啟動使用更新後的 PATH。
 * 偵測流程：在需要時改用「已更新/持久化 Windows PATH」進行 node/npm 探測，並加入回歸測試。
 
 ## Internal
 
-- Installer i18n：翻譯 9 個 Installer 相關 key 至所有 13 個非英文 locale（含刪除 localization_todo backlog 檔），並確認 `npm run i18n:check` 通過。
+* Installer i18n：翻譯 9 個 Installer 相關 key 至所有 13 個非英文 locale（含刪除 localization_todo backlog 檔），並確認 `npm run i18n:check` 通過。
+
 * Install Helper：把安裝/偵測等工作移出 UI thread（避免像在同一個 Pane 裡又跑編譯又跑渲染那樣卡住）。
 * 多項 Install Helper 與安裝器相關的偵測/文件/測試調整（含架構與手冊更新）。
 * 版本變更（整理順序/分類等）與相關測試更新。
@@ -4262,154 +4672,169 @@ Compare: <https://github.com/ryantsai/KKTerm/compare/v0.1.48...v0.1.49>
 
 ## Highlights
 
-- **Dashboard Tab Reorder**: Reorder tabs in Dashboard view (so your Session can follow your brain, not the other way around).
+* **Dashboard Tab Reorder**: Reorder tabs in Dashboard view (so your Session can follow your brain, not the other way around).
+
 * **Installer improvements for managed apps**: Enhanced support around installer managed app behavior and related documentation.
 
 ## New
 
-- **Dashboard view tab reorder** (PR #183 by @ryantsai): Lets you change the order of tabs on the Dashboard view.
+* **Dashboard view tab reorder** (PR #183 by @ryantsai): Lets you change the order of tabs on the Dashboard view.
 
 ## Improved
 
-- **Installer managed app support** (commit: 3cb61ad): Expanded/updated support for installer managed apps and their related catalogs/docs.
+* **Installer managed app support** (commit: 3cb61ad): Expanded/updated support for installer managed apps and their related catalogs/docs.
+
 * **Installer UI log behavior** (commit: 1489027): Installer progress now shows a single in-app command log instead of duplicate legacy rendering.
 * **Installer latest-version checks** (commit: 5b45dec, 1489027): Updated winget latest-version checks to pass `--accept-source-agreements`, helping fresh Windows machines return latest versions instead of “unknown” on first winget use.
 
 ## Fixed
 
-- **Regression coverage added**: Added regression tests around installer behaviors (including dashboard/view reorder and installer log/latest-version behaviors).
+* **Regression coverage added**: Added regression tests around installer behaviors (including dashboard/view reorder and installer log/latest-version behaviors).
 
 ## Internal
 
-- **Install helper catalog apps** (commit: 8903fe1): Added install helper catalog apps and updated related architecture/docs and installer code paths.
+* **Install helper catalog apps** (commit: 8903fe1): Added install helper catalog apps and updated related architecture/docs and installer code paths.
+
 * Wired new/updated tests into `npm run check` (commits: 5b45dec, 1489027, 3cb61ad).
 
 ---
 
 ## 亮點
 
-- **Dashboard 分頁重排序**：在 Dashboard 視圖中重排分頁（讓你的 Session 跟著你的思路走，不必反過來）。
+* **Dashboard 分頁重排序**：在 Dashboard 視圖中重排分頁（讓你的 Session 跟著你的思路走，不必反過來）。
+
 * **受管理應用程式安裝器更新**：強化安裝器受管理應用程式相關支援與文件。
 
 ## 新增
 
-- **Dashboard 視圖分頁重排序**（PR #183 由 @ryantsai 提供）：可調整 Dashboard 視圖分頁的順序。
+* **Dashboard 視圖分頁重排序**（PR #183 由 @ryantsai 提供）：可調整 Dashboard 視圖分頁的順序。
 
 ## 改善
 
-- **受管理應用程式安裝器支援**（commit：3cb61ad）：擴充/更新受管理應用程式的支援，並同步更新相關 catalogs/文件。
+* **受管理應用程式安裝器支援**（commit：3cb61ad）：擴充/更新受管理應用程式的支援，並同步更新相關 catalogs/文件。
+
 * **安裝器介面日誌顯示行為**（commit：1489027）：安裝進度現在只顯示一份內建的指令日誌，不再重複顯示舊版的重繪結果。
 * **安裝器最新版本檢查**（commit：5b45dec、1489027）：更新 winget 最新版本檢查，改為傳入 `--accept-source-agreements`，協助全新 Windows 裝置在第一次使用 winget 時能回傳最新版本而非顯示「unknown」。
 
 ## 修正
 
-- **加入迴歸測試覆蓋**：新增針對安裝器行為的迴歸測試（包含 Dashboard/視圖重排、安裝器日誌與最新版本檢查等）。
+* **加入迴歸測試覆蓋**：新增針對安裝器行為的迴歸測試（包含 Dashboard/視圖重排、安裝器日誌與最新版本檢查等）。
 
 ## Internal
 
-- **安裝器 Helper Catalog Apps**（commit：8903fe1）：新增安裝器 helper catalog apps，並更新相關架構/文件與安裝器程式流程。
+* **安裝器 Helper Catalog Apps**（commit：8903fe1）：新增安裝器 helper catalog apps，並更新相關架構/文件與安裝器程式流程。
+
 * 將新增/更新的測試接入 `npm run check`（commits：5b45dec、1489027、3cb61ad）。
 
 ## Highlights
 
-- The Windows installer now correctly uses the right npm entrypoint (goodbye “program not found” when Node is actually there). ✅
+* The Windows installer now correctly uses the right npm entrypoint (goodbye “program not found” when Node is actually there). ✅
 
 ## Fixed
 
-- Fixed npm detection/installation in the Installer on Windows by using `npm.cmd` instead of spawning `npm` directly (while keeping `npm` elsewhere). (da2ada1)
+* Fixed npm detection/installation in the Installer on Windows by using `npm.cmd` instead of spawning `npm` directly (while keeping `npm` elsewhere). (da2ada1)
 
 ## Internal
 
-- Updated installer logic to wire the refreshed PATH runner through npm install/detection/uninstall flows, including npm package installs immediately after Node in the same Install Helper flow. (da2ada1)
+* Updated installer logic to wire the refreshed PATH runner through npm install/detection/uninstall flows, including npm package installs immediately after Node in the same Install Helper flow. (da2ada1)
+
 * Documentation and installer command/detection/uninstall/install internals updated. (da2ada1)
 
 ---
 
 ## 亮點
 
-- Windows 安裝程式現在會正確使用對的 npm 入口點（告別明明有 Node 卻還報「program not found」的狀況）。✅
+* Windows 安裝程式現在會正確使用對的 npm 入口點（告別明明有 Node 卻還報「program not found」的狀況）。✅
 （很像網管發現錯的設定檔，終於把連線救回來。）
 
 ## 修正
 
-- 修正 Installer 在 Windows 上的 npm 偵測/安裝行為：改用 `npm.cmd` 取代直接執行 `npm`（其他平台維持使用 `npm`）。(da2ada1)
+* 修正 Installer 在 Windows 上的 npm 偵測/安裝行為：改用 `npm.cmd` 取代直接執行 `npm`（其他平台維持使用 `npm`）。(da2ada1)
 
 ## Internal（內部）
 
-- 更新安裝程式的流程：將更新後的 PATH runner 一併串到 npm 安裝/偵測/解除安裝等流程；並支援在同一個 Install Helper 流程中，Node 剛安裝完立刻安裝 npm 套件而不需要重開機。 (da2ada1)
+* 更新安裝程式的流程：將更新後的 PATH runner 一併串到 npm 安裝/偵測/解除安裝等流程；並支援在同一個 Install Helper 流程中，Node 剛安裝完立刻安裝 npm 套件而不需要重開機。 (da2ada1)
+
 * 同步更新文件與安裝程式內部的命令/偵測/解除安裝/安裝實作。 (da2ada1)
 
 ## Highlights
 
-- Improved RDP Connection Session resizing so **remote desktop no longer starts too small** and **doesn’t require a manual Tab/Pane nudge** to settle.
+* Improved RDP Connection Session resizing so **remote desktop no longer starts too small** and **doesn’t require a manual Tab/Pane nudge** to settle.
+
 * Fixed a regression where **the RDP desktop could never appear** after connect (even while the toolbar still showed **“Connected”**).
 
 ## New
 
-- (Docs) Documented the **RDP native-window lifecycle invariant** in `ARCHITECTURE.md` so the off-screen staging vs on-screen re-apply behavior doesn’t get re-broken. (Think of it as putting a “do not touch” label on the terminal’s network cable.)
+* (Docs) Documented the **RDP native-window lifecycle invariant** in `ARCHITECTURE.md` so the off-screen staging vs on-screen re-apply behavior doesn’t get re-broken. (Think of it as putting a “do not touch” label on the terminal’s network cable.)
 
 ## Improved
 
-- RDP automatic resolution (`remoteResolution=automatic`) now performs additional settle passes after the Session becomes displayable, applying the correct size without waiting for a Pane resize.
+* RDP automatic resolution (`remoteResolution=automatic`) now performs additional settle passes after the Session becomes displayable, applying the correct size without waiting for a Pane resize.
 
 ## Fixed
 
-- Fixed RDP automatic resolution rendering at the wrong (small) size until a pane resize nudges the Tab.
+* Fixed RDP automatic resolution rendering at the wrong (small) size until a pane resize nudges the Tab.
+
 * Hotfix: Fixed RDP desktop potentially never showing after the prior change (#180), caused by an off-screen settle path leaving the native window parked.
   * PR #180: <https://github.com/ryantsai/KKTerm/pull/180>
   * PR #181: <https://github.com/ryantsai/KKTerm/pull/181>
 
 ## Internal
 
-- Split/organized connection dialog fields by type (including RDP) under `src/modules/workspace/connections/connection-dialog`.
+* Split/organized connection dialog fields by type (including RDP) under `src/modules/workspace/connections/connection-dialog`.
 
 ---
 
 ## 重點摘要
 
-- 改善 RDP Connection Session 的縮放行為：**遠端桌面不再一開始就太小**，也**不再需要手動去推一下 Tab/Pane** 才會「正常 settle」。
+* 改善 RDP Connection Session 的縮放行為：**遠端桌面不再一開始就太小**，也**不再需要手動去推一下 Tab/Pane** 才會「正常 settle」。
+
 * 修正一個回歸問題：RDP 在連線後**可能永遠不會顯示桌面**（雖然工具列仍顯示 **「Connected」**）。
 
 ## 新增
 
-- （文件）在 `ARCHITECTURE.md` 補上 **RDP native-window lifecycle invariant** 的說明，避免再次把「離屏 staging」和「畫面上重套用」的流程搞混。（就像在終端機網路線上貼了「不要亂拔」標籤。）
+* （文件）在 `ARCHITECTURE.md` 補上 **RDP native-window lifecycle invariant** 的說明，避免再次把「離屏 staging」和「畫面上重套用」的流程搞混。（就像在終端機網路線上貼了「不要亂拔」標籤。）
 
 ## 改善
 
-- RDP 自動解析度（`remoteResolution=automatic`）在 Session 變得可顯示後，會額外進行 settle passes，讓 Tab/Pane 不必先被調整也能套用正確大小。
+* RDP 自動解析度（`remoteResolution=automatic`）在 Session 變得可顯示後，會額外進行 settle passes，讓 Tab/Pane 不必先被調整也能套用正確大小。
 
 ## 修正
 
-- 修正 RDP 自動解析度剛開始會以錯誤（偏小）的大小呈現，直到面板大小被調整才會變正確。
+* 修正 RDP 自動解析度剛開始會以錯誤（偏小）的大小呈現，直到面板大小被調整才會變正確。
+
 * Hotfix：修正先前改動（#180）後，RDP 桌面可能**不會顯示**的問題；原因是某段 settle 路徑把原生視窗停放在離屏狀態。
   * PR #180: <https://github.com/ryantsai/KKTerm/pull/180>
   * PR #181: <https://github.com/ryantsai/KKTerm/pull/181>
 
 ## Internal
 
-- 整理/拆分連線對話框的欄位，依連線類型放到 `src/modules/workspace/connections/connection-dialog`（包含 RDP）。
+* 整理/拆分連線對話框的欄位，依連線類型放到 `src/modules/workspace/connections/connection-dialog`（包含 RDP）。
 
 ## Highlights
 
-- **Status Bar visibility option**: You can now show or hide the Status Bar.
+* **Status Bar visibility option**: You can now show or hide the Status Bar.
+
 * **Dashboard updates for watchdogs**: Watchdogs now appear in the bottom-right Status Bar as soon as they emit events, with richer detail when you click.
 
 ## New
 
-- **Show/Hide Status Bar setting** (moved Connection-rail toggle to **Workspace** settings). By @ryantsai in <https://github.com/ryantsai/KKTerm/pull/177>
+* **Show/Hide Status Bar setting** (moved Connection-rail toggle to **Workspace** settings). By @ryantsai in <https://github.com/ryantsai/KKTerm/pull/177>
+
 * **Watchdog Status Bar experience**: New/updated UI behavior and detail panel content for watchdogs (elapsed time, watch summary, next check, exit condition, notification method, action mode). Includes docs/manual update for the Status Bar indicator. (See commits around `WatchdogStatusBar` / `WatchdogDetail`.)
 
 ## Improved
 
-- **AI widget-design contracts**: Strengthened contracts for dashboard widget layout, contrast, and copy, and wired them into widget creation/system instructions. By @ryantsai in <https://github.com/ryantsai/KKTerm/pull/178>
+* **AI widget-design contracts**: Strengthened contracts for dashboard widget layout, contrast, and copy, and wired them into widget creation/system instructions. By @ryantsai in <https://github.com/ryantsai/KKTerm/pull/178>
 
 ## Fixed
 
-- **Install Helper detection UI tiles**: Fixed an event payload shape mismatch so detected Install Helper progress results apply to the correct Dashboard Widget Instance keys (instead of leaving tiles stuck at “Not installed / Checked: Never”). Added regression tests. (Fix in `events.rs`.)
+* **Install Helper detection UI tiles**: Fixed an event payload shape mismatch so detected Install Helper progress results apply to the correct Dashboard Widget Instance keys (instead of leaving tiles stuck at “Not installed / Checked: Never”). Added regression tests. (Fix in `events.rs`.)
 
 ## Internal
 
-- **Install Helper catalog & detection cache update**: Updated Install Helper catalog and detection cache. By @ryantsai in <https://github.com/ryantsai/KKTerm/pull/179>
+* **Install Helper catalog & detection cache update**: Updated Install Helper catalog and detection cache. By @ryantsai in <https://github.com/ryantsai/KKTerm/pull/179>
+
 * **Install Helper detection change**: Install Helper now detects winget-provider tools from a local Add/Remove Programs registry snapshot (via catalog aliases) for existing installs, while still using winget for install/update/latest-version work. (Commit `4839200`.)
 * **Progress event payload tests & normalization**: Regression coverage for the corrected progress event field mapping (commit `39e5f09`).
 
@@ -4417,25 +4842,28 @@ Compare: <https://github.com/ryantsai/KKTerm/compare/v0.1.48...v0.1.49>
 
 ## 亮點
 
-- **狀態列顯示/隱藏選項**：你現在可以選擇顯示或隱藏 Status Bar。
+* **狀態列顯示/隱藏選項**：你現在可以選擇顯示或隱藏 Status Bar。
+
 * **Watchdog 相關體驗更新**：Watchdog 會在右下角狀態列中於送出事件後立刻出現；點擊後可看到更完整的細節。
 
 ## 新增
 
-- **狀態列顯示/隱藏設定**（並將 Connection-rail 切換移到 **Workspace** 設定）。由 @ryantsai 於 <https://github.com/ryantsai/KKTerm/pull/177>
+* **狀態列顯示/隱藏設定**（並將 Connection-rail 切換移到 **Workspace** 設定）。由 @ryantsai 於 <https://github.com/ryantsai/KKTerm/pull/177>
+
 * **Watchdog Status Bar 體驗**：新的/更新的狀態列行為與明細面板內容（包含經過時間、watch summary、下一次檢查、結束條件、通知方式、action mode）。並更新文件/手冊說明狀態列指示器。（請參考 `WatchdogStatusBar` / `WatchdogDetail` 相關提交。）
 
 ## 改善
 
-- **AI widget 設計合約強化**：加強 Dashboard Widget Instance 的版面、對比與文案（copy）合約，並串接到 dashboard_create_widget 的工具描述與系統指示中。由 @ryantsai 於 <https://github.com/ryantsai/KKTerm/pull/178>
+* **AI widget 設計合約強化**：加強 Dashboard Widget Instance 的版面、對比與文案（copy）合約，並串接到 dashboard_create_widget 的工具描述與系統指示中。由 @ryantsai 於 <https://github.com/ryantsai/KKTerm/pull/178>
 
 ## 修正
 
-- **Install Helper 偵測顯示瓷磚**：修正事件 payload 結構不一致，讓 Install Helper 的偵測進度能套用到正確的 Dashboard Widget Instance 欄位；不再讓瓷磚卡在「Not installed / Checked: Never」。並加入回歸測試。（`events.rs` 修正。）
+* **Install Helper 偵測顯示瓷磚**：修正事件 payload 結構不一致，讓 Install Helper 的偵測進度能套用到正確的 Dashboard Widget Instance 欄位；不再讓瓷磚卡在「Not installed / Checked: Never」。並加入回歸測試。（`events.rs` 修正。）
 
 ## Internal
 
-- **更新 Install Helper 目錄與偵測快取**：更新 Install Helper 目錄與偵測快取。由 @ryantsai 於 <https://github.com/ryantsai/KKTerm/pull/179>
+* **更新 Install Helper 目錄與偵測快取**：更新 Install Helper 目錄與偵測快取。由 @ryantsai 於 <https://github.com/ryantsai/KKTerm/pull/179>
+
 * **Install Helper 偵測方式調整**：Install Helper 現在會從本機「新增/移除程式」的登錄快照辨識 winget-provider 工具（透過目錄 aliases），以更正確捕捉既有安裝；安裝/更新/最新版本仍使用 winget。（提交 `4839200`。）
 * **進度事件欄位映射修正測試**：加入回歸測試以涵蓋已修正的 progress event 欄位對應（提交 `39e5f09`）。
 
@@ -4443,31 +4871,36 @@ Compare: <https://github.com/ryantsai/KKTerm/compare/v0.1.48...v0.1.49>
 
 ## Highlights
 
-- Redesigned **Install Helper** with a popup dialog and streaming step events (less tile chaos, more terminal-friendly clarity).
+* Redesigned **Install Helper** with a popup dialog and streaming step events (less tile chaos, more terminal-friendly clarity).
+
 * DB write latency improvements via **WAL** + **busy_timeout** to keep your UI from waiting on the network gremlins.
 * Improved handling for ongoing UI flows: session teardown unblocks, and AI stream rendering is coalesced for smoother updates.
 
 ## New
 
-- Install Helper now uses a popup-driven dialog and stepper flow, including streaming progress and per-step expandable logs. (by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/173>)
+* Install Helper now uses a popup-driven dialog and stepper flow, including streaming progress and per-step expandable logs. (by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/173>)
+
 * Render installer/update release notes as Markdown. (by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/175>)
 * Completed pending locale translations. (by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/176>)
 
 ## Improved
 
-- Storage/DB: enabled **WAL** + **busy_timeout** to shorten DB write latency. (by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/174>)
+* Storage/DB: enabled **WAL** + **busy_timeout** to shorten DB write latency. (by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/174>)
+
 * AI UI responsiveness: coalesced streamed AI renders, improved connection-tree filtering behavior, and avoided no-op CWD updates in panes. (unblocked smoother tab/pane interactions; from <https://github.com/ryantsai/KKTerm/pull/174>)
 * Session handling improvements to avoid cross-session FTP/VNC shutdown blocking and to harden WebView start reservations. (from <https://github.com/ryantsai/KKTerm/pull/174>)
 
 ## Fixed
 
-- Storage IDs: made generated IDs collision-proof using a process-wide monotonic counter (prevents UNIQUE constraint failures when IDs are generated within the same millisecond). (from <https://github.com/ryantsai/KKTerm/pull/174>)
+* Storage IDs: made generated IDs collision-proof using a process-wide monotonic counter (prevents UNIQUE constraint failures when IDs are generated within the same millisecond). (from <https://github.com/ryantsai/KKTerm/pull/174>)
+
 * Install Helper console-flash storm: detection/version-check spawns now use `CREATE_NO_WINDOW`, and update checks stream incrementally so the UI doesn’t freeze on large update sets. (by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/173>)
 * Storage locking: recover uniformly from a poisoned mutex for better stability (instead of “lock is poisoned” until restart). (from <https://github.com/ryantsai/KKTerm/pull/174>)
 
 ## Internal
 
-- perf/storage: recover poisoned lock uniformly; offload async-command DB work (WAL-safe import path and related storage updates). (from <https://github.com/ryantsai/KKTerm/pull/174>)
+* perf/storage: recover poisoned lock uniformly; offload async-command DB work (WAL-safe import path and related storage updates). (from <https://github.com/ryantsai/KKTerm/pull/174>)
+
 * perf/ui: coalesce AI stream renders; defer connection search filtering updates; skip no-op cwd updates. (from <https://github.com/ryantsai/KKTerm/pull/174>)
 * perf(sessions): unblock cross-session FTP/VNC close; harden WebView start. (from <https://github.com/ryantsai/KKTerm/pull/174>)
 
@@ -4475,43 +4908,49 @@ Compare: <https://github.com/ryantsai/KKTerm/compare/v0.1.48...v0.1.49>
 
 ## 重點摘要
 
-- **安裝器助手（Install Helper）**改版：使用彈出式對話框與串流步驟事件（少一點磁磚地獄，多一點終端機式清楚）。
+* **安裝器助手（Install Helper）**改版：使用彈出式對話框與串流步驟事件（少一點磁磚地獄，多一點終端機式清楚）。
+
 * 透過 **WAL** + **busy_timeout** 改善資料庫寫入延遲，避免介面因等待而卡住（不再讓 UI 跟網路惡作劇硬碰硬）。
 * 強化持續進行中的流程：包含 session 關閉不卡住彼此、以及 AI 串流渲染更順暢。
 
 ## 新增
 
-- 安裝器助手改為「彈出式對話框 + 分步步驟器（stepper）」流程，包含串流進度與每一步可展開的日誌。 (by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/173>)
+* 安裝器助手改為「彈出式對話框 + 分步步驟器（stepper）」流程，包含串流進度與每一步可展開的日誌。 (by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/173>)
+
 * 將更新/安裝相關的 release notes 以 Markdown 方式渲染。 (by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/175>)
 * 完成所有未完成的語系翻譯。 (by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/176>)
 
 ## 改善
 
-- Storage/DB：啟用 **WAL** + **busy_timeout** 以縮短 DB 寫入延遲。 (by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/174>)
+* Storage/DB：啟用 **WAL** + **busy_timeout** 以縮短 DB 寫入延遲。 (by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/174>)
+
 * AI 介面回應：合併 AI 串流渲染、改善連線樹（connection-tree）篩選行為、並在 Pane 中避免不必要的 CWD 無效更新（讓分頁/Pane 互動更順）。 (自 <https://github.com/ryantsai/KKTerm/pull/174>)
 * Session 處理強化：避免 FTP/VNC 的跨 session 關閉互相阻塞，並強化 WebView 啟動保留（reservation）。 (自 <https://github.com/ryantsai/KKTerm/pull/174>)
 
 ## 修正
 
-- Storage ID：使用「程序級單調遞增計數器」使生成的 ID 不會碰撞（避免同一毫秒內生成造成 UNIQUE constraint 失敗）。 (自 <https://github.com/ryantsai/KKTerm/pull/174>)
+* Storage ID：使用「程序級單調遞增計數器」使生成的 ID 不會碰撞（避免同一毫秒內生成造成 UNIQUE constraint 失敗）。 (自 <https://github.com/ryantsai/KKTerm/pull/174>)
+
 * 安裝器助手：修正 console-flash 騷擾（偵測/版本檢查啟動改用 `CREATE_NO_WINDOW`），並讓更新檢查能逐步串流，避免一次性大型更新資料導致介面凍結。 (by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/173>)
 * Storage locking：一致地從 poisoned mutex 恢復（不再出現直到重啟前都報「lock is poisoned」的狀況）。 (自 <https://github.com/ryantsai/KKTerm/pull/174>)
 
 ## Internal
 
-- perf/storage：一致地從 poisoned lock 恢復；將 async 指令的 DB 工作卸載（包含 WAL 安全的匯入路徑與相關 storage 更新）。 (自 <https://github.com/ryantsai/KKTerm/pull/174>)
+* perf/storage：一致地從 poisoned lock 恢復；將 async 指令的 DB 工作卸載（包含 WAL 安全的匯入路徑與相關 storage 更新）。 (自 <https://github.com/ryantsai/KKTerm/pull/174>)
+
 * perf/ui：合併 AI 串流渲染；延後連線樹搜尋篩選更新；略過無效 cwd 更新。 (自 <https://github.com/ryantsai/KKTerm/pull/174>)
 * perf(sessions)：解除跨 session FTP/VNC 關閉互相卡住；強化 WebView 啟動。 (自 <https://github.com/ryantsai/KKTerm/pull/174>)
 
 ## Highlights
 
-- **Install Helper (Windows):** New Settings control to hide the Install Helper **icon on the Activity Rail**.
+* **Install Helper (Windows):** New Settings control to hide the Install Helper **icon on the Activity Rail**.
+
 * **Dashboard widgets:** Enable **widget file drag-and-drop** from Windows Explorer into AI Created Dashboard Widgets (and improved file bridge documentation).
 * **Dashboard AI Created Widgets:** Updated script editor flow for **Dashboard Widget Instance** script customization (view source now supports **Edit / Save / Cancel**).
 
 ## New
 
-- **Install Helper module (Windows):** Adds an Install Helper **Activity Rail Module** to install, update, and uninstall a curated Windows developer tools catalog. (PR [#167](https://github.com/ryantsai/KKTerm/pull/167), [#168](https://github.com/ryantsai/KKTerm/pull/168), [#170](https://github.com/ryantsai/KKTerm/pull/170), [#171](https://github.com/ryantsai/KKTerm/pull/171), [#172](https://github.com/ryantsai/KKTerm/pull/172) by @ryantsai)
+* **Install Helper module (Windows):** Adds an Install Helper **Activity Rail Module** to install, update, and uninstall a curated Windows developer tools catalog. (PR [#167](https://github.com/ryantsai/KKTerm/pull/167), [#168](https://github.com/ryantsai/KKTerm/pull/168), [#170](https://github.com/ryantsai/KKTerm/pull/170), [#171](https://github.com/ryantsai/KKTerm/pull/171), [#172](https://github.com/ryantsai/KKTerm/pull/172) by @ryantsai)
 
 * **Settings → Install Helper:** Add a rail visibility toggle to control whether the Install Helper icon appears on the Activity Rail. (PR [#172](https://github.com/ryantsai/KKTerm/pull/172) by @ryantsai)
 
@@ -4519,7 +4958,8 @@ Compare: <https://github.com/ryantsai/KKTerm/compare/v0.1.48...v0.1.49>
 
 ## Improved
 
-- **Install Helper UI:** Install Helper icons now use a **grid view** with square tiles, status dots, and expanded details while keeping the existing install/uninstall/options/log layout. (PR [#171](https://github.com/ryantsai/KKTerm/pull/171) by @ryantsai; sha `bf1ad69`)
+* **Install Helper UI:** Install Helper icons now use a **grid view** with square tiles, status dots, and expanded details while keeping the existing install/uninstall/options/log layout. (PR [#171](https://github.com/ryantsai/KKTerm/pull/171) by @ryantsai; sha `bf1ad69`)
+
 * **Install Helper installs “stall” clarity:** Install Helper now provides heartbeat-style progress behavior (helps distinguish “actually working” vs “hung while reading”). (PR [#171](https://github.com/ryantsai/KKTerm/pull/171) by @ryantsai; sha `bf1ad69`)
 * **Install Helper catalog trust model:** Switch Install Helper catalog from **remote signed** to **compile-time bundled** (shipped with the KKTerm release). (PR [#170](https://github.com/ryantsai/KKTerm/pull/170) by @ryantsai; sha `7e55a5c`)
 * **Default rail visibility:** Install Helper rail icon defaults to **hidden** until users opt in from **Settings → Install Helper**. (sha `171c53c`; Settings update in PR [#172](https://github.com/ryantsai/KKTerm/pull/172))
@@ -4527,12 +4967,14 @@ Compare: <https://github.com/ryantsai/KKTerm/compare/v0.1.48...v0.1.49>
 
 ## Fixed
 
-- **Install Helper review issues:** Address review feedback across install helper logic/UI. (sha `d76404d`)
+* **Install Helper review issues:** Address review feedback across install helper logic/UI. (sha `d76404d`)
+
 * **Dashboard data safety across schema bumps:** Stop wiping Dashboard tables on every `SCHEMA_USER_VERSION` bump; dashboard data now drops only for `< 16`. (sha `3509d48`)
 
 ## Internal
 
-- **Connection/session credentials:** Add reusable connection password credentials work (docs + storage/secrets related). (sha `afeabda`)
+* **Connection/session credentials:** Add reusable connection password credentials work (docs + storage/secrets related). (sha `afeabda`)
+
 * **Custom title bar mandatory:** Make custom title bar mandatory. (sha `8de0362`)
 * Version/build bump: `vsrsion bump` (sha `44a3eac`)
 * Merge housekeeping: `Merge branch 'main'...` (sha `c78d005`), `Merge main into Install Helper branch` (sha `2299dca`), `Merge pull request...` (shas `838e4c5`, `3509d48`, `c78d005` etc.)
@@ -4541,13 +4983,14 @@ Compare: <https://github.com/ryantsai/KKTerm/compare/v0.1.48...v0.1.49>
 
 ## 亮點
 
-- **Install Helper（Windows）：** 新增 Settings 選項，可隱藏 **活動軌道（Activity Rail）** 上的 Install Helper 圖示。
+* **Install Helper（Windows）：** 新增 Settings 選項，可隱藏 **活動軌道（Activity Rail）** 上的 Install Helper 圖示。
+
 * **儀表板小工具：** 讓你可以把 **小工具檔案** 從 **Windows 檔案總管（Explorer）** 拖曳到 AI 建立的儀表板小工具中（也補強了檔案橋接文件）。
 * **Dashboard AI 建立小工具：** 已更新腳本編輯器流程；在 `View source` 現在支援 **編輯 / 儲存 / 取消**。
 
 ## 新功能
 
-- **Install Helper 模組（Windows）：** 新增 Install Helper **活動軌道模組**，可安裝、更新與解除安裝精選的 Windows 開發工具目錄。（PR [#167](https://github.com/ryantsai/KKTerm/pull/167)、[#168](https://github.com/ryantsai/KKTerm/pull/168)、[#170](https://github.com/ryantsai/KKTerm/pull/170)、[#171](https://github.com/ryantsai/KKTerm/pull/171)、[#172](https://github.com/ryantsai/KKTerm/pull/172) 由 @ryantsai 提供）
+* **Install Helper 模組（Windows）：** 新增 Install Helper **活動軌道模組**，可安裝、更新與解除安裝精選的 Windows 開發工具目錄。（PR [#167](https://github.com/ryantsai/KKTerm/pull/167)、[#168](https://github.com/ryantsai/KKTerm/pull/168)、[#170](https://github.com/ryantsai/KKTerm/pull/170)、[#171](https://github.com/ryantsai/KKTerm/pull/171)、[#172](https://github.com/ryantsai/KKTerm/pull/172) 由 @ryantsai 提供）
 
 * **Settings → Install Helper：** 新增活動軌道圖示顯示/隱藏切換。 （PR [#172](https://github.com/ryantsai/KKTerm/pull/172) 由 @ryantsai 提供）
 
@@ -4555,7 +4998,8 @@ Compare: <https://github.com/ryantsai/KKTerm/compare/v0.1.48...v0.1.49>
 
 ## 改進
 
-- **Install Helper 介面：** 圖示改為 **格狀網格（grid view）**，方形磁貼搭配狀態圓點；點擊磁貼會展開詳細內容，同時保留既有的安裝/解除安裝/選項/記錄區塊。（PR [#171](https://github.com/ryantsai/KKTerm/pull/171) 由 @ryantsai；sha `bf1ad69`）
+* **Install Helper 介面：** 圖示改為 **格狀網格（grid view）**，方形磁貼搭配狀態圓點；點擊磁貼會展開詳細內容，同時保留既有的安裝/解除安裝/選項/記錄區塊。（PR [#171](https://github.com/ryantsai/KKTerm/pull/171) 由 @ryantsai；sha `bf1ad69`）
+
 * **Install Helper 安裝更清楚：** 增加「心跳式」進度行為，幫助分辨到底是仍在運作，還是卡在讀取過程。（PR [#171](https://github.com/ryantsai/KKTerm/pull/171) 由 @ryantsai；sha `bf1ad69`）
 * **Install Helper 目錄（catalog）信任模型：** 將目錄由 **遠端簽章（remote signed）** 改為 **編譯時打包（compile-time bundled）**（隨 KKTerm 發行版本一起提供）。（PR [#170](https://github.com/ryantsai/KKTerm/pull/170) 由 @ryantsai；sha `7e55a5c`）
 * **預設活動軌道顯示：** Install Helper 圖示預設為 **隱藏**，直到你在 **Settings → Install Helper** 自行選擇啟用。（sha `171c53c`；Settings 更新在 PR [#172](https://github.com/ryantsai/KKTerm/pull/172)）
@@ -4563,53 +5007,61 @@ Compare: <https://github.com/ryantsai/KKTerm/compare/v0.1.48...v0.1.49>
 
 ## 修正
 
-- **Install Helper 審查問題修正：** 修正 Install Helper 相關流程/介面中的審查回饋。（sha `d76404d`）
+* **Install Helper 審查問題修正：** 修正 Install Helper 相關流程/介面中的審查回饋。（sha `d76404d`）
+
 * **儀表板資料在 schema 更新時的保護：** 不再因為任何 `SCHEMA_USER_VERSION` 提升就清空 Dashboard 表；Dashboard 只會在 `< 16` 時才會被移除。（sha `3509d48`）
 
 ## Internal
 
-- **連線/Session 密碼憑證：** 新增可重複使用的連線密碼憑證相關工作（含文件與 storage/secrets）。（sha `afeabda`）
+* **連線/Session 密碼憑證：** 新增可重複使用的連線密碼憑證相關工作（含文件與 storage/secrets）。（sha `afeabda`）
+
 * **自訂標題列強制：** 使自訂標題列成為必填。（sha `8de0362`）
 * 版本/建置更新：`vsrsion bump`（sha `44a3eac`）
 * 合併/維護：`Merge branch 'main'...`（sha `c78d005`）、`Merge main into Install Helper branch`（sha `2299dca`）、各種 PR 合併（shas `838e4c5`、`3509d48`、`c78d005` 等）
 
 ## Highlights
 
-- Easier-to-use SFTP toolbar browser via a popup (because rummaging around tabs is a chore).
+* Easier-to-use SFTP toolbar browser via a popup (because rummaging around tabs is a chore).
+
 * Improved Connection visibility and native URL handling for RDP and webview-based Sessions.
 
 ## New
 
-- **SFTP toolbar browser opens as a popup**. *(c5c903b)*
+* **SFTP toolbar browser opens as a popup**. *(c5c903b)*
 
 ## Improved
 
-- **Fix native URL handling** for webview-based functionality. *(55aacd0)*
+* **Fix native URL handling** for webview-based functionality. *(55aacd0)*
+
 * **Improve RDP Session visibility** behavior. *(55aacd0)*
 
 ## Fixed
 
-- **RDP session visibility** and **native URL** issues addressed. *(55aacd0)*
+* **RDP session visibility** and **native URL** issues addressed. *(55aacd0)*
+
 * **SFTP toolbar browser presentation** corrected to use a popup. *(c5c903b)*
 
 ## Internal
 
-- Updated documentation and tests for SFTP toolbar popup. *(c5c903b)*
+* Updated documentation and tests for SFTP toolbar popup. *(c5c903b)*
+
 * Added/updated RDP and webview visibility lifecycle tests. *(55aacd0)*
 
 ## Highlights
 
-- Fixed App Launcher behavior so toggling **Show file extensions** no longer wipes pinned shortcuts.
+* Fixed App Launcher behavior so toggling **Show file extensions** no longer wipes pinned shortcuts.
+
 * Improved Dashboard so dynamic content (including video backgrounds) continues playing when KKTerm loses OS window focus.
 * Added **child connection workspace mode** for Connection tabs/Panes within a Session workspace.
 
 ## New
 
-- **Child connection workspace mode** for Connection tabs and Pane layouts by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/166>
+* **Child connection workspace mode** for Connection tabs and Pane layouts by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/166>
 
 ## Improved
 
-- Kept Dashboard dynamic and video backgrounds playing when other OS windows take focus (animations don’t “freeze” just because you alt-tabbed) by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/161>
+* Kept Dashboard dynamic and video backgrounds playing when other OS windows take focus (animations don’t “freeze” just because you alt-tabbed) by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/161>
+
 * Fix App Launcher icon-mode grid trailing empty slot by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/162>
 * Improved connections sidebar: fixed **folder drag reorder** and added **Show All** flat connections view by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/163>
 * Localized UI text for **appLauncher.showFileExtensions** and **connections.showAll** across all 13 locales by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/164>
@@ -4617,107 +5069,118 @@ Compare: <https://github.com/ryantsai/KKTerm/compare/v0.1.48...v0.1.49>
 
 ## Fixed
 
-- App Launcher pinned shortcuts were wiped when toggling **Show file extensions** by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/160>
+* App Launcher pinned shortcuts were wiped when toggling **Show file extensions** by @ryantsai in <https://github.com/ryantsai/KKTerm/pull/160>
+
 * (Docs/under-the-hood) Dashboard URL WebView background popover overlap fix by @ryantsai in commits around 92993fd and 8392a4a
 
 ## Internal
 
-- Updated docs (architecture / dashboard manual) in commits around 1d78fe9
+* Updated docs (architecture / dashboard manual) in commits around 1d78fe9
+
 * Added/updated regression coverage for WebView visibility lifecycle in tests/webview-visibility-lifecycle.test.mjs and wired into `npm run check` (as part of the Dashboard WebView fixes around 8392a4a)
 
 ## Highlights
 
-- Dashboard: right-click menus should behave again when widgets overlap the canvas, and idle background animations now pause when the Dashboard isn’t actively visible (so your RTX workload can also take a nap).
+* Dashboard: right-click menus should behave again when widgets overlap the canvas, and idle background animations now pause when the Dashboard isn’t actively visible (so your RTX workload can also take a nap).
+
 * App Launcher: you can show file extensions via a new widget setting.
 * RDP: Session display sync/disconnect handling was adjusted to avoid spurious “Remote desktop disconnected” states during resize/display sync.
 
 ## New
 
-- App Launcher: added a **“Show file extensions”** setting, including the display logic (**@ryantsai** in **#159** — <https://github.com/ryantsai/KKTerm/pull/159>).
+* App Launcher: added a **“Show file extensions”** setting, including the display logic (**@ryantsai** in **#159** — <https://github.com/ryantsai/KKTerm/pull/159>).
 
 ## Improved
 
-- Dashboard: fixed widget right-click behavior so embedded Connection panes don’t eat right-click, and the widget frame menu actions remain reachable (**@ryantsai** in **#158** — <https://github.com/ryantsai/KKTerm/pull/158>).
+* Dashboard: fixed widget right-click behavior so embedded Connection panes don’t eat right-click, and the widget frame menu actions remain reachable (**@ryantsai** in **#158** — <https://github.com/ryantsai/KKTerm/pull/158>).
+
 * Dashboard: idle background animations now pause when the Dashboard is hidden, the window is minimized, or another app is in front, and resume without visual jumps.
 * RDP Session: updated the resolution dropdown behavior to show **Automatic + fixed resolutions** (removed “Smart Sizing” and “DPI Zoom” from the dropdown), and normalized saved values so dead options don’t appear (**28c7b91**).
 
 ## Fixed
 
-- Dashboard: fixed right-click and pause behavior for Dashboard background animations (**@ryantsai** in **#158** — <https://github.com/ryantsai/KKTerm/pull/158>).
+* Dashboard: fixed right-click and pause behavior for Dashboard background animations (**@ryantsai** in **#158** — <https://github.com/ryantsai/KKTerm/pull/158>).
+
 * RDP: removed an “ActiveX reconnect fallback” during display sync failures that could turn a normal “resize not ready yet” into a disconnect state (**7752ccf**).
 * RDP Tabs: tab auto-close behavior was moved toward event-driven Session disconnect handling (instead of the earlier polling/removed auto-close path) to prevent incorrect Tab closure timing (**8f932c2**, **ff17388**).
 
 ## Internal
 
-- Docs & i18n alignment with the current Dashboard codebase (removed stale legacy widget/preset references; updated manuals and locale keys) (**@ryantsai** in **#157** — <https://github.com/ryantsai/KKTerm/pull/157>).
+* Docs & i18n alignment with the current Dashboard codebase (removed stale legacy widget/preset references; updated manuals and locale keys) (**@ryantsai** in **#157** — <https://github.com/ryantsai/KKTerm/pull/157>).
+
 * RDP resolution options regression test added (**28c7b91**) and updated tests to validate event-driven Tab auto-close behavior (**8f932c2**).
 * Terminal context menu rendering: routed through a portal so it escapes Dashboard widget transforms/overflow constraints (**be72504**).
 
 ## Highlights
 
-- Quick Connect: embedded **elevated local terminals** are now available (because Windows UAC occasionally needs to be reminded who’s boss).
+* Quick Connect: embedded **elevated local terminals** are now available (because Windows UAC occasionally needs to be reminded who’s boss).
+
 * Quick Command Bar: introduces a **Quick Command Library** with **tmux scroll handling** for faster command workflows.
 * Dashboard: fixes the **tab color picker**.
 * Localization: translates multiple UI areas (watchdog, settings, dashboard, and Quick Command UI) across **all 13 locales**.
 
 ## New
 
-- Embed elevated **Quick Connect local terminals** for convenience when you need admin-level sessions. (codex, by @ryantsai in [#152](https://github.com/ryantsai/KKTerm/pull/152), [c0ccc9b])
+* Embed elevated **Quick Connect local terminals** for convenience when you need admin-level sessions. (codex, by @ryantsai in [#152](https://github.com/ryantsai/KKTerm/pull/152), [c0ccc9b])
+
 * Quick Command Bar library + tmux scroll handling. (codex, by @ryantsai in [#155](https://github.com/ryantsai/KKTerm/pull/155), [8b7b48f])
 
 ## Improved
 
-- Dashboard **tab color picker** fix for the right shade on the right Tab. (codex, by @ryantsai in [#154](https://github.com/ryantsai/KKTerm/pull/154), [0ad9f3f])
+* Dashboard **tab color picker** fix for the right shade on the right Tab. (codex, by @ryantsai in [#154](https://github.com/ryantsai/KKTerm/pull/154), [0ad9f3f])
+
 * Localization updates: translate watchdog, ai.watchdogApproval, settings, dashboard, and quickCommands UI strings across **all 13 locales**. (by @ryantsai in [#156](https://github.com/ryantsai/KKTerm/pull/156), [9ac23df])
 * Remove wiki module and update settings export. (codex, by @ryantsai in [#153](https://github.com/ryantsai/KKTerm/pull/153), [86610f7])
 
 ## Fixed
 
-- Fixed dashboard tab color picker. (by @ryantsai in [#154](https://github.com/ryantsai/KKTerm/pull/154), [0ad9f3f])
+* Fixed dashboard tab color picker. (by @ryantsai in [#154](https://github.com/ryantsai/KKTerm/pull/154), [0ad9f3f])
 
 ## Internal
 
-- Quick Command Bar library implementation and documentation updates. (by @ryantsai in [#155](https://github.com/ryantsai/KKTerm/pull/155), [72b8f94], [tests/quick-command-library-taxonomy.test.mjs])
+* Quick Command Bar library implementation and documentation updates. (by @ryantsai in [#155](https://github.com/ryantsai/KKTerm/pull/155), [72b8f94], [tests/quick-command-library-taxonomy.test.mjs])
+
 * Localization work includes translated Quick Command Library strings and completed localization_todo closures. (by @ryantsai, [01b64a3], [8af5ec1], [9ac23df])
 
 ## Highlights
 
-- Workspace Tabs: double-click a Tab title for inline rename (Enter/blur saves, Escape cancels) and middle-click a Tab to close it. (If your fingers are fast, your Tabs will be, too.)
+* Workspace Tabs: double-click a Tab title for inline rename (Enter/blur saves, Escape cancels) and middle-click a Tab to close it. (If your fingers are fast, your Tabs will be, too.)
 
 ## New
 
-- Implemented the Workspace Tab feature, including per-Tab `displayTitle` state so renaming a Tab doesn’t rename the underlying **Connection**.
+* Implemented the Workspace Tab feature, including per-Tab `displayTitle` state so renaming a Tab doesn’t rename the underlying **Connection**.
 
 ## Improved
 
-- Double-clicking a Tab title now opens inline rename; Enter/blur commits changes and Escape cancels.
+* Double-clicking a Tab title now opens inline rename; Enter/blur commits changes and Escape cancels.
 
 ## Fixed
 
-- Renaming a Tab no longer affects the underlying **Connection** title.
+* Renaming a Tab no longer affects the underlying **Connection** title.
 
 ## Internal
 
-- Updated workspace manual and styling/i18n for Workspace Tabs (`workspace.css`, `04-workspace-tabs-panes.md`, and all locale files).
+* Updated workspace manual and styling/i18n for Workspace Tabs (`workspace.css`, `04-workspace-tabs-panes.md`, and all locale files).
 
 ## Highlights
 
-- Smarter Codex usage fallback for AI coding guidance: when the preferred refresh path doesn’t work, KKTerm can pull `/wham/usage` data from your local Codex auth (where available).
+* Smarter Codex usage fallback for AI coding guidance: when the preferred refresh path doesn’t work, KKTerm can pull `/wham/usage` data from your local Codex auth (where available).
+
 * Prevents “missing window” surprises on Windows: if the main window is restored off-screen, KKTerm relocates it so you can get back to your Tabs and Panes without the hunt.
 
 ## New
 
-- Added a Codex `/wham/usage` fallback path for AI coding usage normalization (uses `~/.codex/auth.json` or `CODEX_HOME/auth.json`, with HTTPS/local-only filtering where applicable).
+* Added a Codex `/wham/usage` fallback path for AI coding usage normalization (uses `~/.codex/auth.json` or `CODEX_HOME/auth.json`, with HTTPS/local-only filtering where applicable).
   * Preserves the full `/wham/usage` payload as raw provider JSON when this fallback path is used (so quota/limit details remain available for future explicit UI expansion).
 
 ## Improved
 
-- Improved Windows window restore behavior: KKTerm now detects when the main window rect doesn’t overlap the Windows virtual desktop and moves/resizes the window to `0,0` at `1440x940`.
+* Improved Windows window restore behavior: KKTerm now detects when the main window rect doesn’t overlap the Windows virtual desktop and moves/resizes the window to `0,0` at `1440x940`.
   * Runs during startup restore, tray restore, and second-instance focus.
 
 ## Fixed
 
-- Removed the SSH/local Terminal Codex/Claude Code detection path entirely (and its UI/badge wiring), including:
+* Removed the SSH/local Terminal Codex/Claude Code detection path entirely (and its UI/badge wiring), including:
   * Deleted `agentDetection.ts` and its associated detection test wiring
   * Removed terminal agent badge CSS/locale key and updated the terminal manual to stop documenting the badge
   * Added a guard test (`no-terminal-agent-detection.test.mjs`) to prevent the detection file/wiring from creeping back in
@@ -4726,31 +5189,36 @@ Compare: <https://github.com/ryantsai/KKTerm/compare/v0.1.48...v0.1.49>
 
 ## Internal
 
-- None
+* None
 
 ## Highlights
 
-- **AI watchdog:** Structured monitors with intervention and a status-bar UI—no more silent “prompt prefix that fell through to chat.” (rebased from #120) ([#140](https://github.com/ryantsai/KKTerm/pull/140), @ryantsai) *(ab10c8b / 1935910)*
+* **AI watchdog:** Structured monitors with intervention and a status-bar UI—no more silent “prompt prefix that fell through to chat.” (rebased from #120) ([#140](https://github.com/ryantsai/KKTerm/pull/140), @ryantsai) *(ab10c8b / 1935910)*
+
 * **Dashboard widget scaffolds:** New **widget archetype** scaffolding to help set up Dashboard Widget Instance foundations for **[codex]** workflows. ([#147](https://github.com/ryantsai/KKTerm/pull/147), @ryantsai) *(5b0b6e8 / 5eaad64)*
 
 ## New
 
-- **[codex] Widget archetype scaffolds** for Dashboard Widgets (templates/scaffolds). ([#147](https://github.com/ryantsai/KKTerm/pull/147), @ryantsai) *(5b0b6e8 / 5eaad64)*
+* **[codex] Widget archetype scaffolds** for Dashboard Widgets (templates/scaffolds). ([#147](https://github.com/ryantsai/KKTerm/pull/147), @ryantsai) *(5b0b6e8 / 5eaad64)*
+
 * **AI watchdog monitors with intervention** (structured monitor/actor runtime + status-bar UI). ([#140](https://github.com/ryantsai/KKTerm/pull/140), @ryantsai) *(1935910)*
 
 ## Improved
 
-- **Terminal external links:** Shift-click an `http/https` link in **any terminal Pane** and it opens in your OS default browser. This applies across local, SSH, Telnet, and Serial terminal Sessions (shared xterm renderer). *(af9767c)*
+* **Terminal external links:** Shift-click an `http/https` link in **any terminal Pane** and it opens in your OS default browser. This applies across local, SSH, Telnet, and Serial terminal Sessions (shared xterm renderer). *(af9767c)*
+
 * **Script-widget timing hardening:** Script-widget `rAF` now honors `body.lifecycle.minTickMs`, clamped with a safe lower bound; widgets without a declared cadence keep the existing default. *(ab10c8b)*
 
 ## Fixed
 
-- **Watchdog trigger refiring** issues addressed so interventions don’t keep waking up like a misconfigured alert daemon. *(16de505)*
+* **Watchdog trigger refiring** issues addressed so interventions don’t keep waking up like a misconfigured alert daemon. *(16de505)*
+
 * **(Support change) Widget callable-library surface guidance:** Mermaid is no longer advertised/auto-inferred in the AI “Created Widget” callable library surface; related validator/schema + prompt guidance + tests updated accordingly. *(55b526a)*
 
 ## Internal
 
-- **Removed public promotion log** from `docs/PROMOTION.md`. *(d99a366)*
+* **Removed public promotion log** from `docs/PROMOTION.md`. *(d99a366)*
+
 * **Promotion-related docs updates** (OpenSourceAlternative, outreach email, Tauri, landing pages, feedback kit, etc.). *(2113b98, 6e9835e, 02228f8, bd61780, c6d0404, 5ca106a, e363c13, 75d8323, 5036e49, a128ba2, a6df7a7)*
 * **Version bump / lockfile updates**. *(7949922)*
 
@@ -4765,54 +5233,62 @@ Compare: <https://github.com/ryantsai/KKTerm/compare/v0.1.48...v0.1.49>
 
 ## Highlights
 
-- Dashboard Connection widget Session/Tab/Pane creation now resolves tmux IDs in an effect (reducing render-time churn and avoiding brief ID reuse when switching Connections).
+* Dashboard Connection widget Session/Tab/Pane creation now resolves tmux IDs in an effect (reducing render-time churn and avoiding brief ID reuse when switching Connections).
+
 * System tray/assistant “external-open” events now switch the app shell to the Workspace Module before opening/focusing the target Connection.
 
 ## New
 
-- Added comments to `.env.example` (because even terminals like a little guidance).
+* Added comments to `.env.example` (because even terminals like a little guidance).
 
 ## Improved
 
-- Dashboard Connection widget: resolve tmux id in an effect using the reuse-first helper, then create the Tab/Pane from that id (instead of calling `appendTmuxSessionId()` during render). Also keyed by `connection.id` to avoid momentary reuse while switching widget Connections.
+* Dashboard Connection widget: resolve tmux id in an effect using the reuse-first helper, then create the Tab/Pane from that id (instead of calling `appendTmuxSessionId()` during render). Also keyed by `connection.id` to avoid momentary reuse while switching widget Connections.
   * PRs/changes include `tests/dashboard-connection-widget-tmux.test.mjs`, `src/modules/dashboard/widgets/builtin/connections/ConnectionWidget.tsx`, and `docs/manual/10-dashboard.md` (via the same update set as <https://github.com/ryantsai/KKTerm/pull/139>).
+
 * System tray behavior note updated in the manual to match the updated external-open flow.
   * Updated: `docs/manual/01-getting-started.md`
 
 ## Fixed
 
-- Docs consistency updates:
+* Docs consistency updates:
   * Marked File Explorer as **planned** in architecture diagrams.
   * Corrected Dashboard animated canvas background count from 9 to 21 across all README locales (full list included in the PR).
   * Fixed contributing guide widget path from `src/dashboard/widgets/` to `src/modules/dashboard/widgets/builtin/`.
   * Replaced non-existent `mist` background reference with `ocean` in all locales.
+
 * Updated tray/assistant external-open events so the app shell switches to the Workspace Module before opening or focusing the Connection (instead of racing ahead of the module switch).
   * Updated: `src/App.tsx`, `src/modules/workspace/connections/ConnectionSidebar.tsx`
 
 ## Internal
 
-- Docs maintenance: pruned/reorganized `AGENTS.md` into a smaller “routing + guardrails” doc and moved the durable architectural/source-of-truth burden back to `CONTEXT.md`, `docs/ARCHITECTURE.md`, product docs, and manual docs.
+* Docs maintenance: pruned/reorganized `AGENTS.md` into a smaller “routing + guardrails” doc and moved the durable architectural/source-of-truth burden back to `CONTEXT.md`, `docs/ARCHITECTURE.md`, product docs, and manual docs.
+
 * Docs/readme updates across all languages reflecting current codebase state (PR #139 by @ryantsai): <https://github.com/ryantsai/KKTerm/pull/139>
 
 ## Highlights
 
-- App Launcher drop target now covers the full Dashboard Widget Instance body (no more “your file is hovering, but not landing”).
+* App Launcher drop target now covers the full Dashboard Widget Instance body (no more “your file is hovering, but not landing”).
+
 * URL Pane is contained to its nearest host panel (Dashboard Connection widget, embedded split Pane, or Workspace Canvas)—so it can’t spill into adjacent panes/panels.
 * Custom titlebar work continues: the titlebar appearance is now theme-integrated and better aligned, with a fix to custom titlebar chrome.
 
 ## New
 
-- **Built-in MCP server (kkterm-cli)** is now wired end-to-end and expanded (21 tools), with **Module** terminology defined. PR #135 by @ryantsai (see PR #135).
+* **Built-in MCP server (kkterm-cli)** is now wired end-to-end and expanded (21 tools), with **Module** terminology defined. PR #135 by @ryantsai (see PR #135).
+
 * AI Coding Usage documentation added for the **AI Coding Usage widget** and the built-in MCP server; **aider** mentions dropped. PR #137 by @ryantsai (see PR #137).
 
 ## Improved
 
-- App Launcher icon grid row spacing adjusted so extra widget height doesn’t stretch the row tracks. (PR #132? see: “Make App Launcher drop target…” and “fixed the row spacing too.”)
+* App Launcher icon grid row spacing adjusted so extra widget height doesn’t stretch the row tracks. (PR #132? see: “Make App Launcher drop target…” and “fixed the row spacing too.”)
+
 * Terminal-pane containment fix for URL Pane rendering updated to document contained URL Pane behavior. (PR #136? see WebViewWorkspace containment fix details in commits; PR #136 is the src/ restructure, and the containment change is in the PR with SHA 71d9be9.)
 
 ## Fixed
 
-- Fixed **custom titlebar chrome**. PR #134 by @ryantsai.
+* Fixed **custom titlebar chrome**. PR #134 by @ryantsai.
+
 * Fixed **titlebar button position**. (Test referenced: `tests/titlebar-theme.test.mjs`.)
 * Fixed **App Launcher drop target** to cover the full widget body. PR #132 by @ryantsai.
 * Fixed **URL Pane containment** by clamping WebView2 native bounds to the nearest host panel/pane/canvas and adjusting URL webview layout behavior. (Regression coverage added via `tests/webview-toolbar-layout.test.mjs`.)
@@ -4821,7 +5297,8 @@ Compare: <https://github.com/ryantsai/KKTerm/compare/v0.1.48...v0.1.49>
 
 ## Internal
 
-- Restructured `src/` to mirror **Module** domain language. PR #136 by @ryantsai.
+* Restructured `src/` to mirror **Module** domain language. PR #136 by @ryantsai.
+
 * Added/reworked built-in MCP server/config documentation and logging improvements (including debug JSONL logging to `mcp.debug.log`).
 * Release-engineering script hardening and resilience (e.g., tolerate missing GitHub release), plus updated release tooling.
 * Rendered the committed `demo.gif` in all READMEs to remove placeholder imagery. PR #138 by @ryantsai.
