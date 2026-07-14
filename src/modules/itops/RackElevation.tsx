@@ -500,6 +500,7 @@ export function RackElevation({
                     }
                   : {}),
               };
+              const quarterWidth = xSpan.xQuarters === 1;
               const face = (
                 <RackDevice
                   kind={item.kind}
@@ -524,7 +525,7 @@ export function RackElevation({
                   seed={item.id}
                 />
               );
-              const className = `rk-item dev-in${ghost ? " ghost" : ""}`;
+              const className = `rk-item dev-in${ghost ? " ghost" : ""}${quarterWidth ? " quarter-width" : ""}`;
               if (!editable) {
                 return (
                   <div key={item.id} className={className} style={style} title={text}>
@@ -604,7 +605,7 @@ export function RackElevation({
                 hovered slot in realtime; red when the span overlaps a device. */}
             {placing && placeGhost && placeSpec ? (
               <div
-                className={`rk-item rk-place-ghost${placeGhost.blocked ? " blocked" : ""}`}
+                className={`rk-item rk-place-ghost${placeQuarters === 1 ? " quarter-width" : ""}${placeGhost.blocked ? " blocked" : ""}`}
                 aria-hidden="true"
                 style={{
                   gridColumn: 2,

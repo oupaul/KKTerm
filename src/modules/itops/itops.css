@@ -3355,6 +3355,10 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.itops-page .rk-item.quarter-width .rkd-name,
+.itops-page .rack-item-preview-device.quarter-width .rkd-name {
+  font-size: 8.05px;
+}
 .itops-page .rkd-sub {
   font-family: var(--app-mono-font-family, monospace);
   font-size: 9px;

@@ -331,7 +331,11 @@ export function RackItemDialog({
                   <span className="rack-item-preview-rail" />
                   <div className="rack-item-preview-bay">
                     <div
-                      className="rack-item-preview-device"
+                      className={`rack-item-preview-device${
+                        rackItemKindSupportsFractionalWidth(kind) && widthFraction === "quarter"
+                          ? " quarter-width"
+                          : ""
+                      }`}
                       style={{
                         ["--rack-item-preview-height" as string]: `${Math.min(5, Math.max(1, heightU)) * 22}px`,
                         ...(rackItemKindSupportsFractionalWidth(kind) && widthFraction !== "full"

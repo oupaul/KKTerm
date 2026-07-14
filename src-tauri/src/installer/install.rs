@@ -26,6 +26,7 @@ use serde_json::json;
 const HEARTBEAT_INTERVAL_SECS: u64 = 10;
 const RECENT_PROCESS_OUTPUT_LINES: usize = 40;
 const FAILURE_OUTPUT_DETAIL_MAX_CHARS: usize = 500;
+const WINGET_NO_APPLICABLE_UPGRADE_EXIT_CODE: i32 = 0x8A15_002B_u32 as i32;
 
 use super::detect::{
     GithubReleaseMarker, InstallScope, detect_chocolatey_package, detect_one,
@@ -2063,6 +2064,16 @@ fn run_streamed_elevated_impl(
                     });
                     break Ok(());
                 }
+                if is_nonfatal_winget_upgrade_exit(program, args, code) {
+                    emit(ProgressEvent::Stdout {
+                        tool_id: tool_id.into(),
+                        step_id: None,
+                        line: format!(
+                            "[installer] `{program}` reported no applicable upgrade after {elapsed}s; no changes made"
+                        ),
+                    });
+                    break Ok(());
+                }
                 let hint = if code == 1223 {
                     " (Administrator elevation was declined)"
                 } else {
@@ -2263,6 +2274,25 @@ fn run_streamed_with_environment(
                     return Ok(());
                 }
                 let code = status.code().unwrap_or(-1);
+                if is_nonfatal_winget_upgrade_exit(program, args, code) {
+                    emit(ProgressEvent::Stdout {
+                        tool_id: tool_id.into(),
+                        step_id: None,
+                        line: format!(
+                            "[installer] `{program}` reported no applicable upgrade after {elapsed}s; no changes made"
+                        ),
+                    });
+                    crate::logging::installer_helper_debug(
+                        "process.exit.noop",
+                        &json!({
+                            "toolId": tool_id,
+                            "program": program,
+                            "elapsedMs": started_at_log.elapsed().as_millis(),
+                            "code": code,
+                        }),
+                    );
+                    return Ok(());
+                }
                 let detail = exit_status_detail(program, code);
                 emit(ProgressEvent::Stderr {
                     tool_id: tool_id.into(),
@@ -2496,6 +2526,14 @@ fn process_failure_message(
         Some(output) => format!("{base}: {output}"),
         None => base,
     }
+}
+
+fn is_nonfatal_winget_upgrade_exit(program: &str, args: &[String], code: i32) -> bool {
+    program.eq_ignore_ascii_case("winget")
+        && args
+            .first()
+            .is_some_and(|verb| verb.eq_ignore_ascii_case("upgrade"))
+        && code == WINGET_NO_APPLICABLE_UPGRADE_EXIT_CODE
 }
 
 fn failure_output_detail(output_lines: &[String]) -> Option<String> {
@@ -2850,6 +2888,37 @@ mod tests {
             process_failure_message("elevated ", "choco", 1, "", &output),
             "elevated `choco` exited with status 1: fzf - Unable to uninstall 'fzf.0.74.0' because 'opencode.1.17.15' depends on it."
         );
+    }
+
+    #[test]
+    fn winget_no_applicable_upgrade_is_a_nonfatal_noop() {
+        let upgrade_args = vec![
+            "upgrade".to_string(),
+            "--id".to_string(),
+            "Notepad++.Notepad++".to_string(),
+        ];
+        let install_args = vec![
+            "install".to_string(),
+            "--id".to_string(),
+            "Notepad++.Notepad++".to_string(),
+        ];
+
+        assert!(is_nonfatal_winget_upgrade_exit(
+            "winget",
+            &upgrade_args,
+            -1_978_335_189,
+        ));
+        assert!(!is_nonfatal_winget_upgrade_exit(
+            "winget",
+            &install_args,
+            -1_978_335_189,
+        ));
+        assert!(!is_nonfatal_winget_upgrade_exit(
+            "choco",
+            &upgrade_args,
+            -1_978_335_189,
+        ));
+        assert!(!is_nonfatal_winget_upgrade_exit("winget", &upgrade_args, 1));
     }
 
     #[test]
