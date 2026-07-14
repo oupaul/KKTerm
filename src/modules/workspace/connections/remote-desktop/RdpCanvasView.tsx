@@ -329,6 +329,14 @@ export function RdpCanvasView({
     sendScancode(ctrlScancode, false);
   };
 
+  const pasteNativeMacClipboard = () => {
+    const sessionId = sessionIdRef.current;
+    if (!sessionId) {
+      return;
+    }
+    void invokeCommand("paste_rdp_client_clipboard", { request: { sessionId } }).catch(() => undefined);
+  };
+
   // Refresh CLIPRDR with trusted paste-event text before sending remote Ctrl+V.
   // Reading ClipboardEvent data avoids WKWebView's async clipboard permission
   // boundary.
@@ -379,6 +387,10 @@ export function RdpCanvasView({
     // its clipboardData, refreshes CLIPRDR, and sends remote Ctrl+V. The key is
     // not forwarded as a raw scancode, so no bare remote V can leak through.
     if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.code === "KeyV") {
+      if (isMacPlatform()) {
+        e.preventDefault();
+        pasteNativeMacClipboard();
+      }
       return;
     }
     const shortcut = e.ctrlKey || e.altKey || e.metaKey;

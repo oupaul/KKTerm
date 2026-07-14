@@ -38,13 +38,14 @@ test("assistant remote-desktop tools use IronRDP client commands for canvas RDP"
 });
 
 test("IronRDP canvas syncs clipboard text through the CLIPRDR channel", () => {
-  // A trusted paste event supplies text without WKWebView async-read permission,
-  // advertises it through CLIPRDR, and sends a remote Ctrl+V paste chord.
+  // macOS reads NSPasteboard natively and performs advertise + remote Ctrl+V as
+  // one ordered backend operation. Linux retains the trusted paste-event path.
   assert.match(
     canvasSource,
     /\(e\.ctrlKey \|\| e\.metaKey\) && !e\.altKey && !e\.shiftKey && e\.code === "KeyV"/,
   );
   assert.match(canvasSource, /onPaste=\{onPaste\}/);
+  assert.match(canvasSource, /invokeCommand\("paste_rdp_client_clipboard"/);
   assert.match(canvasSource, /e\.clipboardData\.getData\("text\/plain"\)/);
   assert.doesNotMatch(canvasSource, /readFromClipboard/);
   assert.match(canvasSource, /send_rdp_client_clipboard_text/);
@@ -52,6 +53,10 @@ test("IronRDP canvas syncs clipboard text through the CLIPRDR channel", () => {
   assert.match(canvasSource, /sendRemotePasteChord\(\)/);
   assert.match(backendSource, /pending_local_format_response: Option<OwnedFormatDataResponse>/);
   assert.match(backendSource, /\.submit_format_data\(response\)/);
+  assert.match(backendSource, /RdpInput::PasteLocalClipboardText\(text\)/);
+  assert.match(backendSource, /NSPasteboard::generalPasteboard\(\)/);
+  assert.match(backendSource, /pending_remote_paste_chord = ok/);
+  assert.match(backendSource, /flush_pending_remote_paste_chord/);
   assert.doesNotMatch(backendSource, /CanvasClipboardProxy/);
   assert.match(canvasSource, /clipboardText/);
   assert.match(canvasSource, /writeToClipboard\(payload\.text\)/);

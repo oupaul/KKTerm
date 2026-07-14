@@ -653,19 +653,47 @@ fn parse_mobaxterm_session(
     value: &str,
     folder_path: &[String],
 ) -> Result<Option<ImportedConnectionDraft>, String> {
-    let body = value.trim_start_matches('#');
-    let mut parts = body.split('#');
-    let type_id_text = parts.next().unwrap_or("").trim();
-    let after_type = parts.next().unwrap_or("");
+    // Session values look like `#IconNumber#Type%host%port%user%…#FontSettings…`.
+    // The leading `#`-field is the icon (which changes between MobaXterm
+    // releases, e.g. the default SSH icon moved from 109 to 110); the real
+    // session type is the first `%`-field of the section that follows it.
+    let body = value.trim().trim_start_matches('#');
+    let mut sections = body.split('#');
+    let first_section = sections.next().unwrap_or("").trim();
+    let params_section = if first_section.contains('%') {
+        // Icon omitted: the value starts directly with `Type%host%…`.
+        first_section
+    } else {
+        sections.next().unwrap_or("").trim()
+    };
+    let params: Vec<&str> = params_section.split('%').collect();
+    let type_id_text = params.first().map(|value| value.trim()).unwrap_or("");
 
     let connection_type = match type_id_text {
-        "0" | "109" => "ssh",
-        "1" | "8" => "telnet",
-        "91" | "98" => "rdp",
-        "96" => "vnc",
-        "5" => "local",
+        "0" => "ssh",
+        "1" => "telnet",
+        "4" => "rdp",
+        "5" => "vnc",
+        "9" => "local",
         "" => return Ok(None),
-        other => return Err(format!("unsupported MobaXterm session type {other}")),
+        other => {
+            let label = match other {
+                "2" => " (Rsh)",
+                "3" => " (Xdmcp)",
+                "6" => " (FTP)",
+                "7" => " (SFTP)",
+                "8" => " (Serial)",
+                "10" => " (File)",
+                "11" => " (Browser)",
+                "12" => " (Mosh)",
+                "13" => " (AWS S3)",
+                "14" => " (WSL)",
+                _ => "",
+            };
+            return Err(format!(
+                "unsupported MobaXterm session type {other}{label}"
+            ));
+        }
     };
 
     if connection_type == "local" {
@@ -682,7 +710,6 @@ fn parse_mobaxterm_session(
         }));
     }
 
-    let params: Vec<&str> = after_type.split('%').collect();
     let host = params
         .get(1)
         .map(|value| value.trim())
@@ -1821,6 +1848,42 @@ Host *
             draft.folder_path,
             vec!["Servers".to_string(), "Linux".to_string()]
         );
+    }
+
+    #[test]
+    fn parses_mobaxterm_sessions_regardless_of_icon_number() {
+        // MobaXterm 26.x exports use icon 110 for SSH sessions; the icon
+        // number must not be read as the session type.
+        let text = "[Bookmarks]\nSubRep=\nImgNum=42\nGDB2=#110#0%1.2.2.42%22%%%-1%-1%%%%%0%-1%0%%%-1%0%0%0%%1080%%0%0%1%%0%%%%0%-1%-1%0%%%0#MobaFont%11%0%0%-1%15%236,236,236%30,30,30%180,180,192%0%-1%-1%_MobaFolder_\\Logs%xterm%-1%0%_Std_Colors_0_%80%24%0%1%-1%<none>%%0%0%-1%-1%#0# #-1\nTEV1=#91#4%2.2.102.182%3389%%-1%0%0%0%-1%0%0%-1%%%%%0%-1%%-1%%-1%0%0%-1%0%-1%1%0%0%0%#MobaFont%11%0%0%-1%15%236,236,236%30,30,30%180,180,192%0%-1%-1%_MobaFolder_\\Logs%xterm%-1%0%_Std_Colors_0_%80%24%0%1%-1%<none>%%0%0%-1%-1%#0# #-1\n";
+        let preview = parse_mobaxterm(text);
+        assert_eq!(preview.warnings, Vec::<String>::new());
+        assert_eq!(preview.drafts.len(), 2);
+        assert_eq!(preview.drafts[0].connection_type, "ssh");
+        assert_eq!(preview.drafts[0].host, "1.2.2.42");
+        assert_eq!(preview.drafts[0].port, Some(22));
+        assert_eq!(preview.drafts[1].connection_type, "rdp");
+        assert_eq!(preview.drafts[1].host, "2.2.102.182");
+        assert_eq!(preview.drafts[1].port, Some(3389));
+    }
+
+    #[test]
+    fn parses_mobaxterm_session_without_icon_prefix() {
+        let text = "[Bookmarks]\nBox=#0%host.example.com%2200%[admin]\n";
+        let preview = parse_mobaxterm(text);
+        assert_eq!(preview.drafts.len(), 1);
+        assert_eq!(preview.drafts[0].connection_type, "ssh");
+        assert_eq!(preview.drafts[0].host, "host.example.com");
+        assert_eq!(preview.drafts[0].port, Some(2200));
+        assert_eq!(preview.drafts[0].user, "admin");
+    }
+
+    #[test]
+    fn warns_on_unsupported_mobaxterm_session_type_with_protocol_name() {
+        let text = "[Bookmarks]\nStorage=#140#7%sftp.example.com%22%backup\n";
+        let preview = parse_mobaxterm(text);
+        assert_eq!(preview.drafts.len(), 0);
+        assert_eq!(preview.warnings.len(), 1);
+        assert!(preview.warnings[0].contains("type 7 (SFTP)"));
     }
 
     #[test]

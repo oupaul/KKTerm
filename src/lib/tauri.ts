@@ -2922,6 +2922,10 @@ type CommandMap = {
     args: { request: RdpClientTextRequest };
     result: null;
   };
+  paste_rdp_client_clipboard: {
+    args: { request: RdpClientSimpleRequest };
+    result: null;
+  };
   send_rdp_client_ctrl_alt_delete: {
     args: { request: RdpClientSimpleRequest };
     result: null;
