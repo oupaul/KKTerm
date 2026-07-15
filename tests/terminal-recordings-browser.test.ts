@@ -9,6 +9,7 @@ import {
   recordingConnectionIdFragment,
   resizeTerminalRecordingColumn,
   resolveTerminalRecordingRows,
+  terminalRecordingGridMinimumWidth,
   terminalRecordingGridTemplate,
 } from "../src/modules/workspace/connections/terminal/terminalRecordingsModel";
 
@@ -55,8 +56,10 @@ test("universal recording rows resolve the current host but keep deleted-Connect
   );
 
   assert.equal(rows[0].host, "prod-east.example.net");
+  assert.equal(rows[0].recordingType, "ssh");
   assert.equal(rows[0].connectionId, sshConnection.id);
   assert.equal(rows[1].host, "retired host");
+  assert.equal(rows[1].recordingType, "unknown");
 });
 
 test("full-text results combine with filename metadata before host/date sorting", () => {
@@ -92,6 +95,7 @@ test("recording export names include one host, latest local stamp, and session c
 });
 
 test("recording columns resize independently, clamp to readable minimums, and share one grid template", () => {
+  assert.equal(DEFAULT_TERMINAL_RECORDING_COLUMN_WIDTHS.name, 330);
   const widerSummary = resizeTerminalRecordingColumn(
     DEFAULT_TERMINAL_RECORDING_COLUMN_WIDTHS,
     "summary",
@@ -101,9 +105,10 @@ test("recording columns resize independently, clamp to readable minimums, and sh
 
   assert.equal(widerSummary.summary, 460);
   assert.equal(widerSummary.name, DEFAULT_TERMINAL_RECORDING_COLUMN_WIDTHS.name);
-  assert.equal(clampedName.name, 180);
+  assert.equal(clampedName.name, 240);
   assert.equal(
     terminalRecordingGridTemplate(clampedName),
-    "36px 180px 140px 112px 92px 92px 84px 460px",
+    "36px 240px 94px 140px 112px 92px 92px 84px minmax(460px, 1fr)",
   );
+  assert.equal(terminalRecordingGridMinimumWidth(clampedName), 1_350);
 });

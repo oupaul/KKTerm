@@ -2829,7 +2829,7 @@ function TerminalPaneView({
 
   function handleOpenRecordings() {
     setActionsMenuOpen(false);
-    openTerminalRecordingsBrowser();
+    openTerminalRecordingsBrowser(undefined, recordingInfo?.path);
   }
 
   async function handleSendBufferToAssistant() {

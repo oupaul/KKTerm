@@ -1507,13 +1507,13 @@
 }
 
 .terminal-recordings-dialog {
-  width: min(72vw, calc(100vw - 48px)) !important;
-  height: min(72vh, calc(100vh - 48px)) !important;
+  position: relative;
+  width: min(var(--terminal-recordings-dialog-width, 72vw), calc(100vw - 48px)) !important;
+  height: min(var(--terminal-recordings-dialog-height, 72vh), calc(100vh - 48px)) !important;
   min-width: min(840px, calc(100vw - 24px));
   min-height: min(520px, calc(100vh - 24px));
   max-width: calc(100vw - 24px);
   max-height: calc(100vh - 24px) !important;
-  resize: both;
 }
 
 .terminal-recordings-dialog .kk-dlg-head {
@@ -1533,6 +1533,38 @@
 .terminal-recordings-dialog .kk-dlg-foot {
   min-height: 53px;
   padding: 11px 18px;
+}
+
+.terminal-recordings-dialog-resizer {
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  z-index: 4;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  background:
+    linear-gradient(
+      135deg,
+      transparent 0 56%,
+      color-mix(in srgb, var(--text-faint) 70%, transparent) 57% 61%,
+      transparent 62% 70%,
+      color-mix(in srgb, var(--text-faint) 70%, transparent) 71% 75%,
+      transparent 76%
+    );
+  border: 0;
+  border-radius: 4px;
+  cursor: nwse-resize;
+  touch-action: none;
+}
+
+.terminal-recordings-dialog-resizer:hover {
+  background-color: var(--hover);
+}
+
+.terminal-recordings-dialog-resizer:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
 }
 
 .terminal-recordings-toolbar {
@@ -1616,8 +1648,8 @@
   display: grid;
   grid-template-columns: var(--terminal-recordings-columns);
   align-items: center;
-  width: max-content;
-  min-width: 100%;
+  width: 100%;
+  min-width: var(--terminal-recordings-min-width);
 }
 
 .terminal-recordings-grid-head {
@@ -1716,12 +1748,13 @@
 
 .terminal-recordings-grid-body {
   flex: 0 0 auto;
-  min-width: 100%;
+  width: 100%;
+  min-width: var(--terminal-recordings-min-width);
 }
 
 .terminal-recordings-entry {
-  width: max-content;
-  min-width: 100%;
+  width: 100%;
+  min-width: var(--terminal-recordings-min-width);
   border-bottom: 0.5px solid var(--hairline);
 }
 
@@ -1830,6 +1863,52 @@
   font-weight: 600;
 }
 
+.terminal-recordings-type {
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
+  align-items: center;
+  min-height: 20px;
+  padding: 0 7px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  font-family: "SF Mono", ui-monospace, "JetBrains Mono", Menlo, monospace;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
+}
+
+.terminal-recordings-type-local {
+  color: var(--accent) !important;
+  background: var(--accent-soft);
+  border-color: color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+.terminal-recordings-type-ssh {
+  color: var(--green) !important;
+  background: var(--green-soft);
+  border-color: color-mix(in srgb, var(--green) 20%, transparent);
+}
+
+.terminal-recordings-type-telnet {
+  color: var(--amber) !important;
+  background: var(--amber-soft);
+  border-color: color-mix(in srgb, var(--amber) 22%, transparent);
+}
+
+.terminal-recordings-type-serial {
+  color: var(--red) !important;
+  background: color-mix(in srgb, var(--red) 11%, var(--surface));
+  border-color: color-mix(in srgb, var(--red) 20%, transparent);
+}
+
+.terminal-recordings-type-unknown {
+  color: var(--text-muted) !important;
+  background: var(--surface-muted);
+  border-color: var(--hairline);
+}
+
 .terminal-recordings-mono,
 .terminal-recordings-number {
   font-family: "SF Mono", ui-monospace, "JetBrains Mono", Menlo, monospace;
@@ -1917,10 +1996,48 @@
   display: grid;
   grid-template-columns: var(--terminal-recordings-columns);
   align-items: center;
-  width: max-content;
-  min-width: 100%;
+  width: 100%;
+  min-width: var(--terminal-recordings-min-width);
   min-height: 44px;
   border-bottom: 0.5px solid var(--hairline);
+}
+
+.terminal-recording-viewer-dialog {
+  width: min(82vw, calc(100vw - 48px)) !important;
+  height: min(82vh, calc(100vh - 48px)) !important;
+  min-width: min(760px, calc(100vw - 24px));
+  min-height: min(480px, calc(100vh - 24px));
+  max-width: calc(100vw - 24px);
+  max-height: calc(100vh - 24px) !important;
+  resize: both;
+}
+
+.terminal-recording-viewer-dialog .kk-dlg-head {
+  padding-right: 56px;
+}
+
+.terminal-recording-viewer-dialog .kk-dlg-sub {
+  max-width: none;
+  overflow: hidden;
+  font-family: "SF Mono", ui-monospace, "JetBrains Mono", Menlo, monospace;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.terminal-recording-viewer-dialog .kk-dlg-body {
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.terminal-recording-viewer-loading {
+  display: grid;
+  height: 100%;
+  place-items: center;
+  color: var(--text-muted);
+  background: var(--surface);
+  font-size: 12px;
 }
 
 .terminal-recordings-skeleton span {

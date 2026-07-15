@@ -2193,6 +2193,30 @@ fn export_terminal_recordings(
     sessions::export_terminal_recordings(sessions::terminal_recordings_root(&app)?, request)
 }
 
+fn open_folder_in_file_manager(app: &tauri::AppHandle, folder: &Path) -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    {
+        let _ = app;
+        std::process::Command::new("explorer.exe")
+            .arg(folder)
+            .spawn()
+            .map(|_| ())
+            .map_err(|error| {
+                format!(
+                    "failed to open folder {} with Windows Explorer: {error}",
+                    folder.display()
+                )
+            })
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        app.opener()
+            .open_path(folder.to_string_lossy(), None::<&str>)
+            .map_err(|error| format!("failed to open folder {}: {error}", folder.display()))
+    }
+}
+
 #[tauri::command]
 fn open_terminal_recordings_root(app: tauri::AppHandle) -> Result<(), String> {
     let root = sessions::terminal_recordings_root(&app)?;
@@ -2202,14 +2226,7 @@ fn open_terminal_recordings_root(app: tauri::AppHandle) -> Result<(), String> {
             root.display()
         )
     })?;
-    app.opener()
-        .open_path(root.to_string_lossy(), None::<&str>)
-        .map_err(|error| {
-            format!(
-                "failed to open terminal recordings folder {}: {error}",
-                root.display()
-            )
-        })
+    open_folder_in_file_manager(&app, &root)
 }
 
 #[tauri::command]
@@ -2226,14 +2243,7 @@ fn open_terminal_recordings_folder(
             folder.display()
         )
     })?;
-    app.opener()
-        .open_path(folder.to_string_lossy(), None::<&str>)
-        .map_err(|error| {
-            format!(
-                "failed to open terminal recordings folder {}: {error}",
-                folder.display()
-            )
-        })
+    open_folder_in_file_manager(&app, &folder)
 }
 
 #[tauri::command]

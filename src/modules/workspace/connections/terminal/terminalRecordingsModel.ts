@@ -2,10 +2,12 @@ import type { TerminalRecordingEntry } from "../../../../lib/tauri";
 import type { Connection } from "../../../../types";
 
 export type RecordingDateRange = "all" | "today" | "7d";
-export type RecordingSortKey = "name" | "host" | "date" | "duration" | "size";
+export type RecordingSortKey = "name" | "type" | "host" | "date" | "duration" | "size";
 export type RecordingSort = { key: RecordingSortKey; direction: "asc" | "desc" };
+export type TerminalRecordingType = "local" | "ssh" | "telnet" | "serial" | "unknown";
 export type TerminalRecordingColumnKey =
   | "name"
+  | "type"
   | "host"
   | "date"
   | "time"
@@ -15,7 +17,8 @@ export type TerminalRecordingColumnKey =
 export type TerminalRecordingColumnWidths = Record<TerminalRecordingColumnKey, number>;
 
 export const DEFAULT_TERMINAL_RECORDING_COLUMN_WIDTHS: TerminalRecordingColumnWidths = {
-  name: 280,
+  name: 330,
+  type: 94,
   host: 140,
   date: 112,
   time: 92,
@@ -25,7 +28,8 @@ export const DEFAULT_TERMINAL_RECORDING_COLUMN_WIDTHS: TerminalRecordingColumnWi
 };
 
 const MIN_TERMINAL_RECORDING_COLUMN_WIDTHS: TerminalRecordingColumnWidths = {
-  name: 180,
+  name: 240,
+  type: 76,
   host: 90,
   date: 88,
   time: 76,
@@ -49,13 +53,18 @@ export function terminalRecordingGridTemplate(widths: TerminalRecordingColumnWid
   return [
     "36px",
     `${widths.name}px`,
+    `${widths.type}px`,
     `${widths.host}px`,
     `${widths.date}px`,
     `${widths.time}px`,
     `${widths.duration}px`,
     `${widths.size}px`,
-    `${widths.summary}px`,
+    `minmax(${widths.summary}px, 1fr)`,
   ].join(" ");
+}
+
+export function terminalRecordingGridMinimumWidth(widths: TerminalRecordingColumnWidths) {
+  return 36 + Object.values(widths).reduce((sum, width) => sum + width, 0);
 }
 
 export interface TerminalRecordingRow extends TerminalRecordingEntry {
@@ -63,6 +72,7 @@ export interface TerminalRecordingRow extends TerminalRecordingEntry {
   connectionId?: string;
   connectionName: string;
   host: string;
+  recordingType: TerminalRecordingType;
   timestampMillis: number;
 }
 
@@ -107,6 +117,7 @@ export function resolveTerminalRecordingRows(
       connectionId: connection?.id,
       connectionName: connection?.name ?? humanizeRecordingFolderLabel(entry.connectionFolderLabel),
       host: recordingHostLabel(connection, entry.connectionFolderLabel),
+      recordingType: terminalRecordingType(connection),
       timestampMillis: entry.startedAtMillis ?? entry.modifiedAtMillis ?? 0,
     };
   });
@@ -139,7 +150,7 @@ export function filterAndSortTerminalRecordings(options: {
     if (!query) {
       return true;
     }
-    const metadata = `${row.fileName} ${row.host} ${row.connectionName} ${row.aiSummary ?? ""}`
+    const metadata = `${row.fileName} ${row.recordingType} ${row.host} ${row.connectionName} ${row.aiSummary ?? ""}`
       .toLocaleLowerCase();
     return metadata.includes(query) || options.contentMatches.has(row.id);
   });
@@ -152,6 +163,9 @@ export function filterAndSortTerminalRecordings(options: {
         break;
       case "host":
         comparison = left.host.localeCompare(right.host);
+        break;
+      case "type":
+        comparison = left.recordingType.localeCompare(right.recordingType);
         break;
       case "duration":
         comparison = (left.durationMillis ?? 0) - (right.durationMillis ?? 0);
@@ -166,6 +180,18 @@ export function filterAndSortTerminalRecordings(options: {
     }
     return comparison * direction || left.fileName.localeCompare(right.fileName);
   });
+}
+
+function terminalRecordingType(connection: Connection | undefined): TerminalRecordingType {
+  switch (connection?.type) {
+    case "local":
+    case "ssh":
+    case "telnet":
+    case "serial":
+      return connection.type;
+    default:
+      return "unknown";
+  }
 }
 
 export function buildTerminalRecordingsExportName(rows: TerminalRecordingRow[]) {

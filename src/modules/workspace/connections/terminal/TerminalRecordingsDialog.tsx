@@ -1,7 +1,10 @@
 import {
+  lazy,
+  Suspense,
   useDeferredValue,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type CSSProperties,
   type KeyboardEvent,
@@ -17,6 +20,7 @@ import {
   selectTerminalRecordingsExportFile,
 } from "../../../../lib/tauri";
 import { useWorkspaceStore } from "../../../../store";
+import type { WorkspaceTab } from "../../../../types";
 import { flattenConnections } from "../treeUtils";
 import {
   DEFAULT_TERMINAL_RECORDING_COLUMN_WIDTHS,
@@ -26,6 +30,7 @@ import {
   recordingHostLabel,
   resizeTerminalRecordingColumn,
   resolveTerminalRecordingRows,
+  terminalRecordingGridMinimumWidth,
   terminalRecordingGridTemplate,
   type RecordingDateRange,
   type RecordingSort,
@@ -34,6 +39,10 @@ import {
   type TerminalRecordingColumnWidths,
   type TerminalRecordingRow,
 } from "./terminalRecordingsModel";
+
+const FileViewerWorkspace = lazy(async () => ({
+  default: (await import("../file-viewer/FileViewerWorkspace")).FileViewerWorkspace,
+}));
 
 export function TerminalRecordingsDialog() {
   const browser = useWorkspaceStore((state) => state.terminalRecordingsBrowser);
@@ -44,6 +53,7 @@ export function TerminalRecordingsDialog() {
   return (
     <TerminalRecordingsDialogContent
       initialConnectionId={browser.initialConnectionId}
+      initialRecordingPath={browser.initialRecordingPath}
       key={browser.requestId}
       onClose={close}
     />
@@ -52,13 +62,14 @@ export function TerminalRecordingsDialog() {
 
 function TerminalRecordingsDialogContent({
   initialConnectionId,
+  initialRecordingPath,
   onClose,
 }: {
   initialConnectionId?: string;
+  initialRecordingPath?: string;
   onClose: () => void;
 }) {
   const { t } = useTranslation();
-  const openFileViewerPath = useWorkspaceStore((state) => state.openFileViewerPath);
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
   const [rows, setRows] = useState<TerminalRecordingRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -75,6 +86,13 @@ function TerminalRecordingsDialogContent({
     DEFAULT_TERMINAL_RECORDING_COLUMN_WIDTHS,
   );
   const [exporting, setExporting] = useState(false);
+  const [viewingRow, setViewingRow] = useState<TerminalRecordingRow>();
+  const currentRecordingRowRef = useRef<HTMLDivElement | null>(null);
+  const didScrollToInitialRecording = useRef(false);
+  const initialRecordingId = useMemo(
+    () => (initialRecordingPath ? normalizeRecordingPath(initialRecordingPath) : undefined),
+    [initialRecordingPath],
+  );
 
   useEffect(() => {
     let canceled = false;
@@ -94,7 +112,11 @@ function TerminalRecordingsDialogContent({
           return;
         }
         const connections = flattenConnections(tree);
-        setRows(resolveTerminalRecordingRows(recordings, connections));
+        const resolvedRows = resolveTerminalRecordingRows(recordings, connections);
+        setRows(resolvedRows);
+        if (initialRecordingId && resolvedRows.some((row) => row.id === initialRecordingId)) {
+          setSelected(new Set([initialRecordingId]));
+        }
         if (initialConnectionId) {
           const initialConnection = connections.find((connection) => connection.id === initialConnectionId);
           if (initialConnection) {
@@ -118,7 +140,7 @@ function TerminalRecordingsDialogContent({
     return () => {
       canceled = true;
     };
-  }, [initialConnectionId, showStatusBarNotice, t]);
+  }, [initialConnectionId, initialRecordingId, showStatusBarNotice, t]);
 
   useEffect(() => {
     let canceled = false;
@@ -170,6 +192,21 @@ function TerminalRecordingsDialogContent({
       }),
     [contentMatches, deferredQuery, host, range, rows, sort],
   );
+  useEffect(() => {
+    if (
+      loading ||
+      !initialRecordingId ||
+      didScrollToInitialRecording.current ||
+      !currentRecordingRowRef.current
+    ) {
+      return;
+    }
+    const frame = window.requestAnimationFrame(() => {
+      currentRecordingRowRef.current?.scrollIntoView({ block: "center" });
+      didScrollToInitialRecording.current = true;
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [initialRecordingId, loading, visibleRows]);
   const selectedRows = useMemo(
     () => rows.filter((row) => selected.has(row.id)),
     [rows, selected],
@@ -183,6 +220,7 @@ function TerminalRecordingsDialogContent({
     () =>
       ({
         "--terminal-recordings-columns": terminalRecordingGridTemplate(columnWidths),
+        "--terminal-recordings-min-width": `${terminalRecordingGridMinimumWidth(columnWidths)}px`,
       }) as CSSProperties,
     [columnWidths],
   );
@@ -210,11 +248,6 @@ function TerminalRecordingsDialogContent({
       }
       return next;
     });
-  }
-
-  function openRecording(row: TerminalRecordingRow) {
-    openFileViewerPath(row.path);
-    onClose();
   }
 
   async function openFolder() {
@@ -342,50 +375,64 @@ function TerminalRecordingsDialogContent({
     }
   }
 
+  const typeLabels = {
+    local: t("terminal.recordingsTypeLocal"),
+    ssh: t("terminal.recordingsTypeSsh"),
+    telnet: t("terminal.recordingsTypeTelnet"),
+    serial: t("terminal.recordingsTypeSerial"),
+    unknown: t("terminal.recordingsTypeUnknown"),
+  };
+
   return (
+    <>
     <DialogShell onBackdrop={onClose}>
       <Sheet
         ariaLabel={t("terminal.recordingsTitle")}
         className="terminal-recordings-dialog"
         closeAriaLabel={t("common.close")}
         footer={
-          <Actions
-            extraLeft={
-              <span className="terminal-recordings-selection-status">
-                {selectedRows.length > 0
-                  ? t("terminal.recordingsSelected", {
-                      count: selectedRows.length,
-                      size: formatByteCount(selectedSize),
-                    })
-                  : ""}
-              </span>
-            }
-            primary={
-              <span className="terminal-recordings-footer-actions">
-                <Btn
-                  kind="ghost"
-                  icon="wand"
-                  disabled={selectedRows.length === 0 || batchSummarizing}
-                  onClick={() => void summarizeSelected()}
-                  sm
-                >
-                  {batchSummarizing
-                    ? t("terminal.recordingsSummarizing")
-                    : t("terminal.recordingsSummarize")}
-                </Btn>
-                <Btn
-                  kind="primary"
-                  icon="download"
-                  disabled={selectedRows.length === 0 || exporting}
-                  onClick={() => void exportSelected()}
-                >
-                  {exporting
-                    ? t("terminal.recordingsExporting")
-                    : t("terminal.recordingsExportZip")}
-                </Btn>
-              </span>
-            }
-          />
+          <>
+            <Actions
+              extraLeft={
+                <span className="terminal-recordings-selection-status">
+                  {selectedRows.length > 0
+                    ? t("terminal.recordingsSelected", {
+                        count: selectedRows.length,
+                        size: formatByteCount(selectedSize),
+                      })
+                    : ""}
+                </span>
+              }
+              primary={
+                <span className="terminal-recordings-footer-actions">
+                  <Btn
+                    kind="ghost"
+                    icon="wand"
+                    disabled={selectedRows.length === 0 || batchSummarizing}
+                    onClick={() => void summarizeSelected()}
+                    sm
+                  >
+                    {batchSummarizing
+                      ? t("terminal.recordingsSummarizing")
+                      : t("terminal.recordingsSummarize")}
+                  </Btn>
+                  <Btn
+                    kind="primary"
+                    icon="download"
+                    disabled={selectedRows.length === 0 || exporting}
+                    onClick={() => void exportSelected()}
+                  >
+                    {exporting
+                      ? t("terminal.recordingsExporting")
+                      : t("terminal.recordingsExportZip")}
+                  </Btn>
+                </span>
+              }
+            />
+            <TerminalRecordingsDialogResizeHandle
+              label={t("terminal.recordingsResizeDialog")}
+            />
+          </>
         }
         onClose={onClose}
         rule
@@ -451,6 +498,14 @@ function TerminalRecordingsDialogContent({
               width={columnWidths.name}
             >
               <SortHeader label={t("terminal.recordingsName")} name="name" onSort={toggleSort} sort={sort} />
+            </RecordingHeaderCell>
+            <RecordingHeaderCell
+              column="type"
+              label={t("terminal.recordingsType")}
+              onResize={setColumnWidths}
+              width={columnWidths.type}
+            >
+              <SortHeader label={t("terminal.recordingsType")} name="type" onSort={toggleSort} sort={sort} />
             </RecordingHeaderCell>
             <RecordingHeaderCell
               column="host"
@@ -519,7 +574,11 @@ function TerminalRecordingsDialogContent({
               ? visibleRows.map((row) => {
                   const busy = summaryBusy.has(row.id);
                   return (
-                    <div className="terminal-recordings-entry" key={row.id}>
+                    <div
+                      className="terminal-recordings-entry"
+                      key={row.id}
+                      ref={row.id === initialRecordingId ? currentRecordingRowRef : undefined}
+                    >
                       <div
                         className={`terminal-recordings-grid-row${selected.has(row.id) ? " selected" : ""}`}
                         role="row"
@@ -534,13 +593,20 @@ function TerminalRecordingsDialogContent({
                         <div className="terminal-recordings-cell" role="cell">
                           <button
                             className="terminal-recordings-name"
-                            onClick={() => openRecording(row)}
+                            onClick={() => setViewingRow(row)}
                             title={t("terminal.recordingsOpenBuiltInEditor", { name: row.fileName })}
                             type="button"
                           >
                             <DIcon name="terminal" size={14} />
                             <span>{row.fileName}</span>
                           </button>
+                        </div>
+                        <div className="terminal-recordings-cell" role="cell">
+                          <span
+                            className={`terminal-recordings-type terminal-recordings-type-${row.recordingType}`}
+                          >
+                            {typeLabels[row.recordingType]}
+                          </span>
                         </div>
                         <div className="terminal-recordings-cell" role="cell">
                           <span className="terminal-recordings-host" title={row.connectionName}>
@@ -586,6 +652,168 @@ function TerminalRecordingsDialogContent({
         </div>
       </Sheet>
     </DialogShell>
+    {viewingRow ? (
+      <TerminalRecordingViewerDialog row={viewingRow} onClose={() => setViewingRow(undefined)} />
+    ) : null}
+    </>
+  );
+}
+
+function TerminalRecordingViewerDialog({
+  row,
+  onClose,
+}: {
+  row: TerminalRecordingRow;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation();
+  const tab = useMemo<WorkspaceTab>(
+    () => ({
+      id: `terminal-recording-viewer-${row.id}`,
+      title: row.fileName,
+      toolbarTitle: row.fileName,
+      subtitle: row.path,
+      kind: "fileViewer",
+      panes: [],
+      connection: {
+        id: `terminal-recording-file-${row.id}`,
+        name: row.fileName,
+        host: "localhost",
+        user: "",
+        localStartupDirectory: row.path,
+        type: "fileView",
+        status: "idle",
+      },
+    }),
+    [row],
+  );
+
+  return (
+    <DialogShell onBackdrop={onClose} zClassName="kk-qc-subdialog">
+      <Sheet
+        ariaLabel={row.fileName}
+        className="terminal-recording-viewer-dialog"
+        closeAriaLabel={t("common.close")}
+        onClose={onClose}
+        rule
+        sub={row.path}
+        title={row.fileName}
+      >
+        <Suspense
+          fallback={
+            <div className="terminal-recording-viewer-loading">
+              {t("workspace.fileViewer.loading")}
+            </div>
+          }
+        >
+          <FileViewerWorkspace embeddedDialog isActive tab={tab} />
+        </Suspense>
+      </Sheet>
+    </DialogShell>
+  );
+}
+
+function TerminalRecordingsDialogResizeHandle({ label }: { label: string }) {
+  const dragStart = useRef<
+    | {
+        height: number;
+        pointerId: number;
+        startX: number;
+        startY: number;
+        width: number;
+      }
+    | undefined
+  >(undefined);
+
+  function dialogFor(target: HTMLElement) {
+    return target.closest<HTMLElement>(".terminal-recordings-dialog");
+  }
+
+  function resizeDialog(dialog: HTMLElement, width: number, height: number) {
+    const maxWidth = Math.max(320, window.innerWidth - 24);
+    const maxHeight = Math.max(320, window.innerHeight - 24);
+    const minWidth = Math.min(840, maxWidth);
+    const minHeight = Math.min(520, maxHeight);
+    dialog.style.setProperty(
+      "--terminal-recordings-dialog-width",
+      `${Math.min(maxWidth, Math.max(minWidth, Math.round(width)))}px`,
+    );
+    dialog.style.setProperty(
+      "--terminal-recordings-dialog-height",
+      `${Math.min(maxHeight, Math.max(minHeight, Math.round(height)))}px`,
+    );
+  }
+
+  function handlePointerDown(event: ReactPointerEvent<HTMLButtonElement>) {
+    const dialog = dialogFor(event.currentTarget);
+    if (!dialog) {
+      return;
+    }
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    const bounds = dialog.getBoundingClientRect();
+    dragStart.current = {
+      height: bounds.height,
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      width: bounds.width,
+    };
+  }
+
+  function handlePointerMove(event: ReactPointerEvent<HTMLButtonElement>) {
+    const start = dragStart.current;
+    const dialog = dialogFor(event.currentTarget);
+    if (!start || start.pointerId !== event.pointerId || !dialog) {
+      return;
+    }
+    resizeDialog(
+      dialog,
+      start.width + event.clientX - start.startX,
+      start.height + event.clientY - start.startY,
+    );
+  }
+
+  function finishPointerResize(event: ReactPointerEvent<HTMLButtonElement>) {
+    if (dragStart.current?.pointerId !== event.pointerId) {
+      return;
+    }
+    dragStart.current = undefined;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+  }
+
+  function handleResizeKey(event: KeyboardEvent<HTMLButtonElement>) {
+    if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)) {
+      return;
+    }
+    const dialog = dialogFor(event.currentTarget);
+    if (!dialog) {
+      return;
+    }
+    event.preventDefault();
+    const bounds = dialog.getBoundingClientRect();
+    const step = event.shiftKey ? 64 : 24;
+    resizeDialog(
+      dialog,
+      bounds.width + (event.key === "ArrowRight" ? step : event.key === "ArrowLeft" ? -step : 0),
+      bounds.height + (event.key === "ArrowDown" ? step : event.key === "ArrowUp" ? -step : 0),
+    );
+  }
+
+  return (
+    <button
+      aria-label={label}
+      className="terminal-recordings-dialog-resizer"
+      onKeyDown={handleResizeKey}
+      onPointerCancel={finishPointerResize}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={finishPointerResize}
+      title={label}
+      type="button"
+    />
   );
 }
 
@@ -719,6 +947,7 @@ function RecordingSkeletonRows() {
     <div aria-hidden="true" className="terminal-recordings-skeletons">
       {Array.from({ length: 8 }, (_, index) => (
         <div className="terminal-recordings-skeleton" key={index}>
+          <span />
           <span />
           <span />
           <span />

@@ -1242,7 +1242,11 @@ interface WorkspaceState {
   localTerminalPopup?: WorkspaceTab;
   /** App-global Terminal recordings browser. A Connection id is present only
    * when the browser was opened from that Connection's tree context menu. */
-  terminalRecordingsBrowser?: { initialConnectionId?: string; requestId: number };
+  terminalRecordingsBrowser?: {
+    initialConnectionId?: string;
+    initialRecordingPath?: string;
+    requestId: number;
+  };
   /** Open Git Browser overlay target (repo root + label); undefined when closed. */
   gitBrowser?: GitBrowserTarget;
   /** App-global "left file" remembered for File Compare; undefined when none picked. */
@@ -1349,7 +1353,10 @@ interface WorkspaceState {
   openLocalTerminal: (options?: { name?: string; shell?: string }) => void;
   openLocalTerminalHere: (cwd: string, options?: { name?: string; shell?: string }) => void;
   closeLocalTerminalPopup: () => void;
-  openTerminalRecordingsBrowser: (initialConnectionId?: string) => void;
+  openTerminalRecordingsBrowser: (
+    initialConnectionId?: string,
+    initialRecordingPath?: string,
+  ) => void;
   closeTerminalRecordingsBrowser: () => void;
   openGitBrowser: (repoRoot: string, label: string) => void;
   closeGitBrowser: () => void;
@@ -2865,10 +2872,11 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     });
   },
   closeLocalTerminalPopup: () => set({ localTerminalPopup: undefined }),
-  openTerminalRecordingsBrowser: (initialConnectionId) =>
+  openTerminalRecordingsBrowser: (initialConnectionId, initialRecordingPath) =>
     set({
       terminalRecordingsBrowser: {
         initialConnectionId,
+        initialRecordingPath,
         requestId: Date.now(),
       },
     }),
