@@ -1228,7 +1228,7 @@
       "unitCount": "{{count}}U",
       "deviceCount": "{{count}} appareils",
       "faceDeviceCount": "{{face}} · {{count}} appareils",
-      "allRackFacesLabel": "Toutes les baies",
+      "allRackFacesLabel": "Retourner toutes les baies",
       "viewFaceLabel": "Face de la baie",
       "showFace": "Afficher {{face}}",
       "mountingSideLabel": "Face de montage",

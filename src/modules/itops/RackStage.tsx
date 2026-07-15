@@ -1,8 +1,8 @@
 // Single-rack stage (docs/SITE.md Rack View). Centers a <RackElevation> and
-// overlays per-device "balloon" callouts that point to each device's U slot,
-// alternating left and right with a leader line to the rack edge. Balloon Y is
-// measured from the live device grid so it tracks the rack's variable header
-// height; same-side balloons are nudged apart so they don't overlap.
+// overlays per-device "balloon" callouts that point to each device's U slot.
+// One-face mode alternates left/right; two-face mode gives Front and Rear
+// separate outer lanes so leaders never cross between cabinets. Balloon Y is
+// measured from the live device grids and same-lane balloons spread apart.
 
 import { useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -22,7 +22,7 @@ import type { RackItemDraft } from "./RackItemDialog";
 /** Child-host names for a device balloon: first two, then a "+N" overflow. */
 const BALLOON_CHILD_HOSTS = 2;
 
-const BALLOON_MIN_GAP = 44; // px between same-side balloon centers
+const BALLOON_MIN_GAP = 60; // px between same-lane balloon centers
 
 const MIN_RACK_U_PX = 12;
 const RACK_VERTICAL_CHROME_PX = 48;
@@ -69,8 +69,41 @@ function specOf(item: RackItem, t: (k: string, o?: Record<string, unknown>) => s
 
 interface Balloon {
   item: RackItem;
+  face: RackMountFace;
   side: "left" | "right";
   y: number; // px from stage top
+}
+
+interface RackGeometry {
+  top: number;
+  height: number;
+  left: number;
+  right: number;
+  stageHeight: number;
+}
+
+/** Keep one callout lane readable without letting its first/last balloon drift
+ * outside the stage. Dense racks compress the gap only as much as necessary. */
+function spreadBalloonLane(lane: Balloon[], minY: number, maxY: number): void {
+  if (lane.length === 0) return;
+  lane.sort((a, b) => a.y - b.y);
+  const gap =
+    lane.length > 1
+      ? Math.min(BALLOON_MIN_GAP, Math.max(0, maxY - minY) / (lane.length - 1))
+      : 0;
+  let previous = minY - gap;
+  for (const balloon of lane) {
+    balloon.y = Math.max(balloon.y, previous + gap);
+    previous = balloon.y;
+  }
+  const overflow = lane[lane.length - 1].y - maxY;
+  if (overflow > 0) {
+    for (const balloon of lane) balloon.y -= overflow;
+  }
+  const underflow = minY - lane[0].y;
+  if (underflow > 0) {
+    for (const balloon of lane) balloon.y += underflow;
+  }
 }
 
 export function RackStage({
@@ -120,9 +153,9 @@ export function RackStage({
   const { t } = useTranslation();
   const stageRef = useRef<HTMLDivElement | null>(null);
   const [unitPx, setUnitPx] = useState(U_PX);
-  const [geom, setGeom] = useState<{ top: number; height: number; left: number; right: number } | null>(
-    null,
-  );
+  const [geometry, setGeometry] = useState<
+    Partial<Record<RackMountFace, RackGeometry>>
+  >({});
   const frontItems = rack.items.filter(
     (item) => item.kind !== "kuaiguai" && (item.mountFace ?? "front") === "front",
   );
@@ -135,9 +168,7 @@ export function RackStage({
     : rearItems.length > 0 && frontItems.length === 0
       ? ["rear"]
       : ["front"];
-  const visibleItems = rack.items.filter(
-    (item) => item.kind === "kuaiguai" || (item.mountFace ?? "front") === faces[0],
-  );
+  const facesKey = faces.join(",");
   const randomCallouts = selectRandomRackCallouts(rack.items, rack.id, 2);
 
   // Rack View is the only elevation that adapts its U height to the current
@@ -163,43 +194,88 @@ export function RackStage({
     };
   }, [rack.heightU]);
 
-  // Measure the device grid relative to the stage so balloons anchor to the
-  // right U rows regardless of the rack header's height.
+  // Measure every visible device grid relative to the stage. Dual-face mode
+  // needs independent anchors because Front and Rear can differ horizontally.
   useLayoutEffect(() => {
     const stage = stageRef.current;
     if (!stage) return;
+    const measuredFaces = facesKey.split(",") as RackMountFace[];
+    const grids = measuredFaces
+      .map(
+        (face) =>
+          stage.querySelector(`.rk-stage-rack[data-face="${face}"] .rk-grid`) as
+            | HTMLElement
+            | null,
+      )
+      .filter((grid): grid is HTMLElement => grid != null);
     const measure = () => {
-      const grid = stage.querySelector(".rk-grid") as HTMLElement | null;
-      if (!grid) return;
       const s = stage.getBoundingClientRect();
-      const g = grid.getBoundingClientRect();
-      setGeom({ top: g.top - s.top, height: g.height, left: g.left - s.left, right: g.right - s.left });
+      const next: Partial<Record<RackMountFace, RackGeometry>> = {};
+      for (const face of measuredFaces) {
+        const grid = stage.querySelector(
+          `.rk-stage-rack[data-face="${face}"] .rk-grid`,
+        ) as HTMLElement | null;
+        if (!grid) continue;
+        const g = grid.getBoundingClientRect();
+        next[face] = {
+          top: g.top - s.top,
+          height: g.height,
+          left: g.left - s.left,
+          right: g.right - s.left,
+          stageHeight: s.height,
+        };
+      }
+      setGeometry(next);
     };
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(stage);
+    for (const grid of grids) ro.observe(grid);
     return () => ro.disconnect();
-  }, [rack.id, rack.heightU, rack.items.length]);
+  }, [facesKey, rack.id, rack.heightU, rack.items.length]);
 
-  // Build balloons: alternate sides by top-of-rack order, then enforce a
-  // minimum vertical gap within each side so callouts don't collide.
-  let balloons: Balloon[] = [];
-  if (!dualFace && geom && visibleItems.length > 0) {
+  // A single elevation alternates callouts on both sides. With two elevations,
+  // each mounting face owns its outer lane: Front left, Rear right. Nothing
+  // crosses the breathing room between the cabinets.
+  const balloons: Balloon[] = [];
+  for (const face of faces) {
+    const geom = geometry[face];
+    if (!geom) continue;
+    const faceItems = rack.items.filter((item) =>
+      item.kind === "kuaiguai"
+        ? faces.length === 1 || face === "front"
+        : (item.mountFace ?? "front") === face,
+    );
     const rowPx = geom.height / rack.heightU;
-    const ordered = [...visibleItems].sort(
+    const ordered = [...faceItems].sort(
       (a, b) => b.startU + b.heightU - (a.startU + a.heightU),
     );
-    balloons = ordered.map((item, index) => {
+    ordered.forEach((item, index) => {
       const topRow0 = rack.heightU - (item.startU + item.heightU - 1);
       const y = geom.top + (topRow0 + item.heightU / 2) * rowPx;
-      return { item, side: index % 2 === 0 ? "left" : ("right" as const), y };
+      balloons.push({
+        item,
+        face,
+        side: dualFace
+          ? face === "front"
+            ? "left"
+            : "right"
+          : index % 2 === 0
+            ? "left"
+            : "right",
+        y,
+      });
     });
+  }
+  for (const face of faces) {
+    const geom = geometry[face];
+    if (!geom) continue;
     for (const side of ["left", "right"] as const) {
-      let prev = -Infinity;
-      for (const b of balloons.filter((x) => x.side === side)) {
-        if (b.y - prev < BALLOON_MIN_GAP) b.y = prev + BALLOON_MIN_GAP;
-        prev = b.y;
-      }
+      spreadBalloonLane(
+        balloons.filter((balloon) => balloon.face === face && balloon.side === side),
+        22,
+        Math.max(22, geom.stageHeight - 22),
+      );
     }
   }
 
@@ -242,68 +318,69 @@ export function RackStage({
           </div>
         ))}
       </div>
-      {geom
-        ? balloons.map((b) => {
-            const status = isGhost?.(b.item) ? "offline" : itemStatus(b.item);
-            const spec = specOf(b.item, t);
-            const sub = hostFor?.(b.item);
-            const boundHost = b.item.metadata?.hostId
-              ? hosts?.find((entry) => entry.id === b.item.metadata?.hostId)
-              : undefined;
-            const childHosts = boundHost ? childHostsOf(hosts ?? [], boundHost.id) : [];
-            const shownChildren = childHosts.slice(0, BALLOON_CHILD_HOSTS);
-            const overflow = childHosts.length - shownChildren.length;
-            // Left balloons fill from the stage's left edge to the rack's left
-            // edge; right balloons from the rack's right edge to the stage's end.
-            const style =
-              b.side === "left"
-                ? { top: b.y, left: 0, width: geom.left }
-                : { top: b.y, left: geom.right, right: 0 };
-            const box = (
-              <span className="rk-balloon-box">
-                <span className={`rk-balloon-dot ${status}`} />
-                <span className="rk-balloon-txt">
-                  <span className="rk-balloon-nm">
-                    {b.item.label || t(`itops.racks.kind.${b.item.kind}`)}
-                  </span>
-                  {sub || spec ? (
-                    <span className="rk-balloon-meta">
-                      {sub ? <span className="host">{sub}</span> : null}
-                      {spec ? <span className="spec">{spec}</span> : null}
+      {balloons.map((b) => {
+        const geom = geometry[b.face];
+        if (!geom) return null;
+        const status = isGhost?.(b.item) ? "offline" : itemStatus(b.item);
+        const spec = specOf(b.item, t);
+        const sub = hostFor?.(b.item);
+        const boundHost = b.item.metadata?.hostId
+          ? hosts?.find((entry) => entry.id === b.item.metadata?.hostId)
+          : undefined;
+        const childHosts = boundHost ? childHostsOf(hosts ?? [], boundHost.id) : [];
+        const shownChildren = childHosts.slice(0, BALLOON_CHILD_HOSTS);
+        const overflow = childHosts.length - shownChildren.length;
+        // Left balloons fill from the stage's left edge to the rack's left
+        // edge; right balloons from the rack's right edge to the stage's end.
+        const style =
+          b.side === "left"
+            ? { top: b.y, left: 0, width: geom.left }
+            : { top: b.y, left: geom.right, right: 0 };
+        const box = (
+          <span className="rk-balloon-box">
+            <span className={`rk-balloon-dot ${status}`} />
+            <span className="rk-balloon-txt">
+              <span className="rk-balloon-nm">
+                {b.item.label || t(`itops.racks.kind.${b.item.kind}`)}
+              </span>
+              {sub || spec ? (
+                <span className="rk-balloon-meta">
+                  {sub ? <span className="host">{sub}</span> : null}
+                  {spec ? <span className="spec">{spec}</span> : null}
+                </span>
+              ) : null}
+              {boundHost ? (
+                <span className="rk-balloon-hosts">
+                  <span className="hostname">{boundHost.hostname}</span>
+                  {shownChildren.map((child) => (
+                    <span key={child.id} className="child">
+                      {hostDisplayName(child)}
                     </span>
-                  ) : null}
-                  {boundHost ? (
-                    <span className="rk-balloon-hosts">
-                      <span className="hostname">{boundHost.hostname}</span>
-                      {shownChildren.map((child) => (
-                        <span key={child.id} className="child">
-                          {hostDisplayName(child)}
-                        </span>
-                      ))}
-                      {overflow > 0 ? (
-                        <span className="more">
-                          {t("itops.hosts.childOverflow", { count: overflow })}
-                        </span>
-                      ) : null}
+                  ))}
+                  {overflow > 0 ? (
+                    <span className="more">
+                      {t("itops.hosts.childOverflow", { count: overflow })}
                     </span>
                   ) : null}
                 </span>
-              </span>
-            );
-            return (
-              <div
-                key={b.item.id}
-                className={`rk-balloon ${b.side}`}
-                style={style}
-                onClick={() => onEditItem?.(b.item)}
-              >
-                {b.side === "right" ? <span className="rk-balloon-leader" /> : null}
-                {box}
-                {b.side === "left" ? <span className="rk-balloon-leader" /> : null}
-              </div>
-            );
-          })
-        : null}
+              ) : null}
+            </span>
+          </span>
+        );
+        return (
+          <div
+            key={`${b.face}:${b.item.id}`}
+            className={`rk-balloon ${b.side}`}
+            data-face={b.face}
+            style={style}
+            onClick={() => onEditItem?.(b.item)}
+          >
+            {b.side === "right" ? <span className="rk-balloon-leader" /> : null}
+            {box}
+            {b.side === "left" ? <span className="rk-balloon-leader" /> : null}
+          </div>
+        );
+      })}
       {randomCallouts.length > 0 ? (
         <div className="rack-random-callouts">
           {randomCallouts.map((callout) => {

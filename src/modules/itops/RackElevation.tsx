@@ -108,7 +108,7 @@ export function RackElevation({
   onCancelPlacement?: () => void;
   /** Cabinet mounting plane currently presented by this elevation. */
   face?: RackMountFace;
-  /** Optional per-rack face switch shown in the elevation header. */
+  /** Optional per-rack face switch shown at the cabinet's top-right corner. */
   onToggleFace?: () => void;
 }) {
   const { t } = useTranslation();
@@ -342,19 +342,6 @@ export function RackElevation({
             ) : null}
           </div>
         ) : null}
-        {onToggleFace ? (
-          <button
-            type="button"
-            className="rk-face-toggle"
-            aria-label={t("itops.racks.showFace", {
-              face: t(`itops.racks.face.${displayFace === "front" ? "rear" : "front"}`),
-            })}
-            onClick={onToggleFace}
-          >
-            <span>{t(`itops.racks.face.${displayFace}`)}</span>
-            <ItIcon name="rerun" size={11} />
-          </button>
-        ) : null}
         {onRunRack ? (
           <button
             type="button"
@@ -388,6 +375,21 @@ export function RackElevation({
       </div> : null}
 
       <div className="rk-cabinet">
+        {onToggleFace ? (
+          <button
+            type="button"
+            className="rk-cabinet-flip"
+            title={t("itops.racks.showFace", {
+              face: t(`itops.racks.face.${displayFace === "front" ? "rear" : "front"}`),
+            })}
+            aria-label={t("itops.racks.showFace", {
+              face: t(`itops.racks.face.${displayFace === "front" ? "rear" : "front"}`),
+            })}
+            onClick={onToggleFace}
+          >
+            <ItIcon name="rerun" size={14} />
+          </button>
+        ) : null}
         <div
           className={`rk-top-area${canMove ? " drop-target" : ""}`}
           onDragOver={canMove ? (event) => {
@@ -425,6 +427,7 @@ export function RackElevation({
                   yaw={item.metadata?.yaw ?? null}
                   kuaiguaiSize={item.metadata?.kuaiguaiSize ?? null}
                   kuaiguaiStyle={item.metadata?.kuaiguaiStyle ?? null}
+                  face={displayFace}
                   notes={item.metadata?.notes ?? null}
                   formFactor={item.metadata?.formFactor ?? null}
                   serverPanelStyle={item.metadata?.serverPanelStyle ?? null}
@@ -460,6 +463,7 @@ export function RackElevation({
                 yaw={placeSpec.metadata?.yaw ?? null}
                 kuaiguaiSize={placeSpec.metadata?.kuaiguaiSize ?? null}
                 kuaiguaiStyle={placeSpec.metadata?.kuaiguaiStyle ?? null}
+                face={displayFace}
                 notes={placeSpec.metadata?.notes ?? null}
                 formFactor={placeSpec.metadata?.formFactor ?? null}
                 serverPanelStyle={placeSpec.metadata?.serverPanelStyle ?? null}
@@ -583,6 +587,7 @@ export function RackElevation({
                   yaw={item.metadata?.yaw ?? null}
                   kuaiguaiSize={item.metadata?.kuaiguaiSize ?? null}
                   kuaiguaiStyle={item.metadata?.kuaiguaiStyle ?? null}
+                  face={displayFace}
                   notes={item.metadata?.notes ?? null}
                   formFactor={item.metadata?.formFactor ?? null}
                   serverPanelStyle={item.metadata?.serverPanelStyle ?? null}
@@ -699,6 +704,7 @@ export function RackElevation({
                   yaw={placeSpec.metadata?.yaw ?? null}
                   kuaiguaiSize={placeSpec.metadata?.kuaiguaiSize ?? null}
                   kuaiguaiStyle={placeSpec.metadata?.kuaiguaiStyle ?? null}
+                  face={displayFace}
                   notes={placeSpec.metadata?.notes ?? null}
                   formFactor={placeSpec.metadata?.formFactor ?? null}
                   serverPanelStyle={placeSpec.metadata?.serverPanelStyle ?? null}
@@ -773,6 +779,7 @@ export function RackElevation({
                 yaw={placeSpec.metadata?.yaw ?? null}
                 kuaiguaiSize={placeSpec.metadata?.kuaiguaiSize ?? null}
                 kuaiguaiStyle={placeSpec.metadata?.kuaiguaiStyle ?? null}
+                face={displayFace}
                 notes={placeSpec.metadata?.notes ?? null}
                 formFactor={placeSpec.metadata?.formFactor ?? null}
                 serverPanelStyle={placeSpec.metadata?.serverPanelStyle ?? null}

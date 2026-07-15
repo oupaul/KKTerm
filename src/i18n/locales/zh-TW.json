@@ -1228,7 +1228,7 @@
       "unitCount": "{{count}}U",
       "deviceCount": "{{count}} 個裝置",
       "faceDeviceCount": "{{face}} · {{count}} 個裝置",
-      "allRackFacesLabel": "所有機櫃",
+      "allRackFacesLabel": "翻轉所有機櫃",
       "viewFaceLabel": "機櫃面",
       "showFace": "顯示{{face}}",
       "mountingSideLabel": "安裝面",

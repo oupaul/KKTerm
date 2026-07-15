@@ -1228,7 +1228,7 @@
       "unitCount": "{{count}}U",
       "deviceCount": "{{count}} อุปกรณ์",
       "faceDeviceCount": "{{face}} · {{count}} อุปกรณ์",
-      "allRackFacesLabel": "แร็คทั้งหมด",
+      "allRackFacesLabel": "พลิกแร็คทั้งหมด",
       "viewFaceLabel": "ด้านของแร็ค",
       "showFace": "แสดง{{face}}",
       "mountingSideLabel": "ด้านติดตั้ง",

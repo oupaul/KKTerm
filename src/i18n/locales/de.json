@@ -1228,7 +1228,7 @@
       "unitCount": "{{count}}U",
       "deviceCount": "{{count}} Geräte",
       "faceDeviceCount": "{{face}} · {{count}} Geräte",
-      "allRackFacesLabel": "Alle Racks",
+      "allRackFacesLabel": "Alle Racks umdrehen",
       "viewFaceLabel": "Rackseite",
       "showFace": "{{face}} anzeigen",
       "mountingSideLabel": "Montageseite",

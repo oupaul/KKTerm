@@ -1228,7 +1228,7 @@
       "unitCount": "{{count}}U",
       "deviceCount": "{{count}} 台のデバイス",
       "faceDeviceCount": "{{face}} · {{count}} 台のデバイス",
-      "allRackFacesLabel": "すべてのラック",
+      "allRackFacesLabel": "すべてのラックを反転",
       "viewFaceLabel": "ラック面",
       "showFace": "{{face}}を表示",
       "mountingSideLabel": "取り付け面",

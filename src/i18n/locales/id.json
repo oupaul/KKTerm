@@ -1228,7 +1228,7 @@
       "unitCount": "{{count}}U",
       "deviceCount": "{{count}} perangkat",
       "faceDeviceCount": "{{face}} · {{count}} perangkat",
-      "allRackFacesLabel": "Semua rak",
+      "allRackFacesLabel": "Balikkan semua rak",
       "viewFaceLabel": "Sisi rak",
       "showFace": "Tampilkan {{face}}",
       "mountingSideLabel": "Sisi pemasangan",

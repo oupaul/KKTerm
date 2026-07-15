@@ -107,10 +107,12 @@ export function KuaiKuaiBag({
   style = "full",
   expiry,
   notes,
+  face = "front",
 }: {
   style?: KuaiKuaiStyle | null;
   expiry?: string | null;
   notes?: string | null;
+  face?: "front" | "rear";
 }) {
   const id = useId().replace(/:/g, "");
   const bag = `${id}-bag`;
@@ -125,6 +127,7 @@ export function KuaiKuaiBag({
     <svg
       className="kk-bag"
       data-style={style}
+      data-face={face}
       data-expired={grayscale >= 1 || undefined}
       style={grayscale > 0 ? { filter: `grayscale(${Math.round(grayscale * 100)}%)` } : undefined}
       viewBox={style === "laidDown" ? "0 0 360 120" : "0 0 280 340"}
@@ -167,43 +170,85 @@ export function KuaiKuaiBag({
           fill={`url(#${sheen})`}
         />
         <path d="M20 27Q140 40 260 27M20 313Q140 300 260 313" fill="none" stroke="#3f8a1c" strokeWidth="1.3" opacity=".42" />
-        <rect x="100" y="46" width="80" height="30" rx="9" fill="#d71920" />
-        <text x="140" y="68" textAnchor="middle" fontWeight="800" fontSize="19" letterSpacing=".04em" fill="#fff">KK</text>
-        <text x="140" y="89" textAnchor="middle" fontWeight="700" fontSize="7.5" letterSpacing=".22em" fill="#1f5c12">EST · 1968</text>
-        <rect x="56" y="98" width="168" height="94" rx="18" fill="#0c1219" stroke="#243344" strokeWidth="1.5" />
-        <circle cx="76" cy="116" r="4.4" fill="#ff5f57" />
-        <circle cx="92" cy="116" r="4.4" fill="#febc2e" />
-        <circle cx="108" cy="116" r="4.4" fill="#28c840" />
-        <text x="140" y="158" textAnchor="middle" fontFamily="var(--app-mono-font-family, monospace)" fontWeight="700" fontSize="42" fill="#7ee787">KK</text>
-        <text x="140" y="180" textAnchor="middle" fontFamily="var(--app-mono-font-family, monospace)" fontWeight="500" fontSize="10.5" fill="#3f7f4a">&gt;_ behave</text>
-        <rect x="44" y="204" width="192" height="100" rx="14" fill="#fff" stroke="#cfe3b0" strokeWidth="1.5" />
-        <text x="58" y="227" fontWeight="800" fontSize="14" fill="#d71920">KK</text>
-        <g fill="#62bd2f"><circle cx="200" cy="221" r="3.4" /><circle cx="211" cy="221" r="3.4" /><circle cx="222" cy="221" r="3.4" /></g>
-        <g stroke="#b9c6da" strokeWidth="1.6" strokeDasharray="2.5 5" strokeLinecap="round">
-          <line x1="58" y1="246" x2="222" y2="246" /><line x1="58" y1="263" x2="222" y2="263" /><line x1="58" y1="280" x2="222" y2="280" />
-        </g>
-        {noteLines.length ? (
-          <g
-            className="kk-bag-notes"
-            clipPath={`url(#${noteClip})`}
-            fontFamily='"Segoe Print", "Bradley Hand", "Comic Sans MS", "Kaiti TC", DFKai-SB, KaiTi, cursive'
-            fontSize={NOTE_FONT_SIZE}
-            fill="#3b5ba5"
-            opacity=".92"
-          >
-            {noteLines.map((line, i) => (
-              <text
-                key={i}
-                x={58 + NOTE_INDENTS[i]}
-                y={NOTE_BASELINES[i]}
-                transform={`rotate(${NOTE_TILTS[i]} 140 ${NOTE_BASELINES[i]})`}
-              >
-                {line}
-              </text>
-            ))}
+        {face === "rear" ? (
+          <g className="kk-bag-rear">
+            <path d="M140 35V304" stroke="#347b18" strokeWidth="2" strokeDasharray="4 4" opacity=".55" />
+            <rect x="43" y="48" width="194" height="244" rx="14" fill="#f7fce9" stroke="#b8d596" strokeWidth="1.5" />
+            <rect x="58" y="64" width="164" height="30" rx="5" fill="#e5efd4" />
+            <g fill="#6f8b58">
+              <rect x="66" y="71" width="104" height="4" rx="2" />
+              <rect x="66" y="80" width="142" height="3" rx="1.5" opacity=".65" />
+            </g>
+            <g stroke="#a8bd91" strokeWidth="2" strokeLinecap="round">
+              {Array.from({ length: 8 }, (_, index) => (
+                <line
+                  key={index}
+                  x1="61"
+                  y1={111 + index * 13}
+                  x2={index % 3 === 2 ? "184" : "219"}
+                  y2={111 + index * 13}
+                />
+              ))}
+            </g>
+            <rect x="58" y="222" width="94" height="52" rx="5" fill="#fff" stroke="#b8caa7" />
+            <g fill="#25321f">
+              {Array.from({ length: 18 }, (_, index) => (
+                <rect
+                  key={index}
+                  x={66 + index * 4.2}
+                  y="230"
+                  width={index % 4 === 0 ? "2.5" : index % 3 === 0 ? "1.8" : "1"}
+                  height="30"
+                />
+              ))}
+            </g>
+            <g fill="none" stroke="#568c38" strokeWidth="2" opacity=".9">
+              <path d="M184 232l10-6 10 6-4 5" />
+              <path d="M205 246v12l-10 6-4-5" />
+              <path d="M181 258l-7-12 7-12 5 4" />
+            </g>
           </g>
-        ) : null}
-        {expiry ? <text x="140" y="298" textAnchor="middle" fontWeight="700" fontSize="8.5" fill="#8094ad">EXP {expiry}</text> : <text x="140" y="298" textAnchor="middle" fontWeight="600" fontSize="8.5" fill="#9fb0c8">be good · behave</text>}
+        ) : (
+          <>
+            <rect x="100" y="46" width="80" height="30" rx="9" fill="#d71920" />
+            <text x="140" y="68" textAnchor="middle" fontWeight="800" fontSize="19" letterSpacing=".04em" fill="#fff">KK</text>
+            <text x="140" y="89" textAnchor="middle" fontWeight="700" fontSize="7.5" letterSpacing=".22em" fill="#1f5c12">EST · 1968</text>
+            <rect x="56" y="98" width="168" height="94" rx="18" fill="#0c1219" stroke="#243344" strokeWidth="1.5" />
+            <circle cx="76" cy="116" r="4.4" fill="#ff5f57" />
+            <circle cx="92" cy="116" r="4.4" fill="#febc2e" />
+            <circle cx="108" cy="116" r="4.4" fill="#28c840" />
+            <text x="140" y="158" textAnchor="middle" fontFamily="var(--app-mono-font-family, monospace)" fontWeight="700" fontSize="42" fill="#7ee787">KK</text>
+            <text x="140" y="180" textAnchor="middle" fontFamily="var(--app-mono-font-family, monospace)" fontWeight="500" fontSize="10.5" fill="#3f7f4a">&gt;_ behave</text>
+            <rect x="44" y="204" width="192" height="100" rx="14" fill="#fff" stroke="#cfe3b0" strokeWidth="1.5" />
+            <text x="58" y="227" fontWeight="800" fontSize="14" fill="#d71920">KK</text>
+            <g fill="#62bd2f"><circle cx="200" cy="221" r="3.4" /><circle cx="211" cy="221" r="3.4" /><circle cx="222" cy="221" r="3.4" /></g>
+            <g stroke="#b9c6da" strokeWidth="1.6" strokeDasharray="2.5 5" strokeLinecap="round">
+              <line x1="58" y1="246" x2="222" y2="246" /><line x1="58" y1="263" x2="222" y2="263" /><line x1="58" y1="280" x2="222" y2="280" />
+            </g>
+            {noteLines.length ? (
+              <g
+                className="kk-bag-notes"
+                clipPath={`url(#${noteClip})`}
+                fontFamily='"Segoe Print", "Bradley Hand", "Comic Sans MS", "Kaiti TC", DFKai-SB, KaiTi, cursive'
+                fontSize={NOTE_FONT_SIZE}
+                fill="#3b5ba5"
+                opacity=".92"
+              >
+                {noteLines.map((line, i) => (
+                  <text
+                    key={i}
+                    x={58 + NOTE_INDENTS[i]}
+                    y={NOTE_BASELINES[i]}
+                    transform={`rotate(${NOTE_TILTS[i]} 140 ${NOTE_BASELINES[i]})`}
+                  >
+                    {line}
+                  </text>
+                ))}
+              </g>
+            ) : null}
+            {expiry ? <text x="140" y="298" textAnchor="middle" fontWeight="700" fontSize="8.5" fill="#8094ad">EXP {expiry}</text> : <text x="140" y="298" textAnchor="middle" fontWeight="600" fontSize="8.5" fill="#9fb0c8">be good · behave</text>}
+          </>
+        )}
       </g>
     </svg>
   );

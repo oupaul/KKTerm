@@ -1,12 +1,11 @@
 # itops.racks.allRackFacesLabel
 
-- **English value**: `All racks`
+- **English value**: `Flip all racks`
 - **Namespace**: `itops`
 - **File/component**: `src/modules/itops/SitesTab.tsx`
-- **UI role**: `label`
-- **User flow**: Labels the elevation toolbar control that changes every visible rack to its front or rear face.
+- **UI role**: `tooltip and accessible name`
+- **User flow**: Labels the icon button immediately left of Edit that flips every visible elevation between its front and rear face.
 - **Tone**: `concise/neutral`
 - **Placeholders**: `none`
-- **Context/meaning**: `All racks means every rack in the current Server Room elevation view.`
+- **Context/meaning**: `Flip means turn every rack in the current Server Room elevation view to the opposite mounting face.`
 - **Domain notes**: `Rack is an IT Ops cabinet.`
-

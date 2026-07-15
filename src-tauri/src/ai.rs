@@ -61,6 +61,7 @@ use crate::assistant_skills::{self, AssistantSkillSummary};
 use crate::dashboard_ids::new_dashboard_id;
 use crate::dashboard_storage as ds;
 use crate::dashboard_validation::{ICONS, drop_unused_script_libraries, normalize_script_body};
+use crate::itops::types::RackMountFace;
 use crate::storage::{
     AiAssistantToolSettings, AiProviderSettings, Storage, ai_provider_secret_owner_id,
 };
@@ -2942,7 +2943,7 @@ fn ai_tool_definitions_with_skills(
         ));
         tools.push(tool_definition(
             "itops_place_rack_item",
-            "Place one Rack Device into a Rack. Call itops_list_racks first. mountFace is front or rear and defaults to front; overlap validation is independent per face. For an in-cabinet device, startU is its lowest occupied U (1 = bottom) and startU..startU+heightU-1 must fit without overlap on that face. To place a standing Kuai Kuai package on the rack top, use kind \"kuaiguai\", startU = rack.heightU + 1, heightU 4, and metadata.kuaiguaiStyle \"full\"; a laid-down package uses heightU 1 and \"laidDown\". metadata.expiry is an ISO date (YYYY-MM-DD). Only one Kuai Kuai may occupy a rack top regardless of face. kind \"connection\" requires connectionId; other kinds are passive inventory/visual devices. Metadata never contains secrets.",
+            "Place one Rack Device into a Rack. Call itops_list_racks first. mountFace is front or rear and defaults to front; when the user asks for the back, backside, or rear of a Rack, set mountFace to \"rear\" explicitly. Rack floor-plan facing is unrelated to mounting face, and overlap validation is independent per face. For an in-cabinet device, startU is its lowest occupied U (1 = bottom) and startU..startU+heightU-1 must fit without overlap on that face. To place a standing Kuai Kuai package on the rack top, use kind \"kuaiguai\", startU = rack.heightU + 1, heightU 4, and metadata.kuaiguaiStyle \"full\"; a laid-down package uses heightU 1 and \"laidDown\". metadata.expiry is an ISO date (YYYY-MM-DD). Only one Kuai Kuai may occupy a rack top regardless of face. kind \"connection\" requires connectionId; other kinds are passive inventory/visual devices. Metadata never contains secrets.",
             json!({"type":"object","properties":{
                 "rackId":{"type":"string"},
                 "kind":{"type":"string","enum":["connection","server","storage","switch","router","firewall","pdu","ups","kvm","patchPanel","genericDevice","kuaiguai"]},
@@ -4569,6 +4570,15 @@ fn compact_itops_value(mut value: Value) -> Value {
     value
 }
 
+fn optional_itops_mount_face(args: &Value) -> Result<Option<RackMountFace>, String> {
+    match args.get("mountFace") {
+        None | Some(Value::Null) => Ok(None),
+        Some(value) => serde_json::from_value(value.clone())
+            .map(Some)
+            .map_err(|_| "mountFace must be front or rear".to_string()),
+    }
+}
+
 /// IT Ops Module tools shared by the in-app assistant and the built-in MCP
 /// bridge (`kkterm.itops.*`): Site/Server Room/Rack topology, Rack Device
 /// placement, the Host inventory, the global Task Library, durable
@@ -4587,7 +4597,7 @@ pub(crate) async fn itops_tool(app: &tauri::AppHandle, name: &str, args: Value) 
     use crate::itops::task_storage as itops_tasks;
     use crate::itops::types::{
         AutomationAction, BatchTask, HostKind, ItopsTask, RackItemKind, RackItemMetadata,
-        RackMountFace, RunHistoryEntry, RunScope, SiteFilter, TaskOperatingSystem, Transport,
+        RunHistoryEntry, RunScope, SiteFilter, TaskOperatingSystem, Transport,
     };
     use crate::watchdog::WatchdogRegistry;
     use crate::watchdog::types::{WatchdogAction, WatchdogConfig};
@@ -4621,14 +4631,6 @@ pub(crate) async fn itops_tool(app: &tauri::AppHandle, name: &str, args: Value) 
             None | Some(Value::Null) => Ok(RackItemMetadata::default()),
             Some(value) => serde_json::from_value(value.clone())
                 .map_err(|error| format!("invalid metadata: {error}")),
-        }
-    }
-    fn optional_mount_face(args: &Value) -> Result<Option<RackMountFace>, String> {
-        match args.get("mountFace") {
-            None | Some(Value::Null) => Ok(None),
-            Some(value) => serde_json::from_value(value.clone())
-                .map(Some)
-                .map_err(|_| "mountFace must be front or rear".to_string()),
         }
     }
     fn optional_connection_id(args: &Value) -> Option<String> {
@@ -5027,7 +5029,7 @@ pub(crate) async fn itops_tool(app: &tauri::AppHandle, name: &str, args: Value) 
                     &label,
                     start_u,
                     height_u,
-                    optional_mount_face(&args)?.unwrap_or_default(),
+                    optional_itops_mount_face(&args)?.unwrap_or_default(),
                     metadata,
                 )
                 .map(to_value)
@@ -5046,7 +5048,7 @@ pub(crate) async fn itops_tool(app: &tauri::AppHandle, name: &str, args: Value) 
                     &label,
                     metadata,
                     None,
-                    optional_mount_face(&args)?,
+                    optional_itops_mount_face(&args)?,
                 )
                 .map(to_value)
                 .map_err(|e| e.to_string())
@@ -5063,7 +5065,7 @@ pub(crate) async fn itops_tool(app: &tauri::AppHandle, name: &str, args: Value) 
                     start_u,
                     height_u,
                     None,
-                    optional_mount_face(&args)?,
+                    optional_itops_mount_face(&args)?,
                 )
                 .map(to_value)
                 .map_err(|e| e.to_string())
