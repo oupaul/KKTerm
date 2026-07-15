@@ -520,7 +520,7 @@ export interface ImportedConnectionDraft {
   port?: number;
   keyPath?: string;
   proxyJump?: string;
-  type: "local" | "ssh" | "telnet" | "serial" | "url" | "rdp" | "vnc";
+  type: "local" | "ssh" | "telnet" | "serial" | "url" | "rdp" | "vnc" | "ftp" | "localFiles";
   folderPath: string[];
 }
 

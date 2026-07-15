@@ -674,26 +674,27 @@ fn parse_mobaxterm_session(
         "1" => "telnet",
         "4" => "rdp",
         "5" => "vnc",
+        "6" => "ftp",
+        "7" => "ssh",
         "8" => "serial",
-        "9" | "10" => "local",
+        "9" => "local",
+        "10" => "localFiles",
         "11" => "url",
+        "14" => "local",
         "" => return Ok(None),
         other => {
             let label = match other {
                 "2" => " (Rsh)",
                 "3" => " (Xdmcp)",
-                "6" => " (FTP)",
-                "7" => " (SFTP)",
                 "12" => " (Mosh)",
                 "13" => " (AWS S3)",
-                "14" => " (WSL)",
                 _ => "",
             };
             return Err(format!("unsupported MobaXterm session type {other}{label}"));
         }
     };
 
-    if matches!(connection_type, "local") {
+    if connection_type == "local" {
         return Ok(Some(ImportedConnectionDraft {
             name: name.to_string(),
             host: String::new(),
@@ -720,7 +721,7 @@ fn parse_mobaxterm_session(
         .map(|value| strip_enclosing_square_brackets(value.trim()).to_string())
         .unwrap_or_default();
 
-    if host.is_empty() {
+    if host.is_empty() && connection_type != "localFiles" {
         return Err(match connection_type {
             "serial" => "missing serial line".to_string(),
             "url" => "missing URL".to_string(),
@@ -1885,11 +1886,11 @@ Host *
     }
 
     #[test]
-    fn parses_mobaxterm_serial_terminal_and_browser_sessions() {
-        let text = "[Bookmarks]\nCOM4=#91#8%COM4%9600%%\nTerminal=#91#10%%%%\nAdmin UI=#91#11%https://admin.example.com%%%\n";
+    fn parses_mobaxterm_serial_file_browser_sftp_ftp_and_wsl_sessions() {
+        let text = "[Bookmarks]\nCOM4=#91#8%COM4%9600%%\nLocal shell=#97#9%%%%\nLocal docs=#84#10%C:\\Docs%%%\nAdmin UI=#313#11%https://admin.example.com%%%\nRemote files=#140#7%sftp.example.com%22%backup\nFTP Site=#130#6%ftp.example.com%21%deploy\nUbuntu=#151#14%%%%\n";
         let preview = parse_mobaxterm(text);
         assert_eq!(preview.warnings, Vec::<String>::new());
-        assert_eq!(preview.drafts.len(), 3);
+        assert_eq!(preview.drafts.len(), 7);
 
         assert_eq!(preview.drafts[0].connection_type, "serial");
         assert_eq!(preview.drafts[0].host, "COM4");
@@ -1898,21 +1899,37 @@ Host *
         assert_eq!(preview.drafts[1].connection_type, "local");
         assert_eq!(preview.drafts[1].host, "");
 
-        assert_eq!(preview.drafts[2].connection_type, "url");
-        assert_eq!(preview.drafts[2].host, "https://admin.example.com");
+        assert_eq!(preview.drafts[2].connection_type, "localFiles");
+        assert_eq!(preview.drafts[2].host, "C:\\Docs");
+
+        assert_eq!(preview.drafts[3].connection_type, "url");
+        assert_eq!(preview.drafts[3].host, "https://admin.example.com");
         assert_eq!(
-            preview.drafts[2].url.as_deref(),
+            preview.drafts[3].url.as_deref(),
             Some("https://admin.example.com")
         );
+
+        assert_eq!(preview.drafts[4].connection_type, "ssh");
+        assert_eq!(preview.drafts[4].host, "sftp.example.com");
+        assert_eq!(preview.drafts[4].port, Some(22));
+        assert_eq!(preview.drafts[4].user, "backup");
+
+        assert_eq!(preview.drafts[5].connection_type, "ftp");
+        assert_eq!(preview.drafts[5].host, "ftp.example.com");
+        assert_eq!(preview.drafts[5].port, Some(21));
+        assert_eq!(preview.drafts[5].user, "deploy");
+
+        assert_eq!(preview.drafts[6].connection_type, "local");
+        assert_eq!(preview.drafts[6].host, "");
     }
 
     #[test]
     fn warns_on_unsupported_mobaxterm_session_type_with_protocol_name() {
-        let text = "[Bookmarks]\nStorage=#140#7%sftp.example.com%22%backup\n";
+        let text = "[Bookmarks]\nStorage=#145#12%mosh.example.com%22%backup\n";
         let preview = parse_mobaxterm(text);
         assert_eq!(preview.drafts.len(), 0);
         assert_eq!(preview.warnings.len(), 1);
-        assert!(preview.warnings[0].contains("type 7 (SFTP)"));
+        assert!(preview.warnings[0].contains("type 12 (Mosh)"));
     }
 
     #[test]
