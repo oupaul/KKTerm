@@ -2319,6 +2319,27 @@ function TerminalPaneView({
           });
         }
         sessionIdRef.current = result.sessionId;
+        if (terminalSettings.autoRecordSessions) {
+          // Register recording before startup scripts can produce output.
+          setRecordingBusy(true);
+          try {
+            await startTerminalRecording(result.sessionId, connection);
+          } catch (error) {
+            if (!disposed) {
+              showStatusBarNotice(
+                t("terminal.recordingFailed", { message: error instanceof Error ? error.message : String(error) }),
+                { tone: "error" },
+              );
+            }
+          } finally {
+            if (!disposed) {
+              setRecordingBusy(false);
+            }
+          }
+          if (disposed) {
+            return;
+          }
+        }
         if (connection.type === "ssh") {
           updateOpenTerminalPaneX11ForwardingStatus(
             tabId,
@@ -2369,15 +2390,6 @@ function TerminalPaneView({
         }
         if (trackConnectionSession) {
           markConnectionSessionStarted(connection.id);
-        }
-        if (terminalSettings.autoRecordSessions) {
-          // Auto archive: new Sessions start with the record button pressed.
-          void startTerminalRecording(result.sessionId, connection).catch((error) => {
-            showStatusBarNotice(
-              t("terminal.recordingFailed", { message: error instanceof Error ? error.message : String(error) }),
-              { tone: "error" },
-            );
-          });
         }
         void maybeAutoDetectOsIcon(connection, result.sessionId);
       } catch (error) {

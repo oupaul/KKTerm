@@ -383,6 +383,13 @@ impl TerminalRecordingManager {
     ) -> Result<TerminalRecordingInfo, String> {
         let session_id = required_recording_part("session id", &request.session_id)?;
         let connection_id = required_recording_part("connection id", &request.connection_id)?;
+        let mut active = self
+            .active
+            .lock()
+            .map_err(|_| "terminal recording lock is poisoned".to_string())?;
+        if active.contains_key(&session_id) {
+            return Err("terminal recording is already active".to_string());
+        }
         let connection_name = request.connection_name.trim().to_string();
         let started_at_millis = current_unix_millis();
         let folder = self.connection_folder_at(root, &connection_id, &connection_name)?;
@@ -398,12 +405,16 @@ impl TerminalRecordingManager {
             recording_id_fragment(&session_id, 12)
         );
         let path = folder.join(file_name);
-        let mut file = File::create(&path).map_err(|error| {
-            format!(
-                "failed to create terminal recording {}: {error}",
-                path.display()
-            )
-        })?;
+        let mut file = File::options()
+            .write(true)
+            .create_new(true)
+            .open(&path)
+            .map_err(|error| {
+                format!(
+                    "failed to create terminal recording {}: {error}",
+                    path.display()
+                )
+            })?;
         if !request.initial_buffer.is_empty() {
             file.write_all(request.initial_buffer.as_bytes())
                 .map_err(|error| format!("failed to write terminal recording prelude: {error}"))?;
@@ -427,16 +438,13 @@ impl TerminalRecordingManager {
             started_at_millis,
             path,
         };
-        self.active
-            .lock()
-            .map_err(|_| "terminal recording lock is poisoned".to_string())?
-            .insert(
-                session_id,
-                ActiveTerminalRecording {
-                    info: info.clone(),
-                    file,
-                },
-            );
+        active.insert(
+            session_id,
+            ActiveTerminalRecording {
+                info: info.clone(),
+                file,
+            },
+        );
         Ok(info)
     }
 
@@ -756,11 +764,12 @@ fn recording_timestamp_file_part(millis: u128) -> String {
     let timestamp = time::OffsetDateTime::from_unix_timestamp(seconds)
         .unwrap_or(time::OffsetDateTime::UNIX_EPOCH)
         .to_offset(offset);
-    timestamp
+    let timestamp = timestamp
         .format(&time::macros::format_description!(
             "[year][month][day]-[hour][minute][second]"
         ))
-        .unwrap_or_else(|_| millis.to_string())
+        .unwrap_or_else(|_| millis.to_string());
+    format!("{timestamp}-{:03}", millis % 1_000)
 }
 
 impl SessionManager {
@@ -779,6 +788,14 @@ impl SessionManager {
         root: PathBuf,
         request: StartTerminalRecordingRequest,
     ) -> Result<TerminalRecordingInfo, String> {
+        let session_id = required_recording_part("session id", &request.session_id)?;
+        let sessions = self
+            .sessions
+            .lock()
+            .map_err(|_| "terminal session lock is poisoned".to_string())?;
+        if !sessions.contains_key(&session_id) {
+            return Err("terminal session is not active".to_string());
+        }
         self.recordings.start_recording_at(root, request)
     }
 
@@ -3941,6 +3958,63 @@ mod tests {
                 .path
                 .starts_with(root.join("prod-east").join("prod-east--conn-12345678"))
         );
+    }
+
+    #[test]
+    fn terminal_recording_rejects_duplicate_start_without_truncating_output() {
+        let root = temp_recording_root("duplicate-start");
+        let manager = TerminalRecordingManager::new_for_root(root);
+        let started = manager
+            .start_recording(StartTerminalRecordingRequest {
+                session_id: "session-123".to_string(),
+                connection_id: "conn-456".to_string(),
+                connection_name: "Production".to_string(),
+                initial_buffer: "existing output".to_string(),
+            })
+            .expect("first recording starts");
+
+        let duplicate = manager.start_recording(StartTerminalRecordingRequest {
+            session_id: "session-123".to_string(),
+            connection_id: "conn-456".to_string(),
+            connection_name: "Production".to_string(),
+            initial_buffer: "replacement output".to_string(),
+        });
+
+        assert!(matches!(
+            duplicate,
+            Err(ref message) if message == "terminal recording is already active"
+        ));
+        manager
+            .record_output("session-123", "live output\n")
+            .expect("live output writes");
+        manager
+            .stop_recording("session-123".to_string())
+            .expect("recording stops")
+            .expect("recording existed");
+        let text = std::fs::read_to_string(&started.path).expect("recording file reads");
+        assert_eq!(text, "existing output\nlive output\n");
+    }
+
+    #[test]
+    fn session_manager_rejects_recording_after_session_closes() {
+        let root = temp_recording_root("closed-session");
+        let manager = SessionManager::new();
+
+        let result = manager.start_terminal_recording(
+            root.clone(),
+            StartTerminalRecordingRequest {
+                session_id: "closed-session".to_string(),
+                connection_id: "conn-456".to_string(),
+                connection_name: "Production".to_string(),
+                initial_buffer: String::new(),
+            },
+        );
+
+        assert!(matches!(
+            result,
+            Err(ref message) if message == "terminal session is not active"
+        ));
+        assert!(!root.exists());
     }
 
     #[test]
