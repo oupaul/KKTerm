@@ -2,12 +2,14 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   WORKSPACE_SHORTCUT_ACTIONS,
+  activeConnectionForNewTab,
   bindingFromKeyboardEvent,
   conflictingWorkspaceShortcutAction,
   effectiveWorkspaceShortcutBindings,
   fixedTerminalShortcutFromKeyboardEvent,
   workspaceShortcutFromKeyboardEvent,
 } from "../src/modules/workspace/keymap";
+import type { Connection, WorkspaceTab } from "../src/types";
 
 // Minimal KeyboardEvent stand-in; the keymap only reads these fields.
 function keyEvent(
@@ -23,6 +25,29 @@ function keyEvent(
     ...modifiers,
   } as KeyboardEvent;
 }
+
+test("activeConnectionForNewTab targets the focused Pane before the Tab fallback", () => {
+  const parent = { id: "parent", name: "Parent" } as Connection;
+  const focused = { id: "focused", name: "Focused" } as Connection;
+  const tabs = [
+    {
+      id: "tab-1",
+      connection: parent,
+      focusedPaneId: "pane-focused",
+      panes: [
+        { id: "pane-parent", connection: parent },
+        { id: "pane-focused", connection: focused },
+      ],
+    },
+  ] as WorkspaceTab[];
+
+  assert.equal(activeConnectionForNewTab(tabs, "tab-1"), focused);
+  assert.equal(
+    activeConnectionForNewTab([{ ...tabs[0], focusedPaneId: "missing" }], "tab-1"),
+    parent,
+  );
+  assert.equal(activeConnectionForNewTab(tabs, "missing"), null);
+});
 
 test("bindingFromKeyboardEvent canonicalizes modifier order and key casing", () => {
   assert.equal(

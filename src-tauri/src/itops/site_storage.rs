@@ -38,12 +38,6 @@ pub struct Span {
 }
 
 impl Span {
-    /// A full-rack-width span (the default for devices without a fractional
-    /// `widthFraction` in their metadata).
-    pub fn full(start_u: u32, height_u: u32) -> Self {
-        Span { start_u, height_u, x_start: 0, x_quarters: 4 }
-    }
-
     /// Exclusive top edge: the first U *above* this item.
     fn end_exclusive(&self) -> u32 {
         self.start_u + self.height_u
@@ -1258,7 +1252,7 @@ mod tests {
     }
 
     fn span(start_u: u32, height_u: u32) -> Span {
-        Span::full(start_u, height_u)
+        Span { start_u, height_u, x_start: 0, x_quarters: 4 }
     }
 
     fn fractional(start_u: u32, height_u: u32, x_start: u32, x_quarters: u32) -> Span {

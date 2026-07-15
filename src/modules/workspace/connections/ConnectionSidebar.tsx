@@ -48,7 +48,7 @@ import {
   shouldDeleteSshSocksProxySecret,
 } from "./credentialUnlockPreflight";
 import { confirmTrustedSshHostKey, connectionPasswordOwnerId, connectionSshSocksProxyPasswordOwnerId, defaultPortForConnectionType, connectionTypeLabel, ftpPortForProtocolSelection, isRemoteDesktopConnectionType, localShellOptionsForPlatform, resolveSshCompression, resolveSshOldProtocols, resolveSshSocksProxyRequest, uniqueRuntimeId, type LocalShellOption } from "./utils";
-import { IMPORT_CONNECTIONS_REQUEST_EVENT, NEW_CONNECTION_REQUEST_EVENT, RECENT_CONNECTION_LIMIT, loadCollapsedFolderIds, loadRecentConnectionIds, notifyConnectionTreeInvalidated, saveCollapsedFolderIds, saveRecentConnectionIds, type NewConnectionRequestDetail } from "./connectionSidebarState";
+import { IMPORT_CONNECTIONS_REQUEST_EVENT, NEW_CONNECTION_REQUEST_EVENT, NEW_CONNECTION_TAB_REQUEST_EVENT, RECENT_CONNECTION_LIMIT, loadCollapsedFolderIds, loadRecentConnectionIds, notifyConnectionTreeInvalidated, saveCollapsedFolderIds, saveRecentConnectionIds, type NewConnectionRequestDetail, type NewConnectionTabRequestDetail } from "./connectionSidebarState";
 import { collectConnectionFolderIds, countConnections, countFolders, filterConnectedConnections, filterConnectionTree, findConnectionInTree, flattenConnections, flattenFolders, visibleFlatConnections as flattenVisibleConnections, withLiveConnectionStatuses } from "./treeUtils";
 import { WorkspaceIcon } from "../workspaceIcons";
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Check, ChevronDown, ChevronRight, CircleDot, Folder, FolderPlus, KeyRound, LayoutDashboard, List, Maximize2, Minimize2, PanelsTopLeft, PanelRight, Pencil, Pin, PinOff, Play, Plus, Radio, RotateCcw, Save, Search, Settings, SquarePlus, Trash2, X } from "../../../lib/reicon";
@@ -647,11 +647,20 @@ export function ConnectionSidebar({
       handleImportRequested();
     }
 
+    function handleNewConnectionTabRequest(event: Event) {
+      const detail = (event as CustomEvent<NewConnectionTabRequestDetail>).detail;
+      if (detail?.connection) {
+        void handleOpenConnectionInNewTab(detail.connection);
+      }
+    }
+
     window.addEventListener(NEW_CONNECTION_REQUEST_EVENT, handleNewConnectionRequest);
     window.addEventListener(IMPORT_CONNECTIONS_REQUEST_EVENT, handleImportConnectionsRequest);
+    window.addEventListener(NEW_CONNECTION_TAB_REQUEST_EVENT, handleNewConnectionTabRequest);
     return () => {
       window.removeEventListener(NEW_CONNECTION_REQUEST_EVENT, handleNewConnectionRequest);
       window.removeEventListener(IMPORT_CONNECTIONS_REQUEST_EVENT, handleImportConnectionsRequest);
+      window.removeEventListener(NEW_CONNECTION_TAB_REQUEST_EVENT, handleNewConnectionTabRequest);
     };
   });
 

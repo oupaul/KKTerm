@@ -11,6 +11,7 @@ use std::sync::OnceLock;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
+use super::latest_version::installer_latest_is_newer;
 use super::managed_app::{is_managed_app, managed_app_install_dir, managed_app_marker_path};
 use super::proc::{no_window, npm_program};
 use super::schema::{Catalog, Detection, GithubReleaseLayout, Provider, Recipe};
@@ -617,7 +618,7 @@ fn detect_installed_software_match(
     detection: &Detection,
     snapshot: &InstalledSoftwareSnapshot,
 ) -> DetectedState {
-    let mut global_match = None;
+    let mut best_match = None;
     for entry in &snapshot.entries {
         if !installed_entry_matches(provider_id, detection, entry) {
             continue;
@@ -625,12 +626,35 @@ fn detect_installed_software_match(
         let state = DetectedState::installed(entry.display_version.clone())
             .with_install_location(entry.install_location.clone())
             .with_install_scope(installed_entry_scope(entry));
-        if installed_entry_is_user_scope(entry) {
-            return state;
+        if best_match
+            .as_ref()
+            .is_none_or(|current| installed_state_is_better(&state, current))
+        {
+            best_match = Some(state);
         }
-        global_match.get_or_insert(state);
     }
-    global_match.unwrap_or_else(DetectedState::not_installed)
+    best_match.unwrap_or_else(DetectedState::not_installed)
+}
+
+fn installed_state_is_better(candidate: &DetectedState, current: &DetectedState) -> bool {
+    match (
+        candidate.installed_version.as_deref(),
+        current.installed_version.as_deref(),
+    ) {
+        (Some(candidate_version), Some(current_version)) => {
+            if installer_latest_is_newer(candidate_version, current_version) {
+                return true;
+            }
+            if installer_latest_is_newer(current_version, candidate_version) {
+                return false;
+            }
+        }
+        (Some(_), None) => return true,
+        (None, Some(_)) => return false,
+        (None, None) => {}
+    }
+    candidate.install_scope == Some(InstallScope::User)
+        && current.install_scope != Some(InstallScope::User)
 }
 
 fn installed_entry_matches(
@@ -691,10 +715,6 @@ fn registry_key_matches_winget_source(registry_key: &str, winget_id: &str) -> bo
 fn display_name_matches_alias(display_name: &str, alias: &str) -> bool {
     let alias = normalize_detection_value(alias);
     display_name == alias || display_name == format!("{alias} (user)")
-}
-
-fn installed_entry_is_user_scope(entry: &InstalledSoftwareEntry) -> bool {
-    normalize_detection_value(&entry.registry_key).starts_with("arp\\user\\")
 }
 
 fn installed_entry_scope(entry: &InstalledSoftwareEntry) -> Option<InstallScope> {
@@ -1424,7 +1444,7 @@ mod tests {
                 InstalledSoftwareEntry {
                     registry_key: "ARP\\Machine\\X64\\Cursor_is1".into(),
                     display_name: Some("Cursor".into()),
-                    display_version: Some("3.5.0".into()),
+                    display_version: Some("3.6.21".into()),
                     install_location: Some("C:\\Program Files\\Cursor".into()),
                 },
                 InstalledSoftwareEntry {
@@ -1445,6 +1465,46 @@ mod tests {
         assert_eq!(
             state.install_location.as_deref(),
             Some("C:\\Users\\ryan\\AppData\\Local\\Programs\\Cursor")
+        );
+    }
+
+    #[test]
+    fn installed_software_match_prefers_newer_global_install_over_stale_user_install() {
+        let recipe = winget_recipe_with_detection(
+            "Notepad++.Notepad++",
+            &[],
+            &["Notepad++", "Notepad++ (64-bit x64)"],
+            &[],
+        );
+        let snapshot = InstalledSoftwareSnapshot {
+            entries: vec![
+                InstalledSoftwareEntry {
+                    registry_key: "ARP\\User\\X64\\Notepad++.Notepad++_Microsoft.Winget.Source_8wekyb3d8bbwe"
+                        .into(),
+                    display_name: Some("Notepad++".into()),
+                    display_version: Some("8.9.6.4".into()),
+                    install_location: Some(
+                        "C:\\Users\\ryan\\AppData\\Local\\Microsoft\\WinGet\\Packages\\Notepad++.Notepad++_Microsoft.Winget.Source_8wekyb3d8bbwe"
+                            .into(),
+                    ),
+                },
+                InstalledSoftwareEntry {
+                    registry_key: "ARP\\Machine\\X64\\Notepad++".into(),
+                    display_name: Some("Notepad++ (64-bit x64)".into()),
+                    display_version: Some("8.9.7".into()),
+                    install_location: Some("C:\\Program Files\\Notepad++".into()),
+                },
+            ],
+        };
+
+        let state = detect_installed_software(&recipe, &snapshot);
+
+        assert!(state.installed);
+        assert_eq!(state.installed_version.as_deref(), Some("8.9.7"));
+        assert_eq!(state.install_scope, Some(InstallScope::Machine));
+        assert_eq!(
+            state.install_location.as_deref(),
+            Some("C:\\Program Files\\Notepad++")
         );
     }
 
