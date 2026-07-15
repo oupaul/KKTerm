@@ -4400,6 +4400,7 @@
     "workspaceCreated": "Area di lavoro \"{{name}}\" creata",
     "fileViewer": {
       "loading": "Caricamento…",
+      "largeTextLoadFailed": "Could not load the complete large file.",
       "noFile": "Nessun file selezionato per questa Connection Documento.",
       "truncated": "Questo file è grande; viene mostrata un’anteprima parziale.",
       "invalidJson": "JSON non valido; visualizzazione del testo grezzo.",

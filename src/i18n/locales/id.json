@@ -4400,6 +4400,7 @@
     "workspaceCreated": "Ruang kerja \"{{name}}\" dibuat",
     "fileViewer": {
       "loading": "Memuat…",
+      "largeTextLoadFailed": "Could not load the complete large file.",
       "noFile": "Tidak ada file yang dipilih untuk Connection Dokumen ini.",
       "truncated": "File ini besar; menampilkan pratinjau sebagian.",
       "invalidJson": "JSON tidak valid; menampilkan teks mentah.",

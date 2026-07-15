@@ -12,7 +12,7 @@
 use base64::Engine;
 use serde::{Deserialize, Serialize};
 use std::fs::File;
-use std::io::{Read, Seek, SeekFrom};
+use std::io::{BufRead, BufReader, Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::UNIX_EPOCH;
@@ -27,6 +27,10 @@ const PROBE_SAMPLE_BYTES: usize = 8192;
 /// Hard upper bound on a single text or byte read regardless of the requested
 /// size, so a viewer bug or hostile request cannot allocate unbounded memory.
 const READ_HARD_CAP_BYTES: u64 = 64 * 1024 * 1024;
+
+/// Sparse large-text index cadence. The frontend loads one bounded page between
+/// adjacent checkpoints and keeps only nearby pages in memory.
+const LARGE_TEXT_LINE_STRIDE: u64 = 256;
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -47,6 +51,27 @@ pub struct FileViewTextRequest {
     /// `encoding_rs` label (e.g. `utf-8`, `gbk`, `shift_jis`, `windows-1252`)
     /// to decode the bytes with. `None` (or an unknown label) auto-detects the
     /// charset with `chardetng`.
+    #[serde(default)]
+    pub encoding: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FileViewTextIndexRequest {
+    pub path: String,
+    /// The encoding selected/detected by the initial bounded text read.
+    #[serde(default)]
+    pub encoding: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FileViewTextPageRequest {
+    pub path: String,
+    /// Exact byte range from two adjacent sparse-index checkpoints.
+    pub start_offset: u64,
+    pub end_offset: u64,
+    /// The encoding selected/detected by the initial bounded text read.
     #[serde(default)]
     pub encoding: Option<String>,
 }
@@ -109,6 +134,29 @@ pub struct FileViewText {
     pub mtime_ms: i64,
     /// `encoding_rs` label actually used to decode the text (lowercased), so the
     /// viewer can show what Auto resolved to and gate editing to UTF-8.
+    pub detected_encoding: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FileViewTextIndex {
+    pub total_size: u64,
+    pub total_lines: u64,
+    pub line_stride: u64,
+    /// Byte offset for line 0, line `line_stride`, line `line_stride * 2`, ...
+    pub checkpoint_offsets: Vec<u64>,
+    pub mtime_ms: i64,
+    pub detected_encoding: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FileViewTextPage {
+    pub text: String,
+    pub start_offset: u64,
+    pub end_offset: u64,
+    pub total_size: u64,
+    pub mtime_ms: i64,
     pub detected_encoding: String,
 }
 
@@ -248,6 +296,183 @@ pub fn read_text(request: FileViewTextRequest) -> Result<FileViewText, String> {
         bytes_read,
         truncated: start > 0 || bytes_read < total_size,
         from_end: request.from_end,
+        mtime_ms: mtime_ms(&metadata),
+        detected_encoding,
+    })
+}
+
+#[derive(Clone, Copy)]
+enum NewlineEncoding {
+    SingleByte,
+    Utf16Le,
+    Utf16Be,
+}
+
+fn newline_encoding(label: &str) -> NewlineEncoding {
+    match label.to_ascii_lowercase().as_str() {
+        "utf-16le" => NewlineEncoding::Utf16Le,
+        "utf-16be" => NewlineEncoding::Utf16Be,
+        _ => NewlineEncoding::SingleByte,
+    }
+}
+
+fn push_large_text_checkpoint(
+    newline_count: &mut u64,
+    next_line_offset: u64,
+    checkpoints: &mut Vec<u64>,
+) {
+    *newline_count += 1;
+    if *newline_count % LARGE_TEXT_LINE_STRIDE == 0 {
+        checkpoints.push(next_line_offset);
+    }
+}
+
+fn scan_large_text_line_unit(
+    unit: u16,
+    next_offset: u64,
+    pending_carriage_return: &mut Option<u64>,
+    newline_count: &mut u64,
+    checkpoints: &mut Vec<u64>,
+) {
+    if let Some(carriage_return_end) = pending_carriage_return.take() {
+        if unit == b'\n' as u16 {
+            push_large_text_checkpoint(newline_count, next_offset, checkpoints);
+            return;
+        }
+        push_large_text_checkpoint(newline_count, carriage_return_end, checkpoints);
+    }
+
+    if unit == b'\r' as u16 {
+        *pending_carriage_return = Some(next_offset);
+    } else if unit == b'\n' as u16 {
+        push_large_text_checkpoint(newline_count, next_offset, checkpoints);
+    }
+}
+
+/// Scan the file once and keep only one byte offset per 256 lines. The scan is
+/// performed by the async command's blocking worker, so even multi-gigabyte
+/// inputs do not stall the webview or allocate their contents in memory.
+pub fn index_text(request: FileViewTextIndexRequest) -> Result<FileViewTextIndex, String> {
+    let path = Path::new(&request.path);
+    let metadata = metadata_for(path)?;
+    let total_size = metadata.len();
+    let mut file = File::open(path).map_err(|error| format!("cannot open file: {error}"))?;
+
+    let mut sample = vec![0u8; PROBE_SAMPLE_BYTES.min(total_size as usize)];
+    let sample_read = file
+        .read(&mut sample)
+        .map_err(|error| format!("cannot read file: {error}"))?;
+    sample.truncate(sample_read);
+    let (_, detected_encoding) = decode_text(&sample, request.encoding.as_deref());
+    file.seek(SeekFrom::Start(0))
+        .map_err(|error| format!("cannot seek file: {error}"))?;
+
+    let mut reader = BufReader::with_capacity(1024 * 1024, file);
+    let mut checkpoints = vec![0];
+    let mut newline_count = 0u64;
+    let mut absolute_offset = 0u64;
+    let mut pending_utf16_byte: Option<(u8, u64)> = None;
+    let mut pending_carriage_return: Option<u64> = None;
+    let newline_kind = newline_encoding(&detected_encoding);
+
+    loop {
+        let buffer = reader
+            .fill_buf()
+            .map_err(|error| format!("cannot read file: {error}"))?;
+        if buffer.is_empty() {
+            break;
+        }
+
+        match newline_kind {
+            NewlineEncoding::SingleByte => {
+                for (index, byte) in buffer.iter().enumerate() {
+                    scan_large_text_line_unit(
+                        *byte as u16,
+                        absolute_offset + index as u64 + 1,
+                        &mut pending_carriage_return,
+                        &mut newline_count,
+                        &mut checkpoints,
+                    );
+                }
+            }
+            NewlineEncoding::Utf16Le | NewlineEncoding::Utf16Be => {
+                for (index, byte) in buffer.iter().enumerate() {
+                    let offset = absolute_offset + index as u64;
+                    if let Some((first, _first_offset)) = pending_utf16_byte.take() {
+                        let unit = match newline_kind {
+                            NewlineEncoding::Utf16Le => u16::from_le_bytes([first, *byte]),
+                            NewlineEncoding::Utf16Be => u16::from_be_bytes([first, *byte]),
+                            NewlineEncoding::SingleByte => unreachable!(),
+                        };
+                        scan_large_text_line_unit(
+                            unit,
+                            offset + 1,
+                            &mut pending_carriage_return,
+                            &mut newline_count,
+                            &mut checkpoints,
+                        );
+                    } else {
+                        pending_utf16_byte = Some((*byte, offset));
+                    }
+                }
+            }
+        }
+
+        let consumed = buffer.len();
+        reader.consume(consumed);
+        absolute_offset += consumed as u64;
+    }
+
+    if let Some(carriage_return_end) = pending_carriage_return {
+        push_large_text_checkpoint(&mut newline_count, carriage_return_end, &mut checkpoints);
+    }
+
+    Ok(FileViewTextIndex {
+        total_size,
+        total_lines: if total_size == 0 {
+            0
+        } else {
+            newline_count.saturating_add(1)
+        },
+        line_stride: LARGE_TEXT_LINE_STRIDE,
+        checkpoint_offsets: checkpoints,
+        mtime_ms: mtime_ms(&metadata),
+        detected_encoding,
+    })
+}
+
+/// Read one exact large-text page identified by adjacent sparse-index offsets.
+/// The hard cap protects the webview from pathological individual lines while
+/// ordinary pages remain a few kilobytes.
+pub fn read_text_page(request: FileViewTextPageRequest) -> Result<FileViewTextPage, String> {
+    let path = Path::new(&request.path);
+    let metadata = metadata_for(path)?;
+    let total_size = metadata.len();
+    let start_offset = request.start_offset.min(total_size);
+    let end_offset = request.end_offset.min(total_size);
+    if end_offset < start_offset {
+        return Err("large-text page has an invalid byte range".to_string());
+    }
+    let length = end_offset - start_offset;
+    if length > READ_HARD_CAP_BYTES {
+        return Err("large-text page exceeds the maximum readable size".to_string());
+    }
+
+    let mut file = File::open(path).map_err(|error| format!("cannot open file: {error}"))?;
+    if start_offset > 0 {
+        file.seek(SeekFrom::Start(start_offset))
+            .map_err(|error| format!("cannot seek file: {error}"))?;
+    }
+    let mut buffer = vec![0u8; length as usize];
+    file.read_exact(&mut buffer)
+        .map_err(|error| format!("cannot read file: {error}"))?;
+    let (text, detected_encoding) = decode_text(&buffer, request.encoding.as_deref());
+
+    Ok(FileViewTextPage {
+        text,
+        start_offset,
+        end_offset,
+        total_size,
         mtime_ms: mtime_ms(&metadata),
         detected_encoding,
     })
@@ -642,6 +867,64 @@ mod tests {
         .unwrap();
         assert_eq!(result.text, "héllo");
         assert_eq!(result.detected_encoding, "utf-8");
+        std::fs::remove_file(path).ok();
+    }
+
+    #[test]
+    fn large_text_index_and_pages_cover_the_complete_file() {
+        let source = (0..600)
+            .map(|line| format!("line-{line:04}"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        let (_dir, path) = temp_file("large.txt", source.as_bytes());
+        let path_string = path.to_string_lossy().into_owned();
+        let index = index_text(FileViewTextIndexRequest {
+            path: path_string.clone(),
+            encoding: Some("utf-8".to_string()),
+        })
+        .unwrap();
+
+        assert_eq!(index.total_lines, 600);
+        assert_eq!(index.line_stride, 256);
+        assert_eq!(index.checkpoint_offsets.len(), 3);
+
+        let page = read_text_page(FileViewTextPageRequest {
+            path: path_string,
+            start_offset: index.checkpoint_offsets[1],
+            end_offset: index.checkpoint_offsets[2],
+            encoding: Some("utf-8".to_string()),
+        })
+        .unwrap();
+        let lines = page.text.lines().collect::<Vec<_>>();
+        assert_eq!(lines.len(), 256);
+        assert_eq!(lines.first().copied(), Some("line-0256"));
+        assert_eq!(lines.last().copied(), Some("line-0511"));
+        std::fs::remove_file(path).ok();
+    }
+
+    #[test]
+    fn large_text_index_recognizes_utf16_line_boundaries() {
+        let mut bytes = vec![0xFF, 0xFE];
+        for unit in "alpha\nbeta\ngamma".encode_utf16() {
+            bytes.extend_from_slice(&unit.to_le_bytes());
+        }
+        let (_dir, path) = temp_file("utf16.txt", &bytes);
+        let path_string = path.to_string_lossy().into_owned();
+        let index = index_text(FileViewTextIndexRequest {
+            path: path_string.clone(),
+            encoding: Some("utf-16le".to_string()),
+        })
+        .unwrap();
+        assert_eq!(index.total_lines, 3);
+
+        let page = read_text_page(FileViewTextPageRequest {
+            path: path_string,
+            start_offset: 0,
+            end_offset: index.total_size,
+            encoding: Some("utf-16le".to_string()),
+        })
+        .unwrap();
+        assert_eq!(page.text, "alpha\nbeta\ngamma");
         std::fs::remove_file(path).ok();
     }
 

@@ -4400,6 +4400,7 @@
     "workspaceCreated": "\"{{name}}\" 작업 영역이 생성되었습니다",
     "fileViewer": {
       "loading": "로드 중…",
+      "largeTextLoadFailed": "Could not load the complete large file.",
       "noFile": "이 문서 Connection에 선택된 파일이 없습니다.",
       "truncated": "이 파일은 큽니다. 부분 미리보기를 표시합니다.",
       "invalidJson": "잘못된 JSON입니다. 원시 텍스트를 표시합니다.",

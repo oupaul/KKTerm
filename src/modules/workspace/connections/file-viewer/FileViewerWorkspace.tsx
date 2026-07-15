@@ -599,7 +599,7 @@ export function FileViewerWorkspace({
         />
       ) : null}
 
-      {content?.truncated ? (
+      {content?.truncated && content.kind !== "text" ? (
         <div className="file-viewer-notice">{t("workspace.fileViewer.truncated")}</div>
       ) : null}
       {saveError ? (
@@ -749,7 +749,13 @@ function FileViewerContent({
     case "text":
     default:
       if (content.truncated) {
-        return <LargeTextViewer text={content.text ?? ""} />;
+        return (
+          <LargeTextViewer
+            encoding={content.encoding}
+            filePath={filePath}
+            text={content.text ?? ""}
+          />
+        );
       }
       return (
         <TextCodeViewer

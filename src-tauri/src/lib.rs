@@ -2619,6 +2619,26 @@ async fn read_file_view_text(
 }
 
 #[tauri::command]
+async fn index_file_view_text(
+    request: file_viewer::FileViewTextIndexRequest,
+) -> Result<file_viewer::FileViewTextIndex, String> {
+    run_blocking_command("index file view text", move || {
+        file_viewer::index_text(request)
+    })
+    .await
+}
+
+#[tauri::command]
+async fn read_file_view_text_page(
+    request: file_viewer::FileViewTextPageRequest,
+) -> Result<file_viewer::FileViewTextPage, String> {
+    run_blocking_command("read file view text page", move || {
+        file_viewer::read_text_page(request)
+    })
+    .await
+}
+
+#[tauri::command]
 async fn read_file_view_bytes(
     request: file_viewer::FileViewBytesRequest,
 ) -> Result<file_viewer::FileViewBytes, String> {
@@ -4015,6 +4035,8 @@ pub fn run() {
             local_path_properties,
             probe_file_view,
             read_file_view_text,
+            index_file_view_text,
+            read_file_view_text_page,
             read_file_view_bytes,
             file_view_pdf_status,
             write_file_view,

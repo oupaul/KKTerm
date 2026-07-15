@@ -4400,6 +4400,7 @@
     "workspaceCreated": "已建立工作區「{{name}}」",
     "fileViewer": {
       "loading": "正在載入…",
+      "largeTextLoadFailed": "Could not load the complete large file.",
       "noFile": "未為此文件 Connection 選擇檔案。",
       "truncated": "此檔案很大；正在顯示部分預覽。",
       "invalidJson": "JSON 無效；正在顯示原始文字。",

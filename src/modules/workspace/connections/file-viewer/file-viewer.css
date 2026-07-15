@@ -1161,3 +1161,7 @@
 .fv-large-text-code {
   padding: 0 12px;
 }
+
+.fv-large-text-line.loading .fv-large-text-code {
+  color: var(--text-faint);
+}
