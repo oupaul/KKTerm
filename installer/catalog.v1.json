@@ -1500,6 +1500,9 @@
         ],
         "displayNamePrefixes": [
           "ChatGPT"
+        ],
+        "appxPackageFamilyNames": [
+          "OpenAI.Codex_2p2nqsd0c76g0"
         ]
       },
       "provider": {
@@ -1621,7 +1624,7 @@
       },
       "provider": {
         "kind": "downloadInstaller",
-        "url": "https://hermes-assets.nousresearch.com/Hermes-Setup.exe?build=c9269fbfb689",
+        "url": "https://hermes-assets.nousresearch.com/Hermes-Setup.exe",
         "fileName": "Hermes-Setup.exe"
       },
       "descriptionLocales": {

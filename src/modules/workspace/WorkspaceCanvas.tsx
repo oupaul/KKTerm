@@ -5,6 +5,7 @@ import {
 } from "./connections/connectionTabContextMenu";
 import { ftpBrowserCommands, localBrowserCommands } from "../../lib/fileBrowserCommands";
 import { TerminalWorkspace } from "./connections/terminal/TerminalWorkspace";
+import { TerminalRecordingsDialog } from "./connections/terminal/TerminalRecordingsDialog";
 import { ConnectionIcon } from "./connections/ConnectionIcon";
 import { ConnectionTypeGlyph } from "./connections/ConnectionGlyph";
 import { CONNECTION_CREATION_OPTIONS } from "./connections/ConnectionMenus";
@@ -531,6 +532,7 @@ export function WorkspaceCanvas({
         {gitBrowserOverlay}
         {compareOverlay}
         {folderCompareOverlay}
+        <TerminalRecordingsDialog />
       </>
     );
   }
@@ -650,6 +652,7 @@ export function WorkspaceCanvas({
       {gitBrowserOverlay}
       {compareOverlay}
       {folderCompareOverlay}
+      <TerminalRecordingsDialog />
     </Suspense>
   );
 }

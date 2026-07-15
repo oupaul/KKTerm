@@ -5,10 +5,10 @@ use encoding_rs::{Encoding, UTF_8};
 use portable_pty::{Child, CommandBuilder, MasterPty, PtySize, native_pty_system};
 use serde::{Deserialize, Serialize};
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::{BTreeMap, HashMap, VecDeque},
     ffi::OsString,
     fs::{self, File},
-    io::{Read, Write},
+    io::{BufRead, BufReader, Read, Write},
     net::{IpAddr, TcpListener as StdTcpListener},
     path::{Path, PathBuf},
     process::Command as ProcessCommand,
@@ -17,6 +17,7 @@ use std::{
     time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 use tauri::{AppHandle, Emitter, Manager};
+use zip::{ZipWriter, write::SimpleFileOptions};
 
 pub struct SessionManager {
     sessions: Mutex<HashMap<String, TerminalSession>>,
@@ -346,6 +347,59 @@ pub struct TerminalRecordingEntry {
     pub path: PathBuf,
     pub size_bytes: u64,
     pub modified_at_millis: Option<u128>,
+    pub started_at_millis: Option<u128>,
+    pub duration_millis: Option<u128>,
+    pub connection_id_fragment: String,
+    pub connection_folder_label: String,
+    pub ai_summary: Option<String>,
+    pub ai_summary_preview: Option<String>,
+    pub ai_summary_model: Option<String>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TerminalRecordingSummaryInput {
+    pub sample: String,
+    pub preview: String,
+    pub total_lines: usize,
+    pub sampled_lines: usize,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SaveTerminalRecordingSummaryRequest {
+    pub path: String,
+    pub summary: String,
+    pub preview: String,
+    pub provider_kind: String,
+    pub model: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExportTerminalRecordingsRequest {
+    pub paths: Vec<String>,
+    pub destination: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExportTerminalRecordingsResult {
+    pub destination: PathBuf,
+    pub count: usize,
+}
+
+#[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct TerminalRecordingSummaryCache {
+    version: u8,
+    size_bytes: u64,
+    modified_at_millis: Option<u128>,
+    summary: String,
+    preview: String,
+    provider_kind: String,
+    model: String,
+    generated_at_millis: u128,
 }
 
 #[derive(Deserialize)]
@@ -636,11 +690,518 @@ fn terminal_recording_entry(path: PathBuf) -> Result<TerminalRecordingEntry, Str
         .and_then(|value| value.to_str())
         .unwrap_or("recording.txt")
         .to_string();
+    let started_at_millis = recording_started_at_millis(&file_name);
+    let duration_millis = started_at_millis
+        .zip(modified_at_millis)
+        .map(|(started, modified)| modified.saturating_sub(started));
+    let folder_name = path
+        .parent()
+        .and_then(Path::file_name)
+        .and_then(|value| value.to_str())
+        .unwrap_or("connection");
+    let (connection_folder_label, connection_id_fragment) = folder_name
+        .rsplit_once("--")
+        .map(|(label, id)| (label.to_string(), id.to_string()))
+        .unwrap_or_else(|| (folder_name.to_string(), String::new()));
+    let cached_summary = read_terminal_recording_summary_cache(
+        &path,
+        metadata.len(),
+        modified_at_millis,
+    );
     Ok(TerminalRecordingEntry {
         file_name,
         path,
         size_bytes: metadata.len(),
         modified_at_millis,
+        started_at_millis,
+        duration_millis,
+        connection_id_fragment,
+        connection_folder_label,
+        ai_summary: cached_summary.as_ref().map(|cache| cache.summary.clone()),
+        ai_summary_preview: cached_summary.as_ref().map(|cache| cache.preview.clone()),
+        ai_summary_model: cached_summary.map(|cache| cache.model),
+    })
+}
+
+fn recording_started_at_millis(file_name: &str) -> Option<u128> {
+    let stamp = file_name.get(..19)?;
+    let year = stamp.get(0..4)?.parse::<i32>().ok()?;
+    let month = stamp.get(4..6)?.parse::<u8>().ok()?;
+    let day = stamp.get(6..8)?.parse::<u8>().ok()?;
+    if stamp.get(8..9)? != "-" || stamp.get(15..16)? != "-" {
+        return None;
+    }
+    let hour = stamp.get(9..11)?.parse::<u8>().ok()?;
+    let minute = stamp.get(11..13)?.parse::<u8>().ok()?;
+    let second = stamp.get(13..15)?.parse::<u8>().ok()?;
+    let millisecond = stamp.get(16..19)?.parse::<u16>().ok()?;
+    let month = time::Month::try_from(month).ok()?;
+    let date = time::Date::from_calendar_date(year, month, day).ok()?;
+    let time = time::Time::from_hms_milli(hour, minute, second, millisecond).ok()?;
+    let offset = time::UtcOffset::current_local_offset().unwrap_or(time::UtcOffset::UTC);
+    let millis = time::PrimitiveDateTime::new(date, time)
+        .assume_offset(offset)
+        .unix_timestamp_nanos()
+        / 1_000_000;
+    (millis >= 0).then_some(millis as u128)
+}
+
+fn terminal_recording_summary_cache_path(path: &Path) -> PathBuf {
+    let file_name = path
+        .file_name()
+        .and_then(|value| value.to_str())
+        .unwrap_or("recording.txt");
+    path.with_file_name(format!("{file_name}.kkterm-summary.json"))
+}
+
+fn read_terminal_recording_summary_cache(
+    path: &Path,
+    size_bytes: u64,
+    modified_at_millis: Option<u128>,
+) -> Option<TerminalRecordingSummaryCache> {
+    let bytes = fs::read(terminal_recording_summary_cache_path(path)).ok()?;
+    let cache = serde_json::from_slice::<TerminalRecordingSummaryCache>(&bytes).ok()?;
+    (cache.version == 1
+        && cache.size_bytes == size_bytes
+        && cache.modified_at_millis == modified_at_millis
+        && !cache.summary.trim().is_empty())
+    .then_some(cache)
+}
+
+fn validate_terminal_recording_path(root: &Path, requested: &str) -> Result<PathBuf, String> {
+    let canonical_root = root
+        .canonicalize()
+        .map_err(|error| format!("failed to resolve terminal recordings root: {error}"))?;
+    let path = PathBuf::from(requested)
+        .canonicalize()
+        .map_err(|error| format!("failed to resolve terminal recording {requested}: {error}"))?;
+    if !path.starts_with(&canonical_root) {
+        return Err("terminal recording path must stay inside the recordings folder".to_string());
+    }
+    if path.extension().and_then(|value| value.to_str()) != Some("txt") || !path.is_file() {
+        return Err("terminal recording must be a text file".to_string());
+    }
+    Ok(path)
+}
+
+pub(crate) fn list_all_terminal_recordings(
+    root: PathBuf,
+) -> Result<Vec<TerminalRecordingEntry>, String> {
+    let mut recordings = Vec::new();
+    let groups = match fs::read_dir(&root) {
+        Ok(entries) => entries,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(recordings),
+        Err(error) => {
+            return Err(format!(
+                "failed to read terminal recordings root {}: {error}",
+                root.display()
+            ));
+        }
+    };
+    for group in groups
+        .filter_map(Result::ok)
+        .filter(|entry| entry.path().is_dir())
+    {
+        let folders = match fs::read_dir(group.path()) {
+            Ok(entries) => entries,
+            Err(_) => continue,
+        };
+        for folder in folders
+            .filter_map(Result::ok)
+            .filter(|entry| entry.path().is_dir())
+        {
+            let entries = match fs::read_dir(folder.path()) {
+                Ok(entries) => entries,
+                Err(_) => continue,
+            };
+            recordings.extend(
+                entries
+                    .filter_map(Result::ok)
+                    .filter_map(|entry| terminal_recording_entry(entry.path()).ok()),
+            );
+        }
+    }
+    recordings.sort_by(|left, right| {
+        right
+            .started_at_millis
+            .or(right.modified_at_millis)
+            .cmp(&left.started_at_millis.or(left.modified_at_millis))
+            .then_with(|| right.file_name.cmp(&left.file_name))
+    });
+    Ok(recordings)
+}
+
+pub(crate) fn search_terminal_recordings(
+    root: PathBuf,
+    query: &str,
+) -> Result<Vec<PathBuf>, String> {
+    let query = query.trim();
+    if query.is_empty() {
+        return Ok(Vec::new());
+    }
+    if query.contains(['\r', '\n']) {
+        return Err("terminal recording search must stay on one line".to_string());
+    }
+    if !root.exists() {
+        return Ok(Vec::new());
+    }
+
+    let mut ripgrep = ProcessCommand::new("rg");
+    ripgrep.args([
+        "--files-with-matches",
+        "--ignore-case",
+        "--fixed-strings",
+        "--no-messages",
+        "--color",
+        "never",
+        "--glob",
+        "*.txt",
+        "--",
+        query,
+    ]);
+    ripgrep.arg(&root);
+    hide_console_window(&mut ripgrep);
+    if let Ok(output) = ripgrep.output()
+        && (output.status.success() || output.status.code() == Some(1))
+    {
+        return recording_search_paths_from_output(&root, &output.stdout);
+    }
+
+    let mut fallback = if cfg!(windows) {
+        let mut command = ProcessCommand::new("findstr");
+        command.args(["/S", "/I", "/L", "/M", &format!("/C:{query}")]);
+        command.arg(root.join("*.txt"));
+        command
+    } else {
+        let mut command = ProcessCommand::new("grep");
+        command.args(["-RIlF", "--include=*.txt", "--", query]);
+        command.arg(&root);
+        command
+    };
+    hide_console_window(&mut fallback);
+    if let Ok(output) = fallback.output()
+        && (output.status.success() || output.status.code() == Some(1))
+    {
+        return recording_search_paths_from_output(&root, &output.stdout);
+    }
+
+    // Last-resort correctness path for unusually minimal systems where neither
+    // ripgrep nor the platform search command is available.
+    native_terminal_recording_search(&root, query)
+}
+
+fn recording_search_paths_from_output(root: &Path, stdout: &[u8]) -> Result<Vec<PathBuf>, String> {
+    let canonical_root = root
+        .canonicalize()
+        .map_err(|error| format!("failed to resolve terminal recordings root: {error}"))?;
+    let mut paths = Vec::new();
+    for line in String::from_utf8_lossy(stdout).lines() {
+        let candidate = PathBuf::from(line.trim());
+        let candidate = if candidate.is_absolute() {
+            candidate
+        } else {
+            root.join(candidate)
+        };
+        let Ok(candidate) = candidate.canonicalize() else {
+            continue;
+        };
+        if candidate.starts_with(&canonical_root)
+            && candidate.extension().and_then(|value| value.to_str()) == Some("txt")
+            && !paths.contains(&candidate)
+        {
+            paths.push(candidate);
+        }
+    }
+    Ok(paths)
+}
+
+fn native_terminal_recording_search(root: &Path, query: &str) -> Result<Vec<PathBuf>, String> {
+    let needle = query.to_lowercase();
+    let mut matches = Vec::new();
+    for recording in list_all_terminal_recordings(root.to_path_buf())? {
+        let mut file = match File::open(&recording.path) {
+            Ok(file) => file,
+            Err(_) => continue,
+        };
+        let mut text = String::new();
+        if file.read_to_string(&mut text).is_ok() && text.to_lowercase().contains(&needle) {
+            matches.push(recording.path);
+        }
+    }
+    Ok(matches)
+}
+
+pub(crate) fn prepare_terminal_recording_summary(
+    root: PathBuf,
+    requested: &str,
+) -> Result<TerminalRecordingSummaryInput, String> {
+    const FIRST_LIMIT: usize = 24;
+    const LAST_LIMIT: usize = 64;
+    const SALIENT_LIMIT: usize = 96;
+    const PERIODIC_LIMIT: usize = 48;
+    const SAMPLE_BYTES_LIMIT: usize = 24 * 1024;
+
+    let path = validate_terminal_recording_path(&root, requested)?;
+    let file = File::open(&path)
+        .map_err(|error| format!("failed to open terminal recording {}: {error}", path.display()))?;
+    let mut first = Vec::new();
+    let mut last = VecDeque::with_capacity(LAST_LIMIT);
+    let mut salient = Vec::new();
+    let mut periodic = Vec::new();
+    let mut preview = String::new();
+    let mut total_lines = 0usize;
+    let mut bytes = Vec::new();
+    let mut reader = BufReader::new(file);
+    while reader
+        .read_until(b'\n', &mut bytes)
+        .map_err(|error| format!("failed to read terminal recording: {error}"))?
+        > 0
+    {
+        total_lines += 1;
+        let line = clean_terminal_recording_line(&String::from_utf8_lossy(&bytes));
+        bytes.clear();
+        if line.is_empty() {
+            continue;
+        }
+        let numbered = (total_lines, line.clone());
+        if first.len() < FIRST_LIMIT {
+            first.push(numbered.clone());
+        }
+        if last.len() == LAST_LIMIT {
+            last.pop_front();
+        }
+        last.push_back(numbered.clone());
+        if salient.len() < SALIENT_LIMIT && terminal_recording_line_is_salient(&line) {
+            salient.push(numbered.clone());
+        }
+        if periodic.len() < PERIODIC_LIMIT && total_lines % 200 == 0 {
+            periodic.push(numbered);
+        }
+        if preview.is_empty() && terminal_recording_line_looks_like_command(&line) {
+            preview = truncate_recording_line(&line, 180);
+        }
+    }
+
+    if preview.is_empty() {
+        preview = first
+            .first()
+            .map(|(_, line)| truncate_recording_line(line, 180))
+            .unwrap_or_default();
+    }
+
+    let sections = [
+        ("BEGINNING", first),
+        ("COMMANDS AND IMPORTANT OUTPUT", salient),
+        ("PERIODIC SAMPLES", periodic),
+        ("ENDING", last.into_iter().collect()),
+    ];
+    let mut sample = String::new();
+    let mut sampled_lines = 0usize;
+    let mut seen = std::collections::HashSet::new();
+    'sections: for (label, lines) in sections {
+        let mut section_started = false;
+        for (line_number, line) in lines {
+            if !seen.insert(line_number) {
+                continue;
+            }
+            let rendered = format!("{line_number}: {line}\n");
+            let header = if section_started {
+                String::new()
+            } else {
+                format!("\n[{label}]\n")
+            };
+            if sample.len() + header.len() + rendered.len() > SAMPLE_BYTES_LIMIT {
+                break 'sections;
+            }
+            sample.push_str(&header);
+            sample.push_str(&rendered);
+            sampled_lines += 1;
+            section_started = true;
+        }
+    }
+    if sample.is_empty() {
+        sample.push_str("[EMPTY RECORDING]\n");
+    }
+    Ok(TerminalRecordingSummaryInput {
+        sample,
+        preview,
+        total_lines,
+        sampled_lines,
+    })
+}
+
+fn clean_terminal_recording_line(line: &str) -> String {
+    let mut clean = String::with_capacity(line.len().min(520));
+    let mut chars = line.chars().peekable();
+    while let Some(character) = chars.next() {
+        if character == '\u{1b}' {
+            match chars.peek().copied() {
+                Some('[') => {
+                    chars.next();
+                    for next in chars.by_ref() {
+                        if ('@'..='~').contains(&next) {
+                            break;
+                        }
+                    }
+                }
+                Some(']') => {
+                    chars.next();
+                    let mut previous_escape = false;
+                    for next in chars.by_ref() {
+                        if next == '\u{7}' || (previous_escape && next == '\\') {
+                            break;
+                        }
+                        previous_escape = next == '\u{1b}';
+                    }
+                }
+                _ => {}
+            }
+            continue;
+        }
+        if character == '\t' || !character.is_control() {
+            clean.push(character);
+        }
+        if clean.chars().count() >= 500 {
+            clean.push('…');
+            break;
+        }
+    }
+    clean.trim().to_string()
+}
+
+fn terminal_recording_line_looks_like_command(line: &str) -> bool {
+    let trimmed = line.trim_start();
+    trimmed.starts_with("$ ")
+        || trimmed.starts_with("# ")
+        || trimmed.starts_with("> ")
+        || trimmed.starts_with("% ")
+        || trimmed
+            .get(..3)
+            .is_some_and(|prefix| prefix.eq_ignore_ascii_case("PS "))
+}
+
+fn terminal_recording_line_is_salient(line: &str) -> bool {
+    if terminal_recording_line_looks_like_command(line) {
+        return true;
+    }
+    let lower = line.to_lowercase();
+    [
+        "error", "failed", "failure", "warning", "fatal", "panic", "exception",
+        "traceback", "denied", "timeout", "timed out", "not found", "unhealthy",
+        "restarted", "completed", "success", "changed", "created", "deleted",
+    ]
+    .iter()
+    .any(|needle| lower.contains(needle))
+}
+
+fn truncate_recording_line(line: &str, max_chars: usize) -> String {
+    let mut value = line.chars().take(max_chars).collect::<String>();
+    if line.chars().count() > max_chars {
+        value.push('…');
+    }
+    value
+}
+
+pub(crate) fn save_terminal_recording_summary(
+    root: PathBuf,
+    request: SaveTerminalRecordingSummaryRequest,
+) -> Result<(), String> {
+    let path = validate_terminal_recording_path(&root, &request.path)?;
+    let summary = request.summary.trim();
+    if summary.is_empty() {
+        return Err("terminal recording summary cannot be empty".to_string());
+    }
+    if summary.chars().count() > 4_000 {
+        return Err("terminal recording summary is too long".to_string());
+    }
+    let metadata = fs::metadata(&path)
+        .map_err(|error| format!("failed to read terminal recording metadata: {error}"))?;
+    let modified_at_millis = metadata
+        .modified()
+        .ok()
+        .and_then(|time| time.duration_since(UNIX_EPOCH).ok())
+        .map(|duration| duration.as_millis());
+    let cache = TerminalRecordingSummaryCache {
+        version: 1,
+        size_bytes: metadata.len(),
+        modified_at_millis,
+        summary: summary.to_string(),
+        preview: truncate_recording_line(request.preview.trim(), 240),
+        provider_kind: truncate_recording_line(request.provider_kind.trim(), 80),
+        model: truncate_recording_line(request.model.trim(), 160),
+        generated_at_millis: current_unix_millis(),
+    };
+    let bytes = serde_json::to_vec_pretty(&cache)
+        .map_err(|error| format!("failed to serialize terminal recording summary: {error}"))?;
+    let destination = terminal_recording_summary_cache_path(&path);
+    let temporary = destination.with_extension("json.tmp");
+    fs::write(&temporary, bytes)
+        .map_err(|error| format!("failed to write terminal recording summary: {error}"))?;
+    fs::rename(&temporary, &destination)
+        .or_else(|_| {
+            let _ = fs::remove_file(&destination);
+            fs::rename(&temporary, &destination)
+        })
+        .map_err(|error| format!("failed to finalize terminal recording summary: {error}"))
+}
+
+pub(crate) fn export_terminal_recordings(
+    root: PathBuf,
+    request: ExportTerminalRecordingsRequest,
+) -> Result<ExportTerminalRecordingsResult, String> {
+    if request.paths.is_empty() {
+        return Err("select at least one terminal recording to export".to_string());
+    }
+    if request.paths.len() > 2_000 {
+        return Err("too many terminal recordings selected for one export".to_string());
+    }
+    let destination = PathBuf::from(request.destination.trim());
+    if destination.as_os_str().is_empty() {
+        return Err("terminal recording export destination is required".to_string());
+    }
+    let parent = destination
+        .parent()
+        .ok_or_else(|| "terminal recording export destination has no parent folder".to_string())?;
+    fs::create_dir_all(parent)
+        .map_err(|error| format!("failed to create terminal recording export folder: {error}"))?;
+    let canonical_root = root
+        .canonicalize()
+        .map_err(|error| format!("failed to resolve terminal recordings root: {error}"))?;
+    let sources = request
+        .paths
+        .iter()
+        .map(|path| validate_terminal_recording_path(&root, path))
+        .collect::<Result<Vec<_>, _>>()?;
+    let temporary = destination.with_extension("zip.part");
+    let file = File::create(&temporary)
+        .map_err(|error| format!("failed to create terminal recording archive: {error}"))?;
+    let mut archive = ZipWriter::new(file);
+    let options = SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);
+    for source in &sources {
+        let relative = source
+            .strip_prefix(&canonical_root)
+            .map_err(|_| "terminal recording path escaped the recordings root".to_string())?;
+        let archive_name = relative.to_string_lossy().replace('\\', "/");
+        archive
+            .start_file(archive_name, options)
+            .map_err(|error| format!("failed to add terminal recording to archive: {error}"))?;
+        let mut source_file = File::open(source)
+            .map_err(|error| format!("failed to open terminal recording for export: {error}"))?;
+        std::io::copy(&mut source_file, &mut archive)
+            .map_err(|error| format!("failed to write terminal recording archive: {error}"))?;
+    }
+    archive
+        .finish()
+        .map_err(|error| format!("failed to finalize terminal recording archive: {error}"))?;
+    if destination.exists() {
+        fs::remove_file(&destination)
+            .map_err(|error| format!("failed to replace terminal recording archive: {error}"))?;
+    }
+    fs::rename(&temporary, &destination)
+        .map_err(|error| format!("failed to save terminal recording archive: {error}"))?;
+    Ok(ExportTerminalRecordingsResult {
+        destination,
+        count: sources.len(),
     })
 }
 

@@ -212,6 +212,25 @@ export interface TerminalRecordingEntry {
   path: string;
   sizeBytes: number;
   modifiedAtMillis?: number;
+  startedAtMillis?: number;
+  durationMillis?: number;
+  connectionIdFragment: string;
+  connectionFolderLabel: string;
+  aiSummary?: string;
+  aiSummaryPreview?: string;
+  aiSummaryModel?: string;
+}
+
+export interface TerminalRecordingSummaryInput {
+  sample: string;
+  preview: string;
+  totalLines: number;
+  sampledLines: number;
+}
+
+export interface ExportTerminalRecordingsResult {
+  destination: string;
+  count: number;
 }
 
 export interface TmuxSession {
@@ -2131,6 +2150,34 @@ type CommandMap = {
     };
     result: TerminalRecordingEntry[];
   };
+  list_all_terminal_recordings: {
+    args: undefined;
+    result: TerminalRecordingEntry[];
+  };
+  search_terminal_recordings: {
+    args: { query: string };
+    result: string[];
+  };
+  prepare_terminal_recording_summary: {
+    args: { path: string };
+    result: TerminalRecordingSummaryInput;
+  };
+  save_terminal_recording_summary: {
+    args: {
+      request: {
+        path: string;
+        summary: string;
+        preview: string;
+        providerKind: string;
+        model: string;
+      };
+    };
+    result: null;
+  };
+  export_terminal_recordings: {
+    args: { request: { paths: string[]; destination: string } };
+    result: ExportTerminalRecordingsResult;
+  };
   open_terminal_recordings_folder: {
     args: {
       request: {
@@ -2138,6 +2185,10 @@ type CommandMap = {
         connectionName: string;
       };
     };
+    result: null;
+  };
+  open_terminal_recordings_root: {
+    args: undefined;
     result: null;
   };
   open_terminal_recording: {
@@ -3349,6 +3400,24 @@ export async function selectSettingsImportFile(options: {
 }
 
 export async function selectSettingsExportFile(options: {
+  title: string;
+  filterName: string;
+  defaultFilename: string;
+}) {
+  if (!isTauriRuntime()) {
+    return null;
+  }
+
+  const selectedPath = await saveDialog({
+    defaultPath: options.defaultFilename,
+    filters: [{ name: options.filterName, extensions: ["zip"] }],
+    title: options.title,
+  });
+
+  return typeof selectedPath === "string" ? selectedPath : null;
+}
+
+export async function selectTerminalRecordingsExportFile(options: {
   title: string;
   filterName: string;
   defaultFilename: string;

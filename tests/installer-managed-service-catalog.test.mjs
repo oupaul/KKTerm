@@ -331,7 +331,7 @@ test("Hermes Desktop is visible in AI Agents and uses a direct installer source"
   assert.equal(recipe.category, "ai-agent");
   assert.deepEqual(recipe.provider, {
     kind: "downloadInstaller",
-    url: "https://hermes-assets.nousresearch.com/Hermes-Setup.exe?build=c9269fbfb689",
+    url: "https://hermes-assets.nousresearch.com/Hermes-Setup.exe",
     fileName: "Hermes-Setup.exe",
   });
 

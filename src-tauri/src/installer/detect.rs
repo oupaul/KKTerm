@@ -97,8 +97,8 @@ pub enum InstallScope {
 
 /// Detect every recipe in the catalog. The frontend only runs this on first
 /// Module entry per session; subsequent visits use the in-memory cache.
-/// Winget-provider recipes share one local Add/Remove Programs registry
-/// snapshot instead of spawning `winget list`.
+/// Recipes share one local Add/Remove Programs plus current-user AppX package
+/// snapshot instead of spawning per-tool detection commands.
 pub fn detect_all(catalog: &Catalog) -> HashMap<String, DetectedState> {
     crate::logging::installer_helper_debug(
         "detect.all.start",
@@ -505,9 +505,9 @@ fn command_output_with_path(program: &str, args: &[&str], path: Option<String>) 
 // ---- Windows installed software / winget -------------------------------
 //
 // Detection is intentionally local-first and cheap: scan Windows Add/Remove
-// Programs registry entries once per sweep, then match each winget recipe
-// against catalog detection aliases. `winget` remains the install/update
-// provider, but detection does not shell out to `winget list`.
+// Programs registry entries and current-user AppX packages once per sweep,
+// then match recipes against catalog detection aliases. `winget` remains the
+// default package-manager provider, but detection does not shell out to it.
 
 #[derive(Default)]
 struct InstalledSoftwareSnapshot {
@@ -683,6 +683,15 @@ fn installed_entry_matches(
     {
         return true;
     }
+    if registry_key.starts_with("appx\\user\\")
+        && registry_key.rsplit('\\').next().is_some_and(|family| {
+            detection.appx_package_family_names.iter().any(|expected| {
+                normalize_detection_value(expected) == normalize_detection_value(family)
+            })
+        })
+    {
+        return true;
+    }
     let Some(display_name) = entry.display_name.as_deref() else {
         return false;
     };
@@ -721,6 +730,8 @@ fn installed_entry_scope(entry: &InstalledSoftwareEntry) -> Option<InstallScope>
     let registry_key = normalize_detection_value(&entry.registry_key);
     if registry_key.starts_with("arp\\user\\") {
         Some(InstallScope::User)
+    } else if registry_key.starts_with("appx\\user\\") {
+        Some(InstallScope::User)
     } else if registry_key.starts_with("arp\\machine\\") {
         Some(InstallScope::Machine)
     } else {
@@ -748,6 +759,9 @@ mod windows_installed_software {
     use std::ffi::{OsStr, OsString};
     use std::os::windows::ffi::{OsStrExt, OsStringExt};
 
+    use windows::Management::Deployment::PackageManager;
+    use windows::Win32::System::WinRT::{RO_INIT_MULTITHREADED, RoInitialize, RoUninitialize};
+    use windows::core::HSTRING;
     use windows_sys::Win32::Foundation::{ERROR_NO_MORE_ITEMS, ERROR_SUCCESS};
     use windows_sys::Win32::System::Registry::{
         HKEY, HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE, KEY_READ, KEY_WOW64_32KEY, KEY_WOW64_64KEY,
@@ -798,7 +812,52 @@ mod windows_installed_software {
             KEY_WOW64_32KEY,
             &mut entries,
         );
+        scan_appx_packages(&mut entries);
         InstalledSoftwareSnapshot { entries }
+    }
+
+    fn scan_appx_packages(entries: &mut Vec<InstalledSoftwareEntry>) {
+        struct WinRtGuard(bool);
+        impl Drop for WinRtGuard {
+            fn drop(&mut self) {
+                if self.0 {
+                    unsafe { RoUninitialize() };
+                }
+            }
+        }
+        let _winrt = WinRtGuard(unsafe { RoInitialize(RO_INIT_MULTITHREADED) }.is_ok());
+        let Ok(manager) = PackageManager::new() else {
+            return;
+        };
+        let Ok(packages) = manager.FindPackagesByUserSecurityId(&HSTRING::new()) else {
+            return;
+        };
+        let Ok(iterator) = packages.First() else {
+            return;
+        };
+        while iterator.HasCurrent().unwrap_or(false) {
+            if let Ok(package) = iterator.Current()
+                && let Ok(id) = package.Id()
+                && let Ok(family) = id.FamilyName()
+            {
+                let version = id.Version().ok().map(|version| {
+                    format!(
+                        "{}.{}.{}.{}",
+                        version.Major, version.Minor, version.Build, version.Revision
+                    )
+                });
+                let family = family.to_string();
+                entries.push(InstalledSoftwareEntry {
+                    registry_key: format!("AppX\\User\\{family}"),
+                    display_name: None,
+                    display_version: version,
+                    install_location: None,
+                });
+            }
+            if iterator.MoveNext().is_err() {
+                break;
+            }
+        }
     }
 
     fn scan_uninstall_key(
@@ -1151,6 +1210,7 @@ mod tests {
                     .iter()
                     .map(|value| (*value).into())
                     .collect(),
+                appx_package_family_names: vec![],
             },
         }
     }
@@ -1163,6 +1223,22 @@ mod tests {
 
         assert!(!state.installed);
         assert_eq!(state.partial_count, Some((1, 3)));
+    }
+
+    #[test]
+    fn appx_family_alias_matches_store_package_without_arp_entry() {
+        let detection = Detection {
+            appx_package_family_names: vec!["OpenAI.Codex_2p2nqsd0c76g0".into()],
+            ..Detection::default()
+        };
+        let entry = InstalledSoftwareEntry {
+            registry_key: "AppX\\User\\OpenAI.Codex_2p2nqsd0c76g0".into(),
+            display_name: Some("ChatGPT".into()),
+            display_version: Some("26.707.9981.0".into()),
+            install_location: None,
+        };
+
+        assert!(installed_entry_matches("codex-desktop", &detection, &entry));
     }
 
     #[test]

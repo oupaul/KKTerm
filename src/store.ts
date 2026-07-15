@@ -1240,6 +1240,9 @@ interface WorkspaceState {
   performanceMetrics: PerformanceMetrics;
   statusBarNotice?: StatusBarNotice;
   localTerminalPopup?: WorkspaceTab;
+  /** App-global Terminal recordings browser. A Connection id is present only
+   * when the browser was opened from that Connection's tree context menu. */
+  terminalRecordingsBrowser?: { initialConnectionId?: string; requestId: number };
   /** Open Git Browser overlay target (repo root + label); undefined when closed. */
   gitBrowser?: GitBrowserTarget;
   /** App-global "left file" remembered for File Compare; undefined when none picked. */
@@ -1346,6 +1349,8 @@ interface WorkspaceState {
   openLocalTerminal: (options?: { name?: string; shell?: string }) => void;
   openLocalTerminalHere: (cwd: string, options?: { name?: string; shell?: string }) => void;
   closeLocalTerminalPopup: () => void;
+  openTerminalRecordingsBrowser: (initialConnectionId?: string) => void;
+  closeTerminalRecordingsBrowser: () => void;
   openGitBrowser: (repoRoot: string, label: string) => void;
   closeGitBrowser: () => void;
   setCompareLeft: (endpoint: CompareEndpoint) => void;
@@ -1453,6 +1458,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   activeSessionCounts: {},
   performanceMetrics: {},
   statusBarNotice: undefined,
+  terminalRecordingsBrowser: undefined,
   documentStatusSlot: null,
   quickCommandsByConnection: {},
   setQuery: (query) => set({ query }),
@@ -2859,6 +2865,14 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     });
   },
   closeLocalTerminalPopup: () => set({ localTerminalPopup: undefined }),
+  openTerminalRecordingsBrowser: (initialConnectionId) =>
+    set({
+      terminalRecordingsBrowser: {
+        initialConnectionId,
+        requestId: Date.now(),
+      },
+    }),
+  closeTerminalRecordingsBrowser: () => set({ terminalRecordingsBrowser: undefined }),
   openGitBrowser: (repoRoot, label) => set({ gitBrowser: { repoRoot, label } }),
   closeGitBrowser: () => set({ gitBrowser: undefined }),
   setCompareLeft: (endpoint) => set({ compareLeft: endpoint }),

@@ -290,6 +290,7 @@ export function ConnectionSidebar({
   const openChildConnectionInNewTab = useWorkspaceStore((state) => state.openChildConnectionInNewTab);
   const openChildConnectionLayout = useWorkspaceStore((state) => state.openChildConnectionLayout);
   const openConnectionsInPanorama = useWorkspaceStore((state) => state.openConnectionsInPanorama);
+  const openTerminalRecordingsBrowser = useWorkspaceStore((state) => state.openTerminalRecordingsBrowser);
   const updateOpenChildConnectionMetadata = useWorkspaceStore((state) => state.updateOpenChildConnectionMetadata);
   const refreshOpenConnectionMetadata = useWorkspaceStore((state) => state.refreshOpenConnectionMetadata);
   const tabs = useWorkspaceStore((state) => state.tabs);
@@ -2030,6 +2031,13 @@ export function ConnectionSidebar({
           iconSvg: nativeMenuIcons.folderPlus,
           action: handleTreeMenuCreateFolder,
         },
+        { kind: "separator" },
+        {
+          kind: "item",
+          label: t("terminal.openRecordings"),
+          iconSvg: nativeMenuIcons.folderOpen,
+          action: () => openTerminalRecordingsBrowser(),
+        },
       ];
     }
 
@@ -2047,6 +2055,17 @@ export function ConnectionSidebar({
         },
         { kind: "separator" },
       );
+      if (isTerminalConnectionType(menu.connection.type)) {
+        items.push(
+          {
+            kind: "item",
+            label: t("terminal.openRecordings"),
+            iconSvg: nativeMenuIcons.folderOpen,
+            action: () => openTerminalRecordingsBrowser(menu.connection.id),
+          },
+          { kind: "separator" },
+        );
+      }
     }
     items.push(
       {

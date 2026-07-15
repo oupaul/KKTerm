@@ -2152,6 +2152,67 @@ fn list_terminal_recordings(
 }
 
 #[tauri::command]
+fn list_all_terminal_recordings(
+    app: tauri::AppHandle,
+) -> Result<Vec<sessions::TerminalRecordingEntry>, String> {
+    sessions::list_all_terminal_recordings(sessions::terminal_recordings_root(&app)?)
+}
+
+#[tauri::command]
+fn search_terminal_recordings(
+    app: tauri::AppHandle,
+    query: String,
+) -> Result<Vec<PathBuf>, String> {
+    sessions::search_terminal_recordings(sessions::terminal_recordings_root(&app)?, &query)
+}
+
+#[tauri::command]
+fn prepare_terminal_recording_summary(
+    app: tauri::AppHandle,
+    path: String,
+) -> Result<sessions::TerminalRecordingSummaryInput, String> {
+    sessions::prepare_terminal_recording_summary(sessions::terminal_recordings_root(&app)?, &path)
+}
+
+#[tauri::command]
+fn save_terminal_recording_summary(
+    app: tauri::AppHandle,
+    request: sessions::SaveTerminalRecordingSummaryRequest,
+) -> Result<(), String> {
+    sessions::save_terminal_recording_summary(
+        sessions::terminal_recordings_root(&app)?,
+        request,
+    )
+}
+
+#[tauri::command]
+fn export_terminal_recordings(
+    app: tauri::AppHandle,
+    request: sessions::ExportTerminalRecordingsRequest,
+) -> Result<sessions::ExportTerminalRecordingsResult, String> {
+    sessions::export_terminal_recordings(sessions::terminal_recordings_root(&app)?, request)
+}
+
+#[tauri::command]
+fn open_terminal_recordings_root(app: tauri::AppHandle) -> Result<(), String> {
+    let root = sessions::terminal_recordings_root(&app)?;
+    fs::create_dir_all(&root).map_err(|error| {
+        format!(
+            "failed to create terminal recordings folder {}: {error}",
+            root.display()
+        )
+    })?;
+    app.opener()
+        .open_path(root.to_string_lossy(), None::<&str>)
+        .map_err(|error| {
+            format!(
+                "failed to open terminal recordings folder {}: {error}",
+                root.display()
+            )
+        })
+}
+
+#[tauri::command]
 fn open_terminal_recordings_folder(
     app: tauri::AppHandle,
     sessions: tauri::State<'_, sessions::SessionManager>,
@@ -3902,7 +3963,13 @@ pub fn run() {
             start_terminal_recording,
             stop_terminal_recording,
             list_terminal_recordings,
+            list_all_terminal_recordings,
+            search_terminal_recordings,
+            prepare_terminal_recording_summary,
+            save_terminal_recording_summary,
+            export_terminal_recordings,
             open_terminal_recordings_folder,
+            open_terminal_recordings_root,
             open_terminal_recording,
             // ── tmux
             list_tmux_sessions,

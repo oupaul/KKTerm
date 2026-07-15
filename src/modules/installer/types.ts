@@ -20,6 +20,7 @@ export interface Detection {
   registryKeys?: string[];
   displayNames?: string[];
   displayNamePrefixes?: string[];
+  appxPackageFamilyNames?: string[];
 }
 
 export type Provider =

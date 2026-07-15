@@ -15,7 +15,7 @@ import { useTranslation } from "react-i18next";
 import i18next from "../../../../i18n/config";
 import { ariaInvalid, dialogButtonAria, menuButtonAria } from "../../../../lib/aria";
 import { fileBrowserCommandsFor } from "../../../../lib/fileBrowserCommands";
-import { focusCurrentWebview, invokeCommand, isTauriRuntime, logUiDebug, openExternalUrl, saveTextFile, type TerminalOutput, type TerminalRecordingEntry, type TerminalRecordingInfo, type TmuxSession } from "../../../../lib/tauri";
+import { focusCurrentWebview, invokeCommand, isTauriRuntime, logUiDebug, openExternalUrl, saveTextFile, type TerminalOutput, type TerminalRecordingInfo, type TmuxSession } from "../../../../lib/tauri";
 import { markOsIconAutoDetectDone, osIconIdForDetection, osIconRefForId, shouldAutoDetectOsIcon } from "../../../../lib/osIcons";
 import { notifyConnectionTreeInvalidated } from "../connectionSidebarState";
 import { defaultTerminalSettings } from "../../../../app-defaults";
@@ -1654,7 +1654,6 @@ function TerminalPaneView({
   const [multilinePasteConfirmationOpen, setMultilinePasteConfirmationOpen] = useState(false);
   const [recordingInfo, setRecordingInfo] = useState<TerminalRecordingInfo | null>(null);
   const [recordingBusy, setRecordingBusy] = useState(false);
-  const [recordingsOpen, setRecordingsOpen] = useState(false);
   const [tmuxMouseEnabled, setTmuxMouseEnabled] = useState(true);
   const [quickSelect, setQuickSelect] = useState<{
     matches: LabeledQuickSelectMatch[];
@@ -1722,6 +1721,7 @@ function TerminalPaneView({
   const setOpenTerminalPaneSshForwardFailures = useWorkspaceStore((state) => state.setOpenTerminalPaneSshForwardFailures);
   const markOpenTerminalPaneTmuxUnavailable = useWorkspaceStore((state) => state.markOpenTerminalPaneTmuxUnavailable);
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
+  const openTerminalRecordingsBrowser = useWorkspaceStore((state) => state.openTerminalRecordingsBrowser);
   const openGitBrowser = useWorkspaceStore((state) => state.openGitBrowser);
   // Show the Git icon when a local terminal's directory is inside a repo. Use
   // the OSC-reported cwd when available, otherwise fall back to the Connection's
@@ -2446,7 +2446,6 @@ function TerminalPaneView({
       setSelectedTerminalText("");
       setRecordingInfo(null);
       setRecordingBusy(false);
-      setRecordingsOpen(false);
       setContextMenu(null);
       setQuickSelect(null);
       setSearchResult({ resultIndex: -1, resultCount: 0, found: true });
@@ -2830,7 +2829,7 @@ function TerminalPaneView({
 
   function handleOpenRecordings() {
     setActionsMenuOpen(false);
-    setRecordingsOpen(true);
+    openTerminalRecordingsBrowser();
   }
 
   async function handleSendBufferToAssistant() {
@@ -3516,12 +3515,6 @@ function TerminalPaneView({
           onPaste={() => void handlePasteIntoTerminal()}
         />
       ) : null}
-      {recordingsOpen && pane.connection ? (
-        <TerminalRecordingsDialog
-          connection={pane.connection}
-          onClose={() => setRecordingsOpen(false)}
-        />
-      ) : null}
       {multilinePasteConfirmationOpen ? (
         <ConfirmDialog
           confirmIcon="copy"
@@ -3608,166 +3601,12 @@ function TerminalContextMenu({
   );
 }
 
-function TerminalRecordingsDialog({
-  connection,
-  onClose,
-}: {
-  connection: Connection;
-  onClose: () => void;
-}) {
-  const [recordings, setRecordings] = useState<TerminalRecordingEntry[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const { t } = useTranslation();
-
-  useEffect(() => {
-    let canceled = false;
-    async function loadRecordings() {
-      if (!isTauriRuntime()) {
-        setRecordings([]);
-        setError(t("terminal.tauriRequired"));
-        return;
-      }
-      setLoading(true);
-      setError("");
-      try {
-        const result = await invokeCommand("list_terminal_recordings", {
-          request: {
-            connectionId: connection.id,
-            connectionName: connection.name,
-          },
-        });
-        if (!canceled) {
-          setRecordings(result);
-        }
-      } catch (loadError) {
-        if (!canceled) {
-          setRecordings([]);
-          setError(loadError instanceof Error ? loadError.message : String(loadError));
-        }
-      } finally {
-        if (!canceled) {
-          setLoading(false);
-        }
-      }
-    }
-
-    void loadRecordings();
-    return () => {
-      canceled = true;
-    };
-  }, [connection.id, connection.name, t]);
-
-  async function handleOpenFolder() {
-    try {
-      await invokeCommand("open_terminal_recordings_folder", {
-        request: {
-          connectionId: connection.id,
-          connectionName: connection.name,
-        },
-      });
-    } catch (openError) {
-      setError(openError instanceof Error ? openError.message : String(openError));
-    }
-  }
-
-  async function handleOpenRecording(path: string) {
-    try {
-      await invokeCommand("open_terminal_recording", { path });
-    } catch (openError) {
-      setError(openError instanceof Error ? openError.message : String(openError));
-    }
-  }
-
-  return (
-    <div className="terminal-recordings-backdrop" role="presentation">
-      <div className="terminal-recordings-dialog" role="dialog" aria-modal="true" aria-label={t("terminal.recordingsTitle")}>
-        <header>
-          <div>
-            <strong>{t("terminal.recordingsTitle")}</strong>
-            <small>{connection.name}</small>
-          </div>
-          <div className="terminal-recordings-actions">
-            <button
-              className="terminal-pane-action"
-              aria-label={t("terminal.openRecordingsFolder")}
-              onClick={() => void handleOpenFolder()}
-              title={t("terminal.openRecordingsFolder")}
-              type="button"
-            >
-              <FolderOpen size={13} />
-            </button>
-            <button
-              className="terminal-pane-action"
-              aria-label={t("common.close")}
-              onClick={onClose}
-              title={t("common.close")}
-              type="button"
-            >
-              <X size={13} />
-            </button>
-          </div>
-        </header>
-        {loading ? <p>{t("terminal.loading")}</p> : null}
-        {error ? <p className="form-error">{error}</p> : null}
-        {!loading && !error && recordings.length === 0 ? <p>{t("terminal.noRecordings")}</p> : null}
-        {recordings.length > 0 ? (
-          <div className="terminal-recordings-list">
-            {recordings.map((recording) => (
-              <button
-                className="terminal-recording-row"
-                key={recording.path}
-                onClick={() => void handleOpenRecording(recording.path)}
-                type="button"
-              >
-                <FileText size={14} />
-                <span>
-                  <strong>{recording.fileName}</strong>
-                  <small>
-                    {formatRecordingMetadata(recording, t)}
-                  </small>
-                </span>
-              </button>
-            ))}
-          </div>
-        ) : null}
-      </div>
-    </div>
-  );
-}
-
 function isMultilinePaste(data: string) {
   return data.split(/\r\n|\r|\n/).filter((line) => line.length > 0).length > 1;
 }
 
 function truncateForNotice(text: string) {
   return text.length > 60 ? `${text.slice(0, 57)}…` : text;
-}
-
-function formatRecordingMetadata(recording: TerminalRecordingEntry, t: (key: string, options?: Record<string, unknown>) => string) {
-  const parts = [formatByteCount(recording.sizeBytes)];
-  if (recording.modifiedAtMillis) {
-    parts.push(new Date(recording.modifiedAtMillis).toLocaleString());
-  }
-  return t("terminal.recordingMetadata", { metadata: parts.join(" · ") });
-}
-
-function formatByteCount(bytes: number) {
-  if (!Number.isFinite(bytes) || bytes < 0) {
-    return "0 B";
-  }
-  if (bytes < 1024) {
-    return `${bytes} B`;
-  }
-  const units = ["KB", "MB", "GB"];
-  let value = bytes / 1024;
-  for (let index = 0; index < units.length; index += 1) {
-    if (value < 1024 || index === units.length - 1) {
-      return `${value.toFixed(value >= 10 ? 0 : 1)} ${units[index]}`;
-    }
-    value /= 1024;
-  }
-  return `${bytes} B`;
 }
 
 function encodeTerminalInput(data: string) {
