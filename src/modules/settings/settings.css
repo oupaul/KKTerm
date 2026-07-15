@@ -1437,6 +1437,26 @@
   line-height: 1.25;
 }
 
+.terminal-ssh-scope-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-inline-start: 7px;
+  padding: 1px 5px;
+  color: var(--text-faint);
+  font-size: 10px;
+  font-weight: 620;
+  line-height: 1.35;
+  letter-spacing: 0;
+  vertical-align: 1px;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.settings-toggle-row .terminal-ssh-scope-badge {
+  display: inline-flex;
+}
+
 .settings-fieldset > div:has(> .field-hint:only-child),
 .settings-fieldset .settings-collapsible-content > div:has(> .field-hint:only-child),
 .settings-fieldset > .settings-section-title:has(.field-hint) {
@@ -1561,6 +1581,7 @@
 }
 
 .settings-section label:not(.settings-toggle-row):last-child,
+.settings-section label:not(.settings-toggle-row):has(+ datalist:last-child),
 .settings-list-row:last-child,
 .settings-summary-item:last-child,
 .settings-reset-layout {
@@ -2009,6 +2030,31 @@
   border-bottom: 0;
 }
 
+.settings-inline-add-button {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: center;
+  justify-self: start;
+  width: max-content;
+  height: 30px;
+  margin: 6px 0 2px;
+  padding: 0 9px;
+  color: var(--text-muted);
+  background: transparent;
+  border-color: transparent;
+  border-radius: 6px;
+  box-shadow: none;
+  font-size: 12px;
+  font-weight: 620;
+}
+
+.settings-inline-add-button:hover {
+  color: var(--text);
+  background: var(--surface);
+  border-color: var(--border);
+}
+
 /*
  * Merge consecutive Settings row blocks inside one subsection so related
  * controls read as one grouped card divided by rules instead of separate cards.
@@ -2019,11 +2065,21 @@
   border-bottom-left-radius: 0;
 }
 
+.settings-fieldset > :is(.form-grid, .ai-provider-fields, .settings-toggle-list, .settings-list, .settings-summary-grid):has(+ :is(.form-grid, .ai-provider-fields, .settings-toggle-list, .settings-list, .settings-summary-grid)),
+.settings-collapsible-content > :is(.form-grid, .ai-provider-fields, .settings-toggle-list, .settings-list, .settings-summary-grid):has(+ :is(.form-grid, .ai-provider-fields, .settings-toggle-list, .settings-list, .settings-summary-grid)) {
+  padding-bottom: 0;
+}
+
 .settings-fieldset > :is(.form-grid, .ai-provider-fields, .settings-toggle-list, .settings-list, .settings-summary-grid, .settings-data-actions, .settings-reset-layout) + :is(.form-grid, .ai-provider-fields, .settings-toggle-list, .settings-list, .settings-summary-grid, .settings-data-actions, .settings-reset-layout, .settings-merged-block),
 .settings-collapsible-content > :is(.form-grid, .ai-provider-fields, .settings-toggle-list, .settings-list, .settings-summary-grid, .settings-data-actions, .settings-reset-layout) + :is(.form-grid, .ai-provider-fields, .settings-toggle-list, .settings-list, .settings-summary-grid, .settings-data-actions, .settings-reset-layout, .settings-merged-block) {
   margin-top: -10px;
   border-top-left-radius: 0;
   border-top-right-radius: 0;
+}
+
+.settings-fieldset > :is(.form-grid, .ai-provider-fields, .settings-toggle-list, .settings-list, .settings-summary-grid) + :is(.form-grid, .ai-provider-fields, .settings-toggle-list, .settings-list, .settings-summary-grid),
+.settings-collapsible-content > :is(.form-grid, .ai-provider-fields, .settings-toggle-list, .settings-list, .settings-summary-grid) + :is(.form-grid, .ai-provider-fields, .settings-toggle-list, .settings-list, .settings-summary-grid) {
+  padding-top: 0;
 }
 
 .settings-fieldset > :is(.form-grid, .ai-provider-fields, .settings-toggle-list, .settings-list, .settings-summary-grid):has(+ :is(.form-grid, .ai-provider-fields, .settings-toggle-list, .settings-list, .settings-summary-grid, .settings-data-actions, .settings-reset-layout, .settings-merged-block)) :is(label:not(.settings-toggle-row):last-child, .settings-toggle-row:last-child, .settings-list-row:last-child, .settings-summary-item:last-child),

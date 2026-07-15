@@ -1753,6 +1753,7 @@
     "sectionAiAssistant": "Assistente IA",
     "sectionSsh": "SSH",
     "sectionTerminal": "Terminale",
+    "includesSsh": "Si applica anche a SSH",
     "sectionRdp": "Desktop remoto (RDP)",
     "sectionVnc": "VNC",
     "sectionAbout": "Informazioni",

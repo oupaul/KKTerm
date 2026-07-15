@@ -1753,6 +1753,7 @@
     "sectionAiAssistant": "KI-Assistent",
     "sectionSsh": "SSH",
     "sectionTerminal": "Terminal",
+    "includesSsh": "Gilt auch für SSH",
     "sectionRdp": "Remotedesktop (RDP)",
     "sectionVnc": "VNC",
     "sectionAbout": "Über",

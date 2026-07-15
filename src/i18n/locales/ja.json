@@ -1753,6 +1753,7 @@
     "sectionAiAssistant": "AIアシスタント",
     "sectionSsh": "SSH",
     "sectionTerminal": "ターミナル",
+    "includesSsh": "SSHにも適用",
     "sectionRdp": "リモートデスクトップ（RDP）",
     "sectionVnc": "VNC",
     "sectionAbout": "について",

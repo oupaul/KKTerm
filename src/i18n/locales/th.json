@@ -1753,6 +1753,7 @@
     "sectionAiAssistant": "ผู้ช่วย AI",
     "sectionSsh": "SSH",
     "sectionTerminal": "เทอร์มินัล",
+    "includesSsh": "ใช้กับ SSH ด้วย",
     "sectionRdp": "เดสก์ท็อประยะไกล (RDP)",
     "sectionVnc": "VNC",
     "sectionAbout": "เกี่ยวกับ",

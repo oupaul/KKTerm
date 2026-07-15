@@ -32,6 +32,13 @@ test("Settings row blocks merge consecutive controls inside the same relevant gr
   assert.match(settingsStyles, /\.settings-fieldset > :is\([\s\S]*\) \+ :is\(/);
   assert.match(settingsStyles, /border-bottom-left-radius:\s*0;/);
   assert.match(settingsStyles, /margin-top:\s*-10px;/);
+  assert.match(settingsStyles, /padding-bottom:\s*0;/);
+  assert.match(settingsStyles, /padding-top:\s*0;/);
+  assert.equal(
+    terminalSource.match(/className="toolbar-button settings-inline-add-button"/g)?.length,
+    2,
+  );
+  assert.match(settingsStyles, /\.settings-inline-add-button\s*\{[\s\S]*width:\s*max-content;/);
   assert.match(
     architecture,
     /Related Settings rows should stay in the same grouped card whenever they share a subsection/i,

@@ -1753,6 +1753,7 @@
     "sectionAiAssistant": "AI 助理",
     "sectionSsh": "SSH",
     "sectionTerminal": "終端機",
+    "includesSsh": "也適用於 SSH",
     "sectionRdp": "遠端桌面 (RDP)",
     "sectionVnc": "VNC",
     "sectionAbout": "關於",

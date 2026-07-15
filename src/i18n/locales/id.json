@@ -1753,6 +1753,7 @@
     "sectionAiAssistant": "AI Assistant",
     "sectionSsh": "SSH",
     "sectionTerminal": "Terminal",
+    "includesSsh": "Juga berlaku untuk SSH",
     "sectionRdp": "Desktop Jarak Jauh (RDP)",
     "sectionVnc": "VNC",
     "sectionAbout": "Tentang",
