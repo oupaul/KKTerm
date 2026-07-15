@@ -687,10 +687,10 @@ mod tests {
             .recipes
             .iter()
             .find(|recipe| recipe.id == "codex-desktop")
-            .expect("catalog should include Codex Desktop");
+            .expect("catalog should include ChatGPT Desktop (Codex)");
         assert!(matches!(
             &codex.provider,
-            Provider::DownloadInstaller { url, .. } if url.starts_with("https://get.microsoft.com/installer/download/")
+            Provider::DownloadInstaller { url, file_name, .. } if url.starts_with("https://get.microsoft.com/installer/download/") && file_name == "ChatGPTInstaller.exe"
         ));
 
         let claude = catalog

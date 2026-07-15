@@ -1487,21 +1487,25 @@
     },
     {
       "id": "codex-desktop",
-      "name": "Codex Desktop",
-      "descriptionEn": "Desktop app for working with OpenAI Codex coding agents.",
+      "name": "ChatGPT Desktop (Codex)",
+      "descriptionEn": "New ChatGPT desktop app with Chat, Work, and Codex coding agents.",
       "category": "ai-agent",
       "icon": "Bot",
-      "homepage": "https://openai.com/codex/",
-      "releaseNotesUrl": "https://openai.com/codex/",
+      "homepage": "https://chatgpt.com/download",
+      "releaseNotesUrl": "https://help.openai.com/en/articles/20001276-moving-to-the-new-chatgpt-desktop-app",
       "detection": {
         "displayNames": [
+          "ChatGPT",
           "Codex"
+        ],
+        "displayNamePrefixes": [
+          "ChatGPT"
         ]
       },
       "provider": {
         "kind": "downloadInstaller",
         "url": "https://get.microsoft.com/installer/download/9PLM9XGG6VKS?cid=website_cta_psi",
-        "fileName": "CodexInstaller.exe"
+        "fileName": "ChatGPTInstaller.exe"
       },
       "descriptionLocales": {
         "es": "Aplicación de escritorio para trabajar con agentes de codificación OpenAI Codex.",
