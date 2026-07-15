@@ -96,6 +96,7 @@ export interface TerminalRenderer {
   setFontFamily: (family: string) => void;
   getFontSize: () => number;
   getBufferText: () => string;
+  getRecordingBufferText: () => string;
   onFocus: (handler: () => void) => IDisposable;
 }
 
@@ -655,9 +656,11 @@ class XtermTerminalRenderer implements TerminalRenderer, TerminalFontAtlasRefres
     return this.terminal.options.fontSize ?? 14;
   }
 
-  getBufferText() {
+  private bufferText(includeAlternate: boolean) {
     const lines: string[] = [];
-    const buffers = [this.terminal.buffer.normal, this.terminal.buffer.alternate];
+    const buffers = includeAlternate
+      ? [this.terminal.buffer.normal, this.terminal.buffer.alternate]
+      : [this.terminal.buffer.normal];
     const seen = new Set<typeof buffers[number]>();
     for (const buffer of buffers) {
       if (!buffer || seen.has(buffer)) {
@@ -677,6 +680,14 @@ class XtermTerminalRenderer implements TerminalRenderer, TerminalFontAtlasRefres
       lines.pop();
     }
     return lines.join("\n");
+  }
+
+  getBufferText() {
+    return this.bufferText(true);
+  }
+
+  getRecordingBufferText() {
+    return this.bufferText(false);
   }
 
   onFocus(handler: () => void) {

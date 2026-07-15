@@ -1660,8 +1660,6 @@ impl SessionManager {
     }
 
     pub fn resize_terminal(&self, request: ResizeTerminalRequest) -> Result<(), String> {
-        self.recordings
-            .resize(&request.session_id, request.rows, request.cols);
         let mut sessions = self
             .sessions
             .lock()
@@ -1669,7 +1667,7 @@ impl SessionManager {
         let session = sessions
             .get_mut(&request.session_id)
             .ok_or_else(|| "terminal session was not found".to_string())?;
-        match &mut session.transport {
+        let result = match &mut session.transport {
             TerminalTransport::Pty { master, .. } => master
                 .resize(resize_pty_size(&request))
                 .map_err(|error| format!("failed to resize terminal: {error}")),
@@ -1681,7 +1679,13 @@ impl SessionManager {
             ),
             TerminalTransport::NativeTelnet(session) => session.resize(request.cols, request.rows),
             TerminalTransport::NativeSerial(_) => Ok(()),
+        };
+        if result.is_ok() {
+            drop(sessions);
+            self.recordings
+                .resize(&request.session_id, request.rows, request.cols);
         }
+        result
     }
 
     pub fn close_terminal_session(&self, session_id: String) -> Result<(), String> {

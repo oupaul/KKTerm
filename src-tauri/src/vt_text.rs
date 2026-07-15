@@ -36,6 +36,9 @@ pub struct VtTextRenderer {
     screen: Vec<Vec<char>>,
     row: usize,
     col: usize,
+    /// The last printable cell reached the right margin; the next printable
+    /// character wraps, while cursor/control operations cancel the pending wrap.
+    wrap_pending: bool,
     saved_cursor: Option<(usize, usize)>,
     /// Saved main screen and cursor while the alternate screen is active.
     main_screen: Option<(Vec<Vec<char>>, usize, usize)>,
@@ -55,6 +58,7 @@ impl VtTextRenderer {
             screen: vec![blank_row(cols); rows],
             row: 0,
             col: 0,
+            wrap_pending: false,
             saved_cursor: None,
             main_screen: None,
             state: ParserState::Ground,
@@ -84,6 +88,7 @@ impl VtTextRenderer {
         self.flush_screen();
         self.row = 0;
         self.col = 0;
+        self.wrap_pending = false;
         std::mem::take(&mut self.pending)
     }
 
@@ -115,6 +120,7 @@ impl VtTextRenderer {
         self.rows = rows;
         self.row = self.row.min(rows - 1);
         self.col = self.col.min(cols - 1);
+        self.wrap_pending = false;
     }
 
     fn step(&mut self, ch: char) {
@@ -128,7 +134,7 @@ impl VtTextRenderer {
             }
             ParserState::Csi => self.step_csi(ch),
             ParserState::Osc => match ch {
-                '\x07' => self.state = ParserState::Ground,
+                '\x07' | '\u{009c}' => self.state = ParserState::Ground,
                 '\x1b' => self.state = ParserState::OscEscape,
                 _ => {}
             },
@@ -141,7 +147,7 @@ impl VtTextRenderer {
                 }
             }
             ParserState::ConsumeSt => match ch {
-                '\x07' => self.state = ParserState::Ground,
+                '\x07' | '\u{009c}' => self.state = ParserState::Ground,
                 '\x1b' => self.state = ParserState::ConsumeStEscape,
                 _ => {}
             },
@@ -159,16 +165,39 @@ impl VtTextRenderer {
     fn step_ground(&mut self, ch: char) {
         match ch {
             '\x1b' => self.state = ParserState::Escape,
-            '\r' => self.col = 0,
-            '\n' | '\x0b' | '\x0c' => self.line_feed(),
-            '\x08' => self.col = self.col.saturating_sub(1),
-            '\t' => self.col = (((self.col / 8) + 1) * 8).min(self.cols - 1),
-            c if (c as u32) < 0x20 || c == '\x7f' => {}
+            '\u{0090}' | '\u{0098}' | '\u{009e}' | '\u{009f}' => {
+                self.state = ParserState::ConsumeSt
+            }
+            '\u{009b}' => {
+                self.csi_params.clear();
+                self.csi_has_intermediate = false;
+                self.state = ParserState::Csi;
+            }
+            '\u{009d}' => self.state = ParserState::Osc,
+            '\u{009c}' => {}
+            '\r' => {
+                self.col = 0;
+                self.wrap_pending = false;
+            }
+            '\n' | '\x0b' | '\x0c' => {
+                self.wrap_pending = false;
+                self.line_feed();
+            }
+            '\x08' => {
+                self.wrap_pending = false;
+                self.col = self.col.saturating_sub(1);
+            }
+            '\t' => {
+                self.wrap_pending = false;
+                self.col = (((self.col / 8) + 1) * 8).min(self.cols - 1);
+            }
+            c if (c as u32) < 0x20 || (0x7f..=0x9f).contains(&(c as u32)) => {}
             c => self.print(c),
         }
     }
 
     fn step_escape(&mut self, ch: char) {
+        self.wrap_pending = false;
         self.state = ParserState::Ground;
         match ch {
             '[' => {
@@ -223,6 +252,7 @@ impl VtTextRenderer {
     }
 
     fn csi_dispatch(&mut self, final_byte: char) {
+        self.wrap_pending = false;
         let private = self
             .csi_params
             .starts_with(|c| matches!(c, '<' | '=' | '>' | '?'));
@@ -327,6 +357,11 @@ impl VtTextRenderer {
             return;
         }
         let width = width.min(self.cols);
+        if self.wrap_pending {
+            self.col = 0;
+            self.line_feed();
+            self.wrap_pending = false;
+        }
         if self.col + width > self.cols {
             self.col = 0;
             self.line_feed();
@@ -339,7 +374,12 @@ impl VtTextRenderer {
         } else {
             self.screen[self.row][self.col] = ch;
         }
-        self.col += width;
+        if self.col + width == self.cols {
+            self.col = self.cols - 1;
+            self.wrap_pending = true;
+        } else {
+            self.col += width;
+        }
     }
 
     /// Overwriting half of a double-width character orphans the other half;
@@ -596,6 +636,14 @@ mod tests {
     }
 
     #[test]
+    fn handles_eight_bit_csi_and_string_terminators() {
+        assert_eq!(
+            render_all(24, 80, "\u{009d}title\u{009c}\u{009b}32mgreen\u{009b}0m"),
+            "green\n"
+        );
+    }
+
+    #[test]
     fn conpty_repaint_does_not_duplicate_lines() {
         let stream = "Windows PowerShell\r\nCopyright (C) Microsoft\r\n\
             \x1b[H\x1b[?25l\x1b[KWindows PowerShell\r\n\x1b[KCopyright (C) Microsoft\r\n\x1b[K\x1b[?25h";
@@ -635,6 +683,16 @@ mod tests {
     #[test]
     fn carriage_return_overwrites_line_in_place() {
         assert_eq!(render_all(24, 80, "12345\rab"), "ab345\n");
+    }
+
+    #[test]
+    fn right_margin_control_sequences_do_not_overrun_the_row() {
+        assert_eq!(render_all(2, 5, "abcde\x1b[PZ"), "abcdZ\n");
+    }
+
+    #[test]
+    fn line_feed_at_right_margin_does_not_wrap_twice() {
+        assert_eq!(render_all(3, 5, "abcde\nZ"), "abcde\n    Z\n");
     }
 
     #[test]

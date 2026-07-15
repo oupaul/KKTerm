@@ -2777,7 +2777,7 @@ function TerminalPaneView({
         sessionId,
         connectionId: connection.id,
         connectionName: connection.name,
-        initialBuffer: terminalRendererRef.current?.getBufferText() ?? "",
+        initialBuffer: terminalRendererRef.current?.getRecordingBufferText() ?? "",
         rows: dimensions?.rows,
         cols: dimensions?.cols,
       },
