@@ -7,12 +7,13 @@
 // Edit mode drags footprints between cells (swapping on collision), rotates
 // facings, and places/stacks/deletes room objects; the object picker column
 // (owned by SitesTab, shared with the 2.5D view) arms a rack or object kind
-// and a cell click drops it under the cursor.
+// and two clicks choose its position and facing.
 
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { useTranslation } from "react-i18next";
 import type { Rack } from "../../types";
 import {
+  facingFromPoint,
   moveIsoRack,
   rackDepthFrac,
   rackFootprint,
@@ -28,6 +29,7 @@ import {
   nudgeZ,
   objectCellSpan,
   objectFootprint,
+  objectSurfaceAnchor,
   objectSpec,
   rackTopSupport,
   resolveDropZ,
@@ -80,6 +82,10 @@ interface DragState {
   target: IsoCell;
 }
 
+type PendingFacingPlacement =
+  | { kind: "rack"; cell: IsoCell; facing: Facing }
+  | { kind: "object"; cell: IsoCell; corner: Corner; facing: Facing };
+
 export function ServerRoomFloorPlan({
   racks,
   editMode,
@@ -103,7 +109,7 @@ export function ServerRoomFloorPlan({
   editMode?: boolean;
   /** Armed object kind from the shared picker column (SitesTab owns it). */
   tool?: RoomTool;
-  /** A just-created rack awaiting its placement click. */
+  /** A just-created rack awaiting its position/facing clicks. */
   placeRackId?: string | null;
   onRackPlaced?: () => void;
   /** A room fixture was successfully placed; the owner may keep continuous tools armed. */
@@ -117,7 +123,7 @@ export function ServerRoomFloorPlan({
   /** A 乖乖 pack landed on a cabinet top: it becomes a rack-top Rack Device
    *  (shared with the Rack View) instead of a room object. Returns false when
    *  the rack top is already taken. */
-  onPlaceKuaiguai?: (rack: Rack, corner?: Corner) => boolean;
+  onPlaceKuaiguai?: (rack: Rack, corner?: Corner, facing?: Facing) => boolean;
   onDeleteRack?: (rack: Rack) => void;
   onSelectRack: (rackId: string) => void;
   /** A placement click or drag found no available space in the cell. */
@@ -160,15 +166,25 @@ export function ServerRoomFloorPlan({
   // hovered cell (and, for quarter-block fixtures, the cell quadrant under
   // the pointer) so the grid shows the drop before the click commits.
   const [hover, setHover] = useState<(IsoCell & { corner: Corner }) | null>(null);
+  const [pendingFacing, setPendingFacing] = useState<PendingFacingPlacement | null>(null);
   const [rackHover, setRackHover] = useState<{
     rackId: string;
     pointer: { x: number; y: number };
   } | null>(null);
   const placing = !!editMode && armed;
-  const placementPointer = useRoomPlacementPointer(placing, onCancelPlacement, scrollRef);
+  const cancelArmedPlacement = () => {
+    setHover(null);
+    setPendingFacing(null);
+    onCancelPlacement?.();
+  };
+  const placementPointer = useRoomPlacementPointer(placing, cancelArmedPlacement, scrollRef);
   useEffect(() => {
-    if (!placing) setHover(null);
+    if (!placing) {
+      setHover(null);
+      setPendingFacing(null);
+    }
   }, [placing]);
+  useEffect(() => setPendingFacing(null), [placeRackId, tool]);
   const [drag, setDrag] = useState<DragState | null>(null);
   const dragRef = useRef<{
     kind: "rack" | "object";
@@ -303,6 +319,11 @@ export function ServerRoomFloorPlan({
   }
 
   function trackPlacement(event: ReactPointerEvent<HTMLDivElement>) {
+    if (pendingFacing) {
+      const nextFacing = facingForPending(event, pendingFacing);
+      setPendingFacing((current) => current ? { ...current, facing: nextFacing } : current);
+      return;
+    }
     const cell = cellFromEvent(event);
     const corner =
       tool != null && objectSpec(tool).quarter ? cornerFromEvent(event, cell) : (0 as Corner);
@@ -315,8 +336,41 @@ export function ServerRoomFloorPlan({
 
   function cancelPlacement(event: React.MouseEvent<HTMLDivElement>) {
     event.preventDefault();
-    setHover(null);
-    onCancelPlacement?.();
+    cancelArmedPlacement();
+  }
+
+  function facingForPending(
+    event: React.MouseEvent<HTMLDivElement>,
+    pending: PendingFacingPlacement,
+  ): Facing {
+    const center = pending.kind === "rack"
+      ? (() => {
+          const rack = racks.find((entry) => entry.id === placeRackId);
+          const fp = rackFootprint(pending.facing, rackDepthFrac(rack?.depthMm ?? 1000));
+          return { x: pending.cell.x + fp.x + fp.w / 2, y: pending.cell.y + fp.y + fp.d / 2 };
+        })()
+      : (() => {
+          if (tool == null) return { x: pending.cell.x + 0.5, y: pending.cell.y + 0.5 };
+          const anchor = objectSurfaceAnchor(tool, pending.facing, pending.corner);
+          return { x: pending.cell.x + anchor.x, y: pending.cell.y + anchor.y };
+        })();
+    return facingFromPoint(pointFromEvent(event), center);
+  }
+
+  function resolveObjectPlacement(cell: IsoCell, corner: Corner, rot: Facing) {
+    if (tool == null) return { z: null, support: null };
+    const z = resolveDropZ(
+      footprintSpans(cell, tool, rot, racks, layout.cells, objects, undefined, corner, facing),
+      tool,
+    );
+    if (z == null) return { z: null, support: null };
+    const support = tool === "kuaikuai"
+      ? rackTopSupport(cell, tool, rot, corner, z, racks, layout.cells, facing)
+      : null;
+    if (support?.items.some((item) => isRackTopItem(item, support.heightU))) {
+      return { z: null, support };
+    }
+    return { z, support };
   }
 
   // An armed picker card places on any cell click: objects land on racks too
@@ -326,37 +380,68 @@ export function ServerRoomFloorPlan({
     if (!editMode || !armed) return;
     const cell = cellFromEvent(event);
     if (placeRackId != null) {
+      if (pendingFacing?.kind === "rack") {
+        const nextFacing = facingForPending(event, pendingFacing);
+        if (layout.cells[placeRackId]) {
+          setPendingFacing(null);
+          setHover(null);
+          onPlacementChange?.(moveIsoRack(grid, placeRackId, pendingFacing.cell));
+          onFacingChange?.({ ...facing, [placeRackId]: nextFacing });
+          onRackPlaced?.();
+        }
+        return;
+      }
       if (wallOccupiesCell(cell, objects)) {
         onObjectBlocked?.();
         return;
       }
-      if (layout.cells[placeRackId]) {
-        onPlacementChange?.(moveIsoRack(grid, placeRackId, cell));
-        onRackPlaced?.();
-      }
+      setPendingFacing({ kind: "rack", cell, facing: 0 });
+      setHover({ ...cell, corner: 0 });
       return;
     }
     if (tool == null || !onObjectsChange) return;
+    if (pendingFacing?.kind === "object") {
+      const nextFacing = facingForPending(event, pendingFacing);
+      const candidate = resolveObjectPlacement(
+        pendingFacing.cell,
+        pendingFacing.corner,
+        nextFacing,
+      );
+      if (candidate.z == null) {
+        onObjectBlocked?.();
+        return;
+      }
+      if (tool === "kuaikuai" && candidate.support && onPlaceKuaiguai) {
+        if (!onPlaceKuaiguai(candidate.support, pendingFacing.corner, nextFacing)) {
+          onObjectBlocked?.();
+          return;
+        }
+      } else {
+        onObjectsChange([
+          ...objects,
+          {
+            id: crypto.randomUUID(),
+            kind: tool,
+            x: pendingFacing.cell.x,
+            y: pendingFacing.cell.y,
+            z: candidate.z,
+            rot: nextFacing,
+            corner: pendingFacing.corner,
+          },
+        ]);
+      }
+      setPendingFacing(null);
+      setHover(null);
+      onObjectPlaced?.();
+      return;
+    }
     const corner = objectSpec(tool).quarter ? cornerFromEvent(event, cell) : (0 as Corner);
-    const spans = footprintSpans(cell, tool, 0, racks, layout.cells, objects, undefined, corner, facing);
-    const z = resolveDropZ(spans, tool);
-    if (z == null) {
+    if (resolveObjectPlacement(cell, corner, 0).z == null) {
       onObjectBlocked?.();
       return;
     }
-    if (tool === "kuaikuai" && onPlaceKuaiguai) {
-      const support = rackTopSupport(cell, tool, 0, corner, z, racks, layout.cells, facing);
-      if (support) {
-        if (onPlaceKuaiguai(support, corner)) onObjectPlaced?.();
-        else onObjectBlocked?.();
-        return;
-      }
-    }
-    onObjectsChange([
-      ...objects,
-      { id: crypto.randomUUID(), kind: tool, x: cell.x, y: cell.y, z, rot: 0, corner },
-    ]);
-    onObjectPlaced?.();
+    setPendingFacing({ kind: "object", cell, corner, facing: 0 });
+    setHover({ ...cell, corner });
   }
 
   function selectRack(rackId: string) {
@@ -429,7 +514,7 @@ export function ServerRoomFloorPlan({
               }}
               onClick={placeAt}
               onPointerMove={placing ? trackPlacement : undefined}
-              onPointerLeave={placing ? () => setHover(null) : undefined}
+              onPointerLeave={placing && !pendingFacing ? () => setHover(null) : undefined}
               onContextMenu={placing ? cancelPlacement : undefined}
             >
               {drag ? (
@@ -501,45 +586,37 @@ export function ServerRoomFloorPlan({
                   }
                 />
               ))}
-              {placing && hover
+              {placing && (pendingFacing ?? hover)
                 ? (() => {
-                    // Realtime placement preview under the cursor: the armed
-                    // fixture's plan artwork on its slot — the hovered cell
-                    // quadrant for a quarter-block fixture, the covered cell
-                    // span otherwise — red when no vertical span is free.
-                    // The pending rack previews at its depth, front flush.
+                    const preview = pendingFacing ?? {
+                      kind: tool != null ? "object" as const : "rack" as const,
+                      cell: hover!,
+                      corner: hover!.corner,
+                      facing: 0 as Facing,
+                    };
+                    const previewCorner = preview.kind === "object" ? preview.corner : (0 as Corner);
+                    const previewFacing = preview.facing;
                     const spec = tool != null ? objectSpec(tool) : null;
                     const blocked = placeRackId != null
-                      ? wallOccupiesCell(hover, objects)
-                      : tool != null &&
-                        (() => {
-                          const z = resolveDropZ(
-                            footprintSpans(hover, tool, 0, racks, layout.cells, objects, undefined, hover.corner, facing),
-                            tool,
-                          );
-                          if (z == null) return true;
-                          if (tool !== "kuaikuai") return false;
-                          // A rack-top drop becomes the rack's single top item.
-                          const support = rackTopSupport(hover, tool, 0, hover.corner, z, racks, layout.cells, facing);
-                          return !!support && support.items.some((item) => isRackTopItem(item, support.heightU));
-                        })();
-                    const span = tool != null ? objectCellSpan(tool, 0) : { w: 1, h: 1 };
-                    const slot = spec?.quarter
-                      ? {
-                          left:
-                            (hover.x + (hover.corner === 1 || hover.corner === 2 ? 0.5 : 0)) *
-                            cellW,
-                          top: (hover.y + (hover.corner >= 2 ? 0.5 : 0)) * cellH,
-                          width: cellW / 2,
-                          height: cellH / 2,
-                        }
-                      : {
-                          left: hover.x * cellW,
-                          top: hover.y * cellH,
-                          width: span.w * cellW,
-                          height: span.h * cellH,
-                        };
-                    const pending = racks.find((entry) => entry.id === placeRackId);
+                      ? wallOccupiesCell(preview.cell, objects)
+                      : tool != null && resolveObjectPlacement(
+                          preview.cell,
+                          previewCorner,
+                          previewFacing,
+                        ).z == null;
+                    const pendingRack = racks.find((entry) => entry.id === placeRackId);
+                    const fp = tool != null
+                      ? objectFootprint(tool, previewFacing, previewCorner)
+                      : rackFootprint(
+                          previewFacing,
+                          rackDepthFrac(pendingRack?.depthMm ?? 1000),
+                        );
+                    const slot = {
+                      left: (preview.cell.x + fp.x) * cellW,
+                      top: (preview.cell.y + fp.y) * cellH,
+                      width: fp.w * cellW,
+                      height: fp.d * cellH,
+                    };
                     return (
                       <div
                         className={`rm-bp-ghost${blocked ? " blocked" : ""}`}
@@ -554,10 +631,9 @@ export function ServerRoomFloorPlan({
                           <span
                             className="rm-bp-ghost-item"
                             style={{
-                              // The wall glyph draws its run inside a whole
-                              // square cell; other kinds size to footprint.
-                              width: tool === "wall" ? Math.round(cellW) : Math.round(spec.wide * cellW),
-                              height: tool === "wall" ? Math.round(cellH) : Math.round(spec.deep * cellH),
+                              width: Math.round(spec.wide * cellW),
+                              height: Math.round(spec.deep * cellH),
+                              transform: `rotate(${previewFacing * 90}deg)`,
                             }}
                           >
                             <RoomObjectPlanArtwork kind={tool} />
@@ -566,15 +642,14 @@ export function ServerRoomFloorPlan({
                           <span
                             className="rm-bp-ghost-rack"
                             style={{
-                              width: cellW,
-                              height: Math.round(
-                                cellH * rackDepthFrac(pending?.depthMm ?? 1000),
-                              ),
-                              alignSelf: "flex-end",
+                              width: "100%",
+                              height: "100%",
                             }}
                           />
                         )}
-                        <RoomPlacementFacingArrow facing={0} />
+                        {pendingFacing ? (
+                          <RoomPlacementFacingArrow facing={previewFacing} />
+                        ) : null}
                       </div>
                     );
                   })()
@@ -597,7 +672,7 @@ export function ServerRoomFloorPlan({
         tool={tool}
         rackArmed={placeRackId != null}
         variant="floor"
-        snapped={hover != null}
+        snapped={pendingFacing != null || hover != null}
       />
     </div>
   );
@@ -687,6 +762,7 @@ function BlueprintRack({
               {
                 left: `${topKuaiguaiPoint.x * 100}%`,
                 top: `${topKuaiguaiPoint.y * 100}%`,
+                transform: `translate(-50%, -50%) rotate(${sanitizeFacing(topKuaiguai.metadata?.rackTopFacing) * 90}deg)`,
                 "--obj": OBJECT_ACCENTS.kuaikuai,
               } as React.CSSProperties
             }

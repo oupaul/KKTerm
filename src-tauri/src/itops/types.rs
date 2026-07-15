@@ -651,6 +651,9 @@ pub struct RackItemMetadata {
     /// Optional Server Room rack-top corner (clockwise 0=NW..3=SW).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub rack_top_corner: Option<u8>,
+    /// Optional Server Room rack-top facing (0=+y, 1=-x, 2=-y, 3=+x).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rack_top_facing: Option<u8>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub vendor: Option<String>,
     /// Server chassis presentation ("rack" | "tower").

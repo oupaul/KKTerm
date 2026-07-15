@@ -190,7 +190,7 @@ test("IT Ops page-root layout stays off dialog backdrops and edit-mode dot grids
   );
 });
 
-test("Armed placement previews a cursor-snapped ghost and supports continuous Walls", async () => {
+test("Armed placement uses two clicks for position and facing and supports continuous Walls", async () => {
   const sites = await read("src/modules/itops/SitesTab.tsx");
   const floorPlan = await read("src/modules/itops/ServerRoomFloorPlan.tsx");
   const isoView = await read("src/modules/itops/ServerRoomIsoView.tsx");
@@ -206,11 +206,15 @@ test("Armed placement previews a cursor-snapped ghost and supports continuous Wa
     assert.match(view, /onCancelPlacement\?: \(\) => void/);
     assert.match(view, /onObjectPlaced\?: \(\) => void/);
     assert.match(view, /onObjectPlaced\?\.\(\)/);
-    assert.match(view, /useRoomPlacementPointer\(placing, onCancelPlacement, scrollRef\)/);
+    assert.match(view, /useRoomPlacementPointer\(placing, cancelArmedPlacement, scrollRef\)/);
     assert.match(view, /<RoomPlacementCursorGhost/);
     assert.match(view, /<RoomPlacementFacingArrow/);
+    assert.match(view, /PendingFacingPlacement/);
+    assert.match(view, /setPendingFacing\(\{ kind: "rack", cell, facing: 0 \}\)/);
+    assert.match(view, /setPendingFacing\(\{ kind: "object", cell, corner, facing: 0 \}\)/);
+    assert.match(view, /onFacingChange\?\.\(\{ \.\.\.facing, \[placeRackId\]: nextFacing \}\)/);
     assert.match(view, /onContextMenu=\{/);
-    assert.match(view, /resolveDropZ\(\s*footprintSpans\(\s*hover,\s*tool,\s*0/);
+    assert.match(view, /resolveDropZ\(\s*footprintSpans\(cell, tool, rot/);
     assert.match(view, /if \(wallOccupiesCell\(state\.target, objects\)\) onObjectBlocked\?\.\(\)/);
     assert.match(view, /if \(wallOccupiesCell\(cell, objects\)\) \{/);
   }
@@ -231,6 +235,7 @@ test("Armed placement previews a cursor-snapped ghost and supports continuous Wa
   assert.match(css, /\.rm-iso-drop\.blocked/);
   assert.match(css, /\.rm-placement-facing-arrow/);
   assert.match(css, /--placement-facing-angle/);
+  assert.match(css, /--placement-facing-x/);
   assert.match(css, /\.rm-cursor-ghost \{/);
 });
 

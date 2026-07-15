@@ -21,6 +21,7 @@ import {
 } from "../src/modules/itops/roomObjects";
 import {
   cornerFromDisplayPoint,
+  facingFromPoint,
   rackTopCornerPoint,
   rotateCellForView,
   rotateFacingForView,
@@ -391,6 +392,14 @@ test("view rotation maps cells, facings, and grid size consistently", () => {
   assert.deepEqual({ dx: b.x - a.x, dy: b.y - a.y }, { dx: 0, dy: 1 });
   assert.equal(rotateFacingForView(0, 1), 1);
   assert.equal(rotateFacingForView(3, 1), 0);
+});
+
+test("pointer position selects the nearest of four placement facings", () => {
+  const center = { x: 10, y: 10 };
+  assert.equal(facingFromPoint({ x: 10, y: 18 }, center), 0);
+  assert.equal(facingFromPoint({ x: 2, y: 10 }, center), 1);
+  assert.equal(facingFromPoint({ x: 10, y: 2 }, center), 2);
+  assert.equal(facingFromPoint({ x: 18, y: 10 }, center), 3);
 });
 
 test("viewDeltaToGrid inverts the display-space drag for every angle", () => {

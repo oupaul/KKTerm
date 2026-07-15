@@ -429,10 +429,12 @@ Excel-readable inventory table.
 An empty Server Room uses explanatory guidance with an inline New Rack action.
 An empty Rack uses an inline Edit mode action that reveals the Rack Device
 picker.
-In the Server Room floor-plan and 2.5D object picker, a successfully placed Wall
-remains armed for continuous placement. Every snapped fixture or Rack preview
-shows a high-contrast facing arrow that follows the 2.5D view angle and turns
-red with the blocked target. A Wall reserves its entire logical grid cell even
+In the Server Room floor-plan and 2.5D object picker, Rack and fixture placement
+uses two clicks: the first locks the floor position, moving the pointer selects
+one of four facings with a high-contrast arrow on that side, and the second
+commits both position and facing. The arrow follows the 2.5D view angle and
+turns red when the selected facing cannot fit. A successfully placed Wall
+remains armed for continuous placement. A Wall reserves its entire logical grid cell even
 though its construction is drawn as a thin segment: Rack and object placement
 or dragging cannot enter that cell, and a Wall cannot replace any occupant.
 The Rack hover detail card shared by both spatial views mounts outside their

@@ -5260,12 +5260,13 @@
   opacity: 0.75;
 }
 
-/* Snapped placement ghosts carry an explicit facing arrow. Facing 0 points
-   south/down; quarter turns follow the shared Rack/Object Facing numbering. */
+/* After a placement's first click, its facing arrow moves around the four
+   sides of the locked footprint. Facing 0 points south/down; quarter turns
+   follow the shared Rack/Object Facing numbering. */
 .itops-page .rm-placement-facing-arrow {
   position: absolute;
-  left: 50%;
-  top: 50%;
+  left: var(--placement-facing-x);
+  top: var(--placement-facing-y);
   width: 22px;
   height: 28px;
   border: 1px solid color-mix(in srgb, var(--accent) 72%, var(--border));
@@ -5299,7 +5300,7 @@
   border-right: 5.5px solid transparent;
   border-left: 5.5px solid transparent;
 }
-.itops-page .blocked > .rm-placement-facing-arrow {
+.itops-page .blocked .rm-placement-facing-arrow {
   border-color: color-mix(in srgb, var(--red) 72%, var(--border));
   color: var(--red);
 }
@@ -6320,22 +6321,6 @@
   line-height: 1.2;
   text-overflow: ellipsis;
   white-space: nowrap;
-  transform-origin: center;
-  pointer-events: none;
-}
-.itops-page .rm-iso-front-marker {
-  position: absolute;
-  left: 50%;
-  top: 24%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--accent) 76%, var(--surface));
-  color: var(--accent-contrast, white);
-  box-shadow: 0 1px 4px rgb(0 0 0 / 34%);
   transform-origin: center;
   pointer-events: none;
 }

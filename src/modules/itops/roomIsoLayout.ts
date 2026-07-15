@@ -377,6 +377,18 @@ export function rotateFacingForView(facing: Facing, angle: IsoViewAngle): Facing
   return ((facing + angle) % 4) as Facing;
 }
 
+/** Pick the nearest quarter-turn direction from an origin toward a pointer.
+ *  Facing numbering follows the room grid: 0 = +y, 1 = -x, 2 = -y, 3 = +x. */
+export function facingFromPoint(
+  point: { x: number; y: number },
+  origin: { x: number; y: number },
+): Facing {
+  const dx = point.x - origin.x;
+  const dy = point.y - origin.y;
+  if (Math.abs(dx) > Math.abs(dy)) return dx < 0 ? 1 : 3;
+  return dy < 0 ? 2 : 0;
+}
+
 /** Invert `rotateCellForView` for a displacement (drag delta) in cells/px. */
 export function viewDeltaToGrid(
   du: number,

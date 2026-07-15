@@ -53,6 +53,13 @@ export function RoomPlacementFacingArrow({
   /** 2.5D height above the floor plane; omitted in the top-down plan. */
   liftPx?: number;
 }) {
+  const positions = [
+    { x: "50%", y: "calc(100% + 15px)" },
+    { x: "-15px", y: "50%" },
+    { x: "50%", y: "-15px" },
+    { x: "calc(100% + 15px)", y: "50%" },
+  ] as const;
+  const position = positions[facing];
   return (
     <span
       aria-hidden="true"
@@ -60,6 +67,8 @@ export function RoomPlacementFacingArrow({
       style={
         {
           "--placement-facing-angle": `${facing * 90}deg`,
+          "--placement-facing-x": position.x,
+          "--placement-facing-y": position.y,
           ...(liftPx == null ? {} : { "--placement-facing-lift": `${liftPx}px` }),
         } as CSSProperties
       }
@@ -655,15 +664,15 @@ export function ObjectGlyph({ kind, size = 14 }: { kind: RoomObjectKind; size?: 
 
 // ── Edit-mode object picker ──
 
-/** The armed placement tool: null = move/select, or the object kind the next
- *  cell click will place. */
+/** The armed placement tool: null = move/select, or the object kind whose next
+ *  two clicks choose position and facing. */
 export type RoomTool = RoomObjectKind | null;
 
 /** Full-height right-side picker column shown while editing a spatial room
  *  view: a search box over a grid of preview cards — Racks first, then every
- *  room-object kind. Clicking a card arms it; floor-cell clicks place it under
- *  the cursor. Racks have properties, so the Rack card opens the New Rack
- *  dialog first and the created rack is placed by the following click. */
+ *  room-object kind. Clicking a card arms it; the first floor click locks its
+ *  position and the second confirms its facing. Racks have properties, so the
+ *  Rack card opens the New Rack dialog before the same two-click flow. */
 export function RoomObjectPicker({
   tool,
   onToolChange,

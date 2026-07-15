@@ -59,7 +59,7 @@ import {
   type DrillPath,
   type ServerRoomGroup,
 } from "./rackTopology";
-import { resolveIsoLayout, sanitizeFacing, type Corner } from "./roomIsoLayout";
+import { resolveIsoLayout, sanitizeFacing, type Corner, type Facing } from "./roomIsoLayout";
 import { ItOpsBackground } from "./ItOpsBackground";
 import { ItOpsEmptyHint } from "./ItOpsEmptyHint";
 import { RackStage } from "./RackStage";
@@ -1654,7 +1654,7 @@ function RackDrill({
   const placeRackItemAction = useItOpsStore((state) => state.placeRackItem);
   const kuaiguaiPlacingRef = useRef<Set<string>>(new Set());
   const placeKuaiguaiOnRack = useCallback(
-    (target: Rack, corner?: Corner): boolean => {
+    (target: Rack, corner?: Corner, facing?: Facing): boolean => {
       if (
         kuaiguaiPlacingRef.current.has(target.id) ||
         target.items.some((item) => isRackTopItem(item, target.heightU))
@@ -1674,6 +1674,7 @@ function RackDrill({
           kuaiguaiSize: "large",
           kuaiguaiStyle: "full",
           rackTopCorner: corner,
+          rackTopFacing: facing,
         },
       })
         .catch((error: unknown) => {

@@ -326,6 +326,8 @@ export interface RackItemMetadata {
   kuaiguaiStyle?: "full" | "laidDown" | null;
   /** Optional rack-top corner selected in a Server Room spatial view. */
   rackTopCorner?: 0 | 1 | 2 | 3 | null;
+  /** Optional rack-top facing selected by the spatial two-click placement flow. */
+  rackTopFacing?: 0 | 1 | 2 | 3 | null;
   /** Hardware model used for the graphical device preview, e.g. Dell 740XD. */
   vendor?: string | null;
   /** Server chassis presentation. Tower servers render at half rack width. */

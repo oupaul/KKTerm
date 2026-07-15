@@ -100,6 +100,7 @@ pub fn normalize_metadata(mut metadata: RackItemMetadata) -> RackItemMetadata {
     // A 0 W draw carries no information for the power heatmap; store as unset.
     metadata.power_w = metadata.power_w.filter(|watts| *watts > 0);
     metadata.rack_top_corner = metadata.rack_top_corner.filter(|corner| *corner <= 3);
+    metadata.rack_top_facing = metadata.rack_top_facing.filter(|facing| *facing <= 3);
 
     metadata
 }
@@ -119,7 +120,8 @@ mod inventory_tests {
             "vendor": "Dell",
             "formFactor": "tower",
             "serverPanelStyle": "style1",
-            "rackTopCorner": 3
+            "rackTopCorner": 3,
+            "rackTopFacing": 1
         }))
         .expect("legacy metadata should deserialize");
 
@@ -133,5 +135,6 @@ mod inventory_tests {
         assert_eq!(normalized.form_factor.as_deref(), Some("tower"));
         assert_eq!(normalized.server_panel_style.as_deref(), Some("style1"));
         assert_eq!(normalized.rack_top_corner, Some(3));
+        assert_eq!(normalized.rack_top_facing, Some(1));
     }
 }

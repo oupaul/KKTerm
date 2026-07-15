@@ -206,6 +206,7 @@ export function RackItemDialog({
           kuaiguaiSize,
           kuaiguaiStyle,
           rackTopCorner: initialMetadata.rackTopCorner,
+          rackTopFacing: initialMetadata.rackTopFacing,
         }
       : {}),
     ...(showsPorts(kind) ? { ports } : {}),

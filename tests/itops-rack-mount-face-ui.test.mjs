@@ -64,5 +64,5 @@ test("Rack View and 2.5D render independent front and rear faces", async () => {
   assert.match(stage, /className="rk-balloon-notes"/);
   assert.match(iso, /<IsoRackSkin rack=\{rack\} axis="[xy]" face="front"/);
   assert.match(iso, /<IsoRackSkin rack=\{rack\} axis="[xy]" face="rear"/);
-  assert.match(iso, /rm-iso-front-marker/);
+  assert.doesNotMatch(iso, /rm-iso-front-marker/);
 });
