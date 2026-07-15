@@ -2835,29 +2835,33 @@
 .itops-page .rk-pill.off .dot {
   background: var(--red);
 }
-.itops-page .rk-face-toggle {
+.itops-page .rk-cabinet-flip {
+  position: absolute;
+  right: 8px;
+  bottom: calc(100% + 5px);
+  z-index: 12;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  height: 24px;
-  padding: 0 7px;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
   border: 0.5px solid var(--border);
-  border-radius: 6px;
-  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
   color: var(--text-muted);
-  font: inherit;
-  font-size: 9.5px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
   cursor: pointer;
+  box-shadow: var(--shadow-control);
+  backdrop-filter: blur(8px);
+  transition: background 0.14s, border-color 0.14s, color 0.14s, transform 0.14s;
 }
-.itops-page .rk-face-toggle:hover {
+.itops-page .rk-cabinet-flip:hover {
   background: var(--hover);
-  color: var(--text);
+  border-color: color-mix(in srgb, var(--accent) 48%, var(--border));
+  color: var(--accent);
+  transform: scale(1.05);
 }
-.itops-page .rk-face-toggle:focus-visible,
-.itops-page .rack-face-global-control button:focus-visible,
+.itops-page .rk-cabinet-flip:focus-visible,
 .rack-mount-face-segmented button:focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 1px;
@@ -2894,6 +2898,9 @@
 .itops-page .rk-cabinet {
   position: relative;
   margin-top: var(--rk-top-clearance, 0px);
+}
+.itops-page .rk.has-face-toggle .rk-cabinet {
+  margin-top: max(var(--rk-top-clearance, 0px), 34px);
 }
 .itops-page .rk-top-area {
   position: absolute;
@@ -4952,10 +4959,11 @@
   gap: 42px;
 }
 .itops-page .rk-stage.dual-face {
-  padding-inline: 18px;
+  min-width: 980px;
+  padding-inline: 32px;
 }
 .itops-page .rk-stage.dual-face .rk-stage-racks {
-  gap: 30px;
+  gap: clamp(72px, 8vw, 132px);
 }
 .itops-page .rk-stage-rack {
   flex: 0 0 auto;
@@ -5051,11 +5059,31 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.itops-page .rk-balloon-meta > span,
+.itops-page .rk-balloon-notes {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.itops-page .rk-balloon-meta .model {
+  flex: 1 1 auto;
+  color: var(--text-muted);
+}
 .itops-page .rk-balloon-meta .host {
+  flex: 0 1 auto;
   font-family: var(--app-mono-font-family, monospace);
 }
 .itops-page .rk-balloon-meta .spec {
+  flex: 0 1 auto;
   color: var(--text-faint);
+}
+.itops-page .rk-balloon-notes {
+  display: block;
+  max-width: 100%;
+  color: var(--text-faint);
+  font-size: 10px;
+  line-height: 1.25;
+  white-space: nowrap;
 }
 
 /* Server-room rack groups: labeled sections in the room view. */
@@ -5145,44 +5173,6 @@
   position: static;
   transform: none;
 }
-.itops-page .rack-face-global-control {
-  display: inline-flex;
-  align-items: center;
-  height: 24px;
-  padding: 0 2px 0 7px;
-  border: 0.5px solid var(--border);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--surface) 88%, transparent);
-  box-shadow: var(--shadow-control);
-  white-space: nowrap;
-}
-.itops-page .rack-face-global-control > span {
-  margin-right: 5px;
-  color: var(--text-faint);
-  font-size: 9.5px;
-  font-weight: 650;
-}
-.itops-page .rack-face-global-control button {
-  height: 20px;
-  padding: 0 7px;
-  border: 0;
-  border-radius: 5px;
-  background: transparent;
-  color: var(--text-muted);
-  font: inherit;
-  font-size: 10.5px;
-  font-weight: 600;
-  cursor: pointer;
-}
-.itops-page .rack-face-global-control button:hover {
-  color: var(--text);
-  background: var(--hover);
-}
-.itops-page .rack-face-global-control button[data-active="true"] {
-  color: var(--accent);
-  background: var(--accent-soft);
-}
-
 .itops-page .rm-bp-wrap {
   display: flex;
   flex-direction: column;

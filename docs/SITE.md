@@ -112,9 +112,12 @@ Replaces the **Host Group** entry in `CONTEXT.md`; adds the rest. Follows the
   `itops_site_racks`. _Avoid_: cabinet group, shelf.
 - **Rack View** — the single-Rack drill-down stage. It centers one mounting
   face when only that face is occupied and shows labeled Front and Rear
-  elevations side by side when both are occupied (and while editing). It is the
-  place where a user opens or edits a Rack Device. _Avoid_: floor plan,
-  topology graph.
+  elevations side by side when both are occupied (and while editing). Dual-face
+  callouts use separate outer lanes—Front on the left and Rear on the right—so
+  leaders never cross between cabinets; they include truncated model/notes
+  metadata. A rack-top 乖乖 renders the artwork appropriate to both visible
+  faces but owns one face-neutral callout. It is the place where a user opens
+  or edits a Rack Device. _Avoid_: floor plan, topology graph.
 - **Rack Device** — one device occupying a contiguous
   `start_u..start_u+height_u` span on a Rack's Front or Rear mounting face.
   Occupancy is validated independently per face. Either **Connection-backed**

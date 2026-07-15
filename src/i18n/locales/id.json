@@ -1228,7 +1228,7 @@
       "unitCount": "{{count}}U",
       "deviceCount": "{{count}} perangkat",
       "faceDeviceCount": "{{face}} · {{count}} perangkat",
-      "allRackFacesLabel": "Semua rak",
+      "allRackFacesLabel": "Balikkan semua rak",
       "viewFaceLabel": "Sisi rak",
       "showFace": "Tampilkan {{face}}",
       "mountingSideLabel": "Sisi pemasangan",
@@ -4400,6 +4400,7 @@
     "workspaceCreated": "Ruang kerja \"{{name}}\" dibuat",
     "fileViewer": {
       "loading": "Memuat…",
+      "largeTextLoadFailed": "Could not load the complete large file.",
       "noFile": "Tidak ada file yang dipilih untuk Connection Dokumen ini.",
       "truncated": "File ini besar; menampilkan pratinjau sebagian.",
       "invalidJson": "JSON tidak valid; menampilkan teks mentah.",

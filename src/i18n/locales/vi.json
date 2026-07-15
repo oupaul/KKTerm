@@ -1228,7 +1228,7 @@
       "unitCount": "{{count}}U",
       "deviceCount": "{{count}} thiết bị",
       "faceDeviceCount": "{{face}} · {{count}} thiết bị",
-      "allRackFacesLabel": "Tất cả tủ rack",
+      "allRackFacesLabel": "Lật tất cả tủ rack",
       "viewFaceLabel": "Mặt tủ rack",
       "showFace": "Hiện mặt {{face}}",
       "mountingSideLabel": "Mặt lắp đặt",
@@ -4400,6 +4400,7 @@
     "workspaceCreated": "Đã tạo không gian làm việc \"{{name}}\"",
     "fileViewer": {
       "loading": "Đang tải…",
+      "largeTextLoadFailed": "Could not load the complete large file.",
       "noFile": "Chưa chọn tệp nào cho Connection Tài liệu này.",
       "truncated": "Tệp này lớn; đang hiển thị bản xem trước một phần.",
       "invalidJson": "JSON không hợp lệ; đang hiển thị văn bản thô.",

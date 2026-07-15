@@ -4712,7 +4712,9 @@ mod tests {
                 session_id: "session-browser".to_string(),
                 connection_id: "conn-1234567890abcdef".to_string(),
                 connection_name: "Prod East".to_string(),
-                initial_buffer: "$ sudo systemctl restart nginx\n".to_string(),
+                initial_buffer: "$ sudo systemctl restart nginx\r\n".to_string(),
+                rows: Some(24),
+                cols: Some(80),
             })
             .expect("recording starts");
         for index in 0..500 {
@@ -4720,9 +4722,9 @@ mod tests {
                 .record_output(
                     "session-browser",
                     &format!(
-                        "line {index}\n{}",
+                        "line {index}\r\n{}",
                         if index == 410 {
-                            "ERROR upstream timed out\n"
+                            "ERROR upstream timed out\r\n"
                         } else {
                             ""
                         }

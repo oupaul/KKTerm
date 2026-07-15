@@ -108,7 +108,7 @@ export function RackElevation({
   onCancelPlacement?: () => void;
   /** Cabinet mounting plane currently presented by this elevation. */
   face?: RackMountFace;
-  /** Optional per-rack face switch shown in the elevation header. */
+  /** Optional per-rack face switch shown at the cabinet's top-right corner. */
   onToggleFace?: () => void;
 }) {
   const { t } = useTranslation();
@@ -260,16 +260,20 @@ export function RackElevation({
   // Top-to-bottom U numbers: heightU … 1.
   const unitNumbers = Array.from({ length: rack.heightU }, (_, i) => rack.heightU - i);
 
-  // Status tallies for the header pills (passive items default to online).
+  // Status tallies describe the whole cabinet, independent of which mounting
+  // face is currently visible. Rack-top packages are not cabinet devices.
   let online = 0;
   let warning = 0;
   let offline = 0;
+  const allCabinetItems = rack.items.filter(
+    (item) => !isRackTopItem(item, rack.heightU),
+  );
   const visibleItems = rack.items.filter(
     (item) =>
       (showRackTop && isRackTopItem(item, rack.heightU)) ||
       (!isRackTopItem(item, rack.heightU) && (item.mountFace ?? "front") === displayFace),
   );
-  for (const item of visibleItems.filter((entry) => !isRackTopItem(entry, rack.heightU))) {
+  for (const item of allCabinetItems) {
     const s = itemStatus(item);
     if (s === "warning") warning += 1;
     else if (s === "offline") offline += 1;
@@ -299,7 +303,7 @@ export function RackElevation({
 
   return (
     <div
-      className={`rk${detailed ? " rk-detailed" : ""}${topClearanceU > 0 ? " has-top-item" : ""}${turning ? " face-turning" : ""}`}
+      className={`rk${detailed ? " rk-detailed" : ""}${topClearanceU > 0 ? " has-top-item" : ""}${onToggleFace ? " has-face-toggle" : ""}${turning ? " face-turning" : ""}`}
       data-shell={cabShell}
       data-face={displayFace}
       data-rack-id={rack.id}
@@ -322,7 +326,7 @@ export function RackElevation({
               : ""}
           </span>
         </div>
-        {cabinetItems.length > 0 ? (
+        {allCabinetItems.length > 0 ? (
           <div className="rk-pills">
             <span className="rk-pill on" title={t("itops.racks.status.online")}>
               <span className="dot" />
@@ -341,19 +345,6 @@ export function RackElevation({
               </span>
             ) : null}
           </div>
-        ) : null}
-        {onToggleFace ? (
-          <button
-            type="button"
-            className="rk-face-toggle"
-            aria-label={t("itops.racks.showFace", {
-              face: t(`itops.racks.face.${displayFace === "front" ? "rear" : "front"}`),
-            })}
-            onClick={onToggleFace}
-          >
-            <span>{t(`itops.racks.face.${displayFace}`)}</span>
-            <ItIcon name="rerun" size={11} />
-          </button>
         ) : null}
         {onRunRack ? (
           <button
@@ -388,6 +379,21 @@ export function RackElevation({
       </div> : null}
 
       <div className="rk-cabinet">
+        {onToggleFace ? (
+          <button
+            type="button"
+            className="rk-cabinet-flip"
+            title={t("itops.racks.showFace", {
+              face: t(`itops.racks.face.${displayFace === "front" ? "rear" : "front"}`),
+            })}
+            aria-label={t("itops.racks.showFace", {
+              face: t(`itops.racks.face.${displayFace === "front" ? "rear" : "front"}`),
+            })}
+            onClick={onToggleFace}
+          >
+            <ItIcon name="rerun" size={14} />
+          </button>
+        ) : null}
         <div
           className={`rk-top-area${canMove ? " drop-target" : ""}`}
           onDragOver={canMove ? (event) => {
@@ -425,6 +431,7 @@ export function RackElevation({
                   yaw={item.metadata?.yaw ?? null}
                   kuaiguaiSize={item.metadata?.kuaiguaiSize ?? null}
                   kuaiguaiStyle={item.metadata?.kuaiguaiStyle ?? null}
+                  face={displayFace}
                   notes={item.metadata?.notes ?? null}
                   formFactor={item.metadata?.formFactor ?? null}
                   serverPanelStyle={item.metadata?.serverPanelStyle ?? null}
@@ -460,6 +467,7 @@ export function RackElevation({
                 yaw={placeSpec.metadata?.yaw ?? null}
                 kuaiguaiSize={placeSpec.metadata?.kuaiguaiSize ?? null}
                 kuaiguaiStyle={placeSpec.metadata?.kuaiguaiStyle ?? null}
+                face={displayFace}
                 notes={placeSpec.metadata?.notes ?? null}
                 formFactor={placeSpec.metadata?.formFactor ?? null}
                 serverPanelStyle={placeSpec.metadata?.serverPanelStyle ?? null}
@@ -583,6 +591,7 @@ export function RackElevation({
                   yaw={item.metadata?.yaw ?? null}
                   kuaiguaiSize={item.metadata?.kuaiguaiSize ?? null}
                   kuaiguaiStyle={item.metadata?.kuaiguaiStyle ?? null}
+                  face={displayFace}
                   notes={item.metadata?.notes ?? null}
                   formFactor={item.metadata?.formFactor ?? null}
                   serverPanelStyle={item.metadata?.serverPanelStyle ?? null}
@@ -699,6 +708,7 @@ export function RackElevation({
                   yaw={placeSpec.metadata?.yaw ?? null}
                   kuaiguaiSize={placeSpec.metadata?.kuaiguaiSize ?? null}
                   kuaiguaiStyle={placeSpec.metadata?.kuaiguaiStyle ?? null}
+                  face={displayFace}
                   notes={placeSpec.metadata?.notes ?? null}
                   formFactor={placeSpec.metadata?.formFactor ?? null}
                   serverPanelStyle={placeSpec.metadata?.serverPanelStyle ?? null}
@@ -773,6 +783,7 @@ export function RackElevation({
                 yaw={placeSpec.metadata?.yaw ?? null}
                 kuaiguaiSize={placeSpec.metadata?.kuaiguaiSize ?? null}
                 kuaiguaiStyle={placeSpec.metadata?.kuaiguaiStyle ?? null}
+                face={displayFace}
                 notes={placeSpec.metadata?.notes ?? null}
                 formFactor={placeSpec.metadata?.formFactor ?? null}
                 serverPanelStyle={placeSpec.metadata?.serverPanelStyle ?? null}

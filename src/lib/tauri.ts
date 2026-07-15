@@ -395,6 +395,24 @@ export interface FileViewText {
   detectedEncoding: string;
 }
 
+export interface FileViewTextIndex {
+  totalSize: number;
+  totalLines: number;
+  lineStride: number;
+  checkpointOffsets: number[];
+  mtimeMs: number;
+  detectedEncoding: string;
+}
+
+export interface FileViewTextPage {
+  text: string;
+  startOffset: number;
+  endOffset: number;
+  totalSize: number;
+  mtimeMs: number;
+  detectedEncoding: string;
+}
+
 export interface FileViewBytes {
   base64: string;
   totalSize: number;
@@ -2543,6 +2561,16 @@ type CommandMap = {
   read_file_view_text: {
     args: { request: { path: string; maxBytes: number; fromEnd?: boolean; encoding?: string } };
     result: FileViewText;
+  };
+  index_file_view_text: {
+    args: { request: { path: string; encoding?: string } };
+    result: FileViewTextIndex;
+  };
+  read_file_view_text_page: {
+    args: {
+      request: { path: string; startOffset: number; endOffset: number; encoding?: string };
+    };
+    result: FileViewTextPage;
   };
   read_file_view_bytes: {
     args: { request: { path: string; offset: number; length: number } };

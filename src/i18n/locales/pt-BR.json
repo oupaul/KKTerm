@@ -1228,7 +1228,7 @@
       "unitCount": "{{count}}U",
       "deviceCount": "{{count}} dispositivos",
       "faceDeviceCount": "{{face}} · {{count}} dispositivos",
-      "allRackFacesLabel": "Todos os racks",
+      "allRackFacesLabel": "Virar todos os racks",
       "viewFaceLabel": "Face do rack",
       "showFace": "Mostrar {{face}}",
       "mountingSideLabel": "Face de montagem",
@@ -4400,6 +4400,7 @@
     "workspaceCreated": "Espaço de trabalho \"{{name}}\" criado",
     "fileViewer": {
       "loading": "Carregando…",
+      "largeTextLoadFailed": "Could not load the complete large file.",
       "noFile": "Nenhum arquivo selecionado para esta Connection de Documento.",
       "truncated": "Este arquivo é grande; mostrando uma pré-visualização parcial.",
       "invalidJson": "JSON inválido; exibindo texto bruto.",

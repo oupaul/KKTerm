@@ -1228,7 +1228,7 @@
       "unitCount": "{{count}}U",
       "deviceCount": "{{count}} 台のデバイス",
       "faceDeviceCount": "{{face}} · {{count}} 台のデバイス",
-      "allRackFacesLabel": "すべてのラック",
+      "allRackFacesLabel": "すべてのラックを反転",
       "viewFaceLabel": "ラック面",
       "showFace": "{{face}}を表示",
       "mountingSideLabel": "取り付け面",
@@ -4400,6 +4400,7 @@
     "workspaceCreated": "ワークスペース \"{{name}}\" を作成しました",
     "fileViewer": {
       "loading": "読み込み中…",
+      "largeTextLoadFailed": "Could not load the complete large file.",
       "noFile": "このドキュメント Connection に選択されたファイルはありません。",
       "truncated": "このファイルは大きいため、一部のプレビューを表示しています。",
       "invalidJson": "JSON が無効です。生テキストを表示します。",

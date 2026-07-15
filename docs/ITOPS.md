@@ -499,9 +499,12 @@ Automations (list/create/update/set-enabled/remove plus a one-shot
 (start/cancel/run-history/report). A successful mutating tool emits an
 `itops-changed` backend event that reloads the IT Ops store so the change
 appears without restart. The Rack Device placement schema includes
-`mountFace` (`front` or `rear`, default `front`) plus `kuaiguai`, and documents the rack-top virtual position
-(`startU = rack.heightU + 1`) plus expiry/style metadata, so assistant and
-built-in MCP calls preserve the same placement invariant as the UI.
+`mountFace` (`front` or `rear`, default `front`) plus `kuaiguai`; assistant
+requests for the back, backside, or rear explicitly map to `mountFace: "rear"`
+instead of the Rack's unrelated floor-plan facing. The schema documents the
+rack-top virtual position (`startU = rack.heightU + 1`) plus expiry/style
+metadata, so assistant and built-in MCP calls preserve the same placement
+invariant as the UI.
 
 Assistant-authored Batch Tasks (Task definitions, Automation `runBatch`
 payloads, ad-hoc run scripts) may never introduce sudo steps or

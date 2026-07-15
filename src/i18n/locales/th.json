@@ -1228,7 +1228,7 @@
       "unitCount": "{{count}}U",
       "deviceCount": "{{count}} อุปกรณ์",
       "faceDeviceCount": "{{face}} · {{count}} อุปกรณ์",
-      "allRackFacesLabel": "แร็คทั้งหมด",
+      "allRackFacesLabel": "พลิกแร็คทั้งหมด",
       "viewFaceLabel": "ด้านของแร็ค",
       "showFace": "แสดง{{face}}",
       "mountingSideLabel": "ด้านติดตั้ง",
@@ -4400,6 +4400,7 @@
     "workspaceCreated": "สร้างพื้นที่ทำงาน \"{{name}}\" แล้ว",
     "fileViewer": {
       "loading": "กำลังโหลด…",
+      "largeTextLoadFailed": "Could not load the complete large file.",
       "noFile": "ไม่ได้เลือกไฟล์สำหรับ Connection เอกสารนี้",
       "truncated": "ไฟล์นี้มีขนาดใหญ่; กำลังแสดงตัวอย่างบางส่วน",
       "invalidJson": "JSON ไม่ถูกต้อง; กำลังแสดงข้อความดิบ",

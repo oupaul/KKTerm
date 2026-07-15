@@ -1742,8 +1742,11 @@ function RackDrill({
 
   async function handleElevationContextMenu(event: ReactMouseEvent<HTMLDivElement>) {
     if (event.defaultPrevented) return;
+    // An armed placement owns right-click as Cancel. Let its document-level
+    // handler consume the event instead of opening the background picker.
+    if (placeDevice) return;
     const target = event.target as HTMLElement;
-    if (target.closest("[data-rack-id]")) return;
+    if (target.closest("[data-rack-id], .rm-picker")) return;
     event.preventDefault();
     await showNativeContextMenu(
       [
@@ -1973,26 +1976,6 @@ function RackDrill({
                   {t("itops.floorPlan.view25d")}
                 </button>
               </div>
-              {roomView === "elevation" ? (
-                <div
-                  className="rack-face-global-control"
-                  role="group"
-                  aria-label={t("itops.racks.allRackFacesLabel")}
-                >
-                  <span>{t("itops.racks.allRackFacesLabel")}</span>
-                  {(["front", "rear"] as const).map((face) => (
-                    <button
-                      key={face}
-                      type="button"
-                      aria-pressed={globalElevationFace === face}
-                      data-active={globalElevationFace === face || undefined}
-                      onClick={() => setAllElevationFaces(face)}
-                    >
-                      {t(`itops.racks.face.${face}`)}
-                    </button>
-                  ))}
-                </div>
-              ) : null}
             </div>
           ) : null}
           {rack ? (
@@ -2017,6 +2000,20 @@ function RackDrill({
                 onClick={autoOrganizeSiteRooms}
               >
                 <ItIcon name="grid" size={15} />
+              </button>
+            ) : null}
+            {serverRoom && !rack && roomView === "elevation" ? (
+              <button
+                type="button"
+                className="it-drill-action rack-flip-all-action"
+                title={t("itops.racks.allRackFacesLabel")}
+                aria-label={t("itops.racks.allRackFacesLabel")}
+                data-face={globalElevationFace ?? "mixed"}
+                onClick={() =>
+                  setAllElevationFaces(globalElevationFace === "front" ? "rear" : "front")
+                }
+              >
+                <ItIcon name="rerun" size={15} />
               </button>
             ) : null}
             <button
@@ -2196,11 +2193,13 @@ function RackDrill({
               ) : null}
             </div>
           ) : (
-            <div className="rk-room-layout">
+            <div
+              className="rk-room-layout"
+              onContextMenu={handleElevationContextMenu}
+            >
               <div
                 className="rk-elevations"
                 ref={roomElevationsRef}
-                onContextMenu={handleElevationContextMenu}
               >
                 {groupRacksByGroup(serverRoom.racks).map((g) => (
                   <div className="rk-group" key={g.key}>

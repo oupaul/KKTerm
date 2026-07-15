@@ -278,10 +278,11 @@ test("Server Room elevation blank space opens the shared room background picker"
   const sites = await read("src/modules/itops/SitesTab.tsx");
 
   assert.match(sites, /async function handleElevationContextMenu/);
-  assert.match(sites, /target\.closest\("\[data-rack-id\]"\)/);
+  assert.match(sites, /if \(placeDevice\) return/);
+  assert.match(sites, /target\.closest\("\[data-rack-id\], \.rm-picker"\)/);
   assert.match(
     sites,
-    /className="rk-elevations"[\s\S]*?onContextMenu=\{handleElevationContextMenu\}/,
+    /className="rk-room-layout"[\s\S]*?onContextMenu=\{handleElevationContextMenu\}[\s\S]*?className="rk-elevations"/,
   );
   assert.match(
     sites,

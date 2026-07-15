@@ -2557,6 +2557,22 @@ fn itops_rack_item_tools_expose_mounting_face_and_rack_top_contracts() {
     );
     assert!(place.function.description.contains("rack.heightU + 1"));
     assert!(place.function.description.contains("heightU 4"));
+    assert!(
+        place
+            .function
+            .description
+            .contains("back, backside, or rear")
+    );
+}
+
+#[test]
+fn itops_rack_item_mount_face_parser_accepts_rear_and_keeps_front_default_optional() {
+    assert_eq!(
+        optional_itops_mount_face(&json!({ "mountFace": "rear" })).unwrap(),
+        Some(RackMountFace::Rear)
+    );
+    assert_eq!(optional_itops_mount_face(&json!({})).unwrap(), None);
+    assert!(optional_itops_mount_face(&json!({ "mountFace": "back" })).is_err());
 }
 
 #[test]
