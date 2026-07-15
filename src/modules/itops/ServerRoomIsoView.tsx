@@ -825,8 +825,8 @@ export function ServerRoomIsoView({
                       // Realtime placement preview on the hovered cell: the
                       // armed fixture's 2.5D artwork at its resolved level
                       // over its covered cell span (red tile when the cell
-                      // has no free vertical span), or a translucent cabinet
-                      // for the pending rack at its depth, front flush.
+                      // has no free vertical span), or the complete cabinet
+                      // model for the pending rack at its depth, front flush.
                       const preview = pendingFacing ?? {
                         kind: tool != null ? "object" as const : "rack" as const,
                         cell: hover!,
@@ -934,33 +934,19 @@ export function ServerRoomIsoView({
                               <RoomPlacementFacingArrow facing={displayFacing} liftPx={gh + 8} />
                             ) : null}
                           </div>
-                          <div
-                            className={`rm-iso-cab ghost${blocked ? " blocked" : ""}`}
-                            data-shell={
-                              pendingRack?.shell && pendingRack.shell !== "black"
-                                ? pendingRack.shell
-                                : undefined
-                            }
-                            style={{
-                              left: (at.x + fp.x) * CELL,
-                              top: (at.y + fp.y) * CELL,
-                              width: w,
-                              height: d,
-                            }}
-                          >
-                            <span
-                              className="rm-iso-face rm-iso-top"
-                              style={{ transform: `translateZ(${gh}px)` }}
+                          {pendingRack ? (
+                            <IsoCabinet
+                              rack={pendingRack}
+                              cell={at}
+                              facing={displayFacing}
+                              viewAngle={angle}
+                              drag={null}
+                              editMode={false}
+                              selected={false}
+                              ghost
+                              blocked={blocked}
                             />
-                            <span
-                              className="rm-iso-face rm-iso-front side"
-                              style={{ width: w, height: gh, top: d - gh }}
-                            />
-                            <span
-                              className="rm-iso-face rm-iso-side side"
-                              style={{ width: gh, height: d, left: w - gh }}
-                            />
-                          </div>
+                          ) : null}
                         </>
                       );
                     })()
@@ -1088,6 +1074,8 @@ function IsoCabinet({
   drag,
   editMode,
   selected,
+  ghost = false,
+  blocked = false,
   onPointerDown,
   onPointerMove,
   onPointerUp,
@@ -1108,15 +1096,18 @@ function IsoCabinet({
   drag: DragState | null;
   editMode: boolean;
   selected: boolean;
-  onPointerDown: (event: ReactPointerEvent<HTMLDivElement>) => void;
-  onPointerMove: (event: ReactPointerEvent<HTMLDivElement>) => void;
-  onPointerUp: (event: ReactPointerEvent<HTMLDivElement>) => void;
-  onPointerCancel: (event: ReactPointerEvent<HTMLDivElement>) => void;
-  onInfoHover: (event: ReactPointerEvent<HTMLDivElement>) => void;
-  onInfoLeave: () => void;
+  /** Placement preview uses the complete cabinet model without interactions. */
+  ghost?: boolean;
+  blocked?: boolean;
+  onPointerDown?: (event: ReactPointerEvent<HTMLDivElement>) => void;
+  onPointerMove?: (event: ReactPointerEvent<HTMLDivElement>) => void;
+  onPointerUp?: (event: ReactPointerEvent<HTMLDivElement>) => void;
+  onPointerCancel?: (event: ReactPointerEvent<HTMLDivElement>) => void;
+  onInfoHover?: (event: ReactPointerEvent<HTMLDivElement>) => void;
+  onInfoLeave?: () => void;
   /** Armed placement hover: previews the selected quarter of this cabinet top. */
   onHoverCell?: (event: ReactPointerEvent<HTMLButtonElement>) => void;
-  onSelect: (event: ReactMouseEvent<HTMLButtonElement>) => void;
+  onSelect?: (event: ReactMouseEvent<HTMLButtonElement>) => void;
   onRotate?: () => void;
   onDelete?: () => void;
 }) {
@@ -1145,7 +1136,7 @@ function IsoCabinet({
 
   return (
     <div
-      className={`rm-iso-cab${drag ? " dragging" : ""}${editMode ? " editing" : ""}${selected ? " selected" : ""}`}
+      className={`rm-iso-cab${drag ? " dragging" : ""}${editMode ? " editing" : ""}${selected ? " selected" : ""}${ghost ? " ghost" : ""}${blocked ? " blocked" : ""}`}
       data-shell={rack.shell && rack.shell !== "black" ? rack.shell : undefined}
       style={{
         left,

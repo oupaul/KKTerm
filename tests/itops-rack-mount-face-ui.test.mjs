@@ -4,7 +4,7 @@ import test from "node:test";
 
 const read = (path) => readFile(path, "utf8");
 
-test("rack elevations expose cabinet and toolbar flip icons", async () => {
+test("rack elevations reveal one reachable cabinet flip on hover and keep the toolbar flip", async () => {
   const [elevation, sites, css, bag] = await Promise.all([
     read("src/modules/itops/RackElevation.tsx"),
     read("src/modules/itops/SitesTab.tsx"),
@@ -28,7 +28,10 @@ test("rack elevations expose cabinet and toolbar flip icons", async () => {
   assert.match(sites, /setAllElevationFaces/);
   assert.match(css, /@keyframes rkFaceTurn/);
   assert.match(css, /\.rk-cabinet-flip \{[\s\S]*bottom: calc\(100% \+ 5px\)/);
+  assert.match(css, /\.rk-cabinet-flip \{[\s\S]*opacity: 0;[\s\S]*pointer-events: none;/);
+  assert.match(css, /\.rk:hover \.rk-cabinet-flip,[\s\S]*\.rk:focus-within \.rk-cabinet-flip \{[\s\S]*opacity: 1;[\s\S]*pointer-events: auto;/);
   assert.match(css, /\.rk\.has-face-toggle \.rk-cabinet \{[\s\S]*margin-top: max/);
+  assert.match(css, /\.rk\.has-face-toggle \.rk-cabinet::before \{[\s\S]*bottom: 100%;[\s\S]*height: 34px;/);
   assert.match(css, /\.rk\[data-face="rear"\]/);
   assert.match(bag, /data-face=\{face\}/);
   assert.match(bag, /face === "rear"/);

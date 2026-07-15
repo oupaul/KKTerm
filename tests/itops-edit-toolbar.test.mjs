@@ -230,7 +230,8 @@ test("Armed placement uses two clicks for position and facing and supports conti
   assert.match(isoView, /rm-iso-plane\$\{placing \? " placing" : ""\}/);
   assert.match(isoView, /onHoverCell/);
   assert.match(isoView, /className=\{`rm-iso-obj ghost/);
-  assert.match(isoView, /className=\{`rm-iso-cab ghost\$\{blocked \? " blocked" : ""\}`\}/);
+  assert.match(isoView, /<IsoCabinet\s+rack=\{pendingRack\}/);
+  assert.match(isoView, /selected=\{false\}\s+ghost\s+blocked=\{blocked\}/);
   assert.match(css, /\.rm-bp-ghost/);
   assert.match(css, /\.rm-iso-drop\.blocked/);
   assert.match(css, /\.rm-placement-facing-arrow/);

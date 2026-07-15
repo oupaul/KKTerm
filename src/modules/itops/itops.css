@@ -2853,7 +2853,14 @@
   cursor: pointer;
   box-shadow: var(--shadow-control);
   backdrop-filter: blur(8px);
-  transition: background 0.14s, border-color 0.14s, color 0.14s, transform 0.14s;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.14s, background 0.14s, border-color 0.14s, color 0.14s, transform 0.14s;
+}
+.itops-page .rk:hover .rk-cabinet-flip,
+.itops-page .rk:focus-within .rk-cabinet-flip {
+  opacity: 1;
+  pointer-events: auto;
 }
 .itops-page .rk-cabinet-flip:hover {
   background: var(--hover);
@@ -2901,6 +2908,17 @@
 }
 .itops-page .rk.has-face-toggle .rk-cabinet {
   margin-top: max(var(--rk-top-clearance, 0px), 34px);
+}
+/* The flip control sits above the cabinet. This transparent hit area bridges
+   the gap so moving from the rack to its revealed control keeps `.rk:hover`. */
+.itops-page .rk.has-face-toggle .rk-cabinet::before {
+  content: "";
+  position: absolute;
+  right: 4px;
+  bottom: 100%;
+  z-index: 11;
+  width: 34px;
+  height: 34px;
 }
 .itops-page .rk-top-area {
   position: absolute;
@@ -6185,11 +6203,12 @@
   pointer-events: none;
 }
 .itops-page .rm-iso-cab.ghost {
-  opacity: 0.65;
+  /* Opacity on this preserve-3d parent flattens its cabinet faces into the
+     floor. Keep the same complete model used by placed racks fully 3D. */
   pointer-events: none;
 }
-.itops-page .rm-iso-cab.ghost.blocked {
-  opacity: 0.32;
+.itops-page .rm-iso-cab.ghost.blocked .rm-iso-face {
+  opacity: 0.4;
 }
 .itops-page .rm-iso-drop .rm-placement-facing-arrow {
   transform: translate3d(-50%, -50%, var(--placement-facing-lift, 8px)) rotate(var(--placement-facing-angle));
