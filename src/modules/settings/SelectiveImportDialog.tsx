@@ -104,6 +104,11 @@ export function SelectiveImportDialog({
         setBusy(false);
         return;
       }
+      const replacesWorkspaceData =
+        actions.workspaces === "replace" || actions.connections === "replace";
+      if (replacesWorkspaceData || actions.settings === "replace") {
+        closeAllTabs();
+      }
       const result = await invokeCommand("import_selective_database", {
         path,
         actions,
@@ -111,7 +116,7 @@ export function SelectiveImportDialog({
       });
       const importedSettings = result.applied.includes("settings");
       const importedConnections = result.applied.includes("connections");
-      if (importedConnections) {
+      if (importedConnections || result.applied.includes("workspaces")) {
         window.dispatchEvent(new CustomEvent("kkterm:connection-tree-invalidated"));
       }
       if (result.applied.includes("dashboards")) {
@@ -137,6 +142,23 @@ export function SelectiveImportDialog({
       showStatusBarNotice(error instanceof Error ? error.message : String(error), { tone: "error" });
       setBusy(false);
     }
+  }
+
+  function updateSegmentAction(segment: string, action: SegmentAction) {
+    setActions((prev) => {
+      const next = { ...prev, [segment]: action };
+      if (
+        segment === "workspaces" &&
+        action === "replace" &&
+        selectiveManifest?.segments.includes("connections")
+      ) {
+        next.connections = "replace";
+      }
+      if (segment === "connections" && action !== "replace" && prev.workspaces === "replace") {
+        next.workspaces = "add";
+      }
+      return next;
+    });
   }
 
   const actionOptions = [
@@ -199,7 +221,7 @@ export function SelectiveImportDialog({
                       options={actionOptions}
                       value={actions[segment] ?? "add"}
                       onChange={(event) =>
-                        setActions((prev) => ({ ...prev, [segment]: event.currentTarget.value as SegmentAction }))
+                        updateSegmentAction(segment, event.currentTarget.value as SegmentAction)
                       }
                     />
                   }
