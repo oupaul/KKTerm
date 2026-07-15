@@ -425,15 +425,40 @@ Excel-readable inventory table.
 An empty Server Room uses explanatory guidance with an inline New Rack action.
 An empty Rack uses an inline Edit mode action that reveals the Rack Device
 picker.
+In the Server Room floor-plan and 2.5D object picker, a successfully placed Wall
+remains armed for continuous placement. Every snapped fixture or Rack preview
+shows a high-contrast facing arrow that follows the 2.5D view angle and turns
+red with the blocked target. A Wall reserves its entire logical grid cell even
+though its construction is drawn as a thin segment: Rack and object placement
+or dragging cannot enter that cell, and a Wall cannot replace any occupant.
+The Rack hover detail card shared by both spatial views mounts outside their
+clipping canvases and flips or clamps within the visible room at every edge.
+The Rack configuration dialog exposes
+`itops.racks.sequenceAction`, which inserts `%02d`; a matching Rack name opts
+into continuous placement with the next number after the highest matching name
+in that Server Room while preserving the configured Rack settings. Right-click,
+Escape, selecting another app control, leaving edit mode, switching layouts, or
+navigating away cancels either continuous tool and deletes only an unplaced
+pending Rack.
 Site, Server Room, and Rack tree rows share one native context-menu contract:
 Properties is always the final item, separated from the commands above it.
 Delete sits above Properties and routes to the shared danger `ConfirmSheet`;
 the seeded Default Site shows Delete disabled. A Server Room also places
 `itops.racks.addRackAction` above Delete and opens the New Rack dialog already
 scoped to that Server Room.
-The virtual Server Rooms row has its own single-command native menu:
+When the virtual Server Rooms row is selected, an `itops.racks.sortAction`
+icon button appears immediately left of the tree-wide collapse/expand controls.
+Its `itops.racks.sortAscending` and `itops.racks.sortDescending` native menu
+items naturally order only that Site's Server Room rows; the per-Site direction
+is a persisted tree-view preference and does not reorder the Site View canvas.
+Selecting an individual Server Room shows the same toolbar icon and naturally
+orders only that room's Rack children; its direction persists per Server Room
+and does not rearrange Rack placement in any spatial view. The virtual row's
+native context menu exposes
 `itops.racks.addServerRoomAction`, which opens the New Server Room dialog for
-that Site.
+that Site, followed by an `itops.racks.sortAction` submenu with the same two
+ordering choices. An individual Server Room's native menu likewise adds that
+submenu after `itops.racks.addRackAction` and before Delete/Properties.
 The live
 Batch Run view renders a per-host grid
 with status chips and **live streamed output** (each host auto-reveals its

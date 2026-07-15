@@ -51,3 +51,14 @@ docs/superpowers/plans
 .design-sync/.cache/
 .design-sync/learnings/
 .design-sync/node_modules
+/.codebuddy
+/.continue
+/.cursor
+/.kiro
+/.kilocode
+/.opencode
+/.qoder
+/.roo
+/.trae
+/.windsurf
+/.warp

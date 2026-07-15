@@ -2,9 +2,9 @@
 
 ## AI grep hints
 
-- Keys: `remoteDesktop.*` (full namespace), `connections.windowsRdp`, `connections.screenControl`, `settings.rdpRemoteResolution*`, `settings.remoteDesktopViewMode*`, `settings.submitAiAttachmentsDirectly`, `workspace.sendEntirePanelToAi`, `ai.directAttachmentPrompt`
-- Topics: RDP via mstscax ActiveX, VNC via vnc-rs, Ctrl+Alt+Del, Ctrl+Alt+End hotkey hint, remote resolution (Automatic / fixed `WxH`), view mode scaling, reconnect, framebuffer waiting, tutorial targets `remoteDesktop.toolbar`, `remoteDesktop.viewMode`, `remoteDesktop.sendCtrlAltDel`, `remoteDesktop.reconnect`, `remoteDesktop.sendToAi`, `remoteDesktop.surface`, `settings.rdpRemoteResolution`
-- Synonyms: "remote desktop", "screen sharing", "mstsc", "VNC viewer", "send three-finger salute", "high DPI scaling", "remote screen size"
+- Keys: `remoteDesktop.*` (full namespace), `connections.windowsRdp`, `connections.screenControl`, `settings.rdpRemoteResolution*`, `settings.remoteDesktopViewMode*`, `settings.rdpShareLocalFolder`, `settings.rdpAllLocalDrives`, `settings.rdpChooseDrives`, `settings.submitAiAttachmentsDirectly`, `workspace.sendEntirePanelToAi`, `ai.directAttachmentPrompt`
+- Topics: RDP via mstscax ActiveX, RDP via IronRDP, Windows drive redirection, macOS/Linux shared local folder, VNC via vnc-rs, Ctrl+Alt+Del, Ctrl+Alt+End hotkey hint, remote resolution (Automatic / fixed `WxH`), view mode scaling, reconnect, framebuffer waiting, tutorial targets `remoteDesktop.toolbar`, `remoteDesktop.viewMode`, `remoteDesktop.sendCtrlAltDel`, `remoteDesktop.reconnect`, `remoteDesktop.sendToAi`, `remoteDesktop.surface`, `settings.rdpRemoteResolution`
+- Synonyms: "remote desktop", "screen sharing", "mstsc", "IronRDP", "drive mapping", "redirect drives", "share local folder", "VNC viewer", "send three-finger salute", "high DPI scaling", "remote screen size"
 
 ## Connection kinds
 
@@ -47,6 +47,12 @@ Transport labels for status messages: `remoteDesktop.rdpActiveX`, `remoteDesktop
 
 Tutorial targets: `remoteDesktop.toolbar`, `remoteDesktop.viewMode`, `remoteDesktop.sendCtrlAltDel`, `remoteDesktop.reconnect`, `remoteDesktop.sendToAi`.
 
+## macOS/Linux RDP keyboard and clipboard
+
+The IronRDP canvas routes printable and IME-composed text through Unicode keyboard events, while navigation keys, modifiers, and shortcuts use RDP scancodes. Clicking the remote surface focuses an in-viewport hidden input and keeps the canvas pointer action from taking focus back, so typing starts immediately after the click in macOS WKWebView and Linux WebKitGTK.
+
+On macOS, Command+V reads plain text from the native general pasteboard, advertises it through the IronRDP CLIPRDR channel, then sends the remote Ctrl+V chord as one ordered backend operation. Ctrl+V uses the focused canvas input's trusted paste event to provide the same behavior on Linux. Remote plain-text clipboard updates are written back to the local clipboard. Right-click remains a remote mouse action: the canvas suppresses WKWebView selection and its local DOM edit menu so the click reaches the remote Session instead. macOS Control-click is translated to the same remote right-button action.
+
 ## RDP overlay parking (implementation note)
 
 The native HWND backing an RDP Session does not obey DOM z-index. When an app-owned DOM overlay intersects the RDP host rectangle, KKTerm:
@@ -55,17 +61,26 @@ The native HWND backing an RDP Session does not obey DOM z-index. When an app-ow
 2. Shows that bitmap underneath the DOM overlay.
 3. Hides ("parks") the ActiveX HWND until the overlay closes.
 
-This behaviour is **RDP-only**. WebView2, VNC, terminal, and SFTP surfaces never use overlay parking. Geometry-scoped detection lives in `src/modules/workspace/nativeOverlay.ts`. Do not extend this workaround to other surfaces.
+This behaviour is **RDP-only**. WebView2, VNC, terminal, and SFTP surfaces never use overlay parking. Geometry-scoped detection lives in `src/modules/workspace/nativeOverlay.ts`; app dialog backdrops (`.kk-dlg-backdrop`) participate so a confirmation such as the large-Panorama warning cannot sit underneath an ActiveX surface. Do not extend this workaround to other surfaces.
 
 In dense Panorama layouts, KKTerm intersects the RDP surface with its owning embedded Pane before sending bounds to the native ATL host. This prevents an overflowing descendant DOM box from expanding the native RDP window over adjacent Connection Panes.
 
 ## RDP debug logging
 
-Debug builds write RDP startup, ActiveX control creation, display-size sync, and main-thread command timing records to `rdp.debug.log` beside `kkterm.log`. Release builds write the same JSONL log only when Settings → General → Debug → `settings.advancedDebugging` is enabled. Records include non-secret Connection details such as host, username, port, RDP options, bounds, selected ActiveX ProgID, display size, scale factors, and command errors. Correlated `rdp.geometry.frontend` and `rdp.geometry.native` records in `ui.debug.log` compare DOM/viewport sizing with the owning embedded Pane clip, requested physical rectangle, actual ATL host and hosted ActiveX object window/client rectangles, SmartSizing, and remote desktop dimensions. Password-like, secret-like, token-like, and credential-like fields are redacted defensively; users should still review the files before sharing because hostnames and usernames may be sensitive.
+Debug builds write RDP startup, ActiveX control creation, display-size sync, clipboard handshake stages, and main-thread command timing records to `rdp.debug.log` beside `kkterm.log`. Clipboard records contain format IDs and byte/character counts, never clipboard text. Release builds write the same JSONL log only when Settings → General → Debug → `settings.advancedDebugging` is enabled. Records include non-secret Connection details such as host, username, port, RDP options, bounds, selected ActiveX ProgID, display size, scale factors, and command errors. Correlated `rdp.geometry.frontend` and `rdp.geometry.native` records in `ui.debug.log` compare DOM/viewport sizing with the owning embedded Pane clip, requested physical rectangle, actual ATL host and hosted ActiveX object window/client rectangles, SmartSizing, and remote desktop dimensions. Password-like, secret-like, token-like, and credential-like fields are redacted defensively; users should still review the files before sharing because hostnames and usernames may be sensitive.
 
 ## RDP / VNC settings
 
 Per-kind defaults (resolution, view mode, colour depth, etc.) live in Settings → RDP (`settings.sectionRdp`) and Settings → VNC (`settings.sectionVnc`). See [15-settings.md](15-settings.md).
+
+### RDP local resources
+
+`settings.rdpRedirectDrives` remains disabled by default and is available both as a global RDP default and as a per-Connection override.
+
+- On Windows, enabling it defaults to `settings.rdpAllLocalDrives`. `settings.rdpChooseDrives` opens an app-owned Sheet where the user can retain all drives or choose individual drive roots such as C: and D:. Saved selections are applied through the ActiveX drive collection. A selected drive that is currently disconnected remains in the saved selection and is labelled with `settings.rdpUnavailableDrive`.
+- On macOS and Linux, the same setting is presented as `settings.rdpShareLocalFolder`. IronRDP redirects exactly one folder selected through `settings.rdpChooseFolder`; it never exposes the whole filesystem implicitly. Enabling the option without selecting a folder is rejected with `settings.rdpSharedFolderRequired`. The native RDPDR filesystem backend validates remote paths against the canonical selected root before file operations.
+
+When a Connection inherits RDP defaults, its selector is disabled and summarizes the inherited value. Choosing Connection-specific settings enables its own drive subset or shared folder without changing the global default.
 
 ### View mode (`settings.remoteDesktopViewMode`)
 

@@ -9,9 +9,9 @@ import {
   save as saveDialog,
 } from "@tauri-apps/plugin-dialog";
 import type { ConfirmDialogOptions } from "@tauri-apps/plugin-dialog";
-import { readFile, writeFile, writeTextFile } from "@tauri-apps/plugin-fs";
+import { exists, readFile, writeFile, writeTextFile } from "@tauri-apps/plugin-fs";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { documentDir } from "@tauri-apps/api/path";
+import { documentDir, homeDir } from "@tauri-apps/api/path";
 import { isMacPlatform, isWindowsPlatform } from "./platform";
 import i18next from "../i18n/config";
 import {
@@ -163,6 +163,7 @@ export interface StartTerminalSessionRequest {
   sshSocksProxySecretOwnerId?: string;
   sshSocksProxyInheritDefaults?: boolean;
   sshCompression?: boolean;
+  sshOldProtocols?: boolean;
   authMethod?: "keyFile" | "password" | "agent";
   secretOwnerId?: string;
   passphraseOwnerId?: string;
@@ -262,6 +263,7 @@ export interface StartSftpSessionRequest {
   passphraseOwnerId?: string;
   path?: string;
   sshCompression?: boolean;
+  sshOldProtocols?: boolean;
 }
 
 export interface SftpDirectoryEntry {
@@ -508,7 +510,7 @@ export interface SshConfigImportPreview {
   unsupportedDirectives: UnsupportedSshDirective[];
 }
 
-export type ImportFileFormat = "csv" | "tsv" | "rdcman" | "mobaxterm" | "putty" | "bookmarks";
+export type ImportFileFormat = "csv" | "tsv" | "rdcman" | "mobaxterm" | "putty" | "sshConfig" | "bookmarks";
 
 export interface ImportedConnectionDraft {
   name: string;
@@ -516,7 +518,9 @@ export interface ImportedConnectionDraft {
   user: string;
   url?: string;
   port?: number;
-  type: "local" | "ssh" | "telnet" | "serial" | "url" | "rdp" | "vnc";
+  keyPath?: string;
+  proxyJump?: string;
+  type: "local" | "ssh" | "telnet" | "serial" | "url" | "rdp" | "vnc" | "ftp" | "localFiles";
   folderPath: string[];
 }
 
@@ -950,6 +954,7 @@ export interface StartRdpClientSessionRequest {
   desktopWidth?: number;
   desktopHeight?: number;
   ignoreTlsErrors?: boolean;
+  sharedLocalFolder?: string;
 }
 
 export interface RdpClientSessionStarted {
@@ -1279,11 +1284,13 @@ type CommandMap = {
       connectionId: string | null;
       label: string;
       metadata?: RackItemMetadata;
+      startU?: number;
+      heightU?: number;
     };
     result: RackItem;
   };
   itops_move_rack_item: {
-    args: { id: string; rackId: string; startU: number; heightU: number };
+    args: { id: string; rackId: string; startU: number; heightU: number; slot?: number };
     result: RackItem;
   };
   itops_remove_rack_item: {
@@ -1714,6 +1721,7 @@ type CommandMap = {
         sshSocksProxySecretOwnerId?: string;
         sshSocksProxyInheritDefaults?: boolean;
         sshCompression?: boolean;
+  sshOldProtocols?: boolean;
       };
     };
     result: TransferSshPublicKeyResult;
@@ -2022,7 +2030,7 @@ type CommandMap = {
     result: ScanNetworkResponse;
   };
   inspect_ssh_host_key: {
-    args: { request: { host: string; port?: number; sshSocksProxy?: string; sshSocksProxyUsername?: string; sshSocksProxySecretOwnerId?: string } };
+    args: { request: { host: string; port?: number; sshSocksProxy?: string; sshSocksProxyUsername?: string; sshSocksProxySecretOwnerId?: string; sshOldProtocols?: boolean } };
     result: SshHostKeyPreview;
   };
   trust_ssh_host_key: {
@@ -2145,6 +2153,7 @@ type CommandMap = {
   sshSocksProxySecretOwnerId?: string;
   sshSocksProxyInheritDefaults?: boolean;
         sshCompression?: boolean;
+  sshOldProtocols?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
         passphraseOwnerId?: string;
@@ -2165,6 +2174,7 @@ type CommandMap = {
   sshSocksProxySecretOwnerId?: string;
   sshSocksProxyInheritDefaults?: boolean;
         sshCompression?: boolean;
+  sshOldProtocols?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
         passphraseOwnerId?: string;
@@ -2187,6 +2197,7 @@ type CommandMap = {
   sshSocksProxySecretOwnerId?: string;
   sshSocksProxyInheritDefaults?: boolean;
         sshCompression?: boolean;
+  sshOldProtocols?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
         passphraseOwnerId?: string;
@@ -2209,6 +2220,7 @@ type CommandMap = {
   sshSocksProxySecretOwnerId?: string;
   sshSocksProxyInheritDefaults?: boolean;
         sshCompression?: boolean;
+  sshOldProtocols?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
         passphraseOwnerId?: string;
@@ -2230,6 +2242,7 @@ type CommandMap = {
   sshSocksProxySecretOwnerId?: string;
   sshSocksProxyInheritDefaults?: boolean;
         sshCompression?: boolean;
+  sshOldProtocols?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
         passphraseOwnerId?: string;
@@ -2252,6 +2265,7 @@ type CommandMap = {
   sshSocksProxySecretOwnerId?: string;
   sshSocksProxyInheritDefaults?: boolean;
         sshCompression?: boolean;
+  sshOldProtocols?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
         passphraseOwnerId?: string;
@@ -2274,6 +2288,7 @@ type CommandMap = {
   sshSocksProxySecretOwnerId?: string;
   sshSocksProxyInheritDefaults?: boolean;
         sshCompression?: boolean;
+  sshOldProtocols?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
         passphraseOwnerId?: string;
@@ -2311,6 +2326,7 @@ type CommandMap = {
   sshSocksProxySecretOwnerId?: string;
   sshSocksProxyInheritDefaults?: boolean;
         sshCompression?: boolean;
+  sshOldProtocols?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
         passphraseOwnerId?: string;
@@ -2331,6 +2347,7 @@ type CommandMap = {
         sshSocksProxySecretOwnerId?: string;
         sshSocksProxyInheritDefaults?: boolean;
         sshCompression?: boolean;
+  sshOldProtocols?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
         passphraseOwnerId?: string;
@@ -2352,6 +2369,7 @@ type CommandMap = {
   sshSocksProxySecretOwnerId?: string;
   sshSocksProxyInheritDefaults?: boolean;
         sshCompression?: boolean;
+  sshOldProtocols?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
         passphraseOwnerId?: string;
@@ -2373,6 +2391,7 @@ type CommandMap = {
         sshSocksProxySecretOwnerId?: string;
         sshSocksProxyInheritDefaults?: boolean;
         sshCompression?: boolean;
+  sshOldProtocols?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
         passphraseOwnerId?: string;
@@ -2399,6 +2418,7 @@ type CommandMap = {
   sshSocksProxySecretOwnerId?: string;
   sshSocksProxyInheritDefaults?: boolean;
         sshCompression?: boolean;
+  sshOldProtocols?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
         passphraseOwnerId?: string;
@@ -2903,6 +2923,10 @@ type CommandMap = {
   };
   send_rdp_client_clipboard_text: {
     args: { request: RdpClientTextRequest };
+    result: null;
+  };
+  paste_rdp_client_clipboard: {
+    args: { request: RdpClientSimpleRequest };
     result: null;
   };
   send_rdp_client_ctrl_alt_delete: {
@@ -3453,7 +3477,7 @@ export async function selectConnectionImportFile() {
     filters: [
       {
         name: i18next.t("connections.import.fromFileTitle"),
-        extensions: ["csv", "tsv", "txt", "rdg", "mxtsessions", "reg"],
+        extensions: ["csv", "tsv", "txt", "rdg", "mxtsessions", "reg", "config"],
       },
       { name: i18next.t("common.allFilesFilter"), extensions: ["*"] },
     ],
@@ -3534,6 +3558,24 @@ export async function selectAppLauncherFolder(options: {
   return typeof selectedPath === "string" ? selectedPath : null;
 }
 
+export async function selectRdpSharedFolder(options: {
+  defaultPath?: string;
+  title: string;
+}) {
+  if (!isTauriRuntime()) {
+    return null;
+  }
+
+  const selectedPath = await openDialog({
+    defaultPath: options.defaultPath,
+    directory: true,
+    multiple: false,
+    title: options.title,
+  });
+
+  return typeof selectedPath === "string" ? selectedPath : null;
+}
+
 export async function selectKeyFile(defaultPath?: string) {
   if (!isTauriRuntime()) {
     return null;
@@ -3547,6 +3589,38 @@ export async function selectKeyFile(defaultPath?: string) {
   });
 
   return typeof selectedPath === "string" ? selectedPath : null;
+}
+
+export async function selectAndReadSshConfigFile(): Promise<{ path: string; content: string } | null> {
+  if (!isTauriRuntime()) {
+    return null;
+  }
+
+  const home = await homeDir().catch(() => "");
+  const separator = isWindowsPlatform() ? "\\" : "/";
+  const defaultPath = home ? `${home.replace(/[\\/]$/, "")}${separator}.ssh${separator}config` : undefined;
+  let path = defaultPath && await exists(defaultPath).catch(() => false) ? defaultPath : undefined;
+
+  if (!path) {
+    const selectedPath = await openDialog({
+      defaultPath: home || undefined,
+      directory: false,
+      multiple: false,
+      title: i18next.t("connections.importSshConfig"),
+      filters: [
+        { name: i18next.t("connections.sshConfigFile"), extensions: ["config", "txt"] },
+        { name: i18next.t("common.allFilesFilter"), extensions: ["*"] },
+      ],
+    });
+    path = typeof selectedPath === "string" ? selectedPath : undefined;
+  }
+
+  if (!path) {
+    return null;
+  }
+
+  const content = new TextDecoder().decode(await readFile(path));
+  return { path, content };
 }
 
 export async function selectFileViewPath(options: { title: string; defaultPath?: string }) {

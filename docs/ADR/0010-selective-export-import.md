@@ -38,9 +38,11 @@ encrypted SQLite backend is in use.
 
 - **Selective database export/import** (`.kkbackup`, ZIP of `manifest.json` +
   `data.json` + optional `secrets.enc`): the user picks which **segments** to
-  carry (`connections`, `workspaces`, `dashboards`, `settings`, `mcpServers`)
-  and, on import, chooses **per segment** whether to Skip, Add (merge), or
-  Replace.
+  carry (`connections`, `workspaces`, `dashboards`, `settings`, `mcpServers`;
+  bundle v2 added `itops` and `assistant`) and, on import, chooses **per
+  segment** whether to Skip, Add (merge), or Replace. The manifest records the
+  lowest bundle version able to carry the chosen segments, so bundles without
+  the newer segments stay importable by older app versions.
 
 ### Generic, metadata-driven row copy
 
@@ -75,10 +77,11 @@ the merged rows.
 
 - The colleague-sharing and personal-backup stories are both served without the
   destructive whole-database replace.
-- **Scope limits (intentional, v1):** only connection-related secrets are
-  carried — widget secrets and AI/email/MCP keys are not, so widgets/servers
-  that depend on them prompt for re-entry after import. `is_default` is cleared
-  on merged Workspaces to avoid two defaults.
+- **Scope limits (intentional):** only connection-related secrets are carried —
+  widget secrets, AI/email/MCP keys, and IT Ops Task vault entries are not, so
+  imported features that depend on them prompt for re-entry. IT Ops Task vault
+  references are cleared during import so they cannot bind to unrelated local
+  secrets. `is_default` is cleared on merged Workspaces to avoid two defaults.
 - Whole-database snapshot commands remain for backup/recovery paths. The visible
   Settings Export button uses the selective path; the visible Settings Import
   button accepts both selective `.kkbackup` files and full ZIP snapshots.

@@ -1194,11 +1194,25 @@ function firstTabIdForWorkspace(tabs: WorkspaceTab[], workspaceId: string) {
   return tabs.find((tab) => tabWorkspaceId(tab) === workspaceId)?.id ?? "";
 }
 
+function tabIdForWorkspace(
+  tabs: WorkspaceTab[],
+  workspaceId: string,
+  preferredTabId: string | undefined,
+) {
+  const preferredTab = preferredTabId
+    ? tabs.find((tab) => tab.id === preferredTabId)
+    : undefined;
+  return tabWorkspaceId(preferredTab) === workspaceId
+    ? preferredTab?.id ?? ""
+    : firstTabIdForWorkspace(tabs, workspaceId);
+}
+
 interface WorkspaceState {
   query: string;
   tabs: WorkspaceTab[];
   activeTabId: string;
   activeWorkspaceId: string;
+  activeTabIdsByWorkspace: Record<string, string>;
   workspaces: Workspace[];
   generalSettings: GeneralSettings;
   credentialSettings: CredentialSettings;
@@ -1410,6 +1424,9 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   tabs: initialTabs,
   activeTabId: initialTabs[0]?.id ?? "",
   activeWorkspaceId: loadStoredActiveWorkspaceId(),
+  activeTabIdsByWorkspace: initialTabs[0]
+    ? { [tabWorkspaceId(initialTabs[0])]: initialTabs[0].id }
+    : {},
   workspaces: [],
   generalSettings: defaultGeneralSettings,
   credentialSettings: defaultCredentialSettings,
@@ -1448,7 +1465,11 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       set({
         workspaces,
         activeWorkspaceId: fallbackId,
-        activeTabId: firstTabIdForWorkspace(get().tabs, fallbackId),
+        activeTabId: tabIdForWorkspace(
+          get().tabs,
+          fallbackId,
+          get().activeTabIdsByWorkspace[fallbackId],
+        ),
       });
       if (typeof window !== "undefined") {
         window.dispatchEvent(new CustomEvent("kkterm:connection-tree-invalidated"));
@@ -1462,12 +1483,19 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       return;
     }
     persistActiveWorkspaceId(workspaceId);
-    const activeTab = get().tabs.find((tab) => tab.id === get().activeTabId);
+    const state = get();
+    const activeTabIdsByWorkspace = {
+      ...state.activeTabIdsByWorkspace,
+      [state.activeWorkspaceId]: state.activeTabId,
+    };
     set({
       activeWorkspaceId: workspaceId,
-      activeTabId: tabWorkspaceId(activeTab) === workspaceId
-        ? activeTab?.id ?? ""
-        : firstTabIdForWorkspace(get().tabs, workspaceId),
+      activeTabId: tabIdForWorkspace(
+        state.tabs,
+        workspaceId,
+        activeTabIdsByWorkspace[workspaceId],
+      ),
+      activeTabIdsByWorkspace,
     });
     // The Connection Tree, rail, and sidebar all re-read the active Workspace's
     // tree off this shared invalidation event.
@@ -1494,7 +1522,11 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     );
     const nextActiveTabId = activeTabStillOpen
       ? get().activeTabId
-      : firstTabIdForWorkspace(remainingTabs, nextActiveWorkspaceId);
+      : tabIdForWorkspace(
+          remainingTabs,
+          nextActiveWorkspaceId,
+          get().activeTabIdsByWorkspace[nextActiveWorkspaceId],
+        );
 
     if (nextActiveWorkspaceId !== get().activeWorkspaceId) {
       persistActiveWorkspaceId(nextActiveWorkspaceId);
@@ -1671,13 +1703,27 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     // session" over the wrong Workspace.
     if (tab && targetWorkspaceId !== state.activeWorkspaceId) {
       persistActiveWorkspaceId(targetWorkspaceId);
-      set({ activeTabId: tabId, activeWorkspaceId: targetWorkspaceId });
+      set((current) => ({
+        activeTabId: tabId,
+        activeWorkspaceId: targetWorkspaceId,
+        activeTabIdsByWorkspace: {
+          ...current.activeTabIdsByWorkspace,
+          [current.activeWorkspaceId]: current.activeTabId,
+          [targetWorkspaceId]: tabId,
+        },
+      }));
       if (typeof window !== "undefined") {
         window.dispatchEvent(new CustomEvent("kkterm:connection-tree-invalidated"));
       }
       return;
     }
-    set({ activeTabId: tabId });
+    set((current) => ({
+      activeTabId: tabId,
+      activeTabIdsByWorkspace: {
+        ...current.activeTabIdsByWorkspace,
+        [targetWorkspaceId]: tabId,
+      },
+    }));
   },
   renameTab: async (tabId, title) => {
     const displayTitle = title.trim();

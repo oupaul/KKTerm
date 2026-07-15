@@ -17,7 +17,7 @@ import {
   type RefObject,
 } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import { Maximize2, Minimize2 } from "../../lib/reicon";
+import { ArrowUpDown, Maximize2, Minimize2 } from "../../lib/reicon";
 import { ConfirmSheet } from "../../app/ui/dialog";
 import { showNativeContextMenu, type NativeContextMenuItem } from "../../lib/nativeContextMenu";
 import { nativeMenuIcons } from "../../lib/nativeMenuIcons";
@@ -32,6 +32,10 @@ import { HostsPanel } from "./HostsPanel";
 import { TaskLibrary } from "./TaskLibrary";
 import { RackElevation } from "./RackElevation";
 import { RackDialog } from "./RackDialog";
+import {
+  nextRackSequenceName,
+  type RackPlacementSequence,
+} from "./rackSequence";
 import { ServerRoomDialog } from "./ServerRoomDialog";
 import { RackItemDialog, RACK_ITEM_KINDS, type RackItemDraft } from "./RackItemDialog";
 import { RackDevice } from "./RackDevice";
@@ -45,6 +49,7 @@ import {
   nodeId,
   topologyGroupKey,
   type DrillPath,
+  type ServerRoomGroup,
 } from "./rackTopology";
 import { resolveIsoLayout, sanitizeFacing, type Corner } from "./roomIsoLayout";
 import { ItOpsBackground } from "./ItOpsBackground";
@@ -53,8 +58,16 @@ import { RackStage } from "./RackStage";
 import { ServerRoomFloorPlan } from "./ServerRoomFloorPlan";
 import { ServerRoomIsoView } from "./ServerRoomIsoView";
 import { RoomObjectPicker, type RoomTool } from "./roomViewParts";
-import { collectBoundConnectionIds } from "./rackInventory";
-import { isRackTopItem, KUAIGUAI_TOP_CLEARANCE_U } from "./rackPlacement";
+import {
+  collectBoundConnectionIds,
+  rackItemKindSupportsFractionalWidth,
+  rackItemSlotCount,
+} from "./rackInventory";
+import {
+  firstAvailableRackUnit,
+  isRackTopItem,
+  KUAIGUAI_TOP_CLEARANCE_U,
+} from "./rackPlacement";
 import type { DashboardBackground } from "../dashboard/types";
 import { SharedBackgroundPopover } from "../dashboard/edit/SharedBackgroundPopover";
 import { loadBackgroundImage } from "../dashboard/state/persistence";
@@ -65,19 +78,26 @@ import {
   loadCollapsedNodeIds,
   loadFreePlacement,
   loadRackFacing,
+  loadRackTreeSort,
   loadRoomObjects,
   loadRoomViewMode,
+  loadServerRoomTreeSort,
   loadSiteTreeWidth,
   saveFreePlacement,
   saveCollapsedNodeIds,
   saveRackFacing,
+  saveRackTreeSort,
   saveRoomObjects,
   saveRoomViewMode,
+  saveServerRoomTreeSort,
   saveSiteTreeWidth,
   sanitizeIsoFloor,
+  sortServerRoomTopology,
+  sortRackTopology,
   type FreePlacementMap,
   type RackFacingMap,
   type RoomViewMode,
+  type ServerRoomSortDirection,
 } from "./siteTreeState";
 import { rackTopSupport, settleRoomObjects, type RoomObject } from "./roomObjects";
 import {
@@ -104,6 +124,10 @@ const TILE_COLORS = [
   IT_ACCENTS.purple,
 ];
 
+function rackTreeSortKey(siteId: string, room: ServerRoomGroup): string {
+  return room.room?.id ?? `${siteId}:${topologyGroupKey(room.key)}`;
+}
+
 type ItOpsCustomIcon = {
   iconColor?: string | null;
   iconDataUrl?: string | null;
@@ -118,6 +142,7 @@ type PendingDelete =
 
 const FREE_CARD_WIDTH = 240;
 const FREE_CARD_HEIGHT = 74;
+const RACK_SEQUENCE_PENDING_ID = "__rack-sequence-pending__";
 const DEFAULT_SITE_ID = "default-fleet";
 
 type SiteDestination = "site" | "serverRooms" | "hosts" | "runHistory" | "automations";
@@ -182,7 +207,7 @@ export function SitesTab({
     rack: Rack | null;
     defaultServerRoom?: string;
     /** Picker placement flow: consume the saved rack instead of drilling in. */
-    onSaved?: (saved: Rack) => void;
+    onSaved?: (saved: Rack, sequence: RackPlacementSequence | null) => void;
   } | null>(null);
   const [serverRoomDialog, setServerRoomDialog] = useState<{
     siteId: string;
@@ -211,10 +236,14 @@ export function SitesTab({
   const [query, setQuery] = useState("");
   const [treeWidth, setTreeWidth] = useState(loadSiteTreeWidth);
   const [collapsed, setCollapsed] = useState<Set<string>>(loadCollapsedNodeIds);
+  const [serverRoomSort, setServerRoomSort] = useState(loadServerRoomTreeSort);
+  const [rackSort, setRackSort] = useState(loadRackTreeSort);
   const resizing = useRef(false);
   const treeRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => saveCollapsedNodeIds(collapsed), [collapsed]);
+  useEffect(() => saveServerRoomTreeSort(serverRoomSort), [serverRoomSort]);
+  useEffect(() => saveRackTreeSort(rackSort), [rackSort]);
 
   const isExpanded = useCallback((id: string) => !collapsed.has(id), [collapsed]);
   const toggleNode = useCallback((id: string) => {
@@ -398,11 +427,13 @@ export function SitesTab({
       onDelete,
       deleteDisabled = false,
       addAction,
+      sortItems,
     }: {
       onProperties: () => void;
       onDelete: () => void;
       deleteDisabled?: boolean;
       addAction?: { label: string; action: () => void };
+      sortItems?: NativeContextMenuItem[];
     },
   ) {
     event.preventDefault();
@@ -415,6 +446,15 @@ export function SitesTab({
         iconSvg: nativeMenuIcons.plus,
         action: addAction.action,
       });
+    }
+    if (sortItems) {
+      if (items.length > 0) items.push({ kind: "separator" });
+      items.push({
+        kind: "submenu",
+        label: t("itops.racks.sortAction"),
+        items: sortItems,
+      });
+      items.push({ kind: "separator" });
     }
     items.push(
       {
@@ -446,13 +486,69 @@ export function SitesTab({
           iconSvg: nativeMenuIcons.plus,
           action: () => setServerRoomDialog({ siteId, room: null }),
         },
+        { kind: "separator" },
+        {
+          kind: "submenu",
+          label: t("itops.racks.sortAction"),
+          items: serverRoomSortMenuItems(siteId),
+        },
       ],
       { x: event.clientX, y: event.clientY },
     );
   }
 
-  // Armed picker placement: the configured Rack Device lands on the clicked U.
-  async function placeConfiguredDevice(rack: Rack, draft: RackItemDraft, startU: number) {
+  function setServerRoomSortDirection(siteId: string, direction: ServerRoomSortDirection) {
+    setServerRoomSort((current) => ({ ...current, [siteId]: direction }));
+  }
+
+  function topologySortMenuItems(
+    setDirection: (direction: ServerRoomSortDirection) => void,
+  ): NativeContextMenuItem[] {
+    return [
+      {
+        kind: "item",
+        label: t("itops.racks.sortAscending"),
+        iconSvg: nativeMenuIcons.arrowUp,
+        action: () => setDirection("asc"),
+      },
+      {
+        kind: "item",
+        label: t("itops.racks.sortDescending"),
+        iconSvg: nativeMenuIcons.arrowDown,
+        action: () => setDirection("desc"),
+      },
+    ];
+  }
+
+  function serverRoomSortMenuItems(siteId: string): NativeContextMenuItem[] {
+    return topologySortMenuItems((direction) => setServerRoomSortDirection(siteId, direction));
+  }
+
+  function rackSortMenuItems(roomKey: string): NativeContextMenuItem[] {
+    return topologySortMenuItems((direction) =>
+      setRackSort((current) => ({ ...current, [roomKey]: direction })),
+    );
+  }
+
+  function showTreeSortMenu(
+    event: ReactMouseEvent<HTMLButtonElement>,
+    items: NativeContextMenuItem[],
+  ) {
+    const bounds = event.currentTarget.getBoundingClientRect();
+    void showNativeContextMenu(items, {
+      x: bounds.left,
+      y: bounds.bottom,
+    });
+  }
+
+  // Armed picker placement: the configured Rack Device lands on the clicked U
+  // (and, for a fractional-width device, the clicked horizontal slot).
+  async function placeConfiguredDevice(
+    rack: Rack,
+    draft: RackItemDraft,
+    startU: number,
+    slot?: number,
+  ) {
     if (!activeGroup) return;
     try {
       await placeRackItem(activeGroup.id, {
@@ -462,7 +558,10 @@ export function SitesTab({
         label: draft.label,
         startU,
         heightU: draft.heightU,
-        metadata: draft.metadata,
+        metadata:
+          draft.metadata.widthFraction && slot != null
+            ? { ...draft.metadata, slot }
+            : draft.metadata,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -470,17 +569,36 @@ export function SitesTab({
     }
   }
 
-  async function moveItem(itemId: string, targetRackId: string, startU: number) {
+  async function moveItem(
+    itemId: string,
+    targetRackId: string,
+    startU: number,
+    xFraction?: number,
+  ) {
     if (!activeGroup) return;
     const item = racks.flatMap((rack) => rack.items).find((entry) => entry.id === itemId);
     if (!item) return;
-    if (item.rackId === targetRackId && item.startU === startU) return;
+    // A fractional-width device also lands on the horizontal slot under the
+    // drop point; full-width devices ignore it.
+    const slots = rackItemSlotCount(item.metadata?.widthFraction);
+    const slot =
+      slots > 1 && xFraction != null
+        ? Math.min(slots - 1, Math.floor(Math.max(0, xFraction) * slots))
+        : null;
+    if (
+      item.rackId === targetRackId &&
+      item.startU === startU &&
+      (slot == null || slot === (item.metadata?.slot ?? 0))
+    ) {
+      return;
+    }
     try {
       await moveRackItem(activeGroup.id, {
         id: itemId,
         rackId: targetRackId,
         startU,
         heightU: item.heightU,
+        ...(slot != null ? { slot } : {}),
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -583,6 +701,23 @@ export function SitesTab({
   const matchQ = (s: string) => !q || (s || t("itops.racks.unassigned")).toLowerCase().includes(q);
   const effectiveTreeWidth = treeCollapsed ? SITE_TREE_COLLAPSED_WIDTH : treeWidth;
   const hasExpandableTreeNodes = sites.length > 0;
+  const selectedServerRoomsSiteId =
+    rootSurface === "site" && selectedDestination === "serverRooms" && drill.serverRoom == null
+      ? activeGroup?.id ?? null
+      : null;
+  const selectedServerRoomGroup = drill.serverRoom == null
+    ? null
+    : topology.find(
+        (room) => topologyGroupKey(room.key) === topologyGroupKey(drill.serverRoom),
+      ) ?? null;
+  const selectedRackSortKey =
+    rootSurface === "site" &&
+    selectedDestination === "serverRooms" &&
+    drill.rackId == null &&
+    activeGroup &&
+    selectedServerRoomGroup
+      ? rackTreeSortKey(activeGroup.id, selectedServerRoomGroup)
+      : null;
   const addTopologyMenu = !treeCollapsed ? (
     <div className="ft-add-wrap">
       <button
@@ -661,6 +796,27 @@ export function SitesTab({
               <span className="ft-head-title">{t("itops.sites.heading")}</span>
               {hasExpandableTreeNodes ? (
                 <div className="ft-tree-controls" aria-label={t("itops.sites.heading")}>
+                  {selectedServerRoomsSiteId || selectedRackSortKey ? (
+                    <button
+                      aria-label={t("itops.racks.sortAction")}
+                      aria-haspopup="menu"
+                      className="it-icon-btn sm ft-tree-control"
+                      onClick={(event) =>
+                        showTreeSortMenu(
+                          event,
+                          selectedServerRoomsSiteId
+                            ? serverRoomSortMenuItems(selectedServerRoomsSiteId)
+                            : selectedRackSortKey
+                              ? rackSortMenuItems(selectedRackSortKey)
+                              : [],
+                        )
+                      }
+                      title={t("itops.racks.sortAction")}
+                      type="button"
+                    >
+                      <ArrowUpDown size={13} />
+                    </button>
+                  ) : null}
                   <button
                     aria-label={t("connections.collapseAll")}
                     className="it-icon-btn sm ft-tree-control"
@@ -700,7 +856,10 @@ export function SitesTab({
               {sites.map((site) => {
                 const fId = nodeId.site(site.id);
                 const siteRacks = racksBySite[site.id] ?? [];
-                const siteTopo = groupRackTopology(siteRacks, serverRoomsBySite[site.id] ?? []);
+                const siteTopo = sortServerRoomTopology(
+                  groupRackTopology(siteRacks, serverRoomsBySite[site.id] ?? []),
+                  serverRoomSort[site.id],
+                );
                 const open = isExpanded(fId);
                 return (
                   <div key={site.id}>
@@ -744,6 +903,11 @@ export function SitesTab({
                           .map((room) => {
                             const mId = nodeId.serverRoom(site.id, room.key);
                             const mOpen = isExpanded(mId);
+                            const roomRackSortKey = rackTreeSortKey(site.id, room);
+                            const sortedRoomRacks = sortRackTopology(
+                              room.racks,
+                              rackSort[roomRackSortKey],
+                            );
                             return (
                               <div key={mId}>
                                 <TreeRow
@@ -772,6 +936,7 @@ export function SitesTab({
                                                   defaultServerRoom: room.key,
                                                 }),
                                             },
+                                            sortItems: rackSortMenuItems(roomRackSortKey),
                                             onProperties: () =>
                                               setServerRoomDialog({ siteId: site.id, room: room.room! }),
                                             onDelete: () =>
@@ -786,7 +951,7 @@ export function SitesTab({
                                   }
                                 />
                                 {mOpen
-                                  ? room.racks.map((rack) => (
+                                  ? sortedRoomRacks.map((rack) => (
                                       <TreeRow
                                         key={rack.id}
                                         depth={3}
@@ -867,11 +1032,15 @@ export function SitesTab({
             onConfigureDevice={(rack, kind, arm) =>
               setItemDialog({ rack, item: null, kind, onConfigured: arm })
             }
-            onPlaceDevice={(rack, draft, startU) => void placeConfiguredDevice(rack, draft, startU)}
+            onPlaceDevice={(rack, draft, startU, slot) =>
+              void placeConfiguredDevice(rack, draft, startU, slot)
+            }
             onOpenItem={openRackItem}
             onEditItem={(rack, item) => setItemDialog({ rack, item })}
             onBindItem={setBindingsDialog}
-            onMoveItem={(itemId, targetRackId, startU) => void moveItem(itemId, targetRackId, startU)}
+            onMoveItem={(itemId, targetRackId, startU, xFraction) =>
+              void moveItem(itemId, targetRackId, startU, xFraction)
+            }
             onAddRack={(serverRoom) => {
               setRackDialog({
                 siteId: activeGroup.id,
@@ -918,12 +1087,13 @@ export function SitesTab({
           serverRoomsBySite={serverRoomsBySite}
           rack={rackDialog.rack}
           defaultServerRoom={rackDialog.defaultServerRoom}
+          placementMode={!!rackDialog.onSaved}
           onClose={() => setRackDialog(null)}
-          onSaved={(saved) => {
+          onSaved={(saved, sequence) => {
             // Picker placement flow: stay in the room view and arm the new
             // rack for its placement click instead of drilling into it.
             if (rackDialog.onSaved) {
-              rackDialog.onSaved(saved);
+              rackDialog.onSaved(saved, sequence);
               return;
             }
             setActiveId(saved.siteId);
@@ -1144,17 +1314,21 @@ function RackDrill({
   /** Picker flow: open the device dialog in configure mode; `arm` receives the
    *  configured draft so the drill can start the cursor-tracked placement. */
   onConfigureDevice: (rack: Rack, kind: RackItemKind, arm: (draft: RackItemDraft) => void) => void;
-  /** Armed placement click landed on `startU`: place the configured device. */
-  onPlaceDevice: (rack: Rack, draft: RackItemDraft, startU: number) => void;
+  /** Armed placement click landed on `startU` (and, for a fractional-width
+   *  device, the horizontal `slot`): place the configured device. */
+  onPlaceDevice: (rack: Rack, draft: RackItemDraft, startU: number, slot?: number) => void;
   onOpenItem: (item: RackItem, anchor: HTMLElement) => void;
   onEditItem: (rack: Rack, item: RackItem) => void;
   onBindItem: (item: RackItem) => void;
-  onMoveItem: (itemId: string, targetRackId: string, startU: number) => void;
+  onMoveItem: (itemId: string, targetRackId: string, startU: number, xFraction?: number) => void;
   onAddServerRoom: () => void;
   onAddRack: (serverRoom: string) => void;
   /** Picker flow: open the New Rack dialog, hand the saved rack back for a
    *  placement click instead of drilling into it. */
-  onAddRackForPlacement: (serverRoom: string, onSaved: (saved: Rack) => void) => void;
+  onAddRackForPlacement: (
+    serverRoom: string,
+    onSaved: (saved: Rack, sequence: RackPlacementSequence | null) => void,
+  ) => void;
   onDeleteServerRoom: (serverRoom: string, racks: Rack[]) => void;
   onDeleteRack: (rack: Rack) => void;
   onDeleteItem: (rack: Rack, item: RackItem) => void;
@@ -1168,6 +1342,7 @@ function RackDrill({
   const [backgroundOpen, setBackgroundOpen] = useState(false);
   const setServerRoomBackground = useItOpsStore((state) => state.setServerRoomBackground);
   const setSiteBackground = useItOpsStore((state) => state.setSiteBackground);
+  const createRackForSequence = useItOpsStore((state) => state.createRack);
   const discardRack = useItOpsStore((state) => state.deleteRack);
 
   // Server Room View layout: rack elevations (default), the blueprint floor
@@ -1188,6 +1363,7 @@ function RackDrill({
   const [placeRackId, setPlaceRackId] = useState<string | null>(null);
   const placeRackIdRef = useRef(placeRackId);
   placeRackIdRef.current = placeRackId;
+  const rackSequenceRef = useRef<RackPlacementSequence | null>(null);
   const discardPendingRackRef = useRef<(rackId: string) => void>(() => undefined);
   discardPendingRackRef.current = (rackId) => {
     void discardRack(site.id, rackId).catch((error: unknown) => {
@@ -1199,14 +1375,47 @@ function RackDrill({
   function cancelRoomPlacement() {
     const pendingRackId = placeRackIdRef.current;
     placeRackIdRef.current = null;
+    rackSequenceRef.current = null;
     setRoomTool(null);
     setPlaceRackId(null);
-    if (pendingRackId) discardPendingRackRef.current(pendingRackId);
+    if (pendingRackId && pendingRackId !== RACK_SEQUENCE_PENDING_ID) {
+      discardPendingRackRef.current(pendingRackId);
+    }
   }
 
   function completeRackPlacement() {
-    placeRackIdRef.current = null;
-    setPlaceRackId(null);
+    const sequence = rackSequenceRef.current;
+    if (!sequence) {
+      placeRackIdRef.current = null;
+      setPlaceRackId(null);
+      return;
+    }
+    // Keep the placement tool cancellable while the next durable Rack is
+    // created, without allowing another click to move the Rack just placed.
+    placeRackIdRef.current = RACK_SEQUENCE_PENDING_ID;
+    setPlaceRackId(RACK_SEQUENCE_PENDING_ID);
+
+    const nextName = nextRackSequenceName(
+      sequence.template,
+      racks
+        .filter((entry) => entry.serverRoom === sequence.input.serverRoom)
+        .map((entry) => entry.name),
+    );
+    void createRackForSequence(site.id, { ...sequence.input, name: nextName })
+      .then((created) => {
+        if (rackSequenceRef.current !== sequence) {
+          return discardPendingRackRef.current(created.id);
+        }
+        placeRackIdRef.current = created.id;
+        setPlaceRackId(created.id);
+      })
+      .catch((error: unknown) => {
+        rackSequenceRef.current = null;
+        placeRackIdRef.current = null;
+        setPlaceRackId(null);
+        const message = error instanceof Error ? error.message : String(error);
+        showStatusBarNotice(t("itops.errorNotice", { message }), { tone: "error" });
+      });
   }
   // Rack View and Server Room elevation picker: a configured Rack Device
   // awaiting its placement click.
@@ -1230,10 +1439,13 @@ function RackDrill({
   useEffect(() => {
     const pendingRackId = placeRackIdRef.current;
     placeRackIdRef.current = null;
+    rackSequenceRef.current = null;
     setRoomTool(null);
     setPlaceRackId(null);
     setPlaceDevice(null);
-    if (pendingRackId) discardPendingRackRef.current(pendingRackId);
+    if (pendingRackId && pendingRackId !== RACK_SEQUENCE_PENDING_ID) {
+      discardPendingRackRef.current(pendingRackId);
+    }
   }, [viewKey, editMode, roomView]);
 
   // Server Room elevation placement: every cabinet listens document-wide while
@@ -1399,7 +1611,11 @@ function RackDrill({
     // placements plus derived defaults), not the raw stored map — otherwise
     // auto-placed racks are invisible to gravity and their rack-top objects
     // would be yanked to the floor.
-    const rackCells = resolveIsoLayout(roomRacks, isoPlacements).cells;
+    const rackCells = resolveIsoLayout(
+      roomRacks,
+      isoPlacements,
+      roomObjects.filter((object) => object.kind === "wall"),
+    ).cells;
     const settled = settleRoomObjects(roomObjects, roomRacks, rackCells, roomFacing);
     // Rack-top 乖乖 packs from older saves become rack items; a pack whose
     // cabinet top is already taken merges away instead of double-stacking.
@@ -1428,8 +1644,8 @@ function RackDrill({
     showStatusBarNotice(t("itops.floorPlan.objectNoSpace"), { tone: "warning" });
   }
 
-  // The background popover serves the Server Room 2.5D view and Site View;
-  // each persists to its own durable scope.
+  // The background popover serves the Server Room elevation/2.5D views and
+  // Site View; each persists to its own durable scope.
   async function saveDrillViewBackground(background: DashboardBackground | null) {
     try {
       if (serverRoom) {
@@ -1441,6 +1657,23 @@ function RackDrill({
       const message = error instanceof Error ? error.message : String(error);
       showStatusBarNotice(t("itops.errorNotice", { message }), { tone: "error" });
     }
+  }
+
+  async function handleElevationContextMenu(event: ReactMouseEvent<HTMLDivElement>) {
+    if (event.defaultPrevented) return;
+    const target = event.target as HTMLElement;
+    if (target.closest("[data-rack-id]")) return;
+    event.preventDefault();
+    await showNativeContextMenu(
+      [
+        {
+          kind: "item",
+          label: t("itops.racks.changeBackground"),
+          action: () => setBackgroundOpen(true),
+        },
+      ],
+      { x: event.clientX, y: event.clientY },
+    );
   }
 
   // Snap every Server Room card back onto the default Site View grid.
@@ -1485,9 +1718,9 @@ function RackDrill({
         reserveTopU={KUAIGUAI_TOP_CLEARANCE_U}
         editMode={editMode}
         placeSpec={roomPlaceRackId === r.id ? placeDevice : null}
-        onPlaceAt={(startU) => {
+        onPlaceAt={(startU, slot) => {
           if (!placeDevice) return;
-          onPlaceDevice(r, placeDevice, startU);
+          onPlaceDevice(r, placeDevice, startU, slot);
           setPlaceDevice(null);
         }}
         onCancelPlacement={() => setPlaceDevice(null)}
@@ -1711,9 +1944,9 @@ function RackDrill({
               onMoveItem={editMode ? onMoveItem : undefined}
               onDeleteItem={editMode ? (item) => onDeleteItem(rack, item) : undefined}
               placeSpec={editMode ? placeDevice : null}
-              onPlaceAt={(startU) => {
+              onPlaceAt={(startU, slot) => {
                 if (!placeDevice) return;
-                onPlaceDevice(rack, placeDevice, startU);
+                onPlaceDevice(rack, placeDevice, startU, slot);
                 setPlaceDevice(null);
               }}
               onCancelPlacement={() => setPlaceDevice(null)}
@@ -1768,7 +2001,9 @@ function RackDrill({
                   tool={roomTool}
                   placeRackId={placeRackId}
                   onRackPlaced={completeRackPlacement}
-                  onObjectPlaced={() => setRoomTool(null)}
+                  onObjectPlaced={() => {
+                    if (roomTool !== "wall") setRoomTool(null);
+                  }}
                   placement={isoPlacements}
                   onPlacementChange={saveIsoPlacements}
                   facing={roomFacing}
@@ -1790,7 +2025,9 @@ function RackDrill({
                   tool={roomTool}
                   placeRackId={placeRackId}
                   onRackPlaced={completeRackPlacement}
-                  onObjectPlaced={() => setRoomTool(null)}
+                  onObjectPlaced={() => {
+                    if (roomTool !== "wall") setRoomTool(null);
+                  }}
                   placement={isoPlacements}
                   onPlacementChange={saveIsoPlacements}
                   facing={roomFacing}
@@ -1818,14 +2055,22 @@ function RackDrill({
                       cancelRoomPlacement();
                       return;
                     }
-                    onAddRackForPlacement(serverRoom.key, (saved) => setPlaceRackId(saved.id));
+                    onAddRackForPlacement(serverRoom.key, (saved, sequence) => {
+                      rackSequenceRef.current = sequence;
+                      placeRackIdRef.current = saved.id;
+                      setPlaceRackId(saved.id);
+                    });
                   }}
                 />
               ) : null}
             </div>
           ) : (
             <div className="rk-room-layout">
-              <div className="rk-elevations" ref={roomElevationsRef}>
+              <div
+                className="rk-elevations"
+                ref={roomElevationsRef}
+                onContextMenu={handleElevationContextMenu}
+              >
                 {groupRacksByGroup(serverRoom.racks).map((g) => (
                   <div className="rk-group" key={g.key}>
                     {groupRacksByGroup(serverRoom.racks).length > 1 || g.key ? (
@@ -1878,7 +2123,9 @@ function RackDrill({
           </div>
         )}
       </ItOpsBackground>
-      {backgroundOpen && ((serverRoom && roomView === "iso") || (!serverRoom && !rack)) ? (
+      {backgroundOpen &&
+      ((serverRoom && (roomView === "elevation" || roomView === "iso")) ||
+        (!serverRoom && !rack)) ? (
         <SharedBackgroundPopover
           className="itops-bg-popover"
           background={viewBackground ?? null}
@@ -2073,16 +2320,6 @@ function useNearestPlacementRack(
   return rackId;
 }
 
-function firstAvailableRackUnit(rack: Rack): number | null {
-  for (let unit = 1; unit <= rack.heightU; unit += 1) {
-    const occupied = rack.items.some(
-      (item) => unit >= item.startU && unit < item.startU + item.heightU,
-    );
-    if (!occupied) return unit;
-  }
-  return null;
-}
-
 function RackObjectPicker({
   racks,
   armedKind,
@@ -2098,7 +2335,8 @@ function RackObjectPicker({
   const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const q = query.trim().toLowerCase();
-  const hasFreeUnit = racks.some((rack) => firstAvailableRackUnit(rack) != null);
+  const hasFullWidthUnit = racks.some((rack) => firstAvailableRackUnit(rack, 4) != null);
+  const hasFractionalUnit = racks.some((rack) => firstAvailableRackUnit(rack, 1) != null);
   const rackTopAvailable = racks.some(
     (rack) => !rack.items.some((item) => isRackTopItem(item, rack.heightU)),
   );
@@ -2130,7 +2368,9 @@ function RackObjectPicker({
       <div className="rm-picker-grid">
         {kinds.map((kind) => {
           const label = t(`itops.racks.kind.${kind}`);
-          const available = hasFreeUnit || (kind === "kuaiguai" && rackTopAvailable);
+          const available =
+            (rackItemKindSupportsFractionalWidth(kind) ? hasFractionalUnit : hasFullWidthUnit) ||
+            (kind === "kuaiguai" && rackTopAvailable);
           return (
             <button
               key={kind}

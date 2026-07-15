@@ -3355,6 +3355,10 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.itops-page .rk-item.quarter-width .rkd-name,
+.itops-page .rack-item-preview-device.quarter-width .rkd-name {
+  font-size: 8.05px;
+}
 .itops-page .rkd-sub {
   font-family: var(--app-mono-font-family, monospace);
   font-size: 9px;
@@ -3943,6 +3947,27 @@
   font-size: 8.5px;
   color: var(--amber);
   font-weight: 600;
+}
+.itops-page .rkd-pdu[data-height-u="1"] {
+  gap: 2px;
+}
+.itops-page .rkd-pdu[data-height-u="1"] .rkd-outlet {
+  width: 9px;
+  height: 9px;
+}
+.itops-page .rkd-pdu[data-height-u="1"] .rkd-outlet-pin {
+  width: 1px;
+  height: 3px;
+}
+.itops-page .rkd-pdu[data-height-u="1"] .rkd-load {
+  gap: 4px;
+}
+.itops-page .rkd-pdu[data-height-u="1"] .rkd-load-track {
+  height: 3px;
+}
+.itops-page .rkd-pdu[data-height-u="1"] .rkd-load-pct {
+  font-size: 7.5px;
+  line-height: 1;
 }
 
 /* UPS. */
@@ -5077,9 +5102,13 @@
   background: color-mix(in srgb, var(--accent) 16%, transparent);
   pointer-events: none;
 }
+.itops-page .rm-bp-drop.blocked {
+  border-color: var(--red);
+  background: color-mix(in srgb, var(--red) 14%, transparent);
+}
 /* Armed-placement ghost: the picked fixture (or pending rack footprint) rides
    the cursor snapped to the hovered cell, previewing the drop before the
-   click commits; blocked means the cell has no free vertical span. */
+   click commits; blocked means the cell cannot accept that placement. */
 .itops-page .rm-bp-ghost {
   position: absolute;
   display: flex;
@@ -5108,6 +5137,50 @@
   border-radius: 3px;
   background: color-mix(in srgb, var(--accent) 22%, var(--surface));
   opacity: 0.75;
+}
+
+/* Snapped placement ghosts carry an explicit facing arrow. Facing 0 points
+   south/down; quarter turns follow the shared Rack/Object Facing numbering. */
+.itops-page .rm-placement-facing-arrow {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 22px;
+  height: 28px;
+  border: 1px solid color-mix(in srgb, var(--accent) 72%, var(--border));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  color: var(--accent);
+  box-shadow: var(--shadow-control);
+  transform: translate(-50%, -50%) rotate(var(--placement-facing-angle));
+  transform-origin: center;
+  pointer-events: none;
+  z-index: 7;
+}
+.itops-page .rm-placement-facing-arrow::before {
+  content: "";
+  position: absolute;
+  left: 9px;
+  top: 5px;
+  width: 3px;
+  height: 13px;
+  border-radius: 2px;
+  background: currentColor;
+}
+.itops-page .rm-placement-facing-arrow::after {
+  content: "";
+  position: absolute;
+  left: 5px;
+  bottom: 4px;
+  width: 0;
+  height: 0;
+  border-top: 7px solid currentColor;
+  border-right: 5.5px solid transparent;
+  border-left: 5.5px solid transparent;
+}
+.itops-page .blocked > .rm-placement-facing-arrow {
+  border-color: color-mix(in srgb, var(--red) 72%, var(--border));
+  color: var(--red);
 }
 
 /* One rack footprint standing on its cell, painted in the rack's shell
@@ -5408,6 +5481,25 @@
   font-family: var(--app-mono-font-family, monospace);
   font-size: 9px;
 }
+/* Partition wall plan strokes are the wall's real thickness against the cell,
+   so they must scale with the glyph instead of staying screen-constant. */
+.itops-page .rm-object-art[data-kind="wall"] * {
+  vector-effect: none;
+}
+.itops-page .rm-art-wall-casing {
+  fill: none;
+  stroke: color-mix(in srgb, var(--obj) 58%, var(--surface));
+  stroke-width: 12.5;
+}
+.itops-page .rm-art-wall-core {
+  fill: none;
+  stroke: color-mix(in srgb, var(--obj) 16%, var(--surface));
+  stroke-width: 7.5;
+}
+.itops-page .rm-art-wall-node {
+  fill: var(--obj);
+  stroke: none;
+}
 /* Reference CSS-3D object constructions. In the live room they remain inside
    the floor plane; the detached cursor preview supplies its own projection. */
 .itops-page .rm-iso-obj-model {
@@ -5428,6 +5520,7 @@
 .itops-page .rm-iso-obj-model[data-kind="sensor"] { width: 48px; height: 38px; }
 .itops-page .rm-iso-obj-model[data-kind="smokeDetector"] { width: 45px; height: 22px; }
 .itops-page .rm-iso-obj-model[data-kind="fireExtinguisher"] { width: 38px; height: 54px; }
+.itops-page .rm-iso-obj-model[data-kind="wall"] { width: 58px; height: 122px; }
 .itops-page .rm-iso-obj-model[data-kind="kuaikuai"] { width: 42px; height: 56px; }
 .itops-page .rm-object-art-iso {
   position: relative;
@@ -5451,6 +5544,10 @@
 .itops-page .rm-object-art-iso[data-kind="camera"] .rm-ref-iso-stage { transform: scale(0.68); }
 .itops-page .rm-object-art-iso[data-kind="sensor"] .rm-ref-iso-stage { transform: scale(0.82); }
 .itops-page .rm-object-art-iso[data-kind="smokeDetector"] .rm-ref-iso-stage { transform: scale(0.86); }
+/* The wall's 88px reference run must span one 58px floor cell exactly so
+   joined cells connect flush, while its 56px reference height stretches to
+   the real 2.4 m (54U ≈ 113 plane px) so it reads taller than the cabinets. */
+.itops-page .rm-object-art-iso[data-kind="wall"] .rm-ref-iso-stage { transform: scale3d(0.66, 0.66, 2); }
 /* Keep the corrected footprint widths while independently shortening the
    CSS-3D height axis: extinguisher to 1/2, erected 乖乖 pack to 1/4. */
 .itops-page .rm-object-art-iso[data-kind="fireExtinguisher"] .rm-ref-iso-stage { transform: scale3d(0.27, 0.27, 0.5); }
@@ -5939,6 +6036,7 @@
   border: 1.5px solid var(--accent);
   border-radius: 4px;
   background: color-mix(in srgb, var(--accent) 16%, transparent);
+  transform-style: preserve-3d;
   pointer-events: none;
 }
 .itops-page .rm-iso-drop.blocked {
@@ -5967,6 +6065,12 @@
 .itops-page .rm-iso-cab.ghost {
   opacity: 0.65;
   pointer-events: none;
+}
+.itops-page .rm-iso-cab.ghost.blocked {
+  opacity: 0.32;
+}
+.itops-page .rm-iso-drop .rm-placement-facing-arrow {
+  transform: translate3d(-50%, -50%, var(--placement-facing-lift, 8px)) rotate(var(--placement-facing-angle));
 }
 .itops-page .rm-iso-obj.ghost {
   /* Parent opacity flattens preserve-3d descendants and collapses every
@@ -6175,13 +6279,23 @@
   border-top: 2px solid var(--skin-rail);
   border-bottom: 2px solid var(--skin-rail);
 }
+.itops-page .rm-iso-skin-items {
+  position: absolute;
+  display: block;
+}
+.itops-page .rm-iso-skin.axis-y .rm-iso-skin-items {
+  inset: 0 2px;
+}
+.itops-page .rm-iso-skin.axis-x .rm-iso-skin-items {
+  inset: 2px 0;
+}
 .itops-page .rm-iso-skin.axis-y .rm-iso-skin-item {
-  left: 2px;
-  right: 2px;
+  left: 0;
+  right: 0;
 }
 .itops-page .rm-iso-skin.axis-x .rm-iso-skin-item {
-  top: 2px;
-  bottom: 2px;
+  top: 0;
+  bottom: 0;
 }
 .itops-page .rm-iso-skin-item {
   position: absolute;
@@ -6231,12 +6345,17 @@
 .itops-page .rm-iso-skin-item[data-kind="label"]::after {
   content: none;
 }
-/* Hover detail card shared by both spatial views (RackTipContent): billboarded
-   above a 2.5D cabinet, floating above a floor-plan footprint. */
-.itops-page .rm-iso-tip,
-.itops-page .rm-bp-tip {
-  position: absolute;
-  left: 50%;
+/* Hover detail card shared by both spatial views (RackTipContent). The portal
+   escapes both scroll overflow and the 2.5D floor clip; JS flips/clamps the
+   fixed card to the visible room rectangle. */
+.itops-page.rm-rack-hover-portal {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  pointer-events: none;
+}
+.itops-page .rm-rack-hover-card {
+  position: fixed;
   display: flex;
   flex-direction: column;
   gap: 3px;
@@ -6246,25 +6365,7 @@
   border-radius: 9px;
   background: var(--surface);
   box-shadow: var(--shadow-control);
-  opacity: 0;
   pointer-events: none;
-  transition: opacity 0.14s;
-}
-.itops-page .rm-iso-tip {
-  top: 50%;
-}
-.itops-page .rm-bp-tip {
-  bottom: calc(100% + 8px);
-  transform: translateX(-50%);
-  z-index: 9;
-}
-.itops-page .rm-iso-cab:hover .rm-iso-tip,
-.itops-page .rm-bp-rack:hover .rm-bp-tip {
-  opacity: 1;
-}
-/* Edit mode floats the control strip in the same spot; keep the card away. */
-.itops-page .rm-bp-rack.editing .rm-bp-tip {
-  display: none;
 }
 .itops-page .rm-tip-name {
   font-size: 12px;
@@ -6472,6 +6573,44 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+}
+.rack-dialog-name-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.rack-dialog-name-label-row .kk-lbl {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 590;
+}
+.rack-dialog-name-label-row .kk-req {
+  color: var(--accent);
+}
+.rack-dialog-sequence-link {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--green);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1;
+  cursor: pointer;
+}
+.rack-dialog-sequence-link:hover {
+  color: color-mix(in srgb, var(--green) 75%, var(--text));
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.rack-dialog-sequence-link:focus-visible {
+  outline: none;
+  border-radius: 3px;
+  box-shadow: var(--ring);
 }
 .rack-dialog-shell-grid {
   display: grid;
@@ -6866,21 +7005,6 @@
   justify-self: center;
 }
 
-.itops-page .rack-port-list {
-  display: grid;
-  gap: 8px;
-}
-
-.itops-page .rack-port-row {
-  display: grid;
-  gap: 8px;
-  align-items: center;
-}
-
-.rack-item-dialog .rack-port-row {
-  grid-template-columns: 1fr;
-}
-
 .itops-page .connection-binding-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -6993,8 +7117,7 @@
   .rack-item-dialog-grid { grid-template-columns: 1fr; }
   .itops-page .rack-form-grid.two,
   .itops-page .rack-kuaiguai-fields,
-  .itops-page .connection-binding-list,
-  .itops-page .rack-port-row {
+  .itops-page .connection-binding-list {
     grid-template-columns: 1fr;
   }
 }

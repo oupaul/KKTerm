@@ -10,6 +10,7 @@ const canvasSource = await readFile(
   new URL("../src/modules/workspace/connections/remote-desktop/RdpCanvasView.tsx", import.meta.url),
   "utf8",
 );
+const backendSource = await readFile(new URL("../src-tauri/src/rdp_client.rs", import.meta.url), "utf8");
 
 test("IronRDP canvas sessions report lifecycle to the workspace controller", () => {
   assert.match(canvasSource, /onSessionConnected\?: \(sessionId: string\) => void;/);
@@ -37,18 +38,26 @@ test("assistant remote-desktop tools use IronRDP client commands for canvas RDP"
 });
 
 test("IronRDP canvas syncs clipboard text through the CLIPRDR channel", () => {
-  // Ctrl/Cmd+V reads the local clipboard, advertises it through CLIPRDR, and sends
-  // a remote Ctrl+V paste chord.
-  assert.match(canvasSource, /readFromClipboard/);
+  // macOS reads NSPasteboard natively and performs advertise + remote Ctrl+V as
+  // one ordered backend operation. Linux retains the trusted paste-event path.
   assert.match(
     canvasSource,
     /\(e\.ctrlKey \|\| e\.metaKey\) && !e\.altKey && !e\.shiftKey && e\.code === "KeyV"/,
   );
-  assert.match(canvasSource, /pasteFromClipboard\(\);/);
+  assert.match(canvasSource, /onPaste=\{onPaste\}/);
+  assert.match(canvasSource, /invokeCommand\("paste_rdp_client_clipboard"/);
+  assert.match(canvasSource, /e\.clipboardData\.getData\("text\/plain"\)/);
+  assert.doesNotMatch(canvasSource, /readFromClipboard/);
   assert.match(canvasSource, /send_rdp_client_clipboard_text/);
-  assert.match(canvasSource, /readFromClipboard\(\)[\s\S]*sendClipboardText\(text\)/);
+  assert.match(canvasSource, /sendClipboardText\(text\)[\s\S]*sendRemotePasteChord\(\)/);
   assert.match(canvasSource, /sendRemotePasteChord\(\)/);
-  assert.match(canvasSource, /e\.preventDefault\(\);[\s\S]*pasteFromClipboard\(\);[\s\S]*return;/);
+  assert.match(backendSource, /pending_local_format_response: Option<OwnedFormatDataResponse>/);
+  assert.match(backendSource, /\.submit_format_data\(response\)/);
+  assert.match(backendSource, /RdpInput::PasteLocalClipboardText\(text\)/);
+  assert.match(backendSource, /NSPasteboard::generalPasteboard\(\)/);
+  assert.match(backendSource, /pending_remote_paste_chord = ok/);
+  assert.match(backendSource, /flush_pending_remote_paste_chord/);
+  assert.doesNotMatch(backendSource, /CanvasClipboardProxy/);
   assert.match(canvasSource, /clipboardText/);
   assert.match(canvasSource, /writeToClipboard\(payload\.text\)/);
   // The Cmd/Super modifier stays local so paste does not tap the remote Start menu.

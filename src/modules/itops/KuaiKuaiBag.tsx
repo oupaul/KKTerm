@@ -5,6 +5,89 @@ export type KuaiKuaiStyle = "full" | "laidDown";
 /** Days before the expiry date over which the bag's colors drain away. */
 export const KUAIKUAI_FADE_DAYS = 30;
 
+// The white note panel's writing area: the ruled lines run x 58–222 with the
+// handwriting drawn at this font size, so wrapping estimates glyph advances
+// (an SVG <text> cannot wrap by itself).
+const NOTE_FONT_SIZE = 10.5;
+const NOTE_LINE_WIDTH = 160;
+const NOTE_MAX_LINES = 3;
+// Ruled lines sit at y 246/263/280; each handwriting baseline rests just above.
+const NOTE_BASELINES = [243.5, 260.5, 277.5];
+// Tiny per-line rotation/indent jitter so the writing reads as scribbled by hand.
+const NOTE_TILTS = [-1.3, 0.9, -0.6];
+const NOTE_INDENTS = [0, 2.5, 1];
+
+// CJK ideographs, kana, hangul, and fullwidth forms write ~1em wide; other
+// glyphs average a narrower handwriting advance.
+const WIDE_CHAR_RANGES =
+  "\\u1100-\\u11ff\\u2e80-\\u9fff\\ua000-\\ua4cf\\uac00-\\ud7a3\\uf900-\\ufaff\\ufe30-\\ufe4f\\uff00-\\uff60\\u3000-\\u303f";
+const WIDE_CHAR = new RegExp(`[${WIDE_CHAR_RANGES}]`);
+// Whitespace runs, single wide chars, and narrow-glyph words wrap as units.
+const NOTE_TOKEN = new RegExp(`\\s+|[${WIDE_CHAR_RANGES}]|[^\\s${WIDE_CHAR_RANGES}]+`, "g");
+
+function noteCharWidth(ch: string): number {
+  if (WIDE_CHAR.test(ch)) return NOTE_FONT_SIZE;
+  if (ch === " ") return NOTE_FONT_SIZE * 0.32;
+  return NOTE_FONT_SIZE * 0.56;
+}
+
+function noteTextWidth(text: string): number {
+  let width = 0;
+  for (const ch of text) width += noteCharWidth(ch);
+  return width;
+}
+
+/** Wrap a device's notes onto the bag's ruled note lines: user line breaks are
+ *  kept, long runs wrap at spaces (or per character for CJK / unbroken runs),
+ *  and anything past the last ruled line is ellipsized. */
+export function kuaiKuaiNoteLines(notes?: string | null): string[] {
+  const text = (notes ?? "").trim();
+  if (!text) return [];
+  const lines: string[] = [];
+  for (const para of text.split(/\r?\n/)) {
+    if (!para.trim()) {
+      lines.push("");
+      continue;
+    }
+    let line = "";
+    let width = 0;
+    const flush = () => {
+      if (line.trim()) lines.push(line.trimEnd());
+      line = "";
+      width = 0;
+    };
+    for (const token of para.match(NOTE_TOKEN) ?? []) {
+      const isSpace = !token.trim();
+      const tokenWidth = noteTextWidth(token);
+      if (!isSpace && width + tokenWidth > NOTE_LINE_WIDTH) {
+        if (tokenWidth <= NOTE_LINE_WIDTH) {
+          flush();
+        } else {
+          // A single run wider than the panel hard-breaks per character.
+          for (const ch of token) {
+            const w = noteCharWidth(ch);
+            if (width + w > NOTE_LINE_WIDTH) flush();
+            line += ch;
+            width += w;
+          }
+          continue;
+        }
+      }
+      if (isSpace && !line) continue;
+      line += token;
+      width += tokenWidth;
+    }
+    flush();
+  }
+  if (lines.length > NOTE_MAX_LINES) {
+    let last = lines[NOTE_MAX_LINES - 1];
+    const budget = NOTE_LINE_WIDTH - noteCharWidth("…");
+    while (last && noteTextWidth(last) > budget) last = last.slice(0, -1);
+    return [...lines.slice(0, NOTE_MAX_LINES - 1), `${last.trimEnd()}…`];
+  }
+  return lines;
+}
+
 /** Grayscale amount for a bag with the given expiry date: 0 (fresh colors)
  *  until KUAIKUAI_FADE_DAYS days out, then ramping linearly to 1 (fully black
  *  and white) on and after the expiry date. Unset or unparsable dates never
@@ -23,16 +106,20 @@ export function kuaiKuaiGrayscale(expiry?: string | null, now = new Date()): num
 export function KuaiKuaiBag({
   style = "full",
   expiry,
+  notes,
 }: {
   style?: KuaiKuaiStyle | null;
   expiry?: string | null;
+  notes?: string | null;
 }) {
   const id = useId().replace(/:/g, "");
   const bag = `${id}-bag`;
   const sheen = `${id}-sheen`;
   const puff = `${id}-puff`;
+  const noteClip = `${id}-note`;
   const transform = style === "laidDown" ? "translate(0 112) rotate(-90) scale(.33 1.05)" : undefined;
   const grayscale = kuaiKuaiGrayscale(expiry);
+  const noteLines = kuaiKuaiNoteLines(notes);
 
   return (
     <svg
@@ -60,6 +147,11 @@ export function KuaiKuaiBag({
           <stop offset=".58" stopColor="#fff" stopOpacity="0" />
           <stop offset="1" stopColor="#205f0c" stopOpacity=".34" />
         </radialGradient>
+        {noteLines.length ? (
+          <clipPath id={noteClip}>
+            <rect x="46" y="206" width="188" height="96" rx="12" />
+          </clipPath>
+        ) : null}
       </defs>
       <g transform={transform}>
         <path
@@ -90,6 +182,27 @@ export function KuaiKuaiBag({
         <g stroke="#b9c6da" strokeWidth="1.6" strokeDasharray="2.5 5" strokeLinecap="round">
           <line x1="58" y1="246" x2="222" y2="246" /><line x1="58" y1="263" x2="222" y2="263" /><line x1="58" y1="280" x2="222" y2="280" />
         </g>
+        {noteLines.length ? (
+          <g
+            className="kk-bag-notes"
+            clipPath={`url(#${noteClip})`}
+            fontFamily='"Segoe Print", "Bradley Hand", "Comic Sans MS", "Kaiti TC", DFKai-SB, KaiTi, cursive'
+            fontSize={NOTE_FONT_SIZE}
+            fill="#3b5ba5"
+            opacity=".92"
+          >
+            {noteLines.map((line, i) => (
+              <text
+                key={i}
+                x={58 + NOTE_INDENTS[i]}
+                y={NOTE_BASELINES[i]}
+                transform={`rotate(${NOTE_TILTS[i]} 140 ${NOTE_BASELINES[i]})`}
+              >
+                {line}
+              </text>
+            ))}
+          </g>
+        ) : null}
         {expiry ? <text x="140" y="298" textAnchor="middle" fontWeight="700" fontSize="8.5" fill="#8094ad">EXP {expiry}</text> : <text x="140" y="298" textAnchor="middle" fontWeight="600" fontSize="8.5" fill="#9fb0c8">be good · behave</text>}
       </g>
     </svg>

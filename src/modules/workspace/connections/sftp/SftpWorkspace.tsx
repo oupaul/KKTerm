@@ -1,4 +1,4 @@
-import { confirmTrustedSshHostKey, connectionToolbarTitle, resolveSshSocksProxyRequest, uniqueRuntimeId, usesNativeSshHostKeyVerification } from "../utils";
+import { confirmTrustedSshHostKey, connectionToolbarTitle, resolveSshOldProtocols, resolveSshSocksProxyRequest, uniqueRuntimeId, usesNativeSshHostKeyVerification } from "../utils";
 
 import { AlertTriangle, ChevronsUpDown, X } from "../../../../lib/reicon";
 import { Actions, Btn, DIcon, DialogShell, Field, Sheet, TextInput } from "../../../../app/ui/dialog";
@@ -609,6 +609,7 @@ export function SftpWorkspace({
               host: connection.host,
               port: connection.port,
               ...resolveSshSocksProxyRequest(connection),
+              sshOldProtocols: resolveSshOldProtocols(connection, useWorkspaceStore.getState().sshSettings),
             },
           });
           await confirmTrustedSshHostKey(preview);

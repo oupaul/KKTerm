@@ -9,6 +9,12 @@ import { defaultWslConnectionName, distroFromWslShell } from "./connection-dialo
 import { LocalFilesConnectionFields } from "./connection-dialog/LocalFilesConnectionFields";
 import { FileViewConnectionFields } from "./connection-dialog/FileViewConnectionFields";
 import { RdpConnectionFields, RdpConnectionOptions } from "./connection-dialog/RdpConnectionFields";
+import { parseRdpDriveSelection } from "./remote-desktop/rdpLocalResources";
+import {
+  resolvePanoramaConnections,
+  shouldConfirmPanorama,
+  unopenedPanoramaConnections,
+} from "./panorama";
 import { SerialConnectionFields } from "./connection-dialog/SerialConnectionFields";
 import { SshConnectionFields, SshConnectionOptions } from "./connection-dialog/SshConnectionFields";
 import { writeSshApplyStartupToExistingTmux } from "./connection-dialog/sshStartupScript";
@@ -41,7 +47,7 @@ import {
   connectionRequestNeedsCredentialStoreUnlock,
   shouldDeleteSshSocksProxySecret,
 } from "./credentialUnlockPreflight";
-import { confirmTrustedSshHostKey, connectionPasswordOwnerId, connectionSshSocksProxyPasswordOwnerId, defaultPortForConnectionType, connectionTypeLabel, ftpPortForProtocolSelection, isRemoteDesktopConnectionType, localShellOptionsForPlatform, resolveSshCompression, resolveSshSocksProxyRequest, uniqueRuntimeId, type LocalShellOption } from "./utils";
+import { confirmTrustedSshHostKey, connectionPasswordOwnerId, connectionSshSocksProxyPasswordOwnerId, defaultPortForConnectionType, connectionTypeLabel, ftpPortForProtocolSelection, isRemoteDesktopConnectionType, localShellOptionsForPlatform, resolveSshCompression, resolveSshOldProtocols, resolveSshSocksProxyRequest, uniqueRuntimeId, type LocalShellOption } from "./utils";
 import { IMPORT_CONNECTIONS_REQUEST_EVENT, NEW_CONNECTION_REQUEST_EVENT, RECENT_CONNECTION_LIMIT, loadCollapsedFolderIds, loadRecentConnectionIds, notifyConnectionTreeInvalidated, saveCollapsedFolderIds, saveRecentConnectionIds, type NewConnectionRequestDetail } from "./connectionSidebarState";
 import { collectConnectionFolderIds, countConnections, countFolders, filterConnectedConnections, filterConnectionTree, findConnectionInTree, flattenConnections, flattenFolders, visibleFlatConnections as flattenVisibleConnections, withLiveConnectionStatuses } from "./treeUtils";
 import { WorkspaceIcon } from "../workspaceIcons";
@@ -63,16 +69,16 @@ import { reiconIconRefForName } from "../../../lib/iconCatalog";
 import { requestCredentialUnlock } from "../../../lib/credentialUnlock";
 import { nativeMenuIcons } from "../../../lib/nativeMenuIcons";
 import { lockOsIconAutoDetect } from "../../../lib/osIcons";
-import { isMacPlatform } from "../../../lib/platform";
+import { isMacPlatform, isWindowsPlatform } from "../../../lib/platform";
 import { showNativeContextMenu, type NativeContextMenuItem } from "../../../lib/nativeContextMenu";
-import { confirmNativeDialog, invokeCommand, isCredentialUnlockRequiredError, isTauriRuntime, selectAppLauncherFolder, selectFileViewPath, selectKeyFile, type TmuxSession } from "../../../lib/tauri";
+import { confirmNativeDialog, invokeCommand, isCredentialUnlockRequiredError, isTauriRuntime, selectAndReadSshConfigFile, selectAppLauncherFolder, selectFileViewPath, selectKeyFile, type TmuxSession } from "../../../lib/tauri";
 import { connectionTree } from "../../../app-defaults";
 import { DeleteConfirmationDialog } from "../../../app/DeleteConfirmationDialog";
 import { DialogPortal } from "../../../app/DialogPortal";
-import { LegacyDialogActions } from "../../../app/ui/dialog";
+import { ConfirmSheet, LegacyDialogActions } from "../../../app/ui/dialog";
 import { pushTrayMenu } from "../../../app/trayMenu";
 import { CHILD_CONNECTION_CLOSED_EVENT, DEFAULT_WORKSPACE_ID, appendTmuxSessionId, useWorkspaceStore } from "../../../store";
-import type { Connection, ConnectionFolder, ConnectionStatus, ConnectionTree, ConnectionType, CreateConnectionRequest, RdpSettings, SplitDirection, SshCompressionMode, SshSettings, StoredCredentialSummary, UpdateConnectionRequest, VncSettings, WorkspaceChildConnection, WorkspaceTab } from "../../../types";
+import type { Connection, ConnectionFolder, ConnectionStatus, ConnectionTree, ConnectionType, CreateConnectionRequest, RdpSettings, SplitDirection, SshCompressionMode, SshOldProtocolsMode, SshSettings, StoredCredentialSummary, UpdateConnectionRequest, VncSettings, WorkspaceChildConnection, WorkspaceTab } from "../../../types";
 
 // Pointer travel (px, either axis) before a press is treated as a drag rather
 // than a click. Kept above ordinary click jitter so selecting a row never
@@ -242,6 +248,12 @@ type FolderIconDialogState = {
   folder: ConnectionFolder;
 };
 
+type PendingPanorama = {
+  connectionIds: string[];
+  title: string;
+  newSessionCount: number;
+};
+
 const QUICK_CONNECT_RECENT_TOP_LEVEL_LIMIT = 5;
 const QUICK_CONNECT_RECENT_SUBMENU_LIMIT = 20;
 
@@ -328,6 +340,7 @@ export function ConnectionSidebar({
   const [transferSshPublicKeyError, setTransferSshPublicKeyError] = useState("");
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [confirmDeleteTarget, setConfirmDeleteTarget] = useState<DeleteTarget | null>(null);
+  const [pendingPanorama, setPendingPanorama] = useState<PendingPanorama | null>(null);
   // Ephemeral filter: only show connections with a live session. Not persisted
   // because "currently connected" is meaningless across restarts.
   const [showConnectedOnly, setShowConnectedOnly] = useState(false);
@@ -944,6 +957,7 @@ export function ConnectionSidebar({
           proxyJump: connection.proxyJump,
           ...resolveSshSocksProxyRequest(connection),
           sshCompression: resolveSshCompression(connection, sshSettings),
+          sshOldProtocols: resolveSshOldProtocols(connection, sshSettings),
           authMethod: connection.authMethod,
           secretOwnerId: connectionPasswordOwnerId(connection),
         },
@@ -1097,6 +1111,7 @@ export function ConnectionSidebar({
           proxyJump: connection.proxyJump,
           ...resolveSshSocksProxyRequest(connection),
           sshCompression: resolveSshCompression(connection, sshSettings),
+          sshOldProtocols: resolveSshOldProtocols(connection, sshSettings),
         },
       });
       setTransferSshPublicKeyDialog(null);
@@ -2395,8 +2410,28 @@ export function ConnectionSidebar({
   }
 
   function openConnectionPanorama(connections: Connection[], title: string) {
-    const unopenedConnections = connections.filter(
-      (connection) => !findOpenTabForConnection(connection.id),
+    const connectionIds = connections.map((connection) => connection.id);
+    const rawConnections = resolvePanoramaConnections(tree, connectionIds);
+    const unopenedConnections = unopenedPanoramaConnections(
+      rawConnections,
+      (connectionId) => Boolean(findOpenTabForConnection(connectionId)),
+    );
+    if (shouldConfirmPanorama(unopenedConnections.length)) {
+      setPendingPanorama({
+        connectionIds,
+        title,
+        newSessionCount: unopenedConnections.length,
+      });
+      return;
+    }
+    openResolvedConnectionPanorama(connectionIds, title);
+  }
+
+  function openResolvedConnectionPanorama(connectionIds: string[], title: string) {
+    const connections = resolvePanoramaConnections(tree, connectionIds);
+    const unopenedConnections = unopenedPanoramaConnections(
+      connections,
+      (connectionId) => Boolean(findOpenTabForConnection(connectionId)),
     );
     if (unopenedConnections.length > 0) {
       openConnectionsInPanorama(unopenedConnections, { title });
@@ -2411,7 +2446,7 @@ export function ConnectionSidebar({
   }
 
   function handleOpenRootPanorama() {
-    openConnectionPanorama(flattenConnections(treeWithLiveStatuses), panelTitle);
+    openConnectionPanorama(flattenConnections(tree), panelTitle);
   }
 
   // Closes every open Tab and Pane for every connection in the folder (child
@@ -3281,6 +3316,21 @@ export function ConnectionSidebar({
           target={confirmDeleteTarget}
         />
       ) : null}
+      {pendingPanorama ? (
+        <ConfirmSheet
+          tone="warn"
+          confirmIcon="monitor"
+          title={t("connections.openPanoramaConfirmTitle", { count: pendingPanorama.newSessionCount })}
+          message={t("connections.openPanoramaConfirmBody", { count: pendingPanorama.newSessionCount })}
+          confirmLabel={t("connections.openPanoramaConfirmAction")}
+          onCancel={() => setPendingPanorama(null)}
+          onConfirm={() => {
+            const pending = pendingPanorama;
+            setPendingPanorama(null);
+            openResolvedConnectionPanorama(pending.connectionIds, pending.title);
+          }}
+        />
+      ) : null}
       {transferSshPublicKeyDialog ? (
         <TransferSshPublicKeyDialog
           connection={transferSshPublicKeyDialog.connection}
@@ -3409,6 +3459,7 @@ function FolderIconDialog({
 }) {
   const { t } = useTranslation();
   const [iconDataUrl, setIconDataUrl] = useState<string | null>(folder.iconDataUrl ?? null);
+
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -4113,6 +4164,10 @@ function ConnectionDialog({
   const [keyPath, setKeyPath] = useState(
     initialConnection?.keyPath ?? sshSettings.defaultKeyPath ?? "",
   );
+  const [nameDraft, setNameDraft] = useState(initialConnection?.name ?? "");
+  const [hostDraft, setHostDraft] = useState(initialConnection?.host ?? "");
+  const [userDraft, setUserDraft] = useState(initialConnection?.user ?? sshSettings.defaultUser);
+  const [importedProxyJump, setImportedProxyJump] = useState<string | undefined>();
   const [localStartupDirectory, setLocalStartupDirectory] = useState(
     initialConnection?.localStartupDirectory ?? "",
   );
@@ -4129,6 +4184,7 @@ function ConnectionDialog({
   const [keyPassphraseDraft, setKeyPassphraseDraft] = useState("");
   const [isGeneratingKey, setIsGeneratingKey] = useState(false);
   const [keyGenerationError, setKeyGenerationError] = useState("");
+  const [rdpLocalResourceError, setRdpLocalResourceError] = useState("");
   const [hasStoredConnectionPassword, setHasStoredConnectionPassword] = useState(
     Boolean(initialConnection?.hasPassword || initialConnection?.passwordCredentialId),
   );
@@ -4324,8 +4380,38 @@ function ConnectionDialog({
     };
   }, [connectionType]);
 
+  async function handleImportSshConfig() {
+    try {
+      const file = await selectAndReadSshConfigFile();
+      if (!file) {
+        return;
+      }
+      const preview = await invokeCommand("import_ssh_config", {
+        request: { content: file.content, folderId: initialFolderId },
+      });
+      const draft = preview.drafts[0];
+      if (!draft) {
+        throw new Error(t("connections.importSshConfigEmpty"));
+      }
+      setNameDraft(draft.name ?? "");
+      setHostDraft(draft.host ?? "");
+      setUserDraft(draft.user ?? sshSettings.defaultUser);
+      setPortDraft(draft.port ? String(draft.port) : "");
+      setKeyPath(draft.keyPath ?? "");
+      if (draft.proxyJump) {
+        setImportedProxyJump(draft.proxyJump);
+        setSshSocksProxyInheritsSettingsDefaults(false);
+      }
+    } catch (importError) {
+      useWorkspaceStore.getState().showStatusBarNotice(importError instanceof Error ? importError.message : String(importError), { tone: "error" });
+    }
+  }
+
+
+
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setRdpLocalResourceError("");
     if (!connectionType) {
       return;
     }
@@ -4398,12 +4484,35 @@ function ConnectionDialog({
     // override (undefined) so the connection tracks the global default; an
     // explicit choice persists "off"/"fast".
     const formSshCompression = String(form.get("sshCompression") ?? "");
+    const formSshOldProtocols = String(form.get("sshOldProtocols") ?? "");
     const sshCompression =
       usesSshDefaults && !sshUsesDefaultOptions && (formSshCompression === "off" || formSshCompression === "fast")
         ? (formSshCompression as SshCompressionMode)
         : undefined;
+    const sshOldProtocols =
+      usesSshDefaults && !sshUsesDefaultOptions && (formSshOldProtocols === "off" || formSshOldProtocols === "legacy")
+        ? (formSshOldProtocols as SshOldProtocolsMode)
+        : undefined;
     const usePsmuxSessions = connectionType === "local" && form.get("usePsmuxSessions") === "on";
     const inheritRdpDefaults = form.get("rdpInheritDefaults") === "on";
+    const rdpDriveSelection = inheritRdpDefaults
+      ? rdpSettings.driveSelection
+      : parseRdpDriveSelection(form.get("rdpDriveSelection"), rdpSettings.driveSelection);
+    const rdpSharedLocalFolder = inheritRdpDefaults
+      ? rdpSettings.sharedLocalFolder
+      : String(form.get("rdpSharedLocalFolder") ?? "").trim() || undefined;
+    const redirectsRdpLocalResources = inheritRdpDefaults
+      ? rdpSettings.redirectDrives
+      : form.get("rdpRedirectDrives") === "on";
+    if (
+      connectionType === "rdp"
+      && !isWindowsPlatform()
+      && redirectsRdpLocalResources
+      && !rdpSharedLocalFolder
+    ) {
+      setRdpLocalResourceError(t("settings.rdpSharedFolderRequired"));
+      return;
+    }
     const inheritVncDefaults = form.get("vncInheritDefaults") === "on";
     const urlProxyInheritDefaults = form.get("urlProxyInheritDefaults") === "on";
     const urlProxyMode = String(form.get("urlProxyMode") ?? "direct") as UrlProxyMode;
@@ -4451,6 +4560,7 @@ function ConnectionDialog({
       sshSocksProxyUsername: usesSshDefaults ? sshSocksProxyUsername || undefined : undefined,
       sshSocksProxyInheritDefaults: usesSshDefaults ? sshUsesDefaultOptions : undefined,
       sshCompression: usesSshDefaults ? sshCompression : undefined,
+      sshOldProtocols: usesSshDefaults ? sshOldProtocols : undefined,
       sshSocksProxyPassword: usesSshDefaults && !sshUsesDefaultOptions ? sshSocksProxyPassword || undefined : undefined,
       authMethod: usesSshAuthFields ? effectiveAuthMethod : undefined,
       keyPassphrase: usesSshAuthFields && effectiveAuthMethod === "keyFile" ? keyPassphrase || undefined : undefined,
@@ -4495,6 +4605,8 @@ function ConnectionDialog({
               redirectDrives: inheritRdpDefaults
                 ? rdpSettings.redirectDrives
                 : form.get("rdpRedirectDrives") === "on",
+              driveSelection: rdpDriveSelection,
+              sharedLocalFolder: rdpSharedLocalFolder,
               bitmapCache: inheritRdpDefaults
                 ? rdpSettings.bitmapCache
                 : form.get("rdpBitmapCache") === "on",
@@ -4742,12 +4854,18 @@ function ConnectionDialog({
             isEditMode={isEditMode}
             keyPath={keyPath}
             keyPassphraseDraft={keyPassphraseDraft}
+            nameDraft={nameDraft}
+            hostDraft={hostDraft}
+            userDraft={userDraft}
             matchingPasswordCredentials={matchingPasswordCredentials}
             onAuthMethodChange={setAuthMethod}
             onBrowseKeyFile={() => void handleBrowseKeyFile()}
             onKeyPathChange={setKeyPath}
             onOpenKeyEmailDialog={handleOpenKeyEmailDialog}
             onPortDraftChange={setPortDraft}
+            onHostDraftChange={setHostDraft}
+            onNameDraftChange={setNameDraft}
+            onUserDraftChange={setUserDraft}
             onSelectedPasswordCredentialIdChange={setSelectedPasswordCredentialId}
             portDraft={portDraft}
             selectedPasswordCredentialId={selectedPasswordCredentialId}
@@ -4830,6 +4948,7 @@ function ConnectionDialog({
         return (
           <SshConnectionOptions
             initialConnection={initialConnection}
+            importedProxyJump={importedProxyJump}
             onInheritsSettingsDefaultsChange={setSshSocksProxyInheritsSettingsDefaults}
             sshInheritsSettingsDefaults={sshSocksProxyInheritsSettingsDefaults}
             sshSettings={sshSettings}
@@ -4964,9 +5083,14 @@ function ConnectionDialog({
           </div>
         ) : null}
 
-        {error ? <p className="form-error">{error}</p> : null}
+        {rdpLocalResourceError || error ? <p className="form-error">{rdpLocalResourceError || error}</p> : null}
 
         <LegacyDialogActions
+          extraLeft={connectionType === "ssh" && !isEditMode ? (
+            <button className="toolbar-button" onClick={() => void handleImportSshConfig()} type="button">
+              {t("connections.importSshConfig")}
+            </button>
+          ) : undefined}
           primary={<button className="approve-button" disabled={!connectionType} type="submit">
             <Check size={15} />
             {mode === "quick" ? t("connections.saveAndConnect") : t("common.save")}

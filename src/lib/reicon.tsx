@@ -16,7 +16,7 @@ import {
   Database as ReDatabase, DocumentCode2 as ReDocumentCode2, DocumentText2 as ReDocumentText2, Download as ReDownload,
   Edit2 as ReEdit2, Envelope as ReEnvelope, Eye as ReEye, EyeOff as ReEyeOff,
   File as ReFile, FilePlus as ReFilePlus, FileText as ReFileText, FileUp as ReFileUp,
-  Fingerprint as ReFingerprint, Flag as ReFlag, Folder as ReFolder, FolderOpen as ReFolderOpen,
+  Fingerprint as ReFingerprint, Flag as ReFlag, Floppy as ReFloppy, Folder as ReFolder, FolderOpen as ReFolderOpen,
   FolderPlus as ReFolderPlus, Gauge3 as ReGauge3, Gear as ReGear, Globe as ReGlobe,
   Globe2 as ReGlobe2, Grid as ReGrid, Hand as ReHand, HardDrive as ReHardDrive,
   Hashtag as ReHashtag, HeartPulse as ReHeartPulse, HelpCircle as ReHelpCircle, Home as ReHome,
@@ -45,7 +45,7 @@ import {
   Wifi as ReWifi, Wind as ReWind, Window as ReWindow, X as ReX,
 } from "reicon-react";
 import {
-  Bot as LucideBot, Braces as LucideBraces, Brain as LucideBrain, Cable as LucideCable,
+  ArrowUpDown as LucideArrowUpDown, Bot as LucideBot, Braces as LucideBraces, Brain as LucideBrain, Cable as LucideCable,
   Circle as LucideCircle, CircleDashed as LucideCircleDashed, CircleDot as LucideCircleDot, Columns2 as LucideColumns2,
   Container as LucideContainer, ExternalLink as LucideExternalLink, Factory as LucideFactory, FileType as LucideFileType,
   FolderInput as LucideFolderInput, GitCommit as LucideGitCommit, GitFork as LucideGitFork,
@@ -77,7 +77,7 @@ const reiconIconComponents = {
   "Eye": ReEye, "EyeOff": ReEyeOff, "File": ReFile, "FileCode": ReDocumentCode2,
   "FileImage": ReImage, "FileJson": ReDocumentCode2, "FilePlus": ReFilePlus, "FileTerminal": ReTerminalSquare,
   "FileText": ReFileText, "FileUp": ReFileUp, "Fingerprint": ReFingerprint, "Flag": ReFlag,
-  "Folder": ReFolder, "FolderOpen": ReFolderOpen, "FolderPlus": ReFolderPlus, "Gauge": ReGauge3,
+  "Floppy": ReFloppy, "Folder": ReFolder, "FolderOpen": ReFolderOpen, "FolderPlus": ReFolderPlus, "Gauge": ReGauge3,
   "GitBranch": ReBranchUp, "Globe": ReGlobe, "Globe2": ReGlobe2, "Grid": ReGrid,
   "Grid2x2": ReGrid, "Hammer": ReSledgehammer, "Hand": ReHand, "HardDrive": ReHardDrive,
   "Hash": ReHashtag, "HeartPulse": ReHeartPulse, "Home": ReHome, "ImagePlus": ReImagePlus,
@@ -112,7 +112,7 @@ const reiconIconComponents = {
 } as const satisfies Readonly<Record<string, IconComponent>>;
 
 const lucideFallbackIconComponents = {
-  "Bot": LucideBot as unknown as IconComponent, "Braces": LucideBraces as unknown as IconComponent, "Brain": LucideBrain as unknown as IconComponent, "Cable": LucideCable as unknown as IconComponent,
+  "ArrowUpDown": LucideArrowUpDown as unknown as IconComponent, "Bot": LucideBot as unknown as IconComponent, "Braces": LucideBraces as unknown as IconComponent, "Brain": LucideBrain as unknown as IconComponent, "Cable": LucideCable as unknown as IconComponent,
   "Circle": LucideCircle as unknown as IconComponent, "CircleDashed": LucideCircleDashed as unknown as IconComponent, "CircleDot": LucideCircleDot as unknown as IconComponent, "Columns2": LucideColumns2 as unknown as IconComponent,
   "Container": LucideContainer as unknown as IconComponent, "ExternalLink": LucideExternalLink as unknown as IconComponent, "Factory": LucideFactory as unknown as IconComponent, "FileType": LucideFileType as unknown as IconComponent,
   "FolderInput": LucideFolderInput as unknown as IconComponent, "GitCommit": LucideGitCommit as unknown as IconComponent, "GitFork": LucideGitFork as unknown as IconComponent,
@@ -144,6 +144,7 @@ export const ArrowLeft = ReArrowLeft;
 export const ArrowLeftRight = ReArrowSwapHorizontal2;
 export const ArrowRight = ReArrowRight;
 export const ArrowUp = ReArrowUp;
+export const ArrowUpDown = LucideArrowUpDown as unknown as IconComponent;
 export const ArrowUpFromLine = ReUpload;
 export const BadgeCheck = ReCheckCircle;
 export const BedSingle = ReBed;
@@ -208,6 +209,7 @@ export const FileText = ReFileText;
 export const FileUp = ReFileUp;
 export const Fingerprint = ReFingerprint;
 export const Flag = ReFlag;
+export const Floppy = ReFloppy;
 export const Folder = ReFolder;
 export const FolderOpen = ReFolderOpen;
 export const FolderPlus = ReFolderPlus;

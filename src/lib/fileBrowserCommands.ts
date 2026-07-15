@@ -17,7 +17,7 @@ import {
   type SftpTransferResult,
 } from "./tauri";
 import type { Connection, FtpConnectionOptions, SftpSettings } from "../types";
-import { connectionPasswordOwnerId, resolveSshCompression, resolveSshSocksProxyRequest } from "../modules/workspace/connections/utils";
+import { connectionPasswordOwnerId, resolveSshCompression, resolveSshOldProtocols, resolveSshSocksProxyRequest } from "../modules/workspace/connections/utils";
 import { useWorkspaceStore } from "../store";
 
 export interface FileBrowserCapabilities {
@@ -104,6 +104,7 @@ export function sftpBrowserCommands(connection: Connection): FileBrowserCommands
           proxyJump: connection.proxyJump,
           ...resolveSshSocksProxyRequest(connection),
           sshCompression: resolveSshCompression(connection, useWorkspaceStore.getState().sshSettings),
+          sshOldProtocols: resolveSshOldProtocols(connection, useWorkspaceStore.getState().sshSettings),
           authMethod: connection.authMethod,
           secretOwnerId: connectionPasswordOwnerId(connection),
           password,

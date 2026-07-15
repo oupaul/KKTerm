@@ -22,21 +22,23 @@ import type {
   RackItemKind,
   RackItemMetadata,
   RackItemStatus,
-  RackNetworkPort,
-  RackPortSpeed,
+  RackItemWidthFraction,
   RackServerFormFactor,
   RackServerPanelStyle,
   RackShell,
   ResolvedHost,
 } from "../../types";
 import type { KuaiKuaiStyle } from "./KuaiKuaiBag";
-import { normalizeRackItemMetadata } from "./rackInventory";
+import {
+  normalizeRackItemMetadata,
+  rackItemKindSupportsFractionalWidth,
+  rackItemSlotCount,
+} from "./rackInventory";
 import { RackDevice } from "./RackDevice";
 import { RackHostBindingDialog } from "./RackHostBindingDialog";
 import { useItOpsStore } from "./state";
 
 const SHELL_OPTIONS: RackShell[] = ["black", "white", "grey"];
-const PORT_SPEEDS: RackPortSpeed[] = ["gigabit", "10g", "25g", "40g", "100g", "custom"];
 
 export const RACK_ITEM_KINDS: RackItemKind[] = [
   "server",
@@ -68,10 +70,6 @@ function splitLines(value: string): string[] | null {
 
 function joinValues(value: string[] | null | undefined): string {
   return (value ?? []).join("\n");
-}
-
-function newNetworkPort(index: number): RackNetworkPort {
-  return { name: `${index + 1}`, speed: "gigabit", state: "unknown" };
 }
 
 function clampStartUForHeight(startU: number, heightU: number, rackHeightU: number) {
@@ -119,9 +117,7 @@ export function RackItemDialog({
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
   const placeRackItem = useItOpsStore((state) => state.placeRackItem);
   const updateRackItem = useItOpsStore((state) => state.updateRackItem);
-  const moveRackItem = useItOpsStore((state) => state.moveRackItem);
   const removeRackItem = useItOpsStore((state) => state.removeRackItem);
-  const refreshRackItemSnmp = useItOpsStore((state) => state.refreshRackItemSnmp);
 
   const [kind, setKind] = useState<RackItemKind>(initialKind);
   const [connectionId, setConnectionId] = useState<string>(
@@ -149,15 +145,14 @@ export function RackItemDialog({
   // in the Rack View callout.
   const [hostId, setHostId] = useState(item?.metadata?.hostId ?? "");
   const [editingHostBinding, setEditingHostBinding] = useState(false);
-  const [networkPortRows, setNetworkPortRows] = useState<RackNetworkPort[]>(
-    initialMetadata.networkPorts ?? [],
-  );
-  const [snmpTarget, setSnmpTarget] = useState(initialMetadata.snmp?.target ?? "");
-  const [snmpOid, setSnmpOid] = useState(initialMetadata.snmp?.oid ?? "");
   const [vendor, setVendor] = useState(item?.metadata?.vendor ?? "");
   const [formFactor, setFormFactor] = useState<RackServerFormFactor>(
     initialMetadata.formFactor ?? "rack",
   );
+  const [widthFraction, setWidthFraction] = useState<"full" | RackItemWidthFraction>(
+    initialMetadata.widthFraction ?? "full",
+  );
+  const [slot, setSlot] = useState(initialMetadata.slot ?? 0);
   const [serverPanelStyle, setServerPanelStyle] = useState<RackServerPanelStyle>(
     initialMetadata.serverPanelStyle ?? "default",
   );
@@ -172,6 +167,9 @@ export function RackItemDialog({
       ? startU
       : clampStartUForHeight(startU, heightU, rack.heightU);
   const previewLabel = label.trim() || t(`itops.racks.kind.${kind}`);
+  const previewSlotCount = rackItemSlotCount(
+    widthFraction === "full" ? null : widthFraction,
+  );
   const parsedDraw = Number.parseInt(powerDraw, 10);
   const parsedPowerDraw = Number.isFinite(parsedDraw) && parsedDraw > 0 ? parsedDraw : null;
   // A 乖乖 package is decor: no status/shell/accent/power semantics.
@@ -185,19 +183,13 @@ export function RackItemDialog({
     tags: splitLines(tags),
     connectionIds: initialMetadata.connectionIds,
     hostId: hostId || null,
-    networkPorts: networkPortRows
-      .map((port) => ({
-        ...port,
-        name: port.name.trim(),
-        oid: port.oid?.trim() || null,
-        note: port.note?.trim() || null,
-      }))
-      .filter((port) => port.name),
-    snmp: snmpTarget.trim()
-      ? { target: snmpTarget.trim(), oid: snmpOid.trim() || null }
-      : null,
+    networkPorts: initialMetadata.networkPorts,
+    snmp: initialMetadata.snmp,
     vendor: vendor.trim() || null,
     formFactor: kind === "server" ? formFactor : null,
+    widthFraction:
+      rackItemKindSupportsFractionalWidth(kind) && widthFraction !== "full" ? widthFraction : null,
+    slot: rackItemKindSupportsFractionalWidth(kind) && widthFraction !== "full" ? slot : null,
     serverPanelStyle: kind === "server" ? serverPanelStyle : null,
     powerW: isKuaiguai ? null : parsedPowerDraw,
     ...(isKuaiguai
@@ -221,14 +213,6 @@ export function RackItemDialog({
   // Picker flow: the dialog only configures the device; the rack position
   // comes from the armed placement click afterwards.
   const placementMode = !isEdit && !!onConfigured;
-
-  function updateNetworkPort(index: number, patch: Partial<RackNetworkPort>) {
-    setNetworkPortRows((rows) => rows.map((row, i) => (i === index ? { ...row, ...patch } : row)));
-  }
-
-  function addNetworkPort() {
-    setNetworkPortRows((rows) => [...rows, newNetworkPort(rows.length)]);
-  }
 
   function selectKind(next: RackItemKind) {
     setKind(next);
@@ -272,10 +256,9 @@ export function RackItemDialog({
           connectionId: resolvedConnectionId,
           label: label.trim(),
           metadata,
+          startU: placedStartU,
+          heightU,
         });
-        if (heightU !== item!.heightU) {
-          await moveRackItem(siteId, { id: item!.id, rackId: rack.id, startU: placedStartU, heightU });
-        }
       } else {
         await placeRackItem(siteId, {
           rackId: rack.id,
@@ -287,20 +270,6 @@ export function RackItemDialog({
           metadata,
         });
       }
-      onClose();
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      showStatusBarNotice(t("itops.errorNotice", { message }), { tone: "error" });
-      setBusy(false);
-    }
-  }
-
-  async function handleRefreshSnmp() {
-    if (!item) return;
-    setBusy(true);
-    try {
-      await refreshRackItemSnmp(siteId, item.id);
-      showStatusBarNotice(t("itops.racks.snmpRefreshComplete"), { tone: "success" });
       onClose();
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -362,9 +331,19 @@ export function RackItemDialog({
                   <span className="rack-item-preview-rail" />
                   <div className="rack-item-preview-bay">
                     <div
-                      className="rack-item-preview-device"
+                      className={`rack-item-preview-device${
+                        rackItemKindSupportsFractionalWidth(kind) && widthFraction === "quarter"
+                          ? " quarter-width"
+                          : ""
+                      }`}
                       style={{
                         ["--rack-item-preview-height" as string]: `${Math.min(5, Math.max(1, heightU)) * 22}px`,
+                        ...(rackItemKindSupportsFractionalWidth(kind) && widthFraction !== "full"
+                          ? {
+                              width: `${100 / previewSlotCount}%`,
+                              marginLeft: `${(slot * 100) / previewSlotCount}%`,
+                            }
+                          : {}),
                       }}
                     >
                       <RackDevice
@@ -380,6 +359,7 @@ export function RackItemDialog({
                         rotation={kind === "kuaiguai" ? rotation : null}
                         kuaiguaiSize={kind === "kuaiguai" ? kuaiguaiSize : null}
                         kuaiguaiStyle={kind === "kuaiguai" ? kuaiguaiStyle : null}
+                        notes={kind === "kuaiguai" ? notes : null}
                         formFactor={kind === "server" ? formFactor : null}
                         serverPanelStyle={kind === "server" ? serverPanelStyle : null}
                         heightU={heightU}
@@ -596,6 +576,39 @@ export function RackItemDialog({
                   <Stepper value={heightU} min={1} onChange={(next) => { const clampedHeight = Math.max(1, Math.min(rack.heightU, next)); setHeightU(clampedHeight); setStartU((current) => clampStartUForHeight(current, clampedHeight, rack.heightU)); setDisks((current) => Math.min(current, clampedHeight * DISKS_PER_U)); }} ariaDecrease={t("itops.racks.itemHeightDecrease")} ariaIncrease={t("itops.racks.itemHeightIncrease")} />
                 </Field>
               )}
+              {rackItemKindSupportsFractionalWidth(kind) ? (
+                <Field label={t("itops.racks.widthFractionLabel")}>
+                  <Select
+                    value={widthFraction}
+                    onChange={(event) => {
+                      const next = event.currentTarget.value as "full" | RackItemWidthFraction;
+                      setWidthFraction(next);
+                      setSlot((current) =>
+                        Math.min(current, rackItemSlotCount(next === "full" ? null : next) - 1),
+                      );
+                    }}
+                    options={(["full", "half", "quarter"] as const).map((value) => ({
+                      value,
+                      label: t(`itops.racks.widthFraction.${value}`),
+                    }))}
+                  />
+                </Field>
+              ) : null}
+              {rackItemKindSupportsFractionalWidth(kind) && widthFraction !== "full" ? (
+                <Field label={t("itops.racks.slotLabel")}>
+                  <Select
+                    value={String(slot)}
+                    onChange={(event) => setSlot(Number(event.currentTarget.value))}
+                    options={(widthFraction === "quarter"
+                      ? (["left", "centerLeft", "centerRight", "right"] as const)
+                      : (["left", "right"] as const)
+                    ).map((position, index) => ({
+                      value: String(index),
+                      label: t(`itops.racks.slotPosition.${position}`),
+                    }))}
+                  />
+                </Field>
+              ) : null}
             </div>
 
             {isKuaiguai ? null : (
@@ -635,38 +648,6 @@ export function RackItemDialog({
                 </Field>
               </div>
             ) : null}
-
-        {kind === "switch" || kind === "router" ? (
-          <>
-            <Field label={t("itops.racks.portSpeedsLabel")} hint={t("itops.racks.portSpeedsHint")}>
-              <div className="rack-port-list">
-                {networkPortRows.map((port, index) => (
-                  <div className="rack-port-row" key={`${port.name}-${index}`}>
-                    <TextInput value={port.name} onChange={(event) => updateNetworkPort(index, { name: event.currentTarget.value })} />
-                    <Select value={port.speed} onChange={(event) => updateNetworkPort(index, { speed: event.currentTarget.value as RackPortSpeed })} options={PORT_SPEEDS.map((speed) => ({ value: speed, label: speed.toUpperCase() }))} />
-                    <Select value={port.state ?? "unknown"} onChange={(event) => updateNetworkPort(index, { state: event.currentTarget.value as RackNetworkPort["state"] })} options={["unknown", "up", "down"].map((state) => ({ value: state, label: t(`itops.racks.portState.${state}`) }))} />
-                  </div>
-                ))}
-                <Btn kind="ghost" onClick={addNetworkPort}>
-                  {t("itops.racks.addNetworkPort")}
-                </Btn>
-              </div>
-            </Field>
-            <div className="rack-form-grid two">
-              <Field label={t("itops.racks.snmpLabel")} hint={t("itops.racks.snmpHint")}>
-                <TextInput value={snmpTarget} onChange={(event) => setSnmpTarget(event.currentTarget.value)} />
-              </Field>
-              <Field label={t("itops.racks.snmpOidLabel")}>
-                <TextInput value={snmpOid} onChange={(event) => setSnmpOid(event.currentTarget.value)} />
-              </Field>
-            </div>
-            {isEdit && snmpTarget.trim() ? (
-              <Btn kind="ghost" onClick={() => void handleRefreshSnmp()} disabled={busy}>
-                {t("itops.racks.refreshSnmp")}
-              </Btn>
-            ) : null}
-          </>
-        ) : null}
 
             <button
               type="button"

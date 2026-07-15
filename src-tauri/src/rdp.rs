@@ -1,7 +1,7 @@
 #[cfg(target_os = "windows")]
 mod platform {
     use std::{
-        collections::HashMap,
+        collections::{BTreeSet, HashMap},
         ffi::c_void,
         mem::ManuallyDrop,
         sync::{Arc, Mutex, MutexGuard, OnceLock, mpsc},
@@ -29,20 +29,22 @@ mod platform {
                 LibraryLoader::{GetModuleHandleW, GetProcAddress, LoadLibraryW},
                 Memory::{GMEM_MOVEABLE, GlobalAlloc, GlobalLock, GlobalUnlock},
                 Ole::{CF_UNICODETEXT, DISPID_PROPERTYPUT, IOleInPlaceObject, OleInitialize},
+                Threading::{AttachThreadInput, GetCurrentThreadId},
                 Variant::{
                     VARIANT, VT_BOOL, VT_BSTR, VT_DISPATCH, VT_I2, VT_I4, VT_UI4, VariantClear,
                 },
             },
             UI::{
                 Input::KeyboardAndMouse::{
-                    INPUT, INPUT_0, INPUT_KEYBOARD, KEYBD_EVENT_FLAGS, KEYBDINPUT, KEYEVENTF_KEYUP,
-                    MAPVK_VK_TO_VSC, MAPVK_VK_TO_VSC_EX, MapVirtualKeyW, SendInput, SetFocus,
-                    VIRTUAL_KEY, VkKeyScanW,
+                    GetFocus, INPUT, INPUT_0, INPUT_KEYBOARD, KEYBD_EVENT_FLAGS, KEYBDINPUT,
+                    KEYEVENTF_KEYUP, MAPVK_VK_TO_VSC, MAPVK_VK_TO_VSC_EX, MapVirtualKeyW,
+                    SendInput, SetFocus, VIRTUAL_KEY, VkKeyScanW,
                 },
                 WindowsAndMessaging::{
-                    CallNextHookEx, CreateWindowExW, DestroyWindow, GetClientRect, GetWindowRect,
-                    HC_ACTION, HHOOK, HMENU, IsChild, MSLLHOOKSTRUCT, SW_SHOWNOACTIVATE,
-                    SWP_NOACTIVATE, SWP_NOZORDER, SendMessageW, SetForegroundWindow, SetWindowPos,
+                    CallNextHookEx, CreateWindowExW, DestroyWindow, GetClientRect,
+                    GetForegroundWindow, GetWindowRect, GetWindowThreadProcessId, HC_ACTION, HHOOK,
+                    HMENU, IsChild, MSLLHOOKSTRUCT, SW_SHOWNOACTIVATE, SWP_NOACTIVATE,
+                    SWP_NOZORDER, SendMessageW, SetForegroundWindow, SetWindowPos,
                     SetWindowsHookExW, ShowWindow, UnhookWindowsHookEx, WH_MOUSE_LL,
                     WM_LBUTTONDOWN, WM_MBUTTONDOWN, WM_RBUTTONDOWN, WM_XBUTTONDOWN,
                     WS_CLIPCHILDREN, WS_CLIPSIBLINGS, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_POPUP,
@@ -50,7 +52,7 @@ mod platform {
                 },
             },
         },
-        core::{BSTR, GUID, IUnknown_Vtbl, Interface, PCSTR, PCWSTR},
+        core::{BSTR, GUID, IUnknown, IUnknown_Vtbl, Interface, PCSTR, PCWSTR},
     };
 
     const HOST_WINDOW_LABEL: &str = "main";
@@ -168,6 +170,75 @@ mod platform {
         ) -> windows::core::HRESULT,
     }
 
+    #[repr(transparent)]
+    #[derive(Clone)]
+    struct IMsRdpClientNonScriptable3(windows::core::IUnknown);
+
+    unsafe impl Interface for IMsRdpClientNonScriptable3 {
+        type Vtable = IMsRdpClientNonScriptable3Vtbl;
+        const IID: GUID = GUID::from_u128(0xb3378d90_0728_45c7_8ed7_b6159fb92219);
+    }
+
+    #[repr(C)]
+    struct IMsRdpClientNonScriptable3Vtbl {
+        base__: IMsRdpClientNonScriptableVtbl,
+        ui_parent_window_handle_put: usize,
+        ui_parent_window_handle_get: usize,
+        show_redirection_warning_dialog_put: usize,
+        show_redirection_warning_dialog_get: usize,
+        prompt_for_credentials_put: usize,
+        prompt_for_credentials_get: usize,
+        negotiate_security_layer_put: usize,
+        negotiate_security_layer_get: usize,
+        enable_cred_ssp_support_put: usize,
+        enable_cred_ssp_support_get: usize,
+        redirect_dynamic_drives_put: usize,
+        redirect_dynamic_drives_get: usize,
+        redirect_dynamic_devices_put: usize,
+        redirect_dynamic_devices_get: usize,
+        device_collection_get: usize,
+        drive_collection_get:
+            unsafe extern "system" fn(*mut c_void, *mut *mut c_void) -> windows::core::HRESULT,
+    }
+
+    #[repr(transparent)]
+    #[derive(Clone)]
+    struct IMsRdpDriveCollection(windows::core::IUnknown);
+
+    unsafe impl Interface for IMsRdpDriveCollection {
+        type Vtable = IMsRdpDriveCollectionVtbl;
+        const IID: GUID = GUID::from_u128(0x7ff17599_da2c_4677_ad35_f60c04fe1585);
+    }
+
+    #[repr(C)]
+    struct IMsRdpDriveCollectionVtbl {
+        base__: IUnknown_Vtbl,
+        rescan_drives:
+            unsafe extern "system" fn(*mut c_void, VARIANT_BOOL) -> windows::core::HRESULT,
+        drive_by_index:
+            unsafe extern "system" fn(*mut c_void, u32, *mut *mut c_void) -> windows::core::HRESULT,
+        drive_count: unsafe extern "system" fn(*mut c_void, *mut u32) -> windows::core::HRESULT,
+    }
+
+    #[repr(transparent)]
+    #[derive(Clone)]
+    struct IMsRdpDrive(windows::core::IUnknown);
+
+    unsafe impl Interface for IMsRdpDrive {
+        type Vtable = IMsRdpDriveVtbl;
+        const IID: GUID = GUID::from_u128(0xd28b5458_f694_47a8_8e61_40356a767e46);
+    }
+
+    #[repr(C)]
+    struct IMsRdpDriveVtbl {
+        base__: IUnknown_Vtbl,
+        name_get: unsafe extern "system" fn(*mut c_void, *mut BSTR) -> windows::core::HRESULT,
+        redirection_state_put:
+            unsafe extern "system" fn(*mut c_void, VARIANT_BOOL) -> windows::core::HRESULT,
+        redirection_state_get:
+            unsafe extern "system" fn(*mut c_void, *mut VARIANT_BOOL) -> windows::core::HRESULT,
+    }
+
     type AtlAxWinInit = unsafe extern "system" fn() -> i32;
     type AtlAxGetControl =
         unsafe extern "system" fn(HWND, *mut *mut c_void) -> windows::core::HRESULT;
@@ -208,12 +279,27 @@ mod platform {
         redirect_clipboard: bool,
         #[serde(default)]
         redirect_drives: bool,
+        #[serde(default)]
+        drive_selection: RdpDriveSelection,
         #[serde(default = "default_true")]
         bitmap_cache: bool,
         #[serde(default = "default_performance_profile")]
         performance_profile: String,
         #[serde(default = "default_remote_resolution")]
         remote_resolution: String,
+    }
+
+    #[derive(Clone, Deserialize, Serialize)]
+    #[serde(tag = "mode", rename_all = "camelCase")]
+    enum RdpDriveSelection {
+        All,
+        Selected { drives: Vec<String> },
+    }
+
+    impl Default for RdpDriveSelection {
+        fn default() -> Self {
+            Self::All
+        }
     }
 
     #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -1393,12 +1479,7 @@ mod platform {
                 let module = GetModuleHandleW(PCWSTR::null())
                     .ok()
                     .map(|handle| HINSTANCE(handle.0));
-                match SetWindowsHookExW(
-                        WH_MOUSE_LL,
-                        Some(rdp_overlay_focus_hook_proc),
-                        module,
-                        0,
-                    ) {
+                match SetWindowsHookExW(WH_MOUSE_LL, Some(rdp_overlay_focus_hook_proc), module, 0) {
                     Ok(hook) => {
                         state.hook = Some(hook);
                     }
@@ -1488,7 +1569,9 @@ mod platform {
             // the remote host, while higher-risk device redirects stay disabled until KKTerm
             // exposes durable Connection settings for them.
             let _ = set_property_bool(&advanced, "RedirectClipboard", options.redirect_clipboard);
-            let _ = set_property_bool(&advanced, "RedirectDrives", options.redirect_drives);
+            let redirect_all_drives = options.redirect_drives
+                && matches!(&options.drive_selection, RdpDriveSelection::All);
+            let _ = set_property_bool(&advanced, "RedirectDrives", redirect_all_drives);
             let _ = set_property_bool(&advanced, "RedirectPorts", false);
             let _ = set_property_bool(&advanced, "RedirectPrinters", false);
             let _ = set_property_bool(&advanced, "RedirectSmartCards", false);
@@ -1502,6 +1585,13 @@ mod platform {
                 "PerformanceFlags",
                 performance_flags_for(&options.performance_profile),
             );
+        }
+        if options.redirect_drives {
+            match configure_drive_collection(dispatch, &options.drive_selection) {
+                Ok(()) => {}
+                Err(_) if matches!(&options.drive_selection, RdpDriveSelection::All) => {}
+                Err(error) => return Err(error),
+            }
         }
         if display_settings.desktop_scale_factor != RDP_DISPLAY_SCALE_FACTOR_PERCENT {
             if let Some(extended) = get_extended_settings(dispatch) {
@@ -1530,6 +1620,7 @@ mod platform {
                 color_depth: default_color_depth(),
                 redirect_clipboard: true,
                 redirect_drives: false,
+                drive_selection: RdpDriveSelection::All,
                 bitmap_cache: true,
                 performance_profile: default_performance_profile(),
                 remote_resolution: default_remote_resolution(),
@@ -1659,6 +1750,97 @@ mod platform {
         SECURED_SETTINGS_PROPERTIES
             .iter()
             .find_map(|name| get_dispatch_property(dispatch, name).ok())
+    }
+
+    fn configure_drive_collection(
+        dispatch: &IDispatch,
+        selection: &RdpDriveSelection,
+    ) -> Result<(), String> {
+        let nonscriptable = dispatch
+            .cast::<IMsRdpClientNonScriptable3>()
+            .map_err(|error| format!("RDP ActiveX does not support selecting drives: {error}"))?;
+        let mut raw_collection = std::ptr::null_mut();
+        unsafe {
+            (nonscriptable.vtable().drive_collection_get)(
+                Interface::as_raw(&nonscriptable),
+                &mut raw_collection,
+            )
+            .ok()
+            .map_err(|error| format!("failed to read the RDP drive collection: {error}"))?;
+        }
+        if raw_collection.is_null() {
+            return Err("RDP ActiveX returned an empty drive collection".to_string());
+        }
+        let collection = IMsRdpDriveCollection(unsafe { IUnknown::from_raw(raw_collection) });
+        unsafe {
+            let _ =
+                (collection.vtable().rescan_drives)(Interface::as_raw(&collection), VARIANT_FALSE);
+        }
+        let mut count = 0;
+        unsafe {
+            (collection.vtable().drive_count)(Interface::as_raw(&collection), &mut count)
+                .ok()
+                .map_err(|error| format!("failed to count local drives for RDP: {error}"))?;
+        }
+        let selected = match selection {
+            RdpDriveSelection::All => None,
+            RdpDriveSelection::Selected { drives } => Some(
+                drives
+                    .iter()
+                    .filter_map(|drive| normalize_drive_root(drive))
+                    .collect::<BTreeSet<_>>(),
+            ),
+        };
+        for index in 0..count {
+            let mut raw_drive = std::ptr::null_mut();
+            unsafe {
+                (collection.vtable().drive_by_index)(
+                    Interface::as_raw(&collection),
+                    index,
+                    &mut raw_drive,
+                )
+                .ok()
+                .map_err(|error| format!("failed to read local RDP drive {index}: {error}"))?;
+            }
+            if raw_drive.is_null() {
+                continue;
+            }
+            let drive = IMsRdpDrive(unsafe { IUnknown::from_raw(raw_drive) });
+            let mut name = BSTR::new();
+            unsafe {
+                (drive.vtable().name_get)(Interface::as_raw(&drive), &mut name)
+                    .ok()
+                    .map_err(|error| format!("failed to read an RDP drive name: {error}"))?;
+            }
+            let normalized = normalize_drive_root(&name.to_string());
+            let redirect = selected.as_ref().is_none_or(|selected| {
+                normalized
+                    .as_ref()
+                    .is_some_and(|name| selected.contains(name))
+            });
+            unsafe {
+                (drive.vtable().redirection_state_put)(
+                    Interface::as_raw(&drive),
+                    if redirect {
+                        VARIANT_TRUE
+                    } else {
+                        VARIANT_FALSE
+                    },
+                )
+                .ok()
+                .map_err(|error| format!("failed to update RDP drive redirection: {error}"))?;
+            }
+        }
+        Ok(())
+    }
+
+    fn normalize_drive_root(value: &str) -> Option<String> {
+        let trimmed = value.trim();
+        let bytes = trimmed.as_bytes();
+        if bytes.len() < 2 || !bytes[0].is_ascii_alphabetic() || bytes[1] != b':' {
+            return None;
+        }
+        Some(format!("{}:", char::from(bytes[0]).to_ascii_uppercase()))
     }
 
     fn set_extended_setting_u32(
@@ -1925,6 +2107,10 @@ mod platform {
         focus_rdp_window(owner, hwnd, hwnd);
     }
 
+    fn format_hwnd(hwnd: HWND) -> String {
+        format!("{:p}", hwnd.0)
+    }
+
     fn focus_rdp_window(owner: HWND, active: HWND, focus: HWND) {
         // Bring KKTerm forward, foreground the no-activate overlay explicitly, and
         // give keyboard focus to the ActiveX child/control HWND that should receive
@@ -1932,9 +2118,77 @@ mod platform {
         // raise in some paths, but best-effort focus still keeps programmatic input
         // routed to the in-process control when Windows permits it.
         unsafe {
-            let _ = SetForegroundWindow(owner);
-            let _ = SetForegroundWindow(active);
+            let current_thread = GetCurrentThreadId();
+            let owner_thread = GetWindowThreadProcessId(owner, None);
+            let active_thread = GetWindowThreadProcessId(active, None);
+            let focus_thread = GetWindowThreadProcessId(focus, None);
+            let foreground = GetForegroundWindow();
+            let foreground_thread = if foreground.0.is_null() {
+                0
+            } else {
+                GetWindowThreadProcessId(foreground, None)
+            };
+            let attached_owner = owner_thread != 0
+                && owner_thread != current_thread
+                && AttachThreadInput(current_thread, owner_thread, true).as_bool();
+            let attached_active = active_thread != 0
+                && active_thread != current_thread
+                && active_thread != owner_thread
+                && AttachThreadInput(current_thread, active_thread, true).as_bool();
+            let attached_focus = focus_thread != 0
+                && focus_thread != current_thread
+                && focus_thread != owner_thread
+                && focus_thread != active_thread
+                && AttachThreadInput(current_thread, focus_thread, true).as_bool();
+            let attached_foreground = foreground_thread != 0
+                && foreground_thread != current_thread
+                && foreground_thread != owner_thread
+                && foreground_thread != active_thread
+                && foreground_thread != focus_thread
+                && AttachThreadInput(current_thread, foreground_thread, true).as_bool();
+
+            let foreground_owner = SetForegroundWindow(owner).as_bool();
+            let foreground_active = SetForegroundWindow(active).as_bool();
+            let previous_focus = GetFocus();
             let _ = SetFocus(Some(focus));
+            let resulting_focus = GetFocus();
+            let set_focus_succeeded = resulting_focus == focus;
+            rdp_debug(
+                "focus.apply",
+                &json!({
+                    "ownerHwnd": format_hwnd(owner),
+                    "activeHwnd": format_hwnd(active),
+                    "focusHwnd": format_hwnd(focus),
+                    "foregroundHwnd": format_hwnd(foreground),
+                    "currentThread": current_thread,
+                    "ownerThread": owner_thread,
+                    "activeThread": active_thread,
+                    "focusThread": focus_thread,
+                    "foregroundThread": foreground_thread,
+                    "attachedOwnerThread": attached_owner,
+                    "attachedActiveThread": attached_active,
+                    "attachedFocusThread": attached_focus,
+                    "attachedForegroundThread": attached_foreground,
+                    "setForegroundOwner": foreground_owner,
+                    "setForegroundActive": foreground_active,
+                    "setFocusSucceeded": set_focus_succeeded,
+                    "previousFocusHwnd": format_hwnd(previous_focus),
+                    "resultingFocusHwnd": format_hwnd(resulting_focus),
+                }),
+            );
+
+            if attached_foreground {
+                let _ = AttachThreadInput(current_thread, foreground_thread, false);
+            }
+            if attached_focus {
+                let _ = AttachThreadInput(current_thread, focus_thread, false);
+            }
+            if attached_active {
+                let _ = AttachThreadInput(current_thread, active_thread, false);
+            }
+            if attached_owner {
+                let _ = AttachThreadInput(current_thread, owner_thread, false);
+            }
         }
     }
 

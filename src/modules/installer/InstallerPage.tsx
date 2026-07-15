@@ -151,6 +151,19 @@ export function InstallerPage({ active }: { active: boolean }) {
           if (completedRecipe && isWslFeature(completedRecipe)) {
             markWslJustEnabled();
           }
+          if (
+            completedRecipe &&
+            recipeSupportsLatestVersion(completedRecipe)
+          ) {
+            // Replace stale provider metadata immediately after an install or
+            // update instead of waiting for the next interval-gated sweep.
+            void invokeCommand("installer_check_latest_versions", {
+              toolIds: [toolId],
+            }).catch(() => {
+              // The completed operation remains valid; Refresh can retry this
+              // non-fatal metadata lookup.
+            });
+          }
         }
         void invokeCommand("installer_redetect", { toolId })
           .then((next) => {

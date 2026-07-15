@@ -14,9 +14,10 @@ import { useEffect, useRef, useState } from "react";
 import type { FormEvent, RefObject } from "react";
 import { useTranslation } from "react-i18next";
 import { Actions, Btn, DialogShell, Field, Sheet, TextInput } from "../../../../app/ui/dialog";
-import { readFromClipboard, writeToClipboard } from "../../../../lib/clipboard";
-import { invokeCommand, isTauriRuntime } from "../../../../lib/tauri";
-import type { Connection } from "../../../../types";
+import { writeToClipboard } from "../../../../lib/clipboard";
+import { isMacPlatform } from "../../../../lib/platform";
+import { invokeCommand, isTauriRuntime, logUiDebug } from "../../../../lib/tauri";
+import type { Connection, RdpSettings } from "../../../../types";
 import { connectionPasswordOwnerId } from "../utils";
 import { isCharacterCode, scancodeForCode } from "./rdpScancodes";
 
@@ -49,6 +50,16 @@ function isMetaKeyCode(code: string): boolean {
   return code === "MetaLeft" || code === "MetaRight";
 }
 
+function pointerButtonBit(button: number, ctrlKey: boolean): number {
+  if (button === 2 || (button === 0 && ctrlKey && isMacPlatform())) {
+    return 2;
+  }
+  if (button === 1) {
+    return 1;
+  }
+  return button === 0 ? 0 : -1;
+}
+
 function createRdpSessionId() {
   return `rdp-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
 }
@@ -67,12 +78,14 @@ export function RdpCanvasView({
   connection,
   onSessionConnected,
   onSessionDisconnected,
+  rdpOptions,
   surfaceRef,
 }: {
   cadSignal?: number;
   connection: Connection;
   onSessionConnected?: (sessionId: string) => void;
   onSessionDisconnected?: (sessionId: string) => void;
+  rdpOptions: RdpSettings;
   surfaceRef?: RefObject<HTMLCanvasElement | null>;
 }) {
   const { t } = useTranslation();
@@ -99,6 +112,21 @@ export function RdpCanvasView({
     setPasswordPrompt(false);
     resolve?.(password);
   }
+
+  const focusInput = (reason: string) => {
+    const input = inputRef.current;
+    if (!input) {
+      return;
+    }
+    input.focus({ preventScroll: true });
+    logUiDebug("rdp.canvas.focus", {
+      reason,
+      sessionId: sessionIdRef.current,
+      documentHasFocus: document.hasFocus(),
+      activeElement: document.activeElement?.tagName.toLowerCase() ?? null,
+      inputFocused: document.activeElement === input,
+    });
+  };
 
   // Session lifecycle + framebuffer rendering.
   useEffect(() => {
@@ -218,6 +246,7 @@ export function RdpCanvasView({
           secretOwnerId: connectionPasswordOwnerId(connection),
           password,
           ignoreTlsErrors: connection.rdpOptions?.ignoreTlsErrors ?? false,
+          sharedLocalFolder: rdpOptions.redirectDrives ? rdpOptions.sharedLocalFolder : undefined,
         },
       });
     })().catch((error) => {
@@ -236,7 +265,14 @@ export function RdpCanvasView({
       sessionIdRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [connection.id, connection.host, connection.port, connection.user]);
+  }, [
+    connection.id,
+    connection.host,
+    connection.port,
+    connection.user,
+    rdpOptions.redirectDrives,
+    rdpOptions.sharedLocalFolder,
+  ]);
 
   // ── Mouse ──────────────────────────────────────────────────────────────────
   const remotePoint = (clientX: number, clientY: number): { x: number; y: number } | null => {
@@ -268,15 +304,19 @@ export function RdpCanvasView({
     sendPointer(e.clientX, e.clientY, buttonMaskRef.current);
   };
   const onPointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    inputRef.current?.focus();
-    const bit = e.button === 1 ? 1 : e.button === 2 ? 2 : e.button === 0 ? 0 : -1;
+    // WKWebView can apply the canvas's default pointer focus after this handler
+    // and immediately blur the hidden IME input. Cancel that default transition
+    // so keyboard and composition events stay routed to the input we focus here.
+    e.preventDefault();
+    focusInput("pointerdown");
+    const bit = pointerButtonBit(e.button, e.ctrlKey);
     if (bit >= 0) {
       buttonMaskRef.current |= 1 << bit;
     }
     sendPointer(e.clientX, e.clientY, buttonMaskRef.current);
   };
   const onPointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    const bit = e.button === 1 ? 1 : e.button === 2 ? 2 : e.button === 0 ? 0 : -1;
+    const bit = pointerButtonBit(e.button, e.ctrlKey);
     if (bit >= 0) {
       buttonMaskRef.current &= ~(1 << bit);
     }
@@ -327,11 +367,22 @@ export function RdpCanvasView({
     sendScancode(ctrlScancode, false);
   };
 
-  // Refresh CLIPRDR with the local clipboard before sending a remote Ctrl+V.
-  // This keeps Cmd+V on macOS local while still performing a normal remote paste.
-  const pasteFromClipboard = () => {
-    void readFromClipboard()
-      .then((text) => sendClipboardText(text))
+  const pasteNativeMacClipboard = () => {
+    const sessionId = sessionIdRef.current;
+    if (!sessionId) {
+      return;
+    }
+    void invokeCommand("paste_rdp_client_clipboard", { request: { sessionId } }).catch(() => undefined);
+  };
+
+  // Refresh CLIPRDR with trusted paste-event text before sending remote Ctrl+V.
+  // Reading ClipboardEvent data avoids WKWebView's async clipboard permission
+  // boundary.
+  const pasteClipboardText = (text: string) => {
+    if (!text) {
+      return;
+    }
+    void sendClipboardText(text)
       .then(() => sendRemotePasteChord())
       .catch(() => undefined);
   };
@@ -349,7 +400,7 @@ export function RdpCanvasView({
       return;
     }
     void invokeCommand("send_rdp_client_ctrl_alt_delete", { request: { sessionId } }).catch(() => undefined);
-    inputRef.current?.focus();
+    focusInput("ctrl-alt-delete");
   };
 
   useEffect(() => {
@@ -360,14 +411,24 @@ export function RdpCanvasView({
   }, [cadSignal]);
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    logUiDebug("rdp.canvas.key", {
+      sessionId: sessionIdRef.current,
+      code: e.code,
+      key: e.key,
+      composing: composingRef.current,
+      documentHasFocus: document.hasFocus(),
+    });
     if (composingRef.current || e.key === "Process") {
       return; // IME is composing — let composition events handle it.
     }
-    // Ctrl/Cmd+V refreshes CLIPRDR, then sends a remote Ctrl+V paste chord.
-    // Swallow the local chord so Cmd+V does not arrive as a bare remote V.
+    // Let the focused IME input produce a trusted paste event. `onPaste` reads
+    // its clipboardData, refreshes CLIPRDR, and sends remote Ctrl+V. The key is
+    // not forwarded as a raw scancode, so no bare remote V can leak through.
     if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.code === "KeyV") {
-      e.preventDefault();
-      pasteFromClipboard();
+      if (isMacPlatform()) {
+        e.preventDefault();
+        pasteNativeMacClipboard();
+      }
       return;
     }
     const shortcut = e.ctrlKey || e.altKey || e.metaKey;
@@ -434,6 +495,16 @@ export function RdpCanvasView({
       inputRef.current.value = "";
     }
   };
+  const onPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    pasteClipboardText(e.clipboardData.getData("text/plain"));
+    if (inputRef.current) {
+      inputRef.current.value = "";
+    }
+  };
+  const preventLocalContextMenu = (e: React.MouseEvent<HTMLElement>) => {
+    e.preventDefault();
+  };
 
   const statusText =
     status === "connecting"
@@ -452,7 +523,8 @@ export function RdpCanvasView({
           onPointerDown={onPointerDown}
           onPointerUp={onPointerUp}
           onWheel={onWheel}
-          onContextMenu={(e) => e.preventDefault()}
+          onContextMenu={preventLocalContextMenu}
+          draggable={false}
         />
         {/* Visually-hidden focus target that captures IME composition + text input. */}
         <input
@@ -464,9 +536,11 @@ export function RdpCanvasView({
           autoCapitalize="off"
           autoCorrect="off"
           spellCheck={false}
+          onContextMenu={preventLocalContextMenu}
           onKeyDown={onKeyDown}
           onKeyUp={onKeyUp}
           onInput={onInput}
+          onPaste={onPaste}
           onCompositionStart={onCompositionStart}
           onCompositionUpdate={onCompositionStart}
           onCompositionEnd={onCompositionEnd}

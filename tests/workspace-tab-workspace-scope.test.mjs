@@ -26,12 +26,17 @@ test("top Tab Strip is scoped to the active Workspace", async () => {
   );
   assert.match(
     storeSource,
-    /activeTabId: tabWorkspaceId\(activeTab\) === workspaceId[\s\S]*?activeTab\?\.id \?\? ""[\s\S]*?firstTabIdForWorkspace\(get\(\)\.tabs,\s*workspaceId\)/,
-    "switching Workspaces should activate a Tab from the destination Workspace or clear the active Tab",
+    /activeTabIdsByWorkspace = \{[\s\S]*?\[state\.activeWorkspaceId\]: state\.activeTabId[\s\S]*?activeTabId: tabIdForWorkspace\([\s\S]*?activeTabIdsByWorkspace\[workspaceId\]/,
+    "switching Workspaces should restore the destination Workspace's last active Tab or clear the active Tab",
   );
   assert.match(
     storeSource,
     /const nextActiveTabId =[\s\S]*?firstTabIdForWorkspace\(remainingTabs,\s*activeWorkspaceId\)/,
     "closing the active Tab should choose the next Tab from the same active Workspace",
+  );
+  assert.match(
+    storeSource,
+    /targetWorkspaceId !== state\.activeWorkspaceId[\s\S]*?\[current\.activeWorkspaceId\]: current\.activeTabId[\s\S]*?\[targetWorkspaceId\]: tabId/,
+    "activating a Tab from another Workspace should remember both the source and target Workspace selections",
   );
 });

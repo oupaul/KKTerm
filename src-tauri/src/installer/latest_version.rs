@@ -6,7 +6,7 @@ use std::process::Command;
 use serde::Deserialize;
 use serde_json::json;
 
-use super::detect::{detect_chocolatey_package, github_release_marker_path};
+use super::detect::{detect_chocolatey_package, detect_npm_provider, github_release_marker_path};
 use super::proc::no_window;
 use super::schema::{Catalog, Provider, Recipe};
 
@@ -81,6 +81,11 @@ fn latest_provider_for_recipe(recipe: &Recipe) -> &Provider {
             return provider;
         }
     }
+    if let Some(provider @ Provider::Npm { .. }) = recipe.npm_provider.as_ref() {
+        if detect_npm_provider(recipe).is_some() {
+            return provider;
+        }
+    }
     if let Some(provider @ Provider::GithubRelease { .. }) = recipe.download_provider.as_ref() {
         if github_release_marker_path(&recipe.id).exists() {
             return provider;
@@ -90,12 +95,10 @@ fn latest_provider_for_recipe(recipe: &Recipe) -> &Provider {
 }
 
 fn winget_latest(id: &str) -> LatestVersionResult {
-    let manifest_latest_error = match winget_manifest_latest(id) {
-        Ok(Some(version)) => return Ok(Some(version)),
-        Ok(None) => None,
-        Err(error) => Some(error),
-    };
+    prefer_winget_source_latest(winget_source_latest(id), || winget_manifest_latest(id))
+}
 
+fn winget_source_latest(id: &str) -> LatestVersionResult {
     let output = no_window(&mut Command::new("winget"))
         .args(winget_show_args(id))
         .output()
@@ -110,12 +113,28 @@ fn winget_latest(id: &str) -> LatestVersionResult {
     if let Some(version) = winget_show_version_from_output(&stdout) {
         return Ok(Some(version));
     }
-    if let Some(error) = manifest_latest_error {
-        return Err(format!(
-            "winget-pkgs lookup for `{id}` failed ({error}); winget show did not report a parseable Version line"
-        ));
-    }
     Err(format!("winget show `{id}` did not report a Version line"))
+}
+
+fn prefer_winget_source_latest(
+    source_latest: LatestVersionResult,
+    manifest_lookup: impl FnOnce() -> LatestVersionResult,
+) -> LatestVersionResult {
+    let source_error = match source_latest {
+        Ok(Some(version)) => return Ok(Some(version)),
+        Ok(None) => None,
+        Err(error) => Some(error),
+    };
+
+    match manifest_lookup() {
+        Ok(version) => Ok(version),
+        Err(manifest_error) => match source_error {
+            Some(source_error) => Err(format!(
+                "{source_error}; winget-pkgs fallback failed: {manifest_error}"
+            )),
+            None => Err(manifest_error),
+        },
+    }
 }
 
 #[derive(Deserialize)]
@@ -521,6 +540,27 @@ mod tests {
             winget_manifest_versions_url("7zip.7zip").unwrap(),
             "https://api.github.com/repos/microsoft/winget-pkgs/contents/manifests/7/7zip/7zip?ref=master"
         );
+    }
+
+    #[test]
+    fn configured_winget_source_wins_over_newer_manifest_repo() {
+        let manifest_lookup_called = std::cell::Cell::new(false);
+        let latest = prefer_winget_source_latest(Ok(Some("8.9.6.4".into())), || {
+            manifest_lookup_called.set(true);
+            Ok(Some("8.9.7".into()))
+        });
+
+        assert_eq!(latest.unwrap().as_deref(), Some("8.9.6.4"));
+        assert!(!manifest_lookup_called.get());
+    }
+
+    #[test]
+    fn winget_manifest_repo_is_fallback_when_configured_source_fails() {
+        let latest = prefer_winget_source_latest(Err("winget source unavailable".into()), || {
+            Ok(Some("8.9.7".into()))
+        });
+
+        assert_eq!(latest.unwrap().as_deref(), Some("8.9.7"));
     }
 
     #[test]

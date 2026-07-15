@@ -34,6 +34,8 @@ export interface RackDeviceProps {
   yaw?: number | null;
   kuaiguaiSize?: "small" | "regular" | "large" | null;
   kuaiguaiStyle?: KuaiKuaiStyle | null;
+  /** Device notes, scribbled onto a large 乖乖 package's white note panel. */
+  notes?: string | null;
   formFactor?: RackServerFormFactor | null;
   serverPanelStyle?: RackServerPanelStyle | null;
   /** Dense object-picker rendering that leaves more room for the faceplate name. */
@@ -109,6 +111,7 @@ export function RackDevice({
   rotation,
   yaw,
   kuaiguaiStyle,
+  notes,
   formFactor,
   serverPanelStyle,
   compact = false,
@@ -150,7 +153,11 @@ export function RackDevice({
           ["--rkd-yaw" as string]: `${yaw ?? 0}deg`,
         }}
       >
-        <KuaiKuaiBag style={kuaiguaiStyle ?? "full"} expiry={expiry} />
+        <KuaiKuaiBag
+          style={kuaiguaiStyle ?? "full"}
+          expiry={expiry}
+          notes={notes}
+        />
       </div>
     );
   }
@@ -426,7 +433,7 @@ export function RackDevice({
 
           {/* PDU */}
           {isPdu ? (
-            <div className="rkd-pdu">
+            <div className="rkd-pdu" data-height-u={heightU}>
               <div className="rkd-outlets">
                 {outlets.map((o) => (
                   <span className="rkd-outlet" key={o}>

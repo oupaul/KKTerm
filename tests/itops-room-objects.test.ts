@@ -3,6 +3,7 @@ import test from "node:test";
 import type { Rack } from "../src/types";
 import {
   ROOM_CEILING_U,
+  ROOM_OBJECT_KINDS,
   cellSpans,
   footprintSpans,
   nudgeZ,
@@ -14,6 +15,8 @@ import {
   resolveDropZ,
   sanitizeRoomObjects,
   settleRoomObjects,
+  wallArms,
+  wallOccupiesCell,
   type RoomObject,
 } from "../src/modules/itops/roomObjects";
 import {
@@ -406,4 +409,60 @@ test("sanitizeFacing coerces unknown values to the default facing", () => {
   assert.equal(sanitizeFacing("2"), 0);
   assert.equal(sanitizeFacing(7), 0);
   assert.equal(sanitizeFacing(undefined), 0);
+});
+
+// ── Partition walls ──
+
+test("an isolated wall runs straight along its rotation axis with open ends", () => {
+  const wall = { ...obj("w1", "wall", 3, 3, 0), rot: 0 as const };
+  // Arms are indexed by Facing direction: 0 = +y, 1 = −x, 2 = −y, 3 = +x.
+  assert.deepEqual(wallArms(wall, [wall]), ["none", "open", "none", "open"]);
+  const turned = { ...wall, rot: 1 as const };
+  assert.deepEqual(wallArms(turned, [turned]), ["open", "none", "open", "none"]);
+});
+
+test("walls auto-connect toward orthogonally adjacent wall cells only", () => {
+  const center = obj("c", "wall", 3, 3, 0);
+  const east = obj("e", "wall", 4, 3, 0);
+  const south = obj("s", "wall", 3, 4, 0);
+  const diagonal = obj("d", "wall", 4, 4, 0);
+  const notAWall = obj("x", "crashCart", 2, 3, 0);
+  const all = [center, east, south, diagonal, notAWall];
+
+  // Corner: joined east and south; the diagonal wall and the adjacent
+  // non-wall object do not create arms, and joins override the rot default.
+  assert.deepEqual(wallArms(center, all), ["joined", "none", "none", "joined"]);
+  // The east neighbour joins back toward the centre, and the wall diagonal
+  // to the centre is orthogonally south of it, giving it a corner too.
+  assert.deepEqual(wallArms(east, all), ["joined", "joined", "none", "none"]);
+  // The south neighbour likewise corners toward the centre and the diagonal.
+  assert.deepEqual(wallArms(south, all), ["none", "none", "joined", "joined"]);
+});
+
+test("a wall spans its whole cell along the run and blocks the floor", () => {
+  const spec = objectSpec("wall");
+  assert.equal(spec.wide, 1);
+  assert.equal(spec.defaultZ, "floor");
+  assert.deepEqual(objectCellSpan("wall", 0), { w: 1, h: 1 });
+  // The strip is centred through the cell and turns with rot.
+  assert.deepEqual(objectFootprint("wall", 0, 0), { x: 0, y: 0.4375, w: 1, d: 0.125 });
+  assert.deepEqual(objectFootprint("wall", 1, 0), { x: 0.4375, y: 0, w: 0.125, d: 1 });
+  // A wall cannot share a cell with a rack: the cabinet occupies the floor.
+  const spans = footprintSpans({ x: 0, y: 0 }, "wall", 0, [rack("a")], { a: { x: 0, y: 0 } }, []);
+  assert.equal(resolveDropZ(spans, "wall"), null);
+});
+
+test("a wall reserves its entire floor block against every other room object", () => {
+  const wall = obj("wall", "wall", 0, 0, 0);
+  assert.equal(wallOccupiesCell({ x: 0, y: 0 }, [wall]), true);
+  assert.equal(wallOccupiesCell({ x: 1, y: 0 }, [wall]), false);
+  assert.equal(wallOccupiesCell({ x: 0, y: 0 }, [wall], wall.id), false);
+  for (const kind of ROOM_OBJECT_KINDS.filter((entry) => entry !== "wall")) {
+    const spans = footprintSpans({ x: 0, y: 0 }, kind, 0, [], {}, [wall]);
+    assert.equal(resolveDropZ(spans, kind), null, `${kind} cannot share a wall block`);
+  }
+
+  const camera = obj("camera", "camera", 0, 0, 52);
+  const wallSpans = footprintSpans({ x: 0, y: 0 }, "wall", 0, [], {}, [camera]);
+  assert.equal(resolveDropZ(wallSpans, "wall"), null, "a wall cannot claim an occupied block");
 });

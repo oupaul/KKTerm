@@ -58,8 +58,8 @@ Driven by `src/lib/nativeContextMenu.ts`. On a Connection or folder node:
 - `connections.newSubfolderIn` (when the right-clicked node is a folder)
 - `connections.rename`, dialogs `connections.renameFolder` / `connections.renameConnection`
 - `connections.changeIcon` on folder rows opens the shared icon picker for the folder icon.
-- `connections.panoramaView` opens every Connection in the active Workspace root as one panorama, reusing live Sessions. Folder-only controls are hidden when the tree has no folders.
-- `connections.openAllInFolder` on folder rows is a submenu that opens every Connection inside the folder, child folders included. Connections that already have an open Tab or Pane keep and reuse that live Session instead of reconnecting. `connections.openAllInTabs` opens each remaining Connection in its own Tab through the standard open path (so per-type handling applies); `connections.openAllInPanorama` lays the remaining unopened Connections out as split Panes inside a single Tab, the same grid a parent Connection uses for multiple Child Connections. The submenu is disabled when the folder holds no Connections.
+- `connections.panoramaView` opens every Connection in the active Workspace root as one panorama, reusing live Sessions. Folder-only controls are hidden when the tree has no folders. When the action would start more than ten new Sessions, `connections.openPanoramaConfirmTitle` / `connections.openPanoramaConfirmBody` ask for confirmation before `connections.openPanoramaConfirmAction` proceeds; already-open Sessions are excluded from that count.
+- `connections.openAllInFolder` on folder rows is a submenu that opens every Connection inside the folder, child folders included. Connections that already have an open Tab or Pane keep and reuse that live Session instead of reconnecting. `connections.openAllInTabs` opens each remaining Connection in its own Tab through the standard open path (so per-type handling applies); `connections.openAllInPanorama` lays the remaining unopened Connections out as split Panes inside a single Tab, the same grid a parent Connection uses for multiple Child Connections. The same over-ten confirmation applies to the Panorama branch. The submenu is disabled when the folder holds no Connections.
 - `connections.closeAllInFolder` on folder rows closes every open Tab and Pane for every Connection inside the folder, child folders included — the folder-wide counterpart of `connections.closeConnection`. It is disabled when nothing in the folder is currently open and does not delete the Connections.
 - `connections.delete`, confirmation copy `connections.deleteFolderConfirm` or `connections.deleteConnectionConfirm`, with caveat `connections.cannotBeUndone`. Deleting a Connection also closes any open Tab or Pane for that Connection.
 - Pin to rail: `connections.pinToRail` / `connections.unpinFromRail`. Status: `connections.pinnedToRailStatus`, `connections.unpinnedFromRailStatus`. Error: `connections.pinRailError`.
@@ -120,6 +120,8 @@ and is **not** saved.
 
 **Add Connection** uses the same form shape but persists to SQLite. The Type selector label is `connections.type`.
 
+The Add Connection browser's `connections.import.tileTitle` entry opens the batch `connections.import.title` dialog. Its `connections.import.fromFileTitle` tab accepts CSV/TSV/text, OpenSSH config (`~/.ssh/config`, `%USERPROFILE%\.ssh\config`, or equivalent content under another filename), RDCMan `.rdg`, MobaXterm `.mxtsessions`, and PuTTY `.reg`. An OpenSSH config produces one editable, initially selected preview row per concrete Host alias; wildcard-only Host sections supply inherited defaults but do not create rows. `IdentityFile` and `ProxyJump` survive the preview and are saved on imported SSH Connections. Unsupported SSH directives appear under `connections.import.warningsHeading`. Users may select any subset before the primary `connections.import.importCount` action creates the Connections in the chosen Workspace.
+
 When Add Connection, Quick Connect, or Connection Properties needs to write a
 password while encrypted database storage is locked, KKTerm opens the encrypted
 database unlock dialog before changing the durable Connection. A successful
@@ -128,6 +130,8 @@ existing Connection data unchanged; the backend lock message is not shown as a
 Connection form-validation error.
 
 Local terminal Add/Edit Connection uses the `connections.shell` tabbed selector for the local shell choice and still stores the selected `localShell` value on the Connection.
+
+RDP Add/Edit Connection can inherit its local-resource choice from Settings or override it for that Connection. Redirection remains off by default. On Windows, enabling it initially redirects all local drives and `settings.rdpChooseDrives` opens a Sheet for choosing all drives or a selected subset; a temporarily unavailable saved drive remains visible and selected through `settings.rdpUnavailableDrive`. On macOS and Linux, IronRDP exposes exactly one folder chosen with `settings.rdpChooseFolder`; the Windows drive selector is not shown.
 
 Beside `connections.localStartupScript`, the wand action
 `connections.cliAccountAlternateProfileHint` opens the guided

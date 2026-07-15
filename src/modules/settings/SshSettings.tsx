@@ -41,6 +41,7 @@ function normalizeSshSettingsDraft(settings: SshSettingsType, t: TFunction): Ssh
     defaultKeyPath,
     defaultProxyJump,
     defaultSshCompression: settings.defaultSshCompression ?? "fast",
+    defaultSshOldProtocols: settings.defaultSshOldProtocols ?? "off",
     bufferLines,
     defaultTransparency,
     defaultUseTmuxSessions: settings.defaultUseTmuxSessions ?? false,
@@ -249,6 +250,23 @@ export function SshSettings() {
               <option value="off">{t("settings.sshCompressionOff")}</option>
             </select>
             <small className="field-hint">{t("settings.sshCompressionHint")}</small>
+          </label>
+        </div>
+        <div className="settings-toggle-list">
+          <label className="settings-toggle-row">
+            <ToggleSwitch
+              checked={(sshDraft.defaultSshOldProtocols ?? "off") === "legacy"}
+              onChange={(checked) =>
+                setSshDraft((settings) => ({
+                  ...settings,
+                  defaultSshOldProtocols: checked ? "legacy" : "off",
+                }))
+              }
+            />
+            <span>
+              <strong>{t("settings.sshOldProtocols")}</strong>
+              <small>{t("settings.sshOldProtocolsHint")}</small>
+            </span>
           </label>
         </div>
       </fieldset>

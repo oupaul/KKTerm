@@ -51,6 +51,7 @@ fn create_test_ssh_connection(
             ssh_socks_proxy_username: None,
             ssh_socks_proxy_inherit_defaults: None,
             ssh_compression: None,
+            ssh_old_protocols: None,
             auth_method: Some("agent".to_string()),
             local_shell: None,
             local_startup_directory: None,
@@ -94,6 +95,7 @@ fn create_test_ssh_connection_in_workspace(
             ssh_socks_proxy_username: None,
             ssh_socks_proxy_inherit_defaults: None,
             ssh_compression: None,
+            ssh_old_protocols: None,
             auth_method: Some("agent".to_string()),
             local_shell: None,
             local_startup_directory: None,
@@ -151,6 +153,7 @@ fn create_test_local_connection(storage: &Storage, name: &str, shell: &str) -> S
             ssh_socks_proxy_username: None,
             ssh_socks_proxy_inherit_defaults: None,
             ssh_compression: None,
+            ssh_old_protocols: None,
             auth_method: Some("keyFile".to_string()),
             local_shell: Some(shell.to_string()),
             local_startup_directory: None,
@@ -243,6 +246,7 @@ fn create_connection_can_persist_root_ssh_connection() {
             ssh_socks_proxy_username: None,
             ssh_socks_proxy_inherit_defaults: None,
             ssh_compression: None,
+            ssh_old_protocols: None,
             auth_method: Some("keyFile".to_string()),
             local_shell: None,
             local_startup_directory: None,
@@ -306,6 +310,7 @@ fn ssh_compression_override_round_trips_and_validates() {
             ssh_socks_proxy_username: None,
             ssh_socks_proxy_inherit_defaults: None,
             ssh_compression: Some("off".to_string()),
+            ssh_old_protocols: None,
             auth_method: Some("agent".to_string()),
             local_shell: None,
             local_startup_directory: None,
@@ -353,6 +358,7 @@ fn ssh_compression_override_round_trips_and_validates() {
         ssh_socks_proxy_username: None,
         ssh_socks_proxy_inherit_defaults: None,
         ssh_compression: Some("turbo".to_string()),
+        ssh_old_protocols: None,
         auth_method: Some("agent".to_string()),
         local_shell: None,
         local_startup_directory: None,
@@ -398,6 +404,7 @@ fn ssh_socks_proxy_username_round_trips_without_storing_passwords_in_sqlite() {
             ssh_socks_proxy_username: Some("  proxy-user  ".to_string()),
             ssh_socks_proxy_inherit_defaults: Some(false),
             ssh_compression: None,
+            ssh_old_protocols: None,
             auth_method: Some("agent".to_string()),
             local_shell: None,
             local_startup_directory: None,
@@ -462,6 +469,7 @@ fn local_connection_persists_startup_directory_and_script() {
             ssh_socks_proxy_username: None,
             ssh_socks_proxy_inherit_defaults: None,
             ssh_compression: None,
+            ssh_old_protocols: None,
             auth_method: None,
             local_shell: Some("powershell.exe".to_string()),
             local_startup_directory: Some("  C:\\Work\\KKTerm  ".to_string()),
@@ -529,6 +537,7 @@ fn ssh_connection_persists_startup_script() {
             ssh_socks_proxy_username: None,
             ssh_socks_proxy_inherit_defaults: None,
             ssh_compression: None,
+            ssh_old_protocols: None,
             auth_method: None,
             local_shell: None,
             local_startup_directory: None,
@@ -588,6 +597,7 @@ fn local_connection_persists_psmux_preference() {
             ssh_socks_proxy_username: None,
             ssh_socks_proxy_inherit_defaults: None,
             ssh_compression: None,
+            ssh_old_protocols: None,
             auth_method: None,
             local_shell: Some("pwsh.exe".to_string()),
             local_startup_directory: None,
@@ -635,6 +645,7 @@ fn local_connection_persists_psmux_preference() {
             ssh_socks_proxy_username: None,
             ssh_socks_proxy_inherit_defaults: None,
             ssh_compression: None,
+            ssh_old_protocols: None,
             auth_method: Some("agent".to_string()),
             local_shell: None,
             local_startup_directory: None,
@@ -677,6 +688,7 @@ fn local_files_connection_can_be_created_with_starting_directory() {
             ssh_socks_proxy_username: None,
             ssh_socks_proxy_inherit_defaults: None,
             ssh_compression: None,
+            ssh_old_protocols: None,
             auth_method: None,
             local_shell: None,
             local_startup_directory: Some("  C:\\Users\\user\\.claude  ".to_string()),
@@ -726,6 +738,7 @@ fn file_view_connection_persists_file_path_and_no_host() {
             ssh_socks_proxy_username: None,
             ssh_socks_proxy_inherit_defaults: None,
             ssh_compression: None,
+            ssh_old_protocols: None,
             auth_method: None,
             local_shell: None,
             // The Document reuses the local-path slot to store the target
@@ -793,6 +806,7 @@ fn create_connection_can_persist_remote_desktop_connections() {
             ssh_socks_proxy_username: None,
             ssh_socks_proxy_inherit_defaults: None,
             ssh_compression: None,
+            ssh_old_protocols: None,
             auth_method: Some("password".to_string()),
             local_shell: None,
             local_startup_directory: None,
@@ -837,6 +851,7 @@ fn create_connection_can_persist_remote_desktop_connections() {
             ssh_socks_proxy_username: None,
             ssh_socks_proxy_inherit_defaults: None,
             ssh_compression: None,
+            ssh_old_protocols: None,
             auth_method: None,
             local_shell: None,
             local_startup_directory: None,
@@ -882,6 +897,7 @@ fn create_connection_can_persist_telnet_and_serial_connections() {
             ssh_socks_proxy_username: None,
             ssh_socks_proxy_inherit_defaults: None,
             ssh_compression: None,
+            ssh_old_protocols: None,
             auth_method: Some("agent".to_string()),
             local_shell: None,
             local_startup_directory: None,
@@ -924,6 +940,7 @@ fn create_connection_can_persist_telnet_and_serial_connections() {
             ssh_socks_proxy_username: None,
             ssh_socks_proxy_inherit_defaults: None,
             ssh_compression: None,
+            ssh_old_protocols: None,
             auth_method: None,
             local_shell: None,
             local_startup_directory: None,
@@ -971,6 +988,7 @@ fn url_credentials_round_trip_without_storing_passwords_in_sqlite() {
             ssh_socks_proxy_username: None,
             ssh_socks_proxy_inherit_defaults: None,
             ssh_compression: None,
+            ssh_old_protocols: None,
             auth_method: None,
             local_shell: None,
             local_startup_directory: None,
@@ -1253,6 +1271,7 @@ fn stored_credential_candidates_include_connection_url_and_widget_metadata() {
             ssh_socks_proxy_username: None,
             ssh_socks_proxy_inherit_defaults: None,
             ssh_compression: None,
+            ssh_old_protocols: None,
             auth_method: Some("password".to_string()),
             local_shell: None,
             local_startup_directory: None,
@@ -1288,6 +1307,7 @@ fn stored_credential_candidates_include_connection_url_and_widget_metadata() {
             ssh_socks_proxy_username: None,
             ssh_socks_proxy_inherit_defaults: None,
             ssh_compression: None,
+            ssh_old_protocols: None,
             auth_method: None,
             local_shell: None,
             local_startup_directory: None,
@@ -1409,6 +1429,7 @@ fn assigning_connection_password_credential_requires_matching_type() {
             ssh_socks_proxy_username: None,
             ssh_socks_proxy_inherit_defaults: None,
             ssh_compression: None,
+            ssh_old_protocols: None,
             auth_method: None,
             local_shell: None,
             local_startup_directory: None,
@@ -1491,6 +1512,7 @@ fn url_credentials_keep_multiple_page_steps_and_ignore_ephemeral_url_parts() {
             ssh_socks_proxy_username: None,
             ssh_socks_proxy_inherit_defaults: None,
             ssh_compression: None,
+            ssh_old_protocols: None,
             auth_method: None,
             local_shell: None,
             local_startup_directory: None,
@@ -1656,6 +1678,7 @@ fn update_connection_edits_fields_and_moves_folder() {
             ssh_socks_proxy_username: None,
             ssh_socks_proxy_inherit_defaults: None,
             ssh_compression: None,
+            ssh_old_protocols: None,
             auth_method: Some("keyFile".to_string()),
             local_shell: None,
             local_startup_directory: None,
@@ -1721,6 +1744,7 @@ fn update_connection_preserves_existing_tmux_preference_when_omitted() {
             ssh_socks_proxy_username: connection.ssh_socks_proxy_username.clone(),
             ssh_socks_proxy_inherit_defaults: Some(connection.ssh_socks_proxy_inherit_defaults),
             ssh_compression: None,
+            ssh_old_protocols: None,
             auth_method: Some(connection.auth_method.clone()),
             local_shell: None,
             local_startup_directory: None,
@@ -1757,6 +1781,7 @@ fn update_connection_preserves_existing_tmux_preference_when_omitted() {
             ssh_socks_proxy_username: disabled.ssh_socks_proxy_username.clone(),
             ssh_socks_proxy_inherit_defaults: Some(disabled.ssh_socks_proxy_inherit_defaults),
             ssh_compression: None,
+            ssh_old_protocols: None,
             auth_method: Some(disabled.auth_method.clone()),
             local_shell: None,
             local_startup_directory: None,
@@ -1953,7 +1978,10 @@ fn create_rename_and_delete_connection_folder() {
     );
 
     let reicon_changed = storage
-        .update_connection_folder_icon_data_url(created.id.clone(), Some("reicon:Server".to_string()))
+        .update_connection_folder_icon_data_url(
+            created.id.clone(),
+            Some("reicon:Server".to_string()),
+        )
         .expect("folder reicon ref is changed");
     assert_eq!(
         reicon_changed.icon_data_url.as_deref(),
@@ -2000,7 +2028,10 @@ fn folders_can_contain_subfolders() {
 
     assert_eq!(parent.folders[0].id, child.id);
     assert_eq!(parent.folders[0].name, "Production");
-    assert_eq!(parent.folders[0].icon_data_url.as_deref(), Some("reicon:Server"));
+    assert_eq!(
+        parent.folders[0].icon_data_url.as_deref(),
+        Some("reicon:Server")
+    );
 }
 
 #[test]
@@ -2029,6 +2060,7 @@ fn deleting_folder_removes_connections_in_that_folder() {
             ssh_socks_proxy_username: None,
             ssh_socks_proxy_inherit_defaults: None,
             ssh_compression: None,
+            ssh_old_protocols: None,
             auth_method: Some("agent".to_string()),
             local_shell: None,
             local_startup_directory: None,
@@ -2938,6 +2970,7 @@ fn ssh_settings_round_trip_through_settings_table() {
             default_key_path: Some("  C:\\Users\\example\\.ssh\\deploy_ed25519  ".to_string()),
             default_proxy_jump: Some("  bastion.internal  ".to_string()),
             default_ssh_compression: "off".to_string(),
+            default_ssh_old_protocols: "legacy".to_string(),
             buffer_lines: 12_000,
             default_transparency: 40,
             default_use_tmux_sessions: false,
@@ -3087,12 +3120,17 @@ fn rdp_and_vnc_settings_round_trip_through_settings_table() {
     assert_eq!(rdp_defaults.color_depth, 32);
     assert!(rdp_defaults.redirect_clipboard);
     assert!(!rdp_defaults.redirect_drives);
+    assert_eq!(rdp_defaults.drive_selection, RdpDriveSelection::All);
 
     storage
         .update_rdp_settings(RdpSettings {
             color_depth: 24,
             redirect_clipboard: false,
             redirect_drives: true,
+            drive_selection: RdpDriveSelection::Selected {
+                drives: vec!["D:\\".to_string(), "c:".to_string(), "D:".to_string()],
+            },
+            shared_local_folder: Some(" /tmp/rdp-share ".to_string()),
             bitmap_cache: true,
             performance_profile: "quality".to_string(),
             remote_resolution: "automatic".to_string(),
@@ -3104,6 +3142,16 @@ fn rdp_and_vnc_settings_round_trip_through_settings_table() {
     assert_eq!(rdp_reloaded.color_depth, 24);
     assert!(!rdp_reloaded.redirect_clipboard);
     assert!(rdp_reloaded.redirect_drives);
+    assert_eq!(
+        rdp_reloaded.drive_selection,
+        RdpDriveSelection::Selected {
+            drives: vec!["C:".to_string(), "D:".to_string()],
+        }
+    );
+    assert_eq!(
+        rdp_reloaded.shared_local_folder.as_deref(),
+        Some("/tmp/rdp-share")
+    );
     assert_eq!(rdp_reloaded.performance_profile, "quality");
     assert_eq!(rdp_reloaded.view_mode, "actualSize");
 
@@ -3130,6 +3178,17 @@ fn rdp_and_vnc_settings_round_trip_through_settings_table() {
 }
 
 #[test]
+fn legacy_rdp_settings_default_drive_selection_to_all() {
+    let settings: RdpSettings = serde_json::from_str(
+        r#"{"colorDepth":32,"redirectClipboard":true,"redirectDrives":true,"bitmapCache":true,"performanceProfile":"balanced","remoteResolution":"automatic","viewMode":"fit"}"#,
+    )
+    .expect("legacy RDP settings deserialize");
+
+    assert_eq!(settings.drive_selection, RdpDriveSelection::All);
+    assert!(settings.shared_local_folder.is_none());
+}
+
+#[test]
 fn sftp_protocol_ftp_connection_persists_ssh_auth_fields() {
     let storage = Storage::open(temp_db_path("sftp-protocol-ftp-auth")).expect("storage opens");
 
@@ -3148,6 +3207,7 @@ fn sftp_protocol_ftp_connection_persists_ssh_auth_fields() {
             ssh_socks_proxy_username: None,
             ssh_socks_proxy_inherit_defaults: None,
             ssh_compression: None,
+            ssh_old_protocols: None,
             auth_method: Some("keyFile".to_string()),
             local_shell: None,
             local_startup_directory: None,
@@ -3199,6 +3259,7 @@ fn remote_desktop_connection_options_are_optional_protocol_overrides() {
             ssh_socks_proxy_username: None,
             ssh_socks_proxy_inherit_defaults: None,
             ssh_compression: None,
+            ssh_old_protocols: None,
             auth_method: None,
             local_shell: None,
             local_startup_directory: None,
@@ -3217,6 +3278,8 @@ fn remote_desktop_connection_options_are_optional_protocol_overrides() {
                 color_depth: Some(24),
                 redirect_clipboard: Some(false),
                 redirect_drives: Some(true),
+                drive_selection: Some(RdpDriveSelection::All),
+                shared_local_folder: None,
                 bitmap_cache: Some(true),
                 performance_profile: Some("quality".to_string()),
                 remote_resolution: None,
@@ -3256,6 +3319,7 @@ fn remote_desktop_connection_options_are_optional_protocol_overrides() {
             ssh_socks_proxy_username: None,
             ssh_socks_proxy_inherit_defaults: None,
             ssh_compression: None,
+            ssh_old_protocols: None,
             auth_method: None,
             local_shell: None,
             local_startup_directory: None,
@@ -3274,6 +3338,8 @@ fn remote_desktop_connection_options_are_optional_protocol_overrides() {
                 color_depth: Some(24),
                 redirect_clipboard: Some(false),
                 redirect_drives: Some(true),
+                drive_selection: Some(RdpDriveSelection::All),
+                shared_local_folder: None,
                 bitmap_cache: Some(true),
                 performance_profile: Some("quality".to_string()),
                 remote_resolution: None,

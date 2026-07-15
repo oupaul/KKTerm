@@ -199,6 +199,10 @@ pub fn detect_one(recipe: &Recipe) -> DetectedState {
                 if !state.installed && recipe.id == "chocolatey" {
                     detect_chocolatey_cli().with_install_provider(Some("chocolatey"))
                 } else if !state.installed
+                    && let Some(npm_state) = detect_npm_provider(recipe)
+                {
+                    npm_state.with_install_provider(Some("npm"))
+                } else if !state.installed
                     && let Some(cli_state) = detect_winget_cli_fallback(&recipe.id)
                 {
                     cli_state.with_install_provider(Some("winget"))
@@ -901,7 +905,7 @@ mod windows_installed_software {
 
 // ---- npm ---------------------------------------------------------------
 
-fn detect_npm(pkg: &str) -> DetectedState {
+pub(super) fn detect_npm(pkg: &str) -> DetectedState {
     let output = match command_output_with_refreshed_path(
         npm_program(),
         &["ls", "-g", "--json", "--depth=0"],
@@ -925,6 +929,14 @@ fn detect_npm(pkg: &str) -> DetectedState {
         }
     }
     DetectedState::not_installed()
+}
+
+pub(super) fn detect_npm_provider(recipe: &Recipe) -> Option<DetectedState> {
+    let Some(Provider::Npm { pkg }) = recipe.npm_provider.as_ref() else {
+        return None;
+    };
+    let state = detect_npm(pkg);
+    state.installed.then_some(state)
 }
 
 // ---- github-release ----------------------------------------------------
@@ -1108,6 +1120,7 @@ mod tests {
             },
             download_provider: None,
             chocolatey_provider: None,
+            npm_provider: None,
             options: vec![],
             homepage: None,
             release_notes_url: None,

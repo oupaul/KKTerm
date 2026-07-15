@@ -97,12 +97,12 @@ export function RackStage({
   onEditRack?: (rack: Rack) => void;
   onDeleteRack?: (rack: Rack) => void;
   onRunRack?: (rack: Rack) => void;
-  onMoveItem?: (itemId: string, targetRackId: string, startU: number) => void;
+  onMoveItem?: (itemId: string, targetRackId: string, startU: number, xFraction?: number) => void;
   onDeleteItem?: (item: RackItem) => void;
   editMode?: boolean;
   /** Armed picker placement pass-through (see RackElevation). */
   placeSpec?: RackItemDraft | null;
-  onPlaceAt?: (startU: number) => void;
+  onPlaceAt?: (startU: number, slot?: number) => void;
   onCancelPlacement?: () => void;
 }) {
   const { t } = useTranslation();

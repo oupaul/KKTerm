@@ -8,7 +8,7 @@ use std::sync::atomic::AtomicBool;
 
 use serde_json::json;
 
-use super::detect::{detect_chocolatey_package, github_release_install_dir};
+use super::detect::{detect_chocolatey_package, detect_npm_provider, github_release_install_dir};
 use super::events::ProgressEvent;
 use super::install::EventSink;
 use super::managed_app::{is_managed_app, managed_app_install_dir};
@@ -30,6 +30,10 @@ pub fn uninstall_recipe(
         && detect_chocolatey_package(id).installed
     {
         uninstall_chocolatey(&recipe.id, id, cancel, emit)
+    } else if let Some(Provider::Npm { pkg }) = recipe.npm_provider.as_ref()
+        && detect_npm_provider(recipe).is_some()
+    {
+        uninstall_npm(&recipe.id, pkg, cancel, emit)
     } else if recipe.id == "ollama" {
         if let Provider::Winget { id } = &recipe.provider {
             uninstall_winget(&recipe.id, id, cancel, emit)

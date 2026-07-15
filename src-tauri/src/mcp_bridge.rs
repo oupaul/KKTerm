@@ -17,7 +17,7 @@ use std::sync::Arc;
 #[cfg(target_os = "windows")]
 use std::process::Command;
 
-use rand::RngCore;
+use rand::Rng;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use tauri::AppHandle;

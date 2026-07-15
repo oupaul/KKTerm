@@ -5,6 +5,7 @@ const NATIVE_BLOCKING_OVERLAY_SELECTOR = [
   ".assistant-image-preview-backdrop",
   ".transfer-conflict-backdrop",
   ".connection-dialog-backdrop",
+  ".kk-dlg-backdrop",
   ".app-launcher-dialog-backdrop",
   ".settings-backdrop",
   ".settings-page",

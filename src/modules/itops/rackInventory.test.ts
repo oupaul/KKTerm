@@ -34,6 +34,20 @@ test("normalizeRackItemMetadata preserves legacy PR metadata while producing typ
   assert.equal(normalized.serverPanelStyle, "style2");
 });
 
+test("normalizeRackItemMetadata clamps fractional width and slot", () => {
+  // A slot only means something on a fractional-width device.
+  assert.equal(normalizeRackItemMetadata({ slot: 2 }).slot, null);
+  assert.equal(normalizeRackItemMetadata({}).widthFraction, null);
+
+  const half = normalizeRackItemMetadata({ widthFraction: "half", slot: 5 });
+  assert.equal(half.widthFraction, "half");
+  assert.equal(half.slot, 1);
+
+  const quarter = normalizeRackItemMetadata({ widthFraction: "quarter" });
+  assert.equal(quarter.widthFraction, "quarter");
+  assert.equal(quarter.slot, 0);
+});
+
 test("summarizeRackDeviceMetadata returns compact visible inventory facts", () => {
   const summary = summarizeRackDeviceMetadata({
     tags: ["core", "edge"],

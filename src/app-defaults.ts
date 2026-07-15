@@ -114,6 +114,7 @@ export const defaultSshSettings: SshSettings = {
   defaultKeyPath: "",
   defaultProxyJump: "",
   defaultSshCompression: "fast",
+  defaultSshOldProtocols: "off",
   bufferLines: 5000,
   defaultTransparency: 50,
   // MobaXterm-style default: SSH runs as a plain scrollback terminal so drags
@@ -145,6 +146,8 @@ export const defaultRdpSettings: RdpSettings = {
   colorDepth: 32,
   redirectClipboard: true,
   redirectDrives: false,
+  driveSelection: { mode: "all" },
+  sharedLocalFolder: "",
   bitmapCache: true,
   performanceProfile: "balanced",
   remoteResolution: "automatic",

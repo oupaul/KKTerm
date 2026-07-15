@@ -95,6 +95,9 @@ function effectiveNeedsFor(recipe: Recipe, options?: InstallOptions): string[] {
   if (selectedProviderForOptions(recipe, options).kind === "chocolatey") {
     return Array.from(new Set([...needs.filter((need) => need !== "winget"), "chocolatey"]));
   }
+  if (selectedProviderForOptions(recipe, options).kind === "npm") {
+    return Array.from(new Set([...needs.filter((need) => need !== "winget"), "node-bundle"]));
+  }
   if (
     recipe.provider.kind === "winget" &&
     selectedProviderForOptions(recipe, options) !== recipe.provider
@@ -117,6 +120,9 @@ function selectedProviderForOptions(recipe: Recipe, options?: InstallOptions): R
     recipe.chocolateyProvider?.kind === "chocolatey"
   ) {
     return recipe.chocolateyProvider;
+  }
+  if (options?.provider === "npm" && recipe.npmProvider?.kind === "npm") {
+    return recipe.npmProvider;
   }
   return recipe.provider;
 }

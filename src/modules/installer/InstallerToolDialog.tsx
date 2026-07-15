@@ -1195,6 +1195,8 @@ function OptionsForm({
       recipe.downloadProvider?.kind === "githubRelease");
   const canChooseChocolatey =
     supported.has("provider") && recipe.chocolateyProvider?.kind === "chocolatey";
+  const canChooseNpm =
+    supported.has("provider") && recipe.npmProvider?.kind === "npm";
   const usingDownloadProvider =
     canChooseDownload && options.provider === "download";
   const selectedProvider = selectedProviderForRecipe(recipe, options);
@@ -1207,7 +1209,7 @@ function OptionsForm({
       className="installer-tool-dialog__options"
       data-tutorial-id="installer.toolOptions"
     >
-      {canChooseDownload || canChooseChocolatey ? (
+      {canChooseDownload || canChooseChocolatey || canChooseNpm ? (
         <label>
           <span>{t("installer.options.provider")}</span>
           <select
@@ -1215,7 +1217,11 @@ function OptionsForm({
             onChange={(event) =>
               onChange(
                 "provider",
-                event.target.value as "default" | "download" | "chocolatey",
+                event.target.value as
+                  | "default"
+                  | "download"
+                  | "chocolatey"
+                  | "npm",
               )
             }
           >
@@ -1229,6 +1235,9 @@ function OptionsForm({
               <option value="chocolatey">
                 {providerSummary(recipe.chocolateyProvider!)}
               </option>
+            ) : null}
+            {canChooseNpm ? (
+              <option value="npm">{providerSummary(recipe.npmProvider!)}</option>
             ) : null}
           </select>
         </label>
@@ -1306,6 +1315,9 @@ function selectedProviderForRecipe(
   ) {
     return recipe.chocolateyProvider;
   }
+  if (options.provider === "npm" && recipe.npmProvider?.kind === "npm") {
+    return recipe.npmProvider;
+  }
   return recipe.provider;
 }
 
@@ -1327,6 +1339,12 @@ function detectedProviderForRecipe(
     recipe.downloadProvider?.kind === "githubRelease"
   ) {
     return recipe.downloadProvider;
+  }
+  if (
+    detected?.installProvider === "npm" &&
+    recipe.npmProvider?.kind === "npm"
+  ) {
+    return recipe.npmProvider;
   }
   return recipe.provider;
 }

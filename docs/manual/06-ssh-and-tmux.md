@@ -29,6 +29,12 @@ This is not a `window.confirm`. Users explicitly approve the new key; the truste
 
 Add/Edit Connection places `connections.keyPassphraseOptional` directly below the private-key path. A value is stored as a per-Connection `connectionPassphrase` secret in the configured secret store, never in the Connection row or plaintext settings data. Leaving the field blank while editing preserves an existing passphrase. When an encrypted key has no stored passphrase, or the stored passphrase cannot decrypt it, the terminal prompts for `SSH key passphrase:` interactively before authentication. This fallback applies to terminal Sessions; non-interactive fresh connections such as SFTP and one-shot tmux/IT Ops commands require the saved passphrase. An entered passphrase does not prevent an unencrypted key from loading; it is ignored for that key.
 
+## Old protocol compatibility
+
+`settings.sshOldProtocols` controls the global **Legacy Protocols** default and is off by default. `connections.sshOldProtocols` is the matching single-switch override for one SSH Connection. Enabling either switch appends the complete supported set of SHA-1-era key-exchange algorithms and the `aes256-cbc`, `aes192-cbc`, `aes128-cbc`, and `3des-cbc` ciphers after the modern algorithms; individual legacy algorithms cannot be selected. Enable it only for trusted older hosts that cannot negotiate the modern default set.
+
+The Add SSH Connection dialog's footer-left `connections.importSshConfig` action imports the platform default SSH config (`%USERPROFILE%\.ssh\config` on Windows, `~/.ssh/config` on macOS/Linux) when it exists. If the default file is absent, KKTerm opens a file picker. The import applies the first importable concrete `Host` alias to the dialog. Exact, `*`, `?`, and negated (`!`) Host patterns contribute supported `HostName`, `User`, `Port`, `IdentityFile`, and `ProxyJump` values using OpenSSH's first-obtained-value-wins order; wildcard-only patterns do not become Connections. Put broad `Host *` defaults after specific blocks when those blocks must override them. Unsupported directives are reported with their source line.
+
 ## Idle behaviour
 
 A live SSH Session has **no app-side idle timeout**. Quiet and unfocused Sessions stay connected until the remote, network, or an explicit user close ends them.

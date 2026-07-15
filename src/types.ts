@@ -57,6 +57,7 @@ export type SshAuthMethod = "keyFile" | "password" | "agent";
  * `undefined` means "inherit the global SSH default".
  */
 export type SshCompressionMode = "off" | "fast";
+export type SshOldProtocolsMode = "off" | "legacy";
 
 /** Per-pane File Explorer / SFTP browser view options (item zoom + content-view
  * background), persisted durably on the Connection. */
@@ -94,6 +95,7 @@ export interface Connection {
   sshSocksProxyUsername?: string;
   sshSocksProxyInheritDefaults?: boolean;
   sshCompression?: SshCompressionMode;
+  sshOldProtocols?: SshOldProtocolsMode;
   authMethod?: SshAuthMethod;
   hasPassword?: boolean;
   localShell?: string;
@@ -261,6 +263,9 @@ export type RackItemKind =
 export type RackItemStatus = "online" | "warning" | "offline";
 
 export type RackServerFormFactor = "rack" | "tower";
+// Fractional faceplate width: several small devices (e.g. two modems) can
+// share one U row side by side. null/undefined = full width.
+export type RackItemWidthFraction = "half" | "quarter";
 export type RackServerPanelStyle = "default" | "style1" | "style2";
 
 export type RackPortSpeed = "gigabit" | "10g" | "25g" | "40g" | "100g" | "custom";
@@ -324,6 +329,11 @@ export interface RackItemMetadata {
   vendor?: string | null;
   /** Server chassis presentation. Tower servers render at half rack width. */
   formFactor?: RackServerFormFactor | null;
+  /** Fractional faceplate width; null/undefined = full rack width. */
+  widthFraction?: RackItemWidthFraction | null;
+  /** Horizontal slot for a fractional-width device, 0-based from the left in
+   *  units of its own width (half: 0–1, quarter: 0–3). null = leftmost. */
+  slot?: number | null;
   /** Server front-panel artwork; independent of shell finish and form factor. */
   serverPanelStyle?: RackServerPanelStyle | null;
 }
@@ -539,6 +549,7 @@ export interface CreateConnectionRequest {
   sshSocksProxyUsername?: string;
   sshSocksProxyInheritDefaults?: boolean;
   sshCompression?: SshCompressionMode;
+  sshOldProtocols?: SshOldProtocolsMode;
   authMethod?: SshAuthMethod;
   localShell?: string;
   localStartupDirectory?: string;
@@ -1002,6 +1013,7 @@ export interface SshSettings {
   defaultKeyPath?: string;
   defaultProxyJump?: string;
   defaultSshCompression: SshCompressionMode;
+  defaultSshOldProtocols: SshOldProtocolsMode;
   bufferLines: number;
   defaultTransparency: number;
   defaultUseTmuxSessions: boolean;
@@ -1067,10 +1079,16 @@ export const RDP_REMOTE_RESOLUTION_FIXED: readonly RdpRemoteResolutionFixed[] = 
   "3840x2400",
 ] as const;
 
+export type RdpDriveSelection =
+  | { mode: "all" }
+  | { mode: "selected"; drives: string[] };
+
 export interface RdpSettings {
   colorDepth: RdpColorDepth;
   redirectClipboard: boolean;
   redirectDrives: boolean;
+  driveSelection: RdpDriveSelection;
+  sharedLocalFolder?: string;
   bitmapCache: boolean;
   performanceProfile: RdpPerformanceProfile;
   remoteResolution: RdpRemoteResolution;
@@ -1082,6 +1100,8 @@ export interface RdpConnectionOptions {
   colorDepth?: RdpColorDepth;
   redirectClipboard?: boolean;
   redirectDrives?: boolean;
+  driveSelection?: RdpDriveSelection;
+  sharedLocalFolder?: string;
   bitmapCache?: boolean;
   performanceProfile?: RdpPerformanceProfile;
   remoteResolution?: RdpRemoteResolution;

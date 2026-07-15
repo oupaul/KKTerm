@@ -82,12 +82,12 @@ Replaces the **Host Group** entry in `CONTEXT.md`; adds the rest. Follows the
   (cell + facing per Rack), paint Racks in their cabinet shell finish (no
   status colouring) with compact utilisation/power tags, and hold
   **Room Objects**. _Avoid_: area view, region view.
-- **Room Object** — a non-rack fixture standing on the Server Room floor grid
-  (security camera, air conditioner, fire extinguisher, UPS,
-  environment sensor, smoke detector, crash cart, 乖乖). A Room Object has a
-  facing and a vertical position in rack units, so occupants can share a
-  floor cell while their vertical spans don't intersect. Resting objects
-  settle on the lowest fitting support surface, while top-hung fixtures such
+- **Room Object** — a non-rack fixture or structure on the Server Room floor
+  grid (security camera, air conditioner, fire extinguisher, UPS,
+  environment sensor, smoke detector, crash cart, partition wall, 乖乖). A
+  Room Object has a facing and a vertical position in rack units, so occupants
+  can share a floor cell while their vertical spans don't intersect. Resting
+  objects settle on the lowest fitting support surface, while top-hung fixtures such
   as cameras and detectors keep their overhead placement. A 乖乖 pack is never
   a Room Object while on a cabinet top: a rack-top drop (or a legacy rack-top
   Room Object found on load) becomes that Rack's single rack-top 乖乖 Rack
@@ -98,7 +98,9 @@ Replaces the **Host Group** entry in `CONTEXT.md`; adds the rest. Follows the
   `corner` property (clockwise 0=NW..3=SW). Larger fixtures use the exact
   one-cell proportions from `Server Room Objects.dc.html` (for example CRAC
   0.94×0.62 and UPS 0.6×0.6) and block their snapped
-  cell for stacking. Durable in
+  cell for stacking. A partition wall is a floor-standing 0.15 m × 2.4 m
+  structure that auto-connects to walls on orthogonally adjacent cells,
+  forming straight runs, corners, tees, and crosses. Durable in
   `itops_room_objects`, scoped by Site + Server Room name like racks (the
   pure model lives in `roomObjects.ts`; the pre-durable localStorage scope
   remains a legacy fallback). Rack facing is a durable `facing` column on
@@ -209,13 +211,19 @@ flat Site target.
 
 ### Overlap / validation rule
 
-A rack item must not overlap another item's U span in the same rack, and must
-fit within `1..=height_u`. The sole exception is one 乖乖 package on the rack
-top, stored at the virtual position `height_u + 1`; changing the Rack height
-moves that package's virtual position with the top. Validate in
-`itops/site_storage.rs` on insert/update (pure helper, unit-tested) and
-re-check in the UI before a drag-drop commit. Keep the overlap and special
-placement rules in small pure functions so they remain testable without a DB.
+A rack item must not overlap another item's occupied area in the same rack,
+and must fit within `1..=height_u`. Occupancy is two-dimensional: besides its
+U span, each item covers a horizontal strip of the rack width in quarter
+units, derived from metadata `widthFraction` ("half" | "quarter"; unset =
+full width) and `slot` (0-based from the left in units of its own width). Two
+items collide only when both their U spans and their horizontal strips
+intersect, so two half-width devices (e.g. modems) may share one U row side
+by side. The sole exception is one 乖乖 package on the rack top, stored at the
+virtual position `height_u + 1`; changing the Rack height moves that
+package's virtual position with the top. Validate in `itops/site_storage.rs`
+on insert/update/move (pure helper, unit-tested) and re-check in the UI
+before a drag-drop commit. Keep the overlap and special placement rules in
+small pure functions so they remain testable without a DB.
 
 ### Rust types (`src-tauri/src/itops/types.rs`)
 

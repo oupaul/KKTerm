@@ -1662,6 +1662,7 @@ export function RemoteDesktopWorkspace({
             key={rdpStartKey}
             onSessionConnected={handleRdpCanvasConnected}
             onSessionDisconnected={handleRdpCanvasDisconnected}
+            rdpOptions={resolveRdpOptions(rdpSettings, connection.rdpOptions)}
             surfaceRef={canvasRef}
           />
         ) : null}
@@ -1931,6 +1932,8 @@ function resolveRdpOptions(
     colorDepth: overrides.colorDepth ?? defaults.colorDepth,
     redirectClipboard: overrides.redirectClipboard ?? defaults.redirectClipboard,
     redirectDrives: overrides.redirectDrives ?? defaults.redirectDrives,
+    driveSelection: overrides.driveSelection ?? defaults.driveSelection,
+    sharedLocalFolder: overrides.sharedLocalFolder ?? defaults.sharedLocalFolder,
     bitmapCache: overrides.bitmapCache ?? defaults.bitmapCache,
     performanceProfile: overrides.performanceProfile ?? defaults.performanceProfile,
     remoteResolution: overrides.remoteResolution ?? defaults.remoteResolution,

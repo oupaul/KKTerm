@@ -56,6 +56,8 @@ type Candidate = {
   password: string;
   url?: string;
   port?: number;
+  keyPath?: string;
+  proxyJump?: string;
   type: ConnectionType;
   folderPath: string[];
 };
@@ -74,7 +76,9 @@ const IMPORTABLE_TYPES: ConnectionType[] = [
   "vnc",
   "serial",
   "url",
+  "ftp",
   "local",
+  "localFiles",
 ];
 
 const SOURCE_ICONS: Record<ImportSource, DialogIconName> = {
@@ -90,7 +94,9 @@ const TYPE_ICONS: Partial<Record<ConnectionType, DialogIconName>> = {
   vnc: "network",
   serial: "bolt",
   url: "globe",
+  ftp: "folder",
   local: "terminal",
+  localFiles: "folder",
 };
 
 export function ImportDialog({ sshSettings, onClose, onImported }: ImportDialogProps) {
@@ -508,7 +514,7 @@ export function ImportDialog({ sshSettings, onClose, onImported }: ImportDialogP
         if (!row.selected) {
           continue;
         }
-        const port = ["local", "serial", "url"].includes(row.type)
+        const port = ["local", "serial", "url", "localFiles"].includes(row.type)
           ? row.port
           : row.port ?? defaultPortForConnectionType(row.type, sshSettings);
         const rowFolderId = await resolveFolderPath(
@@ -517,7 +523,7 @@ export function ImportDialog({ sshSettings, onClose, onImported }: ImportDialogP
           folderCache,
           destinationWorkspaceId,
         );
-        const password = ["ssh", "telnet", "rdp", "vnc"].includes(row.type)
+        const password = ["ssh", "telnet", "rdp", "vnc", "ftp"].includes(row.type)
           ? row.password
           : "";
         const request: CreateConnectionRequest = {
@@ -527,13 +533,24 @@ export function ImportDialog({ sshSettings, onClose, onImported }: ImportDialogP
             row.url ||
             t("connections.import.bookmarkFallbackName"),
           type: row.type,
-          host: row.type === "url" ? undefined : row.host,
+          host: row.type === "url" || row.type === "localFiles" ? undefined : row.host,
           user: row.user,
           folderId: rowFolderId,
           workspaceId: destinationWorkspaceId,
           port,
+          keyPath: row.type === "ssh" && !password ? row.keyPath : undefined,
+          proxyJump: row.type === "ssh" ? row.proxyJump : undefined,
           url: row.type === "url" ? row.url ?? row.host : undefined,
-          authMethod: password && row.type === "ssh" ? "password" : undefined,
+          serialLine: row.type === "serial" ? row.host : undefined,
+          serialSpeed: row.type === "serial" ? row.port : undefined,
+          localStartupDirectory: row.type === "localFiles" ? row.host : undefined,
+          authMethod: row.type === "ssh"
+            ? password
+              ? "password"
+              : row.keyPath
+                ? "keyFile"
+                : undefined
+            : undefined,
         };
         const connection = await invokeCommand("create_connection", { request });
         await storeImportedPassword(connection.id, password);
@@ -572,7 +589,7 @@ export function ImportDialog({ sshSettings, onClose, onImported }: ImportDialogP
   );
 
   return (
-    <DialogShell>
+    <DialogShell zClassName="connection-dialog-backdrop">
       <Sheet
         ariaLabel={t("connections.import.title")}
         className="import-dialog import-dialog-redesign"
@@ -1060,7 +1077,7 @@ function CandidateRow({
           onChange={(event) => onUpdate(row.id, { user: event.currentTarget.value })}
           value={row.user}
         />
-        {["ssh", "telnet", "rdp", "vnc"].includes(row.type) ? (
+        {["ssh", "telnet", "rdp", "vnc", "ftp"].includes(row.type) ? (
           <TextInput
             onChange={(event) => onUpdate(row.id, { password: event.currentTarget.value })}
             placeholder={t("connections.import.bulkPasswordLabel")}
@@ -1243,6 +1260,8 @@ function draftToCandidate(draft: ImportFilePreview["drafts"][number], index: num
     password: "",
     url: draft.url,
     port: draft.port,
+    keyPath: draft.keyPath,
+    proxyJump: draft.proxyJump,
     type: draft.type,
     folderPath: draft.folderPath,
   };

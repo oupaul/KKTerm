@@ -1983,6 +1983,18 @@
   border-bottom: 0;
 }
 
+.settings-rdp-local-resource {
+  border-bottom: 1px solid var(--border);
+}
+
+.settings-rdp-local-resource:last-child {
+  border-bottom: 0;
+}
+
+.settings-rdp-local-resource .settings-toggle-row {
+  border-bottom: 0;
+}
+
 .settings-custom-shell-row {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;

@@ -27,23 +27,26 @@ test("Rack Device property dialog omits removed relationship metadata", async ()
   assert.match(stage, /connectionIds/);
 });
 
-test("Rack Device SNMP refresh path replaces the backend stub", async () => {
+test("Rack Device keeps the SNMP command boundary without exposing its no-op transport", async () => {
   const snmp = await readFile(new URL("../src-tauri/src/net/snmp.rs", import.meta.url), "utf8");
   const commands = await readFile(new URL("../src-tauri/src/itops/commands.rs", import.meta.url), "utf8");
   const tauri = await readFile(new URL("../src/lib/tauri.ts", import.meta.url), "utf8");
+  const dialog = await readFile(new URL("../src/modules/itops/RackItemDialog.tsx", import.meta.url), "utf8");
 
-  assert.doesNotMatch(snmp, /stub/i);
   assert.match(snmp, /SnmpPortSample/);
   assert.match(snmp, /parse_port_speed/);
+  assert.match(snmp, /Ok\(Vec::new\(\)\)/);
   assert.match(commands, /itops_refresh_rack_item_snmp/);
   assert.match(tauri, /itops_refresh_rack_item_snmp/);
+  assert.doesNotMatch(dialog, /handleRefreshSnmp|itops\.racks\.refreshSnmp|itops\.racks\.snmpLabel/);
 });
 
-test("IT Ops manual documents real SNMP scope without promising background polling", async () => {
+test("IT Ops manual reserves SNMP metadata for future automatic discovery", async () => {
   const manual = await readFile(new URL("../docs/manual/12-it-ops.md", import.meta.url), "utf8");
 
   assert.match(manual, /SNMP/);
   assert.doesNotMatch(manual, /IPAM|rack-audit|relationship details/);
-  assert.match(manual, /user-triggered|manual refresh/i);
-  assert.doesNotMatch(manual, /background SNMP polling/i);
+  assert.match(manual, /not exposed in the Rack Device editor/i);
+  assert.match(manual, /future automatic SNMP discovery/i);
+  assert.doesNotMatch(manual, /background SNMP polling|user-triggered manual refresh|target\/OID hints/i);
 });

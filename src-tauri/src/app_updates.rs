@@ -391,7 +391,13 @@ fn sha256_file(path: &Path) -> Result<String, String> {
         )
     })?;
     let digest = Sha256::digest(&bytes);
-    Ok(format!("{digest:x}"))
+    const HEX: &[u8; 16] = b"0123456789abcdef";
+    let mut checksum = String::with_capacity(digest.len() * 2);
+    for byte in digest {
+        checksum.push(HEX[(byte >> 4) as usize] as char);
+        checksum.push(HEX[(byte & 0x0f) as usize] as char);
+    }
+    Ok(checksum)
 }
 
 #[cfg(target_os = "windows")]

@@ -31,7 +31,10 @@ import {
   objectSpec,
   rackTopSupport,
   resolveDropZ,
+  wallArms,
+  wallOccupiesCell,
   type RoomObject,
+  type WallArms,
 } from "./roomObjects";
 import {
   loadRoomZoom,
@@ -47,7 +50,8 @@ import { isRackTopItem } from "./rackPlacement";
 import {
   OBJECT_ACCENTS,
   RackTagChips,
-  RackTipContent,
+  RoomRackHoverCard,
+  RoomPlacementFacingArrow,
   RoomPlacementCursorGhost,
   RoomZoomRuler,
   useRoomPan,
@@ -102,7 +106,7 @@ export function ServerRoomFloorPlan({
   /** A just-created rack awaiting its placement click. */
   placeRackId?: string | null;
   onRackPlaced?: () => void;
-  /** A room fixture was successfully placed; consume the armed picker item. */
+  /** A room fixture was successfully placed; the owner may keep continuous tools armed. */
   onObjectPlaced?: () => void;
   placement: FreePlacementMap;
   onPlacementChange?: (next: FreePlacementMap) => void;
@@ -116,13 +120,17 @@ export function ServerRoomFloorPlan({
   onPlaceKuaiguai?: (rack: Rack, corner?: Corner) => boolean;
   onDeleteRack?: (rack: Rack) => void;
   onSelectRack: (rackId: string) => void;
-  /** A placement click found no free vertical span in the cell. */
+  /** A placement click or drag found no available space in the cell. */
   onObjectBlocked?: () => void;
   /** Right-click while a picker card is armed disarms it. */
   onCancelPlacement?: () => void;
 }) {
   const { t } = useTranslation();
-  const layout = resolveIsoLayout(racks, placement);
+  const layout = resolveIsoLayout(
+    racks,
+    placement,
+    objects.filter((object) => object.kind === "wall"),
+  );
   const [scrollRef, viewport] = useRoomViewportSize();
   // Zoom scales the rendered plan; the fill math below works in unzoomed
   // (logical) px, so zooming out shows more floor cells in the same window.
@@ -152,8 +160,12 @@ export function ServerRoomFloorPlan({
   // hovered cell (and, for quarter-block fixtures, the cell quadrant under
   // the pointer) so the grid shows the drop before the click commits.
   const [hover, setHover] = useState<(IsoCell & { corner: Corner }) | null>(null);
+  const [rackHover, setRackHover] = useState<{
+    rackId: string;
+    pointer: { x: number; y: number };
+  } | null>(null);
   const placing = !!editMode && armed;
-  const placementPointer = useRoomPlacementPointer(placing, onCancelPlacement);
+  const placementPointer = useRoomPlacementPointer(placing, onCancelPlacement, scrollRef);
   useEffect(() => {
     if (!placing) setHover(null);
   }, [placing]);
@@ -216,7 +228,8 @@ export function ServerRoomFloorPlan({
           suppressClickRef.current = false;
         }, 0);
         if (state.kind === "rack") {
-          onPlacementChange?.(moveIsoRack(grid, state.id, state.target));
+          if (wallOccupiesCell(state.target, objects)) onObjectBlocked?.();
+          else onPlacementChange?.(moveIsoRack(grid, state.id, state.target));
         } else {
           dropObject(state.id, state.target);
         }
@@ -308,11 +321,15 @@ export function ServerRoomFloorPlan({
 
   // An armed picker card places on any cell click: objects land on racks too
   // (that is how a 乖乖 pack lands on top of a cabinet), and a pending rack
-  // moves to the clicked cell (swapping with any occupant).
+  // moves to the clicked cell (swapping with another Rack, but never a Wall).
   function placeAt(event: React.MouseEvent<HTMLDivElement>) {
     if (!editMode || !armed) return;
     const cell = cellFromEvent(event);
     if (placeRackId != null) {
+      if (wallOccupiesCell(cell, objects)) {
+        onObjectBlocked?.();
+        return;
+      }
       if (layout.cells[placeRackId]) {
         onPlacementChange?.(moveIsoRack(grid, placeRackId, cell));
         onRackPlaced?.();
@@ -417,7 +434,11 @@ export function ServerRoomFloorPlan({
             >
               {drag ? (
                 <div
-                  className="rm-bp-drop"
+                  className={`rm-bp-drop${
+                    drag.kind === "rack" && wallOccupiesCell(drag.target, objects)
+                      ? " blocked"
+                      : ""
+                  }`}
                   style={{
                     left: drag.target.x * cellW,
                     top: drag.target.y * cellH,
@@ -440,6 +461,13 @@ export function ServerRoomFloorPlan({
                   onPointerMove={moveDrag}
                   onPointerUp={endDrag}
                   onPointerCancel={endDrag}
+                  onInfoHover={(event) =>
+                    setRackHover({
+                      rackId: rack.id,
+                      pointer: { x: event.clientX, y: event.clientY },
+                    })
+                  }
+                  onInfoLeave={() => setRackHover(null)}
                   onSelect={() => selectRack(rack.id)}
                   onRotate={editMode && onFacingChange ? () => rotateRack(rack) : undefined}
                   onDelete={editMode && onDeleteRack ? () => onDeleteRack(rack) : undefined}
@@ -449,6 +477,7 @@ export function ServerRoomFloorPlan({
                 <BlueprintObject
                   key={object.id}
                   object={object}
+                  arms={object.kind === "wall" ? wallArms(object, objects) : undefined}
                   cellW={cellW}
                   cellH={cellH}
                   editMode={!!editMode}
@@ -480,19 +509,20 @@ export function ServerRoomFloorPlan({
                     // span otherwise — red when no vertical span is free.
                     // The pending rack previews at its depth, front flush.
                     const spec = tool != null ? objectSpec(tool) : null;
-                    const blocked =
-                      tool != null &&
-                      (() => {
-                        const z = resolveDropZ(
-                          footprintSpans(hover, tool, 0, racks, layout.cells, objects, undefined, hover.corner, facing),
-                          tool,
-                        );
-                        if (z == null) return true;
-                        if (tool !== "kuaikuai") return false;
-                        // A rack-top drop becomes the rack's single top item.
-                        const support = rackTopSupport(hover, tool, 0, hover.corner, z, racks, layout.cells, facing);
-                        return !!support && support.items.some((item) => isRackTopItem(item, support.heightU));
-                      })();
+                    const blocked = placeRackId != null
+                      ? wallOccupiesCell(hover, objects)
+                      : tool != null &&
+                        (() => {
+                          const z = resolveDropZ(
+                            footprintSpans(hover, tool, 0, racks, layout.cells, objects, undefined, hover.corner, facing),
+                            tool,
+                          );
+                          if (z == null) return true;
+                          if (tool !== "kuaikuai") return false;
+                          // A rack-top drop becomes the rack's single top item.
+                          const support = rackTopSupport(hover, tool, 0, hover.corner, z, racks, layout.cells, facing);
+                          return !!support && support.items.some((item) => isRackTopItem(item, support.heightU));
+                        })();
                     const span = tool != null ? objectCellSpan(tool, 0) : { w: 1, h: 1 };
                     const slot = spec?.quarter
                       ? {
@@ -524,8 +554,10 @@ export function ServerRoomFloorPlan({
                           <span
                             className="rm-bp-ghost-item"
                             style={{
-                              width: Math.round(spec.wide * cellW),
-                              height: Math.round(spec.deep * cellH),
+                              // The wall glyph draws its run inside a whole
+                              // square cell; other kinds size to footprint.
+                              width: tool === "wall" ? Math.round(cellW) : Math.round(spec.wide * cellW),
+                              height: tool === "wall" ? Math.round(cellH) : Math.round(spec.deep * cellH),
                             }}
                           >
                             <RoomObjectPlanArtwork kind={tool} />
@@ -542,12 +574,20 @@ export function ServerRoomFloorPlan({
                             }}
                           />
                         )}
+                        <RoomPlacementFacingArrow facing={0} />
                       </div>
                     );
                   })()
                 : null}
             </div>
           </div>
+          <RoomRackHoverCard
+            rack={!editMode && rackHover
+              ? racks.find((rack) => rack.id === rackHover.rackId) ?? null
+              : null}
+            pointer={!editMode ? rackHover?.pointer ?? null : null}
+            boundaryRef={scrollRef}
+          />
         </div>
         <RoomZoomRuler zoom={zoom} onZoomChange={setZoom} />
       </div>
@@ -575,6 +615,8 @@ function BlueprintRack({
   onPointerMove,
   onPointerUp,
   onPointerCancel,
+  onInfoHover,
+  onInfoLeave,
   onSelect,
   onRotate,
   onDelete,
@@ -590,6 +632,8 @@ function BlueprintRack({
   onPointerMove: (event: ReactPointerEvent<HTMLDivElement>) => void;
   onPointerUp: (event: ReactPointerEvent<HTMLDivElement>) => void;
   onPointerCancel: (event: ReactPointerEvent<HTMLDivElement>) => void;
+  onInfoHover: (event: ReactPointerEvent<HTMLDivElement>) => void;
+  onInfoLeave: () => void;
   onSelect: () => void;
   onRotate?: () => void;
   onDelete?: () => void;
@@ -623,6 +667,8 @@ function BlueprintRack({
       onPointerMove={editMode ? onPointerMove : undefined}
       onPointerUp={editMode ? onPointerUp : undefined}
       onPointerCancel={editMode ? onPointerCancel : undefined}
+      onPointerEnter={!editMode ? onInfoHover : undefined}
+      onPointerLeave={!editMode ? onInfoLeave : undefined}
     >
       <button
         type="button"
@@ -650,9 +696,6 @@ function BlueprintRack({
         ) : null}
         <RackTagChips rack={rack} />
       </button>
-      <span className="rm-bp-tip">
-        <RackTipContent rack={rack} />
-      </span>
       {editMode && (onRotate || onDelete) ? (
         <span className="rm-bp-ctl">
           {onRotate ? (
@@ -690,6 +733,7 @@ function BlueprintRack({
 
 function BlueprintObject({
   object,
+  arms,
   cellW,
   cellH,
   editMode,
@@ -705,6 +749,8 @@ function BlueprintObject({
   onDelete,
 }: {
   object: RoomObject;
+  /** Wall only: resolved auto-connect arms toward adjacent wall cells. */
+  arms?: WallArms;
   cellW: number;
   cellH: number;
   editMode: boolean;
@@ -721,7 +767,13 @@ function BlueprintObject({
   onDelete?: () => void;
 }) {
   const { t } = useTranslation();
-  const fp = objectFootprint(object.kind, object.rot, object.corner);
+  // A wall's arms already point at its joined neighbours in grid space, so
+  // its glyph covers the whole cell unrotated; other kinds keep their exact
+  // footprint box with the artwork turned to the stored rotation.
+  const isWall = object.kind === "wall";
+  const fp = isWall
+    ? { x: 0, y: 0, w: 1, d: 1 }
+    : objectFootprint(object.kind, object.rot, object.corner);
   const w = fp.w * cellW;
   const h = fp.d * cellH;
   const left = (object.x + fp.x) * cellW;
@@ -748,8 +800,11 @@ function BlueprintObject({
       onPointerUp={editMode ? onPointerUp : undefined}
       onPointerCancel={editMode ? onPointerCancel : undefined}
     >
-      <span className="rm-bp-obj-glyph" style={{ transform: `rotate(${object.rot * 90}deg)` }}>
-        <RoomObjectPlanArtwork kind={object.kind} />
+      <span
+        className="rm-bp-obj-glyph"
+        style={isWall ? undefined : { transform: `rotate(${object.rot * 90}deg)` }}
+      >
+        <RoomObjectPlanArtwork kind={object.kind} arms={arms} />
       </span>
       {editMode ? (
         <span className="rm-bp-ctl">

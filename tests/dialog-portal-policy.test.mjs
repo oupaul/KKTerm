@@ -225,3 +225,35 @@ test("Assistant image preview escapes the AI Assistant Panel and remains RDP-blo
     "RDP native overlay parking should treat the Assistant image preview as a blocking overlay",
   );
 });
+
+test("dialog-kit confirmations suppress an intersecting native RDP surface", async () => {
+  const nativeOverlaySource = await readFile(
+    new URL("../src/modules/workspace/nativeOverlay.ts", import.meta.url),
+    "utf8",
+  );
+  assert.match(
+    nativeOverlaySource,
+    /NATIVE_BLOCKING_OVERLAY_SELECTOR[\s\S]*"\.kk-dlg-backdrop"/,
+    "ConfirmSheet's shared backdrop should trigger the existing RDP snapshot-and-park path",
+  );
+});
+
+
+test("Connection import dialog participates in RDP overlay parking", async () => {
+  const importDialogSource = await readFile(
+    new URL("../src/modules/workspace/connections/ImportDialog.tsx", import.meta.url),
+    "utf8",
+  );
+  const nativeOverlaySource = await readFile(new URL("../src/modules/workspace/nativeOverlay.ts", import.meta.url), "utf8");
+
+  assert.match(
+    importDialogSource,
+    /<DialogShell\s+zClassName="connection-dialog-backdrop">/,
+    "Connection import dialog should mark its portal backdrop as RDP-blocking",
+  );
+  assert.match(
+    nativeOverlaySource,
+    /"\.connection-dialog-backdrop"/,
+    "RDP native overlay parking should treat Connection dialogs as blocking overlays",
+  );
+});

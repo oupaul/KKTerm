@@ -36,6 +36,21 @@ test("Rack Device editor follows the compact redesign layout", async () => {
   assert.doesNotMatch(styles, /rack-item-dialog-column[\s\S]{0,180}border-right/);
 });
 
+test("fractional Rack Device position moves the properties preview", async () => {
+  const dialog = await read("src/modules/itops/RackItemDialog.tsx");
+
+  assert.match(dialog, /const previewSlotCount = rackItemSlotCount/);
+  assert.match(dialog, /marginLeft: `\$\{\(slot \* 100\) \/ previewSlotCount\}%`/);
+});
+
+test("Rack Device dialog hides manual network-port and SNMP metadata", async () => {
+  const dialog = await read("src/modules/itops/RackItemDialog.tsx");
+
+  assert.doesNotMatch(dialog, /portSpeedsLabel|addNetworkPort|rack-port-|snmpLabel|snmpOidLabel/);
+  assert.match(dialog, /networkPorts: initialMetadata\.networkPorts/);
+  assert.match(dialog, /snmp: initialMetadata\.snmp/);
+});
+
 test("Rack Device editor centers the current device type in its header", async () => {
   const dialog = await read("src/modules/itops/RackItemDialog.tsx");
   const styles = await read("src/modules/itops/itops.css");
@@ -58,6 +73,19 @@ test("Rack Device editor keeps notes and tags in the model column and pairs capa
   assert.match(formColumn, /className="rack-form-grid two rack-device-dimensions"[\s\S]*disksLabel[\s\S]*itemHeightLabel/);
   assert.match(typeColumn, /notesLabel[\s\S]*TextArea[^>]*rows=\{3\}/);
   assert.match(typeColumn, /tagsLabel[\s\S]*TextArea[^>]*rows=\{1\}/);
+});
+
+test("Kuai Kuai notes update the add and edit properties preview live", async () => {
+  const dialog = await read("src/modules/itops/RackItemDialog.tsx");
+  const previewStart = dialog.indexOf('className="rack-item-preview-stage"');
+  const fieldsStart = dialog.indexOf('label={t("itops.racks.labelLabel")}', previewStart);
+  const preview = dialog.slice(previewStart, fieldsStart);
+
+  // RackItemDialog owns both add and edit flows, so its shared draft state must
+  // feed the main preview directly instead of waiting for Save/persistence.
+  assert.match(dialog, /useState\(item\?\.metadata\?\.notes \?\? ""\)/);
+  assert.match(dialog, /value=\{notes\}[\s\S]*onChange=\{\(event\) => setNotes\(event\.currentTarget\.value\)\}/);
+  assert.match(preview, /notes=\{kind === "kuaiguai" \? notes : null\}/);
 });
 
 test("Rack-top Kuai Kuai can be dragged into the cabinet and back onto the rack top", async () => {

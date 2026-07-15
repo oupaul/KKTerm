@@ -55,6 +55,40 @@ test("rack network ports fit inside compact one-unit faceplates", async () => {
   assert.match(routerRule.groups.body, /gap:\s*5px;/, "router WAN and LAN sections should not crowd the port rows");
 });
 
+test("one-unit PDU controls fit inside the faceplate height", async () => {
+  const [deviceSource, cssSource] = await Promise.all([
+    readFile(new URL("../src/modules/itops/RackDevice.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/modules/itops/itops.css", import.meta.url), "utf8"),
+  ]);
+  const pduRule = cssSource.match(
+    /\.itops-page \.rkd-pdu\[data-height-u="1"\]\s*\{(?<body>[\s\S]*?)\n\}/,
+  );
+  const outletRule = cssSource.match(
+    /\.itops-page \.rkd-pdu\[data-height-u="1"\] \.rkd-outlet\s*\{(?<body>[\s\S]*?)\n\}/,
+  );
+  const loadPctRule = cssSource.match(
+    /\.itops-page \.rkd-pdu\[data-height-u="1"\] \.rkd-load-pct\s*\{(?<body>[\s\S]*?)\n\}/,
+  );
+
+  assert.match(
+    deviceSource,
+    /className="rkd-pdu" data-height-u=\{heightU\}/,
+    "PDU artwork should expose its U height for scoped compact geometry",
+  );
+  assert.ok(pduRule?.groups?.body, "one-unit PDU layout rule should exist");
+  assert.ok(outletRule?.groups?.body, "one-unit PDU outlet rule should exist");
+  assert.ok(loadPctRule?.groups?.body, "one-unit PDU load-label rule should exist");
+
+  const gap = Number(pduRule.groups.body.match(/gap:\s*([\d.]+)px;/)?.[1]);
+  const outletHeight = Number(outletRule.groups.body.match(/height:\s*([\d.]+)px;/)?.[1]);
+  const loadFontSize = Number(loadPctRule.groups.body.match(/font-size:\s*([\d.]+)px;/)?.[1]);
+  assert.match(loadPctRule.groups.body, /line-height:\s*1;/, "load text should not add normal line-height overflow");
+  assert.ok(
+    outletHeight + gap + loadFontSize <= 22,
+    "outlet row, gap, and load row should fit the usable height of a one-unit faceplate",
+  );
+});
+
 test("placed rack servers render model text and compact drive bays", async () => {
   const [elevationSource, cssSource] = await Promise.all([
     readFile(new URL("../src/modules/itops/RackElevation.tsx", import.meta.url), "utf8"),

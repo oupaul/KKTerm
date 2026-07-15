@@ -28,6 +28,8 @@ pub struct ImportedConnectionDraft {
     pub user: String,
     pub url: Option<String>,
     pub port: Option<u16>,
+    pub key_path: Option<String>,
+    pub proxy_jump: Option<String>,
     #[serde(rename = "type")]
     pub connection_type: &'static str,
     pub folder_path: Vec<String>,
@@ -56,7 +58,17 @@ pub fn parse_import_file(request: ParseImportFileRequest) -> Result<ImportFilePr
         .and_then(|ext| ext.to_str())
         .unwrap_or("")
         .to_ascii_lowercase();
-    parse_import_text(&text, &extension)
+    let file_name = path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or("");
+    let format_hint =
+        if file_name.eq_ignore_ascii_case("config") || file_name.eq_ignore_ascii_case(".config") {
+            "sshconfig"
+        } else {
+            extension.as_str()
+        };
+    parse_import_text(&text, format_hint)
 }
 
 pub fn parse_import_text(text: &str, extension: &str) -> Result<ImportFilePreview, String> {
@@ -74,7 +86,70 @@ pub fn parse_import_text(text: &str, extension: &str) -> Result<ImportFilePrevie
     if extension == "reg" || trimmed.starts_with("Windows Registry Editor") {
         return Ok(parse_putty_reg(text));
     }
+    if extension == "sshconfig" || looks_like_ssh_config(text) {
+        return parse_openssh_config(text);
+    }
     Ok(parse_csv_or_tsv(text))
+}
+
+fn looks_like_ssh_config(text: &str) -> bool {
+    text.lines().any(|raw_line| {
+        let line = raw_line.trim();
+        if line.is_empty() || line.starts_with('#') {
+            return false;
+        }
+        let directive_end = line
+            .find(|character: char| character.is_whitespace() || character == '=')
+            .unwrap_or(line.len());
+        let directive = &line[..directive_end];
+        let value = line[directive_end..]
+            .trim_start_matches(|character: char| character.is_whitespace() || character == '=')
+            .trim();
+        directive.eq_ignore_ascii_case("host") && !value.is_empty()
+    })
+}
+
+fn parse_openssh_config(text: &str) -> Result<ImportFilePreview, String> {
+    let preview = crate::ssh_config::parse_ssh_config_text(text, None)?;
+    let drafts = preview
+        .drafts
+        .into_iter()
+        .map(|draft| ImportedConnectionDraft {
+            name: draft.name,
+            host: draft.host,
+            user: draft.user,
+            url: None,
+            port: draft.port,
+            key_path: draft.key_path,
+            proxy_jump: draft.proxy_jump,
+            connection_type: draft.connection_type,
+            folder_path: Vec::new(),
+        })
+        .collect();
+    let warnings = preview
+        .unsupported_directives
+        .into_iter()
+        .map(|warning| {
+            let scope = warning
+                .host_pattern
+                .map(|pattern| format!(" for Host {pattern}"))
+                .unwrap_or_default();
+            let value = if warning.value.is_empty() {
+                String::new()
+            } else {
+                format!(" {}", warning.value)
+            };
+            format!(
+                "SSH config line {}: unsupported directive {}{}{}",
+                warning.line, warning.directive, value, scope
+            )
+        })
+        .collect();
+    Ok(ImportFilePreview {
+        format: "sshConfig",
+        drafts,
+        warnings,
+    })
 }
 
 fn decode_text(bytes: &[u8]) -> String {
@@ -320,6 +395,8 @@ fn draft_from_row(
         user,
         url: None,
         port,
+        key_path: None,
+        proxy_jump: None,
         connection_type,
         folder_path,
     }))
@@ -498,6 +575,8 @@ impl RdcmanServer {
             user,
             url: None,
             port: self.port,
+            key_path: None,
+            proxy_jump: None,
             connection_type: "rdp",
             folder_path,
         })
@@ -574,19 +653,45 @@ fn parse_mobaxterm_session(
     value: &str,
     folder_path: &[String],
 ) -> Result<Option<ImportedConnectionDraft>, String> {
-    let body = value.trim_start_matches('#');
-    let mut parts = body.split('#');
-    let type_id_text = parts.next().unwrap_or("").trim();
-    let after_type = parts.next().unwrap_or("");
+    // Session values look like `#IconNumber#Type%host%port%user%…#FontSettings…`.
+    // The leading `#`-field is the icon (which changes between MobaXterm
+    // releases, e.g. the default SSH icon moved from 109 to 110); the real
+    // session type is the first `%`-field of the section that follows it.
+    let body = value.trim().trim_start_matches('#');
+    let mut sections = body.split('#');
+    let first_section = sections.next().unwrap_or("").trim();
+    let params_section = if first_section.contains('%') {
+        // Icon omitted: the value starts directly with `Type%host%…`.
+        first_section
+    } else {
+        sections.next().unwrap_or("").trim()
+    };
+    let params: Vec<&str> = params_section.split('%').collect();
+    let type_id_text = params.first().map(|value| value.trim()).unwrap_or("");
 
     let connection_type = match type_id_text {
-        "0" | "109" => "ssh",
-        "1" | "8" => "telnet",
-        "91" | "98" => "rdp",
-        "96" => "vnc",
-        "5" => "local",
+        "0" => "ssh",
+        "1" => "telnet",
+        "4" => "rdp",
+        "5" => "vnc",
+        "6" => "ftp",
+        "7" => "ssh",
+        "8" => "serial",
+        "9" => "local",
+        "10" => "localFiles",
+        "11" => "url",
+        "14" => "local",
         "" => return Ok(None),
-        other => return Err(format!("unsupported MobaXterm session type {other}")),
+        other => {
+            let label = match other {
+                "2" => " (Rsh)",
+                "3" => " (Xdmcp)",
+                "12" => " (Mosh)",
+                "13" => " (AWS S3)",
+                _ => "",
+            };
+            return Err(format!("unsupported MobaXterm session type {other}{label}"));
+        }
     };
 
     if connection_type == "local" {
@@ -596,12 +701,13 @@ fn parse_mobaxterm_session(
             user: String::new(),
             url: None,
             port: None,
+            key_path: None,
+            proxy_jump: None,
             connection_type,
             folder_path: folder_path.to_vec(),
         }));
     }
 
-    let params: Vec<&str> = after_type.split('%').collect();
     let host = params
         .get(1)
         .map(|value| value.trim())
@@ -615,16 +721,28 @@ fn parse_mobaxterm_session(
         .map(|value| strip_enclosing_square_brackets(value.trim()).to_string())
         .unwrap_or_default();
 
-    if host.is_empty() {
-        return Err("missing host".to_string());
+    if host.is_empty() && connection_type != "localFiles" {
+        return Err(match connection_type {
+            "serial" => "missing serial line".to_string(),
+            "url" => "missing URL".to_string(),
+            _ => "missing host".to_string(),
+        });
     }
+
+    let url = if connection_type == "url" {
+        Some(host.clone())
+    } else {
+        None
+    };
 
     Ok(Some(ImportedConnectionDraft {
         name: name.to_string(),
         host,
         user,
-        url: None,
+        url,
         port,
+        key_path: None,
+        proxy_jump: None,
         connection_type,
         folder_path: folder_path.to_vec(),
     }))
@@ -746,6 +864,8 @@ fn finalize_putty_session(
         user: values.user.unwrap_or_default(),
         url: None,
         port: values.port,
+        key_path: None,
+        proxy_jump: None,
         connection_type,
         folder_path: Vec::new(),
     });
@@ -1227,6 +1347,8 @@ fn collect_selected_bookmark_drafts(
                     user: String::new(),
                     url: Some(url.to_string()),
                     port: None,
+                    key_path: None,
+                    proxy_jump: None,
                     connection_type: "url",
                     folder_path: folder_path.clone(),
                 });
@@ -1583,6 +1705,34 @@ mod tests {
     }
 
     #[test]
+    fn detects_openssh_config_and_preserves_ssh_fields_and_warnings() {
+        let text = r#"
+Host app
+  HostName app.internal
+  User deploy
+  IdentityFile ~/.ssh/app_key
+
+Host *
+  Port 2222
+  ProxyJump bastion
+  ServerAliveInterval 120
+"#;
+        let preview = parse_import_text(text, "").expect("OpenSSH config parses");
+
+        assert_eq!(preview.format, "sshConfig");
+        assert_eq!(preview.drafts.len(), 1);
+        let draft = &preview.drafts[0];
+        assert_eq!(draft.name, "app");
+        assert_eq!(draft.host, "app.internal");
+        assert_eq!(draft.user, "deploy");
+        assert_eq!(draft.port, Some(2222));
+        assert_eq!(draft.key_path.as_deref(), Some("~/.ssh/app_key"));
+        assert_eq!(draft.proxy_jump.as_deref(), Some("bastion"));
+        assert_eq!(preview.warnings.len(), 1);
+        assert!(preview.warnings[0].contains("ServerAliveInterval 120 for Host *"));
+    }
+
+    #[test]
     fn parses_rdcman_servers_with_group_folder_path() {
         let text = r#"<?xml version="1.0" encoding="utf-8"?>
 <RDCMan>
@@ -1706,6 +1856,80 @@ mod tests {
             draft.folder_path,
             vec!["Servers".to_string(), "Linux".to_string()]
         );
+    }
+
+    #[test]
+    fn parses_mobaxterm_sessions_regardless_of_icon_number() {
+        // MobaXterm 26.x exports use icon 110 for SSH sessions; the icon
+        // number must not be read as the session type.
+        let text = "[Bookmarks]\nSubRep=\nImgNum=42\nGDB2=#110#0%1.2.2.42%22%%%-1%-1%%%%%0%-1%0%%%-1%0%0%0%%1080%%0%0%1%%0%%%%0%-1%-1%0%%%0#MobaFont%11%0%0%-1%15%236,236,236%30,30,30%180,180,192%0%-1%-1%_MobaFolder_\\Logs%xterm%-1%0%_Std_Colors_0_%80%24%0%1%-1%<none>%%0%0%-1%-1%#0# #-1\nTEV1=#91#4%2.2.102.182%3389%%-1%0%0%0%-1%0%0%-1%%%%%0%-1%%-1%%-1%0%0%-1%0%-1%1%0%0%0%#MobaFont%11%0%0%-1%15%236,236,236%30,30,30%180,180,192%0%-1%-1%_MobaFolder_\\Logs%xterm%-1%0%_Std_Colors_0_%80%24%0%1%-1%<none>%%0%0%-1%-1%#0# #-1\n";
+        let preview = parse_mobaxterm(text);
+        assert_eq!(preview.warnings, Vec::<String>::new());
+        assert_eq!(preview.drafts.len(), 2);
+        assert_eq!(preview.drafts[0].connection_type, "ssh");
+        assert_eq!(preview.drafts[0].host, "1.2.2.42");
+        assert_eq!(preview.drafts[0].port, Some(22));
+        assert_eq!(preview.drafts[1].connection_type, "rdp");
+        assert_eq!(preview.drafts[1].host, "2.2.102.182");
+        assert_eq!(preview.drafts[1].port, Some(3389));
+    }
+
+    #[test]
+    fn parses_mobaxterm_session_without_icon_prefix() {
+        let text = "[Bookmarks]\nBox=#0%host.example.com%2200%[admin]\n";
+        let preview = parse_mobaxterm(text);
+        assert_eq!(preview.drafts.len(), 1);
+        assert_eq!(preview.drafts[0].connection_type, "ssh");
+        assert_eq!(preview.drafts[0].host, "host.example.com");
+        assert_eq!(preview.drafts[0].port, Some(2200));
+        assert_eq!(preview.drafts[0].user, "admin");
+    }
+
+    #[test]
+    fn parses_mobaxterm_serial_file_browser_sftp_ftp_and_wsl_sessions() {
+        let text = "[Bookmarks]\nCOM4=#91#8%COM4%9600%%\nLocal shell=#97#9%%%%\nLocal docs=#84#10%C:\\Docs%%%\nAdmin UI=#313#11%https://admin.example.com%%%\nRemote files=#140#7%sftp.example.com%22%backup\nFTP Site=#130#6%ftp.example.com%21%deploy\nUbuntu=#151#14%%%%\n";
+        let preview = parse_mobaxterm(text);
+        assert_eq!(preview.warnings, Vec::<String>::new());
+        assert_eq!(preview.drafts.len(), 7);
+
+        assert_eq!(preview.drafts[0].connection_type, "serial");
+        assert_eq!(preview.drafts[0].host, "COM4");
+        assert_eq!(preview.drafts[0].port, Some(9600));
+
+        assert_eq!(preview.drafts[1].connection_type, "local");
+        assert_eq!(preview.drafts[1].host, "");
+
+        assert_eq!(preview.drafts[2].connection_type, "localFiles");
+        assert_eq!(preview.drafts[2].host, "C:\\Docs");
+
+        assert_eq!(preview.drafts[3].connection_type, "url");
+        assert_eq!(preview.drafts[3].host, "https://admin.example.com");
+        assert_eq!(
+            preview.drafts[3].url.as_deref(),
+            Some("https://admin.example.com")
+        );
+
+        assert_eq!(preview.drafts[4].connection_type, "ssh");
+        assert_eq!(preview.drafts[4].host, "sftp.example.com");
+        assert_eq!(preview.drafts[4].port, Some(22));
+        assert_eq!(preview.drafts[4].user, "backup");
+
+        assert_eq!(preview.drafts[5].connection_type, "ftp");
+        assert_eq!(preview.drafts[5].host, "ftp.example.com");
+        assert_eq!(preview.drafts[5].port, Some(21));
+        assert_eq!(preview.drafts[5].user, "deploy");
+
+        assert_eq!(preview.drafts[6].connection_type, "local");
+        assert_eq!(preview.drafts[6].host, "");
+    }
+
+    #[test]
+    fn warns_on_unsupported_mobaxterm_session_type_with_protocol_name() {
+        let text = "[Bookmarks]\nStorage=#145#12%mosh.example.com%22%backup\n";
+        let preview = parse_mobaxterm(text);
+        assert_eq!(preview.drafts.len(), 0);
+        assert_eq!(preview.warnings.len(), 1);
+        assert!(preview.warnings[0].contains("type 12 (Mosh)"));
     }
 
     #[test]

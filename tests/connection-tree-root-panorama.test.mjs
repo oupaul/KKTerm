@@ -8,7 +8,9 @@ test("Connection Tree exposes a root panorama and hides folder-only controls wit
     "utf8",
   );
 
-  assert.match(source, /openConnectionPanorama\(flattenConnections\(treeWithLiveStatuses\), panelTitle\)/);
+  assert.match(source, /openConnectionPanorama\(flattenConnections\(tree\), panelTitle\)/);
+  assert.match(source, /shouldConfirmPanorama\(unopenedConnections\.length\)/);
+  assert.match(source, /setPendingPanorama\(\{[\s\S]*?connectionIds,[\s\S]*?newSessionCount: unopenedConnections\.length/);
   assert.match(source, /t\("connections\.panoramaView"\)[\s\S]*?<PanelsTopLeft size=\{13\} \/>/);
   assert.match(source, /const hasWorkspaceFolders = treeWithLiveStatuses\.folders\.length > 0/);
   assert.match(source, /const hasWorkspaceConnections = flattenConnections\(treeWithLiveStatuses\)\.length > 0/);

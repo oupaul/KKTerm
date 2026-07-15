@@ -46,6 +46,8 @@ impl Storage {
         let ssh_socks_proxy_inherit_defaults =
             connection_type == "ssh" && request.ssh_socks_proxy_inherit_defaults.unwrap_or(true);
         let ssh_compression = normalize_ssh_compression(request.ssh_compression, &connection_type)?;
+        let ssh_old_protocols =
+            normalize_ssh_old_protocols(request.ssh_old_protocols, &connection_type)?;
         let auth_method = normalize_auth_method(
             request.auth_method,
             &connection_type,
@@ -104,8 +106,8 @@ impl Storage {
         transaction
             .execute(
                 "INSERT INTO connections (
-                    id, folder_id, name, host, username, port, key_path, proxy_jump, ssh_socks_proxy, ssh_socks_proxy_username, ssh_socks_proxy_inherit_defaults, auth_method, local_shell, local_startup_directory, local_startup_script, url, data_partition, url_user_agent, url_proxy, url_proxy_inherit_defaults, use_tmux_sessions, use_psmux_sessions, tmux_connection_id, serial_line, serial_speed, rdp_options, vnc_options, ftp_options, ssh_port_forwardings_json, file_view_open_external, connection_type, status, sort_order, workspace_id, ssh_compression
-                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27, ?28, ?29, ?30, ?31, 'idle', ?32, ?33, ?34)",
+                    id, folder_id, name, host, username, port, key_path, proxy_jump, ssh_socks_proxy, ssh_socks_proxy_username, ssh_socks_proxy_inherit_defaults, auth_method, local_shell, local_startup_directory, local_startup_script, url, data_partition, url_user_agent, url_proxy, url_proxy_inherit_defaults, use_tmux_sessions, use_psmux_sessions, tmux_connection_id, serial_line, serial_speed, rdp_options, vnc_options, ftp_options, ssh_port_forwardings_json, file_view_open_external, connection_type, status, sort_order, workspace_id, ssh_compression, ssh_old_protocols
+                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27, ?28, ?29, ?30, ?31, 'idle', ?32, ?33, ?34, ?35)",
                 params![
                     id,
                     folder_id,
@@ -140,7 +142,8 @@ impl Storage {
                     connection_type,
                     next_sort_order,
                     workspace_id,
-                    ssh_compression
+                    ssh_compression,
+                    ssh_old_protocols
                 ],
             )
             .map_err(to_storage_error)?;
@@ -170,6 +173,7 @@ impl Storage {
             ssh_socks_proxy_username,
             ssh_socks_proxy_inherit_defaults,
             ssh_compression,
+            ssh_old_protocols,
             auth_method,
             local_shell,
             local_startup_directory,
@@ -251,6 +255,8 @@ impl Storage {
         let ssh_socks_proxy_inherit_defaults =
             connection_type == "ssh" && request.ssh_socks_proxy_inherit_defaults.unwrap_or(true);
         let ssh_compression = normalize_ssh_compression(request.ssh_compression, &connection_type)?;
+        let ssh_old_protocols =
+            normalize_ssh_old_protocols(request.ssh_old_protocols, &connection_type)?;
         let auth_method = normalize_auth_method(
             request.auth_method,
             &connection_type,
@@ -393,8 +399,9 @@ impl Storage {
                      file_view_open_external = ?29,
                      sort_order = ?30,
                      workspace_id = ?31,
-                     ssh_compression = ?32
-                 WHERE id = ?33",
+                     ssh_compression = ?32,
+                     ssh_old_protocols = ?33
+                 WHERE id = ?34",
                 params![
                     target_folder_id,
                     name,
@@ -428,6 +435,7 @@ impl Storage {
                     sort_order,
                     &target_workspace_id,
                     ssh_compression,
+                    ssh_old_protocols,
                     &id
                 ],
             )

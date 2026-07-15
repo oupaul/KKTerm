@@ -18,7 +18,7 @@ assert.match(
 
 assert.match(
   storeSource,
-  /set\(\{[\s\S]*?workspaces,[\s\S]*?activeWorkspaceId: fallbackId,[\s\S]*?activeTabId: firstTabIdForWorkspace\(get\(\)\.tabs, fallbackId\),[\s\S]*?\}\);[\s\S]*?window\.dispatchEvent\(new CustomEvent\("kkterm:connection-tree-invalidated"\)\);/,
+  /set\(\{[\s\S]*?workspaces,[\s\S]*?activeWorkspaceId: fallbackId,[\s\S]*?activeTabId: tabIdForWorkspace\([\s\S]*?get\(\)\.tabs,[\s\S]*?fallbackId,[\s\S]*?get\(\)\.activeTabIdsByWorkspace\[fallbackId\],[\s\S]*?\),[\s\S]*?\}\);[\s\S]*?window\.dispatchEvent\(new CustomEvent\("kkterm:connection-tree-invalidated"\)\);/,
   "workspace list refresh also invalidates the tree when the active Workspace disappears",
 );
 

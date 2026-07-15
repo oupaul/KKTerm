@@ -56,6 +56,10 @@ pub struct Recipe {
     /// available in the Chocolatey community feed.
     #[serde(default, rename = "chocolateyProvider")]
     pub chocolatey_provider: Option<Provider>,
+    /// Optional npm fallback for tools whose primary Windows provider is
+    /// winget but which remain available as a global npm package.
+    #[serde(default, rename = "npmProvider")]
+    pub npm_provider: Option<Provider>,
     /// Which options from the closed shared option set apply to this recipe.
     /// See `RecipeOptions` enum.
     #[serde(default)]
@@ -395,6 +399,7 @@ mod tests {
             },
             download_provider: None,
             chocolatey_provider: None,
+            npm_provider: None,
             options: vec![],
             homepage: None,
             release_notes_url: None,
@@ -465,6 +470,7 @@ mod tests {
             category: None,
             download_provider: None,
             chocolatey_provider: None,
+            npm_provider: None,
             provider: Provider::Bundle {
                 steps: vec!["ghost".into()],
             },
@@ -681,10 +687,10 @@ mod tests {
             .recipes
             .iter()
             .find(|recipe| recipe.id == "codex-desktop")
-            .expect("catalog should include Codex Desktop");
+            .expect("catalog should include ChatGPT Desktop (Codex)");
         assert!(matches!(
             &codex.provider,
-            Provider::DownloadInstaller { url, .. } if url.starts_with("https://get.microsoft.com/installer/download/")
+            Provider::DownloadInstaller { url, file_name, .. } if url.starts_with("https://get.microsoft.com/installer/download/") && file_name == "ChatGPTInstaller.exe"
         ));
 
         let claude = catalog
@@ -714,6 +720,22 @@ mod tests {
         let json = include_str!("../../../installer/catalog.v1.json");
         let catalog: Catalog =
             serde_json::from_str(json).expect("shipped catalog JSON should parse");
+
+        let claude_code = catalog
+            .recipes
+            .iter()
+            .find(|recipe| recipe.id == "claude-code-cli")
+            .expect("catalog should include Claude Code CLI");
+        assert!(matches!(
+            &claude_code.provider,
+            Provider::Winget { id } if id == "Anthropic.ClaudeCode"
+        ));
+        assert_eq!(claude_code.needs, ["winget"]);
+        assert!(matches!(
+            &claude_code.npm_provider,
+            Some(Provider::Npm { pkg }) if pkg == "@anthropic-ai/claude-code"
+        ));
+        assert!(claude_code.options.contains(&RecipeOption::Provider));
 
         let antigravity = catalog
             .recipes
@@ -773,6 +795,7 @@ mod tests {
             category: None,
             download_provider: None,
             chocolatey_provider: None,
+            npm_provider: None,
             provider: Provider::Bundle {
                 steps: vec!["nvm".into(), "node".into()],
             },

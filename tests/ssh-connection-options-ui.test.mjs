@@ -11,6 +11,11 @@ const sidebarSource = await readFile(
   "utf8",
 );
 
+const settingsSource = await readFile(
+  new URL("../src/modules/settings/SshSettings.tsx", import.meta.url),
+  "utf8",
+);
+
 const css = await readFile(
   new URL("../src/modules/workspace/connections/connections.css", import.meta.url),
   "utf8",
@@ -38,13 +43,14 @@ const inheritDefaultsIndex = optionsSection.indexOf('name="sshSocksProxyInheritD
 const proxyJumpIndex = optionsSection.indexOf('name="proxyJump"');
 const tmuxIndex = optionsSection.indexOf('name="useTmuxSessions"');
 const compressionIndex = optionsSection.indexOf('name="sshCompression"');
+const legacyProtocolsIndex = optionsSection.indexOf('name="sshOldProtocols"');
 assert.ok(
-  inheritDefaultsIndex !== -1 && proxyJumpIndex !== -1 && compressionIndex !== -1 && tmuxIndex !== -1,
-  "SSH option fields should include inherit defaults, ProxyJump, compression, and tmux controls.",
+  inheritDefaultsIndex !== -1 && proxyJumpIndex !== -1 && compressionIndex !== -1 && legacyProtocolsIndex !== -1 && tmuxIndex !== -1,
+  "SSH option fields should include inherit defaults, ProxyJump, compression, Legacy Protocols, and tmux controls.",
 );
 assert.ok(
-  inheritDefaultsIndex < proxyJumpIndex && proxyJumpIndex < compressionIndex && compressionIndex < tmuxIndex,
-  "SSH compression should appear below ProxyJump and above per-Connection tmux management.",
+  inheritDefaultsIndex < proxyJumpIndex && proxyJumpIndex < compressionIndex && compressionIndex < legacyProtocolsIndex && legacyProtocolsIndex < tmuxIndex,
+  "SSH compression and Legacy Protocols should appear below ProxyJump and above per-Connection tmux management.",
 );
 
 const keyPathIndex = fieldsSection.indexOf('name="keyPath"');
@@ -142,6 +148,36 @@ assert.match(
   optionsSection,
   /<Switch[\s\S]*on=\{displayedUseTmuxSessions\}[\s\S]*disabled=\{sshInheritsSettingsDefaults\}[\s\S]*onChange=\{setUseTmuxSessionsDraft\}[\s\S]*<input[\s\S]*name="useTmuxSessions"[\s\S]*value=\{displayedUseTmuxSessions \? "on" : "off"\}/,
   "tmux management should use the shared dialog Switch while preserving its submitted form value.",
+);
+
+assert.match(
+  optionsSection,
+  /<Switch[\s\S]*on=\{displayedLegacyProtocolsEnabled\}[\s\S]*onChange=\{setLegacyProtocolsEnabledDraft\}[\s\S]*<input[\s\S]*name="sshOldProtocols"[\s\S]*value=\{displayedLegacyProtocolsEnabled \? "legacy" : "off"\}/,
+  "Legacy Protocols should be one shared dialog Switch while preserving the compatible stored enum value.",
+);
+
+assert.doesNotMatch(
+  optionsSection,
+  /sshOldProtocolsOff|sshOldProtocolsLegacy/,
+  "Legacy Protocols should not expose individual protocol choices.",
+);
+
+assert.doesNotMatch(
+  fieldsSection,
+  /connections\.importSshConfig/,
+  "SSH config import should not remain inline among authentication fields.",
+);
+
+assert.match(
+  sidebarSource,
+  /<LegacyDialogActions[\s\S]*?extraLeft=\{connectionType === "ssh" && !isEditMode[\s\S]*?connections\.importSshConfig[\s\S]*?primary=/,
+  "Add SSH Connection should place the config importer in the footer's left auxiliary slot.",
+);
+
+assert.match(
+  settingsSource,
+  /<ToggleSwitch[\s\S]*checked=\{\(sshDraft\.defaultSshOldProtocols \?\? "off"\) === "legacy"\}[\s\S]*defaultSshOldProtocols: checked \? "legacy" : "off"/,
+  "SSH Settings should expose Legacy Protocols as the same single on/off switch.",
 );
 
 assert.match(

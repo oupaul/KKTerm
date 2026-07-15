@@ -50,6 +50,7 @@ export interface Recipe {
   provider: Provider;
   downloadProvider?: Provider;
   chocolateyProvider?: Provider;
+  npmProvider?: Provider;
   options?: RecipeOption[];
   /// Optional official project website, surfaced in the not-installed dialog.
   homepage?: string;
@@ -142,7 +143,7 @@ export interface InstallOptions {
   version?: string;
   location?: string;
   addToPath?: boolean;
-  provider?: "default" | "download" | "chocolatey";
+  provider?: "default" | "download" | "chocolatey" | "npm";
 }
 
 export type ProgressEvent =

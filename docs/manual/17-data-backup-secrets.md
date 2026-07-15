@@ -2,7 +2,7 @@
 
 ## AI grep hints
 
-- Keys: `settings.exportSettings`, `settings.importSettings`, `settings.importBackupFileHint`, `settings.fullBackupImport`, `settings.includeCredentials`, `settings.includeCredentialsWarning`, `settings.importActionAdd`, `settings.importActionReplace`, `settings.resetAllSettings`, `settings.resetAllSettingsConfirm`, `settings.resetAllSettingsComplete`, `settings.sectionCredentials`, `settings.credentialStorage`, `settings.credentialsStored`, `settings.deleteCredential`
+- Keys: `settings.exportSettings`, `settings.importSettings`, `settings.importBackupFileHint`, `settings.fullBackupImport`, `settings.includeCredentials`, `settings.includeCredentialsWarning`, `settings.importActionAdd`, `settings.importActionReplace`, `settings.segment_itops`, `settings.segment_assistant`, `settings.resetAllSettings`, `settings.resetAllSettingsConfirm`, `settings.resetAllSettingsComplete`, `settings.sectionCredentials`, `settings.credentialStorage`, `settings.credentialsStored`, `settings.deleteCredential`
 - Topics: SQLite store, OS keychain, encrypted SQLite secret store, settings Import/Export `.kkbackup`, startup backup ZIP snapshots, import / restore, reset all, where my data lives
 - Synonyms: "where is my data", "back up settings", "restore", "factory reset", "uninstall", "API key storage", "export connections without passwords", "share connections", "selective backup"
 
@@ -19,7 +19,7 @@ Do **not** put live session state (open Tabs, focused Pane, in-flight Sessions) 
 
 ## Export `.kkbackup`
 
-`settings.exportSettings` opens the category-aware export dialog and produces a `.kkbackup` bundle (a ZIP holding `manifest.json`, `data.json`, and an optional `secrets.enc`). The export dialog offers a switch per segment — `settings.segment_connections`, `settings.segment_workspaces`, `settings.segment_dashboards`, `settings.segment_settings`, `settings.segment_mcpServers`.
+`settings.exportSettings` opens the category-aware export dialog and produces a `.kkbackup` bundle (a ZIP holding `manifest.json`, `data.json`, and an optional `secrets.enc`). The export dialog offers a switch per segment — `settings.segment_connections`, `settings.segment_workspaces`, `settings.segment_dashboards`, `settings.segment_settings`, `settings.segment_mcpServers`, `settings.segment_itops` (Sites, Server Rooms, Racks, Hosts, Tasks, Automations, and run history), and `settings.segment_assistant` (AI Assistant chat history and memories). Machine-local state — the encrypted secret store rows, AI coding usage accounts/snapshots, and Install Helper tool state — is never part of a selective bundle; the full ZIP snapshot still carries it.
 
 ## Automatic backup snapshots
 
@@ -37,9 +37,9 @@ Automatic backups must **not** run from app-window close.
 
 The Settings data Export button is the selective `.kkbackup` flow; the Settings data Import button accepts both selective `.kkbackup` files and full KKTerm settings backup `.zip` snapshots. The old separate whole-database single-file import/export buttons are no longer shown.
 
-By default the bundle carries **no passwords**, which is the safe way to share Connections with a colleague. Turning on `settings.includeCredentials` (only available when Connections is selected) requires a passphrase; Connection passwords, SSH key passphrases, URL form-data passwords, and SOCKS proxy passwords are then encrypted into `secrets.enc` (Argon2id + AES-256-GCM) and can only be imported by someone who knows the passphrase (`settings.includeCredentialsWarning`). Other secrets — widget secrets, AI/email/MCP keys — are **not** carried.
+By default the bundle carries **no passwords**, which is the safe way to share Connections with a colleague. Turning on `settings.includeCredentials` (only available when Connections is selected) requires a passphrase; Connection passwords, SSH key passphrases, URL form-data passwords, and SOCKS proxy passwords are then encrypted into `secrets.enc` (Argon2id + AES-256-GCM) and can only be imported by someone who knows the passphrase (`settings.includeCredentialsWarning`). Other secrets — widget secrets, AI/email/MCP keys, and IT Ops Task vault entries — are **not** carried. Imported IT Ops Tasks that used vault-backed steps require those credentials to be entered again.
 
-On import, KKTerm lets the user choose an action per segment present: `settings.importActionSkip`, `settings.importActionAdd` (keep existing items and add the imported ones with fresh ids), or `settings.importActionReplace` (clear that category first). A safety database backup runs before any change (`settings.selectiveImportWarning`); importing the Settings segment reloads the app to re-read preferences. See [docs/ADR/0010-selective-export-import.md](../ADR/0010-selective-export-import.md) for the merge and secret-handling decisions.
+On import, KKTerm lets the user choose an action per segment present: `settings.importActionSkip`, `settings.importActionAdd` (keep existing items and add the imported ones with fresh ids), or `settings.importActionReplace` (clear that category first). A safety database backup runs before any change (`settings.selectiveImportWarning`). Imported Dashboard, IT Ops, and AI Assistant data refreshes its live UI state immediately; imported Automations are reconciled with the live Watchdog runtime. Importing the Settings segment reloads the app to re-read preferences. See [docs/ADR/0010-selective-export-import.md](../ADR/0010-selective-export-import.md) for the merge and secret-handling decisions.
 
 ## Reset all settings
 

@@ -65,11 +65,15 @@ function sanitizeCell(point: FreePlacement): IsoCell {
 
 // Resolve every rack to a floor cell. Stored placements win; unplaced racks
 // fall back to physical-looking rows — each `rackGroup` becomes one rack row
-// with an aisle row between groups — sliding right past any occupied cell so
-// two cabinets never share a tile.
-export function resolveIsoLayout(racks: Rack[], placement: FreePlacementMap): IsoLayout {
+// with an aisle row between groups — sliding right past any occupied or
+// reserved cell so two cabinets never share a tile or a Wall block.
+export function resolveIsoLayout(
+  racks: Rack[],
+  placement: FreePlacementMap,
+  reservedCells: IsoCell[] = [],
+): IsoLayout {
   const cells: Record<string, IsoCell> = {};
-  const occupied = new Set<string>();
+  const occupied = new Set(reservedCells.map(cellKey));
 
   for (const rack of racks) {
     const stored = placement[rack.id];
