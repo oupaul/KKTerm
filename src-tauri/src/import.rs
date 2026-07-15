@@ -674,7 +674,9 @@ fn parse_mobaxterm_session(
         "1" => "telnet",
         "4" => "rdp",
         "5" => "vnc",
-        "9" => "local",
+        "8" => "serial",
+        "9" | "10" => "local",
+        "11" => "url",
         "" => return Ok(None),
         other => {
             let label = match other {
@@ -682,21 +684,16 @@ fn parse_mobaxterm_session(
                 "3" => " (Xdmcp)",
                 "6" => " (FTP)",
                 "7" => " (SFTP)",
-                "8" => " (Serial)",
-                "10" => " (File)",
-                "11" => " (Browser)",
                 "12" => " (Mosh)",
                 "13" => " (AWS S3)",
                 "14" => " (WSL)",
                 _ => "",
             };
-            return Err(format!(
-                "unsupported MobaXterm session type {other}{label}"
-            ));
+            return Err(format!("unsupported MobaXterm session type {other}{label}"));
         }
     };
 
-    if connection_type == "local" {
+    if matches!(connection_type, "local") {
         return Ok(Some(ImportedConnectionDraft {
             name: name.to_string(),
             host: String::new(),
@@ -724,14 +721,24 @@ fn parse_mobaxterm_session(
         .unwrap_or_default();
 
     if host.is_empty() {
-        return Err("missing host".to_string());
+        return Err(match connection_type {
+            "serial" => "missing serial line".to_string(),
+            "url" => "missing URL".to_string(),
+            _ => "missing host".to_string(),
+        });
     }
+
+    let url = if connection_type == "url" {
+        Some(host.clone())
+    } else {
+        None
+    };
 
     Ok(Some(ImportedConnectionDraft {
         name: name.to_string(),
         host,
         user,
-        url: None,
+        url,
         port,
         key_path: None,
         proxy_jump: None,
@@ -1875,6 +1882,28 @@ Host *
         assert_eq!(preview.drafts[0].host, "host.example.com");
         assert_eq!(preview.drafts[0].port, Some(2200));
         assert_eq!(preview.drafts[0].user, "admin");
+    }
+
+    #[test]
+    fn parses_mobaxterm_serial_terminal_and_browser_sessions() {
+        let text = "[Bookmarks]\nCOM4=#91#8%COM4%9600%%\nTerminal=#91#10%%%%\nAdmin UI=#91#11%https://admin.example.com%%%\n";
+        let preview = parse_mobaxterm(text);
+        assert_eq!(preview.warnings, Vec::<String>::new());
+        assert_eq!(preview.drafts.len(), 3);
+
+        assert_eq!(preview.drafts[0].connection_type, "serial");
+        assert_eq!(preview.drafts[0].host, "COM4");
+        assert_eq!(preview.drafts[0].port, Some(9600));
+
+        assert_eq!(preview.drafts[1].connection_type, "local");
+        assert_eq!(preview.drafts[1].host, "");
+
+        assert_eq!(preview.drafts[2].connection_type, "url");
+        assert_eq!(preview.drafts[2].host, "https://admin.example.com");
+        assert_eq!(
+            preview.drafts[2].url.as_deref(),
+            Some("https://admin.example.com")
+        );
     }
 
     #[test]

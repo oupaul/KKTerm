@@ -537,6 +537,8 @@ export function ImportDialog({ sshSettings, onClose, onImported }: ImportDialogP
           keyPath: row.type === "ssh" && !password ? row.keyPath : undefined,
           proxyJump: row.type === "ssh" ? row.proxyJump : undefined,
           url: row.type === "url" ? row.url ?? row.host : undefined,
+          serialLine: row.type === "serial" ? row.host : undefined,
+          serialSpeed: row.type === "serial" ? row.port : undefined,
           authMethod: row.type === "ssh"
             ? password
               ? "password"
