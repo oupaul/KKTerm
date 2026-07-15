@@ -612,8 +612,14 @@ fn redact_bridge_response(response: &Value) -> Value {
     let Some(result) = redacted.get_mut("result").and_then(Value::as_object_mut) else {
         return redacted;
     };
-    if let Some(structured) = result.get_mut("structuredContent") {
-        *structured = redact_sensitive_debug_value(structured);
+    if result.contains_key("structuredContent") {
+        // The response envelope does not carry the tool name, so it cannot
+        // apply tool-specific redaction safely. `bridge.tool_result` already
+        // logs the useful, name-aware redacted copy.
+        result.insert(
+            "structuredContent".to_string(),
+            Value::String("[REDACTED: see bridge.tool_result]".to_string()),
+        );
         if result.contains_key("content") {
             result.insert(
                 "content".to_string(),
@@ -670,6 +676,15 @@ fn redact_tool_result(name: &str, result: &Value) -> Value {
         "kkterm.workspace.sessions.read_buffer"
         | "kkterm.dashboard.read_widget_source"
         | "kkterm.app.dangerous.capture_window"
+        // Task reads and mutation responses contain the full script/playbook.
+        | "kkterm.itops.tasks.get"
+        | "kkterm.itops.tasks.dangerous.create"
+        | "kkterm.itops.tasks.dangerous.update"
+        // Automation responses contain runBatch task bodies in their actions.
+        | "kkterm.itops.automations.list"
+        | "kkterm.itops.automations.dangerous.create"
+        | "kkterm.itops.automations.dangerous.update"
+        | "kkterm.itops.automations.dangerous.set_enabled"
         // Run reports replay captured remote command output.
         | "kkterm.itops.runs.get_report" => Value::String("[REDACTED]".to_string()),
         _ => redact_sensitive_debug_value(result),
@@ -1612,6 +1627,20 @@ mod tests {
             ),
             json!("[REDACTED]")
         );
+        assert_eq!(
+            redact_tool_result(
+                "kkterm.itops.tasks.get",
+                &json!({"task": {"kind": "script", "body": "token=secret"}})
+            ),
+            json!("[REDACTED]")
+        );
+        assert_eq!(
+            redact_tool_result(
+                "kkterm.itops.automations.list",
+                &json!([{"actions": [{"kind": "runBatch", "task": {"kind": "script", "body": "token=secret"}}]}])
+            ),
+            json!("[REDACTED]")
+        );
     }
 
     #[test]
@@ -1633,8 +1662,8 @@ mod tests {
             "[REDACTED: see bridge.tool_result]"
         );
         assert_eq!(
-            redacted["result"]["structuredContent"]["bodyJson"],
-            "[REDACTED]"
+            redacted["result"]["structuredContent"],
+            "[REDACTED: see bridge.tool_result]"
         );
     }
 

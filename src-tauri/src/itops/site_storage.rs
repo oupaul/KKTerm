@@ -265,6 +265,20 @@ fn rename_json_map_key(
         .map_err(|error| ItopsStorageError::Validation(error.to_string()))
 }
 
+fn remove_json_map_key(raw: Option<String>, name: &str) -> Result<Option<String>> {
+    let Some(raw) = raw else {
+        return Ok(None);
+    };
+    let Ok(mut map) = serde_json::from_str::<serde_json::Map<String, serde_json::Value>>(&raw)
+    else {
+        return Ok(Some(raw));
+    };
+    map.remove(name);
+    serde_json::to_string(&map)
+        .map(Some)
+        .map_err(|error| ItopsStorageError::Validation(error.to_string()))
+}
+
 /// Update first-class Server Room properties. Renames every name-keyed
 /// dependent in one transaction so racks, fixtures, icons, and backgrounds
 /// cannot split across two room names.
@@ -364,7 +378,8 @@ pub fn delete_server_room(conn: &SqliteConnection, id: &str) -> Result<()> {
     let Some((site_id, name)) = room else {
         return Err(ItopsStorageError::NotFound);
     };
-    conn.execute(
+    let tx = conn.unchecked_transaction()?;
+    tx.execute(
         "DELETE FROM itops_room_objects WHERE site_id = ? AND server_room = ?",
         params![site_id, name],
     )?;
@@ -372,11 +387,31 @@ pub fn delete_server_room(conn: &SqliteConnection, id: &str) -> Result<()> {
     // View delete flow removes racks itself before this call; the assistant /
     // MCP path relies on this so a deleted room cannot leave orphaned racks
     // whose name tag resurrects a ghost room grouping.
-    conn.execute(
+    tx.execute(
         "DELETE FROM itops_site_racks WHERE site_id = ? AND server_room = ?",
         params![site_id, name],
     )?;
-    conn.execute("DELETE FROM itops_server_rooms WHERE id = ?", params![id])?;
+    let metadata: Option<(Option<String>, Option<String>)> = tx
+        .query_row(
+            "SELECT room_backgrounds_json, room_icons_json FROM itops_sites WHERE id = ?",
+            params![site_id],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .optional()?;
+    if let Some((backgrounds, icons)) = metadata {
+        tx.execute(
+            "UPDATE itops_sites
+             SET room_backgrounds_json = ?, room_icons_json = ?, updated_at = CURRENT_TIMESTAMP
+             WHERE id = ?",
+            params![
+                remove_json_map_key(backgrounds, &name)?,
+                remove_json_map_key(icons, &name)?,
+                site_id
+            ],
+        )?;
+    }
+    tx.execute("DELETE FROM itops_server_rooms WHERE id = ?", params![id])?;
+    tx.commit()?;
     Ok(())
 }
 
@@ -1148,6 +1183,7 @@ mod tests {
         let conn = SqliteConnection::open_in_memory().unwrap();
         conn.execute_batch(
             r#"
+            PRAGMA foreign_keys = ON;
             CREATE TABLE itops_site_racks (
                 id TEXT PRIMARY KEY,
                 site_id TEXT NOT NULL,
@@ -1212,7 +1248,8 @@ mod tests {
                 height_u INTEGER NOT NULL,
                 metadata_json TEXT NOT NULL DEFAULT '{}',
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (rack_id) REFERENCES itops_site_racks(id) ON DELETE CASCADE
             );
             "#,
         )
@@ -1834,6 +1871,58 @@ mod tests {
         assert!(backgrounds.contains("Core Room"));
         assert!(!backgrounds.contains("Room B"));
         assert!(icons.contains("Core Room"));
+        assert!(!icons.contains("Room B"));
+    }
+
+    #[test]
+    fn deleting_a_server_room_removes_its_topology_only() {
+        let conn = open_test_db();
+        create_rack(&conn, "r1", "f1", "A12", "Room B", "", None, 42, 1000, None).unwrap();
+        place_rack_item(
+            &conn,
+            "item-1",
+            "r1",
+            None,
+            RackItemKind::Server,
+            "server",
+            1,
+            1,
+            RackItemMetadata::default(),
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO itops_room_objects (id, site_id, server_room, kind, x, y, z, rot)
+             VALUES ('obj-1', 'f1', 'Room B', 'sensor', 0, 0, 0, 0)",
+            [],
+        )
+        .unwrap();
+
+        delete_server_room(&conn, "room-b").unwrap();
+
+        assert!(list_racks(&conn, "f1").unwrap().is_empty());
+        assert!(list_room_objects(&conn, "f1", "Room B").unwrap().is_empty());
+        assert!(
+            list_server_rooms(&conn, "f1")
+                .unwrap()
+                .iter()
+                .all(|room| room.id != "room-b")
+        );
+        let item_count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM itops_site_rack_items WHERE id = 'item-1'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(item_count, 0);
+        let (backgrounds, icons): (String, String) = conn
+            .query_row(
+                "SELECT room_backgrounds_json, room_icons_json FROM itops_sites WHERE id = 'f1'",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .unwrap();
+        assert!(!backgrounds.contains("Room B"));
         assert!(!icons.contains("Room B"));
     }
 

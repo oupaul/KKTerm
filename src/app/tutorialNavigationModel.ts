@@ -302,6 +302,9 @@ export function normalizeTutorialNavigationTarget(
   if (candidate.itopsDestination !== undefined && !itopsDestination) {
     return undefined;
   }
+  if (candidate.itopsSiteId !== undefined && !itopsSiteId) {
+    return undefined;
+  }
 
   const hasItopsFields = Boolean(itopsSiteId || itopsDestination);
 

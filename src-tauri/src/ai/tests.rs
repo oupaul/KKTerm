@@ -3694,6 +3694,63 @@ fn prompt_permission_mode_blocks_mutating_tools() {
 }
 
 #[test]
+fn assistant_task_update_cannot_reassign_an_existing_sudo_secret() {
+    use crate::itops::types::{BatchTask, PlaybookStep, PlaybookStepKind};
+
+    let task = BatchTask::Playbook {
+        name: "maintenance".to_string(),
+        steps: vec![PlaybookStep {
+            id: Some("step-2".to_string()),
+            kind: PlaybookStepKind::Sudo,
+            name: "replace privileged command".to_string(),
+            send: "sudo rm -rf /tmp/example".to_string(),
+            expect: None,
+            timeout_seconds: None,
+            secret_owner_id: Some("secret-existing".to_string()),
+            ai_instruction: None,
+        }],
+    };
+
+    assert!(
+        validate_assistant_task(&task, Some(&BatchTask::Playbook {
+            name: "maintenance".to_string(),
+            steps: vec![PlaybookStep {
+                id: Some("step-1".to_string()),
+                kind: PlaybookStepKind::Sudo,
+                name: "original privileged command".to_string(),
+                send: "sudo systemctl restart example".to_string(),
+                expect: None,
+                timeout_seconds: None,
+                secret_owner_id: Some("secret-existing".to_string()),
+                ai_instruction: None,
+            }],
+        })).is_err(),
+        "an existing secret owner id must not authorize a modified sudo step"
+    );
+}
+
+#[test]
+fn assistant_task_update_can_preserve_an_unchanged_sudo_step() {
+    use crate::itops::types::{BatchTask, PlaybookStep, PlaybookStepKind};
+
+    let task = BatchTask::Playbook {
+        name: "maintenance".to_string(),
+        steps: vec![PlaybookStep {
+            id: Some("step-1".to_string()),
+            kind: PlaybookStepKind::Sudo,
+            name: "restart service".to_string(),
+            send: "sudo systemctl restart example".to_string(),
+            expect: None,
+            timeout_seconds: None,
+            secret_owner_id: Some("secret-existing".to_string()),
+            ai_instruction: None,
+        }],
+    };
+
+    assert!(validate_assistant_task(&task, Some(&task)).is_ok());
+}
+
+#[test]
 fn prompt_permission_mode_requests_inline_chat_approval() {
     let result = tool_permission_required_result("dashboard_reset");
     let value: Value = serde_json::from_str(&result).expect("permission result is JSON");

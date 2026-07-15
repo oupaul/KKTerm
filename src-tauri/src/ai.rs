@@ -3608,6 +3608,44 @@ fn itops_automation_actions_schema() -> Value {
     })
 }
 
+/// Assistant-authored Batch Tasks may not introduce privileged material:
+/// sudo steps and their secret-vault references are configured in the Task
+/// Library editor. A full-value update may resend an existing sudo step only
+/// when that step remains byte-for-byte unchanged at the same position.
+fn validate_assistant_task(
+    task: &crate::itops::types::BatchTask,
+    existing_task: Option<&crate::itops::types::BatchTask>,
+) -> Result<(), String> {
+    use crate::itops::types::{BatchTask, PlaybookStepKind};
+
+    if let BatchTask::Playbook { steps, .. } = task {
+        let existing_steps = match existing_task {
+            Some(BatchTask::Playbook { steps, .. }) => Some(steps.as_slice()),
+            _ => None,
+        };
+        for (index, step) in steps.iter().enumerate() {
+            let keeps_existing_sudo_step = existing_steps
+                .and_then(|existing| existing.get(index))
+                .is_some_and(|existing| existing == step);
+            match step.kind {
+                PlaybookStepKind::Sudo if keeps_existing_sudo_step => {}
+                PlaybookStepKind::Sudo => {
+                    return Err(
+                        "sudo steps must remain unchanged or be configured in the Task Library editor".to_string(),
+                    );
+                }
+                _ if step.secret_owner_id.is_some() => {
+                    return Err(
+                        "secretOwnerId is reserved for sudo steps configured in the Task Library editor".to_string(),
+                    );
+                }
+                _ => {}
+            }
+        }
+    }
+    Ok(())
+}
+
 fn assistant_use_skill_tool_definition(
     skill_summaries: &[AssistantSkillSummary],
 ) -> OpenAiToolDefinition {
@@ -4541,7 +4579,7 @@ pub(crate) async fn itops_tool(app: &tauri::AppHandle, name: &str, args: Value) 
     use crate::itops::task_commands as itops_task_commands;
     use crate::itops::task_storage as itops_tasks;
     use crate::itops::types::{
-        AutomationAction, BatchTask, HostKind, ItopsTask, PlaybookStepKind, RackItemKind,
+        AutomationAction, BatchTask, HostKind, ItopsTask, RackItemKind,
         RackItemMetadata, RunHistoryEntry, RunScope, SiteFilter, TaskOperatingSystem, Transport,
     };
     use crate::watchdog::WatchdogRegistry;
@@ -4625,35 +4663,6 @@ pub(crate) async fn itops_tool(app: &tauri::AppHandle, name: &str, args: Value) 
             Ok(parsed)
         }
     }
-    /// Assistant-authored Batch Tasks may not introduce privileged material:
-    /// sudo steps and their secret-vault references are configured in the Task
-    /// Library editor. `allowed_secret_ids` lets a full-value task update
-    /// resend the sudo steps a stored Task already carries.
-    fn validate_assistant_task(task: &BatchTask, allowed_secret_ids: &[String]) -> Result<(), String> {
-        if let BatchTask::Playbook { steps, .. } = task {
-            for step in steps {
-                let keeps_existing_secret = step
-                    .secret_owner_id
-                    .as_ref()
-                    .is_some_and(|owner| allowed_secret_ids.iter().any(|id| id == owner));
-                match step.kind {
-                    PlaybookStepKind::Sudo if keeps_existing_secret => {}
-                    PlaybookStepKind::Sudo => {
-                        return Err(
-                            "sudo steps and their credentials must be configured in the Task Library editor".to_string(),
-                        );
-                    }
-                    _ if step.secret_owner_id.is_some() => {
-                        return Err(
-                            "secretOwnerId is reserved for sudo steps configured in the Task Library editor".to_string(),
-                        );
-                    }
-                    _ => {}
-                }
-            }
-        }
-        Ok(())
-    }
     fn parse_automation_config(args: &Value) -> Result<WatchdogConfig, String> {
         let config: WatchdogConfig =
             serde_json::from_value(args.get("config").cloned().unwrap_or(Value::Null))
@@ -4675,7 +4684,7 @@ pub(crate) async fn itops_tool(app: &tauri::AppHandle, name: &str, args: Value) 
                 .map_err(|error| format!("invalid actions: {error}"))?;
         for action in &actions {
             if let AutomationAction::RunBatch { task, .. } = action {
-                validate_assistant_task(task, &[])?;
+                validate_assistant_task(task, None)?;
             }
         }
         Ok(actions)
@@ -4772,13 +4781,13 @@ pub(crate) async fn itops_tool(app: &tauri::AppHandle, name: &str, args: Value) 
             let description = arg_string(&args, "description");
             let applicable_os = parse_applicable_os(&args)?;
             let task = parse_batch_task(args.get("task"))?;
-            let existing_secret_ids = storage.with_connection_infallible(|conn| {
+            let existing_task = storage.with_connection_infallible(|conn| {
                 itops_tasks::get_task(conn, &id)
                     .map_err(|error| error.to_string())?
                     .ok_or_else(|| "task not found".to_string())
-                    .map(|existing| existing.task.secret_owner_ids())
+                    .map(|existing| existing.task)
             })?;
-            validate_assistant_task(&task, &existing_secret_ids)?;
+            validate_assistant_task(&task, Some(&existing_task))?;
             itops_task_commands::itops_update_task(
                 app.clone(),
                 id,
@@ -5207,7 +5216,7 @@ pub(crate) async fn itops_tool(app: &tauri::AppHandle, name: &str, args: Value) 
             let description = arg_string(&args, "description");
             let applicable_os = parse_applicable_os(&args)?;
             let task = parse_batch_task(args.get("task"))?;
-            validate_assistant_task(&task, &[])?;
+            validate_assistant_task(&task, None)?;
             let id = new_itops_id("task");
             itops_tasks::create_task(conn, &id, &task_name, &description, &applicable_os, &task)
                 .map(to_value)
