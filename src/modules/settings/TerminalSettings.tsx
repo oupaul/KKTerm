@@ -661,6 +661,18 @@ export function TerminalSettings() {
               <small>{t("settings.randomDynamicBackgroundOnCreateHint")}</small>
             </span>
           </label>
+          <label className="settings-toggle-row">
+            <ToggleSwitch
+              checked={draft.autoRecordSessions}
+              onChange={(checked) =>
+                setDraft((settings) => ({ ...settings, autoRecordSessions: checked }))
+              }
+            />
+            <span>
+              <strong>{t("settings.autoRecordSessions")}</strong>
+              <small>{t("settings.autoRecordSessionsHint")}</small>
+            </span>
+          </label>
         </div>
       </fieldset>
 
@@ -831,6 +843,18 @@ export function TerminalSettings() {
             />
             <span>
               <strong>{t("settings.confirmMultilinePaste")}</strong>
+            </span>
+          </label>
+          <label className="settings-toggle-row">
+            <ToggleSwitch
+              checked={draft.rightClickPaste}
+              onChange={(checked) =>
+                setDraft((settings) => ({ ...settings, rightClickPaste: checked }))
+              }
+            />
+            <span>
+              <strong>{t("settings.rightClickPaste")}</strong>
+              <small>{t("settings.rightClickPasteHint")}</small>
             </span>
           </label>
         </div>

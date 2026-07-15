@@ -1955,6 +1955,8 @@
     "terminalTextHint": "Fuente, tamaño, altura de línea y cursor del terminal local.",
     "terminalSession": "Valores predeterminados de sesión",
     "terminalSessionHint": "Shell predeterminado y retroceso para Sesiones de terminal local.",
+    "autoRecordSessions": "Grabar sesiones de terminal automáticamente",
+    "autoRecordSessionsHint": "Las nuevas sesiones de terminal comienzan a grabarse automáticamente, como si el botón de grabación estuviera presionado. Cada sesión se graba en su propio archivo de texto en la carpeta de datos de la aplicación; la grabación puede detenerse en cualquier momento desde la barra de herramientas de la terminal.",
     "terminalClipboard": "Portapapeles y pegado",
     "terminalClipboardHint": "Copia del terminal local, OSC 52 y seguridad de pegado.",
     "fontFamily": "Familia tipográfica",
@@ -1984,6 +1986,8 @@
     "allowLocalOsc52Clipboard": "Permitir escrituras OSC 52 del portapapeles en terminal local",
     "allowSshOsc52Clipboard": "Permitir escrituras OSC 52 del portapapeles en SSH",
     "confirmMultilinePaste": "Confirmar pegado multilínea",
+    "rightClickPaste": "Pegar con clic derecho",
+    "rightClickPasteHint": "Al hacer clic derecho en la terminal se pega el contenido del portapapeles en lugar de abrir el menú contextual. Mantén presionada Mayús y haz clic derecho para abrir el menú.",
     "scrollbackHint": "El predeterminado es 5,000. El rango válido es de 100 a 100,000.",
     "qualityDefaults": "Valores predeterminados de calidad",
     "colorDepth": "Profundidad de color",
@@ -2397,7 +2401,9 @@
     "hyperlinkRuleInvalidPattern": "El patrón \"{{pattern}}\" no es una expresión regular válida.",
     "hyperlinkRuleUrlInvalid": "Las URL de las reglas de hipervínculo deben comenzar con http:// o https://.",
     "sshOldProtocols": "Protocolos heredados",
-    "sshOldProtocolsHint": "Desactivado por defecto. Habilite todos los algoritmos de compatibilidad SSH heredados admitidos solo para servidores antiguos de confianza."
+    "sshOldProtocolsHint": "Desactivado por defecto. Habilite todos los algoritmos de compatibilidad SSH heredados admitidos solo para servidores antiguos de confianza.",
+    "autoTrustNewHostKeys": "Confiar automáticamente en claves de host nuevas",
+    "autoTrustNewHostKeysHint": "Omite la confirmación de la huella digital al conectarte a un host por primera vez y registra su clave automáticamente. Las claves de host que cambien seguirán mostrando una advertencia."
   },
   "connections": {
     "title": "Conexiones",

@@ -672,6 +672,10 @@ pub struct TerminalSettings {
     #[serde(default = "default_allow_osc52_clipboard")]
     allow_osc52_clipboard: bool,
     confirm_multiline_paste: bool,
+    #[serde(default)]
+    right_click_paste: bool,
+    #[serde(default)]
+    auto_record_sessions: bool,
     default_shell: String,
     #[serde(default)]
     custom_shells: Vec<TerminalCustomShell>,
@@ -786,6 +790,8 @@ pub struct SshSettings {
     default_ssh_compression: String,
     #[serde(default = "default_ssh_old_protocols")]
     default_ssh_old_protocols: String,
+    #[serde(default)]
+    auto_trust_new_host_keys: bool,
     #[serde(default = "default_ssh_buffer_lines")]
     buffer_lines: u32,
     #[serde(default = "default_terminal_transparency")]
@@ -5094,6 +5100,8 @@ fn default_terminal_settings() -> TerminalSettings {
         copy_on_select: false,
         allow_osc52_clipboard: default_allow_osc52_clipboard(),
         confirm_multiline_paste: true,
+        right_click_paste: false,
+        auto_record_sessions: false,
         default_shell: if cfg!(target_os = "windows") {
             "powershell.exe".to_string()
         } else {
@@ -5136,6 +5144,7 @@ fn default_ssh_settings() -> SshSettings {
         default_proxy_jump: None,
         default_ssh_compression: default_ssh_compression(),
         default_ssh_old_protocols: default_ssh_old_protocols(),
+        auto_trust_new_host_keys: false,
         buffer_lines: default_ssh_buffer_lines(),
         default_transparency: default_terminal_transparency(),
         default_use_tmux_sessions: default_use_tmux_sessions(),

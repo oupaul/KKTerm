@@ -1955,6 +1955,8 @@
     "terminalTextHint": "Local terminal font, size, line height, and cursor.",
     "terminalSession": "Session defaults",
     "terminalSessionHint": "Default shell and scrollback for local terminal Sessions.",
+    "autoRecordSessions": "Auto-record terminal Sessions",
+    "autoRecordSessionsHint": "New terminal Sessions start recording automatically, as if the record button was pressed. Each Session records to its own text file under the app data folder; recording can be stopped anytime from the terminal toolbar.",
     "terminalClipboard": "Clipboard and paste",
     "terminalClipboardHint": "Local terminal copy, OSC 52, and paste safety.",
     "fontFamily": "Font family",
@@ -1984,6 +1986,8 @@
     "allowLocalOsc52Clipboard": "Allow local OSC 52 clipboard writes",
     "allowSshOsc52Clipboard": "Allow SSH OSC 52 clipboard writes",
     "confirmMultilinePaste": "Confirm multiline paste",
+    "rightClickPaste": "Right-click pastes the clipboard",
+    "rightClickPasteHint": "Right-clicking the terminal pastes the clipboard instead of opening the context menu. Hold Shift and right-click to open the menu.",
     "scrollbackHint": "Default 5,000. Range: 100 to 100,000.",
     "qualityDefaults": "Quality defaults",
     "colorDepth": "Color depth",
@@ -2397,7 +2401,9 @@
     "hyperlinkRuleInvalidPattern": "The pattern \"{{pattern}}\" is not a valid regular expression.",
     "hyperlinkRuleUrlInvalid": "Hyperlink rule URLs must start with http:// or https://.",
     "sshOldProtocols": "Legacy Protocols",
-    "sshOldProtocolsHint": "Off by default. Enable all supported legacy SSH compatibility algorithms only for trusted older servers."
+    "sshOldProtocolsHint": "Off by default. Enable all supported legacy SSH compatibility algorithms only for trusted older servers.",
+    "autoTrustNewHostKeys": "Automatically trust new host keys",
+    "autoTrustNewHostKeysHint": "Skip the fingerprint confirmation when connecting to a host for the first time and record its key automatically. Changed host keys still show a warning."
   },
   "connections": {
     "title": "Connections",

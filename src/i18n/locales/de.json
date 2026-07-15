@@ -1955,6 +1955,8 @@
     "terminalTextHint": "Lokale Terminal-Schriftart, -Größe, Zeilenhöhe und Cursor.",
     "terminalSession": "Sitzungs-Standards",
     "terminalSessionHint": "Standard-Shell und Scrollback für lokale Terminal-Sitzungen.",
+    "autoRecordSessions": "Terminal-Sessions automatisch aufzeichnen",
+    "autoRecordSessionsHint": "Neue Terminal-Sessions starten die Aufzeichnung automatisch, als wäre die Aufnahmeschaltfläche gedrückt. Jede Session zeichnet in eine eigene Textdatei im App-Datenordner auf; die Aufzeichnung kann jederzeit über die Terminal-Symbolleiste gestoppt werden.",
     "terminalClipboard": "Zwischenablage und Einfügen",
     "terminalClipboardHint": "Lokale Terminal-Kopie, OSC 52 und Einfügesicherheit.",
     "fontFamily": "Schriftfamilie",
@@ -1984,6 +1986,8 @@
     "allowLocalOsc52Clipboard": "Lokale Terminal OSC 52-Zwischenablage-Schreibvorgänge erlauben",
     "allowSshOsc52Clipboard": "SSH OSC 52-Zwischenablage-Schreibvorgänge erlauben",
     "confirmMultilinePaste": "Mehrzeiliges Einfügen bestätigen",
+    "rightClickPaste": "Rechtsklick fügt Zwischenablage ein",
+    "rightClickPasteHint": "Ein Rechtsklick im Terminal fügt den Inhalt der Zwischenablage ein, statt das Kontextmenü zu öffnen. Halten Sie die Umschalttaste gedrückt und klicken Sie mit der rechten Maustaste, um das Menü zu öffnen.",
     "scrollbackHint": "Standard ist 5.000. Gültiger Bereich ist 100 bis 100.000.",
     "qualityDefaults": "Qualitätsstandards",
     "colorDepth": "Farbtiefe",
@@ -2397,7 +2401,9 @@
     "hyperlinkRuleInvalidPattern": "Das Muster „{{pattern}}“ ist kein gültiger regulärer Ausdruck.",
     "hyperlinkRuleUrlInvalid": "Hyperlink-Regel-URLs müssen mit http:// oder https:// beginnen.",
     "sshOldProtocols": "Legacy-Protokolle",
-    "sshOldProtocolsHint": "Standardmäßig deaktiviert. Alle unterstützten Legacy-SSH-Kompatibilitätsalgorithmen nur für vertrauenswürdige ältere Server aktivieren."
+    "sshOldProtocolsHint": "Standardmäßig deaktiviert. Alle unterstützten Legacy-SSH-Kompatibilitätsalgorithmen nur für vertrauenswürdige ältere Server aktivieren.",
+    "autoTrustNewHostKeys": "Neuen Host-Schlüsseln automatisch vertrauen",
+    "autoTrustNewHostKeysHint": "Überspringt die Fingerprint-Bestätigung beim ersten Verbinden mit einem Host und speichert dessen Schlüssel automatisch. Bei geänderten Host-Schlüsseln wird weiterhin eine Warnung angezeigt."
   },
   "connections": {
     "title": "Verbindungen",

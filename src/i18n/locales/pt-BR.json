@@ -1955,6 +1955,8 @@
     "terminalTextHint": "Fonte, tamanho, altura da linha e cursor do terminal local.",
     "terminalSession": "Padrões de sessão",
     "terminalSessionHint": "Shell padrão e retrocesso para Sessões de terminal local.",
+    "autoRecordSessions": "Gravar Sessões de terminal automaticamente",
+    "autoRecordSessionsHint": "Novas Sessões de terminal começam a gravar automaticamente, como se o botão de gravação estivesse pressionado. Cada Sessão grava em seu próprio arquivo de texto na pasta de dados do aplicativo; a gravação pode ser interrompida a qualquer momento pela barra de ferramentas do terminal.",
     "terminalClipboard": "Área de transferência e colagem",
     "terminalClipboardHint": "Cópia do terminal local, OSC 52 e segurança de colagem.",
     "fontFamily": "Família de fontes",
@@ -1984,6 +1986,8 @@
     "allowLocalOsc52Clipboard": "Permitir gravações OSC 52 da área de transferência no terminal local",
     "allowSshOsc52Clipboard": "Permitir gravações OSC 52 da área de transferência no SSH",
     "confirmMultilinePaste": "Confirmar colagem multilinha",
+    "rightClickPaste": "Colar com clique direito",
+    "rightClickPasteHint": "Clicar com o botão direito no terminal cola o conteúdo da área de transferência em vez de abrir o menu de contexto. Segure Shift e clique com o botão direito para abrir o menu.",
     "scrollbackHint": "O padrão é 5.000. O intervalo válido é de 100 a 100.000.",
     "qualityDefaults": "Padrões de qualidade",
     "colorDepth": "Profundidade de cor",
@@ -2397,7 +2401,9 @@
     "hyperlinkRuleInvalidPattern": "O padrão \"{{pattern}}\" não é uma expressão regular válida.",
     "hyperlinkRuleUrlInvalid": "As URLs das regras de hiperlink devem começar com http:// ou https://.",
     "sshOldProtocols": "Protocolos antigos",
-    "sshOldProtocolsHint": "Desativado por padrão. Ative todos os algoritmos de compatibilidade SSH legados suportados apenas para servidores antigos confiáveis."
+    "sshOldProtocolsHint": "Desativado por padrão. Ative todos os algoritmos de compatibilidade SSH legados suportados apenas para servidores antigos confiáveis.",
+    "autoTrustNewHostKeys": "Confiar automaticamente em novas chaves de host",
+    "autoTrustNewHostKeysHint": "Pula a confirmação da impressão digital ao conectar a um host pela primeira vez e registra a chave automaticamente. Chaves de host alteradas ainda exibem um aviso."
   },
   "connections": {
     "title": "Conexões",

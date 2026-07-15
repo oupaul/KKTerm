@@ -1955,6 +1955,8 @@
     "terminalTextHint": "Font, dimensione, interlinea e cursore del terminale locale.",
     "terminalSession": "Predefiniti sessione",
     "terminalSessionHint": "Shell predefinita e scorrimento per le Sessioni terminale locale.",
+    "autoRecordSessions": "Registra automaticamente le Sessioni del terminale",
+    "autoRecordSessionsHint": "Le nuove Sessioni del terminale avviano automaticamente la registrazione, come se il pulsante di registrazione fosse premuto. Ogni Sessione viene registrata in un proprio file di testo nella cartella dati dell'app; la registrazione può essere interrotta in qualsiasi momento dalla barra degli strumenti del terminale.",
     "terminalClipboard": "Appunti e incolla",
     "terminalClipboardHint": "Copia terminale locale, OSC 52 e sicurezza incolla.",
     "fontFamily": "Famiglia font",
@@ -1984,6 +1986,8 @@
     "allowLocalOsc52Clipboard": "Consenti scrittura appunti OSC 52 del terminale locale",
     "allowSshOsc52Clipboard": "Consenti scrittura appunti OSC 52 SSH",
     "confirmMultilinePaste": "Conferma incolla multilinea",
+    "rightClickPaste": "Incolla con clic destro",
+    "rightClickPasteHint": "Un clic destro nel terminale incolla il contenuto degli appunti invece di aprire il menu contestuale. Tieni premuto Maiusc e fai clic destro per aprire il menu.",
     "scrollbackHint": "Il valore predefinito è 5.000. Intervallo valido da 100 a 100.000.",
     "qualityDefaults": "Predefiniti qualità",
     "colorDepth": "Profondità colore",
@@ -2397,7 +2401,9 @@
     "hyperlinkRuleInvalidPattern": "Il pattern \"{{pattern}}\" non è un'espressione regolare valida.",
     "hyperlinkRuleUrlInvalid": "Gli URL delle regole di collegamento devono iniziare con http:// o https://.",
     "sshOldProtocols": "Protocolli legacy",
-    "sshOldProtocolsHint": "Disattivato per impostazione predefinita. Abilita tutti gli algoritmi di compatibilità SSH legacy supportati solo per server obsoleti attendibili."
+    "sshOldProtocolsHint": "Disattivato per impostazione predefinita. Abilita tutti gli algoritmi di compatibilità SSH legacy supportati solo per server obsoleti attendibili.",
+    "autoTrustNewHostKeys": "Considera automaticamente attendibili le nuove chiavi host",
+    "autoTrustNewHostKeysHint": "Salta la conferma dell'impronta digitale alla prima connessione a un host e registra automaticamente la sua chiave. Le chiavi host modificate mostrano comunque un avviso."
   },
   "connections": {
     "title": "Connessioni",

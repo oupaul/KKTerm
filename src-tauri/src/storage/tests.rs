@@ -2820,6 +2820,8 @@ fn terminal_settings_round_trip_through_settings_table() {
     assert_eq!(defaults.default_transparency, 50);
     assert!(!defaults.use_random_dynamic_background);
     assert!(defaults.confirm_multiline_paste);
+    assert!(!defaults.right_click_paste);
+    assert!(!defaults.auto_record_sessions);
 
     let updated = storage
         .update_terminal_settings(TerminalSettings {
@@ -2833,6 +2835,8 @@ fn terminal_settings_round_trip_through_settings_table() {
             copy_on_select: true,
             allow_osc52_clipboard: true,
             confirm_multiline_paste: false,
+            right_click_paste: true,
+            auto_record_sessions: true,
             default_shell: "pwsh.exe".to_string(),
             custom_shells: vec![TerminalCustomShell {
                 id: "git-bash".to_string(),
@@ -2854,6 +2858,8 @@ fn terminal_settings_round_trip_through_settings_table() {
     assert_eq!(updated.default_transparency, 35);
     assert!(updated.use_random_dynamic_background);
     assert!(updated.copy_on_select);
+    assert!(updated.right_click_paste);
+    assert!(updated.auto_record_sessions);
     assert_eq!(updated.color_scheme, "dracula");
     assert_eq!(updated.hyperlink_rules.len(), 1);
     assert_eq!(
@@ -2957,6 +2963,7 @@ fn ssh_settings_round_trip_through_settings_table() {
     assert!(!defaults.use_random_dynamic_background);
     assert!(defaults.hide_common_port_redirects);
     assert!(defaults.allow_osc52_clipboard);
+    assert!(!defaults.auto_trust_new_host_keys);
     assert!(!defaults.managed_x_server_enabled);
     assert_eq!(defaults.x_server_display, 0);
     assert_eq!(defaults.x_server_args, "-multiwindow -clipboard -wgl");
@@ -2971,6 +2978,7 @@ fn ssh_settings_round_trip_through_settings_table() {
             default_proxy_jump: Some("  bastion.internal  ".to_string()),
             default_ssh_compression: "off".to_string(),
             default_ssh_old_protocols: "legacy".to_string(),
+            auto_trust_new_host_keys: true,
             buffer_lines: 12_000,
             default_transparency: 40,
             default_use_tmux_sessions: false,

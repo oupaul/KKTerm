@@ -1955,6 +1955,8 @@
     "terminalTextHint": "Font, ukuran, tinggi baris, dan kursor terminal lokal.",
     "terminalSession": "Default sesi",
     "terminalSessionHint": "Shell default dan scrollback untuk Sesi terminal lokal.",
+    "autoRecordSessions": "Rekam Sesi terminal secara otomatis",
+    "autoRecordSessionsHint": "Sesi terminal baru mulai merekam secara otomatis, seolah tombol rekam sudah ditekan. Setiap Sesi merekam ke berkas teks tersendiri di folder data aplikasi; perekaman dapat dihentikan kapan saja dari bilah alat terminal.",
     "terminalClipboard": "Clipboard dan tempel",
     "terminalClipboardHint": "Salin terminal lokal, OSC 52, dan keamanan tempel.",
     "fontFamily": "Font",
@@ -1984,6 +1986,8 @@
     "allowLocalOsc52Clipboard": "Izinkan penulisan clipboard OSC 52 terminal lokal",
     "allowSshOsc52Clipboard": "Izinkan penulisan clipboard OSC 52 SSH",
     "confirmMultilinePaste": "Konfirmasi tempel multiline",
+    "rightClickPaste": "Klik kanan menempelkan papan klip",
+    "rightClickPasteHint": "Klik kanan pada terminal menempelkan isi papan klip alih-alih membuka menu konteks. Tahan Shift lalu klik kanan untuk membuka menu.",
     "scrollbackHint": "Default adalah 5.000. Rentang valid adalah 100 hingga 100.000.",
     "qualityDefaults": "Default kualitas",
     "colorDepth": "Kedalaman warna",
@@ -2397,7 +2401,9 @@
     "hyperlinkRuleInvalidPattern": "Pola \"{{pattern}}\" bukan ekspresi reguler yang valid.",
     "hyperlinkRuleUrlInvalid": "URL aturan hyperlink harus diawali http:// atau https://.",
     "sshOldProtocols": "Protokol lama",
-    "sshOldProtocolsHint": "Nonaktif secara default. Aktifkan semua algoritma kompatibilitas SSH lama yang didukung hanya untuk server lama yang tepercaya."
+    "sshOldProtocolsHint": "Nonaktif secara default. Aktifkan semua algoritma kompatibilitas SSH lama yang didukung hanya untuk server lama yang tepercaya.",
+    "autoTrustNewHostKeys": "Percayai kunci host baru secara otomatis",
+    "autoTrustNewHostKeysHint": "Lewati konfirmasi sidik jari saat pertama kali terhubung ke sebuah host dan catat kuncinya secara otomatis. Kunci host yang berubah tetap menampilkan peringatan."
   },
   "connections": {
     "title": "Koneksi",

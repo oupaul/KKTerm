@@ -935,6 +935,12 @@ export interface TerminalSettings {
   copyOnSelect: boolean;
   allowOsc52Clipboard: boolean;
   confirmMultilinePaste: boolean;
+  /** Right-click pastes the clipboard instead of opening the context menu
+   * (Shift+right-click still opens the menu). */
+  rightClickPaste: boolean;
+  /** Every new terminal Session starts with recording active, as if the
+   * record button was pressed. */
+  autoRecordSessions: boolean;
   defaultShell: string;
   customShells: TerminalCustomShell[];
   /** Global default terminal color scheme id; each terminal-type Connection
@@ -1014,6 +1020,9 @@ export interface SshSettings {
   defaultProxyJump?: string;
   defaultSshCompression: SshCompressionMode;
   defaultSshOldProtocols: SshOldProtocolsMode;
+  /** Trust a never-before-seen host key without the fingerprint confirmation
+   * dialog. Changed host keys always still prompt. */
+  autoTrustNewHostKeys: boolean;
   bufferLines: number;
   defaultTransparency: number;
   defaultUseTmuxSessions: boolean;

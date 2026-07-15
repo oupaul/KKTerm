@@ -1955,6 +1955,8 @@
     "terminalTextHint": "ローカルターミナルのフォント、サイズ、行の高さ、カーソル。",
     "terminalSession": "セッションのデフォルト",
     "terminalSessionHint": "ローカルターミナルセッションのデフォルトシェルとスクロールバック。",
+    "autoRecordSessions": "ターミナルセッションを自動記録",
+    "autoRecordSessionsHint": "新しいターミナルセッションは、記録ボタンが押された状態で自動的に記録を開始します。各セッションはアプリデータフォルダー内のそれぞれのテキストファイルに記録され、記録はターミナルのツールバーからいつでも停止できます。",
     "terminalClipboard": "クリップボードと貼り付け",
     "terminalClipboardHint": "ローカルターミナルのコピー、OSC 52、貼り付けの安全性。",
     "fontFamily": "フォントファミリー",
@@ -1984,6 +1986,8 @@
     "allowLocalOsc52Clipboard": "ローカルターミナルの OSC 52 クリップボード書き込みを許可",
     "allowSshOsc52Clipboard": "SSH OSC 52 クリップボード書き込みを許可",
     "confirmMultilinePaste": "複数行の貼り付けを確認",
+    "rightClickPaste": "右クリックでクリップボードを貼り付け",
+    "rightClickPasteHint": "ターミナルを右クリックすると、コンテキストメニューを開く代わりにクリップボードの内容を貼り付けます。Shift を押しながら右クリックするとメニューが開きます。",
     "scrollbackHint": "デフォルトは 5,000 です。有効範囲は 100〜100,000 です。",
     "qualityDefaults": "品質のデフォルト",
     "colorDepth": "色深度",
@@ -2397,7 +2401,9 @@
     "hyperlinkRuleInvalidPattern": "パターン「{{pattern}}」は有効な正規表現ではありません。",
     "hyperlinkRuleUrlInvalid": "ハイパーリンクルールの URL は http:// または https:// で始まる必要があります。",
     "sshOldProtocols": "レガシープロトコル",
-    "sshOldProtocolsHint": "デフォルトはオフです。信頼できる古いサーバーに対してのみ、サポートされているすべてのレガシー SSH 互換アルゴリズムを有効にします。"
+    "sshOldProtocolsHint": "デフォルトはオフです。信頼できる古いサーバーに対してのみ、サポートされているすべてのレガシー SSH 互換アルゴリズムを有効にします。",
+    "autoTrustNewHostKeys": "新しいホストキーを自動的に信頼",
+    "autoTrustNewHostKeysHint": "ホストへの初回接続時にフィンガープリントの確認を省略し、キーを自動的に記録します。ホストキーが変更された場合は引き続き警告が表示されます。"
   },
   "connections": {
     "title": "接続",

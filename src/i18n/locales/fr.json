@@ -1955,6 +1955,8 @@
     "terminalTextHint": "Police, taille, interligne et curseur du terminal local.",
     "terminalSession": "Valeurs par défaut de session",
     "terminalSessionHint": "Shell par défaut et défilement pour les sessions de terminal local.",
+    "autoRecordSessions": "Enregistrer automatiquement les sessions de terminal",
+    "autoRecordSessionsHint": "Les nouvelles sessions de terminal démarrent automatiquement l'enregistrement, comme si le bouton d'enregistrement était activé. Chaque session est enregistrée dans son propre fichier texte dans le dossier de données de l'application ; l'enregistrement peut être arrêté à tout moment depuis la barre d'outils du terminal.",
     "terminalClipboard": "Presse-papiers et collage",
     "terminalClipboardHint": "Copie du terminal local, OSC 52 et sécurité du collage.",
     "fontFamily": "Famille de police",
@@ -1984,6 +1986,8 @@
     "allowLocalOsc52Clipboard": "Autoriser l'écriture du presse-papiers OSC 52 du terminal local",
     "allowSshOsc52Clipboard": "Autoriser l'écriture du presse-papiers OSC 52 SSH",
     "confirmMultilinePaste": "Confirmer le collage multiligne",
+    "rightClickPaste": "Coller avec le clic droit",
+    "rightClickPasteHint": "Un clic droit dans le terminal colle le contenu du presse-papiers au lieu d'ouvrir le menu contextuel. Maintenez Maj enfoncée et faites un clic droit pour ouvrir le menu.",
     "scrollbackHint": "La valeur par défaut est 5 000. Plage valide de 100 à 100 000.",
     "qualityDefaults": "Valeurs par défaut de qualité",
     "colorDepth": "Profondeur de couleur",
@@ -2397,7 +2401,9 @@
     "hyperlinkRuleInvalidPattern": "Le motif « {{pattern}} » n'est pas une expression régulière valide.",
     "hyperlinkRuleUrlInvalid": "Les URL des règles d'hyperliens doivent commencer par http:// ou https://.",
     "sshOldProtocols": "Protocoles hérités",
-    "sshOldProtocolsHint": "Désactivé par défaut. Activez tous les algorithmes de compatibilité SSH hérités pris en charge uniquement pour les serveurs anciens de confiance."
+    "sshOldProtocolsHint": "Désactivé par défaut. Activez tous les algorithmes de compatibilité SSH hérités pris en charge uniquement pour les serveurs anciens de confiance.",
+    "autoTrustNewHostKeys": "Faire automatiquement confiance aux nouvelles clés d'hôte",
+    "autoTrustNewHostKeysHint": "Ignore la confirmation de l'empreinte lors de la première connexion à un hôte et enregistre automatiquement sa clé. Les clés d'hôte modifiées affichent toujours un avertissement."
   },
   "connections": {
     "title": "Connexions",

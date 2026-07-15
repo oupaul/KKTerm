@@ -612,7 +612,7 @@ export function SftpWorkspace({
               sshOldProtocols: resolveSshOldProtocols(connection, useWorkspaceStore.getState().sshSettings),
             },
           });
-          await confirmTrustedSshHostKey(preview);
+          await confirmTrustedSshHostKey(preview, useWorkspaceStore.getState().sshSettings);
         }
 
         setStatus(t("sftp.openingProtocol", { protocol: activeProtocolLabel }));

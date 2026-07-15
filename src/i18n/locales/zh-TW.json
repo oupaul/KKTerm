@@ -1955,6 +1955,8 @@
     "terminalTextHint": "本機終端機字型、大小、行高及游標。",
     "terminalSession": "工作階段預設值",
     "terminalSessionHint": "本機終端機工作階段的預設 Shell 及回溯行數。",
+    "autoRecordSessions": "自動錄製終端機工作階段",
+    "autoRecordSessionsHint": "新的終端機工作階段會自動開始錄製，如同已按下錄製按鈕。每個工作階段會錄製到應用程式資料夾下各自的文字檔；可隨時從終端機工具列停止錄製。",
     "terminalClipboard": "剪貼簿與貼上",
     "terminalClipboardHint": "本機終端機複製、OSC 52 及貼上安全性。",
     "fontFamily": "字型系列",
@@ -1984,6 +1986,8 @@
     "allowLocalOsc52Clipboard": "允許本機終端機 OSC 52 剪貼簿寫入",
     "allowSshOsc52Clipboard": "允許 SSH OSC 52 剪貼簿寫入",
     "confirmMultilinePaste": "確認多行貼上",
+    "rightClickPaste": "滑鼠右鍵貼上剪貼簿",
+    "rightClickPasteHint": "在終端機按滑鼠右鍵會直接貼上剪貼簿內容，而不是開啟右鍵選單。按住 Shift 再按右鍵可開啟選單。",
     "scrollbackHint": "預設值為 5,000。有效範圍為 100 至 100,000。",
     "qualityDefaults": "品質預設值",
     "colorDepth": "色彩深度",
@@ -2397,7 +2401,9 @@
     "hyperlinkRuleInvalidPattern": "樣式「{{pattern}}」不是有效的正規表示式。",
     "hyperlinkRuleUrlInvalid": "超連結規則的 URL 必須以 http:// 或 https:// 開頭。",
     "sshOldProtocols": "舊版協定",
-    "sshOldProtocolsHint": "預設為關閉。僅在信任的舊版伺服器上啟用所有支援的舊版 SSH 相容性演算法。"
+    "sshOldProtocolsHint": "預設為關閉。僅在信任的舊版伺服器上啟用所有支援的舊版 SSH 相容性演算法。",
+    "autoTrustNewHostKeys": "自動信任新的主機金鑰",
+    "autoTrustNewHostKeysHint": "首次連線主機時略過指紋確認並自動記錄其金鑰。主機金鑰變更時仍會顯示警告。"
   },
   "connections": {
     "title": "連線",

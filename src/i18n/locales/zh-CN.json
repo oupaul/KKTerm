@@ -1955,6 +1955,8 @@
     "terminalTextHint": "本地终端字体、大小、行高及光标。",
     "terminalSession": "会话默认值",
     "terminalSessionHint": "本地终端会话的默认 Shell 及回滚行数。",
+    "autoRecordSessions": "自动录制终端会话",
+    "autoRecordSessionsHint": "新的终端会话会自动开始录制，如同已按下录制按钮。每个会话录制到应用数据文件夹下各自的文本文件；可随时从终端工具栏停止录制。",
     "terminalClipboard": "剪贴板与粘贴",
     "terminalClipboardHint": "本地终端复制、OSC 52 及粘贴安全性。",
     "fontFamily": "字体系列",
@@ -1984,6 +1986,8 @@
     "allowLocalOsc52Clipboard": "允许本地终端 OSC 52 剪贴板写入",
     "allowSshOsc52Clipboard": "允许 SSH OSC 52 剪贴板写入",
     "confirmMultilinePaste": "确认多行粘贴",
+    "rightClickPaste": "鼠标右键粘贴剪贴板",
+    "rightClickPasteHint": "在终端中单击鼠标右键会直接粘贴剪贴板内容，而不是打开右键菜单。按住 Shift 再单击右键可打开菜单。",
     "scrollbackHint": "默认值为 5,000。有效范围为 100 至 100,000。",
     "qualityDefaults": "质量默认值",
     "colorDepth": "色彩深度",
@@ -2397,7 +2401,9 @@
     "hyperlinkRuleInvalidPattern": "模式“{{pattern}}”不是有效的正则表达式。",
     "hyperlinkRuleUrlInvalid": "超链接规则的 URL 必须以 http:// 或 https:// 开头。",
     "sshOldProtocols": "旧版协议",
-    "sshOldProtocolsHint": "默认关闭。仅在受信任的旧服务器上启用所有受支持的旧版 SSH 兼容性算法。"
+    "sshOldProtocolsHint": "默认关闭。仅在受信任的旧服务器上启用所有受支持的旧版 SSH 兼容性算法。",
+    "autoTrustNewHostKeys": "自动信任新的主机密钥",
+    "autoTrustNewHostKeysHint": "首次连接主机时跳过指纹确认并自动记录其密钥。主机密钥发生变化时仍会显示警告。"
   },
   "connections": {
     "title": "连接",

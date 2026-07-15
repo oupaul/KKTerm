@@ -1100,7 +1100,7 @@ export function ConnectionSidebar({
           ...resolveSshSocksProxyRequest(connection),
         },
       });
-      await confirmTrustedSshHostKey(hostKeyPreview);
+      await confirmTrustedSshHostKey(hostKeyPreview, sshSettings);
       const result = await invokeCommand("transfer_ssh_public_key", {
         request: {
           host: connection.host,
