@@ -320,6 +320,8 @@ pub struct StartTerminalRecordingRequest {
     pub connection_id: String,
     pub connection_name: String,
     pub initial_buffer: String,
+    pub rows: Option<u16>,
+    pub cols: Option<u16>,
 }
 
 #[derive(Deserialize)]
@@ -375,6 +377,9 @@ pub struct SetTerminalEncodingRequest {
 struct ActiveTerminalRecording {
     info: TerminalRecordingInfo,
     file: File,
+    // Live output carries VT escape sequences (ConPTY repaints especially);
+    // render them to plain text so the saved .txt stays human-readable.
+    renderer: crate::vt_text::VtTextRenderer,
 }
 
 pub struct TerminalRecordingManager {
@@ -490,6 +495,10 @@ impl TerminalRecordingManager {
             ActiveTerminalRecording {
                 info: info.clone(),
                 file,
+                renderer: crate::vt_text::VtTextRenderer::new(
+                    request.rows.unwrap_or(24),
+                    request.cols.unwrap_or(80),
+                ),
             },
         );
         Ok(info)
@@ -502,6 +511,15 @@ impl TerminalRecordingManager {
             .map_err(|_| "terminal recording lock is poisoned".to_string())?
             .remove(&session_id);
         if let Some(mut recording) = recording {
+            let tail = recording.renderer.finish();
+            if !tail.is_empty() {
+                recording.file.write_all(tail.as_bytes()).map_err(|error| {
+                    format!(
+                        "failed to write terminal recording {}: {error}",
+                        recording.info.path.display()
+                    )
+                })?;
+            }
             recording.file.flush().map_err(|error| {
                 format!(
                     "failed to flush terminal recording {}: {error}",
@@ -522,14 +540,27 @@ impl TerminalRecordingManager {
         let Some(recording) = active.get_mut(session_id) else {
             return Ok(());
         };
+        let rendered = recording.renderer.feed(data);
+        if rendered.is_empty() {
+            return Ok(());
+        }
         recording
             .file
-            .write_all(data.as_bytes())
+            .write_all(rendered.as_bytes())
             .map_err(|error| format!("failed to write terminal recording: {error}"))?;
         recording
             .file
             .flush()
             .map_err(|error| format!("failed to flush terminal recording: {error}"))
+    }
+
+    fn resize(&self, session_id: &str, rows: u16, cols: u16) {
+        let Ok(mut active) = self.active.lock() else {
+            return;
+        };
+        if let Some(recording) = active.get_mut(session_id) {
+            recording.renderer.resize(rows, cols);
+        }
     }
 
     fn list_recordings_at(
@@ -1629,6 +1660,8 @@ impl SessionManager {
     }
 
     pub fn resize_terminal(&self, request: ResizeTerminalRequest) -> Result<(), String> {
+        self.recordings
+            .resize(&request.session_id, request.rows, request.cols);
         let mut sessions = self
             .sessions
             .lock()
@@ -4010,6 +4043,8 @@ mod tests {
                 connection_id: "conn-1234567890abcdef".to_string(),
                 connection_name: "Prod East".to_string(),
                 initial_buffer: "existing line\n".to_string(),
+                rows: None,
+                cols: None,
             })
             .expect("recording starts");
 
@@ -4023,12 +4058,45 @@ mod tests {
 
         assert_eq!(started.path, stopped.path);
         let text = std::fs::read_to_string(&stopped.path).expect("recording file reads");
-        assert_eq!(text, "existing line\nnew line\r\n");
+        assert_eq!(text, "existing line\nnew line\n");
         assert!(
             stopped
                 .path
                 .starts_with(root.join("prod-east").join("prod-east--conn-12345678"))
         );
+    }
+
+    #[test]
+    fn terminal_recording_renders_escape_sequences_to_plain_text() {
+        let root = temp_recording_root("conpty-garble");
+        let manager = TerminalRecordingManager::new_for_root(root);
+        let started = manager
+            .start_recording(StartTerminalRecordingRequest {
+                session_id: "session-123".to_string(),
+                connection_id: "conn-456".to_string(),
+                connection_name: "Local".to_string(),
+                initial_buffer: String::new(),
+                rows: Some(24),
+                cols: Some(80),
+            })
+            .expect("recording starts");
+
+        // ConPTY-style stream: mode sets, title, clear, repaint with erases.
+        manager
+            .record_output(
+                "session-123",
+                "\x1b[?9001h\x1b[?1004h\x1b[?25l\x1b[2J\x1b[m\x1b[HWindows PowerShell\r\n\
+                 \x1b]0;C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe\x07\
+                 \x1b[HWindows PowerShell\x1b[K\r\n\x1b[KPS C:\\Users\\ryan> \x1b[?25h",
+            )
+            .expect("live output records");
+        manager
+            .stop_recording("session-123".to_string())
+            .expect("recording stops")
+            .expect("recording existed");
+
+        let text = std::fs::read_to_string(&started.path).expect("recording file reads");
+        assert_eq!(text, "Windows PowerShell\nPS C:\\Users\\ryan>\n");
     }
 
     #[test]
@@ -4041,6 +4109,8 @@ mod tests {
                 connection_id: "conn-456".to_string(),
                 connection_name: "Production".to_string(),
                 initial_buffer: "existing output".to_string(),
+                rows: None,
+                cols: None,
             })
             .expect("first recording starts");
 
@@ -4049,6 +4119,8 @@ mod tests {
             connection_id: "conn-456".to_string(),
             connection_name: "Production".to_string(),
             initial_buffer: "replacement output".to_string(),
+            rows: None,
+            cols: None,
         });
 
         assert!(matches!(
@@ -4078,6 +4150,8 @@ mod tests {
                 connection_id: "conn-456".to_string(),
                 connection_name: "Production".to_string(),
                 initial_buffer: String::new(),
+                rows: None,
+                cols: None,
             },
         );
 
