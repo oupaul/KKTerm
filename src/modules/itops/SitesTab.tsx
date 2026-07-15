@@ -342,6 +342,44 @@ export function SitesTab({
     }
   }, [sites, activeId]);
 
+  // Apply a navigator selection requested from outside the Module (the AI
+  // assistant's tutorial navigation). Waits for the Site list so an explicit
+  // siteId can be validated; falls back to the active/first Site.
+  const pendingNavigation = useItOpsStore((state) => state.pendingNavigation);
+  useEffect(() => {
+    if (!pendingNavigation || !loaded) {
+      return;
+    }
+    useItOpsStore.getState().clearNavigation();
+    if (pendingNavigation.destination === "taskLibrary") {
+      setRootSurface("tasks");
+      return;
+    }
+    const requestedSiteId = pendingNavigation.siteId;
+    const siteId =
+      (requestedSiteId && sites.some((site) => site.id === requestedSiteId)
+        ? requestedSiteId
+        : null) ??
+      (activeId && sites.some((site) => site.id === activeId) ? activeId : null) ??
+      sites[0]?.id ??
+      null;
+    if (!siteId) {
+      return;
+    }
+    selectSiteDestination(siteId, pendingNavigation.destination ?? "site");
+  }, [pendingNavigation, loaded, sites, activeId]);
+
+  // Mirror the navigator's position into the store so the assistant page
+  // context can describe where the user is (never persisted).
+  useEffect(() => {
+    useItOpsStore.getState().setNavigationSnapshot({
+      siteId: activeId,
+      destination: rootSurface === "tasks" ? "taskLibrary" : selectedDestination,
+      serverRoom: drill.serverRoom,
+      rackId: drill.rackId,
+    });
+  }, [activeId, selectedDestination, rootSurface, drill]);
+
   // Resolve the active group's members whenever the group (or its definition)
   // changes. The group object identity changes after an edit, re-running this.
   useEffect(() => {
@@ -869,6 +907,7 @@ export function SitesTab({
                       customIcon={site}
                       label={site.name}
                       tint={groupColor(site.id)}
+                      tutorialId={`itops.site:${site.id}`}
                       hasChildren
                       open={open}
                       selected={activeId === site.id && selectedDestination === "site" && drill.serverRoom == null && rootSurface === "site"}
@@ -1234,6 +1273,7 @@ function TreeRow({
   onToggle,
   onSelect,
   onContextMenu,
+  tutorialId,
 }: {
   depth: number;
   icon: ItIconName;
@@ -1247,11 +1287,14 @@ function TreeRow({
   onToggle?: () => void;
   onSelect: () => void;
   onContextMenu?: (event: ReactMouseEvent<HTMLDivElement>) => void;
+  /** Entity-scoped tutorial anchor (e.g. `itops.site:<id>`). */
+  tutorialId?: string;
 }) {
   return (
     <div
       className={`ft-row${selected ? " sel" : ""}`}
       style={{ paddingLeft: 8 + depth * 14 }}
+      data-tutorial-id={tutorialId}
       onClick={onSelect}
       onContextMenu={onContextMenu}
     >

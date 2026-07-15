@@ -651,6 +651,302 @@ pub fn tool_descriptors() -> Vec<Value> {
             "description": "List the Hosts of one IT Ops Site by siteId: durable inventory entries addressed by hostname, with kind (physical|vm|container|other), optional parentHostId (the device Host carrying a VM/container), bound Connection ids, and the last connectivity-scan snapshot.",
             "inputSchema": site_id_input_schema(),
         }),
+        json!({
+            "name": "kkterm.itops.sites.update",
+            "description": "Update one IT Ops Site by id. Omitted fields keep their current values; presentation fields (icons, backgrounds) are always preserved. memberIds and filter use full-value semantics when supplied.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "id": {"type": "string"},
+                    "name": {"type": "string", "minLength": 1},
+                    "memberIds": {"type": "array", "items": {"type": "string"}},
+                    "filter": {"type": "object", "properties": {
+                        "types": {"type": "array", "items": {"type": "string"}},
+                        "folderId": {"type": ["string", "null"]},
+                    }},
+                    "transport": {"type": "string", "enum": ["ssh", "winrm", "psexec", "auto"]},
+                },
+                "required": ["id"],
+                "additionalProperties": false,
+            },
+        }),
+        json!({
+            "name": "kkterm.itops.sites.remove",
+            "description": "Delete one IT Ops Site by id, including its Server Rooms, Racks, Rack Devices, and Hosts. Saved Connections and Run History are untouched. The seeded Default Site cannot be deleted.",
+            "inputSchema": id_input_schema("id"),
+        }),
+        json!({
+            "name": "kkterm.itops.server_rooms.update",
+            "description": "Update one Server Room by id. Full-value semantics: read the room via kkterm.itops.server_rooms.list first and resend both name and floorColor.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "id": {"type": "string"},
+                    "name": {"type": "string", "minLength": 1},
+                    "floorColor": {"type": "string", "enum": ["default", "concrete", "graphite", "green", "blue"]},
+                },
+                "required": ["id", "name", "floorColor"],
+                "additionalProperties": false,
+            },
+        }),
+        json!({
+            "name": "kkterm.itops.server_rooms.remove",
+            "description": "Delete one Server Room by id, including its Racks and their Rack Device placements. Bound saved Connections are untouched.",
+            "inputSchema": id_input_schema("id"),
+        }),
+        json!({
+            "name": "kkterm.itops.racks.update",
+            "description": "Update one Rack by id. Full-value semantics: read the rack via kkterm.itops.racks.list first and resend every field you want to keep (omitted rackGroup/shell/powerCapacityW are cleared). Shrinking heightU is rejected while placed devices would no longer fit.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "id": {"type": "string"},
+                    "name": {"type": "string", "minLength": 1},
+                    "serverRoom": {"type": "string", "minLength": 1},
+                    "rackGroup": {"type": "string"},
+                    "shell": {"type": "string", "enum": ["black", "white", "grey"]},
+                    "heightU": {"type": "integer", "minimum": 1, "maximum": 100},
+                    "depthMm": {"type": "integer", "minimum": 1, "maximum": 5000},
+                    "powerCapacityW": {"type": "integer", "minimum": 0},
+                },
+                "required": ["id", "name", "serverRoom", "heightU", "depthMm"],
+                "additionalProperties": false,
+            },
+        }),
+        json!({
+            "name": "kkterm.itops.racks.remove",
+            "description": "Delete one Rack by id, including its Rack Device placements. Bound saved Connections are untouched.",
+            "inputSchema": id_input_schema("id"),
+        }),
+        json!({
+            "name": "kkterm.itops.hosts.create",
+            "description": "Create one Host in an IT Ops Site: a durable inventory entry addressed by hostname. parentHostId nests it as a VM/container guest under a device Host. Bind Connections with kkterm.itops.hosts.update.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "siteId": {"type": "string"},
+                    "hostname": {"type": "string", "minLength": 1},
+                    "label": {"type": "string"},
+                    "kind": {"type": "string", "enum": ["physical", "vm", "container", "other"]},
+                    "parentHostId": {"type": "string"},
+                    "notes": {"type": "string"},
+                },
+                "required": ["siteId", "hostname"],
+                "additionalProperties": false,
+            },
+        }),
+        json!({
+            "name": "kkterm.itops.hosts.update",
+            "description": "Update one Host by id. Full-value semantics: read the Host via kkterm.itops.hosts.list first and resend every field you want to keep — omitted label/kind/parentHostId/connectionIds/notes are cleared or reset. connectionIds are ordered saved Connection ids; the first bound SSH Connection makes the Host runnable in Batch Runs.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "id": {"type": "string"},
+                    "hostname": {"type": "string", "minLength": 1},
+                    "label": {"type": "string"},
+                    "kind": {"type": "string", "enum": ["physical", "vm", "container", "other"]},
+                    "parentHostId": {"type": "string"},
+                    "connectionIds": {"type": "array", "items": {"type": "string"}},
+                    "notes": {"type": "string"},
+                },
+                "required": ["id", "hostname"],
+                "additionalProperties": false,
+            },
+        }),
+        json!({
+            "name": "kkterm.itops.hosts.remove",
+            "description": "Delete one Host by id. Its child Hosts (VMs/containers) are re-parented one level up rather than deleted. Bound saved Connections are untouched.",
+            "inputSchema": id_input_schema("id"),
+        }),
+        json!({
+            "name": "kkterm.itops.hosts.import",
+            "description": "Bulk-import a hostname list into an IT Ops Site's Host inventory. Blank entries and case-insensitive duplicates (within the list or against existing Hosts) are skipped, not errors. Returns the created Hosts plus the skipped count.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "siteId": {"type": "string"},
+                    "hostnames": {"type": "array", "items": {"type": "string"}, "minItems": 1, "maxItems": 500},
+                },
+                "required": ["siteId", "hostnames"],
+                "additionalProperties": false,
+            },
+        }),
+        json!({
+            "name": "kkterm.itops.hosts.scan",
+            "description": "Scan a Site's Hosts (all of them, or only hostIds) for remote-access endpoints with bounded TCP probes: SSH (22), WinRM (5985/5986), and HTTPS (443). Waits for the scan to finish and returns the updated Host list; each Host's scan snapshot is persisted.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "siteId": {"type": "string"},
+                    "hostIds": {"type": "array", "items": {"type": "string"}},
+                },
+                "required": ["siteId"],
+                "additionalProperties": false,
+            },
+        }),
+        json!({
+            "name": "kkterm.itops.tasks.list",
+            "description": "List the global IT Ops Task Library: reusable script/playbook definitions with id, name, description, applicableOs, kind, a redacted one-line summary, and builtInKey for app-owned read-only built-ins. Use kkterm.itops.tasks.get for a full definition.",
+            "inputSchema": {"type": "object", "properties": {}, "additionalProperties": false},
+        }),
+        json!({
+            "name": "kkterm.itops.tasks.get",
+            "description": "Read one IT Ops Task's full definition by id, including the script body or playbook steps.",
+            "inputSchema": id_input_schema("id"),
+        }),
+        json!({
+            "name": "kkterm.itops.tasks.dangerous.create",
+            "description": "DANGEROUS: create a reusable IT Ops Task in the global Task Library — a script or interactive playbook definition an operator can later run across many hosts. It only saves the definition; nothing executes. task is {kind:'script', body, shell?} or {kind:'playbook', name, steps:[{kind?:'command'|'ai', name, send, expect?, timeoutSeconds?, aiInstruction?}]}; sudo steps and secret references are rejected (configure them in the Task Library editor). applicableOs defaults to ['any']. Requires built_in_mcp_allow_all_dangerous = true.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string", "minLength": 1},
+                    "description": {"type": "string"},
+                    "applicableOs": {"type": "array", "items": {"type": "string", "enum": ["any", "linux", "macos", "windows", "ciscoIos", "ciscoNxos", "fortiOs", "junos", "aristaEos"]}},
+                    "task": {"type": "object"},
+                },
+                "required": ["name", "task"],
+                "additionalProperties": false,
+            },
+        }),
+        json!({
+            "name": "kkterm.itops.tasks.dangerous.update",
+            "description": "DANGEROUS: update one IT Ops Task by id. Full-value semantics: read the Task via kkterm.itops.tasks.get first and resend name, description, applicableOs, and the full task definition. Built-in catalog Tasks are read-only. New sudo steps or secret references are rejected. Requires built_in_mcp_allow_all_dangerous = true.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "id": {"type": "string"},
+                    "name": {"type": "string", "minLength": 1},
+                    "description": {"type": "string"},
+                    "applicableOs": {"type": "array", "items": {"type": "string", "enum": ["any", "linux", "macos", "windows", "ciscoIos", "ciscoNxos", "fortiOs", "junos", "aristaEos"]}},
+                    "task": {"type": "object"},
+                },
+                "required": ["id", "name", "task"],
+                "additionalProperties": false,
+            },
+        }),
+        json!({
+            "name": "kkterm.itops.tasks.remove",
+            "description": "Delete one user IT Ops Task by id (built-ins cannot be deleted). Completed Run History keeps its redacted task summary; any orphaned task credentials are removed from the vault.",
+            "inputSchema": id_input_schema("id"),
+        }),
+        json!({
+            "name": "kkterm.itops.automations.list",
+            "description": "List durable IT Ops Automations: id, name, enabled, the trigger/condition config, the ordered action list, and the optional Site binding (siteId). Enabled rows are armed as live Watchdogs.",
+            "inputSchema": {"type": "object", "properties": {}, "additionalProperties": false},
+        }),
+        json!({
+            "name": "kkterm.itops.automations.dangerous.create",
+            "description": "DANGEROUS: create a durable IT Ops Automation — one trigger + condition (config, a WatchdogConfig whose action must be {kind:'notify'}) and an ordered action list run when it fires (notify, popup, email, webhook, runBatch). enabled defaults to true and arms the rule immediately; runBatch actions later execute scripts on site hosts. RunBatch tasks may not carry sudo steps or secret references. Requires built_in_mcp_allow_all_dangerous = true.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string", "minLength": 1},
+                    "config": {"type": "object"},
+                    "actions": {"type": "array", "items": {"type": "object"}},
+                    "enabled": {"type": "boolean"},
+                    "siteId": {"type": "string"},
+                },
+                "required": ["name", "config", "actions"],
+                "additionalProperties": false,
+            },
+        }),
+        json!({
+            "name": "kkterm.itops.automations.dangerous.update",
+            "description": "DANGEROUS: update one IT Ops Automation by id. Full-value semantics: read the rule via kkterm.itops.automations.list first and resend name, config, actions, and siteId. An enabled rule is re-armed with the new definition. Requires built_in_mcp_allow_all_dangerous = true.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "id": {"type": "string"},
+                    "name": {"type": "string", "minLength": 1},
+                    "config": {"type": "object"},
+                    "actions": {"type": "array", "items": {"type": "object"}},
+                    "siteId": {"type": "string"},
+                },
+                "required": ["id", "name", "config", "actions"],
+                "additionalProperties": false,
+            },
+        }),
+        json!({
+            "name": "kkterm.itops.automations.dangerous.set_enabled",
+            "description": "DANGEROUS: enable (arm) or disable (disarm) one IT Ops Automation by id. An armed rule polls its trigger and runs its actions unattended. Requires built_in_mcp_allow_all_dangerous = true.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "id": {"type": "string"},
+                    "enabled": {"type": "boolean"},
+                },
+                "required": ["id", "enabled"],
+                "additionalProperties": false,
+            },
+        }),
+        json!({
+            "name": "kkterm.itops.automations.remove",
+            "description": "Delete one IT Ops Automation by id, disarming its live Watchdog first. Run History produced by the rule is kept.",
+            "inputSchema": id_input_schema("id"),
+        }),
+        json!({
+            "name": "kkterm.itops.automations.test",
+            "description": "Dry-run an Automation trigger: sample the config's target once and report the sampled value plus whether the condition would fire right now. No actions are executed and nothing is stored.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {"config": {"type": "object"}},
+                "required": ["config"],
+                "additionalProperties": false,
+            },
+        }),
+        json!({
+            "name": "kkterm.itops.runs.dangerous.start",
+            "description": "DANGEROUS: start a Batch Run against an IT Ops Site — this executes a script or playbook on every resolved host over SSH. Pass exactly one of taskId (a Task Library definition) or script {body, shell?}. Optional scope narrows targets to one serverRoom, one rackId, or selected hostIds. Returns the runId immediately; read results later with kkterm.itops.runs.get_report. Requires built_in_mcp_allow_all_dangerous = true.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "siteId": {"type": "string"},
+                    "taskId": {"type": "string"},
+                    "script": {"type": "object", "properties": {
+                        "body": {"type": "string", "minLength": 1},
+                        "shell": {"type": "string"},
+                    }, "required": ["body"]},
+                    "scope": {"type": "object", "properties": {
+                        "serverRoom": {"type": "string"},
+                        "rackId": {"type": "string"},
+                        "hostIds": {"type": "array", "items": {"type": "string"}},
+                    }},
+                },
+                "required": ["siteId"],
+                "additionalProperties": false,
+            },
+        }),
+        json!({
+            "name": "kkterm.itops.runs.cancel",
+            "description": "Cancel a live Batch Run by runId. Hosts already finished keep their results; the partial report is still written to Run History.",
+            "inputSchema": id_input_schema("runId"),
+        }),
+        json!({
+            "name": "kkterm.itops.runs.list",
+            "description": "List completed Batch Run reports, newest first: id, source (manual or automation:<id>), siteId, taskId, redacted task summary, timestamps, and per-host outcome rows (ok, exitCode, durationMs, error) without output text.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "siteId": {"type": "string"},
+                    "limit": {"type": "integer", "minimum": 1, "maximum": 100},
+                },
+                "additionalProperties": false,
+            },
+        }),
+        json!({
+            "name": "kkterm.itops.runs.get_report",
+            "description": "Read one Batch Run's consolidated report by runId, including each host's captured output (tail-capped per host by maxOutputChars, default 4000). The output may include sensitive remote command results.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "runId": {"type": "string"},
+                    "maxOutputChars": {"type": "integer", "minimum": 100, "maximum": 20000},
+                },
+                "required": ["runId"],
+                "additionalProperties": false,
+            },
+        }),
         // -- Network: read-only diagnostics (kkterm.network.*) -------------
         json!({
             "name": "kkterm.network.ping",
@@ -804,6 +1100,30 @@ pub fn tool_descriptors() -> Vec<Value> {
                     "windowId": {"type": "string", "description": "KKTerm window label from kkterm.app.list_windows (e.g. \"main\")."},
                 },
                 "required": ["windowId"],
+                "additionalProperties": false,
+            },
+        }),
+        json!({
+            "name": "kkterm.app.dangerous.tutorial_highlight",
+            "description": "DANGEROUS: navigate the KKTerm UI and show a one-step Tutorial overlay — highlight one app-owned target, dim the rest of the window, and place a short help balloon beside it. This moves the user's UI: navigation may switch the active Module (workspace, dashboard, itops, installer, settings), a Settings section, or an IT Ops Site destination (navigation.itopsSiteId + navigation.itopsDestination: site|serverRooms|hosts|automations|runHistory|taskLibrary). targetId must be a registered tutorial target (see docs/manual chapters) or an IT Ops entity target such as itops.host:<hostId>. The overlay disappears when the user clicks or presses any key. Requires built_in_mcp_allow_all_dangerous = true.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "targetId": {"type": "string"},
+                    "title": {"type": "string", "maxLength": 80},
+                    "body": {"type": "string", "maxLength": 240},
+                    "navigation": {
+                        "type": "object",
+                        "properties": {
+                            "page": {"type": "string", "enum": ["workspace", "dashboard", "itops", "installer", "settings"]},
+                            "settingsSectionId": {"type": "string"},
+                            "itopsSiteId": {"type": "string"},
+                            "itopsDestination": {"type": "string", "enum": ["site", "serverRooms", "hosts", "automations", "runHistory", "taskLibrary"]},
+                        },
+                        "additionalProperties": false,
+                    },
+                },
+                "required": ["targetId", "title", "body"],
                 "additionalProperties": false,
             },
         }),

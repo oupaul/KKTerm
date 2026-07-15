@@ -486,18 +486,47 @@ i18n rules in `AGENTS.md`. New dialogs/sheets follow
 ## AI Assistant integration
 
 IT Ops commands are registered as approval-gated assistant tools, the
-same model Dashboard uses. The assistant may draft a Site or an
-Automation (trigger + condition + actions) from a typed schema; a
-successful mutating tool emits an `itops-changed` backend event that
-reloads the IT Ops store so the new rule appears without restart. The
-Rack Device placement schema includes `kuaiguai` and documents the rack-top
-virtual position (`startU = rack.heightU + 1`) plus expiry/style metadata, so
-assistant and built-in MCP calls preserve the same placement invariant as the UI. The
-page-context payload is a compact projection — Site names/counts,
-Automation names/states, recent run summaries — never full run output,
-streamed host buffers, secrets, or credential references. Mutating
-actions (starting a Batch Run, enabling an Automation) go through the
-existing approval flow; the assistant cannot run a site task silently.
+same model Dashboard uses. The `itops_*` tool surface covers the Module's
+operations end to end: Site/Server Room/Rack/Rack Device lifecycle, Host
+inventory (create/update/delete/import/scan), the global Task Library
+(list/get/create/update/remove, with built-ins read-only), durable
+Automations (list/create/update/set-enabled/remove plus a one-shot
+`itops_test_automation` dry run), and Batch Runs
+(start/cancel/run-history/report). A successful mutating tool emits an
+`itops-changed` backend event that reloads the IT Ops store so the change
+appears without restart. The Rack Device placement schema includes
+`kuaiguai` and documents the rack-top virtual position
+(`startU = rack.heightU + 1`) plus expiry/style metadata, so assistant and
+built-in MCP calls preserve the same placement invariant as the UI.
+
+Assistant-authored Batch Tasks (Task definitions, Automation `runBatch`
+payloads, ad-hoc run scripts) may never introduce sudo steps or
+secret-vault references — those are configured only in the Task Library
+editor, and a full-value Task update may only resend the sudo steps the
+stored Task already carries. An assistant-created Automation's watchdog
+`config.action` must stay `notify`; the ordered IT Ops actions list
+carries the real work. Run-history reads return compact per-host outcome
+rows; `itops_get_run_report` attaches per-host output tail-capped by
+`maxOutputChars`.
+
+The page-context projection includes the current navigator selection
+(Site, destination, drill-down), Site names/ids/counts, Automation
+names/states, the Task Library count, recent run counts, and the
+registered tutorial targets — never full run output, streamed host
+buffers, secrets, or credential references. The `tutorial_highlight`
+tool's navigation payload accepts `itopsSiteId` and `itopsDestination`
+(`site | serverRooms | hosts | automations | runHistory | taskLibrary`)
+so the assistant can open a specific Site destination before
+highlighting; destination pages carry static targets
+(`itops.hostsPanel`, `itops.automationsNew`, `itops.taskLibrary`, …, see
+`src/app/tutorialNavigationModel.ts`) and rows carry entity-scoped
+targets (`itops.site:<id>`, `itops.host:<id>`, `itops.automation:<id>`,
+`itops.task:<id>`, `itops.run:<id>`). Mutating actions (starting a Batch
+Run, enabling an Automation) go through the existing approval flow; the
+assistant cannot run a site task silently. Over the built-in MCP bridge
+the same tools are published under `kkterm.itops.*`, with
+task-authoring, automation-mutating, and run-starting tools in
+`dangerous` sub-namespaces (see `docs/MCP.md`).
 
 ## Migration from Watchdog
 

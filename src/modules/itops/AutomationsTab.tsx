@@ -204,7 +204,12 @@ export function AutomationsTab({
         <h2>{t("itops.tabs.autos")}</h2>
         <p>{t("itops.automations.pageDescription")}</p>
       </div>
-      <button type="button" className="it-btn primary" onClick={() => setEditor(null)}>
+      <button
+        type="button"
+        className="it-btn primary"
+        data-tutorial-id="itops.automationsNew"
+        onClick={() => setEditor(null)}
+      >
         <ItIcon name="plus" size={14} />
         {t("itops.actions.newAutomation")}
       </button>
@@ -213,7 +218,7 @@ export function AutomationsTab({
 
   if (loaded && automations.length === 0) {
     return (
-      <div className="it-destination-surface">
+      <div className="it-destination-surface" data-tutorial-id="itops.automationsPanel">
         {pageHeader}
         <ItOpsEmptyHint>
           <Trans
@@ -229,11 +234,15 @@ export function AutomationsTab({
   }
 
   return (
-    <div className="au it-destination-surface">
+    <div className="au it-destination-surface" data-tutorial-id="itops.automationsPanel">
       {pageHeader}
       <div className="au-list">
         {automations.map((automation) => (
-          <div key={automation.id} className={`au-row${automation.enabled ? "" : " off"}`}>
+          <div
+            key={automation.id}
+            className={`au-row${automation.enabled ? "" : " off"}`}
+            data-tutorial-id={`itops.automation:${automation.id}`}
+          >
             <span className="tile" style={{ background: triggerColor(automation.config) }}>
               <ItIcon name={triggerIcon(automation.config)} size={17} sw={1.6} />
             </span>

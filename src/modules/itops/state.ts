@@ -33,6 +33,34 @@ import type { DashboardBackground } from "../dashboard/types";
 import type { WatchdogConfig } from "../../watchdog/types";
 import { sanitizeRoomObjects, type RoomObject } from "./roomObjects";
 
+/** A navigator selection requested from outside the Module: which Site to
+ * select and which of its destinations (or the global Task Library) to open. */
+export interface ItOpsNavigationRequest {
+  siteId?: string;
+  destination?:
+    | "site"
+    | "serverRooms"
+    | "hosts"
+    | "automations"
+    | "runHistory"
+    | "taskLibrary";
+}
+
+/** Where the IT Ops navigator currently is. Mirrored by the Sites tab so the
+ * assistant page context can describe the user's position; never persisted. */
+export interface ItOpsNavigationSnapshot {
+  siteId: string | null;
+  destination:
+    | "site"
+    | "serverRooms"
+    | "hosts"
+    | "automations"
+    | "runHistory"
+    | "taskLibrary";
+  serverRoom: string | null;
+  rackId: string | null;
+}
+
 export interface SiteInput {
   name: string;
   memberIds: string[];
@@ -222,6 +250,16 @@ interface ItOpsState {
    *  Sites tab (which owns the dialog + selection) opens the create flow. */
   newGroupRequest: number;
   requestNewSite: () => void;
+  /** Pending navigator selection requested from outside the Module (the AI
+   *  assistant's tutorial_highlight navigation). The Sites tab consumes and
+   *  clears it once mounted, so a request made before the Module is open
+   *  still applies. */
+  pendingNavigation: ItOpsNavigationRequest | null;
+  requestNavigation: (request: ItOpsNavigationRequest) => void;
+  clearNavigation: () => void;
+  /** The navigator's current position (see ItOpsNavigationSnapshot). */
+  navigationSnapshot: ItOpsNavigationSnapshot | null;
+  setNavigationSnapshot: (snapshot: ItOpsNavigationSnapshot) => void;
   loadSites: () => Promise<void>;
   createSite: (input: SiteInput) => Promise<Site>;
   updateSite: (id: string, input: SiteInput) => Promise<Site>;
@@ -360,6 +398,19 @@ export const useItOpsStore = create<ItOpsState>((set, get) => ({
 
   requestNewSite() {
     set({ newGroupRequest: get().newGroupRequest + 1 });
+  },
+
+  pendingNavigation: null,
+  requestNavigation(request) {
+    set({ pendingNavigation: request });
+  },
+  clearNavigation() {
+    set({ pendingNavigation: null });
+  },
+
+  navigationSnapshot: null,
+  setNavigationSnapshot(snapshot) {
+    set({ navigationSnapshot: snapshot });
   },
 
   async loadSites() {
