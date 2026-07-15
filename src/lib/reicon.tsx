@@ -16,7 +16,7 @@ import {
   Database as ReDatabase, DocumentCode2 as ReDocumentCode2, DocumentText2 as ReDocumentText2, Download as ReDownload,
   Edit2 as ReEdit2, Envelope as ReEnvelope, Eye as ReEye, EyeOff as ReEyeOff,
   File as ReFile, FilePlus as ReFilePlus, FileText as ReFileText, FileUp as ReFileUp,
-  Fingerprint as ReFingerprint, Flag as ReFlag, Folder as ReFolder, FolderOpen as ReFolderOpen,
+  Fingerprint as ReFingerprint, Flag as ReFlag, Floppy as ReFloppy, Folder as ReFolder, FolderOpen as ReFolderOpen,
   FolderPlus as ReFolderPlus, Gauge3 as ReGauge3, Gear as ReGear, Globe as ReGlobe,
   Globe2 as ReGlobe2, Grid as ReGrid, Hand as ReHand, HardDrive as ReHardDrive,
   Hashtag as ReHashtag, HeartPulse as ReHeartPulse, HelpCircle as ReHelpCircle, Home as ReHome,
@@ -77,7 +77,7 @@ const reiconIconComponents = {
   "Eye": ReEye, "EyeOff": ReEyeOff, "File": ReFile, "FileCode": ReDocumentCode2,
   "FileImage": ReImage, "FileJson": ReDocumentCode2, "FilePlus": ReFilePlus, "FileTerminal": ReTerminalSquare,
   "FileText": ReFileText, "FileUp": ReFileUp, "Fingerprint": ReFingerprint, "Flag": ReFlag,
-  "Folder": ReFolder, "FolderOpen": ReFolderOpen, "FolderPlus": ReFolderPlus, "Gauge": ReGauge3,
+  "Floppy": ReFloppy, "Folder": ReFolder, "FolderOpen": ReFolderOpen, "FolderPlus": ReFolderPlus, "Gauge": ReGauge3,
   "GitBranch": ReBranchUp, "Globe": ReGlobe, "Globe2": ReGlobe2, "Grid": ReGrid,
   "Grid2x2": ReGrid, "Hammer": ReSledgehammer, "Hand": ReHand, "HardDrive": ReHardDrive,
   "Hash": ReHashtag, "HeartPulse": ReHeartPulse, "Home": ReHome, "ImagePlus": ReImagePlus,
@@ -209,6 +209,7 @@ export const FileText = ReFileText;
 export const FileUp = ReFileUp;
 export const Fingerprint = ReFingerprint;
 export const Flag = ReFlag;
+export const Floppy = ReFloppy;
 export const Folder = ReFolder;
 export const FolderOpen = ReFolderOpen;
 export const FolderPlus = ReFolderPlus;

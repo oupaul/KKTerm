@@ -1,7 +1,7 @@
 import { ScreenshotMenu } from "../../ScreenshotMenu";
 import { documentHasWebviewBlockingOverlay } from "../../nativeOverlay";
 
-import { ArrowLeft, ArrowRight, Bot, ExternalLink, Globe2, KeyRound, Lock, RefreshCw, Save, Unlock, X } from "../../../../lib/reicon";
+import { ArrowLeft, ArrowRight, Bot, ExternalLink, Floppy, Globe2, KeyRound, Lock, RefreshCw, Unlock, X } from "../../../../lib/reicon";
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -1200,7 +1200,7 @@ export function WebViewWorkspace({
                   title={t("webview.savePasswordTitle")}
                   type="button"
                 >
-                  <Save size={15} />
+                  <Floppy size={15} />
                 </button>
                 <button
                   className="terminal-pane-action"
