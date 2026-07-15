@@ -20,6 +20,7 @@ import type {
   SiteHost,
   ItopsTransport,
   Rack,
+  RackMountFace,
   ServerRoom,
   RackItemKind,
   RackItemMetadata,
@@ -103,6 +104,7 @@ export interface PlaceItemInput {
   label: string;
   startU: number;
   heightU: number;
+  mountFace: RackMountFace;
   metadata?: RackItemMetadata;
 }
 
@@ -112,6 +114,7 @@ export interface UpdateItemInput {
   connectionId: string | null;
   label: string;
   metadata?: RackItemMetadata;
+  mountFace?: RackMountFace;
   /** Properties editor only: validate and persist a resize in the same write. */
   startU?: number;
   heightU?: number;
@@ -315,7 +318,14 @@ interface ItOpsState {
   updateRackItem: (siteId: string, input: UpdateItemInput) => Promise<void>;
   moveRackItem: (
     siteId: string,
-    input: { id: string; rackId: string; startU: number; heightU: number; slot?: number },
+    input: {
+      id: string;
+      rackId: string;
+      startU: number;
+      heightU: number;
+      slot?: number;
+      mountFace?: RackMountFace;
+    },
   ) => Promise<void>;
   removeRackItem: (siteId: string, id: string) => Promise<void>;
   refreshRackItemSnmp: (siteId: string, id: string) => Promise<void>;

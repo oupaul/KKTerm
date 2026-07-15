@@ -970,47 +970,61 @@ export function ServerRoomIsoView({
 // (+y) face the U axis runs down the element ("y"); on the east (+x) face the
 // rotateY(90°) fold maps the cabinet's up direction onto the element's width,
 // right edge = floor, so strips lay out horizontally ("x").
-function IsoRackSkin({ rack, axis }: { rack: Rack; axis: "y" | "x" }) {
+function IsoRackSkin({
+  rack,
+  axis,
+  face,
+}: {
+  rack: Rack;
+  axis: "y" | "x";
+  face: "front" | "rear";
+}) {
   const capacity = Math.max(1, rack.heightU);
   return (
     <span
       className={`rm-iso-skin axis-${axis}`}
+      data-face={face}
       data-shell={rack.shell && rack.shell !== "black" ? rack.shell : undefined}
     >
       <span className="rm-iso-skin-items">
-        {rack.items.filter((item) => item.kind !== "kuaiguai").map((item) => {
-          const topU = item.startU + item.heightU - 1;
-          const offset = ((capacity - topU) / capacity) * 100;
-          const size = (Math.max(1, item.heightU) / capacity) * 100;
-          // Fractional-width faces inset across the strip's cross axis so two
-          // devices sharing a U render side by side.
-          const { xStart, xQuarters } = rackItemXSpan(item.metadata);
-          const cross =
-            xQuarters < 4
-              ? { start: `${xStart * 25}%`, size: `${xQuarters * 25}%` }
-              : null;
-          return (
-            <i
-              key={item.id}
-              className="rm-iso-skin-item"
-              data-kind={item.kind}
-              data-status={itemStatus(item)}
-              style={
-                axis === "y"
-                  ? {
-                      top: `${offset}%`,
-                      height: `${size}%`,
-                      ...(cross ? { left: cross.start, width: cross.size } : {}),
-                    }
-                  : {
-                      left: `${offset}%`,
-                      width: `${size}%`,
-                      ...(cross ? { top: cross.start, height: cross.size } : {}),
-                    }
-              }
-            />
-          );
-        })}
+        {rack.items
+          .filter(
+            (item) =>
+              item.kind !== "kuaiguai" && (item.mountFace ?? "front") === face,
+          )
+          .map((item) => {
+            const topU = item.startU + item.heightU - 1;
+            const offset = ((capacity - topU) / capacity) * 100;
+            const size = (Math.max(1, item.heightU) / capacity) * 100;
+            // Fractional-width faces inset across the strip's cross axis so two
+            // devices sharing a U render side by side.
+            const { xStart, xQuarters } = rackItemXSpan(item.metadata);
+            const cross =
+              xQuarters < 4
+                ? { start: `${xStart * 25}%`, size: `${xQuarters * 25}%` }
+                : null;
+            return (
+              <i
+                key={item.id}
+                className="rm-iso-skin-item"
+                data-kind={item.kind}
+                data-status={itemStatus(item)}
+                style={
+                  axis === "y"
+                    ? {
+                        top: `${offset}%`,
+                        height: `${size}%`,
+                        ...(cross ? { left: cross.start, width: cross.size } : {}),
+                      }
+                    : {
+                        left: `${offset}%`,
+                        width: `${size}%`,
+                        ...(cross ? { top: cross.start, height: cross.size } : {}),
+                      }
+                }
+              />
+            );
+          })}
       </span>
     </span>
   );
@@ -1107,6 +1121,13 @@ function IsoCabinet({
       >
         <span className="rm-iso-face rm-iso-top" style={{ transform: `translateZ(${h}px)` }}>
           <span
+            className="rm-iso-front-marker"
+            style={{ transform: `translate(-50%, -50%) rotate(${facing * 90}deg)` }}
+            aria-hidden="true"
+          >
+            <ItIcon name="arrow" size={10} />
+          </span>
+          <span
             className="rm-iso-nameplate"
             style={{ transform: `translate(-50%, -50%) rotate(${facing * 90}deg)` }}
           >
@@ -1134,13 +1155,21 @@ function IsoCabinet({
           className={`rm-iso-face rm-iso-front ${southRole}`}
           style={{ width: w, height: h, top: d - h }}
         >
-          {southRole === "front" ? <IsoRackSkin rack={rack} axis="y" /> : null}
+          {southRole === "front" ? (
+            <IsoRackSkin rack={rack} axis="y" face="front" />
+          ) : southRole === "rear" ? (
+            <IsoRackSkin rack={rack} axis="y" face="rear" />
+          ) : null}
         </span>
         <span
           className={`rm-iso-face rm-iso-side ${eastRole}`}
           style={{ width: h, height: d, left: w - h }}
         >
-          {eastRole === "front" ? <IsoRackSkin rack={rack} axis="x" /> : null}
+          {eastRole === "front" ? (
+            <IsoRackSkin rack={rack} axis="x" face="front" />
+          ) : eastRole === "rear" ? (
+            <IsoRackSkin rack={rack} axis="x" face="rear" />
+          ) : null}
         </span>
       </button>
       {editMode && selected && (onRotate || onDelete) ? (

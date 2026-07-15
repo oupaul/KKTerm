@@ -261,6 +261,7 @@ export type RackItemKind =
   | "kuaiguai";
 
 export type RackItemStatus = "online" | "warning" | "offline";
+export type RackMountFace = "front" | "rear";
 
 export type RackServerFormFactor = "rack" | "tower";
 // Fractional faceplate width: several small devices (e.g. two modems) can
@@ -352,6 +353,8 @@ export interface RackItem {
   // Bottom-most U occupied (1-based) and height in U.
   startU: number;
   heightU: number;
+  // Structural mounting plane; independent from the Rack's room-facing angle.
+  mountFace: RackMountFace;
   metadata: RackItemMetadata;
 }
 

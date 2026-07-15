@@ -21,9 +21,9 @@ use super::site_storage as topo;
 use super::storage as ito;
 use super::types::{
     BatchTask, HostKind, HostScan, HostScanEvent, Rack, RackFacingEntry, RackItem, RackItemKind,
-    RackItemMetadata, RackNetworkPort, RackPlacementEntry, ResolvedHost, RoomIcon, RoomObject,
-    RunEvent, RunEventHost, RunHistoryEntry, RunScope, ServerRoom, Site, SiteFilter, SiteHost,
-    Transport,
+    RackItemMetadata, RackMountFace, RackNetworkPort, RackPlacementEntry, ResolvedHost, RoomIcon,
+    RoomObject, RunEvent, RunEventHost, RunHistoryEntry, RunScope, ServerRoom, Site, SiteFilter,
+    SiteHost, Transport,
 };
 
 fn storage(app: &AppHandle) -> State<'_, crate::storage::Storage> {
@@ -557,11 +557,12 @@ pub fn itops_place_rack_item(
     label: String,
     start_u: u32,
     height_u: u32,
+    mount_face: Option<RackMountFace>,
     metadata: Option<RackItemMetadata>,
 ) -> Result<RackItem, String> {
     let id = new_itops_id("ri");
     storage(&app).with_connection_infallible(|conn| {
-        topo::place_rack_item(
+        topo::place_rack_item_on_face(
             conn,
             &id,
             &rack_id,
@@ -570,6 +571,7 @@ pub fn itops_place_rack_item(
             &label,
             start_u,
             height_u,
+            mount_face.unwrap_or_default(),
             metadata.unwrap_or_default(),
         )
         .map_err(|error| error.to_string())
@@ -586,6 +588,7 @@ pub fn itops_update_rack_item(
     metadata: Option<RackItemMetadata>,
     start_u: Option<u32>,
     height_u: Option<u32>,
+    mount_face: Option<RackMountFace>,
 ) -> Result<RackItem, String> {
     let placement = match (start_u, height_u) {
         (Some(start_u), Some(height_u)) => Some((start_u, height_u)),
@@ -593,7 +596,7 @@ pub fn itops_update_rack_item(
         _ => return Err("startU and heightU must be supplied together".to_string()),
     };
     storage(&app).with_connection_infallible(|conn| {
-        topo::update_rack_item(
+        topo::update_rack_item_on_face(
             conn,
             &id,
             kind,
@@ -601,6 +604,7 @@ pub fn itops_update_rack_item(
             &label,
             metadata.unwrap_or_default(),
             placement,
+            mount_face,
         )
         .map_err(|error| error.to_string())
     })
@@ -614,9 +618,10 @@ pub fn itops_move_rack_item(
     start_u: u32,
     height_u: u32,
     slot: Option<u32>,
+    mount_face: Option<RackMountFace>,
 ) -> Result<RackItem, String> {
     storage(&app).with_connection_infallible(|conn| {
-        topo::move_rack_item(conn, &id, &rack_id, start_u, height_u, slot)
+        topo::move_rack_item_to_face(conn, &id, &rack_id, start_u, height_u, slot, mount_face)
             .map_err(|error| error.to_string())
     })
 }

@@ -22,7 +22,15 @@ import { ConfirmSheet } from "../../app/ui/dialog";
 import { showNativeContextMenu, type NativeContextMenuItem } from "../../lib/nativeContextMenu";
 import { nativeMenuIcons } from "../../lib/nativeMenuIcons";
 import { useWorkspaceStore } from "../../store";
-import type { Site, Rack, RackItem, RackItemKind, ResolvedHost, ServerRoom } from "../../types";
+import type {
+  Site,
+  Rack,
+  RackItem,
+  RackItemKind,
+  RackMountFace,
+  ResolvedHost,
+  ServerRoom,
+} from "../../types";
 import { ConnectionIcon } from "../workspace/connections/ConnectionIcon";
 import { ItIcon, IT_ACCENTS, type ItIconName } from "./icons";
 import { SiteDialog } from "./SiteDialog";
@@ -218,6 +226,7 @@ export function SitesTab({
     rack: Rack;
     item: RackItem | null;
     kind?: RackItemKind;
+    defaultMountFace?: RackMountFace;
     /** Picker placement flow: arm the configured draft instead of placing. */
     onConfigured?: (draft: RackItemDraft) => void;
   } | null>(null);
@@ -596,6 +605,7 @@ export function SitesTab({
         label: draft.label,
         startU,
         heightU: draft.heightU,
+        mountFace: draft.mountFace,
         metadata:
           draft.metadata.widthFraction && slot != null
             ? { ...draft.metadata, slot }
@@ -612,6 +622,7 @@ export function SitesTab({
     targetRackId: string,
     startU: number,
     xFraction?: number,
+    mountFace?: RackMountFace,
   ) {
     if (!activeGroup) return;
     const item = racks.flatMap((rack) => rack.items).find((entry) => entry.id === itemId);
@@ -626,6 +637,7 @@ export function SitesTab({
     if (
       item.rackId === targetRackId &&
       item.startU === startU &&
+      (mountFace == null || mountFace === (item.mountFace ?? "front")) &&
       (slot == null || slot === (item.metadata?.slot ?? 0))
     ) {
       return;
@@ -636,6 +648,7 @@ export function SitesTab({
         rackId: targetRackId,
         startU,
         heightU: item.heightU,
+        ...(mountFace != null ? { mountFace } : {}),
         ...(slot != null ? { slot } : {}),
       });
     } catch (error) {
@@ -1068,8 +1081,14 @@ export function SitesTab({
             roomIcons={activeGroup.roomIcons}
             hostForItem={hostForItem}
             isGhostItem={isGhostItem}
-            onConfigureDevice={(rack, kind, arm) =>
-              setItemDialog({ rack, item: null, kind, onConfigured: arm })
+            onConfigureDevice={(rack, kind, defaultMountFace, arm) =>
+              setItemDialog({
+                rack,
+                item: null,
+                kind,
+                defaultMountFace,
+                onConfigured: arm,
+              })
             }
             onPlaceDevice={(rack, draft, startU, slot) =>
               void placeConfiguredDevice(rack, draft, startU, slot)
@@ -1077,8 +1096,8 @@ export function SitesTab({
             onOpenItem={openRackItem}
             onEditItem={(rack, item) => setItemDialog({ rack, item })}
             onBindItem={setBindingsDialog}
-            onMoveItem={(itemId, targetRackId, startU, xFraction) =>
-              void moveItem(itemId, targetRackId, startU, xFraction)
+            onMoveItem={(itemId, targetRackId, startU, xFraction, mountFace) =>
+              void moveItem(itemId, targetRackId, startU, xFraction, mountFace)
             }
             onAddRack={(serverRoom) => {
               setRackDialog({
@@ -1158,6 +1177,7 @@ export function SitesTab({
           rack={itemDialog.rack}
           item={itemDialog.item}
           defaultKind={itemDialog.kind}
+          defaultMountFace={itemDialog.defaultMountFace}
           members={members}
           onClose={() => setItemDialog(null)}
           onConfigured={itemDialog.onConfigured}
@@ -1356,14 +1376,25 @@ function RackDrill({
   isGhostItem: (item: RackItem) => boolean;
   /** Picker flow: open the device dialog in configure mode; `arm` receives the
    *  configured draft so the drill can start the cursor-tracked placement. */
-  onConfigureDevice: (rack: Rack, kind: RackItemKind, arm: (draft: RackItemDraft) => void) => void;
+  onConfigureDevice: (
+    rack: Rack,
+    kind: RackItemKind,
+    defaultMountFace: RackMountFace,
+    arm: (draft: RackItemDraft) => void,
+  ) => void;
   /** Armed placement click landed on `startU` (and, for a fractional-width
    *  device, the horizontal `slot`): place the configured device. */
   onPlaceDevice: (rack: Rack, draft: RackItemDraft, startU: number, slot?: number) => void;
   onOpenItem: (item: RackItem, anchor: HTMLElement) => void;
   onEditItem: (rack: Rack, item: RackItem) => void;
   onBindItem: (item: RackItem) => void;
-  onMoveItem: (itemId: string, targetRackId: string, startU: number, xFraction?: number) => void;
+  onMoveItem: (
+    itemId: string,
+    targetRackId: string,
+    startU: number,
+    xFraction?: number,
+    mountFace?: RackMountFace,
+  ) => void;
   onAddServerRoom: () => void;
   onAddRack: (serverRoom: string) => void;
   /** Picker flow: open the New Rack dialog, hand the saved rack back for a
@@ -1392,6 +1423,12 @@ function RackDrill({
   // plan, or the 2.5D room. Persists app-wide.
   const [roomView, setRoomView] = useState<RoomViewMode>(loadRoomViewMode);
   useEffect(() => saveRoomViewMode(roomView), [roomView]);
+  const [elevationFaces, setElevationFaces] = useState<Record<string, RackMountFace>>({});
+  useEffect(() => setElevationFaces({}), [site.id, drill.serverRoom]);
+  const elevationFaceFor = useCallback(
+    (rackId: string): RackMountFace => elevationFaces[rackId] ?? "front",
+    [elevationFaces],
+  );
 
   // Host inventory for Rack View callouts.
   const siteHosts = useItOpsStore((state) => state.hostsBySite[site.id]);
@@ -1630,6 +1667,7 @@ function RackDrill({
         connectionId: null,
         kind: "kuaiguai",
         label: "",
+        mountFace: "front",
         startU: target.heightU + 1,
         heightU: KUAIGUAI_TOP_CLEARANCE_U,
         metadata: {
@@ -1753,10 +1791,18 @@ function RackDrill({
   }
 
   function elevation(r: Rack) {
+    const face = elevationFaceFor(r.id);
     return (
       <RackElevation
         key={r.id}
         rack={r}
+        face={face}
+        onToggleFace={() =>
+          setElevationFaces((current) => ({
+            ...current,
+            [r.id]: face === "front" ? "rear" : "front",
+          }))
+        }
         hostFor={hostForItem}
         reserveTopU={KUAIGUAI_TOP_CLEARANCE_U}
         editMode={editMode}
@@ -1778,6 +1824,24 @@ function RackDrill({
     );
   }
 
+  const roomElevationFaces = serverRoom?.racks.map((entry) => elevationFaceFor(entry.id)) ?? [];
+  const globalElevationFace: RackMountFace | null =
+    roomElevationFaces.length > 0 && roomElevationFaces.every((value) => value === "front")
+      ? "front"
+      : roomElevationFaces.length > 0 && roomElevationFaces.every((value) => value === "rear")
+        ? "rear"
+        : null;
+
+  function setAllElevationFaces(face: RackMountFace) {
+    if (!serverRoom) return;
+    setElevationFaces(
+      Object.fromEntries(serverRoom.racks.map((entry) => [entry.id, face])) as Record<
+        string,
+        RackMountFace
+      >,
+    );
+  }
+
   function kindLabel(kind: RackItem["kind"]) {
     return t(`itops.racks.kind.${kind}`);
   }
@@ -1793,6 +1857,7 @@ function RackDrill({
       ungrouped: t("itops.racks.ungrouped"),
       startU: t("itops.racks.startULabel"),
       heightU: t("itops.racks.heightLabel"),
+      mountingSide: t("itops.racks.mountingSideLabel"),
       type: t("itops.racks.kindLabel"),
       label: t("itops.racks.labelLabel"),
       status: t("itops.racks.statusLabel"),
@@ -1800,6 +1865,7 @@ function RackDrill({
       specs: t("itops.export.specs"),
       tags: t("itops.racks.tagsLabel"),
       deviceCount: (count) => t("itops.racks.deviceCount", { count }),
+      faceLabel: (face) => t(`itops.racks.face.${face}`),
       statusLabel: (status) => t(`itops.racks.status.${status}`, { defaultValue: status }),
     };
   }
@@ -1876,35 +1942,57 @@ function RackDrill({
         <div className="it-drill-toolbar">
           <div className="it-drill-spacer" />
           {serverRoom && !rack ? (
-            <div
-              className="rm-segmented"
-              role="group"
-              aria-label={t("itops.floorPlan.viewLabel")}
-            >
-              <button
-                type="button"
-                data-active={roomView === "elevation"}
-                onClick={() => setRoomView("elevation")}
+            <div className="it-room-view-controls">
+              <div
+                className="rm-segmented"
+                role="group"
+                aria-label={t("itops.floorPlan.viewLabel")}
               >
-                <ItIcon name="rows" size={13} />
-                {t("itops.floorPlan.viewElevation")}
-              </button>
-              <button
-                type="button"
-                data-active={roomView === "floor"}
-                onClick={() => setRoomView("floor")}
-              >
-                <ItIcon name="grid" size={13} />
-                {t("itops.floorPlan.viewFloor")}
-              </button>
-              <button
-                type="button"
-                data-active={roomView === "iso"}
-                onClick={() => setRoomView("iso")}
-              >
-                <ItIcon name="cube" size={13} />
-                {t("itops.floorPlan.view25d")}
-              </button>
+                <button
+                  type="button"
+                  data-active={roomView === "elevation"}
+                  onClick={() => setRoomView("elevation")}
+                >
+                  <ItIcon name="rows" size={13} />
+                  {t("itops.floorPlan.viewElevation")}
+                </button>
+                <button
+                  type="button"
+                  data-active={roomView === "floor"}
+                  onClick={() => setRoomView("floor")}
+                >
+                  <ItIcon name="grid" size={13} />
+                  {t("itops.floorPlan.viewFloor")}
+                </button>
+                <button
+                  type="button"
+                  data-active={roomView === "iso"}
+                  onClick={() => setRoomView("iso")}
+                >
+                  <ItIcon name="cube" size={13} />
+                  {t("itops.floorPlan.view25d")}
+                </button>
+              </div>
+              {roomView === "elevation" ? (
+                <div
+                  className="rack-face-global-control"
+                  role="group"
+                  aria-label={t("itops.racks.allRackFacesLabel")}
+                >
+                  <span>{t("itops.racks.allRackFacesLabel")}</span>
+                  {(["front", "rear"] as const).map((face) => (
+                    <button
+                      key={face}
+                      type="button"
+                      aria-pressed={globalElevationFace === face}
+                      data-active={globalElevationFace === face || undefined}
+                      onClick={() => setAllElevationFaces(face)}
+                    >
+                      {t(`itops.racks.face.${face}`)}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
             </div>
           ) : null}
           {rack ? (
@@ -2017,7 +2105,7 @@ function RackDrill({
                     setPlaceDevice(null);
                     return;
                   }
-                  onConfigureDevice(rack, kind, setPlaceDevice);
+                  onConfigureDevice(rack, kind, "front", setPlaceDevice);
                 }}
               />
             ) : null}
@@ -2134,7 +2222,14 @@ function RackDrill({
                       setPlaceDevice(null);
                       return;
                     }
-                    if (roomPickerRack) onConfigureDevice(roomPickerRack, kind, setPlaceDevice);
+                    if (roomPickerRack) {
+                      onConfigureDevice(
+                        roomPickerRack,
+                        kind,
+                        elevationFaceFor(roomPickerRack.id),
+                        setPlaceDevice,
+                      );
+                    }
                   }}
                 />
               ) : null}
@@ -2378,8 +2473,16 @@ function RackObjectPicker({
   const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const q = query.trim().toLowerCase();
-  const hasFullWidthUnit = racks.some((rack) => firstAvailableRackUnit(rack, 4) != null);
-  const hasFractionalUnit = racks.some((rack) => firstAvailableRackUnit(rack, 1) != null);
+  const hasFullWidthUnit = racks.some(
+    (rack) =>
+      firstAvailableRackUnit(rack, 4, "front") != null ||
+      firstAvailableRackUnit(rack, 4, "rear") != null,
+  );
+  const hasFractionalUnit = racks.some(
+    (rack) =>
+      firstAvailableRackUnit(rack, 1, "front") != null ||
+      firstAvailableRackUnit(rack, 1, "rear") != null,
+  );
   const rackTopAvailable = racks.some(
     (rack) => !rack.items.some((item) => isRackTopItem(item, rack.heightU)),
   );

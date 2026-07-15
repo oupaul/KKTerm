@@ -229,6 +229,35 @@ fn schema_initialization_is_idempotent_without_initial_data() {
 }
 
 #[test]
+fn current_schema_fast_path_skips_legacy_data_migrations() {
+    let db_path = temp_db_path("current-schema-fast-path");
+    drop(Storage::open(db_path.clone()).expect("initial storage opens"));
+
+    {
+        let connection = rusqlite::Connection::open(&db_path).expect("raw database opens");
+        connection
+            .execute(
+                "INSERT INTO itops_sites
+                    (id, name, sort_order, member_ids_json, filter_json, transport)
+                 VALUES ('default-fleet', 'Default Fleet', 0, '[]', NULL, 'auto')",
+                [],
+            )
+            .expect("legacy-shaped data is inserted");
+    }
+
+    drop(Storage::open(db_path.clone()).expect("current storage reopens"));
+    let connection = rusqlite::Connection::open(db_path).expect("raw database reopens");
+    let name: String = connection
+        .query_row(
+            "SELECT name FROM itops_sites WHERE id = 'default-fleet'",
+            [],
+            |row| row.get(0),
+        )
+        .expect("site remains readable");
+    assert_eq!(name, "Default Fleet");
+}
+
+#[test]
 fn create_connection_can_persist_root_ssh_connection() {
     let storage = Storage::open(temp_db_path("create")).expect("storage opens");
 

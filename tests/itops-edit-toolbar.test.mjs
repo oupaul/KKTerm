@@ -135,8 +135,8 @@ test("Rack edit mode uses the object-picker column for Rack Device types", async
   assert.match(sites, /function RackObjectPicker/);
   assert.match(sites, /RACK_ITEM_KINDS\.filter/);
   assert.match(sites, /<RackDevice/);
-  assert.match(sites, /firstAvailableRackUnit\(rack, 4\)/);
-  assert.match(sites, /firstAvailableRackUnit\(rack, 1\)/);
+  assert.match(sites, /firstAvailableRackUnit\(rack, 4, "front"\)[\s\S]*firstAvailableRackUnit\(rack, 4, "rear"\)/);
+  assert.match(sites, /firstAvailableRackUnit\(rack, 1, "front"\)[\s\S]*firstAvailableRackUnit\(rack, 1, "rear"\)/);
   assert.match(sites, /defaultKind=\{itemDialog\.kind\}/);
   assert.match(sites, /className="it-rack-layout"/);
   assert.match(css, /\.itops-page \.it-rack-layout \{/);
@@ -164,7 +164,7 @@ test("Rack device picker arms a configure-then-place flow with a cursor-snapped 
   assert.match(sites, /armedKind=\{placeDevice\?\.kind \?\? null\}/);
   // The elevation snaps the ghost to the hovered U, blocks overlaps, and
   // cancels on right-click.
-  assert.match(stage, /placeSpec=\{placeSpec\}/);
+  assert.match(stage, /placeSpec\?\.mountFace === face/);
   assert.match(rackElevation, /function snapPlacement/);
   assert.match(rackElevation, /rk-place-ghost/);
   assert.match(rackElevation, /onCancelPlacement/);

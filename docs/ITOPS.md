@@ -78,14 +78,18 @@ credentials.
 Racks grouped by the optional per-Rack `rack_group` tag.
 
 **Rack** — a durable fixed-height cabinet in one Site and one Server Room.
-It stores Rack Devices at U positions but owns no live Session state.
+It stores Rack Devices at U positions on independent Front and Rear mounting
+faces but owns no live Session state.
 
 **Rack View** — the single-Rack drill-down stage where Rack Devices are
-opened, placed, or edited.
+opened, placed, or edited. It shows Front and Rear elevations side by side
+when both faces contain devices, and always exposes both while editing.
 
-**Rack Device** — a visual device occupying a U span in a Rack. It may be
-Connection-backed or passive. It is stored in `itops_site_rack_items`; older
-code/schema may still use the `RackItem` name.
+**Rack Device** — a visual device occupying a U span on a Rack's Front or Rear
+mounting face. Each face validates U-space independently; a rack-top 乖乖 item
+belongs to the whole cabinet. A device may be Connection-backed or passive. It
+is stored in `itops_site_rack_items`; older code/schema may still use the
+`RackItem` name.
 
 **Rack Device Type** — the finite device kind that controls faceplate
 rendering and properties; it is not a Connection type.
@@ -419,7 +423,7 @@ drill-down views own an icon-only Edit / Export toolbar: edit mode gates free
 placement, Rack Device drag/drop, empty-slot add affordances, and destructive
 controls; normal mode remains an inspect/open surface. Site and Server Room
 exports save a graphical PDF report with topology summaries, scaled rack elevations,
-placed Rack Device faceplates, paginated inventory data, and platform-rendered Unicode
+Front and Rear Rack Device faceplates, paginated inventory data including mounting side, and platform-rendered Unicode
 text for localized names and labels. Rack View also saves an
 Excel-readable inventory table.
 An empty Server Room uses explanatory guidance with an inline New Rack action.
@@ -495,7 +499,7 @@ Automations (list/create/update/set-enabled/remove plus a one-shot
 (start/cancel/run-history/report). A successful mutating tool emits an
 `itops-changed` backend event that reloads the IT Ops store so the change
 appears without restart. The Rack Device placement schema includes
-`kuaiguai` and documents the rack-top virtual position
+`mountFace` (`front` or `rear`, default `front`) plus `kuaiguai`, and documents the rack-top virtual position
 (`startU = rack.heightU + 1`) plus expiry/style metadata, so assistant and
 built-in MCP calls preserve the same placement invariant as the UI.
 
@@ -549,11 +553,15 @@ durable IT Ops rules while live run state remains in-memory.
 
 ## Concrete Data Model
 
-This historical section grounds the original durable shape in the existing storage conventions
-(`src-tauri/src/storage.rs`). The schema is a single idempotent
-`CURRENT_SCHEMA` string of `CREATE TABLE IF NOT EXISTS` statements applied
-via `execute_batch` with `PRAGMA user_version`; adding tables is additive
-and only requires bumping `SCHEMA_USER_VERSION` (currently 26 → 27).
+This historical section grounds the original durable shape in the existing
+storage conventions (`src-tauri/src/storage.rs`). `CURRENT_SCHEMA` defines the
+current baseline with idempotent `CREATE TABLE IF NOT EXISTS` statements, while
+`PRAGMA user_version` selects either the migration path or the current-version
+startup fast path. Adding tables requires updating `CURRENT_SCHEMA`, bumping
+`SCHEMA_USER_VERSION`, adding a version-gated upgrade, and auditing whether any
+ongoing seed reconciliation must also run on the fast path; follow
+`docs/ARCHITECTURE.md` → "Schema initialization and migrations". The original
+change described here was schema 26 → 27.
 Ordered lists use an integer `sort_order` column, matching
 `dashboard_widget_instances`. It predates the Site rename and topology tables;
 use the Scope, Domain Concepts, and `docs/SITE.md` sections above for current
@@ -829,7 +837,8 @@ here so the design is not lost; sequence them by demand.
 renamed to **Site** across the product: the table is `itops_sites`, the
 run-history soft reference is `site_id`, and commands/i18n use the Site term.
 The Site topology layer adds per-Site **Server Rooms**, **Racks**, and **Rack
-Devices**. Racks are drawn as full 42U rack elevations and may hold placed
+Devices**. Racks are drawn as full rack elevations with independent Front and
+Rear mounting planes and may hold placed
 Connections (click to open ssh/rdp/vnc/etc.) or passive items (switch, PDU,
 patch panel). Scoped Batch Runs use Server Room / Rack scope. See
 `docs/SITE.md` for the detailed data model and product terminology.

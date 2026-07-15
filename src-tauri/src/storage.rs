@@ -13,7 +13,7 @@ use std::{
 use time::{OffsetDateTime, format_description::well_known::Rfc3339};
 use zip::{ZipArchive, ZipWriter, write::SimpleFileOptions};
 
-const SCHEMA_USER_VERSION: i32 = 47;
+const SCHEMA_USER_VERSION: i32 = 48;
 
 const DEFAULT_TERMINAL_OPACITY: u8 = 50;
 
@@ -447,6 +447,8 @@ CREATE TABLE IF NOT EXISTS itops_site_rack_items (
     label         TEXT NOT NULL DEFAULT '',
     start_u       INTEGER NOT NULL,
     height_u      INTEGER NOT NULL DEFAULT 1,
+    -- Structural mounting plane. Existing rows remain front-mounted. v48.
+    mount_face    TEXT NOT NULL DEFAULT 'front',
     metadata_json TEXT NOT NULL DEFAULT '{}',
     created_at    TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at    TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -1985,6 +1987,15 @@ impl Storage {
         let stored_version: i32 = connection
             .pragma_query_value(None, "user_version", |row| row.get(0))
             .map_err(to_storage_error)?;
+        // A current database only needs runtime-owned seed reconciliation. Skip
+        // historical schema probes and data backfills entirely on normal startup.
+        if stored_version == SCHEMA_USER_VERSION {
+            crate::dashboard_storage::seed_default(&connection)
+                .map_err(|err| format!("dashboard seed failed: {err:?}"))?;
+            crate::itops::task_storage::sync_builtin_catalog(&connection)
+                .map_err(|err| format!("IT Ops Task catalog seed failed: {err}"))?;
+            return Ok(());
+        }
         // The Dashboard tables get rebuilt only when the user's stored
         // version predates the last Dashboard-schema-changing migration
         // (v16). Pure-additive schema bumps after v16 (v17 added
@@ -2214,6 +2225,14 @@ impl Storage {
         // v41: durable rack facing (the itops_room_objects table itself comes
         // from CURRENT_SCHEMA's CREATE TABLE IF NOT EXISTS).
         ensure_column(&connection, "itops_site_racks", "facing", "INTEGER")?;
+        // v48: Rack Devices may occupy independent front and rear mounting
+        // planes. Existing placements remain front-mounted.
+        ensure_column(
+            &connection,
+            "itops_site_rack_items",
+            "mount_face",
+            "TEXT NOT NULL DEFAULT 'front'",
+        )?;
         // v42: the 2.5D floor finish belongs to the durable Server Room rather
         // than app-wide local UI state.
         ensure_column(

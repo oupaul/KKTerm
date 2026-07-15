@@ -1292,6 +1292,7 @@ type CommandMap = {
       label: string;
       startU: number;
       heightU: number;
+      mountFace?: "front" | "rear";
       metadata?: RackItemMetadata;
     };
     result: RackItem;
@@ -1305,11 +1306,12 @@ type CommandMap = {
       metadata?: RackItemMetadata;
       startU?: number;
       heightU?: number;
+      mountFace?: "front" | "rear";
     };
     result: RackItem;
   };
   itops_move_rack_item: {
-    args: { id: string; rackId: string; startU: number; heightU: number; slot?: number };
+    args: { id: string; rackId: string; startU: number; heightU: number; slot?: number; mountFace?: "front" | "rear" };
     result: RackItem;
   };
   itops_remove_rack_item: {

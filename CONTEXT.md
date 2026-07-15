@@ -154,7 +154,7 @@ A durable, Site-owned topology entity stored in `itops_server_rooms`. The topolo
 _Avoid_: region, datacenter, site object, zone
 
 **Server Room View**:
-The drill-down view for one Server Room. It offers two layouts: rack elevations (the default, racks drawn as front elevations, optionally grouped by each Rack's `rack_group` tag) and a top-down 2D floor plan that lays each Rack out as a footprint tile colored by health (worst placed-device status) or utilization (occupied U vs. capacity), the DCIM floor-plan pattern. The chosen layout and metric persist.
+The drill-down view for one Server Room. Its elevation layout can flip each Rack between Front and Rear mounting faces, individually or all at once; the spatial layouts include a top-down 2D floor plan and a 2.5D room whose cabinet skins place devices on their physical front or rear faces. Layout state persists where documented in `docs/ITOPS.md`.
 _Avoid_: area view, datacenter map
 
 **Rack**:
@@ -162,11 +162,11 @@ A durable fixed-height cabinet, usually 42U and 1000 mm deep, that belongs to on
 _Avoid_: shelf, cabinet group, host group
 
 **Rack View**:
-The single-Rack drill-down stage. It centers one Rack elevation and can show per-device callouts for Rack Devices. It is a topology view, not a live Session surface.
+The single-Rack drill-down stage. It shows Front and Rear elevations side by side when both mounting faces contain Rack Devices (and always while editing), and can show per-device callouts when one face is shown. It is a topology view, not a live Session surface.
 _Avoid_: terminal rack, device session view
 
 **Rack Device**:
-One visual device occupying a contiguous U span in a Rack. It may be Connection-backed (opens the referenced Connection's Session on click) or passive (switch, PDU, patch panel, or another visual/inventory item). Stored in `itops_site_rack_items`; older code and schema names may still say `RackItem`.
+One visual device occupying a contiguous U span on the Front or Rear mounting face of a Rack. U-space collision is independent per mounting face, while a rack-top item is shared by the cabinet. A Rack Device may be Connection-backed (opens the referenced Connection's Session on click) or passive (switch, PDU, patch panel, or another visual/inventory item). Stored in `itops_site_rack_items`; older code and schema names may still say `RackItem`.
 _Avoid_: slot, node, host card
 
 **Rack Device Type**:
@@ -174,7 +174,7 @@ The device kind used to render behavior and faceplate visuals, such as server, s
 _Avoid_: connection type, transport, session kind
 
 **Rack Device Properties**:
-Non-secret presentation metadata for a Rack Device: label, U position, height, status, accent, icon, notes, shell/faceplate fields, kind-specific values such as ports, disks, battery, load, or a Server's rack/tower form factor and front-panel style, and optional Connection bindings. Tower is a half-width faceplate presentation and does not change vertical U occupancy. Server front-panel style selects scalable artwork only. These properties do not store live Session state or credentials. The editor groups them into type, appearance, and metadata columns; bindings use a separate dialog.
+Non-secret presentation metadata for a Rack Device: label, Front/Rear mounting side, U position, height, status, accent, icon, notes, shell/faceplate fields, kind-specific values such as ports, disks, battery, load, or a Server's rack/tower form factor and front-panel style, and optional Connection bindings. Tower is a half-width faceplate presentation and does not change vertical U occupancy. Server front-panel style selects scalable artwork only. These properties do not store live Session state or credentials. The editor groups them into type, appearance, and metadata columns; bindings use a separate dialog.
 _Avoid_: secrets, runtime status, connection settings
 
 **Host**:

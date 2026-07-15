@@ -427,6 +427,32 @@ impl RackItemKind {
     }
 }
 
+/// Which cabinet face a Rack Device is mounted on. This is structural
+/// placement data, separate from a Rack's quarter-turn floor facing.
+#[derive(Clone, Copy, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum RackMountFace {
+    #[default]
+    Front,
+    Rear,
+}
+
+impl RackMountFace {
+    pub fn as_db_str(self) -> &'static str {
+        match self {
+            RackMountFace::Front => "front",
+            RackMountFace::Rear => "rear",
+        }
+    }
+
+    pub fn from_db_str(value: &str) -> Self {
+        match value {
+            "rear" => RackMountFace::Rear,
+            _ => RackMountFace::Front,
+        }
+    }
+}
+
 #[cfg(test)]
 mod rack_item_kind_tests {
     use super::RackItemKind;
@@ -656,6 +682,8 @@ pub struct RackItem {
     pub label: String,
     pub start_u: u32,
     pub height_u: u32,
+    #[serde(default)]
+    pub mount_face: RackMountFace,
     #[serde(default)]
     pub metadata: RackItemMetadata,
 }

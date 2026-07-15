@@ -109,6 +109,36 @@ Owns current SQLite schema initialization and repositories for:
 - non-secret SSH port forwarding mappings
 - dashboard views, widget instances, and AI Created Widget definitions (see `docs/DASHBOARD.md`)
 
+#### Schema initialization and migrations
+
+`Storage::initialize_schema` treats `PRAGMA user_version` as the durable schema
+authority. When the stored version equals `SCHEMA_USER_VERSION`, startup takes a
+fast path: it skips `CURRENT_SCHEMA`, historical `ensure_column` probes, table
+repairs, and one-time data backfills. Only ongoing app-owned reconciliation may
+run there. Today that is Dashboard default seeding plus IT Ops built-in Task
+catalog synchronization; both are idempotent, and catalog synchronization must
+produce no SQLite changes when its definitions are unchanged.
+
+Every schema change must preserve this contract:
+
+1. Update the current table/index shape in `CURRENT_SCHEMA` and bump
+   `SCHEMA_USER_VERSION`.
+2. Add the upgrade step after the current-version fast-path return, gated by the
+   previously stored version. One-time column checks, repairs, and data
+   backfills must not run for an already-current database.
+3. Decide explicitly whether the change introduces ongoing reconciliation. If
+   it does, invoke that work from both the current-version fast path and the
+   post-migration seed tail (or a shared helper used by both); it must be
+   idempotent and write-free when nothing changed. Ordinary schema migrations do
+   not belong on the fast path.
+4. Add coverage for upgrading an older version and reopening a current version.
+   Seed/catalog changes also need a regression proving that a second unchanged
+   reconciliation produces no database changes.
+
+Do not squash historical migrations merely to reduce the version count: direct
+upgrades from supported older releases still need those steps. The fast path is
+what keeps that history out of normal startup.
+
 Plaintext secrets are never stored in SQLite. When the encrypted SQLite backend is selected, SQLite stores only encrypted secret rows plus KDF/cipher metadata.
 
 ### Secrets

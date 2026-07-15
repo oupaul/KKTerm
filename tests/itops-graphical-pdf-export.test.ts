@@ -6,8 +6,9 @@ import { createItOpsPdfBytes, rackPdfDocument, type ItOpsExportLabels } from "..
 const labels: ItOpsExportLabels = {
   devices: "Devices", noRacks: "No racks", noDevices: "No devices", inventory: "Inventory",
   rack: "Rack", group: "Group", ungrouped: "Ungrouped", startU: "Start U", heightU: "Height U",
+  mountingSide: "Mounting side",
   type: "Type", label: "Label", status: "Status", connection: "Connection", specs: "Specs", tags: "Tags",
-  deviceCount: (count) => `${count} devices`, statusLabel: (status) => status,
+  deviceCount: (count) => `${count} devices`, faceLabel: (face) => face, statusLabel: (status) => status,
 };
 const site = { id: "site-1", name: "Taipei", connectionIds: [], filter: null } as Site;
 const rack = {

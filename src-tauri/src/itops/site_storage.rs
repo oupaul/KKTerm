@@ -8,8 +8,8 @@ use rusqlite::{Connection as SqliteConnection, OptionalExtension, params};
 use super::inventory::normalize_metadata;
 use super::storage::ItopsStorageError;
 use super::types::{
-    Rack, RackFacingEntry, RackItem, RackItemKind, RackItemMetadata, RackPlacementEntry,
-    RoomObject, ServerRoom,
+    Rack, RackFacingEntry, RackItem, RackItemKind, RackItemMetadata, RackMountFace,
+    RackPlacementEntry, RoomObject, ServerRoom,
 };
 use crate::dashboard_storage::DashboardBackground;
 
@@ -457,7 +457,7 @@ fn parse_metadata(kind: RackItemKind, raw: &str) -> RackItemMetadata {
 fn row_to_item(row: &rusqlite::Row<'_>) -> rusqlite::Result<RackItem> {
     let kind_raw: String = row.get(3)?;
     let kind = RackItemKind::from_db_str(&kind_raw).unwrap_or(RackItemKind::Blank);
-    let metadata_json: String = row.get(7)?;
+    let metadata_json: String = row.get(8)?;
     Ok(RackItem {
         id: row.get(0)?,
         rack_id: row.get(1)?,
@@ -466,11 +466,12 @@ fn row_to_item(row: &rusqlite::Row<'_>) -> rusqlite::Result<RackItem> {
         label: row.get(4)?,
         start_u: row.get(5)?,
         height_u: row.get(6)?,
+        mount_face: RackMountFace::from_db_str(&row.get::<_, String>(7)?),
         metadata: parse_metadata(kind, &metadata_json),
     })
 }
 
-const SELECT_ITEM_COLUMNS: &str = "id, rack_id, connection_id, kind, label, start_u, height_u, metadata_json \
+const SELECT_ITEM_COLUMNS: &str = "id, rack_id, connection_id, kind, label, start_u, height_u, mount_face, metadata_json \
      FROM itops_site_rack_items";
 
 fn list_items_for_rack(conn: &SqliteConnection, rack_id: &str) -> Result<Vec<RackItem>> {
@@ -484,9 +485,17 @@ fn list_items_for_rack(conn: &SqliteConnection, rack_id: &str) -> Result<Vec<Rac
 }
 
 /// Existing spans in a rack, paired with their item ids (for overlap checks).
-fn existing_spans(conn: &SqliteConnection, rack_id: &str) -> Result<Vec<(String, Span)>> {
+fn existing_spans(
+    conn: &SqliteConnection,
+    rack_id: &str,
+    mount_face: RackMountFace,
+    rack_height_u: u32,
+) -> Result<Vec<(String, Span)>> {
     Ok(list_items_for_rack(conn, rack_id)?
         .into_iter()
+        // Rack-top objects are face-independent; in-cabinet devices collide
+        // only with other devices on the same mounting plane.
+        .filter(|item| item.mount_face == mount_face || item.start_u == rack_height_u + 1)
         .map(|item| {
             let (x_start, x_quarters) = metadata_x_span(&item.metadata);
             (
@@ -1004,10 +1013,37 @@ pub fn place_rack_item(
     height_u: u32,
     metadata: RackItemMetadata,
 ) -> Result<RackItem> {
+    place_rack_item_on_face(
+        conn,
+        id,
+        rack_id,
+        connection_id,
+        kind,
+        label,
+        start_u,
+        height_u,
+        RackMountFace::Front,
+        metadata,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn place_rack_item_on_face(
+    conn: &SqliteConnection,
+    id: &str,
+    rack_id: &str,
+    connection_id: Option<String>,
+    kind: RackItemKind,
+    label: &str,
+    start_u: u32,
+    height_u: u32,
+    mount_face: RackMountFace,
+    metadata: RackItemMetadata,
+) -> Result<RackItem> {
     let connection_id = normalize_item_connection(kind, connection_id)?;
     let metadata = normalize_item_metadata(kind, metadata);
     let rack_height = fetch_rack_height(conn, rack_id)?;
-    let existing = existing_spans(conn, rack_id)?;
+    let existing = existing_spans(conn, rack_id, mount_face, rack_height)?;
     let (x_start, x_quarters) = metadata_x_span(&metadata);
     validate_item_placement(
         kind,
@@ -1024,8 +1060,8 @@ pub fn place_rack_item(
     let metadata_json = metadata_to_json(&metadata)?;
     conn.execute(
         "INSERT INTO itops_site_rack_items
-            (id, rack_id, connection_id, kind, label, start_u, height_u, metadata_json)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (id, rack_id, connection_id, kind, label, start_u, height_u, mount_face, metadata_json)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
         params![
             id,
             rack_id,
@@ -1034,6 +1070,7 @@ pub fn place_rack_item(
             label.trim(),
             start_u,
             height_u,
+            mount_face.as_db_str(),
             metadata_json
         ],
     )?;
@@ -1045,6 +1082,7 @@ pub fn place_rack_item(
         label: label.trim().to_string(),
         start_u,
         height_u,
+        mount_face,
         metadata,
     })
 }
@@ -1060,7 +1098,31 @@ pub fn update_rack_item(
     metadata: RackItemMetadata,
     placement: Option<(u32, u32)>,
 ) -> Result<RackItem> {
+    update_rack_item_on_face(
+        conn,
+        id,
+        kind,
+        connection_id,
+        label,
+        metadata,
+        placement,
+        None,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn update_rack_item_on_face(
+    conn: &SqliteConnection,
+    id: &str,
+    kind: RackItemKind,
+    connection_id: Option<String>,
+    label: &str,
+    metadata: RackItemMetadata,
+    placement: Option<(u32, u32)>,
+    mount_face: Option<RackMountFace>,
+) -> Result<RackItem> {
     let current = fetch_item(conn, id)?;
+    let mount_face = mount_face.unwrap_or(current.mount_face);
     let rack_height = fetch_rack_height(conn, &current.rack_id)?;
     if current.start_u == rack_height + 1 && kind != RackItemKind::Kuaiguai {
         return Err(ItopsStorageError::Validation(
@@ -1074,7 +1136,7 @@ pub fn update_rack_item(
     // Width/slot and height changes alter the final footprint: validate the
     // combined state before storing any part of the edit.
     let (x_start, x_quarters) = metadata_x_span(&metadata);
-    let existing = existing_spans(conn, &current.rack_id)?;
+    let existing = existing_spans(conn, &current.rack_id, mount_face, rack_height)?;
     validate_item_placement(
         kind,
         rack_height,
@@ -1091,7 +1153,7 @@ pub fn update_rack_item(
     let affected = conn.execute(
         "UPDATE itops_site_rack_items
          SET kind = ?, connection_id = ?, label = ?, start_u = ?, height_u = ?,
-             metadata_json = ?, updated_at = CURRENT_TIMESTAMP
+             mount_face = ?, metadata_json = ?, updated_at = CURRENT_TIMESTAMP
          WHERE id = ?",
         params![
             kind.as_db_str(),
@@ -1099,6 +1161,7 @@ pub fn update_rack_item(
             label.trim(),
             start_u,
             height_u,
+            mount_face.as_db_str(),
             metadata_json,
             id
         ],
@@ -1121,14 +1184,27 @@ pub fn move_rack_item(
     height_u: u32,
     slot: Option<u32>,
 ) -> Result<RackItem> {
+    move_rack_item_to_face(conn, id, rack_id, start_u, height_u, slot, None)
+}
+
+pub fn move_rack_item_to_face(
+    conn: &SqliteConnection,
+    id: &str,
+    rack_id: &str,
+    start_u: u32,
+    height_u: u32,
+    slot: Option<u32>,
+    mount_face: Option<RackMountFace>,
+) -> Result<RackItem> {
     let current = fetch_item(conn, id)?;
+    let mount_face = mount_face.unwrap_or(current.mount_face);
     let mut metadata = current.metadata.clone();
     if slot.is_some() && metadata.width_fraction.is_some() {
         metadata.slot = slot;
         metadata = normalize_metadata(metadata);
     }
     let rack_height = fetch_rack_height(conn, rack_id)?;
-    let existing = existing_spans(conn, rack_id)?;
+    let existing = existing_spans(conn, rack_id, mount_face, rack_height)?;
     let (x_start, x_quarters) = metadata_x_span(&metadata);
     validate_item_placement(
         current.kind,
@@ -1145,9 +1221,9 @@ pub fn move_rack_item(
     let metadata_json = metadata_to_json(&metadata)?;
     let affected = conn.execute(
         "UPDATE itops_site_rack_items
-         SET rack_id = ?, start_u = ?, height_u = ?, metadata_json = ?, updated_at = CURRENT_TIMESTAMP
+         SET rack_id = ?, start_u = ?, height_u = ?, mount_face = ?, metadata_json = ?, updated_at = CURRENT_TIMESTAMP
          WHERE id = ?",
-        params![rack_id, start_u, height_u, metadata_json, id],
+        params![rack_id, start_u, height_u, mount_face.as_db_str(), metadata_json, id],
     )?;
     if affected == 0 {
         return Err(ItopsStorageError::NotFound);
@@ -1251,6 +1327,7 @@ mod tests {
                 label TEXT NOT NULL DEFAULT '',
                 start_u INTEGER NOT NULL,
                 height_u INTEGER NOT NULL,
+                mount_face TEXT NOT NULL DEFAULT 'front',
                 metadata_json TEXT NOT NULL DEFAULT '{}',
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -1263,7 +1340,12 @@ mod tests {
     }
 
     fn span(start_u: u32, height_u: u32) -> Span {
-        Span { start_u, height_u, x_start: 0, x_quarters: 4 }
+        Span {
+            start_u,
+            height_u,
+            x_start: 0,
+            x_quarters: 4,
+        }
     }
 
     fn fractional(start_u: u32, height_u: u32, x_start: u32, x_quarters: u32) -> Span {
@@ -1723,6 +1805,91 @@ mod tests {
 
         remove_rack_item(&conn, "i1").unwrap();
         assert_eq!(list_racks(&conn, "f1").unwrap()[0].items.len(), 2);
+    }
+
+    #[test]
+    fn front_and_rear_mounting_faces_validate_independently() {
+        let conn = open_test_db();
+        create_rack(&conn, "r1", "f1", "A12", "Room B", "", None, 42, 1000, None).unwrap();
+
+        let front = place_rack_item_on_face(
+            &conn,
+            "front-device",
+            "r1",
+            None,
+            RackItemKind::Server,
+            "front",
+            20,
+            2,
+            RackMountFace::Front,
+            RackItemMetadata::default(),
+        )
+        .unwrap();
+        let rear = place_rack_item_on_face(
+            &conn,
+            "rear-device",
+            "r1",
+            None,
+            RackItemKind::Switch,
+            "rear",
+            20,
+            2,
+            RackMountFace::Rear,
+            RackItemMetadata::default(),
+        )
+        .unwrap();
+        assert_eq!(front.mount_face, RackMountFace::Front);
+        assert_eq!(rear.mount_face, RackMountFace::Rear);
+
+        assert!(matches!(
+            place_rack_item_on_face(
+                &conn,
+                "rear-overlap",
+                "r1",
+                None,
+                RackItemKind::Pdu,
+                "blocked",
+                21,
+                1,
+                RackMountFace::Rear,
+                RackItemMetadata::default(),
+            ),
+            Err(ItopsStorageError::Validation(_))
+        ));
+
+        assert!(matches!(
+            move_rack_item_to_face(
+                &conn,
+                "front-device",
+                "r1",
+                20,
+                2,
+                None,
+                Some(RackMountFace::Rear),
+            ),
+            Err(ItopsStorageError::Validation(_))
+        ));
+
+        let moved = move_rack_item_to_face(
+            &conn,
+            "front-device",
+            "r1",
+            10,
+            2,
+            None,
+            Some(RackMountFace::Rear),
+        )
+        .unwrap();
+        assert_eq!(moved.mount_face, RackMountFace::Rear);
+
+        let items = &list_racks(&conn, "f1").unwrap()[0].items;
+        assert_eq!(
+            items
+                .iter()
+                .filter(|item| item.mount_face == RackMountFace::Rear)
+                .count(),
+            2
+        );
     }
 
     #[test]

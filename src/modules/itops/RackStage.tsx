@@ -6,7 +6,13 @@
 
 import { useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { Rack, RackItem, RackItemStatus, SiteHost } from "../../types";
+import type {
+  Rack,
+  RackItem,
+  RackItemStatus,
+  RackMountFace,
+  SiteHost,
+} from "../../types";
 import { childHostsOf, hostDisplayName } from "./hostTree";
 import { selectRandomRackCallouts, summarizeRackDeviceMetadata } from "./rackInventory";
 import { RackElevation, U_PX } from "./RackElevation";
@@ -97,7 +103,13 @@ export function RackStage({
   onEditRack?: (rack: Rack) => void;
   onDeleteRack?: (rack: Rack) => void;
   onRunRack?: (rack: Rack) => void;
-  onMoveItem?: (itemId: string, targetRackId: string, startU: number, xFraction?: number) => void;
+  onMoveItem?: (
+    itemId: string,
+    targetRackId: string,
+    startU: number,
+    xFraction?: number,
+    mountFace?: RackMountFace,
+  ) => void;
   onDeleteItem?: (item: RackItem) => void;
   editMode?: boolean;
   /** Armed picker placement pass-through (see RackElevation). */
@@ -110,6 +122,21 @@ export function RackStage({
   const [unitPx, setUnitPx] = useState(U_PX);
   const [geom, setGeom] = useState<{ top: number; height: number; left: number; right: number } | null>(
     null,
+  );
+  const frontItems = rack.items.filter(
+    (item) => item.kind !== "kuaiguai" && (item.mountFace ?? "front") === "front",
+  );
+  const rearItems = rack.items.filter(
+    (item) => item.kind !== "kuaiguai" && item.mountFace === "rear",
+  );
+  const dualFace = editMode || (frontItems.length > 0 && rearItems.length > 0);
+  const faces: RackMountFace[] = dualFace
+    ? ["front", "rear"]
+    : rearItems.length > 0 && frontItems.length === 0
+      ? ["rear"]
+      : ["front"];
+  const visibleItems = rack.items.filter(
+    (item) => item.kind === "kuaiguai" || (item.mountFace ?? "front") === faces[0],
   );
   const randomCallouts = selectRandomRackCallouts(rack.items, rack.id, 2);
 
@@ -157,9 +184,9 @@ export function RackStage({
   // Build balloons: alternate sides by top-of-rack order, then enforce a
   // minimum vertical gap within each side so callouts don't collide.
   let balloons: Balloon[] = [];
-  if (geom && rack.items.length > 0) {
+  if (!dualFace && geom && visibleItems.length > 0) {
     const rowPx = geom.height / rack.heightU;
-    const ordered = [...rack.items].sort(
+    const ordered = [...visibleItems].sort(
       (a, b) => b.startU + b.heightU - (a.startU + a.heightU),
     );
     balloons = ordered.map((item, index) => {
@@ -177,28 +204,43 @@ export function RackStage({
   }
 
   return (
-    <div className="rk-stage" ref={stageRef}>
-      <div className="rk-stage-rack">
-        <RackElevation
-          rack={rack}
-          unitPx={unitPx}
-          hideHeader
-          reserveTopU={KUAIGUAI_TOP_CLEARANCE_U}
-          hostFor={hostFor}
-          isGhost={isGhost}
-          editMode={editMode}
-          onOpenItem={onOpenItem}
-          onEditItem={onEditItem}
-          onBindItem={onBindItem}
-          onEditRack={onEditRack}
-          onDeleteRack={onDeleteRack}
-          onRunRack={onRunRack}
-          onMoveItem={onMoveItem}
-          onDeleteItem={onDeleteItem}
-          placeSpec={placeSpec}
-          onPlaceAt={onPlaceAt}
-          onCancelPlacement={onCancelPlacement}
-        />
+    <div className={`rk-stage${dualFace ? " dual-face" : ""}`} ref={stageRef}>
+      <div className="rk-stage-racks">
+        {faces.map((face) => (
+          <div className="rk-stage-rack" data-face={face} key={face}>
+            <div className="rk-stage-face-label">{t(`itops.racks.face.${face}`)}</div>
+            <RackElevation
+              rack={rack}
+              face={face}
+              unitPx={unitPx}
+              hideHeader
+              showRackTop={faces.length === 1 || face === "front"}
+              reserveTopU={KUAIGUAI_TOP_CLEARANCE_U}
+              hostFor={hostFor}
+              isGhost={isGhost}
+              editMode={editMode}
+              onOpenItem={onOpenItem}
+              onEditItem={onEditItem}
+              onBindItem={onBindItem}
+              onEditRack={onEditRack}
+              onDeleteRack={onDeleteRack}
+              onRunRack={onRunRack}
+              onMoveItem={onMoveItem}
+              onDeleteItem={onDeleteItem}
+              placeSpec={
+                placeSpec?.kind === "kuaiguai"
+                  ? faces.length === 1 || face === "front"
+                    ? placeSpec
+                    : null
+                  : placeSpec?.mountFace === face
+                    ? placeSpec
+                    : null
+              }
+              onPlaceAt={onPlaceAt}
+              onCancelPlacement={onCancelPlacement}
+            />
+          </div>
+        ))}
       </div>
       {geom
         ? balloons.map((b) => {

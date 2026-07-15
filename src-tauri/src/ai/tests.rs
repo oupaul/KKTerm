@@ -2502,7 +2502,7 @@ fn dashboard_update_custom_widget_tool_accepts_structured_script_body_patch() {
 }
 
 #[test]
-fn itops_rack_item_tools_expose_rack_top_kuaiguai_contract() {
+fn itops_rack_item_tools_expose_mounting_face_and_rack_top_contracts() {
     let settings: AiAssistantToolSettings = serde_json::from_value(json!({
         "itops": true
     }))
@@ -2516,6 +2516,10 @@ fn itops_rack_item_tools_expose_rack_top_kuaiguai_contract() {
         .iter()
         .find(|tool| tool.function.name == "itops_update_rack_item")
         .expect("IT Ops update-rack-item tool exists");
+    let move_item = tools
+        .iter()
+        .find(|tool| tool.function.name == "itops_move_rack_item")
+        .expect("IT Ops move-rack-item tool exists");
 
     for tool in [place, update] {
         let kinds = tool
@@ -2537,7 +2541,20 @@ fn itops_rack_item_tools_expose_rack_top_kuaiguai_contract() {
                 .pointer("/properties/metadata/properties/kuaiguaiStyle/enum"),
             Some(&json!(["full", "laidDown"]))
         );
+        assert_eq!(
+            tool.function
+                .parameters
+                .pointer("/properties/mountFace/enum"),
+            Some(&json!(["front", "rear"]))
+        );
     }
+    assert_eq!(
+        move_item
+            .function
+            .parameters
+            .pointer("/properties/mountFace/enum"),
+        Some(&json!(["front", "rear"]))
+    );
     assert!(place.function.description.contains("rack.heightU + 1"));
     assert!(place.function.description.contains("heightU 4"));
 }

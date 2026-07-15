@@ -2942,13 +2942,14 @@ fn ai_tool_definitions_with_skills(
         ));
         tools.push(tool_definition(
             "itops_place_rack_item",
-            "Place one Rack Device into a Rack. Call itops_list_racks first. For an in-cabinet device, startU is its lowest occupied U (1 = bottom) and startU..startU+heightU-1 must fit without overlap. To place a standing Kuai Kuai package on the rack top, use kind \"kuaiguai\", startU = rack.heightU + 1, heightU 4, and metadata.kuaiguaiStyle \"full\"; a laid-down package uses heightU 1 and \"laidDown\". metadata.expiry is an ISO date (YYYY-MM-DD). Only one Kuai Kuai may occupy a rack top. kind \"connection\" requires connectionId; other kinds are passive inventory/visual devices. Metadata never contains secrets.",
+            "Place one Rack Device into a Rack. Call itops_list_racks first. mountFace is front or rear and defaults to front; overlap validation is independent per face. For an in-cabinet device, startU is its lowest occupied U (1 = bottom) and startU..startU+heightU-1 must fit without overlap on that face. To place a standing Kuai Kuai package on the rack top, use kind \"kuaiguai\", startU = rack.heightU + 1, heightU 4, and metadata.kuaiguaiStyle \"full\"; a laid-down package uses heightU 1 and \"laidDown\". metadata.expiry is an ISO date (YYYY-MM-DD). Only one Kuai Kuai may occupy a rack top regardless of face. kind \"connection\" requires connectionId; other kinds are passive inventory/visual devices. Metadata never contains secrets.",
             json!({"type":"object","properties":{
                 "rackId":{"type":"string"},
                 "kind":{"type":"string","enum":["connection","server","storage","switch","router","firewall","pdu","ups","kvm","patchPanel","genericDevice","kuaiguai"]},
                 "label":{"type":"string"},
                 "startU":{"type":"integer","minimum":1},
                 "heightU":{"type":"integer","minimum":1},
+                "mountFace":{"type":"string","enum":["front","rear"]},
                 "connectionId":{"type":"string"},
                 "metadata":{"type":"object","properties":{
                     "expiry":{"type":"string","description":"ISO date in YYYY-MM-DD form"},
@@ -2960,12 +2961,13 @@ fn ai_tool_definitions_with_skills(
         ));
         tools.push(tool_definition(
             "itops_update_rack_item",
-            "Update one Rack Device's kind, label, Connection binding, or metadata by id (position changes go through itops_move_rack_item). kind includes \"kuaiguai\"; its metadata may include expiry (YYYY-MM-DD), kuaiguaiStyle (\"full\"|\"laidDown\"), kuaiguaiSize, and rotation. Submit full new values: omitted metadata clears previously stored metadata, so read the device from itops_list_racks first and resend the fields you want to keep.",
+            "Update one Rack Device's kind, label, mounting face, Connection binding, or metadata by id (position changes go through itops_move_rack_item). mountFace is front or rear; omit it to retain the current face. kind includes \"kuaiguai\"; its metadata may include expiry (YYYY-MM-DD), kuaiguaiStyle (\"full\"|\"laidDown\"), kuaiguaiSize, and rotation. Submit full new values: omitted metadata clears previously stored metadata, so read the device from itops_list_racks first and resend the fields you want to keep.",
             json!({"type":"object","properties":{
                 "id":{"type":"string"},
                 "kind":{"type":"string","enum":["connection","server","storage","switch","router","firewall","pdu","ups","kvm","patchPanel","genericDevice","kuaiguai"]},
                 "label":{"type":"string"},
                 "connectionId":{"type":"string"},
+                "mountFace":{"type":"string","enum":["front","rear"]},
                 "metadata":{"type":"object","properties":{
                     "expiry":{"type":"string","description":"ISO date in YYYY-MM-DD form"},
                     "kuaiguaiStyle":{"type":"string","enum":["full","laidDown"]},
@@ -2976,12 +2978,13 @@ fn ai_tool_definitions_with_skills(
         ));
         tools.push(tool_definition(
             "itops_move_rack_item",
-            "Move and/or resize one Rack Device by id — possibly into a different Rack. The new U span is validated against the target rack (bounds and overlaps).",
+            "Move and/or resize one Rack Device by id — possibly into a different Rack or onto the other mounting face. The new U span is validated against the target rack and face (bounds and overlaps).",
             json!({"type":"object","properties":{
                 "id":{"type":"string"},
                 "rackId":{"type":"string"},
                 "startU":{"type":"integer","minimum":1},
-                "heightU":{"type":"integer","minimum":1}
+                "heightU":{"type":"integer","minimum":1},
+                "mountFace":{"type":"string","enum":["front","rear"]}
             },"required":["id","rackId","startU","heightU"]}),
         ));
         tools.push(tool_definition(
@@ -4584,7 +4587,7 @@ pub(crate) async fn itops_tool(app: &tauri::AppHandle, name: &str, args: Value) 
     use crate::itops::task_storage as itops_tasks;
     use crate::itops::types::{
         AutomationAction, BatchTask, HostKind, ItopsTask, RackItemKind, RackItemMetadata,
-        RunHistoryEntry, RunScope, SiteFilter, TaskOperatingSystem, Transport,
+        RackMountFace, RunHistoryEntry, RunScope, SiteFilter, TaskOperatingSystem, Transport,
     };
     use crate::watchdog::WatchdogRegistry;
     use crate::watchdog::types::{WatchdogAction, WatchdogConfig};
@@ -4618,6 +4621,14 @@ pub(crate) async fn itops_tool(app: &tauri::AppHandle, name: &str, args: Value) 
             None | Some(Value::Null) => Ok(RackItemMetadata::default()),
             Some(value) => serde_json::from_value(value.clone())
                 .map_err(|error| format!("invalid metadata: {error}")),
+        }
+    }
+    fn optional_mount_face(args: &Value) -> Result<Option<RackMountFace>, String> {
+        match args.get("mountFace") {
+            None | Some(Value::Null) => Ok(None),
+            Some(value) => serde_json::from_value(value.clone())
+                .map(Some)
+                .map_err(|_| "mountFace must be front or rear".to_string()),
         }
     }
     fn optional_connection_id(args: &Value) -> Option<String> {
@@ -5007,7 +5018,7 @@ pub(crate) async fn itops_tool(app: &tauri::AppHandle, name: &str, args: Value) 
                 let height_u = required_u32(&args, "heightU")?;
                 let metadata = item_metadata(&args)?;
                 let id = new_itops_id("ri");
-                itops_topo::place_rack_item(
+                itops_topo::place_rack_item_on_face(
                     conn,
                     &id,
                     &rack_id,
@@ -5016,6 +5027,7 @@ pub(crate) async fn itops_tool(app: &tauri::AppHandle, name: &str, args: Value) 
                     &label,
                     start_u,
                     height_u,
+                    optional_mount_face(&args)?.unwrap_or_default(),
                     metadata,
                 )
                 .map(to_value)
@@ -5026,7 +5038,7 @@ pub(crate) async fn itops_tool(app: &tauri::AppHandle, name: &str, args: Value) 
                 let kind = item_kind(&args)?;
                 let label = arg_string(&args, "label");
                 let metadata = item_metadata(&args)?;
-                itops_topo::update_rack_item(
+                itops_topo::update_rack_item_on_face(
                     conn,
                     &id,
                     kind,
@@ -5034,6 +5046,7 @@ pub(crate) async fn itops_tool(app: &tauri::AppHandle, name: &str, args: Value) 
                     &label,
                     metadata,
                     None,
+                    optional_mount_face(&args)?,
                 )
                 .map(to_value)
                 .map_err(|e| e.to_string())
@@ -5043,9 +5056,17 @@ pub(crate) async fn itops_tool(app: &tauri::AppHandle, name: &str, args: Value) 
                 let rack_id = required_string(&args, "rackId")?;
                 let start_u = required_u32(&args, "startU")?;
                 let height_u = required_u32(&args, "heightU")?;
-                itops_topo::move_rack_item(conn, &id, &rack_id, start_u, height_u, None)
-                    .map(to_value)
-                    .map_err(|e| e.to_string())
+                itops_topo::move_rack_item_to_face(
+                    conn,
+                    &id,
+                    &rack_id,
+                    start_u,
+                    height_u,
+                    None,
+                    optional_mount_face(&args)?,
+                )
+                .map(to_value)
+                .map_err(|e| e.to_string())
             }
             "itops_remove_rack_item" => {
                 let id = required_string(&args, "id")?;

@@ -108,12 +108,16 @@ Replaces the **Host Group** entry in `CONTEXT.md`; adds the rest. Follows the
 - **Rack** — a durable, fixed-height (default 42U) cabinet that belongs to one
   Site, grouped by **Server Room** (topology Site → Server Room → Rack), with
   an optional **shell** finish (black/white/grey). Holds Rack Devices at U
-  positions. Stored in `itops_site_racks`. _Avoid_: cabinet group, shelf.
-- **Rack View** — the single-Rack drill-down stage. It centers one rack
-  elevation with per-device balloon callouts and is the place where a user
-  opens or edits a Rack Device. _Avoid_: floor plan, topology graph.
+  positions on independent Front and Rear mounting faces. Stored in
+  `itops_site_racks`. _Avoid_: cabinet group, shelf.
+- **Rack View** — the single-Rack drill-down stage. It centers one mounting
+  face when only that face is occupied and shows labeled Front and Rear
+  elevations side by side when both are occupied (and while editing). It is the
+  place where a user opens or edits a Rack Device. _Avoid_: floor plan,
+  topology graph.
 - **Rack Device** — one device occupying a contiguous
-  `start_u..start_u+height_u` span in a Rack. Either **Connection-backed**
+  `start_u..start_u+height_u` span on a Rack's Front or Rear mounting face.
+  Occupancy is validated independently per face. Either **Connection-backed**
   (carries a `connection_id`, clickable to open its Session) or **passive** (a
   switch, PDU, patch panel, blank filler, or label — inventory/visual only, not
   openable). Stored in `itops_site_rack_items`; code and schema may still use
@@ -136,7 +140,10 @@ Replaces the **Host Group** entry in `CONTEXT.md`; adds the rest. Follows the
 Mirrors `src-tauri/src/itops/storage.rs` conventions: free functions over
 `&SqliteConnection`, JSON `TEXT` for non-relational fields, integer
 `sort_order`, idempotent `CREATE TABLE IF NOT EXISTS` appended to
-`CURRENT_SCHEMA`, schema bump via `PRAGMA user_version`.
+`CURRENT_SCHEMA`, and versioned upgrades selected through `PRAGMA user_version`.
+All later topology schema changes must preserve the current-version startup fast
+path and follow `docs/ARCHITECTURE.md` → "Schema initialization and migrations",
+including the explicit audit for any ongoing seed reconciliation.
 
 ### Schema migration (bump `SCHEMA_USER_VERSION` 33 → 34)
 
@@ -194,6 +201,7 @@ CREATE TABLE IF NOT EXISTS itops_site_rack_items (
     label         TEXT NOT NULL DEFAULT '',
     start_u       INTEGER NOT NULL,        -- bottom-most U occupied (1-based)
     height_u      INTEGER NOT NULL DEFAULT 1,
+    mount_face    TEXT NOT NULL DEFAULT 'front', -- 'front' | 'rear'
     -- Presentation only: accent color, icon, notes, plus faceplate fields
     -- (status, ports, disks, battery, load). No secrets, no live state.
     metadata_json TEXT NOT NULL DEFAULT '{}',
@@ -263,6 +271,8 @@ pub struct RackItem {
     pub label: String,
     pub start_u: u32,
     pub height_u: u32,
+    #[serde(default)]
+    pub mount_face: RackMountFace,
     #[serde(default)]
     pub metadata: RackItemMetadata,   // non-secret rack inventory/presentation metadata
 }
@@ -358,8 +368,9 @@ The visible IT Ops Module opens directly into the Site topology surface:
   controls render only for the clicked selection. Empty-space right-click
   opens the shared Dashboard background picker; the room floor finish is a
   durable Server Room property rather than an always-visible canvas palette.
-- **Rack View** — selecting a Rack centers its front elevation and Rack Device
-  properties/placement interactions. The Rack name/specifications live in the
+- **Rack View** — selecting a Rack centers its occupied mounting face, or shows
+  Front and Rear side by side when both contain devices; Edit mode always shows
+  both as drop targets. The Rack name/specifications live in the
   top-middle toolbar. An armed Rack Device remains under the pointer outside the
   cabinet, magnetically snaps to a nearby U, and cancels on right-click, Escape,
   picker disarm, or navigation. 乖乖 alone can also snap to the rack top (the
@@ -390,8 +401,9 @@ management tab chrome is hidden while the Site-only UI is active.
 
 ### Rack elevation component (`RackElevation.tsx`)
 
-- Renders a fixed `height_u` column of U slots (U-number gutter on the left,
-  numbered top-down as real racks are). Pure SVG/flex/CSS — **no new heavy
+- Renders a fixed `height_u` column of U slots (the U-number gutter is left on
+  Front and right on Rear, numbered top-down as real racks are). Pure
+  SVG/flex/CSS — **no new heavy
   dependency**; reuse design tokens from `src/styles/colorSchemes.css`
   (never hard-code hex, per `AGENTS.md`/`docs/DESIGN_LANGUAGE.md`).
 - Each Rack Device is a block spanning its U range, showing icon + label +

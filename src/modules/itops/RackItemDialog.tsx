@@ -23,6 +23,7 @@ import type {
   RackItemMetadata,
   RackItemStatus,
   RackItemWidthFraction,
+  RackMountFace,
   RackServerFormFactor,
   RackServerPanelStyle,
   RackShell,
@@ -86,6 +87,7 @@ export interface RackItemDraft {
   connectionId: string | null;
   label: string;
   heightU: number;
+  mountFace: RackMountFace;
   metadata: RackItemMetadata;
 }
 
@@ -94,6 +96,7 @@ export function RackItemDialog({
   rack,
   item,
   defaultKind,
+  defaultMountFace = "front",
   members,
   onClose,
   onConfigured,
@@ -102,6 +105,7 @@ export function RackItemDialog({
   rack: Rack;
   item?: RackItem | null;
   defaultKind?: RackItemKind;
+  defaultMountFace?: RackMountFace;
   members: ResolvedHost[];
   onClose: () => void;
   /** Picker placement flow: instead of placing on save, hand the configured
@@ -127,6 +131,9 @@ export function RackItemDialog({
   const [startU, setStartU] = useState(item?.startU ?? 1);
   const [heightU, setHeightU] = useState(
     initialKind === "kuaiguai" ? (initialKuaiguaiStyle === "laidDown" ? 1 : 4) : item?.heightU ?? 1,
+  );
+  const [mountFace, setMountFace] = useState<RackMountFace>(
+    item?.mountFace ?? defaultMountFace,
   );
   const [accent, setAccent] = useState(item?.metadata?.accent ?? "none");
   const [status, setStatus] = useState<RackItemStatus>(item?.metadata?.status ?? "online");
@@ -242,6 +249,7 @@ export function RackItemDialog({
         connectionId: resolvedConnectionId,
         label: label.trim(),
         heightU,
+        mountFace,
         metadata,
       });
       onClose();
@@ -255,6 +263,7 @@ export function RackItemDialog({
           kind,
           connectionId: resolvedConnectionId,
           label: label.trim(),
+          mountFace,
           metadata,
           startU: placedStartU,
           heightU,
@@ -267,6 +276,7 @@ export function RackItemDialog({
           label: label.trim(),
           startU: placedStartU,
           heightU,
+          mountFace,
           metadata,
         });
       }
@@ -469,6 +479,27 @@ export function RackItemDialog({
           </section>
 
           <section className="rack-item-dialog-column form-column">
+            {isKuaiguai ? null : (
+              <Field label={t("itops.racks.mountingSideLabel")}>
+                <div
+                  className="rack-mount-face-segmented"
+                  role="group"
+                  aria-label={t("itops.racks.viewFaceLabel")}
+                >
+                  {(["front", "rear"] as const).map((value) => (
+                    <button
+                      key={value}
+                      type="button"
+                      aria-pressed={mountFace === value}
+                      data-active={mountFace === value || undefined}
+                      onClick={() => setMountFace(value)}
+                    >
+                      {t(`itops.racks.face.${value}`)}
+                    </button>
+                  ))}
+                </div>
+              </Field>
+            )}
             {kind === "server" ? (
               <div className="rack-form-grid two">
                 <Field label={t("itops.racks.formFactorLabel")}>

@@ -1,4 +1,10 @@
-import type { Rack, RackItem, RackItemMetadata, RackItemWidthFraction } from "../../types";
+import type {
+  Rack,
+  RackItem,
+  RackItemMetadata,
+  RackItemWidthFraction,
+  RackMountFace,
+} from "../../types";
 
 export interface ClientRectLike {
   left: number;
@@ -56,11 +62,13 @@ export function rackItemsCollide(
 export function firstAvailableRackUnit(
   rack: Rack,
   minimumFreeQuarters = 4,
+  mountFace: RackMountFace = "front",
 ): number | null {
   const required = Math.max(1, Math.min(4, Math.trunc(minimumFreeQuarters)));
   for (let unit = 1; unit <= rack.heightU; unit += 1) {
     let coveredQuarters = 0;
     for (const item of rack.items) {
+      if ((item.mountFace ?? "front") !== mountFace) continue;
       if (unit < item.startU || unit >= item.startU + item.heightU) continue;
       coveredQuarters += rackItemXSpan(item.metadata).xQuarters;
     }
