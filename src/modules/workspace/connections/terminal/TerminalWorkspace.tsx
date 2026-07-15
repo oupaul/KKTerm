@@ -2770,12 +2770,15 @@ function TerminalPaneView({
   }
 
   async function startTerminalRecording(sessionId: string, connection: Connection) {
+    const dimensions = terminalRendererRef.current?.dimensions;
     const started = await invokeCommand("start_terminal_recording", {
       request: {
         sessionId,
         connectionId: connection.id,
         connectionName: connection.name,
-        initialBuffer: terminalRendererRef.current?.getBufferText() ?? "",
+        initialBuffer: terminalRendererRef.current?.getRecordingBufferText() ?? "",
+        rows: dimensions?.rows,
+        cols: dimensions?.cols,
       },
     });
     setRecordingInfo(started);

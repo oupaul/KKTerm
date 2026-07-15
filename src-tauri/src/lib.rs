@@ -49,6 +49,7 @@ mod storage;
 mod system_theme;
 mod telnet;
 mod vnc;
+mod vt_text;
 mod watchdog;
 mod webview;
 mod window_effects;

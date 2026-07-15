@@ -2133,6 +2133,8 @@ type CommandMap = {
         connectionId: string;
         connectionName: string;
         initialBuffer: string;
+        rows?: number;
+        cols?: number;
       };
     };
     result: TerminalRecordingInfo;
