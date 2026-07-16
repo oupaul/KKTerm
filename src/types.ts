@@ -741,6 +741,8 @@ export interface TerminalCustomShell {
   commandLine: string;
 }
 
+export type InstallerDefaultProvider = "winget" | "chocolatey";
+
 export interface GeneralSettings {
   autoBackupEnabled: boolean;
   autoUpdateChecksEnabled: boolean;
@@ -757,6 +759,7 @@ export interface GeneralSettings {
   showDontSleepOnRail: boolean;
   activityRailOrder: ActivityRailItemId[];
   installerCheckIntervalSeconds: number;
+  installerDefaultProvider: InstallerDefaultProvider;
   pinnedConnectionIds: string[];
   allowClipboardRead: boolean;
   autoStartWithWindows: boolean;

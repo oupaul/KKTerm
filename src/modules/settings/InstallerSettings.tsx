@@ -18,7 +18,8 @@ export function InstallerSettings() {
   const [draft, setDraft] = useState<GeneralSettings>(generalSettings);
   const hasChanges =
     draft.installerCheckIntervalSeconds !==
-      generalSettings.installerCheckIntervalSeconds;
+      generalSettings.installerCheckIntervalSeconds ||
+    draft.installerDefaultProvider !== generalSettings.installerDefaultProvider;
 
   useEffect(() => {
     setDraft(generalSettings);
@@ -30,6 +31,7 @@ export function InstallerSettings() {
       const request = {
         ...currentSettings,
         installerCheckIntervalSeconds: draft.installerCheckIntervalSeconds,
+        installerDefaultProvider: draft.installerDefaultProvider,
       };
       const saved = isTauriRuntime()
         ? await invokeCommand("update_general_settings", { request })
@@ -78,6 +80,32 @@ export function InstallerSettings() {
             </select>
             <small className="field-hint">
               {t("settings.installerCheckIntervalDesc")}
+            </small>
+          </label>
+        </div>
+        <div className="form-grid">
+          <label>
+            <span>{t("settings.installerDefaultProvider")}</span>
+            <select
+              value={draft.installerDefaultProvider}
+              onChange={(event) =>
+                setDraft((state) => ({
+                  ...state,
+                  installerDefaultProvider: event.currentTarget.value as
+                    | "winget"
+                    | "chocolatey",
+                }))
+              }
+            >
+              <option value="winget">
+                {t("settings.installerDefaultProviderWinget")}
+              </option>
+              <option value="chocolatey">
+                {t("settings.installerDefaultProviderChocolatey")}
+              </option>
+            </select>
+            <small className="field-hint">
+              {t("settings.installerDefaultProviderDesc")}
             </small>
           </label>
         </div>

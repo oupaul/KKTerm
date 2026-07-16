@@ -526,6 +526,8 @@ pub struct GeneralSettings {
     activity_rail_order: Vec<String>,
     #[serde(default = "default_installer_check_interval_seconds")]
     installer_check_interval_seconds: u32,
+    #[serde(default = "default_installer_default_provider")]
+    installer_default_provider: String,
     #[serde(default)]
     pinned_connection_ids: Vec<String>,
     #[serde(default = "default_allow_clipboard_read")]
@@ -4909,6 +4911,10 @@ fn required_field(field: &str, value: String) -> Result<String, String> {
     }
 }
 
+fn default_installer_default_provider() -> String {
+    "winget".to_string()
+}
+
 fn default_general_settings() -> GeneralSettings {
     GeneralSettings {
         auto_backup_enabled: true,
@@ -4926,6 +4932,7 @@ fn default_general_settings() -> GeneralSettings {
         show_dont_sleep_on_rail: default_show_dont_sleep_on_rail(),
         activity_rail_order: default_activity_rail_order(),
         installer_check_interval_seconds: default_installer_check_interval_seconds(),
+        installer_default_provider: default_installer_default_provider(),
         pinned_connection_ids: Vec::new(),
         allow_clipboard_read: default_allow_clipboard_read(),
         auto_start_with_windows: false,
@@ -5529,6 +5536,15 @@ fn validate_general_settings(mut settings: GeneralSettings) -> Result<GeneralSet
     settings.installer_check_interval_seconds = match settings.installer_check_interval_seconds {
         3_600 | 86_400 | 604_800 | 2_592_000 => settings.installer_check_interval_seconds,
         _ => default_installer_check_interval_seconds(),
+    };
+    settings.installer_default_provider = match settings
+        .installer_default_provider
+        .trim()
+        .to_lowercase()
+        .as_str()
+    {
+        "chocolatey" => "chocolatey".to_string(),
+        _ => default_installer_default_provider(),
     };
     settings.workspace_shortcuts = sanitize_workspace_shortcuts(settings.workspace_shortcuts);
     settings.proxy_mode = match settings.proxy_mode.trim().to_lowercase().as_str() {

@@ -1232,7 +1232,10 @@
       "viewFaceLabel": "Mặt tủ rack",
       "showFace": "Hiện mặt {{face}}",
       "mountingSideLabel": "Mặt lắp đặt",
-      "face": { "front": "Mặt trước", "rear": "Mặt sau" },
+      "face": {
+        "front": "Mặt trước",
+        "rear": "Mặt sau"
+      },
       "newTitle": "Rack mới",
       "newServerRoomTitle": "Phòng máy chủ mới",
       "editTitle": "Chỉnh sửa rack",
@@ -2159,6 +2162,10 @@
     "installerCheckInterval86400": "Mỗi ngày",
     "installerCheckInterval604800": "Mỗi tuần",
     "installerCheckInterval2592000": "Mỗi tháng",
+    "installerDefaultProvider": "Default package provider",
+    "installerDefaultProviderDesc": "Which package provider is selected by default for new installs when a tool supports both WinGet and Chocolatey. Tools that only support one provider still use their available provider.",
+    "installerDefaultProviderWinget": "WinGet",
+    "installerDefaultProviderChocolatey": "Chocolatey",
     "installerSaved": "Đã lưu cài đặt Trợ lý cài đặt.",
     "sectionUrl": "URL",
     "urlDefaults": "URL data and credentials",

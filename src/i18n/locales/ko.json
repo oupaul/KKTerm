@@ -1232,7 +1232,10 @@
       "viewFaceLabel": "랙 면",
       "showFace": "{{face}} 보기",
       "mountingSideLabel": "장착 면",
-      "face": { "front": "전면", "rear": "후면" },
+      "face": {
+        "front": "전면",
+        "rear": "후면"
+      },
       "newTitle": "새 랙",
       "newServerRoomTitle": "새 서버실",
       "editTitle": "랙 편집",
@@ -2159,6 +2162,10 @@
     "installerCheckInterval86400": "매일",
     "installerCheckInterval604800": "매주",
     "installerCheckInterval2592000": "매월",
+    "installerDefaultProvider": "Default package provider",
+    "installerDefaultProviderDesc": "Which package provider is selected by default for new installs when a tool supports both WinGet and Chocolatey. Tools that only support one provider still use their available provider.",
+    "installerDefaultProviderWinget": "WinGet",
+    "installerDefaultProviderChocolatey": "Chocolatey",
     "installerSaved": "설치 도우미 설정이 저장되었습니다.",
     "sectionUrl": "URL",
     "urlDefaults": "URL 데이터 및 자격 증명",
