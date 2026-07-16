@@ -5,7 +5,7 @@ use encoding_rs::{Encoding, UTF_8};
 use portable_pty::{Child, CommandBuilder, MasterPty, PtySize, native_pty_system};
 use serde::{Deserialize, Serialize};
 use std::{
-    collections::{BTreeMap, HashMap, VecDeque},
+    collections::{BTreeMap, HashMap, HashSet, VecDeque},
     ffi::OsString,
     fs::{self, File},
     io::{BufRead, BufReader, Read, Write},
@@ -1208,11 +1208,12 @@ pub(crate) fn export_terminal_recordings(
         .map_err(|error| format!("failed to create terminal recording archive: {error}"))?;
     let mut archive = ZipWriter::new(file);
     let options = SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);
+    let mut archive_names = HashSet::new();
     for source in &sources {
-        let relative = source
+        source
             .strip_prefix(&canonical_root)
             .map_err(|_| "terminal recording path escaped the recordings root".to_string())?;
-        let archive_name = relative.to_string_lossy().replace('\\', "/");
+        let archive_name = unique_terminal_recording_archive_name(source, &mut archive_names)?;
         archive
             .start_file(archive_name, options)
             .map_err(|error| format!("failed to add terminal recording to archive: {error}"))?;
@@ -1234,6 +1235,45 @@ pub(crate) fn export_terminal_recordings(
         destination,
         count: sources.len(),
     })
+}
+
+fn unique_terminal_recording_archive_name(
+    source: &Path,
+    used_names: &mut HashSet<String>,
+) -> Result<String, String> {
+    let file_name = source
+        .file_name()
+        .ok_or_else(|| "terminal recording path has no file name".to_string())?
+        .to_string_lossy()
+        .chars()
+        .map(|character| match character {
+            '/' | '\\' => '_',
+            other => other,
+        })
+        .collect::<String>();
+    if used_names.insert(file_name.to_lowercase()) {
+        return Ok(file_name);
+    }
+
+    let file_name_path = Path::new(&file_name);
+    let stem = file_name_path
+        .file_stem()
+        .and_then(|value| value.to_str())
+        .unwrap_or("recording");
+    let extension = file_name_path
+        .extension()
+        .and_then(|value| value.to_str())
+        .filter(|value| !value.is_empty());
+    for suffix in 2_u32.. {
+        let candidate = match extension {
+            Some(extension) => format!("{stem} ({suffix}).{extension}"),
+            None => format!("{stem} ({suffix})"),
+        };
+        if used_names.insert(candidate.to_lowercase()) {
+            return Ok(candidate);
+        }
+    }
+    unreachable!("terminal recording archive suffix range is unbounded")
 }
 
 pub(crate) fn terminal_recordings_root(app: &AppHandle) -> Result<PathBuf, String> {
@@ -4787,6 +4827,47 @@ mod tests {
         let file = File::open(&destination).expect("archive opens");
         let archive = zip::ZipArchive::new(file).expect("archive is valid");
         assert_eq!(archive.len(), 1);
+
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn terminal_recording_export_is_flat_and_suffixes_duplicate_file_names() {
+        let root = temp_recording_root("flat-export");
+        let first_folder = root.join("group-a").join("connection-a");
+        let second_folder = root.join("group-b").join("connection-b");
+        fs::create_dir_all(&first_folder).expect("first recording folder exists");
+        fs::create_dir_all(&second_folder).expect("second recording folder exists");
+        let first = first_folder.join("session.log.txt");
+        let second = second_folder.join("session.log.txt");
+        fs::write(&first, "first").expect("first recording writes");
+        fs::write(&second, "second").expect("second recording writes");
+        let destination = root.join("export.zip");
+
+        export_terminal_recordings(
+            root.clone(),
+            ExportTerminalRecordingsRequest {
+                paths: vec![
+                    first.to_string_lossy().to_string(),
+                    second.to_string_lossy().to_string(),
+                ],
+                destination: destination.to_string_lossy().to_string(),
+            },
+        )
+        .expect("recording archive exports");
+
+        let file = File::open(&destination).expect("archive opens");
+        let mut archive = zip::ZipArchive::new(file).expect("archive is valid");
+        let names = (0..archive.len())
+            .map(|index| {
+                archive
+                    .by_index(index)
+                    .expect("archive entry opens")
+                    .name()
+                    .to_string()
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(names, vec!["session.log.txt", "session.log (2).txt"]);
 
         let _ = fs::remove_dir_all(root);
     }
