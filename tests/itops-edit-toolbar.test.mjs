@@ -293,17 +293,32 @@ test("2.5D edit controls are selection-scoped and the room owns its appearance",
 
 test("Server Room elevation blank space opens the shared room background picker", async () => {
   const sites = await read("src/modules/itops/SitesTab.tsx");
+  const background = await read("src/modules/itops/ItOpsBackground.tsx");
+  const css = await read("src/modules/itops/itops.css");
 
   assert.match(sites, /async function handleElevationContextMenu/);
   assert.match(sites, /if \(placeDevice\) return/);
-  assert.match(sites, /target\.closest\("\[data-rack-id\], \.rm-picker"\)/);
   assert.match(
     sites,
-    /className="rk-room-layout"[\s\S]*?onContextMenu=\{handleElevationContextMenu\}[\s\S]*?className="rk-elevations"/,
+    /target\.closest\("\[data-rack-id\], \.rm-picker, \.it-drill-toolbar"\)/,
   );
   assert.match(
     sites,
+    /<ItOpsBackground[\s\S]*?onContextMenu=\{roomView === "elevation" \? handleElevationContextMenu : undefined\}/,
+  );
+  assert.doesNotMatch(
+    sites,
+    /className="rk-room-layout"\s+onContextMenu=\{handleElevationContextMenu\}/,
+  );
+  assert.match(background, /onContextMenu\?: MouseEventHandler<HTMLDivElement>/);
+  assert.match(
+    sites,
     /serverRoom && \(roomView === "elevation" \|\| roomView === "iso"\)/,
+  );
+  assert.match(sites, /floor-toolbar-background/);
+  assert.match(
+    css,
+    /\.ft-drill-bg\.floor-toolbar-background\.has-bg > \.itops-bg-content \{\s*padding: 0;/,
   );
 });
 

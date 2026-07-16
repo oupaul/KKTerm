@@ -4444,6 +4444,12 @@
 .itops-page .ft-drill > .ft-drill-bg.has-bg > .itops-bg-content {
   padding-top: 0;
 }
+/* Floor Plan keeps its opaque blueprint grid edge-to-edge. The saved room
+   background remains visible behind the shared toolbar only, without the
+   generic wallpaper frame inset around the spatial canvas. */
+.itops-page .ft-drill > .ft-drill-bg.floor-toolbar-background.has-bg > .itops-bg-content {
+  padding: 0;
+}
 /* The empty-state card is the only bare .card child of a zero-padding drill
    pane; give it back an inset. */
 .itops-page .ft-drill .itops-bg-content > .card {

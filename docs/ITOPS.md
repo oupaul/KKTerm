@@ -443,6 +443,9 @@ scrollable camera margin around its projected room. In either spatial view,
 drag blank floor with the left mouse button, drag with the middle button, or
 focus the room and use the arrow keys to pan. The target button below the zoom
 levels, or a middle-button click without dragging, resets the camera to center.
+The room background remains editable from empty elevation and 2.5D space. In
+Floor Plan mode, the opaque blueprint grid stays edge-to-edge and the saved
+room background is visible only behind the shared toolbar.
 The Rack hover detail card shared by both spatial views mounts outside their
 clipping canvases and flips or clamps within the visible room at every edge.
 The Rack configuration dialog exposes

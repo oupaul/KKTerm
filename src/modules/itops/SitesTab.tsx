@@ -1853,7 +1853,7 @@ function RackDrill({
     // handler consume the event instead of opening the background picker.
     if (placeDevice) return;
     const target = event.target as HTMLElement;
-    if (target.closest("[data-rack-id], .rm-picker")) return;
+    if (target.closest("[data-rack-id], .rm-picker, .it-drill-toolbar")) return;
     event.preventDefault();
     await showNativeContextMenu(
       [
@@ -2047,7 +2047,15 @@ function RackDrill({
 
   return (
     <div className="ft-drill">
-      <ItOpsBackground background={viewBackground} className="ft-drill-bg">
+      <ItOpsBackground
+        background={viewBackground}
+        className={`ft-drill-bg${
+          serverRoom && !rack && roomView === "floor"
+            ? " floor-toolbar-background"
+            : ""
+        }`}
+        onContextMenu={roomView === "elevation" ? handleElevationContextMenu : undefined}
+      >
         <div className="it-drill-toolbar">
           <div className="it-drill-spacer" />
           {serverRoom && !rack ? (
@@ -2321,10 +2329,7 @@ function RackDrill({
               ) : null}
             </div>
           ) : (
-            <div
-              className="rk-room-layout"
-              onContextMenu={handleElevationContextMenu}
-            >
+            <div className="rk-room-layout">
               <div
                 className="rk-elevations"
                 ref={roomElevationsRef}
