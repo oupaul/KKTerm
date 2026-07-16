@@ -45,6 +45,19 @@ pub(crate) const REMOTE_SESSION_WEBVIEW2_ARGS: &str = "--disable-features=msWebO
 pub(crate) const WRY_DEFAULT_WEBVIEW2_ARGS: &str =
     "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection";
 
+/// Prevent the browser engine's F5 accelerator from reloading the main app
+/// shell. A shell reload destroys frontend-owned live Session chrome while
+/// native URL overlay windows can remain alive. URL overlays intentionally do
+/// not install this guard, so F5 reloads the page when its surface has focus.
+pub(crate) const SUPPRESS_SHELL_F5_RELOAD_SCRIPT: &str = r#"
+window.addEventListener("keydown", (event) => {
+  if (event.key === "F5") {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  }
+}, true);
+"#;
+
 const AUTOFILL_AGENT: &str = r#"
 (() => {
   const TITLE_CHANNEL = "__KKTERM_URL_CREDENTIAL__";
@@ -1454,6 +1467,68 @@ fn configure_certificate_error_handling(
     session_id: &str,
 ) -> Result<(), String> {
     configure_platform_certificate_error_handling(webview, enabled, app, session_id)
+}
+
+#[cfg(windows)]
+pub(crate) fn configure_shell_refresh_shortcut(webview: &WebviewWindow) -> Result<(), String> {
+    use webview2_com::{
+        AcceleratorKeyPressedEventHandler,
+        Microsoft::Web::WebView2::Win32::COREWEBVIEW2_KEY_EVENT_KIND_KEY_DOWN,
+    };
+    use windows::Win32::UI::Input::KeyboardAndMouse::VK_F5;
+
+    let setup_error = Arc::new(Mutex::new(None::<String>));
+    let setup_error_for_callback = Arc::clone(&setup_error);
+
+    webview
+        .with_webview(move |platform_webview| {
+            let result = (|| -> Result<(), String> {
+                unsafe {
+                    let controller = platform_webview.controller();
+                    let handler = AcceleratorKeyPressedEventHandler::create(Box::new(
+                        move |_sender, args| {
+                            if let Some(args) = args {
+                                let mut event_kind = COREWEBVIEW2_KEY_EVENT_KIND_KEY_DOWN;
+                                let mut virtual_key = 0;
+                                args.KeyEventKind(&mut event_kind)?;
+                                args.VirtualKey(&mut virtual_key)?;
+                                if event_kind == COREWEBVIEW2_KEY_EVENT_KIND_KEY_DOWN
+                                    && virtual_key == VK_F5.0 as u32
+                                {
+                                    args.SetHandled(true)?;
+                                }
+                            }
+                            Ok(())
+                        },
+                    ));
+                    let mut token = 0;
+                    controller
+                        .add_AcceleratorKeyPressed(&handler, &mut token)
+                        .map_err(|error| error.to_string())?;
+                }
+                Ok::<(), String>(())
+            })();
+            if let Err(error) = result {
+                if let Ok(mut setup_error) = setup_error_for_callback.lock() {
+                    *setup_error = Some(error);
+                }
+            }
+        })
+        .map_err(|error| format!("failed to access WebView2 for F5 suppression: {error}"))?;
+
+    if let Ok(mut setup_error) = setup_error.lock() {
+        if let Some(error) = setup_error.take() {
+            return Err(format!(
+                "failed to suppress WebView2 F5 browser reload: {error}"
+            ));
+        }
+    }
+    Ok(())
+}
+
+#[cfg(not(windows))]
+pub(crate) fn configure_shell_refresh_shortcut(_webview: &WebviewWindow) -> Result<(), String> {
+    Ok(())
 }
 
 pub(crate) fn configure_shell_clipboard_read_permission(

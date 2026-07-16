@@ -3639,6 +3639,7 @@ pub fn run() {
                 .title("KKTerm")
                 .inner_size(1360.0, 860.0)
                 .min_inner_size(1120.0, 720.0)
+                .initialization_script_for_all_frames(webview::SUPPRESS_SHELL_F5_RELOAD_SCRIPT)
                 .disable_drag_drop_handler();
                 // macOS keeps the native traffic-light controls but renders them
                 // over a transparent overlay title bar so the React-painted bar
@@ -3696,6 +3697,7 @@ pub fn run() {
                 webview_additional_browser_args,
             );
             if let Some(main_webview) = app.get_webview_window(window_state::MAIN_WINDOW_LABEL) {
+                webview::configure_shell_refresh_shortcut(&main_webview).map_err(setup_error)?;
                 webview::configure_shell_clipboard_read_permission(
                     &main_webview,
                     webview_sessions.clipboard_read_allowed_state(),

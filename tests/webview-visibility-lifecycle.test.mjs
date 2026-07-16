@@ -15,6 +15,27 @@ test("backend URL sessions use stable overlay WebviewWindows", async () => {
   assert.doesNotMatch(source, /WebviewBuilder::new|\.add_child\(|\.build_as_child\(/);
 });
 
+test("F5 reload is blocked in the main shell but remains available to focused URL overlays", async () => {
+  const [backend, lib] = await Promise.all([
+    readFile(new URL("../src-tauri/src/webview.rs", import.meta.url), "utf8"),
+    readFile(new URL("../src-tauri/src/lib.rs", import.meta.url), "utf8"),
+  ]);
+  const urlSessionStartup = backend.match(
+    /let mut builder = WebviewWindowBuilder::new\(app, &label,[\s\S]*?sessions\.insert\(/,
+  )?.[0];
+
+  assert.ok(urlSessionStartup, "URL WebView startup should exist");
+  assert.match(backend, /SUPPRESS_SHELL_F5_RELOAD_SCRIPT/);
+  assert.match(backend, /AcceleratorKeyPressedEventHandler/);
+  assert.match(backend, /COREWEBVIEW2_KEY_EVENT_KIND_KEY_DOWN/);
+  assert.match(backend, /VK_F5/);
+  assert.match(backend, /args\.SetHandled\(true\)/);
+  assert.match(lib, /\.initialization_script_for_all_frames\(webview::SUPPRESS_SHELL_F5_RELOAD_SCRIPT\)/);
+  assert.match(lib, /webview::configure_shell_refresh_shortcut\(&main_webview\)/);
+  assert.doesNotMatch(urlSessionStartup, /SUPPRESS_SHELL_F5_RELOAD_SCRIPT/);
+  assert.doesNotMatch(urlSessionStartup, /configure_shell_refresh_shortcut/);
+});
+
 test("frontend URL WebView runtime session ids stay within backend limits", async () => {
   const source = await readFile(
     new URL("../src/modules/workspace/connections/webview/WebViewWorkspace.tsx", import.meta.url),
