@@ -2013,6 +2013,53 @@
       }
     },
     {
+      "id": "keepassxc",
+      "name": "KeePassXC",
+      "descriptionEn": "Open-source password manager for local encrypted vaults.",
+      "category": "utilities",
+      "icon": "KeyRound",
+      "needs": [
+        "winget"
+      ],
+      "homepage": "https://keepassxc.org/",
+      "releaseNotesUrl": "https://github.com/keepassxreboot/keepassxc/releases",
+      "detection": {
+        "displayNames": [
+          "KeePassXC"
+        ],
+        "displayNamePrefixes": [
+          "KeePassXC "
+        ]
+      },
+      "provider": {
+        "kind": "winget",
+        "id": "KeePassXCTeam.KeePassXC"
+      },
+      "chocolateyProvider": {
+        "kind": "chocolatey",
+        "id": "keepassxc"
+      },
+      "options": [
+        "provider",
+        "version"
+      ],
+      "descriptionLocales": {
+        "de": "Open-Source-Passwortmanager für lokale verschlüsselte Tresore.",
+        "es": "Gestor de contraseñas de código abierto para bóvedas cifradas locales.",
+        "es-MX": "Administrador de contraseñas de código abierto para bóvedas cifradas locales.",
+        "fr": "Gestionnaire de mots de passe open source pour coffres chiffrés locaux.",
+        "id": "Pengelola kata sandi sumber terbuka untuk brankas terenkripsi lokal.",
+        "it": "Gestore di password open source per archivi cifrati locali.",
+        "ja": "ローカルの暗号化ボルト向けオープンソースパスワードマネージャー。",
+        "ko": "로컬 암호화 볼트용 오픈 소스 비밀번호 관리자입니다.",
+        "pt-BR": "Gerenciador de senhas de código aberto para cofres criptografados locais.",
+        "th": "ตัวจัดการรหัสผ่านโอเพ่นซอร์สสำหรับคลังที่เข้ารหัสในเครื่อง",
+        "vi": "Trình quản lý mật khẩu mã nguồn mở cho kho mã hóa cục bộ.",
+        "zh-CN": "用于本地加密保险库的开源密码管理器。",
+        "zh-TW": "用於本機加密保險庫的開放原始碼密碼管理工具。"
+      }
+    },
+    {
       "id": "7zip",
       "name": "7-Zip",
       "descriptionEn": "File archiver with broad compression-format support.",

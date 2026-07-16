@@ -32,6 +32,7 @@ import git from "../../assets/installer-icons/git.svg?url";
 import github from "../../assets/installer-icons/github.svg?url";
 import hermesAgent from "../../assets/installer-icons/hermes-agent.svg?url";
 import inkscape from "../../assets/installer-icons/inkscape.svg?url";
+import keepassxc from "../../assets/installer-icons/keepassxc.svg?url";
 import krita from "../../assets/installer-icons/krita.svg?url";
 import langflow from "../../assets/installer-icons/langflow.svg?url";
 import linux from "../../assets/installer-icons/linux.svg?url";
@@ -110,6 +111,7 @@ const RECIPE_ICON_URLS: Record<string, string> = {
   drawio,
   krita,
   inkscape,
+  keepassxc,
   blender,
   bentopdf,
   openflowkit,

@@ -617,6 +617,7 @@ mod tests {
             "tailscale",
             "rustdesk",
             "coreutils",
+            "keepassxc",
             "7zip",
             "sharex",
             "ffmpeg",

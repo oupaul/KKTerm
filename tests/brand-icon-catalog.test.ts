@@ -28,6 +28,7 @@ const INSTALLER_ARTWORK_ICON_IDS = [
   "git",
   "github-cli",
   "hermes-agent",
+  "keepassxc",
   "langflow",
   "wsl",
   "n8n",

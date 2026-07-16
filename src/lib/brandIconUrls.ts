@@ -24,6 +24,7 @@ import gitIcon from "../assets/installer-icons/git.svg?url";
 import githubIcon from "../assets/installer-icons/github.svg?url";
 import hermesAgentIcon from "../assets/installer-icons/hermes-agent.svg?url";
 import inkscapeIcon from "../assets/installer-icons/inkscape.svg?url";
+import keepassxcIcon from "../assets/installer-icons/keepassxc.svg?url";
 import kritaIcon from "../assets/installer-icons/krita.svg?url";
 import langflowIcon from "../assets/installer-icons/langflow.svg?url";
 import linuxIcon from "../assets/installer-icons/linux.svg?url";
@@ -89,6 +90,7 @@ const brandIconUrlById: Record<string, string> = {
   "hermes-agent": hermesAgentIcon,
   "hermes-desktop": hermesAgentIcon,
   inkscape: inkscapeIcon,
+  keepassxc: keepassxcIcon,
   krita: kritaIcon,
   langflow: langflowIcon,
   lmstudio: lmstudioIcon,

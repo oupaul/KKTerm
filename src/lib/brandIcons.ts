@@ -224,6 +224,11 @@ export const BRAND_ICON_ENTRIES: BrandIconEntry[] = [
     keywords: ["inkscape", "svg", "vector", "design", "drawing"],
   },
   {
+    id: "keepassxc",
+    label: "KeePassXC",
+    keywords: ["keepassxc", "keepass", "password", "vault", "security", "utility"],
+  },
+  {
     id: "krita",
     label: "Krita",
     keywords: ["krita", "painting", "drawing", "illustration", "design"],
