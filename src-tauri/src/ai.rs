@@ -6389,17 +6389,16 @@ fn shell_command_tool(root: &Path, args: Value) -> String {
         })
         .to_string();
     }
-    let output = if shell.eq_ignore_ascii_case("batch") {
-        Command::new("cmd")
-            .args(["/C", &command])
-            .current_dir(root)
-            .output()
+    let mut process = if shell.eq_ignore_ascii_case("batch") {
+        let mut process = Command::new("cmd");
+        process.args(["/C", &command]);
+        process
     } else {
-        Command::new("powershell")
-            .args(["-NoProfile", "-NonInteractive", "-Command", &command])
-            .current_dir(root)
-            .output()
+        let mut process = Command::new("powershell");
+        process.args(["-NoProfile", "-NonInteractive", "-Command", &command]);
+        process
     };
+    let output = crate::installer::proc::no_window(process.current_dir(root)).output();
     match output {
         Ok(output) => {
             let mut text = String::new();
