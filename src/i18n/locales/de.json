@@ -1651,6 +1651,7 @@
     "title": "Einstellungen",
     "workspace": "Arbeitsbereich",
     "sectionsNav": "Einstellungsbereiche",
+    "searchNoResults": "Keine Einstellungen gefunden",
     "sectionGeneral": "Allgemein",
     "sectionAppearance": "Erscheinungsbild",
     "sectionDashboard": "Dashboard",

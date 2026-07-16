@@ -1651,6 +1651,7 @@
     "title": "Paramètres",
     "workspace": "Espace de travail",
     "sectionsNav": "Sections des paramètres",
+    "searchNoResults": "Aucun paramètre trouvé",
     "sectionGeneral": "Général",
     "sectionAppearance": "Apparence",
     "sectionDashboard": "Tableau de bord",

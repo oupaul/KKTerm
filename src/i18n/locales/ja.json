@@ -1651,6 +1651,7 @@
     "title": "設定",
     "workspace": "ワークスペース",
     "sectionsNav": "設定セクション",
+    "searchNoResults": "設定が見つかりません",
     "sectionGeneral": "一般",
     "sectionAppearance": "外観",
     "sectionDashboard": "ダッシュボード",

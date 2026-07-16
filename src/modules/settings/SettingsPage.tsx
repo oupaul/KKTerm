@@ -2,6 +2,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type MouseEvent,
   type ReactNode,
@@ -20,6 +21,7 @@ import {
   Network,
   Palette,
   Save,
+  Search,
   Server,
   Settings as SettingsIcon,
   Terminal,
@@ -59,6 +61,10 @@ import {
   SettingsSaveProvider,
   type SettingsSaveRegistration,
 } from "./shared";
+import {
+  buildSettingsSearchResults,
+  SETTINGS_SEARCH_KEYS,
+} from "./settingsSearch";
 
 export { AI_PROVIDER_SECRET_OWNER_ID };
 
@@ -85,14 +91,16 @@ const SETTINGS_SECTION_IDS: readonly SettingsSectionId[] = [
 // Each section gets a colored icon chip, macOS System Settings style. Colors are
 // the design language's vivid Apple-system palette; `requires` gates a section to
 // platforms that support it.
-const SETTINGS_NAV: readonly {
+type SettingsNavItem = {
   id: SettingsSectionId;
   Icon: LucideIcon;
   color: string;
   labelKey: string;
   module?: ModuleKind;
   requires?: "installer" | "rdp";
-}[] = [
+};
+
+const SETTINGS_NAV: readonly SettingsNavItem[] = [
   { id: "general-settings", Icon: SettingsIcon, color: "#8e8e93", labelKey: "settings.sectionGeneral" },
   { id: "appearance-settings", Icon: Palette, color: "#ff2d55", labelKey: "settings.sectionAppearance" },
   { id: "workspace-settings", Icon: LayoutDashboard, color: "#5e5ce6", labelKey: "settings.sectionWorkspace", module: "workspace" },
@@ -125,7 +133,11 @@ export function SettingsPage({
   onBack: () => void;
   onResetLayout: () => void;
 }) {
-  const { t } = useTranslation();
+  const { i18n, t } = useTranslation();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedSearchResultKey, setSelectedSearchResultKey] = useState<string | null>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const settingsContentRef = useRef<HTMLElement>(null);
   const [saveRegistrations, setSaveRegistrations] = useState<
     Partial<Record<SettingsSectionId, SettingsSaveRegistration>>
   >({});
@@ -135,6 +147,24 @@ export function SettingsPage({
   const [unsavedQuitDialogOpen, setUnsavedQuitDialogOpen] = useState(false);
   const installerSupported = supportsInstallerHelper();
   const rdpSupported = supportsRdp();
+  const availableSettingsNav = useMemo(() => SETTINGS_NAV.filter((item) =>
+    item.requires === "installer"
+      ? installerSupported
+      : item.requires === "rdp"
+        ? rdpSupported
+        : true,
+  ), [installerSupported, rdpSupported]);
+  const activeLanguage = i18n.resolvedLanguage ?? i18n.language;
+  const searchResults = useMemo(() => buildSettingsSearchResults({
+    activeLanguage,
+    query: searchQuery,
+    sections: availableSettingsNav.map(({ id, labelKey }) => ({
+      id,
+      labelKey,
+      searchKeys: SETTINGS_SEARCH_KEYS[id],
+    })),
+    translate: (key, language) => String(i18n.getFixedT(language)(key)),
+  }), [activeLanguage, availableSettingsNav, i18n, searchQuery]);
   const assistantContext = useMemo(
     () => buildSettingsAssistantContext(activeSectionId, (key, fallback) => t(key, fallback)),
     [activeSectionId, t],
@@ -203,6 +233,20 @@ export function SettingsPage({
   function handleQuitWithoutSaving() {
     setUnsavedQuitDialogOpen(false);
     onBack();
+  }
+
+  function handleSearchResultClick(sectionId: SettingsSectionId, resultKey?: string) {
+    setSelectedSearchResultKey(resultKey ? `${sectionId}:${resultKey}` : null);
+    onActiveSectionChange(sectionId);
+    window.requestAnimationFrame(() => {
+      settingsContentRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+    });
+  }
+
+  function clearSearch() {
+    setSearchQuery("");
+    setSelectedSearchResultKey(null);
+    searchInputRef.current?.focus();
   }
 
   function renderSettingsSection(sectionId: SettingsSectionId, children: ReactNode) {
@@ -274,29 +318,69 @@ export function SettingsPage({
 
         <div className="settings-layout">
           <aside className="settings-nav" aria-label={t("settings.sectionsNav")}>
-            {SETTINGS_NAV.filter((item) =>
-              item.requires === "installer"
-                ? installerSupported
-                : item.requires === "rdp"
-                  ? rdpSupported
-                  : true,
-            ).map(({ id, Icon, color, labelKey, module }) => (
+            <div className="settings-search-box">
+              <Search aria-hidden="true" size={15} />
+              <input
+                aria-label={t("common.search")}
+                onChange={(event) => {
+                  setSearchQuery(event.target.value);
+                  setSelectedSearchResultKey(null);
+                }}
+                placeholder={t("common.search")}
+                ref={searchInputRef}
+                type="search"
+                value={searchQuery}
+              />
+              {searchQuery ? (
+                <button
+                  aria-label={t("common.clear")}
+                  className="settings-search-clear"
+                  onClick={clearSearch}
+                  type="button"
+                >
+                  <X size={13} />
+                </button>
+              ) : null}
+            </div>
+            {searchQuery.trim() ? (
+              <div className="settings-search-results" aria-live="polite">
+                {searchResults.length > 0 ? searchResults.map((result) => {
+                  const item = availableSettingsNav.find(({ id }) => id === result.id)!;
+                  return (
+                    <div className="settings-search-result-group" key={result.id}>
+                      <button
+                        className={settingsNavItemClass(result.id, activeSectionId)}
+                        onClick={() => handleSearchResultClick(result.id)}
+                        type="button"
+                      >
+                        <SettingsNavIcon item={item} />
+                        <span>{result.label}</span>
+                      </button>
+                      {result.matches.map((match) => (
+                        <button
+                          className={`settings-search-hit${selectedSearchResultKey === `${result.id}:${match.key}` ? " active" : ""}`}
+                          key={match.key}
+                          onClick={() => handleSearchResultClick(result.id, match.key)}
+                          type="button"
+                        >
+                          {match.label}
+                        </button>
+                      ))}
+                    </div>
+                  );
+                }) : (
+                  <p className="settings-search-empty">{t("settings.searchNoResults")}</p>
+                )}
+              </div>
+            ) : availableSettingsNav.map((item) => (
               <button
-                key={id}
-                className={settingsNavItemClass(id, activeSectionId)}
-                onClick={() => onActiveSectionChange(id)}
+                key={item.id}
+                className={settingsNavItemClass(item.id, activeSectionId)}
+                onClick={() => onActiveSectionChange(item.id)}
                 type="button"
               >
-                {module ? (
-                  <ModuleIconTile compact module={module}>
-                    <Icon size={14} />
-                  </ModuleIconTile>
-                ) : (
-                  <span className="settings-nav-icon" style={{ background: color }}>
-                    <Icon size={14} />
-                  </span>
-                )}
-                <span>{t(labelKey)}</span>
+                <SettingsNavIcon item={item} />
+                <span>{t(item.labelKey)}</span>
               </button>
             ))}
           </aside>
@@ -304,6 +388,7 @@ export function SettingsPage({
           <section
             className="settings-content"
             aria-label={t("settings.settingsContent")}
+            ref={settingsContentRef}
           >
             {renderSettingsSection("general-settings", <GeneralSettings />)}
             {renderSettingsSection(
@@ -378,4 +463,17 @@ export function SettingsPage({
 
 function settingsNavItemClass(sectionId: SettingsSectionId, activeSectionId: SettingsSectionId) {
   return `settings-nav-item${sectionId === activeSectionId ? " active" : ""}`;
+}
+
+function SettingsNavIcon({ item }: { item: SettingsNavItem }) {
+  const { Icon, color, module } = item;
+  return module ? (
+    <ModuleIconTile compact module={module}>
+      <Icon size={14} />
+    </ModuleIconTile>
+  ) : (
+    <span className="settings-nav-icon" style={{ background: color }}>
+      <Icon size={14} />
+    </span>
+  );
 }
