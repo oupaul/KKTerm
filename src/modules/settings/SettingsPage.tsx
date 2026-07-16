@@ -154,7 +154,10 @@ export function SettingsPage({
         ? rdpSupported
         : true,
   ), [installerSupported, rdpSupported]);
-  const activeLanguage = i18n.resolvedLanguage ?? i18n.language;
+  // `resolvedLanguage` can remain English after a locale bundle is loaded
+  // dynamically. Search English as an alias, but render results in the user's
+  // actual selected UI language.
+  const activeLanguage = i18n.language || "en";
   const searchResults = useMemo(() => buildSettingsSearchResults({
     activeLanguage,
     query: searchQuery,

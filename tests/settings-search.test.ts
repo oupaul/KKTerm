@@ -118,3 +118,43 @@ test("Settings sidebar shows a conditional clear action and routes result clicks
   assert.match(source, /onClick=\{\(\) => handleSearchResultClick\(result\.id, match\.key\)\}/);
   assert.match(source, /onActiveSectionChange\(sectionId\)/);
 });
+
+test("Settings search renders results in the selected UI language, not the fallback", () => {
+  const source = readFileSync(
+    new URL("../src/modules/settings/SettingsPage.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(source, /const activeLanguage = i18n\.language \|\| "en"/);
+  assert.doesNotMatch(source, /activeLanguage = i18n\.resolvedLanguage/);
+});
+
+test("English backup search finds localized automatic-backup settings", () => {
+  const en = JSON.parse(readFileSync(
+    new URL("../src/i18n/locales/en.json", import.meta.url),
+    "utf8",
+  ));
+  const zhTw = JSON.parse(readFileSync(
+    new URL("../src/i18n/locales/zh-TW.json", import.meta.url),
+    "utf8",
+  ));
+  const localeValue = (locale: Record<string, unknown>, key: string) =>
+    key.split(".").reduce<unknown>((current, part) =>
+      typeof current === "object" && current !== null
+        ? (current as Record<string, unknown>)[part]
+        : undefined,
+    locale);
+  const results = buildSettingsSearchResults({
+    activeLanguage: "zh-TW",
+    query: "backup",
+    sections: [{
+      id: "general-settings",
+      labelKey: "settings.sectionGeneral",
+      searchKeys: SETTINGS_SEARCH_KEYS["general-settings"],
+    }],
+    translate: (key, language) => String(localeValue(language === "en" ? en : zhTw, key) ?? key),
+  });
+  const autoBackup = results[0]?.matches.find(({ key }) => key === "settings.autoBackup");
+
+  assert.equal(autoBackup?.label, zhTw.settings.autoBackup);
+});
