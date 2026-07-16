@@ -310,13 +310,12 @@ export function ActivityRail({
     const existingTab = item.tabId
       ? tabs.find((tab) => tab.id === item.tabId)
       : undefined;
-    // A connected session can live in another Workspace; jump back to it
-    // (activateTab switches Workspaces) instead of assembling a child
-    // layout — and brand-new sessions — in the current Workspace.
-    if (
-      existingTab &&
-      (existingTab.workspaceId ?? DEFAULT_WORKSPACE_ID) !== activeWorkspaceId
-    ) {
+    // A connected rail item already identifies the exact live Tab surface.
+    // Activate it before considering child-layout reconstruction: SFTP Tabs
+    // intentionally carry an ssh-typed Connection, so rebuilding from the
+    // Connection would open an SSH terminal over the existing file browser.
+    // activateTab also switches Workspaces when the live Tab belongs elsewhere.
+    if (existingTab) {
       activateTab(existingTab.id);
       return;
     }
@@ -330,10 +329,6 @@ export function ActivityRail({
         openChildConnectionLayout(item.connection, childConnections);
         return;
       }
-    }
-    if (item.tabId) {
-      activateTab(item.tabId);
-      return;
     }
     openConnection(item.connection);
   }
