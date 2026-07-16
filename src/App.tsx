@@ -221,6 +221,7 @@ function App() {
     toggleConnectionPanel,
   } = useWorkspaceChromeLayout(
     resetAllLayouts,
+    appShellRef,
     shouldExpandConnectionPanelOnLaunch(launchPageRef.current),
   );
 

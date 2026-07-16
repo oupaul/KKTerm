@@ -3,6 +3,8 @@
 // `itops/storage.rs` (free functions over `&SqliteConnection`, JSON `TEXT` for
 // non-relational fields, integer `sort_order`). Reuses `ItopsStorageError`.
 
+use std::collections::HashMap;
+
 use rusqlite::{Connection as SqliteConnection, OptionalExtension, Transaction, params};
 
 use super::inventory::normalize_metadata;
@@ -630,6 +632,26 @@ fn list_items_for_rack(conn: &SqliteConnection, rack_id: &str) -> Result<Vec<Rac
     Ok(items)
 }
 
+fn list_items_for_site(
+    conn: &SqliteConnection,
+    site_id: &str,
+) -> Result<HashMap<String, Vec<RackItem>>> {
+    let mut stmt = conn.prepare(&format!(
+        "SELECT {SELECT_ITEM_COLUMNS}
+         WHERE rack_id IN (SELECT id FROM itops_site_racks WHERE site_id = ?)
+         ORDER BY rack_id, start_u"
+    ))?;
+    let mut items_by_rack: HashMap<String, Vec<RackItem>> = HashMap::new();
+    for item in stmt.query_map(params![site_id], row_to_item)? {
+        let item = item?;
+        items_by_rack
+            .entry(item.rack_id.clone())
+            .or_default()
+            .push(item);
+    }
+    Ok(items_by_rack)
+}
+
 /// Existing spans in a rack, paired with their item ids (for overlap checks).
 fn existing_spans(
     conn: &SqliteConnection,
@@ -727,8 +749,12 @@ pub fn list_racks(conn: &SqliteConnection, site_id: &str) -> Result<Vec<Rack>> {
     let mut racks = stmt
         .query_map(params![site_id], row_to_rack)?
         .collect::<rusqlite::Result<Vec<_>>>()?;
+    if racks.is_empty() {
+        return Ok(racks);
+    }
+    let mut items_by_rack = list_items_for_site(conn, site_id)?;
     for rack in &mut racks {
-        rack.items = list_items_for_rack(conn, &rack.id)?;
+        rack.items = items_by_rack.remove(&rack.id).unwrap_or_default();
     }
     Ok(racks)
 }
@@ -1946,6 +1972,52 @@ mod tests {
             delete_rack(&conn, "r1"),
             Err(ItopsStorageError::NotFound)
         ));
+    }
+
+    #[test]
+    fn list_racks_preserves_rack_and_item_order_with_empty_racks() {
+        let conn = open_test_db();
+        conn.execute_batch(
+            "INSERT INTO itops_site_racks (id, site_id, name, sort_order) VALUES
+                ('rack-late', 'f1', 'Late', 2),
+                ('rack-empty', 'f1', 'Empty', 1),
+                ('rack-early', 'f1', 'Early', 0),
+                ('rack-other', 'f2', 'Other Site', 0);
+             INSERT INTO itops_site_rack_items
+                (id, rack_id, kind, label, start_u, height_u) VALUES
+                ('late-high', 'rack-late', 'server', 'Late high', 20, 1),
+                ('early-high', 'rack-early', 'server', 'Early high', 11, 1),
+                ('late-low', 'rack-late', 'server', 'Late low', 2, 1),
+                ('early-low', 'rack-early', 'server', 'Early low', 3, 1),
+                ('other-item', 'rack-other', 'server', 'Other', 1, 1);",
+        )
+        .unwrap();
+
+        let racks = list_racks(&conn, "f1").unwrap();
+        assert_eq!(
+            racks
+                .iter()
+                .map(|rack| rack.id.as_str())
+                .collect::<Vec<_>>(),
+            vec!["rack-early", "rack-empty", "rack-late"]
+        );
+        assert_eq!(
+            racks[0]
+                .items
+                .iter()
+                .map(|item| (item.id.as_str(), item.start_u))
+                .collect::<Vec<_>>(),
+            vec![("early-low", 3), ("early-high", 11)]
+        );
+        assert!(racks[1].items.is_empty());
+        assert_eq!(
+            racks[2]
+                .items
+                .iter()
+                .map(|item| (item.id.as_str(), item.start_u))
+                .collect::<Vec<_>>(),
+            vec![("late-low", 2), ("late-high", 20)]
+        );
     }
 
     #[test]

@@ -429,6 +429,12 @@ export function ActivityRail({
           sourceConnectionId,
         );
       }
+      const orderUnchanged =
+        nextOrder.length === currentOrder.length &&
+        nextOrder.every((connectionId, index) => connectionId === currentOrder[index]);
+      if (orderUnchanged) {
+        return currentOrder;
+      }
       persistConnectionRailOrder(nextOrder);
       return nextOrder;
     });
@@ -505,7 +511,12 @@ export function ActivityRail({
       event.clientX,
       event.clientY,
     );
-    setConnectionRailDropTarget(targetConnectionId);
+    setConnectionRailDropTarget((currentTarget) =>
+      currentTarget?.connectionId === targetConnectionId.connectionId &&
+      currentTarget.position === targetConnectionId.position
+        ? currentTarget
+        : targetConnectionId,
+    );
     if (targetConnectionId.connectionId !== drag.connectionId) {
       reorderConnectedRailItem(drag.connectionId, targetConnectionId);
     }

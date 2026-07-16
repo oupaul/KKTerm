@@ -167,14 +167,21 @@ export async function hydrateDurableUiState(): Promise<void> {
   if (typeof window === "undefined" || !isTauriRuntime()) {
     return;
   }
-  let records: { key: string; value: string }[] = [];
+  let records: { key: string; value: string }[];
   try {
     records = await invokeCommand("list_durable_ui_state", { prefix: "" });
   } catch {
     // Database unavailable (locked secret store, older backend): keep the cache.
     return;
   }
-  const databaseKeys = new Set(records.map((record) => record.key));
+  const databaseValues = new Map<string, string>();
+  for (const record of records) {
+    // Preserve the previous first-match behavior if malformed input ever
+    // contains duplicate keys: the first database row remains authoritative.
+    if (!databaseValues.has(record.key)) {
+      databaseValues.set(record.key, record.value);
+    }
+  }
 
   // Pull database rows the cache lacks.
   for (const record of records) {
@@ -197,7 +204,7 @@ export async function hydrateDurableUiState(): Promise<void> {
       if (value === null) {
         return Promise.resolve();
       }
-      if (databaseKeys.has(key) && records.find((r) => r.key === key)?.value === value) {
+      if (databaseValues.has(key) && databaseValues.get(key) === value) {
         return Promise.resolve();
       }
       return invokeCommand("set_durable_ui_state", { key, value }).catch(() => {});

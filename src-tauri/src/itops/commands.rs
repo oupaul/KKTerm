@@ -164,14 +164,18 @@ fn now_millis() -> String {
 /// thread, streaming `itops://run` events and writing the consolidated report to
 /// itops_run_history on completion. Returns the run id immediately.
 #[tauri::command]
-pub fn itops_start_batch_run(
+pub async fn itops_start_batch_run(
     app: AppHandle,
     site_id: String,
     task: BatchTask,
     scope: Option<RunScope>,
     task_id: Option<String>,
 ) -> Result<String, String> {
-    start_run(&app, site_id, task, scope, task_id)
+    tauri::async_runtime::spawn_blocking(move || {
+        start_run(&app, site_id, task, scope, task_id)
+    })
+    .await
+    .map_err(|error| format!("batch run preparation task failed: {error}"))?
 }
 
 /// Start a Batch Run; reusable by the command above and the Automation

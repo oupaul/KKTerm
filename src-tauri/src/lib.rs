@@ -1589,17 +1589,27 @@ fn get_performance_snapshot(
 }
 
 #[tauri::command]
-fn get_host_usage_snapshot(
-    performance: tauri::State<'_, performance::PerformanceMonitor>,
-) -> performance::HostUsageSnapshot {
-    performance.host_usage_snapshot()
+async fn get_host_usage_snapshot(
+    app: tauri::AppHandle,
+) -> Result<performance::HostUsageSnapshot, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        app.state::<performance::PerformanceMonitor>()
+            .host_usage_snapshot()
+    })
+    .await
+    .map_err(|error| format!("host usage sampling task failed: {error}"))
 }
 
 #[tauri::command]
-fn get_system_performance_counters(
-    performance: tauri::State<'_, performance::PerformanceMonitor>,
-) -> performance::SystemPerformanceCountersSnapshot {
-    performance.system_performance_counters_snapshot()
+async fn get_system_performance_counters(
+    app: tauri::AppHandle,
+) -> Result<performance::SystemPerformanceCountersSnapshot, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        app.state::<performance::PerformanceMonitor>()
+            .system_performance_counters_snapshot()
+    })
+    .await
+    .map_err(|error| format!("system performance sampling task failed: {error}"))
 }
 
 #[tauri::command]

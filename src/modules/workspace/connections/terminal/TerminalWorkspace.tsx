@@ -1627,6 +1627,7 @@ function TerminalPaneView({
   const sshStartupInjectedRef = useRef(false);
   const sshStartupMarkerTailRef = useRef("");
   const multilinePasteConfirmationResolverRef = useRef<((confirmed: boolean) => void) | null>(null);
+  const selectedTerminalTextRef = useRef("");
   const onFocusRef = useRef(onFocus);
   useEffect(() => {
     onFocusRef.current = onFocus;
@@ -1649,7 +1650,7 @@ function TerminalPaneView({
   }>({ resultIndex: -1, resultCount: 0, found: true });
   const [actionsMenuOpen, setActionsMenuOpen] = useState(false);
   const [backgroundPopoverOpen, setBackgroundPopoverOpen] = useState(false);
-  const [selectedTerminalText, setSelectedTerminalText] = useState("");
+  const [hasTerminalSelection, setHasTerminalSelection] = useState(false);
   const [contextMenu, setContextMenu] = useState<TerminalContextMenuState | null>(null);
   const [multilinePasteConfirmationOpen, setMultilinePasteConfirmationOpen] = useState(false);
   const [recordingInfo, setRecordingInfo] = useState<TerminalRecordingInfo | null>(null);
@@ -1664,6 +1665,12 @@ function TerminalPaneView({
     input: string;
   } | null>(null);
   const quickSelectOverlayRef = useRef<HTMLDivElement | null>(null);
+
+  function updateTerminalSelection(selection: string) {
+    selectedTerminalTextRef.current = selection;
+    setHasTerminalSelection(Boolean(selection));
+  }
+
   function focusTerminalRenderer() {
     const renderer = terminalRendererRef.current;
     if (renderer) {
@@ -1972,7 +1979,7 @@ function TerminalPaneView({
           const selection = terminal.getSelection();
           if (selection) {
             void writeToClipboard(selection);
-            setSelectedTerminalText(selection);
+            updateTerminalSelection(selection);
             setContextMenu(null);
             return false;
           }
@@ -2087,7 +2094,7 @@ function TerminalPaneView({
     });
     const selectionDisposable = terminal.onSelectionChange(() => {
       const selection = terminal.getSelection();
-      setSelectedTerminalText(selection);
+      updateTerminalSelection(selection);
       // Read the setting at selection time so toggling copy-on-select in
       // Settings applies to already-open terminals without re-running this
       // session effect.
@@ -2443,7 +2450,7 @@ function TerminalPaneView({
       lastResizeDimensionsRef.current = null;
       terminalRendererRef.current = null;
       fitAndResizeRef.current = () => undefined;
-      setSelectedTerminalText("");
+      updateTerminalSelection("");
       setRecordingInfo(null);
       setRecordingBusy(false);
       setContextMenu(null);
@@ -2728,7 +2735,7 @@ function TerminalPaneView({
   }
 
   function handleCopyTerminalSelection() {
-    const text = terminalRendererRef.current?.getSelection() || selectedTerminalText;
+    const text = terminalRendererRef.current?.getSelection() || selectedTerminalTextRef.current;
     if (text) {
       void writeToClipboard(text);
     }
@@ -2761,7 +2768,7 @@ function TerminalPaneView({
     }
 
     const selection = terminalRendererRef.current?.getSelection() ?? "";
-    setSelectedTerminalText(selection);
+    updateTerminalSelection(selection);
     setContextMenu({
       x: event.clientX,
       y: event.clientY,
@@ -3094,7 +3101,7 @@ function TerminalPaneView({
             className="terminal-pane-action"
             aria-label={t("terminal.copySelection")}
             data-tutorial-id="terminal.copySelection"
-            disabled={!selectedTerminalText}
+            disabled={!hasTerminalSelection}
             onMouseDown={(e) => e.preventDefault()}
             onClick={handleCopyTerminalSelection}
             title={t("terminal.copySelection")}
