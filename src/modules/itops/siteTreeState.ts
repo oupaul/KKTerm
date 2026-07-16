@@ -5,6 +5,7 @@
 
 import { sanitizeRoomObjects, type RoomObject } from "./roomObjects";
 import { sanitizeFacing, type Facing, type IsoViewAngle } from "./roomIsoLayout";
+import { readDurableUiState, writeDurableUiState } from "../../lib/durableUiState";
 
 const WIDTH_KEY = "kkterm.itopsSiteTreeWidth";
 const PANEL_COLLAPSED_KEY = "kkterm.itopsSiteTreePanelCollapsed";
@@ -158,10 +159,15 @@ export interface FreePlacement {
 
 export type FreePlacementMap = Record<string, FreePlacement>;
 
+// Free placement is durable frontend state: the Site View server-room card
+// positions are stored here (no typed column exists for them) and mirrored to
+// SQLite. Legacy per-room rack placements saved here before the durable
+// rack columns (grid_x/grid_y) existed are still read for a one-time merge in
+// SitesTab, but Server Room View rack drags now write only the typed columns.
 function readFreePlacementStore(): Record<string, FreePlacementMap> {
   if (typeof localStorage === "undefined") return {};
   try {
-    const parsed = JSON.parse(localStorage.getItem(FREE_LAYOUT_KEY) ?? "{}");
+    const parsed = JSON.parse(readDurableUiState(FREE_LAYOUT_KEY) ?? "{}");
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
     const store: Record<string, FreePlacementMap> = {};
     for (const [scope, value] of Object.entries(parsed)) {
@@ -191,29 +197,25 @@ export function saveFreePlacement(scope: string, placement: FreePlacementMap): v
   if (typeof localStorage === "undefined") return;
   const store = readFreePlacementStore();
   store[scope] = placement;
-  localStorage.setItem(FREE_LAYOUT_KEY, JSON.stringify(store));
+  writeDurableUiState(FREE_LAYOUT_KEY, JSON.stringify(store));
 }
 
 // ── Rack facing (per-room quarter-turn orientation of each rack) ──
 
 export type RackFacingMap = Record<string, Facing>;
 
+// Read-only legacy accessor for the per-scope rack-facing and room-object
+// blobs. Both are now durable rack fields / rows (SQLite); these blobs are read
+// once and merged underneath the typed values in SitesTab but never written.
 function readScopedStore(key: string): Record<string, unknown> {
   if (typeof localStorage === "undefined") return {};
   try {
-    const parsed = JSON.parse(localStorage.getItem(key) ?? "{}");
+    const parsed = JSON.parse(readDurableUiState(key) ?? "{}");
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
     return parsed as Record<string, unknown>;
   } catch {
     return {};
   }
-}
-
-function writeScopedStore(key: string, scope: string, value: unknown): void {
-  if (typeof localStorage === "undefined") return;
-  const store = readScopedStore(key);
-  store[scope] = value;
-  localStorage.setItem(key, JSON.stringify(store));
 }
 
 export function loadRackFacing(scope: string): RackFacingMap {
@@ -226,18 +228,10 @@ export function loadRackFacing(scope: string): RackFacingMap {
   return map;
 }
 
-export function saveRackFacing(scope: string, facing: RackFacingMap): void {
-  writeScopedStore(RACK_FACING_KEY, scope, facing);
-}
-
 // ── Room objects (per-room non-rack fixtures, see roomObjects.ts) ──
 
 export function loadRoomObjects(scope: string): RoomObject[] {
   return sanitizeRoomObjects(readScopedStore(ROOM_OBJECTS_KEY)[scope]);
-}
-
-export function saveRoomObjects(scope: string, objects: RoomObject[]): void {
-  writeScopedStore(ROOM_OBJECTS_KEY, scope, objects);
 }
 
 // ── 2.5D fixed view angle (app-wide, like the room view mode) ──
