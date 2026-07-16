@@ -176,7 +176,10 @@ test("Server Room spatial views arm Shift-click deep copies for one-click blank 
   const sites = await read("src/modules/itops/SitesTab.tsx");
   const floor = await read("src/modules/itops/ServerRoomFloorPlan.tsx");
   const iso = await read("src/modules/itops/ServerRoomIsoView.tsx");
+  const english = JSON.parse(await read("src/i18n/locales/en.json"));
 
+  assert.match(english.itops.floorPlan.blueprintEditHint, /SHIFT \+ click.*clone/);
+  assert.match(english.itops.floorPlan.isoEditHint, /SHIFT \+ click.*clone/);
   assert.match(sites, /name: nextTopologyDuplicateName\(/);
   assert.match(sites, /duplicateRackForPlacement\([\s\S]*gridX: cell\.x, gridY: cell\.y, facing: draft\.facing/);
   assert.match(floor, /event\.shiftKey && onCloneRack/);
