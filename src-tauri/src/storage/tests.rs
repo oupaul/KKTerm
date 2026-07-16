@@ -2992,7 +2992,7 @@ fn ssh_settings_round_trip_through_settings_table() {
     assert!(!defaults.use_random_dynamic_background);
     assert!(defaults.hide_common_port_redirects);
     assert!(defaults.allow_osc52_clipboard);
-    assert!(!defaults.auto_trust_new_host_keys);
+    assert!(defaults.auto_trust_new_host_keys);
     assert!(!defaults.managed_x_server_enabled);
     assert_eq!(defaults.x_server_display, 0);
     assert_eq!(defaults.x_server_args, "-multiwindow -clipboard -wgl");

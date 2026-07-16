@@ -16,7 +16,7 @@ For a host that has never been trusted, KKTerm shows an app-owned dialog:
 - Trust action title: `terminal.trustHostKey`
 - Untrusted state status: `terminal.hostKeyNotTrusted`
 
-`settings.autoTrustNewHostKeys` (Settings → SSH, hint `settings.autoTrustNewHostKeysHint`, off by default) skips this first-connection dialog: the never-before-seen key is recorded automatically (trust-on-first-use) and the connection proceeds. The changed-key warning below is deliberately NOT affected by this option — a key that no longer matches a trusted host always prompts, because that is the MITM signal.
+`settings.autoTrustNewHostKeys` (Settings → SSH, hint `settings.autoTrustNewHostKeysHint`, on by default) skips this first-connection dialog: the never-before-seen key is recorded automatically (trust-on-first-use) and the connection proceeds. The changed-key warning below is deliberately NOT affected by this option — a key that no longer matches a trusted host always prompts, because that is the MITM signal.
 
 If the host key no longer matches a previously trusted key, KKTerm shows a stronger warning dialog instead of failing outright:
 

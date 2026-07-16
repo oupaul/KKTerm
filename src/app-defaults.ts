@@ -116,7 +116,7 @@ export const defaultSshSettings: SshSettings = {
   defaultProxyJump: "",
   defaultSshCompression: "fast",
   defaultSshOldProtocols: "off",
-  autoTrustNewHostKeys: false,
+  autoTrustNewHostKeys: true,
   bufferLines: 5000,
   defaultTransparency: 50,
   defaultUseTmuxSessions: true,
