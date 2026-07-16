@@ -1232,7 +1232,10 @@
       "viewFaceLabel": "ラック面",
       "showFace": "{{face}}を表示",
       "mountingSideLabel": "取り付け面",
-      "face": { "front": "前面", "rear": "背面" },
+      "face": {
+        "front": "前面",
+        "rear": "背面"
+      },
       "newTitle": "新規ラック",
       "newServerRoomTitle": "新規サーバールーム",
       "editTitle": "ラックを編集",
@@ -2159,6 +2162,10 @@
     "installerCheckInterval86400": "毎日",
     "installerCheckInterval604800": "毎週",
     "installerCheckInterval2592000": "毎月",
+    "installerDefaultProvider": "Default package provider",
+    "installerDefaultProviderDesc": "Which package provider is selected by default for new installs when a tool supports both WinGet and Chocolatey. Tools that only support one provider still use their available provider.",
+    "installerDefaultProviderWinget": "WinGet",
+    "installerDefaultProviderChocolatey": "Chocolatey",
     "installerSaved": "インストールヘルパー設定を保存しました。",
     "sectionUrl": "URL",
     "urlDefaults": "URL データと資格情報",

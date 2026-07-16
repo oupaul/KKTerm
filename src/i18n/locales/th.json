@@ -1232,7 +1232,10 @@
       "viewFaceLabel": "ด้านของแร็ค",
       "showFace": "แสดง{{face}}",
       "mountingSideLabel": "ด้านติดตั้ง",
-      "face": { "front": "ด้านหน้า", "rear": "ด้านหลัง" },
+      "face": {
+        "front": "ด้านหน้า",
+        "rear": "ด้านหลัง"
+      },
       "newTitle": "แร็คใหม่",
       "newServerRoomTitle": "ห้องเซิร์ฟเวอร์ใหม่",
       "editTitle": "แก้ไขแร็ค",
@@ -2159,6 +2162,10 @@
     "installerCheckInterval86400": "ทุกวัน",
     "installerCheckInterval604800": "ทุกสัปดาห์",
     "installerCheckInterval2592000": "ทุกเดือน",
+    "installerDefaultProvider": "Default package provider",
+    "installerDefaultProviderDesc": "Which package provider is selected by default for new installs when a tool supports both WinGet and Chocolatey. Tools that only support one provider still use their available provider.",
+    "installerDefaultProviderWinget": "WinGet",
+    "installerDefaultProviderChocolatey": "Chocolatey",
     "installerSaved": "บันทึกการตั้งค่าตัวช่วยติดตั้งแล้ว",
     "sectionUrl": "URL",
     "urlDefaults": "ข้อมูลและข้อมูลรับรอง URL",

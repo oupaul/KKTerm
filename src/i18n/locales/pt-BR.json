@@ -1232,7 +1232,10 @@
       "viewFaceLabel": "Face do rack",
       "showFace": "Mostrar {{face}}",
       "mountingSideLabel": "Face de montagem",
-      "face": { "front": "Frente", "rear": "Traseira" },
+      "face": {
+        "front": "Frente",
+        "rear": "Traseira"
+      },
       "newTitle": "Novo rack",
       "newServerRoomTitle": "Nova sala de servidores",
       "editTitle": "Editar rack",
@@ -2159,6 +2162,10 @@
     "installerCheckInterval86400": "Todos os dias",
     "installerCheckInterval604800": "Toda semana",
     "installerCheckInterval2592000": "Todo mês",
+    "installerDefaultProvider": "Default package provider",
+    "installerDefaultProviderDesc": "Which package provider is selected by default for new installs when a tool supports both WinGet and Chocolatey. Tools that only support one provider still use their available provider.",
+    "installerDefaultProviderWinget": "WinGet",
+    "installerDefaultProviderChocolatey": "Chocolatey",
     "installerSaved": "Configurações do Assistente de instalação salvas.",
     "sectionUrl": "URL",
     "urlDefaults": "Dados e credenciais de URL",

@@ -1232,7 +1232,10 @@
       "viewFaceLabel": "Sisi rak",
       "showFace": "Tampilkan {{face}}",
       "mountingSideLabel": "Sisi pemasangan",
-      "face": { "front": "Depan", "rear": "Belakang" },
+      "face": {
+        "front": "Depan",
+        "rear": "Belakang"
+      },
       "newTitle": "Rak baru",
       "newServerRoomTitle": "Ruang server baru",
       "editTitle": "Edit rak",
@@ -2159,6 +2162,10 @@
     "installerCheckInterval86400": "Setiap hari",
     "installerCheckInterval604800": "Setiap minggu",
     "installerCheckInterval2592000": "Setiap bulan",
+    "installerDefaultProvider": "Default package provider",
+    "installerDefaultProviderDesc": "Which package provider is selected by default for new installs when a tool supports both WinGet and Chocolatey. Tools that only support one provider still use their available provider.",
+    "installerDefaultProviderWinget": "WinGet",
+    "installerDefaultProviderChocolatey": "Chocolatey",
     "installerSaved": "Pengaturan Pembantu Instalasi disimpan.",
     "sectionUrl": "URL",
     "urlDefaults": "Data dan kredensial URL",

@@ -686,8 +686,13 @@ function NotInstalledInfoBody({ recipe }: { recipe: Recipe }) {
   const openStepperDialog = useInstallerStore((s) => s.openStepperDialog);
   const beginInFlight = useInstallerStore((s) => s.beginInFlight);
   const wslJustEnabled = useInstallerStore((s) => s.wslJustEnabled);
+  const installerDefaultProvider = useWorkspaceStore(
+    (state) => state.generalSettings.installerDefaultProvider,
+  );
 
-  const [options, setOptions] = useState<InstallOptions>({});
+  const [options, setOptions] = useState<InstallOptions>(() =>
+    defaultInstallOptionsForRecipe(recipe, installerDefaultProvider),
+  );
   const [installConfirm, setInstallConfirm] = useState<null | {
     items: string[];
     recipes: Recipe[];
@@ -704,6 +709,10 @@ function NotInstalledInfoBody({ recipe }: { recipe: Recipe }) {
   const selectedProvider = selectedProviderForRecipe(recipe, options);
   const releaseUrl = recipe.releaseNotesUrl ?? deriveProviderUrl(selectedProvider);
   const installMode = installModeForOptions(recipe, options);
+
+  useEffect(() => {
+    setOptions(defaultInstallOptionsForRecipe(recipe, installerDefaultProvider));
+  }, [recipe, installerDefaultProvider]);
 
   function applyOption<K extends keyof InstallOptions>(
     key: K,
@@ -1296,6 +1305,22 @@ function OptionsForm({
       ) : null}
     </div>
   );
+}
+
+
+function defaultInstallOptionsForRecipe(
+  recipe: Recipe,
+  preferredProvider: "winget" | "chocolatey",
+): InstallOptions {
+  if (
+    preferredProvider === "chocolatey" &&
+    recipe.options?.includes("provider") &&
+    recipe.provider.kind === "winget" &&
+    recipe.chocolateyProvider?.kind === "chocolatey"
+  ) {
+    return { provider: "chocolatey" };
+  }
+  return {};
 }
 
 function selectedProviderForRecipe(

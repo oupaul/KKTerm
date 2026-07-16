@@ -39,6 +39,7 @@ export const defaultGeneralSettings: GeneralSettings = {
   showDontSleepOnRail: true,
   activityRailOrder: [...DEFAULT_ACTIVITY_RAIL_ORDER],
   installerCheckIntervalSeconds: 86400,
+  installerDefaultProvider: "winget",
   pinnedConnectionIds: [],
   allowClipboardRead: true,
   autoStartWithWindows: false,

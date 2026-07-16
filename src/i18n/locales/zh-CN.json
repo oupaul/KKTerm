@@ -1232,7 +1232,10 @@
       "viewFaceLabel": "机柜面",
       "showFace": "显示{{face}}",
       "mountingSideLabel": "安装面",
-      "face": { "front": "前面", "rear": "后面" },
+      "face": {
+        "front": "前面",
+        "rear": "后面"
+      },
       "newTitle": "新建机架",
       "newServerRoomTitle": "新建机房",
       "editTitle": "编辑机架",
@@ -2159,6 +2162,10 @@
     "installerCheckInterval86400": "每天",
     "installerCheckInterval604800": "每周",
     "installerCheckInterval2592000": "每月",
+    "installerDefaultProvider": "Default package provider",
+    "installerDefaultProviderDesc": "Which package provider is selected by default for new installs when a tool supports both WinGet and Chocolatey. Tools that only support one provider still use their available provider.",
+    "installerDefaultProviderWinget": "WinGet",
+    "installerDefaultProviderChocolatey": "Chocolatey",
     "installerSaved": "安装助手设置已保存。",
     "sectionUrl": "URL",
     "urlDefaults": "URL 数据与凭据",
