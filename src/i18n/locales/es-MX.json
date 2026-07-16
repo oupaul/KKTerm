@@ -1651,6 +1651,7 @@
     "title": "Configuración",
     "workspace": "Espacio de trabajo",
     "sectionsNav": "Secciones de configuración",
+    "searchNoResults": "No se encontraron opciones de configuración",
     "sectionGeneral": "General",
     "sectionAppearance": "Apariencia",
     "sectionDashboard": "Tablero",

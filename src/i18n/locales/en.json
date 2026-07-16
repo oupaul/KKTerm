@@ -1651,6 +1651,7 @@
     "title": "Settings",
     "workspace": "Workspace",
     "sectionsNav": "Settings sections",
+    "searchNoResults": "No settings found",
     "sectionGeneral": "General",
     "sectionAppearance": "Appearance",
     "sectionDashboard": "Dashboard",

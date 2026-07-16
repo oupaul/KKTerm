@@ -1651,6 +1651,7 @@
     "title": "Ajustes",
     "workspace": "Espacio de trabajo",
     "sectionsNav": "Secciones de ajustes",
+    "searchNoResults": "No se encontraron ajustes",
     "sectionGeneral": "General",
     "sectionAppearance": "Apariencia",
     "sectionDashboard": "Panel",

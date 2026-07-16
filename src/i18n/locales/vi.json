@@ -1651,6 +1651,7 @@
     "title": "Settings",
     "workspace": "Workspace",
     "sectionsNav": "Settings sections",
+    "searchNoResults": "Không tìm thấy cài đặt",
     "sectionGeneral": "General",
     "sectionAppearance": "Appearance",
     "sectionDashboard": "Bảng điều khiển",

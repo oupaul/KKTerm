@@ -1651,6 +1651,7 @@
     "title": "설정",
     "workspace": "워크스페이스",
     "sectionsNav": "설정 섹션",
+    "searchNoResults": "설정을 찾을 수 없음",
     "sectionGeneral": "일반",
     "sectionAppearance": "외관",
     "sectionDashboard": "대시보드",

@@ -1651,6 +1651,7 @@
     "title": "Pengaturan",
     "workspace": "Ruang kerja",
     "sectionsNav": "Bagian pengaturan",
+    "searchNoResults": "Pengaturan tidak ditemukan",
     "sectionGeneral": "Umum",
     "sectionAppearance": "Tampilan",
     "sectionDashboard": "Dasbor",

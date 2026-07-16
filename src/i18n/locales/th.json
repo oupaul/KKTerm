@@ -1651,6 +1651,7 @@
     "title": "การตั้งค่า",
     "workspace": "พื้นที่ทำงาน",
     "sectionsNav": "ส่วนการตั้งค่า",
+    "searchNoResults": "ไม่พบการตั้งค่า",
     "sectionGeneral": "ทั่วไป",
     "sectionAppearance": "รูปลักษณ์",
     "sectionDashboard": "แดชบอร์ด",

@@ -63,6 +63,7 @@ Settings tutorial targets:
   - `settings.sectionDontSleep`
   - `settings.proxy`
   - `settings.sectionAbout`
+- The search box above the section list filters navigation items and indexed subsection/control labels as text is entered. Results are matched case-insensitively against both the active UI language and English, so English setting names remain discoverable in every locale. Selecting a section or nested result opens its owning Settings section in the detail pane. The trailing `common.clear` button appears only while the query is non-empty; unmatched queries show `settings.searchNoResults`.
 - Save action: `settings.save`. When any visited section has unsaved edits, the popup header shows `settings.changesNotSaved` followed by the Save button immediately to the left of the close button. Switching Settings sections preserves each visited section's draft until it is saved or Settings is closed. When all sections are clean, both the text and Save button are hidden. Clicking outside the Settings popup or using the top-right close button closes it only while there are no unsaved edits; otherwise the warning dialog uses `settings.unsavedQuitTitle`, `settings.unsavedQuitBody`, `settings.saveAndQuit`, `settings.quitWithoutSaving`, and `common.cancel`.
 - Per-section status, e.g. `settings.appearanceSaved`, `settings.generalDefaultsSaved`.
 

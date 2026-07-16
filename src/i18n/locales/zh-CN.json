@@ -1651,6 +1651,7 @@
     "title": "设置",
     "workspace": "工作区",
     "sectionsNav": "设置区段",
+    "searchNoResults": "未找到设置",
     "sectionGeneral": "通用",
     "sectionAppearance": "外观",
     "sectionDashboard": "仪表板",
