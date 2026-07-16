@@ -437,6 +437,12 @@ turns red when the selected facing cannot fit. A successfully placed Wall
 remains armed for continuous placement. A Wall reserves its entire logical grid cell even
 though its construction is drawn as a thin segment: Rack and object placement
 or dragging cannot enter that cell, and a Wall cannot replace any occupant.
+The floor plan pans only when its current zoom or room bounds overflow the pane,
+so it cannot be dragged away to expose background gaps. The 2.5D view keeps
+scrollable camera margin around its projected room. In either spatial view,
+drag blank floor with the left mouse button, drag with the middle button, or
+focus the room and use the arrow keys to pan. The target button below the zoom
+levels, or a middle-button click without dragging, resets the camera to center.
 The Rack hover detail card shared by both spatial views mounts outside their
 clipping canvases and flips or clamps within the visible room at every edge.
 The Rack configuration dialog exposes

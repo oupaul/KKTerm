@@ -20,6 +20,8 @@ const ROT_RAD = (ISO_ROT_DEG * Math.PI) / 180;
 
 /** cos(tilt): how much the projection squashes the floor plane vertically. */
 export const ISO_TILT_COS = Math.cos(TILT_RAD);
+const ISO_VIEW_SIDE_PADDING = 48;
+const ISO_VIEW_VERTICAL_PADDING = 84;
 
 // Keep some empty floor around the outermost cabinets so there is always room
 // to drag a cabinet (or add a new rack) past the current footprint.
@@ -173,6 +175,19 @@ export function fitIsoRoomZoom(
   if (!viewport || natural.w <= 0 || natural.h <= 0) return requestedZoom;
   const fit = Math.min(1, viewport.w / natural.w, viewport.h / natural.h);
   return requestedZoom * Math.max(0.01, fit);
+}
+
+/** Minimum clip-box height for a floor expanded to the available width.
+ *  Without this, wide panes let the projected diamond exceed the viewport's
+ *  bottom edge even though the original rack-derived room bounds fit. */
+export function isoViewHeightForWidth(width: number, maxTop: number): number {
+  const projectedFloorHeight =
+    Math.max(0, width - ISO_VIEW_SIDE_PADDING) * ISO_TILT_COS;
+  return (
+    Math.ceil(projectedFloorHeight) +
+    Math.ceil(maxTop) +
+    ISO_VIEW_VERTICAL_PADDING
+  );
 }
 
 /** Build edit-mode targets for the whole rendered floor. The viewport expands

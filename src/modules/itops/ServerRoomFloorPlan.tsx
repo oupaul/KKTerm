@@ -48,6 +48,7 @@ import {
   type RackFacingMap,
 } from "./siteTreeState";
 import { rackFloorMetrics } from "./roomFloorPlan";
+import { centerRoomViewport, roomPanFrame } from "./roomViewport";
 import { ItIcon } from "./icons";
 import { RoomObjectPlanArtwork } from "./RoomObjectArtwork";
 import { isRackTopItem } from "./rackPlacement";
@@ -160,7 +161,6 @@ export function ServerRoomFloorPlan({
   const [zoom, setZoom] = useState(() => loadRoomZoom("floor"));
   useEffect(() => saveRoomZoom("floor", zoom), [zoom]);
   useWheelZoom(scrollRef, (dir) => setZoom((current) => stepRoomZoom(current, dir)));
-  useRoomPan(scrollRef);
   // Grid dimensions cover the racks, every placed object, and the visible
   // viewport; cell sizes stretch so the walls land on the viewport edge.
   const floorW = viewport ? Math.max(0, viewport.w / zoom - BP_WALL) : 0;
@@ -177,6 +177,14 @@ export function ServerRoomFloorPlan({
   );
   const cellW = floorW > 0 ? Math.max(BP_MIN_CELL, floorW / cols) : BP_CELL;
   const cellH = floorH > 0 ? Math.max(BP_MIN_CELL, floorH / rows) : BP_CELL;
+  const sceneW = (cols * cellW + BP_WALL) * zoom;
+  const sceneH = (rows * cellH + BP_WALL) * zoom;
+  const panFrame = roomPanFrame(
+    viewport ?? { w: sceneW, h: sceneH },
+    { w: sceneW, h: sceneH },
+    false,
+  );
+  useRoomPan(scrollRef, { left: panFrame.sceneLeft, top: panFrame.sceneTop });
   const grid = { cols, rows, cells: layout.cells };
   const armed =
     tool != null || placeRackId != null || cloneRack != null || cloneObject != null;
@@ -566,8 +574,8 @@ export function ServerRoomFloorPlan({
           <div
             className="rm-bp-zoom"
             style={{
-              width: (cols * cellW + BP_WALL) * zoom,
-              height: (rows * cellH + BP_WALL) * zoom,
+              width: panFrame.w,
+              height: panFrame.h,
             }}
           >
             <div
@@ -575,6 +583,8 @@ export function ServerRoomFloorPlan({
               style={{
                 width: cols * cellW,
                 height: rows * cellH,
+                left: panFrame.sceneLeft,
+                top: panFrame.sceneTop,
                 transform: zoom !== 1 ? `scale(${zoom})` : undefined,
                 backgroundSize: `${cellW}px ${cellH}px, ${cellW}px ${cellH}px, ${cellW / 4}px ${cellH / 4}px, ${cellW / 4}px ${cellH / 4}px, auto`,
               }}
@@ -746,7 +756,11 @@ export function ServerRoomFloorPlan({
             boundaryRef={scrollRef}
           />
         </div>
-        <RoomZoomRuler zoom={zoom} onZoomChange={setZoom} />
+        <RoomZoomRuler
+          zoom={zoom}
+          onZoomChange={setZoom}
+          onResetCenter={() => centerRoomViewport(scrollRef)}
+        />
       </div>
       {editMode ? <div className="rm-iso-hint">{t("itops.floorPlan.blueprintEditHint")}</div> : null}
       <RoomPlacementCursorGhost

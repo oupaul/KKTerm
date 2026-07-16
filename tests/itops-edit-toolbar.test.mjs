@@ -77,15 +77,26 @@ test("Spatial room views pan with the left button, zoom on wheel, and expose the
   assert.match(parts, /export function useWheelZoom/);
   assert.match(parts, /export function RoomZoomRuler/);
   assert.match(parts, /className="rm-zoomruler"/);
+  assert.match(parts, /className="rm-zoomruler-reset"/);
+  assert.match(parts, /button === 1 && !panning/);
+  assert.match(parts, /centerRoomViewport\(ref\)/);
   // Left-button pan engages past a threshold and swallows the follow-up click.
   assert.match(parts, /event\.button === 0/);
   assert.match(parts, /squelchClick/);
+  assert.doesNotMatch(
+    parts,
+    /target\.closest\("button,/,
+    "blank 2.5D tile buttons must remain eligible for thresholded left-button panning",
+  );
   for (const view of [floorPlan, isoView]) {
     assert.match(view, /useWheelZoom\(scrollRef/);
-    assert.match(view, /<RoomZoomRuler zoom=\{zoom\} onZoomChange=\{setZoom\} \/>/);
+    assert.match(view, /roomPanFrame\(/);
+    assert.match(view, /onResetCenter=\{\(\) => centerRoomViewport\(scrollRef\)\}/);
     assert.match(view, /loadRoomZoom\(/);
     assert.match(view, /saveRoomZoom\(/);
   }
+  assert.match(floorPlan, /roomPanFrame\([\s\S]*?false,/);
+  assert.match(isoView, /isoViewHeightForWidth\(viewW, maxTop\)/);
 });
 
 test("Edit mode arms placement through the shared object picker column", async () => {

@@ -35,6 +35,7 @@ import {
   expandIsoFloorFrame,
   facingFromPoint,
   fitIsoRoomZoom,
+  isoViewHeightForWidth,
   isoPlacementCells,
   moveIsoRack,
   rackDepthFrac,
@@ -82,6 +83,7 @@ import {
   stepRoomZoom,
 } from "./siteTreeState";
 import { ItIcon } from "./icons";
+import { centerRoomViewport, roomPanFrame } from "./roomViewport";
 import {
   OBJECT_ACCENTS,
   RoomRackHoverCard,
@@ -225,7 +227,6 @@ export function ServerRoomIsoView({
   const [zoom, setZoom] = useState(() => loadRoomZoom("iso"));
   useEffect(() => saveRoomZoom("iso", zoom), [zoom]);
   useWheelZoom(scrollRef, (dir) => setZoom((current) => stepRoomZoom(current, dir)));
-  useRoomPan(scrollRef);
   const armed =
     tool != null || placeRackId != null || cloneRack != null || cloneObject != null;
   const placing = !!editMode && armed;
@@ -345,7 +346,15 @@ export function ServerRoomIsoView({
   const viewH = Math.max(
     naturalView.h,
     (viewport?.h ?? 0) / effectiveZoom,
+    isoViewHeightForWidth(viewW, maxTop),
   );
+  const sceneW = viewW * effectiveZoom;
+  const sceneH = viewH * effectiveZoom;
+  const panFrame = roomPanFrame(
+    viewport ?? { w: sceneW, h: sceneH },
+    { w: sceneW, h: sceneH },
+  );
+  useRoomPan(scrollRef, { left: panFrame.sceneLeft, top: panFrame.sceneTop });
   const floorDiag = Math.max(viewW - 48, (viewH - Math.ceil(maxTop) - 84) / ISO_TILT_COS);
   const { floorCols, floorRows, offX, offY } = expandIsoFloorFrame(
     gridCols,
@@ -741,12 +750,14 @@ export function ServerRoomIsoView({
           onPointerDown={handleRoomPointerDown}
           onContextMenu={placing || onOpenBackground ? handleRoomContextMenu : undefined}
         >
-          <div className="rm-iso-zoom" style={{ width: viewW * effectiveZoom, height: viewH * effectiveZoom }}>
+          <div className="rm-iso-zoom" style={{ width: panFrame.w, height: panFrame.h }}>
             <div
               className="rm-iso-viewport"
               style={{
                 width: viewW,
                 height: viewH,
+                left: panFrame.sceneLeft,
+                top: panFrame.sceneTop,
                 transform: effectiveZoom !== 1 ? `scale(${effectiveZoom})` : undefined,
               }}
             >
@@ -1068,7 +1079,11 @@ export function ServerRoomIsoView({
         {/* Floating control column over the room's top-right corner. Floor
             finish now belongs to Server Room Properties. */}
         <div className="rm-iso-corner">
-          <RoomZoomRuler zoom={zoom} onZoomChange={setZoom} />
+          <RoomZoomRuler
+            zoom={zoom}
+            onZoomChange={setZoom}
+            onResetCenter={() => centerRoomViewport(scrollRef)}
+          />
           <div
             className="rm-iso-angles"
             role="group"

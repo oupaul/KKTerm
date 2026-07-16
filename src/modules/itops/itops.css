@@ -5209,13 +5209,14 @@
 /* Sizer around the zoomed plan: sized to the scaled footprint so scrolling
    and centering track the zoom level. */
 .itops-page .rm-bp-zoom {
+  position: relative;
   flex: 0 0 auto;
   margin: auto;
 }
 /* The room outline reads as a blueprint: heavy wall stroke, major grid per
    floor cell, minor quarter-cell grid, cool tint. Cell size is set inline. */
 .itops-page .rm-bp {
-  position: relative;
+  position: absolute;
   transform-origin: 0 0;
   border: 2.5px solid color-mix(in srgb, var(--text) 52%, var(--surface));
   border-radius: 3px;
@@ -6040,6 +6041,25 @@
   width: 14px;
   height: 2.5px;
 }
+.itops-page .rm-zoomruler-reset {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  margin-top: 3px;
+  padding: 3px;
+  border: 0;
+  border-top: 0.5px solid var(--border);
+  border-radius: 0 0 5px 5px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.14s, color 0.14s;
+}
+.itops-page .rm-zoomruler-reset:hover {
+  background: var(--hover);
+  color: var(--text);
+}
 /* Floating control column over the 2.5D room's top-right corner: the shared
    zoom ruler with the view-angle stepper and floor-colour swatches under it. */
 .itops-page .rm-iso-corner {
@@ -6092,13 +6112,14 @@
 /* Sizer around the zoomed canvas: sized to the scaled footprint so scrolling
    and centering track the zoom level. */
 .itops-page .rm-iso-zoom {
+  position: relative;
   flex: 0 0 auto;
   margin: auto;
 }
 /* Clip the decorative floor overhang: the plane's projection is sized to
    cover the whole canvas, so its corners stick out past the viewport. */
 .itops-page .rm-iso-viewport {
-  position: relative;
+  position: absolute;
   transform-origin: 0 0;
   overflow: hidden;
 }
