@@ -648,7 +648,7 @@ fn apply_segment(
                 continue;
             }
             let mut rewritten = row_obj.clone();
-            rewrite_row(tx, table, &mut rewritten, remap)?;
+            rewrite_row(tx, table, &mut rewritten, action, remap)?;
             // On "add", a built-in Task the importer already has (same
             // deterministic id / built_in_key) is kept as-is rather than
             // duplicated; one the importer lacks is inserted.
@@ -675,6 +675,7 @@ fn rewrite_row(
     tx: &rusqlite::Transaction<'_>,
     table: &TableSpec,
     row: &mut Map<String, Value>,
+    action: &str,
     remap: &HashMap<(String, String), String>,
 ) -> Result<(), String> {
     // Primary key.
@@ -691,7 +692,7 @@ fn rewrite_row(
 
     // Workspaces gain a default flag conflict if two rows claim default; on add
     // we keep only the importer's existing default.
-    if table.name == "workspaces" && row.contains_key("is_default") {
+    if action == "add" && table.name == "workspaces" && row.contains_key("is_default") {
         row.insert("is_default".to_string(), Value::from(0));
     }
 
@@ -2179,7 +2180,7 @@ mod tests {
         let src = SqliteConnection::open_in_memory().unwrap();
         connections_schema(&src);
         src.execute(
-            "INSERT INTO workspaces (id, name, is_default, sort_order) VALUES ('ws-src','Imported',0,0)",
+            "INSERT INTO workspaces (id, name, is_default, sort_order) VALUES ('ws-src','Imported',1,0)",
             [],
         )
         .unwrap();
@@ -2209,19 +2210,19 @@ mod tests {
             .unwrap();
             tx.commit().unwrap();
         }
-        let ids: Vec<String> = {
+        let rows: Vec<(String, i64)> = {
             let mut stmt = dst
-                .prepare("SELECT id FROM workspaces ORDER BY id")
+                .prepare("SELECT id, is_default FROM workspaces ORDER BY id")
                 .unwrap();
-            stmt.query_map([], |row| row.get(0))
+            stmt.query_map([], |row| Ok((row.get(0)?, row.get(1)?)))
                 .unwrap()
                 .collect::<Result<_, _>>()
                 .unwrap()
         };
         assert_eq!(
-            ids,
-            vec!["ws-src".to_string()],
-            "replace wipes old rows and keeps bundle ids"
+            rows,
+            vec![("ws-src".to_string(), 1)],
+            "replace wipes old rows and keeps bundle ids plus the imported default"
         );
     }
 }
