@@ -855,7 +855,9 @@
       "remoteAccess": "遠端存取",
       "packageManagers": "套件管理員",
       "utilities": "公用程式",
-      "design": "設計"
+      "design": "設計",
+      "productivity": "生產力",
+      "multimedia": "多媒體"
     },
     "actions": {
       "install": "安裝",

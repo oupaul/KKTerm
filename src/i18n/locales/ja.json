@@ -855,7 +855,9 @@
       "remoteAccess": "リモート アクセス",
       "packageManagers": "パッケージ マネージャー",
       "utilities": "ユーティリティ",
-      "design": "デザイン"
+      "design": "デザイン",
+      "productivity": "生産性",
+      "multimedia": "マルチメディア"
     },
     "actions": {
       "install": "インストール",

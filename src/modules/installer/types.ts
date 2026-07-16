@@ -1,5 +1,5 @@
 // TypeScript mirror of the Rust types in src-tauri/src/installer/.
-// Any change here must be matched in the Rust side. See ADR 0007.
+// Any change here must be matched in the Rust side. See ADR 0007 and ADR 0008.
 
 export type ProviderKind =
   | "winget"
@@ -15,6 +15,20 @@ export type ProviderKind =
 export type GithubReleaseLayout = "zip" | "exeInstaller" | "msi";
 
 export type RecipeOption = "scope" | "version" | "location" | "addToPath" | "provider";
+
+export type RecipeSection =
+  | "internal"
+  | "essentials"
+  | "aiAgents"
+  | "aiPlatforms"
+  | "development"
+  | "design"
+  | "productivity"
+  | "multimedia"
+  | "windowsPowerUser"
+  | "remoteAccess"
+  | "packageManagers"
+  | "utilities";
 
 export interface Detection {
   registryKeys?: string[];
@@ -43,6 +57,7 @@ export type Provider =
 export interface Recipe {
   id: string;
   name: string;
+  section: RecipeSection;
   descriptionEn: string;
   descriptionLocales?: Record<string, string>;
   needs?: string[];

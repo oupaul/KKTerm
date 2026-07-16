@@ -855,7 +855,9 @@
       "remoteAccess": "Remotezugriff",
       "packageManagers": "Paketmanager",
       "utilities": "Dienstprogramme",
-      "design": "Design"
+      "design": "Design",
+      "productivity": "Produktivität",
+      "multimedia": "Multimedia"
     },
     "actions": {
       "install": "Installieren",

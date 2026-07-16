@@ -1189,6 +1189,7 @@ mod tests {
         Recipe {
             id: "test".into(),
             name: "Test".into(),
+            section: super::super::schema::RecipeSection::Internal,
             description_en: String::new(),
             description_locales: HashMap::new(),
             needs: vec![],

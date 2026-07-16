@@ -855,7 +855,9 @@
       "remoteAccess": "Akses Jarak Jauh",
       "packageManagers": "Manajer Paket",
       "utilities": "Utilitas",
-      "design": "Desain"
+      "design": "Desain",
+      "productivity": "Produktivitas",
+      "multimedia": "Multimedia"
     },
     "actions": {
       "install": "Instal",

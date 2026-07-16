@@ -308,25 +308,21 @@ export function InstallerPage({ active }: { active: boolean }) {
   // Catalog recipes, ordered and filtered to the visible Install Helper set
   // (section order, then per-section order). One ordered list drives counts,
   // grouping, and the flat List/Gallery views.
-  const recipesById = useMemo(
-    () => new Map((catalog?.recipes ?? []).map((r) => [r.id, r])),
-    [catalog],
-  );
   const sectionOfId = useMemo(() => {
     const map = new Map<string, string>();
-    for (const section of INSTALLER_CATEGORY_SECTIONS) {
-      for (const id of section.ids) map.set(id, section.id);
+    for (const recipe of catalog?.recipes ?? []) {
+      if (recipe.section !== "internal") map.set(recipe.id, recipe.section);
     }
     return map;
-  }, []);
+  }, [catalog]);
   const orderedRecipes = useMemo(
     () =>
       INSTALLER_CATEGORY_SECTIONS.flatMap((section) =>
-        section.ids
-          .map((id) => recipesById.get(id))
-          .filter((recipe): recipe is Recipe => !!recipe),
+        (catalog?.recipes ?? []).filter(
+          (recipe) => recipe.section === section.id,
+        ),
       ),
-    [recipesById],
+    [catalog],
   );
 
   const statusFor = useMemo(() => {
@@ -660,12 +656,9 @@ function InstallerContent({
     );
   }
 
-  const recipeIds = new Set(recipes.map((recipe) => recipe.id));
   const groups = INSTALLER_CATEGORY_SECTIONS.map((section) => ({
     section,
-    recipes: section.ids
-      .map((id) => recipes.find((recipe) => recipe.id === id))
-      .filter((recipe): recipe is Recipe => !!recipe && recipeIds.has(recipe.id)),
+    recipes: recipes.filter((recipe) => recipe.section === section.id),
   })).filter((group) => group.recipes.length > 0);
 
   return (

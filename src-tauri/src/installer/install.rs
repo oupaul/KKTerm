@@ -2988,6 +2988,7 @@ mod tests {
         Recipe {
             id: "git".into(),
             name: "Git for Windows".into(),
+            section: super::super::schema::RecipeSection::Internal,
             description_en: "Distributed version control.".into(),
             description_locales: Default::default(),
             needs: vec![],

@@ -66,34 +66,35 @@ no source-kind discriminator.
 
 ## Adding a recipe (developer checklist)
 
-A catalog entry is **necessary but not sufficient** to make a tool show
-up in the Install Helper. The UI does not render by the catalog's
-`category` field — it renders by a hardcoded per-section allow-list of
-recipe ids. A valid recipe that is not in that list is silently
-invisible. This has bitten us several times (most recently
-`powershell-7`). When adding a tool, update **all** of the following:
+A recipe's Install Helper visibility and section membership are catalog-owned.
+Every recipe must declare `section`. User-facing values are the stable section
+ids (`essentials`, `aiAgents`, `aiPlatforms`, `development`, `design`,
+`productivity`, `multimedia`, `windowsPowerUser`, `remoteAccess`,
+`packageManagers`, or `utilities`). Dependency-only recipes must explicitly
+declare `internal`.
+
+`section` is required rather than defaulted so a newly added recipe cannot
+silently disappear because a second frontend allow-list was not updated. The
+frontend `src/modules/installer/sections.ts` contains only section presentation
+metadata (display order, translated label, icon, and tint); it contains no
+recipe ids.
+
+When adding a tool, update the following:
 
 1. **`installer/catalog.v1.json`** — add the recipe object (`id`,
-   `name`, `descriptionEn`, `category`, provider, detection, etc.). The
+   `name`, `section`, `descriptionEn`, `category`, provider, detection, etc.).
+   Use `internal` only for dependency recipes that should never have their own
+   Install Helper tile. The
    `shipped_catalog_parses_and_validates` Rust test guards the schema.
    Because the catalog is `include_str!`-embedded, this requires a Rust
    rebuild to take effect at runtime.
-2. **`src/modules/installer/sections.ts`** — add the recipe `id`
-   to the matching section's `ids` array in
-   `INSTALLER_CATEGORY_SECTIONS` (consumed by `InstallerPage.tsx`).
-   **This is the step that actually makes
-   the tool visible.** `groupRecipes` builds its `visibleIds` set from
-   the union of these arrays and skips any recipe not present, so it
-   also gates update detection. Forgetting this is the classic
-   "I added it to the catalog but don't see it" bug.
-3. **`src/modules/installer/icons.ts`** — optionally map the `id` to a
+2. **`src/modules/installer/icons.ts`** — optionally map the `id` to a
    bundled brand icon in `RECIPE_ICON_URLS`. This one is safe to skip:
    unmapped ids fall back to the generic package icon, so it affects
    appearance only, not visibility.
 
-Steps 1 and 2 are mandatory and independent; step 3 is cosmetic. The
-manual chapter `docs/manual/18-installer.md` lists tools for end users
-and should be updated to match when the user-visible set changes.
+The manual chapter `docs/manual/18-installer.md` lists tools for end users and
+should be updated to match when the user-visible set changes.
 
 ## Finding all install sources for a recipe
 

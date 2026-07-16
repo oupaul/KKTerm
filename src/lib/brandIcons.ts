@@ -259,6 +259,11 @@ export const BRAND_ICON_ENTRIES: BrandIconEntry[] = [
     keywords: ["notepad", "notepad++", "editor", "code", "document", "file"],
   },
   {
+    id: "obs-studio",
+    label: "OBS Studio",
+    keywords: ["obs", "obs studio", "video", "recording", "streaming", "multimedia"],
+  },
+  {
     id: "ollama",
     label: "Ollama",
     keywords: ["ollama", "ai", "assistant", "model", "local"],
@@ -327,6 +332,11 @@ export const BRAND_ICON_ENTRIES: BrandIconEntry[] = [
     id: "vscode",
     label: "Visual Studio Code",
     keywords: ["vscode", "vs code", "visual studio code", "editor", "code", "developer", "microsoft"],
+  },
+  {
+    id: "vlc",
+    label: "VLC media player",
+    keywords: ["vlc", "video", "audio", "media", "player", "streaming", "multimedia"],
   },
 ];
 

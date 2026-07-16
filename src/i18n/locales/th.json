@@ -855,7 +855,9 @@
       "remoteAccess": "การเข้าถึงระยะไกล",
       "packageManagers": "ตัวจัดการแพ็กเกจ",
       "utilities": "ยูทิลิตี",
-      "design": "ออกแบบ"
+      "design": "ออกแบบ",
+      "productivity": "ประสิทธิภาพการทำงาน",
+      "multimedia": "มัลติมีเดีย"
     },
     "actions": {
       "install": "ติดตั้ง",

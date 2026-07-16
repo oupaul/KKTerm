@@ -855,7 +855,9 @@
       "remoteAccess": "Truy cập từ xa",
       "packageManagers": "Trình quản lý gói",
       "utilities": "Tiện ích",
-      "design": "Thiết kế"
+      "design": "Thiết kế",
+      "productivity": "Năng suất",
+      "multimedia": "Đa phương tiện"
     },
     "actions": {
       "install": "Cài đặt",

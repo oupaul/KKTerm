@@ -2287,6 +2287,7 @@ fn general_settings_round_trip_through_settings_table() {
                 "itops".to_string(),
             ],
             installer_check_interval_seconds: 604_800,
+            installer_default_provider: "chocolatey".to_string(),
             pinned_connection_ids: vec![
                 " connection-a ".to_string(),
                 "connection-a".to_string(),
@@ -2325,6 +2326,7 @@ fn general_settings_round_trip_through_settings_table() {
     assert!(!updated.show_dont_sleep_on_rail);
     assert_eq!(updated.activity_rail_order[0], "dontSleep");
     assert_eq!(updated.installer_check_interval_seconds, 604_800);
+    assert_eq!(updated.installer_default_provider, "chocolatey");
     assert_eq!(
         updated.pinned_connection_ids,
         vec!["connection-a".to_string(), "connection-b".to_string()]
@@ -2685,6 +2687,7 @@ fn database_backup_import_restores_settings_and_connections() {
                 "itops".to_string(),
             ],
             installer_check_interval_seconds: 86_400,
+            installer_default_provider: "chocolatey".to_string(),
             pinned_connection_ids: vec!["connection-pinned".to_string()],
             allow_clipboard_read: true,
             auto_start_with_windows: true,
@@ -2723,6 +2726,7 @@ fn database_backup_import_restores_settings_and_connections() {
             show_dont_sleep_on_rail: true,
             activity_rail_order: default_activity_rail_order(),
             installer_check_interval_seconds: 86_400,
+            installer_default_provider: "winget".to_string(),
             pinned_connection_ids: Vec::new(),
             allow_clipboard_read: false,
             auto_start_with_windows: false,
@@ -2770,6 +2774,10 @@ fn database_backup_import_restores_settings_and_connections() {
     assert!(!imported.general_settings.show_installer_on_rail);
     assert!(!imported.general_settings.show_it_ops);
     assert!(!imported.general_settings.show_dont_sleep_on_rail);
+    assert_eq!(
+        imported.general_settings.installer_default_provider,
+        "chocolatey"
+    );
     assert_eq!(
         imported.general_settings.activity_rail_order[0],
         "dontSleep"

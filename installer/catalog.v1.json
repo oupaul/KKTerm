@@ -1,10 +1,11 @@
 {
-  "schemaVersion": 1,
-  "generatedAt": "2026-06-01",
+  "schemaVersion": 2,
+  "generatedAt": "2026-07-16",
   "recipes": [
     {
       "id": "git",
       "name": "Git for Windows",
+      "section": "essentials",
       "descriptionEn": "Distributed version control. Implicit prerequisite for many AI coding tools.",
       "category": "vcs",
       "icon": "GitBranch",
@@ -59,6 +60,7 @@
     {
       "id": "github-cli",
       "name": "GitHub CLI",
+      "section": "internal",
       "descriptionEn": "The `gh` command-line tool for GitHub: PRs, issues, repos, releases.",
       "category": "vcs",
       "icon": "Github",
@@ -108,6 +110,7 @@
     {
       "id": "winget",
       "name": "winget",
+      "section": "packageManagers",
       "descriptionEn": "Microsoft's Windows Package Manager command-line client. Required before KKTerm can install winget-backed tools.",
       "category": "package-managers",
       "icon": "Package",
@@ -138,6 +141,7 @@
     {
       "id": "chocolatey",
       "name": "Chocolatey",
+      "section": "packageManagers",
       "descriptionEn": "Windows package manager used by KKTerm as an optional backend for curated tools that also publish Chocolatey packages.",
       "category": "package-managers",
       "icon": "PackagePlus",
@@ -181,6 +185,7 @@
     {
       "id": "vscode",
       "name": "VS Code",
+      "section": "development",
       "descriptionEn": "Visual Studio Code — Microsoft's free source editor with rich extension ecosystem.",
       "category": "editor",
       "icon": "Code",
@@ -239,6 +244,7 @@
     {
       "id": "cursor",
       "name": "Cursor",
+      "section": "development",
       "descriptionEn": "AI-first code editor built on VS Code.",
       "category": "editor",
       "icon": "MousePointerClick",
@@ -283,6 +289,7 @@
     {
       "id": "notepadpp",
       "name": "Notepad++",
+      "section": "productivity",
       "descriptionEn": "Lightweight Windows text editor with syntax highlighting.",
       "category": "editor",
       "icon": "FileText",
@@ -331,6 +338,7 @@
     {
       "id": "nvm-windows",
       "name": "nvm-windows",
+      "section": "internal",
       "descriptionEn": "Node Version Manager for Windows. Lets you switch between multiple Node versions.",
       "category": "runtime",
       "icon": "Layers",
@@ -378,6 +386,7 @@
     {
       "id": "node-bundle",
       "name": "Node (nvm-windows)",
+      "section": "essentials",
       "descriptionEn": "Installs nvm-windows, then installs and activates the latest Node LTS release through nvm-windows.",
       "category": "runtime",
       "icon": "Boxes",
@@ -406,6 +415,7 @@
     {
       "id": "uv",
       "name": "uv",
+      "section": "internal",
       "descriptionEn": "Fast Python package and project manager from Astral. Can install Python itself on demand.",
       "category": "runtime",
       "icon": "Wind",
@@ -443,6 +453,7 @@
     {
       "id": "python-bundle",
       "name": "Python (uv)",
+      "section": "essentials",
       "descriptionEn": "Installs uv, then installs the latest stable Python 3.13 patch release and pins Python 3.13 globally through uv.",
       "category": "runtime",
       "icon": "Boxes",
@@ -471,6 +482,7 @@
     {
       "id": "wsl",
       "name": "Windows Subsystem for Linux",
+      "section": "development",
       "descriptionEn": "Enables WSL on this Windows install. Requires a reboot before dependent tools (Docker) can run.",
       "category": "infra",
       "icon": "Server",
@@ -498,6 +510,7 @@
     {
       "id": "wsl-ubuntu",
       "name": "Ubuntu (WSL)",
+      "section": "internal",
       "descriptionEn": "Installs the Ubuntu Linux distribution into WSL without launching first-run setup.",
       "category": "infra",
       "icon": "Terminal",
@@ -527,6 +540,7 @@
     {
       "id": "wsl-debian",
       "name": "Debian (WSL)",
+      "section": "internal",
       "descriptionEn": "Installs the Debian Linux distribution into WSL without launching first-run setup.",
       "category": "infra",
       "icon": "Terminal",
@@ -556,6 +570,7 @@
     {
       "id": "docker-desktop",
       "name": "Docker Desktop",
+      "section": "development",
       "descriptionEn": "Docker Desktop for Windows. Uses the WSL2 backend.",
       "category": "infra",
       "icon": "Container",
@@ -604,6 +619,7 @@
     {
       "id": "nssm",
       "name": "NSSM",
+      "section": "utilities",
       "descriptionEn": "The Non-Sucking Service Manager — wrap any program as a Windows service.",
       "category": "utilities",
       "icon": "Wrench",
@@ -649,6 +665,7 @@
     {
       "id": "vcxsrv",
       "name": "VcXsrv",
+      "section": "utilities",
       "descriptionEn": "Lightweight Windows X server for SSH X11 forwarding and remote Linux GUI apps.",
       "category": "utilities",
       "icon": "Monitor",
@@ -696,6 +713,7 @@
     {
       "id": "oh-my-posh",
       "name": "Oh My Posh",
+      "section": "utilities",
       "descriptionEn": "Prompt theme engine for any shell. Adds rich, customizable prompts to PowerShell and more.",
       "category": "utilities",
       "icon": "Palette",
@@ -743,6 +761,7 @@
     {
       "id": "claude-code-cli",
       "name": "Claude Code CLI",
+      "section": "aiAgents",
       "descriptionEn": "Anthropic's official CLI coding agent.",
       "category": "ai",
       "icon": "Bot",
@@ -780,6 +799,7 @@
     {
       "id": "codex-cli",
       "name": "Codex CLI",
+      "section": "aiAgents",
       "descriptionEn": "OpenAI's official CLI coding agent. Requires Node.",
       "category": "ai",
       "icon": "Bot",
@@ -812,6 +832,7 @@
     {
       "id": "antigravity-cli",
       "name": "Antigravity CLI",
+      "section": "aiAgents",
       "descriptionEn": "Google's Antigravity command-line agent, installed with the official Windows command installer.",
       "category": "ai-agent",
       "icon": "Bot",
@@ -841,6 +862,7 @@
     {
       "id": "ollama",
       "name": "Ollama",
+      "section": "aiPlatforms",
       "descriptionEn": "Run local large language models on your machine. Managed under KKTerm app-local storage.",
       "category": "ai",
       "icon": "Cpu",
@@ -889,6 +911,7 @@
     {
       "id": "n8n",
       "name": "n8n",
+      "section": "aiPlatforms",
       "descriptionEn": "Workflow automation tool — self-hosted Zapier alternative. Managed as a KKTerm app-local npm project.",
       "category": "automation",
       "icon": "Workflow",
@@ -922,6 +945,7 @@
     {
       "id": "open-webui",
       "name": "Open WebUI",
+      "section": "aiPlatforms",
       "descriptionEn": "Self-hosted AI chat platform with local model integrations. Managed as a KKTerm app-local uv/pip environment.",
       "category": "ai-platform",
       "icon": "MessagesSquare",
@@ -956,6 +980,7 @@
     {
       "id": "flowise",
       "name": "Flowise",
+      "section": "aiPlatforms",
       "descriptionEn": "Low-code visual builder for LLM workflows and agent chains. Managed as a KKTerm app-local npm project.",
       "category": "ai-platform",
       "icon": "Workflow",
@@ -990,6 +1015,7 @@
     {
       "id": "langflow",
       "name": "Langflow",
+      "section": "aiPlatforms",
       "descriptionEn": "Visual AI application builder for LangChain-style flows. Managed as a KKTerm app-local uv/pip environment.",
       "category": "ai-platform",
       "icon": "Cable",
@@ -1024,6 +1050,7 @@
     {
       "id": "comfyui",
       "name": "ComfyUI",
+      "section": "aiPlatforms",
       "descriptionEn": "Node-based GUI for Stable Diffusion and diffusion-model image and video workflows.",
       "category": "ai-platform",
       "icon": "Workflow",
@@ -1065,6 +1092,7 @@
     {
       "id": "lmstudio",
       "name": "LM Studio",
+      "section": "aiPlatforms",
       "descriptionEn": "Desktop app to discover, download, and run local LLMs with an OpenAI-compatible server.",
       "category": "ai-platform",
       "icon": "Cpu",
@@ -1106,6 +1134,7 @@
     {
       "id": "bruno",
       "name": "Bruno",
+      "section": "development",
       "descriptionEn": "Open-source API client. Postman alternative with git-friendly request files.",
       "category": "utilities",
       "icon": "Boxes",
@@ -1153,6 +1182,7 @@
     {
       "id": "ripgrep",
       "name": "ripgrep",
+      "section": "utilities",
       "descriptionEn": "Recursive line-oriented search tool. AI coding agents lean on this heavily.",
       "category": "cli",
       "icon": "Search",
@@ -1195,6 +1225,7 @@
     {
       "id": "jq",
       "name": "jq",
+      "section": "utilities",
       "descriptionEn": "Command-line JSON processor.",
       "category": "cli",
       "icon": "Braces",
@@ -1237,6 +1268,7 @@
     {
       "id": "fzf",
       "name": "fzf",
+      "section": "utilities",
       "descriptionEn": "General-purpose fuzzy finder for the command line.",
       "category": "cli",
       "icon": "Filter",
@@ -1279,6 +1311,7 @@
     {
       "id": "coreutils",
       "name": "Coreutils for Windows",
+      "section": "utilities",
       "descriptionEn": "Microsoft-maintained native Windows build of Unix-style core utilities.",
       "category": "cli",
       "icon": "Terminal",
@@ -1333,6 +1366,7 @@
     {
       "id": "opencode",
       "name": "OpenCode CLI",
+      "section": "aiAgents",
       "descriptionEn": "Terminal coding agent that can work with multiple AI providers.",
       "category": "ai-agent",
       "icon": "Terminal",
@@ -1377,6 +1411,7 @@
     {
       "id": "rustup",
       "name": "Rustup",
+      "section": "development",
       "descriptionEn": "Rust toolchain installer and version manager.",
       "category": "development",
       "icon": "Hammer",
@@ -1432,6 +1467,7 @@
     {
       "id": "bun",
       "name": "Bun",
+      "section": "development",
       "descriptionEn": "All-in-one JavaScript runtime and toolkit with a bundler, test runner, and Node.js-compatible package manager.",
       "category": "development",
       "icon": "Zap",
@@ -1488,6 +1524,7 @@
     {
       "id": "codex-desktop",
       "name": "ChatGPT Desktop (Codex)",
+      "section": "aiAgents",
       "descriptionEn": "New ChatGPT desktop app with Chat, Work, and Codex coding agents.",
       "category": "ai-agent",
       "icon": "Bot",
@@ -1529,6 +1566,7 @@
     {
       "id": "claude-desktop",
       "name": "Claude Desktop",
+      "section": "aiAgents",
       "descriptionEn": "Anthropic's desktop app for Claude, including local MCP integrations.",
       "category": "ai-agent",
       "icon": "Bot",
@@ -1577,6 +1615,7 @@
     {
       "id": "hermes-agent",
       "name": "Hermes AI Agent",
+      "section": "aiAgents",
       "descriptionEn": "Self-learning AI agent framework from Nous Research, installed with uv/pip.",
       "category": "ai-agent",
       "icon": "BrainCircuit",
@@ -1611,6 +1650,7 @@
     {
       "id": "hermes-desktop",
       "name": "Hermes Desktop",
+      "section": "aiAgents",
       "descriptionEn": "Desktop app for local Hermes AI agent workflows from Nous Research.",
       "category": "ai-agent",
       "icon": "Bot",
@@ -1646,6 +1686,7 @@
     {
       "id": "powertoys",
       "name": "Microsoft PowerToys",
+      "section": "windowsPowerUser",
       "descriptionEn": "Microsoft's Windows productivity utilities, including launcher, window management, and file tools.",
       "category": "windows-power-user",
       "icon": "Sparkles",
@@ -1697,6 +1738,7 @@
     {
       "id": "powershell-7",
       "name": "PowerShell 7",
+      "section": "windowsPowerUser",
       "descriptionEn": "Cross-platform PowerShell 7 (pwsh), with its own $PROFILE separate from Windows PowerShell 5.1.",
       "category": "windows-power-user",
       "icon": "TerminalSquare",
@@ -1753,6 +1795,7 @@
     {
       "id": "sysinternals-suite",
       "name": "Sysinternals Suite",
+      "section": "windowsPowerUser",
       "descriptionEn": "Microsoft Sysinternals troubleshooting and administration utilities.",
       "category": "windows-power-user",
       "icon": "BriefcaseMedical",
@@ -1796,6 +1839,7 @@
     {
       "id": "everything",
       "name": "Everything Search",
+      "section": "windowsPowerUser",
       "descriptionEn": "Fast local file-name search for Windows.",
       "category": "windows-power-user",
       "icon": "Search",
@@ -1847,6 +1891,7 @@
     {
       "id": "psmux",
       "name": "psmux",
+      "section": "windowsPowerUser",
       "descriptionEn": "Native Windows terminal multiplexer with tmux-style sessions, windows, and split panes.",
       "category": "windows-power-user",
       "icon": "PanelsTopLeft",
@@ -1886,6 +1931,7 @@
     {
       "id": "ditto",
       "name": "Ditto Clipboard Manager",
+      "section": "windowsPowerUser",
       "descriptionEn": "Clipboard history manager for Windows.",
       "category": "windows-power-user",
       "icon": "Clipboard",
@@ -1934,6 +1980,7 @@
     {
       "id": "tailscale",
       "name": "Tailscale",
+      "section": "remoteAccess",
       "descriptionEn": "WireGuard-based mesh VPN for private network access.",
       "category": "remote-access",
       "icon": "Network",
@@ -1982,6 +2029,7 @@
     {
       "id": "rustdesk",
       "name": "RustDesk",
+      "section": "remoteAccess",
       "descriptionEn": "Open-source remote desktop client.",
       "category": "remote-access",
       "icon": "Monitor",
@@ -2015,6 +2063,7 @@
     {
       "id": "keepassxc",
       "name": "KeePassXC",
+      "section": "utilities",
       "descriptionEn": "Open-source password manager for local encrypted vaults.",
       "category": "utilities",
       "icon": "KeyRound",
@@ -2062,6 +2111,7 @@
     {
       "id": "7zip",
       "name": "7-Zip",
+      "section": "utilities",
       "descriptionEn": "File archiver with broad compression-format support.",
       "category": "utilities",
       "icon": "Archive",
@@ -2113,6 +2163,7 @@
     {
       "id": "poppler",
       "name": "Poppler",
+      "section": "internal",
       "descriptionEn": "PDF rendering utilities (pdftocairo / pdfinfo) used by the KKTerm Document to preview PDF pages without bundling a PDF engine.",
       "category": "utilities",
       "icon": "FileText",
@@ -2146,6 +2197,7 @@
     {
       "id": "sharex",
       "name": "ShareX",
+      "section": "productivity",
       "descriptionEn": "Screenshot, screen recording, and upload workflow utility.",
       "category": "utilities",
       "icon": "Camera",
@@ -2196,6 +2248,7 @@
     {
       "id": "ffmpeg",
       "name": "FFmpeg",
+      "section": "utilities",
       "descriptionEn": "Command-line multimedia toolkit for converting, recording, streaming, and inspecting audio/video files.",
       "category": "utilities",
       "icon": "Film",
@@ -2252,6 +2305,7 @@
     {
       "id": "scrcpy",
       "name": "scrcpy",
+      "section": "utilities",
       "descriptionEn": "Android screen mirroring and control tool for USB or TCP/IP devices.",
       "category": "utilities",
       "icon": "Smartphone",
@@ -2299,6 +2353,7 @@
     {
       "id": "excalidraw",
       "name": "Excalidraw",
+      "section": "design",
       "descriptionEn": "Whiteboard sketching app hosted from a KKTerm app-local React project.",
       "category": "design",
       "icon": "PenTool",
@@ -2333,6 +2388,7 @@
     {
       "id": "bentopdf",
       "name": "BentoPDF",
+      "section": "productivity",
       "descriptionEn": "Privacy-first browser PDF toolkit hosted from a KKTerm app-local web project.",
       "category": "utilities",
       "icon": "File",
@@ -2365,6 +2421,7 @@
     {
       "id": "openflowkit",
       "name": "OpenFlowKit",
+      "section": "design",
       "descriptionEn": "Local-first AI diagramming studio hosted from a KKTerm app-local web project.",
       "category": "design",
       "icon": "Workflow",
@@ -2397,6 +2454,7 @@
     {
       "id": "drawio",
       "name": "Draw.IO",
+      "section": "design",
       "descriptionEn": "Diagram editor for flowcharts, architecture diagrams, and network maps.",
       "category": "design",
       "icon": "Shapes",
@@ -2448,6 +2506,7 @@
     {
       "id": "krita",
       "name": "Krita",
+      "section": "design",
       "descriptionEn": "Digital painting and 2D animation app for illustration and concept art.",
       "category": "design",
       "icon": "Brush",
@@ -2495,6 +2554,7 @@
     {
       "id": "inkscape",
       "name": "Inkscape",
+      "section": "design",
       "descriptionEn": "Vector graphics editor for creating and editing SVG artwork.",
       "category": "design",
       "icon": "PenTool",
@@ -2539,6 +2599,7 @@
     {
       "id": "blender",
       "name": "Blender",
+      "section": "design",
       "descriptionEn": "Open-source 3D creation suite for modeling, animation, rendering, and VFX.",
       "category": "design",
       "icon": "Box",
@@ -2581,8 +2642,212 @@
       }
     },
     {
+      "id": "pencil",
+      "name": "Pencil",
+      "section": "design",
+      "descriptionEn": "Open-source GUI prototyping tool for creating desktop and mobile mockups.",
+      "category": "design",
+      "icon": "Pencil",
+      "needs": [
+        "winget"
+      ],
+      "homepage": "https://pencil.evolus.vn/",
+      "releaseNotesUrl": "https://github.com/evolus/pencil/releases",
+      "detection": {
+        "displayNames": [
+          "Pencil"
+        ],
+        "displayNamePrefixes": [
+          "Pencil "
+        ]
+      },
+      "provider": {
+        "kind": "winget",
+        "id": "Evolus.Pencil"
+      },
+      "chocolateyProvider": {
+        "kind": "chocolatey",
+        "id": "pencil"
+      },
+      "options": [
+        "provider",
+        "version"
+      ],
+      "descriptionLocales": {
+        "de": "Open-Source-GUI-Prototyping-Tool zum Erstellen von Desktop- und Mobilgeräte-Mockups.",
+        "es": "Herramienta de código abierto para crear prototipos de interfaces y maquetas de escritorio y móviles.",
+        "es-MX": "Herramienta de código abierto para crear prototipos de interfaces y maquetas para escritorio y dispositivos móviles.",
+        "fr": "Outil open source de prototypage d’interfaces pour créer des maquettes de bureau et mobiles.",
+        "id": "Alat prototipe GUI sumber terbuka untuk membuat mockup desktop dan seluler.",
+        "it": "Strumento open source per la prototipazione di GUI e la creazione di mockup desktop e mobile.",
+        "ja": "デスクトップおよびモバイルのモックアップを作成するオープンソースの GUI プロトタイピングツール。",
+        "ko": "데스크톱 및 모바일 목업을 만드는 오픈 소스 GUI 프로토타이핑 도구입니다.",
+        "pt-BR": "Ferramenta de código aberto para prototipagem de interfaces e criação de mockups para desktop e dispositivos móveis.",
+        "th": "เครื่องมือสร้างต้นแบบ GUI แบบโอเพนซอร์สสำหรับสร้างม็อกอัปเดสก์ท็อปและมือถือ",
+        "vi": "Công cụ tạo mẫu GUI mã nguồn mở để tạo mô hình giao diện máy tính và di động.",
+        "zh-CN": "用于创建桌面和移动端模型的开源 GUI 原型设计工具。",
+        "zh-TW": "用來建立桌面與行動裝置介面模型的開放原始碼 GUI 原型設計工具。"
+      }
+    },
+    {
+      "id": "vlc",
+      "name": "VLC media player",
+      "section": "multimedia",
+      "descriptionEn": "Open-source media player for local files, discs, devices, and network streams.",
+      "category": "multimedia",
+      "icon": "Play",
+      "needs": [
+        "winget"
+      ],
+      "homepage": "https://www.videolan.org/vlc/",
+      "releaseNotesUrl": "https://www.videolan.org/developers/vlc/news.html",
+      "detection": {
+        "registryKeys": [
+          "VLC media player"
+        ],
+        "displayNames": [
+          "VLC media player"
+        ],
+        "displayNamePrefixes": [
+          "VLC media player "
+        ]
+      },
+      "provider": {
+        "kind": "winget",
+        "id": "VideoLAN.VLC"
+      },
+      "chocolateyProvider": {
+        "kind": "chocolatey",
+        "id": "vlc"
+      },
+      "options": [
+        "provider",
+        "version"
+      ],
+      "descriptionLocales": {
+        "de": "Open-Source-Mediaplayer für lokale Dateien, Discs, Geräte und Netzwerkstreams.",
+        "es": "Reproductor multimedia de código abierto para archivos locales, discos, dispositivos y transmisiones de red.",
+        "es-MX": "Reproductor multimedia de código abierto para archivos locales, discos, dispositivos y transmisiones de red.",
+        "fr": "Lecteur multimédia open source pour les fichiers locaux, disques, appareils et flux réseau.",
+        "id": "Pemutar media sumber terbuka untuk file lokal, cakram, perangkat, dan streaming jaringan.",
+        "it": "Lettore multimediale open source per file locali, dischi, dispositivi e flussi di rete.",
+        "ja": "ローカルファイル、ディスク、デバイス、ネットワークストリームに対応するオープンソースのメディアプレーヤー。",
+        "ko": "로컬 파일, 디스크, 장치 및 네트워크 스트림을 재생하는 오픈 소스 미디어 플레이어입니다.",
+        "pt-BR": "Reprodutor de mídia de código aberto para arquivos locais, discos, dispositivos e transmissões de rede.",
+        "th": "โปรแกรมเล่นสื่อโอเพนซอร์สสำหรับไฟล์ในเครื่อง ดิสก์ อุปกรณ์ และสตรีมเครือข่าย",
+        "vi": "Trình phát đa phương tiện mã nguồn mở cho tệp cục bộ, đĩa, thiết bị và luồng mạng.",
+        "zh-CN": "用于本地文件、光盘、设备和网络流的开源媒体播放器。",
+        "zh-TW": "開放原始碼媒體播放器，可播放本機檔案、光碟、裝置與網路串流。"
+      }
+    },
+    {
+      "id": "obs-studio",
+      "name": "OBS Studio",
+      "section": "multimedia",
+      "descriptionEn": "Open-source app for video recording and live streaming.",
+      "category": "multimedia",
+      "icon": "Video",
+      "needs": [
+        "winget"
+      ],
+      "homepage": "https://obsproject.com/",
+      "releaseNotesUrl": "https://github.com/obsproject/obs-studio/releases",
+      "detection": {
+        "registryKeys": [
+          "OBS Studio"
+        ],
+        "displayNames": [
+          "OBS Studio"
+        ],
+        "displayNamePrefixes": [
+          "OBS Studio "
+        ]
+      },
+      "provider": {
+        "kind": "winget",
+        "id": "OBSProject.OBSStudio"
+      },
+      "chocolateyProvider": {
+        "kind": "chocolatey",
+        "id": "obs-studio"
+      },
+      "options": [
+        "provider",
+        "version"
+      ],
+      "descriptionLocales": {
+        "de": "Open-Source-App für Videoaufnahmen und Livestreaming.",
+        "es": "Aplicación de código abierto para grabación de vídeo y transmisión en directo.",
+        "es-MX": "Aplicación de código abierto para grabación de video y transmisión en vivo.",
+        "fr": "Application open source d’enregistrement vidéo et de diffusion en direct.",
+        "id": "Aplikasi sumber terbuka untuk perekaman video dan streaming langsung.",
+        "it": "App open source per la registrazione video e lo streaming dal vivo.",
+        "ja": "動画録画とライブ配信のためのオープンソースアプリ。",
+        "ko": "동영상 녹화 및 라이브 스트리밍을 위한 오픈 소스 앱입니다.",
+        "pt-BR": "Aplicativo de código aberto para gravação de vídeo e transmissão ao vivo.",
+        "th": "แอปโอเพนซอร์สสำหรับบันทึกวิดีโอและสตรีมสด",
+        "vi": "Ứng dụng mã nguồn mở để ghi video và phát trực tiếp.",
+        "zh-CN": "用于视频录制和直播的开源应用。",
+        "zh-TW": "用於影片錄製與直播的開放原始碼應用程式。"
+      }
+    },
+    {
+      "id": "xnview-mp",
+      "name": "XnView MP",
+      "section": "multimedia",
+      "descriptionEn": "Image viewer, photo organizer, and batch converter with broad format support.",
+      "category": "multimedia",
+      "icon": "Image",
+      "needs": [
+        "winget"
+      ],
+      "homepage": "https://www.xnview.com/en/xnviewmp/",
+      "releaseNotesUrl": "https://www.xnview.com/en/xnviewmp/#changelog",
+      "detection": {
+        "registryKeys": [
+          "XnView MP (x64)_is1"
+        ],
+        "displayNames": [
+          "XnView MP",
+          "XnView MP (x64)",
+          "XnView MP (Portable)"
+        ],
+        "displayNamePrefixes": [
+          "XnView MP "
+        ]
+      },
+      "provider": {
+        "kind": "winget",
+        "id": "XnSoft.XnViewMP"
+      },
+      "chocolateyProvider": {
+        "kind": "chocolatey",
+        "id": "XnViewMP"
+      },
+      "options": [
+        "provider",
+        "version"
+      ],
+      "descriptionLocales": {
+        "de": "Bildbetrachter, Fotoverwaltung und Stapelkonverter mit breiter Formatunterstützung.",
+        "es": "Visor de imágenes, organizador de fotos y conversor por lotes compatible con numerosos formatos.",
+        "es-MX": "Visor de imágenes, organizador de fotos y convertidor por lotes compatible con numerosos formatos.",
+        "fr": "Visionneuse d’images, gestionnaire de photos et convertisseur par lots prenant en charge de nombreux formats.",
+        "id": "Penampil gambar, pengelola foto, dan konverter batch dengan dukungan format yang luas.",
+        "it": "Visualizzatore di immagini, organizzatore di foto e convertitore batch con ampio supporto dei formati.",
+        "ja": "幅広い形式に対応する画像ビューアー、写真整理、バッチ変換ツール。",
+        "ko": "다양한 형식을 지원하는 이미지 뷰어, 사진 정리 및 일괄 변환 도구입니다.",
+        "pt-BR": "Visualizador de imagens, organizador de fotos e conversor em lote com amplo suporte a formatos.",
+        "th": "โปรแกรมดูภาพ จัดระเบียบรูปภาพ และแปลงไฟล์แบบกลุ่มที่รองรับรูปแบบหลากหลาย",
+        "vi": "Trình xem ảnh, sắp xếp ảnh và chuyển đổi hàng loạt hỗ trợ nhiều định dạng.",
+        "zh-CN": "支持多种格式的图像查看、照片整理和批量转换工具。",
+        "zh-TW": "支援多種格式的影像檢視、相片整理與批次轉換工具。"
+      }
+    },
+    {
       "id": "openclaw",
       "name": "OpenClaw",
+      "section": "aiAgents",
       "descriptionEn": "Open-source AI coding agent CLI.",
       "category": "ai-agent",
       "icon": "Cloud",

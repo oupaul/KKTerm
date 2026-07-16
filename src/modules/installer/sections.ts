@@ -1,129 +1,101 @@
-// Visibility + presentation metadata for the Install Helper category sidebar.
-//
-// The UI renders by these explicit per-section id lists, NOT by the catalog's
-// `category` field, so a recipe added to installer/catalog.v1.json stays
-// invisible until its id is listed here. See docs/ADR/0008 "Adding a recipe
-// (developer checklist)".
-//
-// Each section also carries a line-icon glyph and a CSS tint variable (defined in
-// src/styles/colorSchemes.css) so the rail rows match the house-style mockup.
+// Presentation metadata for the Install Helper category sidebar. Recipe
+// visibility and membership live in installer/catalog.v1.json through each
+// recipe's required `section`; this file only owns section order, labels, icons,
+// and tints.
 
-import { Bot, Box, Boxes, Brush, Code2, Cpu, Globe, Wrench, Zap } from "../../lib/reicon";
+import {
+  Bot,
+  Box,
+  Boxes,
+  Briefcase,
+  Brush,
+  Code2,
+  Cpu,
+  Globe,
+  Video,
+  Wrench,
+  Zap,
+} from "../../lib/reicon";
 import type { LucideIcon } from "../../lib/reicon";
+import type { RecipeSection } from "./types";
+
+export type InstallerSectionId = Exclude<RecipeSection, "internal">;
 
 export interface InstallerSection {
   /// Stable id; also the `sec:<id>` sidebar filter value.
-  id: string;
+  id: InstallerSectionId;
   /// i18n key for the section / filter label.
   titleKey: string;
-  /// Catalog recipe ids in this section, in display order.
-  ids: string[];
   Icon: LucideIcon;
   /// CSS custom property holding the section tint.
   tintVar: string;
 }
 
-// NOTE: within each section, `ids` is declared immediately after `titleKey`.
-// Source-grep guards in tests/ assert `titleKey: "installer.section.X", ids:
-// [...]` adjacency, so keep these two fields together when editing.
 export const INSTALLER_CATEGORY_SECTIONS: InstallerSection[] = [
   {
     id: "essentials",
     titleKey: "installer.section.essentials",
-    ids: ["node-bundle", "python-bundle", "git"],
     Icon: Box,
     tintVar: "--installer-tint-essentials",
   },
   {
     id: "aiAgents",
     titleKey: "installer.section.aiAgents",
-    ids: [
-      "claude-code-cli",
-      "codex-cli",
-      "antigravity-cli",
-      "opencode",
-      "openclaw",
-      "codex-desktop",
-      "claude-desktop",
-      "hermes-agent",
-      "hermes-desktop",
-    ],
     Icon: Bot,
     tintVar: "--installer-tint-ai-agents",
   },
   {
     id: "aiPlatforms",
     titleKey: "installer.section.aiPlatforms",
-    ids: ["ollama", "n8n", "open-webui", "flowise", "langflow", "comfyui", "lmstudio"],
     Icon: Cpu,
     tintVar: "--installer-tint-ai-platforms",
   },
   {
     id: "development",
     titleKey: "installer.section.development",
-    ids: ["vscode", "cursor", "docker-desktop", "bruno", "wsl", "rustup", "bun"],
     Icon: Code2,
     tintVar: "--installer-tint-development",
   },
   {
     id: "design",
     titleKey: "installer.section.design",
-    ids: ["excalidraw", "openflowkit", "drawio", "krita", "inkscape", "blender"],
     Icon: Brush,
     tintVar: "--installer-tint-design",
   },
   {
+    id: "productivity",
+    titleKey: "installer.section.productivity",
+    Icon: Briefcase,
+    tintVar: "--installer-tint-productivity",
+  },
+  {
+    id: "multimedia",
+    titleKey: "installer.section.multimedia",
+    Icon: Video,
+    tintVar: "--installer-tint-multimedia",
+  },
+  {
     id: "windowsPowerUser",
     titleKey: "installer.section.windowsPowerUser",
-    ids: [
-      "powershell-7",
-      "psmux",
-      "powertoys",
-      "sysinternals-suite",
-      "everything",
-      "ditto",
-    ],
     Icon: Zap,
     tintVar: "--installer-tint-power",
   },
   {
     id: "remoteAccess",
     titleKey: "installer.section.remoteAccess",
-    ids: ["tailscale", "rustdesk"],
     Icon: Globe,
     tintVar: "--installer-tint-remote",
   },
   {
     id: "packageManagers",
     titleKey: "installer.section.packageManagers",
-    ids: ["winget", "chocolatey"],
     Icon: Boxes,
     tintVar: "--installer-tint-package-managers",
   },
   {
     id: "utilities",
     titleKey: "installer.section.utilities",
-    ids: [
-      "notepadpp",
-      "nssm",
-      "vcxsrv",
-      "oh-my-posh",
-      "ripgrep",
-      "jq",
-      "fzf",
-      "coreutils",
-      "7zip",
-      "sharex",
-      "ffmpeg",
-      "scrcpy",
-      "bentopdf",
-    ],
     Icon: Wrench,
     tintVar: "--installer-tint-utilities",
   },
 ];
-
-/// All recipe ids visible in the Install Helper, across every section.
-export const INSTALLER_VISIBLE_IDS = new Set(
-  INSTALLER_CATEGORY_SECTIONS.flatMap((section) => section.ids),
-);
