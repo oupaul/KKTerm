@@ -126,6 +126,7 @@ function isTerminalConnectionType(connection: WorkspacePane["connection"]): conn
   return (
     connection?.type === "local" ||
     connection?.type === "ssh" ||
+    connection?.type === "mosh" ||
     connection?.type === "telnet" ||
     connection?.type === "serial"
   );

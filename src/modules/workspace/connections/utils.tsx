@@ -1,4 +1,4 @@
-import { Cable, FileText, FolderInput, FolderOpen, Globe2, Laptop, Monitor, Mouse, Network, Server } from "../../../lib/reicon";
+import { Cable, FileText, FolderInput, FolderOpen, Globe2, Laptop, Monitor, Mouse, Network, Server, Wifi } from "../../../lib/reicon";
 import { confirmNativeDialog, invokeCommand, type SshHostKeyPreview } from "../../../lib/tauri";
 import i18next from "../../../i18n/config";
 import type { Connection, ConnectionType, SshSettings, TerminalCustomShell, WorkspaceTab } from "../../../types";
@@ -109,6 +109,8 @@ export function connectionTypeLabel(type: ConnectionType) {
       return i18next.t("connections.localTerminal");
     case "ssh":
       return i18next.t("connections.sshTerminal");
+    case "mosh":
+      return i18next.t("connections.mosh");
     case "telnet":
       return i18next.t("connections.telnet");
     case "serial":
@@ -184,6 +186,8 @@ export function connectionIconForType(type: ConnectionType) {
       return Cable;
     case "ssh":
       return Server;
+    case "mosh":
+      return Wifi;
     case "ftp":
       return FolderInput;
     case "localFiles":

@@ -2771,7 +2771,9 @@
     "sshOldProtocols": "Legacy-Protokolle",
     "importSshConfig": ".ssh/config importieren",
     "sshConfigFile": "SSH-Konfiguration",
-    "importSshConfigEmpty": "Keine importierbaren SSH-Host-Einträge in der ausgewählten Konfigurationsdatei gefunden."
+    "importSshConfigEmpty": "Keine importierbaren SSH-Host-Einträge in der ausgewählten Konfigurationsdatei gefunden.",
+    "mosh": "Mosh",
+    "moshShell": "Roaming-Shell"
   },
   "terminal": {
     "openSftp": "SFTP-Browser öffnen",

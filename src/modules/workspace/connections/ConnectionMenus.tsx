@@ -6,6 +6,7 @@ import type { ConnectionType } from "../../../types";
 export const CONNECTION_CREATION_OPTIONS = [
   { type: "local", labelKey: "connections.localTerminal" },
   { type: "ssh", labelKey: "connections.ssh" },
+  { type: "mosh", labelKey: "connections.mosh" },
   { type: "telnet", labelKey: "connections.telnet" },
   { type: "serial", labelKey: "connections.serial" },
   { type: "url", labelKey: "connections.url" },

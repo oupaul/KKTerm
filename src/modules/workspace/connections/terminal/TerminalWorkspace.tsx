@@ -3748,9 +3748,10 @@ function terminalDimensionsEqual(left: TerminalDimensions, right: TerminalDimens
   );
 }
 
-function terminalSessionTypeFor(connection: Connection): "local" | "ssh" | "telnet" | "serial" {
+function terminalSessionTypeFor(connection: Connection): "local" | "ssh" | "mosh" | "telnet" | "serial" {
   return connection.type === "local" ||
     connection.type === "ssh" ||
+    connection.type === "mosh" ||
     connection.type === "telnet" ||
     connection.type === "serial"
     ? connection.type

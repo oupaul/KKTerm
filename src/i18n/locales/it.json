@@ -2771,7 +2771,9 @@
     "sshOldProtocols": "Protocolli legacy",
     "importSshConfig": "Importa .ssh/config",
     "sshConfigFile": "Configurazione SSH",
-    "importSshConfigEmpty": "Nessuna voce SSH Host importabile trovata nel file di configurazione selezionato."
+    "importSshConfigEmpty": "Nessuna voce SSH Host importabile trovata nel file di configurazione selezionato.",
+    "mosh": "Mosh",
+    "moshShell": "Shell con roaming"
   },
   "terminal": {
     "openSftp": "Apri browser SFTP",

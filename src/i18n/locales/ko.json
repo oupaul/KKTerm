@@ -2771,7 +2771,9 @@
     "sshOldProtocols": "레거시 프로토콜",
     "importSshConfig": ".ssh/config 가져오기",
     "sshConfigFile": "SSH 설정",
-    "importSshConfigEmpty": "선택한 구성 파일에서 가져올 수 있는 SSH Host 항목을 찾을 수 없습니다."
+    "importSshConfigEmpty": "선택한 구성 파일에서 가져올 수 있는 SSH Host 항목을 찾을 수 없습니다.",
+    "mosh": "Mosh",
+    "moshShell": "로밍 지원 셸"
   },
   "terminal": {
     "openSftp": "SFTP 브라우저 열기",

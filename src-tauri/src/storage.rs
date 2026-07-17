@@ -13,7 +13,7 @@ use std::{
 use time::{OffsetDateTime, format_description::well_known::Rfc3339};
 use zip::{ZipArchive, ZipWriter, write::SimpleFileOptions};
 
-const SCHEMA_USER_VERSION: i32 = 49;
+const SCHEMA_USER_VERSION: i32 = 50;
 
 const DEFAULT_TERMINAL_OPACITY: u8 = 50;
 
@@ -85,7 +85,7 @@ CREATE TABLE IF NOT EXISTS connections (
     file_browser_view_options_json TEXT,
     ssh_port_forwardings_json TEXT,
     file_view_open_external INTEGER NOT NULL DEFAULT 0,
-    connection_type TEXT NOT NULL CHECK (connection_type IN ('local', 'ssh', 'telnet', 'serial', 'url', 'rdp', 'vnc', 'ftp', 'localFiles', 'fileView')),
+    connection_type TEXT NOT NULL CHECK (connection_type IN ('local', 'ssh', 'mosh', 'telnet', 'serial', 'url', 'rdp', 'vnc', 'ftp', 'localFiles', 'fileView')),
     status TEXT NOT NULL CHECK (status IN ('connected', 'idle', 'offline')),
     sort_order INTEGER NOT NULL
 );
@@ -2695,6 +2695,60 @@ impl Storage {
         if stored_version < 47 {
             reveal_it_ops_on_release(&connection)?;
         }
+        // v50: Mosh connection kind. The connections table's connection_type
+        // CHECK predates 'mosh', and SQLite cannot alter a CHECK in place, so
+        // rebuild the table with a relaxed CHECK. Rather than freeze a column
+        // list (the table has gained columns via ensure_column since the last
+        // rebuild), capture the live CREATE statement, add 'mosh' to the CHECK,
+        // and copy every row with SELECT * — new and old tables share an
+        // identical column set/order, so this preserves all columns including
+        // any added later. Skipped when the CHECK already lists 'mosh' (fresh
+        // installs, whose CURRENT_SCHEMA already includes it).
+        if stored_version < 50 && table_exists(&connection, "connections")? {
+            let create_sql: String = connection
+                .query_row(
+                    "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'connections'",
+                    [],
+                    |row| row.get(0),
+                )
+                .map_err(to_storage_error)?;
+            if !create_sql.contains("'mosh'") {
+                let relaxed_create = create_sql.replacen(
+                    "'local', 'ssh', 'telnet'",
+                    "'local', 'ssh', 'mosh', 'telnet'",
+                    1,
+                );
+                if relaxed_create == create_sql {
+                    return Err(
+                        "v50 migration could not locate the connection_type CHECK to add 'mosh'"
+                            .to_string(),
+                    );
+                }
+                connection
+                    .pragma_update(None, "foreign_keys", "OFF")
+                    .map_err(to_storage_error)?;
+                connection
+                    .pragma_update(None, "legacy_alter_table", "ON")
+                    .map_err(to_storage_error)?;
+                connection
+                    .execute_batch(&format!(
+                        "BEGIN;\n\
+                         ALTER TABLE connections RENAME TO connections_pre_v50;\n\
+                         {relaxed_create};\n\
+                         INSERT INTO connections SELECT * FROM connections_pre_v50;\n\
+                         DROP TABLE connections_pre_v50;\n\
+                         COMMIT;"
+                    ))
+                    .map_err(to_storage_error)?;
+                connection
+                    .pragma_update(None, "legacy_alter_table", "OFF")
+                    .map_err(to_storage_error)?;
+                connection
+                    .pragma_update(None, "foreign_keys", "ON")
+                    .map_err(to_storage_error)?;
+            }
+        }
+        repair_connections_scratch_references(&connection, "connections_pre_v50", "pre_v50")?;
         connection
             .execute_batch(&format!("PRAGMA user_version = {SCHEMA_USER_VERSION}"))
             .map_err(to_storage_error)?;
@@ -4272,13 +4326,13 @@ fn normalize_connection_type(value: &str) -> Result<String, String> {
         "localFiles" => Ok("localFiles".to_string()),
         "fileView" => Ok("fileView".to_string()),
         value => match value.to_lowercase().as_str() {
-            "local" | "ssh" | "telnet" | "serial" | "url" | "rdp" | "vnc" | "ftp" => {
+            "local" | "ssh" | "mosh" | "telnet" | "serial" | "url" | "rdp" | "vnc" | "ftp" => {
                 Ok(value.to_lowercase())
             }
             "localfiles" => Ok("localFiles".to_string()),
             "fileview" => Ok("fileView".to_string()),
             _ => Err(
-                "connection type must be local, ssh, telnet, serial, url, rdp, vnc, ftp, localFiles, or fileView"
+                "connection type must be local, ssh, mosh, telnet, serial, url, rdp, vnc, ftp, localFiles, or fileView"
                     .to_string(),
             ),
         },
@@ -4389,7 +4443,12 @@ fn normalize_ssh_auth_key_path(
     connection_type: &str,
     ftp_options: &Option<crate::ftp::FtpOptions>,
 ) -> Option<String> {
-    if connection_type != "ssh" && !is_sftp_protocol_ftp_connection(connection_type, ftp_options) {
+    // Mosh bootstraps over SSH, so it carries an SSH key path like SSH itself
+    // (threaded into mosh's `--ssh` option at launch).
+    if connection_type != "ssh"
+        && connection_type != "mosh"
+        && !is_sftp_protocol_ftp_connection(connection_type, ftp_options)
+    {
         return None;
     }
 
@@ -4638,7 +4697,12 @@ fn normalize_auth_method(
         return Ok("password".to_string());
     }
 
-    if connection_type != "ssh" && !is_sftp_protocol_ftp_connection(connection_type, ftp_options) {
+    // Mosh bootstraps over SSH, so it honors the same auth methods as SSH
+    // (key file / agent / password) rather than being forced to a single one.
+    if connection_type != "ssh"
+        && connection_type != "mosh"
+        && !is_sftp_protocol_ftp_connection(connection_type, ftp_options)
+    {
         return Ok("keyFile".to_string());
     }
 

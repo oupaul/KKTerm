@@ -2771,7 +2771,9 @@
     "sshOldProtocols": "Protokol lama",
     "importSshConfig": "Impor .ssh/config",
     "sshConfigFile": "Konfigurasi SSH",
-    "importSshConfigEmpty": "Tidak ditemukan entri SSH Host yang dapat diimpor di file konfigurasi yang dipilih."
+    "importSshConfigEmpty": "Tidak ditemukan entri SSH Host yang dapat diimpor di file konfigurasi yang dipilih.",
+    "mosh": "Mosh",
+    "moshShell": "Shell roaming"
   },
   "terminal": {
     "openSftp": "Buka browser SFTP",

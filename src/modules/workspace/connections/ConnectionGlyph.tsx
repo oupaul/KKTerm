@@ -9,6 +9,8 @@ export function connectionTypeSubtitle(type: ConnectionType) {
       return i18next.t("connections.localShell");
     case "ssh":
       return i18next.t("connections.secureShell");
+    case "mosh":
+      return i18next.t("connections.moshShell");
     case "telnet":
       return i18next.t("connections.telnetShell");
     case "serial":

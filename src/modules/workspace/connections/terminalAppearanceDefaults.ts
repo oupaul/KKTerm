@@ -16,7 +16,7 @@ function terminalSettingsForConnection(
 }
 
 export function supportsTerminalAppearanceDefaults(type: ConnectionType) {
-  return type === "local" || type === "ssh" || type === "telnet" || type === "serial";
+  return type === "local" || type === "ssh" || type === "mosh" || type === "telnet" || type === "serial";
 }
 
 export function resolveDefaultTerminalAppearance(

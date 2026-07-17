@@ -21,6 +21,9 @@ import documentIcon from "../../../assets/file-icons/material-icon-theme/icons/d
 export const CONNECTION_ICON_SRC: Record<ConnectionType, string> = {
   local: terminalIcon,
   ssh: sshIcon,
+  // Mosh bootstraps over SSH; it shares the SSH predefined icon. The connection
+  // tree/tab glyph distinguishes it via connectionIconForType (utils.tsx).
+  mosh: sshIcon,
   telnet: telnetIcon,
   serial: serialIcon,
   url: urlIcon,
@@ -34,6 +37,7 @@ export const CONNECTION_ICON_SRC: Record<ConnectionType, string> = {
 export const PREDEFINED_CONNECTION_ICON_TYPES: ConnectionType[] = [
   "local",
   "ssh",
+  "mosh",
   "telnet",
   "serial",
   "url",

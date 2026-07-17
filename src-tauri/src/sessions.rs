@@ -3471,10 +3471,73 @@ fn command_for(request: &StartTerminalSessionRequest) -> Result<CommandBuilder, 
             }
             Ok(command)
         }
+        "mosh" => {
+            let host = request.host.trim();
+            if host.is_empty() {
+                return Err("host is required for Mosh sessions".to_string());
+            }
+            // Mosh is a separate local binary (it bootstraps over SSH, then
+            // roams over UDP). Pre-flight the PATH so a missing client produces
+            // an actionable hint instead of a cryptic spawn failure.
+            if !mosh_client_available() {
+                return Err(
+                    "Mosh client not found. Install it (macOS: `brew install mosh`; \
+                     Debian/Ubuntu: `sudo apt install mosh`) and make sure `mosh` is on your PATH, \
+                     then reconnect."
+                        .to_string(),
+                );
+            }
+
+            let mut command = CommandBuilder::new("mosh");
+            sanitize_linux_appimage_environment(&mut command);
+            set_terminal_environment(&mut command);
+
+            // Mosh performs its initial handshake over SSH, so the connection's
+            // port and key are threaded through mosh's `--ssh` option rather
+            // than mosh's own flags (mosh's -p is the UDP range, not the SSH
+            // port). Only override --ssh when we actually have something to add,
+            // so a default connection uses mosh's built-in `ssh` invocation.
+            let mut ssh_cmd = String::from("ssh");
+            if let Some(port) = request.port {
+                ssh_cmd.push_str(" -p ");
+                ssh_cmd.push_str(&port.to_string());
+            }
+            if let Some(key_path) = request.key_path.as_ref().map(|value| value.trim()) {
+                if !key_path.is_empty() {
+                    ssh_cmd.push_str(" -i ");
+                    ssh_cmd.push_str(key_path);
+                }
+            }
+            if ssh_cmd != "ssh" {
+                command.arg(format!("--ssh={ssh_cmd}"));
+            }
+
+            let target = match request.user.trim() {
+                "" => host.to_string(),
+                user => format!("{user}@{host}"),
+            };
+            command.arg(target);
+            Ok(command)
+        }
         other => Err(format!(
             "{other} sessions do not have a terminal transport yet"
         )),
     }
+}
+
+/// Whether a `mosh` client binary is resolvable on the current PATH. Mosh is a
+/// macOS/Linux tool (no native Windows build); on Windows this returns false so
+/// the caller surfaces the install hint rather than attempting a doomed spawn.
+fn mosh_client_available() -> bool {
+    let path = match std::env::var_os("PATH") {
+        Some(path) => path,
+        None => return false,
+    };
+    std::env::split_paths(&path).any(|dir| {
+        let candidate = dir.join("mosh");
+        candidate.is_file()
+            || candidate.with_extension("exe").is_file()
+    })
 }
 
 fn set_terminal_environment(command: &mut CommandBuilder) {

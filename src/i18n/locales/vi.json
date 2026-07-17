@@ -2771,7 +2771,9 @@
     "sshOldProtocols": "Giao thức cũ",
     "importSshConfig": "Nhập .ssh/config",
     "sshConfigFile": "Cấu hình SSH",
-    "importSshConfigEmpty": "Không tìm thấy mục SSH Host có thể nhập trong tệp cấu hình đã chọn."
+    "importSshConfigEmpty": "Không tìm thấy mục SSH Host có thể nhập trong tệp cấu hình đã chọn.",
+    "mosh": "Mosh",
+    "moshShell": "Shell chuyển vùng"
   },
   "terminal": {
     "openSftp": "Open SFTP browser",

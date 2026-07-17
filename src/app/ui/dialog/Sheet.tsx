@@ -447,6 +447,7 @@ export type ConnTileType =
   | "local"
   | "localFiles"
   | "ssh"
+  | "mosh"
   | "telnet"
   | "rdp"
   | "vnc"
@@ -458,6 +459,7 @@ const TILE_BG: Record<string, string> = {
   local: "linear-gradient(160deg,#3a3a3c,#1c1c1e)",
   localFiles: "linear-gradient(160deg,#3a3a3c,#1c1c1e)",
   ssh: "linear-gradient(160deg,#0a84ff,#0060df)",
+  mosh: "linear-gradient(160deg,#32ade6,#0a7ea4)",
   telnet: "linear-gradient(160deg,#5e5ce6,#3634a3)",
   rdp: "linear-gradient(160deg,#30b0c7,#1d7d8f)",
   vnc: "linear-gradient(160deg,#5856d6,#3a38a8)",
@@ -485,6 +487,7 @@ function TileGlyph({ type }: { type: ConnTileType }) {
   }
   const map: Record<string, DialogIconName> = {
     ssh: "server",
+    mosh: "network",
     telnet: "terminal",
     rdp: "monitor",
     vnc: "network",

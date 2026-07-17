@@ -734,6 +734,8 @@ function terminalPaneTitleForConnection(connection: Connection) {
   switch (connection.type) {
     case "local":
       return connection.name;
+    case "mosh":
+      return "mosh";
     case "telnet":
       return "telnet";
     case "serial":

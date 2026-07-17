@@ -2771,7 +2771,9 @@
     "sshOldProtocols": "舊版協定",
     "importSshConfig": "匯入 .ssh/config",
     "sshConfigFile": "SSH 設定",
-    "importSshConfigEmpty": "在選取的設定檔中找不到可匯入的 SSH 主機項目。"
+    "importSshConfigEmpty": "在選取的設定檔中找不到可匯入的 SSH 主機項目。",
+    "mosh": "Mosh",
+    "moshShell": "漫遊連線終端機"
   },
   "terminal": {
     "openSftp": "開啟 SFTP 瀏覽器",

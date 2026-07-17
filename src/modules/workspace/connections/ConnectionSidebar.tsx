@@ -3862,7 +3862,13 @@ function NewFolderDraftRow({
 }
 
 function isTerminalConnectionType(type: ConnectionType) {
-  return type === "local" || type === "ssh" || type === "telnet" || type === "serial";
+  return (
+    type === "local" ||
+    type === "ssh" ||
+    type === "mosh" ||
+    type === "telnet" ||
+    type === "serial"
+  );
 }
 
 function supportsSavedConnectionLayout(type: ConnectionType) {
@@ -4147,6 +4153,11 @@ function TreeContextMenu({
 }
 
 function supportsConnectionPasswordCredential(type: ConnectionType | "") {
+  // Mosh is intentionally absent: it launches via the system-`ssh` bootstrap
+  // (the command path, not the native russh path), which — like a system SSH
+  // connection — authenticates by key/agent/interactive prompt and never
+  // replays a stored password, so offering a saved-password credential would
+  // imply behavior that does not happen.
   return type === "ssh" || type === "telnet" || type === "rdp" || type === "vnc" || type === "ftp";
 }
 
@@ -4875,6 +4886,11 @@ function ConnectionDialog({
             isEditMode={isEditMode}
           />
         );
+      // Mosh authenticates via its SSH bootstrap, so it reuses the SSH
+      // host/user/port/auth/key fields. SSH-only session options (tmux,
+      // compression, SOCKS) live in renderConnectionTypeOptions, which mosh
+      // deliberately skips (falls through to null there).
+      case "mosh":
       case "ssh":
         return (
           <SshConnectionFields
@@ -5847,7 +5863,7 @@ function ConnectionStatusIndicator({
   const syncInputEnabled = useWorkspaceStore((state) => state.syncInputEnabled);
   const isConnectedTerminal =
     status === "connected" &&
-    ["local", "ssh", "telnet", "serial"].includes(connectionType);
+    ["local", "ssh", "mosh", "telnet", "serial"].includes(connectionType);
 
   if (syncInputEnabled && isConnectedTerminal) {
     return (

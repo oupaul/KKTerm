@@ -1001,6 +1001,69 @@ fn create_connection_can_persist_telnet_and_serial_connections() {
 }
 
 #[test]
+fn create_connection_can_persist_mosh_connection() {
+    let storage = Storage::open(temp_db_path("mosh-create")).expect("storage opens");
+
+    // Mosh is a terminal connection type that bootstraps over SSH, so — unlike
+    // telnet (forced to password auth) — it honors the SSH-style auth choice and
+    // must pass the connection_type CHECK relaxed by the v50 migration.
+    let mosh = storage
+        .create_connection(CreateConnectionRequest {
+            name: "Roaming Box".to_string(),
+            host: "field.example.test".to_string(),
+            user: "ops".to_string(),
+            connection_type: "mosh".to_string(),
+            folder_id: None,
+            port: Some(2222),
+            key_path: Some("/home/ops/.ssh/id_ed25519".to_string()),
+            proxy_jump: None,
+            ssh_socks_proxy: None,
+            ssh_socks_proxy_username: None,
+            ssh_socks_proxy_inherit_defaults: None,
+            ssh_compression: None,
+            ssh_old_protocols: None,
+            auth_method: Some("keyFile".to_string()),
+            local_shell: None,
+            local_startup_directory: None,
+            local_startup_script: None,
+            url: None,
+            data_partition: None,
+            url_user_agent: None,
+            url_proxy: None,
+            url_proxy_inherit_defaults: None,
+            use_tmux_sessions: None,
+            use_psmux_sessions: None,
+            serial_line: None,
+            serial_speed: None,
+            rdp_options: None,
+            vnc_options: None,
+            ftp_options: None,
+            file_view_open_external: false,
+            ssh_port_forwardings: None,
+            workspace_id: None,
+        })
+        .expect("Mosh connection is created");
+
+    assert_eq!(mosh.connection_type, "mosh");
+    assert_eq!(mosh.host, "field.example.test");
+    assert_eq!(mosh.user, "ops");
+    assert_eq!(mosh.port, Some(2222));
+    // Mosh keeps the SSH-style auth choice rather than being coerced like telnet.
+    assert_eq!(mosh.auth_method, "keyFile");
+    assert_eq!(mosh.key_path.as_deref(), Some("/home/ops/.ssh/id_ed25519"));
+
+    // It round-trips back out of storage with the type intact.
+    let reloaded = storage
+        .list_connection_tree()
+        .expect("connection tree loads")
+        .connections
+        .into_iter()
+        .find(|connection| connection.id == mosh.id)
+        .expect("mosh connection persisted");
+    assert_eq!(reloaded.connection_type, "mosh");
+}
+
+#[test]
 fn url_credentials_round_trip_without_storing_passwords_in_sqlite() {
     let storage = Storage::open(temp_db_path("url-credentials")).expect("storage opens");
     let created = storage

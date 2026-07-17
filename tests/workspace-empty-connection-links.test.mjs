@@ -19,6 +19,7 @@ test("Workspace empty state offers every supported Connection creation flow", as
   const expectedTypes = [
     "local",
     "ssh",
+    "mosh",
     "telnet",
     "serial",
     "url",

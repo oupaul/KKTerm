@@ -4,6 +4,7 @@ import type { WatchdogConfig } from "./watchdog/types";
 export type ConnectionType =
   | "local"
   | "ssh"
+  | "mosh"
   | "telnet"
   | "serial"
   | "url"
@@ -1362,7 +1363,7 @@ export interface SystemPerformanceCountersSnapshot {
 }
 
 export interface TerminalStartMetric {
-  kind: "local" | "ssh" | "telnet" | "serial";
+  kind: "local" | "ssh" | "mosh" | "telnet" | "serial";
   title: string;
   durationMs: number;
   recordedAt: string;

@@ -2771,7 +2771,9 @@
     "sshOldProtocols": "レガシープロトコル",
     "importSshConfig": ".ssh/config をインポート",
     "sshConfigFile": "SSH 設定",
-    "importSshConfigEmpty": "選択した構成ファイルにインポート可能な SSH Host エントリが見つかりませんでした。"
+    "importSshConfigEmpty": "選択した構成ファイルにインポート可能な SSH Host エントリが見つかりませんでした。",
+    "mosh": "Mosh",
+    "moshShell": "ローミング対応シェル"
   },
   "terminal": {
     "openSftp": "SFTPブラウザを開く",

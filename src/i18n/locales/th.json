@@ -2771,7 +2771,9 @@
     "sshOldProtocols": "โปรโตคอลรุ่นเก่า",
     "importSshConfig": "นำเข้า .ssh/config",
     "sshConfigFile": "การตั้งค่า SSH",
-    "importSshConfigEmpty": "ไม่พบรายการ SSH Host ที่นำเข้าได้ในไฟล์ตั้งค่าที่เลือก"
+    "importSshConfigEmpty": "ไม่พบรายการ SSH Host ที่นำเข้าได้ในไฟล์ตั้งค่าที่เลือก",
+    "mosh": "Mosh",
+    "moshShell": "เชลล์แบบโรมมิ่ง"
   },
   "terminal": {
     "openSftp": "เปิดเบราว์เซอร์ SFTP",

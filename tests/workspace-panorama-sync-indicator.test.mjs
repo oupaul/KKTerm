@@ -24,10 +24,10 @@ assert.match(
   /syncInputEnabled && isConnectedTerminal/,
   "the radio indicator should require both sync input and a connected terminal",
 );
-for (const connectionType of ["local", "ssh", "telnet", "serial"]) {
+for (const connectionType of ["local", "ssh", "mosh", "telnet", "serial"]) {
   assert.match(
     sidebarSource,
-    new RegExp(`\\["local", "ssh", "telnet", "serial"\\]\\.includes\\(connectionType\\)`),
+    new RegExp(`\\["local", "ssh", "mosh", "telnet", "serial"\\]\\.includes\\(connectionType\\)`),
     `${connectionType} Connections should participate in the sync indicator gate`,
   );
 }
