@@ -42,7 +42,7 @@ function normalizeSshSettingsDraft(settings: SshSettingsType, t: TFunction): Ssh
     defaultProxyJump,
     defaultSshCompression: settings.defaultSshCompression ?? "fast",
     defaultSshOldProtocols: settings.defaultSshOldProtocols ?? "off",
-    autoTrustNewHostKeys: settings.autoTrustNewHostKeys ?? true,
+    autoTrustNewHostKeys: settings.autoTrustNewHostKeys ?? false,
     bufferLines,
     defaultTransparency,
     defaultUseTmuxSessions: settings.defaultUseTmuxSessions ?? false,
@@ -271,7 +271,7 @@ export function SshSettings() {
           </label>
           <label className="settings-toggle-row">
             <ToggleSwitch
-              checked={sshDraft.autoTrustNewHostKeys ?? true}
+              checked={sshDraft.autoTrustNewHostKeys ?? false}
               onChange={(checked) =>
                 setSshDraft((settings) => ({ ...settings, autoTrustNewHostKeys: checked }))
               }

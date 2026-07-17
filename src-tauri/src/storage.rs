@@ -5201,7 +5201,9 @@ fn default_ssh_settings() -> SshSettings {
         default_proxy_jump: None,
         default_ssh_compression: default_ssh_compression(),
         default_ssh_old_protocols: default_ssh_old_protocols(),
-        auto_trust_new_host_keys: true,
+        // Security-first default: verify unknown host keys on first connect
+        // rather than silently trusting them (TOFU).
+        auto_trust_new_host_keys: false,
         buffer_lines: default_ssh_buffer_lines(),
         default_transparency: default_terminal_transparency(),
         default_use_tmux_sessions: default_use_tmux_sessions(),

@@ -118,7 +118,10 @@ export const defaultSshSettings: SshSettings = {
   defaultProxyJump: "",
   defaultSshCompression: "fast",
   defaultSshOldProtocols: "off",
-  autoTrustNewHostKeys: true,
+  // Security-first default: prompt to verify a host's key on first connect
+  // (and on key change) instead of silently trusting it (TOFU). Opt in via
+  // Settings → SSH if you want unattended first connections.
+  autoTrustNewHostKeys: false,
   bufferLines: 5000,
   defaultTransparency: 50,
   // MobaXterm-style default: SSH runs as a plain scrollback terminal so drags
