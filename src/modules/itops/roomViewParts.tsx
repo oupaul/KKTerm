@@ -235,23 +235,25 @@ export function useWheelZoom(
  *  inside it — puts focus where the keydown listener hears it. */
 export function useRoomPan(
   ref: RefObject<HTMLDivElement | null>,
-  sceneOrigin: { left: number; top: number },
+  centerOffset: { left: number; top: number },
 ): void {
-  const sceneLeft = sceneOrigin.left;
-  const sceneTop = sceneOrigin.top;
-  const previousOriginRef = useRef<{ left: number; top: number } | null>(null);
+  const centerLeft = centerOffset.left;
+  const centerTop = centerOffset.top;
+  const previousCenterRef = useRef<{ left: number; top: number } | null>(null);
   useLayoutEffect(() => {
     const node = ref.current;
     if (!node) return;
-    const previous = previousOriginRef.current;
+    const previous = previousCenterRef.current;
     if (previous) {
-      node.scrollLeft += sceneLeft - previous.left;
-      node.scrollTop += sceneTop - previous.top;
+      // Preserve the user's pan relative to the centered camera when a fitted
+      // scene changes size (for example, while the IT Ops tree is resized).
+      node.scrollLeft += centerLeft - previous.left;
+      node.scrollTop += centerTop - previous.top;
     } else {
       centerRoomViewport(ref);
     }
-    previousOriginRef.current = { left: sceneLeft, top: sceneTop };
-  }, [ref, sceneLeft, sceneTop]);
+    previousCenterRef.current = { left: centerLeft, top: centerTop };
+  }, [ref, centerLeft, centerTop]);
 
   useEffect(() => {
     const node = ref.current;
