@@ -32,6 +32,7 @@ import git from "../../assets/installer-icons/git.svg?url";
 import github from "../../assets/installer-icons/github.svg?url";
 import hermesAgent from "../../assets/installer-icons/hermes-agent.svg?url";
 import inkscape from "../../assets/installer-icons/inkscape.svg?url";
+import keepassxc from "../../assets/installer-icons/keepassxc.svg?url";
 import krita from "../../assets/installer-icons/krita.svg?url";
 import langflow from "../../assets/installer-icons/langflow.svg?url";
 import linux from "../../assets/installer-icons/linux.svg?url";
@@ -39,6 +40,7 @@ import lmstudio from "../../assets/installer-icons/lmstudio.svg?url";
 import n8n from "../../assets/installer-icons/n8n.svg?url";
 import nodedotjs from "../../assets/installer-icons/nodedotjs.svg?url";
 import notepadpp from "../../assets/installer-icons/notepadpp.svg?url";
+import obsStudio from "../../assets/installer-icons/obs-studio.svg?url";
 import ollama from "../../assets/installer-icons/ollama.svg?url";
 import ohMyPosh from "../../assets/installer-icons/oh-my-posh.svg?url";
 import openflowkit from "../../assets/installer-icons/openflowkit.svg?url";
@@ -55,6 +57,7 @@ import scrcpy from "../../assets/installer-icons/scrcpy.svg?url";
 import sharex from "../../assets/installer-icons/sharex.svg?url";
 import sysinternalsSuite from "../../assets/installer-icons/sysinternals-suite.png?url";
 import tailscale from "../../assets/installer-icons/tailscale.svg?url";
+import vlc from "../../assets/installer-icons/vlc.svg?url";
 import vscode from "../../assets/installer-icons/vscode.png?url";
 
 const RECIPE_ICON_URLS: Record<string, string> = {
@@ -64,6 +67,7 @@ const RECIPE_ICON_URLS: Record<string, string> = {
   vscode,
   cursor,
   notepadpp,
+  "obs-studio": obsStudio,
   "nvm-windows": nodedotjs,
   "node-bundle": nodedotjs,
   uv: astral,
@@ -101,6 +105,7 @@ const RECIPE_ICON_URLS: Record<string, string> = {
   everything,
   ditto,
   tailscale,
+  vlc,
   rustdesk,
   scrcpy,
   "7zip": sevenZip,
@@ -110,6 +115,7 @@ const RECIPE_ICON_URLS: Record<string, string> = {
   drawio,
   krita,
   inkscape,
+  keepassxc,
   blender,
   bentopdf,
   openflowkit,

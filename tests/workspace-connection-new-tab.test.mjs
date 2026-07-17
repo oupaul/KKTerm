@@ -193,6 +193,33 @@ test("Connection Tree supports forced new Tabs from Ctrl-click and Add to menu",
   );
 });
 
+test("the Workspace new-Tab shortcut reuses the active Connection", async () => {
+  const canvasSource = await readFile(
+    new URL("../src/modules/workspace/WorkspaceCanvas.tsx", import.meta.url),
+    "utf8",
+  );
+  const sidebarSource = await readFile(
+    new URL("../src/modules/workspace/connections/ConnectionSidebar.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(
+    canvasSource,
+    /case "newTab":[\s\S]*?activeConnectionForNewTab\(state\.tabs, state\.activeTabId\)[\s\S]*?requestConnectionNewTab\(connection\)/,
+    "Ctrl+Shift+T should request another Tab for the active focused Connection",
+  );
+  assert.doesNotMatch(
+    canvasSource.match(/case "newTab":[\s\S]*?break;/)?.[0] ?? "",
+    /openLocalTerminal/,
+    "the new-Tab shortcut must not fall back to a local terminal",
+  );
+  assert.match(
+    sidebarSource,
+    /NEW_CONNECTION_TAB_REQUEST_EVENT[\s\S]*?handleOpenConnectionInNewTab\(detail\.connection\)/,
+    "the shortcut should reuse the Connection Tree's top-Tab or Child Connection Tab creation path",
+  );
+});
+
 test("Child Connection panorama converts parent Panes and preserves unnamed split Panes", async () => {
   const storeSource = await readFile(new URL("../src/store.ts", import.meta.url), "utf8");
   const sidebarSource = await readFile(

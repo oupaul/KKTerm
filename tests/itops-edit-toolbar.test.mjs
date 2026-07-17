@@ -77,15 +77,26 @@ test("Spatial room views pan with the left button, zoom on wheel, and expose the
   assert.match(parts, /export function useWheelZoom/);
   assert.match(parts, /export function RoomZoomRuler/);
   assert.match(parts, /className="rm-zoomruler"/);
+  assert.match(parts, /className="rm-zoomruler-reset"/);
+  assert.match(parts, /button === 1 && !panning/);
+  assert.match(parts, /centerRoomViewport\(ref\)/);
   // Left-button pan engages past a threshold and swallows the follow-up click.
   assert.match(parts, /event\.button === 0/);
   assert.match(parts, /squelchClick/);
+  assert.doesNotMatch(
+    parts,
+    /target\.closest\("button,/,
+    "blank 2.5D tile buttons must remain eligible for thresholded left-button panning",
+  );
   for (const view of [floorPlan, isoView]) {
     assert.match(view, /useWheelZoom\(scrollRef/);
-    assert.match(view, /<RoomZoomRuler zoom=\{zoom\} onZoomChange=\{setZoom\} \/>/);
+    assert.match(view, /roomPanFrame\(/);
+    assert.match(view, /onResetCenter=\{\(\) => centerRoomViewport\(scrollRef\)\}/);
     assert.match(view, /loadRoomZoom\(/);
     assert.match(view, /saveRoomZoom\(/);
   }
+  assert.match(floorPlan, /roomPanFrame\([\s\S]*?false,/);
+  assert.match(isoView, /isoViewHeightForWidth\(viewW, maxTop\)/);
 });
 
 test("Edit mode arms placement through the shared object picker column", async () => {
@@ -135,8 +146,8 @@ test("Rack edit mode uses the object-picker column for Rack Device types", async
   assert.match(sites, /function RackObjectPicker/);
   assert.match(sites, /RACK_ITEM_KINDS\.filter/);
   assert.match(sites, /<RackDevice/);
-  assert.match(sites, /firstAvailableRackUnit\(rack, 4\)/);
-  assert.match(sites, /firstAvailableRackUnit\(rack, 1\)/);
+  assert.match(sites, /firstAvailableRackUnit\(rack, 4, "front"\)[\s\S]*firstAvailableRackUnit\(rack, 4, "rear"\)/);
+  assert.match(sites, /firstAvailableRackUnit\(rack, 1, "front"\)[\s\S]*firstAvailableRackUnit\(rack, 1, "rear"\)/);
   assert.match(sites, /defaultKind=\{itemDialog\.kind\}/);
   assert.match(sites, /className="it-rack-layout"/);
   assert.match(css, /\.itops-page \.it-rack-layout \{/);
@@ -164,7 +175,7 @@ test("Rack device picker arms a configure-then-place flow with a cursor-snapped 
   assert.match(sites, /armedKind=\{placeDevice\?\.kind \?\? null\}/);
   // The elevation snaps the ghost to the hovered U, blocks overlaps, and
   // cancels on right-click.
-  assert.match(stage, /placeSpec=\{placeSpec\}/);
+  assert.match(stage, /placeSpec\?\.mountFace === face/);
   assert.match(rackElevation, /function snapPlacement/);
   assert.match(rackElevation, /rk-place-ghost/);
   assert.match(rackElevation, /onCancelPlacement/);
@@ -190,7 +201,7 @@ test("IT Ops page-root layout stays off dialog backdrops and edit-mode dot grids
   );
 });
 
-test("Armed placement previews a cursor-snapped ghost and supports continuous Walls", async () => {
+test("Armed placement uses two clicks for position and facing and supports continuous Walls", async () => {
   const sites = await read("src/modules/itops/SitesTab.tsx");
   const floorPlan = await read("src/modules/itops/ServerRoomFloorPlan.tsx");
   const isoView = await read("src/modules/itops/ServerRoomIsoView.tsx");
@@ -206,11 +217,15 @@ test("Armed placement previews a cursor-snapped ghost and supports continuous Wa
     assert.match(view, /onCancelPlacement\?: \(\) => void/);
     assert.match(view, /onObjectPlaced\?: \(\) => void/);
     assert.match(view, /onObjectPlaced\?\.\(\)/);
-    assert.match(view, /useRoomPlacementPointer\(placing, onCancelPlacement, scrollRef\)/);
+    assert.match(view, /useRoomPlacementPointer\(placing, cancelArmedPlacement, scrollRef\)/);
     assert.match(view, /<RoomPlacementCursorGhost/);
     assert.match(view, /<RoomPlacementFacingArrow/);
+    assert.match(view, /PendingFacingPlacement/);
+    assert.match(view, /setPendingFacing\(\{ kind: "rack", cell, facing: 0 \}\)/);
+    assert.match(view, /setPendingFacing\(\{ kind: "object", cell, corner, facing: 0 \}\)/);
+    assert.match(view, /onFacingChange\?\.\(\{ \.\.\.facing, \[placeRackId\]: nextFacing \}\)/);
     assert.match(view, /onContextMenu=\{/);
-    assert.match(view, /resolveDropZ\(\s*footprintSpans\(\s*hover,\s*tool,\s*0/);
+    assert.match(view, /resolveDropZ\(\s*footprintSpans\(cell, tool, rot/);
     assert.match(view, /if \(wallOccupiesCell\(state\.target, objects\)\) onObjectBlocked\?\.\(\)/);
     assert.match(view, /if \(wallOccupiesCell\(cell, objects\)\) \{/);
   }
@@ -226,11 +241,13 @@ test("Armed placement previews a cursor-snapped ghost and supports continuous Wa
   assert.match(isoView, /rm-iso-plane\$\{placing \? " placing" : ""\}/);
   assert.match(isoView, /onHoverCell/);
   assert.match(isoView, /className=\{`rm-iso-obj ghost/);
-  assert.match(isoView, /className=\{`rm-iso-cab ghost\$\{blocked \? " blocked" : ""\}`\}/);
+  assert.match(isoView, /<IsoCabinet\s+rack=\{pendingRack\}/);
+  assert.match(isoView, /selected=\{false\}\s+ghost\s+blocked=\{blocked\}/);
   assert.match(css, /\.rm-bp-ghost/);
   assert.match(css, /\.rm-iso-drop\.blocked/);
   assert.match(css, /\.rm-placement-facing-arrow/);
   assert.match(css, /--placement-facing-angle/);
+  assert.match(css, /--placement-facing-x/);
   assert.match(css, /\.rm-cursor-ghost \{/);
 });
 
@@ -276,16 +293,32 @@ test("2.5D edit controls are selection-scoped and the room owns its appearance",
 
 test("Server Room elevation blank space opens the shared room background picker", async () => {
   const sites = await read("src/modules/itops/SitesTab.tsx");
+  const background = await read("src/modules/itops/ItOpsBackground.tsx");
+  const css = await read("src/modules/itops/itops.css");
 
   assert.match(sites, /async function handleElevationContextMenu/);
-  assert.match(sites, /target\.closest\("\[data-rack-id\]"\)/);
+  assert.match(sites, /if \(placeDevice\) return/);
   assert.match(
     sites,
-    /className="rk-elevations"[\s\S]*?onContextMenu=\{handleElevationContextMenu\}/,
+    /target\.closest\("\[data-rack-id\], \.rm-picker, \.it-drill-toolbar"\)/,
   );
   assert.match(
     sites,
+    /<ItOpsBackground[\s\S]*?onContextMenu=\{roomView === "elevation" \? handleElevationContextMenu : undefined\}/,
+  );
+  assert.doesNotMatch(
+    sites,
+    /className="rk-room-layout"\s+onContextMenu=\{handleElevationContextMenu\}/,
+  );
+  assert.match(background, /onContextMenu\?: MouseEventHandler<HTMLDivElement>/);
+  assert.match(
+    sites,
     /serverRoom && \(roomView === "elevation" \|\| roomView === "iso"\)/,
+  );
+  assert.match(sites, /floor-toolbar-background/);
+  assert.match(
+    css,
+    /\.ft-drill-bg\.floor-toolbar-background\.has-bg > \.itops-bg-content \{\s*padding: 0;/,
   );
 });
 

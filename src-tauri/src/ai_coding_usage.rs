@@ -1112,7 +1112,10 @@ fn fetch_claude_oauth_usage(cli_paths: &ProviderCliPaths) -> Result<Value, Strin
         .get(CLAUDE_OAUTH_USAGE_URL)
         .bearer_auth(&token)
         .header("anthropic-beta", CLAUDE_OAUTH_BETA_HEADER)
-        .header(reqwest::header::USER_AGENT, claude_usage_user_agent(cli_paths))
+        .header(
+            reqwest::header::USER_AGENT,
+            claude_usage_user_agent(cli_paths),
+        )
         .send()
         .map_err(|error| format!("Claude usage request failed: {error}"))?;
     let status = response.status();

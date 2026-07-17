@@ -16,7 +16,7 @@ import { useTranslation } from "react-i18next";
 import i18next from "../../../../i18n/config";
 import { ariaInvalid, dialogButtonAria, menuButtonAria } from "../../../../lib/aria";
 import { fileBrowserCommandsFor } from "../../../../lib/fileBrowserCommands";
-import { focusCurrentWebview, invokeCommand, isTauriRuntime, logUiDebug, openExternalUrl, saveTextFile, type TerminalOutput, type TerminalRecordingEntry, type TerminalRecordingInfo, type TmuxSession } from "../../../../lib/tauri";
+import { focusCurrentWebview, invokeCommand, isTauriRuntime, logUiDebug, openExternalUrl, saveTextFile, type TerminalOutput, type TerminalRecordingInfo, type TmuxSession } from "../../../../lib/tauri";
 import { markOsIconAutoDetectDone, osIconIdForDetection, osIconRefForId, shouldAutoDetectOsIcon } from "../../../../lib/osIcons";
 import { notifyConnectionTreeInvalidated } from "../connectionSidebarState";
 import { defaultTerminalSettings } from "../../../../app-defaults";
@@ -43,6 +43,7 @@ import {
   unregisterPaneRenderer,
 } from "../../paneRegistry";
 import type { Connection, LayoutNode, SplitDirection, TerminalPane, WorkspacePane, WorkspaceTab } from "../../../../types";
+import { TERMINAL_ENCODING_OPTIONS, normalizeTerminalEncoding } from "./terminalEncoding";
 import { QuickCommandBar } from "./QuickCommandBar";
 import { TerminalBackgroundLayer, TerminalBackgroundPopover } from "./TerminalBackgroundPopover";
 import { SshPortForwardingDialog, hasEnabledSshPortForwardings } from "./SshPortForwardingDialog";
@@ -1630,6 +1631,7 @@ function TerminalPaneView({
   const sshStartupInjectedRef = useRef(false);
   const sshStartupMarkerTailRef = useRef("");
   const multilinePasteConfirmationResolverRef = useRef<((confirmed: boolean) => void) | null>(null);
+  const selectedTerminalTextRef = useRef("");
   const onFocusRef = useRef(onFocus);
   useEffect(() => {
     onFocusRef.current = onFocus;
@@ -1652,12 +1654,7 @@ function TerminalPaneView({
   }>({ resultIndex: -1, resultCount: 0, found: true });
   const [actionsMenuOpen, setActionsMenuOpen] = useState(false);
   const [backgroundPopoverOpen, setBackgroundPopoverOpen] = useState(false);
-  const [selectedTerminalText, setSelectedTerminalText] = useState("");
-  const selectedTerminalTextRef = useRef("");
-  function setSelection(text: string) {
-    selectedTerminalTextRef.current = text;
-    setSelectedTerminalText(text);
-  }
+  const [hasTerminalSelection, setHasTerminalSelection] = useState(false);
   // Read the current selection from every possible source. In local panes the
   // selection lives in xterm (terminal.getSelection). In SSH panes the drag
   // often produces a *native browser* DOM selection instead (visible as the
@@ -1680,7 +1677,6 @@ function TerminalPaneView({
   const [multilinePasteConfirmationOpen, setMultilinePasteConfirmationOpen] = useState(false);
   const [recordingInfo, setRecordingInfo] = useState<TerminalRecordingInfo | null>(null);
   const [recordingBusy, setRecordingBusy] = useState(false);
-  const [recordingsOpen, setRecordingsOpen] = useState(false);
   // SSH defaults to tmux mouse OFF so drags make a local (copyable) xterm
   // selection; psmux/local keep mouse on. Kept in sync with the backend tmux
   // startup (set-option mouse off for SSH) and the session-bar toggle.
@@ -1696,6 +1692,12 @@ function TerminalPaneView({
     input: string;
   } | null>(null);
   const quickSelectOverlayRef = useRef<HTMLDivElement | null>(null);
+
+  function updateTerminalSelection(selection: string) {
+    selectedTerminalTextRef.current = selection;
+    setHasTerminalSelection(Boolean(selection));
+  }
+
   function focusTerminalRenderer() {
     const renderer = terminalRendererRef.current;
     if (renderer) {
@@ -1758,10 +1760,12 @@ function TerminalPaneView({
   const updateOpenConnectionTerminalColorScheme = useWorkspaceStore((state) => state.updateOpenConnectionTerminalColorScheme);
   const updateOpenTerminalPaneAppearance = useWorkspaceStore((state) => state.updateOpenTerminalPaneAppearance);
   const updateOpenTerminalPaneBackground = useWorkspaceStore((state) => state.updateOpenTerminalPaneBackground);
+  const updateOpenTerminalPaneTextEncoding = useWorkspaceStore((state) => state.updateOpenTerminalPaneTextEncoding);
   const updateOpenTerminalPaneX11ForwardingStatus = useWorkspaceStore((state) => state.updateOpenTerminalPaneX11ForwardingStatus);
   const setOpenTerminalPaneSshForwardFailures = useWorkspaceStore((state) => state.setOpenTerminalPaneSshForwardFailures);
   const markOpenTerminalPaneTmuxUnavailable = useWorkspaceStore((state) => state.markOpenTerminalPaneTmuxUnavailable);
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
+  const openTerminalRecordingsBrowser = useWorkspaceStore((state) => state.openTerminalRecordingsBrowser);
   const openGitBrowser = useWorkspaceStore((state) => state.openGitBrowser);
   // Show the Git icon when a local terminal's directory is inside a repo. Use
   // the OSC-reported cwd when available, otherwise fall back to the Connection's
@@ -1930,7 +1934,7 @@ function TerminalPaneView({
       if (event.button !== 0) {
         return;
       }
-      setSelection("");
+      updateTerminalSelection("");
     }
     document.addEventListener("mousedown", handleMouseDown, true);
     return () => {
@@ -2059,15 +2063,15 @@ function TerminalPaneView({
       switch (action) {
         case "copy": {
           // Read via readActiveTerminalSelection (xterm + native DOM selection
-          // + last-saved ref) and persist through setSelection so copy stays
-          // reliable on macOS WKWebView, where xterm clears its selection on
+          // + last-saved ref) and persist through updateTerminalSelection so copy
+          // stays reliable on macOS WKWebView, where xterm clears its selection on
           // mouse release. writeToClipboard uses the native Tauri clipboard,
           // which needs no user-gesture context (unlike the browser APIs) and
           // so works in every pane including SSH.
           const selection = readActiveTerminalSelection();
           if (selection) {
             void writeToClipboard(selection);
-            setSelection(selection);
+            updateTerminalSelection(selection);
             setContextMenu(null);
             return false;
           }
@@ -2184,14 +2188,14 @@ function TerminalPaneView({
       const selection = terminal.getSelection();
       // On macOS, xterm's accessibility manager clears the terminal selection
       // immediately after drag-release (DOM selectionchange collapses). We
-      // preserve the last non-empty selection in state so Cmd+C can still use
-      // it. A deliberate click-without-drag produces an empty selection here
-      // too, but the pointerup capture only saves when a selection exists, so
-      // a plain click correctly ends up with nothing to copy.
+      // preserve the last non-empty selection so Cmd+C can still use it. A
+      // deliberate click-without-drag produces an empty selection here too, but
+      // the pointerup capture only saves when a selection exists, so a plain
+      // click correctly ends up with nothing to copy.
       if (selection) {
-        setSelection(selection);
+        updateTerminalSelection(selection);
       } else if (!isMacPlatform()) {
-        setSelection("");
+        updateTerminalSelection("");
       }
       // Read the setting at selection time (not the effect's closed-over
       // value) so toggling copy-on-select in Settings applies to already-open
@@ -2339,7 +2343,7 @@ function TerminalPaneView({
               sshOldProtocols: resolveSshOldProtocols(connection, sshSettings),
             },
           });
-          await confirmTrustedSshHostKey(preview);
+          await confirmTrustedSshHostKey(preview, sshSettings);
         }
 
         const terminalStartAt = performance.now();
@@ -2405,6 +2409,7 @@ function TerminalPaneView({
             sshCompression:
               connection.type === "ssh" ? resolveSshCompression(connection, sshSettings) : undefined,
             sshOldProtocols: connection.type === "ssh" ? resolveSshOldProtocols(connection, sshSettings) : undefined,
+            textEncoding: normalizeTerminalEncoding(pane.textEncoding),
           },
         });
         if (disposed) {
@@ -2428,6 +2433,27 @@ function TerminalPaneView({
           });
         }
         sessionIdRef.current = result.sessionId;
+        if (terminalSettings.autoRecordSessions) {
+          // Register recording before startup scripts can produce output.
+          setRecordingBusy(true);
+          try {
+            await startTerminalRecording(result.sessionId, connection);
+          } catch (error) {
+            if (!disposed) {
+              showStatusBarNotice(
+                t("terminal.recordingFailed", { message: error instanceof Error ? error.message : String(error) }),
+                { tone: "error" },
+              );
+            }
+          } finally {
+            if (!disposed) {
+              setRecordingBusy(false);
+            }
+          }
+          if (disposed) {
+            return;
+          }
+        }
         if (connection.type === "ssh") {
           updateOpenTerminalPaneX11ForwardingStatus(
             tabId,
@@ -2528,10 +2554,9 @@ function TerminalPaneView({
       lastResizeDimensionsRef.current = null;
       terminalRendererRef.current = null;
       fitAndResizeRef.current = () => undefined;
-      setSelection("");
+      updateTerminalSelection("");
       setRecordingInfo(null);
       setRecordingBusy(false);
-      setRecordingsOpen(false);
       setContextMenu(null);
       setQuickSelect(null);
       setSearchResult({ resultIndex: -1, resultCount: 0, found: true });
@@ -2814,7 +2839,7 @@ function TerminalPaneView({
   }
 
   function handleCopyTerminalSelection() {
-    const text = readActiveTerminalSelection() || selectedTerminalText;
+    const text = readActiveTerminalSelection();
     if (text) {
       void writeToClipboard(text);
     }
@@ -2840,15 +2865,52 @@ function TerminalPaneView({
     event.stopPropagation();
     onFocus();
 
+    // PuTTY-style right-click paste; Shift+right-click keeps the menu reachable.
+    if (terminalSettings.rightClickPaste && !event.shiftKey) {
+      void handlePasteIntoTerminal();
+      return;
+    }
+
     // Capture from xterm AND the native DOM selection (SSH panes produce a
     // native browser selection that xterm does not track) before the menu opens.
     const selection = readActiveTerminalSelection();
-    setSelection(selection);
+    updateTerminalSelection(selection);
     setContextMenu({
       x: event.clientX,
       y: event.clientY,
       hasSelection: Boolean(selection),
     });
+  }
+
+  async function startTerminalRecording(sessionId: string, connection: Connection) {
+    const dimensions = terminalRendererRef.current?.dimensions;
+    const started = await invokeCommand("start_terminal_recording", {
+      request: {
+        sessionId,
+        connectionId: connection.id,
+        connectionName: connection.name,
+        initialBuffer: terminalRendererRef.current?.getRecordingBufferText() ?? "",
+        rows: dimensions?.rows,
+        cols: dimensions?.cols,
+      },
+    });
+    setRecordingInfo(started);
+    showStatusBarNotice(t("terminal.recordingStarted"));
+  }
+
+  async function handleTextEncodingChange(encoding: string) {
+    const normalized = normalizeTerminalEncoding(encoding);
+    const sessionId = sessionIdRef.current;
+    try {
+      if (sessionId && isTauriRuntime()) {
+        await invokeCommand("set_terminal_encoding", { request: { sessionId, encoding: normalized } });
+      }
+      updateOpenTerminalPaneTextEncoding(tabId, pane.id, normalized);
+      setActionsMenuOpen(false);
+      focusTerminalRenderer();
+    } catch (error) {
+      showStatusBarNotice(error instanceof Error ? error.message : String(error), { tone: "error" });
+    }
   }
 
   async function handleToggleRecording() {
@@ -2870,16 +2932,7 @@ function TerminalPaneView({
         return;
       }
 
-      const started = await invokeCommand("start_terminal_recording", {
-        request: {
-          sessionId,
-          connectionId: connection.id,
-          connectionName: connection.name,
-          initialBuffer: terminalRendererRef.current?.getBufferText() ?? "",
-        },
-      });
-      setRecordingInfo(started);
-      showStatusBarNotice(t("terminal.recordingStarted"));
+      await startTerminalRecording(sessionId, connection);
     } catch (error) {
       showStatusBarNotice(
         t("terminal.recordingFailed", { message: error instanceof Error ? error.message : String(error) }),
@@ -2892,7 +2945,7 @@ function TerminalPaneView({
 
   function handleOpenRecordings() {
     setActionsMenuOpen(false);
-    setRecordingsOpen(true);
+    openTerminalRecordingsBrowser(undefined, recordingInfo?.path);
   }
 
   async function handleSendBufferToAssistant() {
@@ -3154,7 +3207,7 @@ function TerminalPaneView({
             className="terminal-pane-action"
             aria-label={t("terminal.copySelection")}
             data-tutorial-id="terminal.copySelection"
-            disabled={!selectedTerminalText}
+            disabled={!hasTerminalSelection}
             onMouseDown={(e) => e.preventDefault()}
             onClick={handleCopyTerminalSelection}
             title={t("terminal.copySelection")}
@@ -3427,6 +3480,31 @@ function TerminalPaneView({
                     </button>
                   </div>
                 </div>
+                <div className="terminal-menu-submenu">
+                  <button className="terminal-menu-item" role="menuitem" type="button">
+                    <FileText size={13} />
+                    {t("terminal.textEncoding")}
+                    <ChevronRight size={13} className="terminal-menu-chevron" />
+                  </button>
+                  <div className="terminal-menu terminal-menu-submenu-panel" role="menu">
+                    {TERMINAL_ENCODING_OPTIONS.map((option) => {
+                      const selected = normalizeTerminalEncoding(pane.textEncoding) === option.value;
+                      return (
+                        <button
+                          aria-checked={selected}
+                          className="terminal-menu-item"
+                          key={option.value}
+                          onClick={() => void handleTextEncodingChange(option.value)}
+                          role="menuitemradio"
+                          type="button"
+                        >
+                          {option.label}
+                          {selected ? <Check size={13} className="terminal-color-scheme-check" /> : null}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             ) : null}
           </div>
@@ -3553,12 +3631,6 @@ function TerminalPaneView({
           onPaste={() => void handlePasteIntoTerminal()}
         />
       ) : null}
-      {recordingsOpen && pane.connection ? (
-        <TerminalRecordingsDialog
-          connection={pane.connection}
-          onClose={() => setRecordingsOpen(false)}
-        />
-      ) : null}
       {multilinePasteConfirmationOpen ? (
         <ConfirmDialog
           confirmIcon="copy"
@@ -3645,166 +3717,12 @@ function TerminalContextMenu({
   );
 }
 
-function TerminalRecordingsDialog({
-  connection,
-  onClose,
-}: {
-  connection: Connection;
-  onClose: () => void;
-}) {
-  const [recordings, setRecordings] = useState<TerminalRecordingEntry[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const { t } = useTranslation();
-
-  useEffect(() => {
-    let canceled = false;
-    async function loadRecordings() {
-      if (!isTauriRuntime()) {
-        setRecordings([]);
-        setError(t("terminal.tauriRequired"));
-        return;
-      }
-      setLoading(true);
-      setError("");
-      try {
-        const result = await invokeCommand("list_terminal_recordings", {
-          request: {
-            connectionId: connection.id,
-            connectionName: connection.name,
-          },
-        });
-        if (!canceled) {
-          setRecordings(result);
-        }
-      } catch (loadError) {
-        if (!canceled) {
-          setRecordings([]);
-          setError(loadError instanceof Error ? loadError.message : String(loadError));
-        }
-      } finally {
-        if (!canceled) {
-          setLoading(false);
-        }
-      }
-    }
-
-    void loadRecordings();
-    return () => {
-      canceled = true;
-    };
-  }, [connection.id, connection.name, t]);
-
-  async function handleOpenFolder() {
-    try {
-      await invokeCommand("open_terminal_recordings_folder", {
-        request: {
-          connectionId: connection.id,
-          connectionName: connection.name,
-        },
-      });
-    } catch (openError) {
-      setError(openError instanceof Error ? openError.message : String(openError));
-    }
-  }
-
-  async function handleOpenRecording(path: string) {
-    try {
-      await invokeCommand("open_terminal_recording", { path });
-    } catch (openError) {
-      setError(openError instanceof Error ? openError.message : String(openError));
-    }
-  }
-
-  return (
-    <div className="terminal-recordings-backdrop" role="presentation">
-      <div className="terminal-recordings-dialog" role="dialog" aria-modal="true" aria-label={t("terminal.recordingsTitle")}>
-        <header>
-          <div>
-            <strong>{t("terminal.recordingsTitle")}</strong>
-            <small>{connection.name}</small>
-          </div>
-          <div className="terminal-recordings-actions">
-            <button
-              className="terminal-pane-action"
-              aria-label={t("terminal.openRecordingsFolder")}
-              onClick={() => void handleOpenFolder()}
-              title={t("terminal.openRecordingsFolder")}
-              type="button"
-            >
-              <FolderOpen size={13} />
-            </button>
-            <button
-              className="terminal-pane-action"
-              aria-label={t("common.close")}
-              onClick={onClose}
-              title={t("common.close")}
-              type="button"
-            >
-              <X size={13} />
-            </button>
-          </div>
-        </header>
-        {loading ? <p>{t("terminal.loading")}</p> : null}
-        {error ? <p className="form-error">{error}</p> : null}
-        {!loading && !error && recordings.length === 0 ? <p>{t("terminal.noRecordings")}</p> : null}
-        {recordings.length > 0 ? (
-          <div className="terminal-recordings-list">
-            {recordings.map((recording) => (
-              <button
-                className="terminal-recording-row"
-                key={recording.path}
-                onClick={() => void handleOpenRecording(recording.path)}
-                type="button"
-              >
-                <FileText size={14} />
-                <span>
-                  <strong>{recording.fileName}</strong>
-                  <small>
-                    {formatRecordingMetadata(recording, t)}
-                  </small>
-                </span>
-              </button>
-            ))}
-          </div>
-        ) : null}
-      </div>
-    </div>
-  );
-}
-
 function isMultilinePaste(data: string) {
   return data.split(/\r\n|\r|\n/).filter((line) => line.length > 0).length > 1;
 }
 
 function truncateForNotice(text: string) {
   return text.length > 60 ? `${text.slice(0, 57)}…` : text;
-}
-
-function formatRecordingMetadata(recording: TerminalRecordingEntry, t: (key: string, options?: Record<string, unknown>) => string) {
-  const parts = [formatByteCount(recording.sizeBytes)];
-  if (recording.modifiedAtMillis) {
-    parts.push(new Date(recording.modifiedAtMillis).toLocaleString());
-  }
-  return t("terminal.recordingMetadata", { metadata: parts.join(" · ") });
-}
-
-function formatByteCount(bytes: number) {
-  if (!Number.isFinite(bytes) || bytes < 0) {
-    return "0 B";
-  }
-  if (bytes < 1024) {
-    return `${bytes} B`;
-  }
-  const units = ["KB", "MB", "GB"];
-  let value = bytes / 1024;
-  for (let index = 0; index < units.length; index += 1) {
-    if (value < 1024 || index === units.length - 1) {
-      return `${value.toFixed(value >= 10 ? 0 : 1)} ${units[index]}`;
-    }
-    value /= 1024;
-  }
-  return `${bytes} B`;
 }
 
 function encodeTerminalInput(data: string) {

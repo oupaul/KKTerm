@@ -33,6 +33,20 @@ Use a release-like Tauri build when possible. Development builds are still usefu
 
 Record the machine, OS, build type, date, and values in release notes or the validating issue before marking a milestone measurement item complete.
 
+## Blocking-command Review Checklist
+
+Use this checklist whenever a new Tauri command is added or an existing command gains more work. A function being short is not evidence that it is cheap; inspect the helpers it calls.
+
+1. Classify the worst case, not the typical development fixture. Treat directory/database scans, per-entry metadata, full-file work, image conversion, compression/extraction, password KDFs or bulk cryptography, registry scans, synchronous network calls, and child-process waits as blocking.
+2. Keep only provably bounded validation and short in-memory synchronization in a synchronous command. Move blocking synchronous helpers immediately into `run_blocking_command`/`spawn_blocking`, or use a pure async implementation end to end.
+3. Keep native owner-thread work minimal. Split CPU, delay, and I/O phases away from the native UI phase when the platform API itself cannot move.
+4. Audit concurrency introduced by the new boundary. Preserve serialization for shared native UI and mutable database/filesystem resources; protect changing paths, Connections, Sessions, queries, pages, and selections with a generation/request token or equivalent current-target check so late results cannot replace newer state.
+5. Preserve IPC payloads, errors, side-effect ordering, cancellation behavior, and progress reporting. Offloading is not permission to change product behavior.
+6. Add a structural regression test that keeps known-expensive commands asynchronous and verifies the blocking boundary, plus a caller-level test when result ordering matters.
+7. Run the smallest relevant tests and `cargo check`; use a release-like Tauri build and real low-end hardware or constrained CPU profiling for claims beyond command-boundary correctness.
+
+The canonical runtime rules and approved command shapes live in `docs/ARCHITECTURE.md` under **Backend Command Runtime Boundaries**.
+
 The last native SSH post-auth readiness value is kept in the local performance snapshot and diagnostics manifest as `lastSshTerminalReadyMs`, with no Connection name, host, terminal output, or secret material.
 
 For repeatable SSH readiness checks without terminal output capture, use the ignored Rust measurement test through the package script:

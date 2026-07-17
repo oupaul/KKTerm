@@ -33,6 +33,136 @@ All notable changes to KKTerm are documented here.
 - Dashboard background SVG previews are sanitized with DOMPurify before rendering.
 
 ## Direct Downloads
+* 💻 [Download for Windows (64-bit)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.124/kkterm-0.1.124-windows-x64-setup.exe)
+* 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.124/kkterm-0.1.124-windows-arm64-setup.exe)
+
+## Highlights
+- **SSH Connection**: “Auto trust new host key” is now enabled by default—no more trust prompts for newly seen hosts (your network admin brain can finally rest).  
+- **Durable UI state**: Connection/Tab/Dashboard Widget Instance-related UI state is now stored with an SQLite-backed approach, and a reset race was fixed.
+
+## New
+- **Install Helper**: Added an installer default provider setting in Settings.
+- **Install Helper recipes**: Added **KeePassXC** to Install Helper.
+- **Installer sections**: Added **Multimedia** and **Productivity** sections to the installer.
+
+## Improved
+- **URL overlay**: Improved lifecycle behavior so the **URL overlay** stays correctly visible after reload.
+- **Settings search**: Enhanced search result highlighting and localization support (including indexing + UI enhancements).
+- **IT Ops**: Improved background handling and context menu interactions.
+- **IT Ops room viewport**: Enhanced panning and centering features.
+- **IT Ops cloning workflow**: Improved shift-click instructions and cloning interactions for floor plan / ISO views.
+- **Duplication (IT Ops)**: Enhanced duplication for Server Rooms and Racks (including prefilled properties for Server Rooms during duplicate, and richer rack duplication parameters).
+- **Live Session Tab activation (Activity Rail)**: Improved correct **Tab** activation for live Sessions before child-layout reconstruction.
+
+## Fixed
+- **Selective workspace replace default**: Fixed the selective workspace replace default behavior.
+- **Hide AI shell command windows**: External AI shell command windows are now hidden.
+- **Durable UI state reset race**: Fixed a reset race in the durable UI state flow.
+
+## Internal
+- Localization updates across multiple locales (installer settings, IT Ops hints, and settings search wording).
+- Terminal recording export now uses unique file names with incremental suffixes.
+- IT Ops tests and settings search tests updated/added to match the improved behaviors.
+- Webview handling changes to suppress F5 reload in the main shell while keeping the URL overlay available when needed.  
+
+---
+
+## 版本 v0.1.124 精選重點
+- **SSH Connection**：預設已啟用「自動信任新的主機金鑰」——新增主機不再一直跳出信任提示（你的網管腦終於可以稍微喘口氣了）。
+- **持久化 UI 狀態**：與 **Connection**、**Tab**、以及 **Dashboard Widget Instance** 相關的 UI 狀態改為使用 SQLite 作為儲存方案，並修正了重置競態問題。
+
+## 新增
+- **Install Helper**：在設定中新增「安裝助手預設提供者」設定項。
+- **Install Helper 配方**：新增 **KeePassXC** 到 Install Helper。
+- **安裝程式分類**：安裝程式新增 **多媒體（Multimedia）** 與 **生產力（Productivity）** 兩個區塊。
+
+## 改進
+- **URL overlay**：強化 URL overlay 的生命週期行為，讓 **重新載入後** URL overlay 能維持正確可見。
+- **設定搜尋**：改善搜尋結果高亮顯示與在地化支援（包含索引與 UI 互動增強）。
+- **IT Ops**：改善背景處理與內容選單（context menu）互動。
+- **IT Ops 房間視窗（room viewport）**：加強平移（panning）與置中（centering）體驗。
+- **IT Ops 複製/克隆流程**：改善地面平面/ISO 視圖的 Shift-Click 操作指引與互動體驗。
+- **複製（IT Ops）**：強化伺服器機房與機櫃（Server Rooms / Racks）的複製功能（例如：機房複製時會先開啟可預填的 Properties；機櫃複製支援更多參數）。
+- **Activity Rail：Live Session 的 Tab 啟用**：改善 **Live Session 的 Tab** 在子版面重建前就能正確啟用。
+
+## 修正
+- **選擇性工作區（selective workspace replace）預設值**：修正選擇性工作區取代的預設行為。
+- **隱藏 AI shell 指令視窗**：隱藏外部的 AI shell 指令視窗。
+- **持久化 UI 狀態重置競態**：修正 durable UI state 重置流程中的競態問題。
+
+## Internal
+- 多語系在地化更新（包含安裝程式設定、IT Ops 提示、與設定搜尋文案）。
+- 更新/新增測試以符合 IT Ops 與設定搜尋的改進行為。
+- 終端機錄製匯出改為使用遞增後綴的唯一檔名。
+- Webview 處理調整：抑制主 Shell 的 F5 重新載入，同時保留 URL overlay 在需要時可用。
+
+## Direct Downloads
+* 💻 [Download for Windows (64-bit)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.123/kkterm-0.1.123-windows-x64-setup.exe)
+* 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.123/kkterm-0.1.123-windows-arm64-setup.exe)
+
+## Highlights
+- Smarter Connection + Session defaults for faster desk-to-terminal workflows (auto-record, right-click paste, and auto-trust host keys).
+- Better terminal recording handling: fixes for Windows garbling and general recording rendering hardening.
+- IT Ops got more complete AI assistant/MCP parity, including navigation and highlight coverage. (IT ops is where the network meets the paperwork.)
+
+## New
+- Add auto-record, right-click paste, and auto-trust host key options by @ryantsai in https://github.com/ryantsai/KKTerm/pull/610
+- Add auto-record, right-click paste, and auto-trust host key options by @ryantsai in https://github.com/ryantsai/KKTerm/pull/610
+- Add auto-record, right-click paste, and auto-trust host key options by @ryantsai in https://github.com/ryantsai/KKTerm/pull/610
+- Support more MobaXterm import types by @ryantsai in https://github.com/ryantsai/KKTerm/pull/608
+- Add hmac-sha1 to legacy SSH compatibility mode by @ryantsai in https://github.com/ryantsai/KKTerm/pull/614
+- Enhance terminal recordings model + UI: column resizing and new recording dialog elements by @ryantsai in https://github.com/ryantsai/KKTerm/pull/612
+- feat(itops): full AI assistant/MCP parity, IT Ops navigation, and highlight coverage by @ryantsai in https://github.com/ryantsai/KKTerm/pull/609
+- Selective import: close tabs when replacing workspaces and sync workspaces/connections actions by @ryantsai in https://github.com/ryantsai/KKTerm/pull/611
+- Update Codex desktop installer to ChatGPT Desktop (Codex) and adjust detection by @ryantsai in https://github.com/ryantsai/KKTerm/pull/606
+
+## Improved
+- Use disk icon for URL credential save by @ryantsai in https://github.com/ryantsai/KKTerm/pull/603
+- Remember active tab per workspace by @ryantsai in https://github.com/ryantsai/KKTerm/pull/604
+- Optimize hex viewer decoding and rendering by @ryantsai in https://github.com/ryantsai/KKTerm/pull/613
+
+## Fixed
+- Fix garbled terminal recordings on Windows by @ryantsai in https://github.com/ryantsai/KKTerm/pull/612
+- Fix selective import replace tab cleanup by @ryantsai in https://github.com/ryantsai/KKTerm/pull/611
+- Fix itops assistant/MCP review gaps (harden assistant and MCP review gaps) by @ryantsai in https://github.com/ryantsai/KKTerm/pull/609
+- Fix itops: delete a Server Room's racks with the room by @ryantsai in https://github.com/ryantsai/KKTerm/pull/609
+
+## Internal
+- Optimize hex viewer decoding and rendering by @ryantsai in https://github.com/ryantsai/KKTerm/pull/613 (work also touched tests and related resources)
+- Update localization files for multiple languages and improve test assertions by @ryantsai (commit: 155bfad)
+
+---
+
+## 重點摘要
+- 更聰明的 Connection / Session 預設值：支援自動錄製、右鍵貼上、以及自動信任主機金鑰，讓日常流程少點手動開關（就像把網路線直接插好一樣）。
+- 終端機錄製處理更可靠：修正 Windows 上終端機錄製畫面變形的問題，並強化一般錄製渲染。
+- IT Ops 補齊了 AI 助理 / MCP 的功能對齊，包含導覽與高亮覆蓋。（在 IT Ops 的世界裡，網路與文書總要一起跑。）
+
+## 新增
+- 新增自動錄製、右鍵貼上、以及自動信任主機金鑰選項（Auto-record / right-click paste / auto-trust host keys）by @ryantsai in https://github.com/ryantsai/KKTerm/pull/610
+- 支援更多 MobaXterm 匯入類型 by @ryantsai in https://github.com/ryantsai/KKTerm/pull/608
+- 為舊版 SSH 相容模式加入 hmac-sha1 by @ryantsai in https://github.com/ryantsai/KKTerm/pull/614
+- 終端機錄製模型 + 介面強化：支援欄位調整寬度，並新增錄製對話框相關元素 by @ryantsai in https://github.com/ryantsai/KKTerm/pull/612
+- feat(itops): 完整的 AI 助理/MCP 對齊、IT Ops 導覽與高亮覆蓋 by @ryantsai in https://github.com/ryantsai/KKTerm/pull/609
+- 選擇性匯入：在取代 Workspace 時關閉分頁，並同步 workspace / connections 相關動作 by @ryantsai in https://github.com/ryantsai/KKTerm/pull/611
+- 更新 Codex 桌面安裝器為 ChatGPT Desktop (Codex)，並調整偵測方式 by @ryantsai in https://github.com/ryantsai/KKTerm/pull/606
+
+## 改進
+- URL 憑證儲存改用磁碟機圖示 by @ryantsai in https://github.com/ryantsai/KKTerm/pull/603
+- 每個 workspace 記住目前作用中的分頁（Tab） by @ryantsai in https://github.com/ryantsai/KKTerm/pull/604
+- 優化 hex viewer 的解碼與渲染 by @ryantsai in https://github.com/ryantsai/KKTerm/pull/613
+
+## 修正
+- 修正 Windows 上終端機錄製內容變形（garbled） by @ryantsai in https://github.com/ryantsai/KKTerm/pull/612
+- 修正選擇性匯入在取代分頁時的清理問題 by @ryantsai in https://github.com/ryantsai/KKTerm/pull/611
+- 修正 itops 助理/MCP 審閱缺口（harden assistant and MCP review gaps）by @ryantsai in https://github.com/ryantsai/KKTerm/pull/609
+- 修正：刪除 Server Room 時，同步刪除該房間內的機櫃/機架（racks）by @ryantsai in https://github.com/ryantsai/KKTerm/pull/609
+
+## Internal
+- 優化 hex viewer 解碼與渲染（同時也影響到相關測試與資源）by @ryantsai in https://github.com/ryantsai/KKTerm/pull/613
+- 更新多語系翻譯檔並改進測試斷言 by @ryantsai（commit：155bfad）
+
+## Direct Downloads
 * 💻 [Download for Windows (64-bit)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.122/kkterm-0.1.122-windows-x64-setup.exe)
 * 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.122/kkterm-0.1.122-windows-arm64-setup.exe)
 

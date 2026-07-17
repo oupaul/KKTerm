@@ -36,6 +36,8 @@ test("Server Room spatial placement keeps Walls and sequenced Racks armed", asyn
 
   assert.match(parts, /document\.addEventListener\("pointerdown", cancelFromOtherUi, true\)/);
   assert.match(parts, /target\.closest\("\.rm-bp-ctl, \.rm-iso-ctl"\)/);
-  assert.match(floor, /useRoomPlacementPointer\(placing, onCancelPlacement, scrollRef\)/);
-  assert.match(iso, /useRoomPlacementPointer\(placing, onCancelPlacement, scrollRef\)/);
+  assert.match(floor, /useRoomPlacementPointer\(placing, cancelArmedPlacement, scrollRef\)/);
+  assert.match(iso, /useRoomPlacementPointer\(placing, cancelArmedPlacement, scrollRef\)/);
+  assert.match(floor, /setPendingFacing\(\{ kind: "rack", cell, facing: 0 \}\)/);
+  assert.match(iso, /setPendingFacing\(\{ kind: "rack", cell, facing: 0 \}\)/);
 });

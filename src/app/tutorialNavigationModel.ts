@@ -1,10 +1,33 @@
 import type { ActivePage } from "./ActivityRail";
 import type { SettingsSectionId } from "../modules/settings/settingsAssistantContext";
 
+/** An IT Ops navigator destination the tutorial overlay can open: a Site's
+ * predefined virtual pages, or the global Task Library root surface. */
+export type ItOpsNavigationDestination =
+  | "site"
+  | "serverRooms"
+  | "hosts"
+  | "automations"
+  | "runHistory"
+  | "taskLibrary";
+
 export type TutorialNavigationTarget = {
   page: ActivePage;
   settingsSectionId?: SettingsSectionId;
+  /** IT Ops only: which Site to select (defaults to the active/first Site). */
+  itopsSiteId?: string;
+  /** IT Ops only: which navigator destination to open for that Site. */
+  itopsDestination?: ItOpsNavigationDestination;
 };
+
+const ITOPS_NAVIGATION_DESTINATIONS = new Set<ItOpsNavigationDestination>([
+  "site",
+  "serverRooms",
+  "hosts",
+  "automations",
+  "runHistory",
+  "taskLibrary",
+]);
 
 const SETTINGS_SECTION_IDS = new Set<SettingsSectionId>([
   "general-settings",
@@ -142,6 +165,32 @@ const ITOPS_TUTORIAL_TARGET_IDS = [
   "itops.siteView",
 ] as const;
 
+// IT Ops destination-page targets: highlighting one first opens its navigator
+// destination (Site selection falls back to the active/first Site).
+const ITOPS_DESTINATION_TUTORIAL_TARGETS: Record<string, ItOpsNavigationDestination> = {
+  "itops.hostsPanel": "hosts",
+  "itops.hostsRunTask": "hosts",
+  "itops.hostsImport": "hosts",
+  "itops.hostsScan": "hosts",
+  "itops.automationsPanel": "automations",
+  "itops.automationsNew": "automations",
+  "itops.runHistoryPanel": "runHistory",
+  "itops.taskLibrary": "taskLibrary",
+  "itops.taskLibraryNew": "taskLibrary",
+};
+
+// Entity-scoped dynamic targets (`itops.<entity>:<id>`), advertised through the
+// IT Ops page context rather than the static registry. The prefix picks the
+// destination; pass navigation.itopsSiteId when the entity belongs to a Site
+// that is not currently selected.
+const ITOPS_ENTITY_TARGET_PREFIXES: Record<string, ItOpsNavigationDestination> = {
+  "itops.site:": "site",
+  "itops.host:": "hosts",
+  "itops.automation:": "automations",
+  "itops.task:": "taskLibrary",
+  "itops.run:": "runHistory",
+};
+
 const INSTALLER_TUTORIAL_TARGET_IDS = [
   "installer.updateAll",
   "installer.toolOptions",
@@ -159,6 +208,14 @@ const TUTORIAL_TARGET_NAVIGATION: Record<string, TutorialNavigationTarget> = {
       targetId,
       { page: "itops" },
     ]),
+  ),
+  ...Object.fromEntries(
+    Object.entries(ITOPS_DESTINATION_TUTORIAL_TARGETS).map(
+      ([targetId, itopsDestination]) => [
+        targetId,
+        { page: "itops", itopsDestination },
+      ],
+    ),
   ),
   ...Object.fromEntries(
     WORKSPACE_TUTORIAL_TARGET_IDS.map((targetId) => [
@@ -185,7 +242,17 @@ const TUTORIAL_TARGET_NAVIGATION: Record<string, TutorialNavigationTarget> = {
 export function tutorialNavigationForTarget(
   targetId: string,
 ): TutorialNavigationTarget | undefined {
-  return TUTORIAL_TARGET_NAVIGATION[targetId.trim()];
+  const trimmed = targetId.trim();
+  const staticTarget = TUTORIAL_TARGET_NAVIGATION[trimmed];
+  if (staticTarget) {
+    return staticTarget;
+  }
+  for (const [prefix, itopsDestination] of Object.entries(ITOPS_ENTITY_TARGET_PREFIXES)) {
+    if (trimmed.startsWith(prefix) && trimmed.length > prefix.length) {
+      return { page: "itops", itopsDestination };
+    }
+  }
+  return undefined;
 }
 
 // Tutorial targets that live inside an open Workspace Tab surface can only be
@@ -226,19 +293,52 @@ export function normalizeTutorialNavigationTarget(
   const candidate = value as Record<string, unknown>;
   const page = normalizeTutorialPage(candidate.page);
   const settingsSectionId = normalizeSettingsSectionId(candidate.settingsSectionId);
+  const itopsSiteId = normalizeItopsSiteId(candidate.itopsSiteId);
+  const itopsDestination = normalizeItopsDestination(candidate.itopsDestination);
 
   if (candidate.settingsSectionId !== undefined && !settingsSectionId) {
     return undefined;
   }
+  if (candidate.itopsDestination !== undefined && !itopsDestination) {
+    return undefined;
+  }
+  if (candidate.itopsSiteId !== undefined && !itopsSiteId) {
+    return undefined;
+  }
+
+  const hasItopsFields = Boolean(itopsSiteId || itopsDestination);
 
   if (page) {
     if (page !== "settings" && settingsSectionId) {
       return undefined;
     }
-    return settingsSectionId ? { page, settingsSectionId } : { page };
+    if (page !== "itops" && hasItopsFields) {
+      return undefined;
+    }
+    if (settingsSectionId) {
+      return { page, settingsSectionId };
+    }
+    if (hasItopsFields) {
+      return {
+        page,
+        ...(itopsSiteId ? { itopsSiteId } : {}),
+        ...(itopsDestination ? { itopsDestination } : {}),
+      };
+    }
+    return { page };
   }
 
-  return settingsSectionId ? { page: "settings", settingsSectionId } : undefined;
+  if (settingsSectionId) {
+    return { page: "settings", settingsSectionId };
+  }
+  if (hasItopsFields) {
+    return {
+      page: "itops",
+      ...(itopsSiteId ? { itopsSiteId } : {}),
+      ...(itopsDestination ? { itopsDestination } : {}),
+    };
+  }
+  return undefined;
 }
 
 function normalizeTutorialPage(value: unknown): ActivePage | undefined {
@@ -260,4 +360,20 @@ function normalizeSettingsSectionId(value: unknown): SettingsSectionId | undefin
   }
   const trimmed = value.trim() as SettingsSectionId;
   return SETTINGS_SECTION_IDS.has(trimmed) ? trimmed : undefined;
+}
+
+function normalizeItopsSiteId(value: unknown): string | undefined {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+  const trimmed = value.trim();
+  return trimmed ? trimmed : undefined;
+}
+
+function normalizeItopsDestination(value: unknown): ItOpsNavigationDestination | undefined {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+  const trimmed = value.trim() as ItOpsNavigationDestination;
+  return ITOPS_NAVIGATION_DESTINATIONS.has(trimmed) ? trimmed : undefined;
 }

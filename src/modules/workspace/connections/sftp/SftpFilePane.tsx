@@ -132,6 +132,7 @@ export function FilePane({
   const [isDropTarget, setIsDropTarget] = useState(false);
   const [search, setSearch] = useState("");
 
+  const selectedNameSet = useMemo(() => new Set(selectedNames), [selectedNames]);
   const sortedFiles = useMemo(() => sortFileEntries(files, sort), [files, sort]);
   const query = search.trim().toLocaleLowerCase();
   const visibleFiles = useMemo(
@@ -761,7 +762,7 @@ export function FilePane({
 
             {!isLoading && !status && view === "list"
               ? visibleFiles.map((file) => {
-                  const isSelected = selectedNames.includes(file.name);
+                  const isSelected = selectedNameSet.has(file.name);
                   const handlers = rowHandlers(file, isSelected);
                   return (
                     <div
@@ -789,7 +790,7 @@ export function FilePane({
             {!isLoading && !status && view === "gallery" ? (
               <div className="sftp-gallery-grid">
                 {visibleFiles.map((file) => {
-                  const isSelected = selectedNames.includes(file.name);
+                  const isSelected = selectedNameSet.has(file.name);
                   const handlers = rowHandlers(file, isSelected);
                   return (
                     <div
@@ -898,18 +899,21 @@ function sortFileEntries(files: FileEntry[], sort: SortState) {
     if (left.kind !== "folder" && right.kind === "folder") {
       return 1;
     }
-    const byName = left.name.localeCompare(right.name, undefined, { numeric: true, sensitivity: "base" });
-    const primary =
-      sort.key === "size"
-        ? (left.sizeBytes ?? -1) - (right.sizeBytes ?? -1)
-        : sort.key === "date"
-          ? (left.modifiedTimestamp ?? 0) - (right.modifiedTimestamp ?? 0)
-          : byName;
-    if (primary === 0) {
-      // Stable tiebreak by name ascending regardless of primary direction.
-      return byName;
+    if (sort.key !== "name") {
+      const primary =
+        sort.key === "size"
+          ? (left.sizeBytes ?? -1) - (right.sizeBytes ?? -1)
+          : (left.modifiedTimestamp ?? 0) - (right.modifiedTimestamp ?? 0);
+      if (primary !== 0) {
+        return sort.dir === "asc" ? primary : -primary;
+      }
     }
-    return sort.dir === "asc" ? primary : -primary;
+    const byName = left.name.localeCompare(right.name, undefined, {
+      numeric: true,
+      sensitivity: "base",
+    });
+    // Size/date ties remain name-ascending regardless of primary direction.
+    return sort.key === "name" && sort.dir === "desc" ? -byName : byName;
   });
   return sorted;
 }

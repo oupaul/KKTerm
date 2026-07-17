@@ -18,10 +18,8 @@ fn playbook_ai_decision_accepts_closed_json_and_rejects_unknown_actions() {
     assert_eq!(decision.reason, "service is active");
 
     assert!(
-        parse_playbook_ai_decision(
-            "{\"decision\":\"runCommand\",\"reason\":\"sudo rm -rf /\"}"
-        )
-        .is_err()
+        parse_playbook_ai_decision("{\"decision\":\"runCommand\",\"reason\":\"sudo rm -rf /\"}")
+            .is_err()
     );
 }
 
@@ -436,11 +434,11 @@ fn claude_auth_status_requires_logged_in_json() {
     assert!(claude_auth_status_logged_in(
         "{\n  \"loggedIn\": true,\n  \"authMethod\": \"claude.ai\"\n}"
     ));
-    assert!(!claude_auth_status_logged_in(
-        "{\n  \"loggedIn\": false\n}"
-    ));
+    assert!(!claude_auth_status_logged_in("{\n  \"loggedIn\": false\n}"));
     // Unknown output shapes degrade to the old exit-code-only behavior.
-    assert!(claude_auth_status_logged_in("Logged in as user@example.com"));
+    assert!(claude_auth_status_logged_in(
+        "Logged in as user@example.com"
+    ));
     assert!(claude_auth_status_logged_in("{\"status\":\"ok\"}"));
 }
 
@@ -523,7 +521,10 @@ fn windows_external_terminal_command_line_wraps_quoted_command() {
     #[cfg(target_os = "windows")]
     assert_eq!(
         command,
-        format!("{} auth login", shell_quote("C:\\nvm4w\\nodejs\\claude.cmd"))
+        format!(
+            "{} auth login",
+            shell_quote("C:\\nvm4w\\nodejs\\claude.cmd")
+        )
     );
 
     let line = windows_external_terminal_command_line(command);
@@ -2501,7 +2502,7 @@ fn dashboard_update_custom_widget_tool_accepts_structured_script_body_patch() {
 }
 
 #[test]
-fn itops_rack_item_tools_expose_rack_top_kuaiguai_contract() {
+fn itops_rack_item_tools_expose_mounting_face_and_rack_top_contracts() {
     let settings: AiAssistantToolSettings = serde_json::from_value(json!({
         "itops": true
     }))
@@ -2515,6 +2516,10 @@ fn itops_rack_item_tools_expose_rack_top_kuaiguai_contract() {
         .iter()
         .find(|tool| tool.function.name == "itops_update_rack_item")
         .expect("IT Ops update-rack-item tool exists");
+    let move_item = tools
+        .iter()
+        .find(|tool| tool.function.name == "itops_move_rack_item")
+        .expect("IT Ops move-rack-item tool exists");
 
     for tool in [place, update] {
         let kinds = tool
@@ -2536,9 +2541,38 @@ fn itops_rack_item_tools_expose_rack_top_kuaiguai_contract() {
                 .pointer("/properties/metadata/properties/kuaiguaiStyle/enum"),
             Some(&json!(["full", "laidDown"]))
         );
+        assert_eq!(
+            tool.function
+                .parameters
+                .pointer("/properties/mountFace/enum"),
+            Some(&json!(["front", "rear"]))
+        );
     }
+    assert_eq!(
+        move_item
+            .function
+            .parameters
+            .pointer("/properties/mountFace/enum"),
+        Some(&json!(["front", "rear"]))
+    );
     assert!(place.function.description.contains("rack.heightU + 1"));
     assert!(place.function.description.contains("heightU 4"));
+    assert!(
+        place
+            .function
+            .description
+            .contains("back, backside, or rear")
+    );
+}
+
+#[test]
+fn itops_rack_item_mount_face_parser_accepts_rear_and_keeps_front_default_optional() {
+    assert_eq!(
+        optional_itops_mount_face(&json!({ "mountFace": "rear" })).unwrap(),
+        Some(RackMountFace::Rear)
+    );
+    assert_eq!(optional_itops_mount_face(&json!({})).unwrap(), None);
+    assert!(optional_itops_mount_face(&json!({ "mountFace": "back" })).is_err());
 }
 
 #[test]
@@ -3676,12 +3710,82 @@ fn prompt_permission_mode_blocks_mutating_tools() {
     assert!(!tool_requires_allow_all("performance_counters"));
     assert!(!tool_requires_allow_all("tutorial_highlight"));
     assert!(!tool_requires_allow_all("assistant_use_skill"));
+    assert!(tool_requires_allow_all("itops_create_site"));
+    assert!(tool_requires_allow_all("itops_create_task"));
+    assert!(tool_requires_allow_all("itops_create_automation"));
+    assert!(tool_requires_allow_all("itops_start_batch_run"));
+    assert!(!tool_requires_allow_all("itops_list_sites"));
+    assert!(!tool_requires_allow_all("itops_list_run_history"));
+    assert!(!tool_requires_allow_all("itops_get_task"));
+    assert!(!tool_requires_allow_all("itops_get_run_report"));
+    assert!(!tool_requires_allow_all("itops_test_automation"));
 
     let result = tool_permission_required_result("dashboard_reset");
     let value: Value = serde_json::from_str(&result).expect("permission result is JSON");
     assert_eq!(value["ok"], false);
     assert_eq!(value["error"], "permissionRequired");
     assert_eq!(value["permissionMode"], "prompt");
+}
+
+#[test]
+fn assistant_task_update_cannot_reassign_an_existing_sudo_secret() {
+    use crate::itops::types::{BatchTask, PlaybookStep, PlaybookStepKind};
+
+    let task = BatchTask::Playbook {
+        name: "maintenance".to_string(),
+        steps: vec![PlaybookStep {
+            id: Some("step-2".to_string()),
+            kind: PlaybookStepKind::Sudo,
+            name: "replace privileged command".to_string(),
+            send: "sudo rm -rf /tmp/example".to_string(),
+            expect: None,
+            timeout_seconds: None,
+            secret_owner_id: Some("secret-existing".to_string()),
+            ai_instruction: None,
+        }],
+    };
+
+    assert!(
+        validate_assistant_task(
+            &task,
+            Some(&BatchTask::Playbook {
+                name: "maintenance".to_string(),
+                steps: vec![PlaybookStep {
+                    id: Some("step-1".to_string()),
+                    kind: PlaybookStepKind::Sudo,
+                    name: "original privileged command".to_string(),
+                    send: "sudo systemctl restart example".to_string(),
+                    expect: None,
+                    timeout_seconds: None,
+                    secret_owner_id: Some("secret-existing".to_string()),
+                    ai_instruction: None,
+                }],
+            })
+        )
+        .is_err(),
+        "an existing secret owner id must not authorize a modified sudo step"
+    );
+}
+
+#[test]
+fn assistant_task_update_can_preserve_an_unchanged_sudo_step() {
+    use crate::itops::types::{BatchTask, PlaybookStep, PlaybookStepKind};
+
+    let task = BatchTask::Playbook {
+        name: "maintenance".to_string(),
+        steps: vec![PlaybookStep {
+            id: Some("step-1".to_string()),
+            kind: PlaybookStepKind::Sudo,
+            name: "restart service".to_string(),
+            send: "sudo systemctl restart example".to_string(),
+            expect: None,
+            timeout_seconds: None,
+            secret_owner_id: Some("secret-existing".to_string()),
+            ai_instruction: None,
+        }],
+    };
+
+    assert!(validate_assistant_task(&task, Some(&task)).is_ok());
 }
 
 #[test]
@@ -3947,15 +4051,15 @@ fn format_copilot_sdk_error_maps_json_failure_to_cli_update_guidance() {
         "expected an update command, got: {message}"
     );
     // The underlying detail stays available for bug reports.
-    assert!(message.contains("1782380691690"), "expected detail, got: {message}");
+    assert!(
+        message.contains("1782380691690"),
+        "expected detail, got: {message}"
+    );
 }
 
 #[test]
 fn format_copilot_sdk_error_keeps_stage_context_for_other_failures() {
-    let error = CopilotSdkError::with_message(
-        CopilotSdkErrorKind::InvalidConfig,
-        "bad config",
-    );
+    let error = CopilotSdkError::with_message(CopilotSdkErrorKind::InvalidConfig, "bad config");
     let message = format_copilot_sdk_error("create session", error);
 
     assert!(

@@ -527,7 +527,12 @@ fn find_xcap_window(window: &tauri::WebviewWindow) -> Result<xcap::Window, Strin
     let mut own: Vec<xcap::Window> = xcap::Window::all()
         .map_err(|error| format!("failed to enumerate windows: {error}"))?
         .into_iter()
-        .filter(|candidate| candidate.pid().map(|candidate_pid| candidate_pid == pid).unwrap_or(false))
+        .filter(|candidate| {
+            candidate
+                .pid()
+                .map(|candidate_pid| candidate_pid == pid)
+                .unwrap_or(false)
+        })
         .collect();
     if own.is_empty() {
         return Err("no KKTerm windows were found to capture".to_string());
@@ -539,15 +544,31 @@ fn find_xcap_window(window: &tauri::WebviewWindow) -> Result<xcap::Window, Strin
     let index = own
         .iter()
         .position(|candidate| {
-            !title.is_empty() && candidate.title().map(|value| value == title).unwrap_or(false)
+            !title.is_empty()
+                && candidate
+                    .title()
+                    .map(|value| value == title)
+                    .unwrap_or(false)
         })
         .or_else(|| {
             let (position, size) = (position?, size?);
             own.iter().position(|candidate| {
-                candidate.x().map(|value| value == position.x).unwrap_or(false)
-                    && candidate.y().map(|value| value == position.y).unwrap_or(false)
-                    && candidate.width().map(|value| value == size.width).unwrap_or(false)
-                    && candidate.height().map(|value| value == size.height).unwrap_or(false)
+                candidate
+                    .x()
+                    .map(|value| value == position.x)
+                    .unwrap_or(false)
+                    && candidate
+                        .y()
+                        .map(|value| value == position.y)
+                        .unwrap_or(false)
+                    && candidate
+                        .width()
+                        .map(|value| value == size.width)
+                        .unwrap_or(false)
+                    && candidate
+                        .height()
+                        .map(|value| value == size.height)
+                        .unwrap_or(false)
             })
         })
         .or_else(|| if own.len() == 1 { Some(0) } else { None })

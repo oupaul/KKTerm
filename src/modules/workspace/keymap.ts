@@ -12,6 +12,8 @@
 // while the Workspace Module is active; "terminal" actions are handled inside
 // the focused terminal Pane's xterm.js custom key handler.
 
+import type { Connection, WorkspaceTab } from "../../types";
+
 export type WorkspaceShortcutScope = "workspace" | "terminal";
 
 export type WorkspaceShortcutActionId =
@@ -39,6 +41,18 @@ export type WorkspaceShortcutAction = {
   labelKey: string;
   defaultBinding: string | null;
 };
+
+export function activeConnectionForNewTab(
+  tabs: readonly WorkspaceTab[],
+  activeTabId: string | null,
+): Connection | null {
+  const activeTab = tabs.find((tab) => tab.id === activeTabId);
+  if (!activeTab) {
+    return null;
+  }
+  const focusedPane = activeTab.panes.find((pane) => pane.id === activeTab.focusedPaneId);
+  return focusedPane?.connection ?? activeTab.connection ?? activeTab.panes[0]?.connection ?? null;
+}
 
 export const WORKSPACE_SHORTCUT_ACTIONS: readonly WorkspaceShortcutAction[] = [
   { id: "newTab", scope: "workspace", labelKey: "workspace.newTab", defaultBinding: "Ctrl+Shift+T" },

@@ -28,11 +28,13 @@ const INSTALLER_ARTWORK_ICON_IDS = [
   "git",
   "github-cli",
   "hermes-agent",
+  "keepassxc",
   "langflow",
   "wsl",
   "n8n",
   "nodejs",
   "notepadpp",
+  "obs-studio",
   "ollama",
   "oh-my-posh",
   "openflowkit",
@@ -50,6 +52,7 @@ const INSTALLER_ARTWORK_ICON_IDS = [
   "sysinternals-suite",
   "tailscale",
   "vscode",
+  "vlc",
 ] as const;
 
 test("brand icon references round-trip only known ids", () => {

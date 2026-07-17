@@ -152,6 +152,44 @@ test("Server Room rows expose Add Rack before Delete and final Properties", asyn
   assert.match(sites, /setRackDialog\(\{[\s\S]*siteId: site\.id,[\s\S]*rack: null,[\s\S]*defaultServerRoom: room\.key/);
 });
 
+test("Server Room and Rack rows expose deep Duplicate commands", async () => {
+  const sites = await read("src/modules/itops/SitesTab.tsx");
+  const state = await read("src/modules/itops/state.ts");
+  const tauri = await read("src/lib/tauri.ts");
+  const english = JSON.parse(await read("src/i18n/locales/en.json"));
+
+  assert.equal(english.itops.actions.duplicate, "Duplicate");
+  assert.match(sites, /label: t\("itops\.actions\.duplicate"\)/);
+  assert.match(sites, /iconSvg: nativeMenuIcons\.copy/);
+  assert.match(sites, /onDuplicate: \(\) =>\s*setServerRoomDialog\(\{/);
+  assert.match(sites, /onDuplicate: \(\) =>\s*setRackDialog\(\{/);
+  assert.match(sites, /duplicateName: nextTopologyDuplicateName\(/);
+  assert.match(sites, /duplicateOf=\{rackDialog\.duplicateOf\}/);
+  assert.match(sites, /duplicateOf=\{serverRoomDialog\.duplicateOf\}/);
+  assert.match(state, /invokeCommand\("itops_duplicate_server_room", \{/);
+  assert.match(state, /invokeCommand\("itops_duplicate_rack", \{[\s\S]*id,[\s\S]*\.\.\.input,[\s\S]*\.\.\.placement/);
+  assert.match(tauri, /itops_duplicate_server_room:/);
+  assert.match(tauri, /itops_duplicate_rack:/);
+});
+
+test("Server Room spatial views arm Shift-click deep copies for one-click blank placement", async () => {
+  const sites = await read("src/modules/itops/SitesTab.tsx");
+  const floor = await read("src/modules/itops/ServerRoomFloorPlan.tsx");
+  const iso = await read("src/modules/itops/ServerRoomIsoView.tsx");
+  const english = JSON.parse(await read("src/i18n/locales/en.json"));
+
+  assert.match(english.itops.floorPlan.blueprintEditHint, /SHIFT \+ click.*clone/);
+  assert.match(english.itops.floorPlan.isoEditHint, /SHIFT \+ click.*clone/);
+  assert.match(sites, /name: nextTopologyDuplicateName\(/);
+  assert.match(sites, /duplicateRackForPlacement\([\s\S]*gridX: cell\.x, gridY: cell\.y, facing: draft\.facing/);
+  assert.match(floor, /event\.shiftKey && onCloneRack/);
+  assert.match(floor, /event\.shiftKey && onCloneObject/);
+  assert.match(floor, /roomCellIsBlank\(cell, layout\.cells, objects\)/);
+  assert.match(iso, /event\.shiftKey && onCloneRack/);
+  assert.match(iso, /event\.shiftKey && onCloneObject/);
+  assert.match(iso, /cloneRack != null \|\| cloneObject != null[\s\S]*placeCloneAt\(cell\)/);
+});
+
 test("Server Rooms virtual row exposes its contextual add command", async () => {
   const sites = await read("src/modules/itops/SitesTab.tsx");
   const english = JSON.parse(await read("src/i18n/locales/en.json"));

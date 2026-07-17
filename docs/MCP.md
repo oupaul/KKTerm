@@ -234,28 +234,73 @@ same protection without any per-Module gate code.
 
 ### IT Ops Module (`kkterm.itops.*`)
 
-Site topology and Rack Device placement for the IT Ops Module (docs/ITOPS.md).
-Backed by `crate::ai::itops_tool`, the same implementation the in-app
-assistant's `itops_*` tools use, so MCP and the assistant share one storage
-path. Mutations emit `itops-changed` so the IT Ops UI reloads. All tools are
-safe (durable data reads/writes, no executable code and no secrets); in the
-in-app assistant the mutating tools still go through the per-call approval
-prompt unless the tool permission mode is Allow-all. The topology invariant
-is Site → Server Room → Rack → Rack Device: create the parent first.
+The full IT Ops Module surface (docs/ITOPS.md): Site topology and Rack Device
+placement, the Host inventory, the global Task Library, durable Automations,
+and Batch Runs. Backed by `crate::ai::itops_tool`, the same implementation the
+in-app assistant's `itops_*` tools use, so MCP and the assistant share one
+storage path. Mutations emit `itops-changed` so the IT Ops UI reloads.
+
+Safe tools are durable data reads/writes with no executable code and no
+secrets; in the in-app assistant every mutating tool still goes through the
+per-call approval prompt unless the tool permission mode is Allow-all. Tools
+that author or execute runnable material — Task definitions, Automations
+(their `runBatch` actions later execute scripts unattended), and starting a
+Batch Run (remote code execution on every resolved host) — live in
+`kkterm.itops.*.dangerous.*` namespaces behind the
+`built_in_mcp_allow_all_dangerous` gate. Assistant-authored Tasks, Automation
+`runBatch` payloads, and playbooks may never introduce sudo steps or
+secret-vault references; those are configured only in the Task Library editor.
+The topology invariant is Site → Server Room → Rack → Rack Device: create the
+parent first.
 
 | Name | Description |
 |---|---|
 | `kkterm.itops.sites.list` | List IT Ops Sites (id, name, memberIds, filter, transport). Presentation-heavy fields (backgrounds, icon images) are omitted. |
 | `kkterm.itops.sites.create` | Create a Site. Optional `memberIds` reference saved Connection ids; `transport` defaults to `auto`. |
+| `kkterm.itops.sites.update` | Update one Site by id. Omitted fields keep their current values; presentation fields (icons, backgrounds) are always preserved. |
+| `kkterm.itops.sites.remove` | Delete one Site by id including its Server Rooms, Racks, Rack Devices, and Hosts. Saved Connections and Run History survive; the Default Site cannot be deleted. |
 | `kkterm.itops.server_rooms.list` | List one Site's Server Rooms by `siteId`. |
 | `kkterm.itops.server_rooms.create` | Create a Server Room in a Site. `floorColor` defaults to `default`. |
+| `kkterm.itops.server_rooms.update` | Update one Server Room by id. Full-value semantics: read the room first and resend `name` and `floorColor`. |
+| `kkterm.itops.server_rooms.remove` | Delete one Server Room by id, including its Racks and placements. |
 | `kkterm.itops.racks.list` | List one Site's Racks by `siteId`, each with its placed Rack Devices in U order. |
 | `kkterm.itops.racks.create` | Create a Rack in a Site. `serverRoom` names an existing Server Room in the same Site; `heightU` defaults to 42, `depthMm` to 1000. |
-| `kkterm.itops.rack_items.place` | Place one Rack Device. In-cabinet spans use the lowest occupied `startU` (1 = bottom) and are validated against bounds/overlaps. A rack-top package uses kind `kuaiguai`, `startU = rack.heightU + 1`, height 4 with `metadata.kuaiguaiStyle = "full"` (or height 1 with `"laidDown"`), and optional ISO `metadata.expiry`; only one may occupy a Rack top. Kind `connection` requires `connectionId`. |
-| `kkterm.itops.rack_items.update` | Update one Rack Device's kind, label, Connection binding, or metadata by id. The kind enum includes `kuaiguai`, with typed expiry/style/size/rotation metadata. Full-value semantics: omitted metadata clears stored metadata. |
-| `kkterm.itops.rack_items.move` | Move and/or resize one Rack Device by id, possibly into a different Rack; the new span is re-validated. |
+| `kkterm.itops.racks.update` | Update one Rack by id. Full-value semantics; shrinking `heightU` is rejected while placed devices would no longer fit. |
+| `kkterm.itops.racks.remove` | Delete one Rack by id, including its Rack Device placements. |
+| `kkterm.itops.rack_items.place` | Place one Rack Device. `mountFace` is `front` or `rear` (default `front`); in-cabinet spans use the lowest occupied `startU` (1 = bottom) and are validated against bounds/overlaps on that face. A rack-top package uses kind `kuaiguai`, `startU = rack.heightU + 1`, height 4 with `metadata.kuaiguaiStyle = "full"` (or height 1 with `"laidDown"`), and optional ISO `metadata.expiry`; only one may occupy a Rack top regardless of face. Kind `connection` requires `connectionId`. |
+| `kkterm.itops.rack_items.update` | Update one Rack Device's kind, label, Connection binding, `mountFace`, or metadata by id. Moving to another face re-validates the occupied span there. The kind enum includes `kuaiguai`, with typed expiry/style/size/rotation metadata. Full-value semantics: omitted metadata clears stored metadata. |
+| `kkterm.itops.rack_items.move` | Move and/or resize one Rack Device by id, possibly into a different Rack or onto its `front`/`rear` `mountFace`; the new face and span are re-validated. |
 | `kkterm.itops.rack_items.remove` | Remove one Rack Device placement by id. Bound saved Connections are untouched. |
 | `kkterm.itops.hosts.list` | List one Site's Hosts by `siteId`: hostname, kind, parent Host, bound Connection ids, and last connectivity-scan snapshot. |
+| `kkterm.itops.hosts.create` | Create one Host in a Site's inventory. `parentHostId` nests it as a VM/container guest. |
+| `kkterm.itops.hosts.update` | Update one Host by id. Full-value semantics; `connectionIds` are ordered saved Connection references, and the first bound SSH Connection makes the Host runnable. |
+| `kkterm.itops.hosts.remove` | Delete one Host by id. Child Hosts re-parent one level up. |
+| `kkterm.itops.hosts.import` | Bulk-import a hostname list into a Site. Blanks and case-insensitive duplicates are skipped, not errors. |
+| `kkterm.itops.hosts.scan` | Probe a Site's Hosts (all or by `hostIds`) for SSH (22), WinRM (5985/5986), and HTTPS (443) with bounded TCP probes; waits for completion, persists each snapshot, and returns the updated list. |
+| `kkterm.itops.tasks.list` | List the global Task Library: metadata plus a redacted one-line summary per Task, never full script bodies. |
+| `kkterm.itops.tasks.get` | Read one Task's full definition by id (script body or playbook steps). |
+| `kkterm.itops.tasks.remove` | Delete one user Task by id (built-ins are protected). Run History keeps its redacted summaries; orphaned task credentials are removed from the vault. |
+| `kkterm.itops.automations.list` | List durable Automations: name, enabled, trigger/condition config, ordered actions, optional Site binding. |
+| `kkterm.itops.automations.remove` | Delete one Automation by id, disarming its live Watchdog first. |
+| `kkterm.itops.automations.test` | Dry-run an Automation trigger: sample the target once and report the value plus whether the condition would fire. No actions execute; nothing is stored. |
+| `kkterm.itops.runs.cancel` | Cancel a live Batch Run by `runId`; finished hosts keep their results and the partial report is persisted. |
+| `kkterm.itops.runs.list` | List completed Batch Run reports with per-host outcome rows (ok, exitCode, durationMs, error) but no output text. |
+| `kkterm.itops.runs.get_report` | Read one run's consolidated report by `runId` including per-host output, tail-capped by `maxOutputChars` (default 4000). The output may include sensitive remote command results. |
+
+### IT Ops Module — dangerous (`kkterm.itops.*.dangerous.*`)
+
+These tools author or execute runnable material, so they require
+`built_in_mcp_allow_all_dangerous = true` (the gate matches the literal
+`dangerous` segment anywhere in the dotted name).
+
+| Name | Description |
+|---|---|
+| `kkterm.itops.tasks.dangerous.create` | Create a reusable Task definition (script or interactive playbook). Saves only; nothing executes. Sudo steps and secret references are rejected — the Task Library editor owns those. |
+| `kkterm.itops.tasks.dangerous.update` | Update one user Task by id with full-value semantics. Built-ins are read-only; new sudo steps or secret references are rejected. |
+| `kkterm.itops.automations.dangerous.create` | Create a durable Automation (trigger + condition config with a `notify` watchdog action, plus the ordered IT Ops action list). `enabled` defaults to true and arms the rule immediately; `runBatch` actions later execute scripts on site hosts unattended. |
+| `kkterm.itops.automations.dangerous.update` | Update one Automation by id with full-value semantics; an enabled rule is re-armed with the new definition. |
+| `kkterm.itops.automations.dangerous.set_enabled` | Arm or disarm one Automation by id. An armed rule polls its trigger and runs its actions unattended. |
+| `kkterm.itops.runs.dangerous.start` | Start a Batch Run against a Site — remote code execution on every resolved host over SSH. Pass exactly one of `taskId` or `script`; optional `scope` narrows to one `serverRoom`, `rackId`, or `hostIds`. Returns the `runId` immediately. |
 
 ### Network capability (`kkterm.network.*`)
 
@@ -304,6 +349,7 @@ permission, or capture fails with a clear error.
 |---|---|
 | `kkterm.app.list_windows` | List KKTerm's own UI windows (main window plus owned overlays such as the URL WebView2, RDP, and VNC surfaces). Returns each window's `id` (stable Tauri label), `title`, `kind`, bounds, and visibility. Safe (read-only). |
 | `kkterm.app.dangerous.capture_window` | DANGEROUS: capture any KKTerm UI window by `windowId` as a JPEG data URL plus dimensions. The image may include sensitive terminal, remote-desktop, URL, or file content. Requires `built_in_mcp_allow_all_dangerous = true`; on macOS requires the Screen Recording permission. |
+| `kkterm.app.dangerous.tutorial_highlight` | DANGEROUS: navigate the KKTerm UI and show the one-step Tutorial overlay on a registered target (dim + help balloon). Navigation can switch the active Module, a Settings section, or an IT Ops Site destination (`navigation.itopsSiteId` / `navigation.itopsDestination`), so it visibly moves the user's UI. Backed by the frontend live-tool bridge (`tutorial_highlight`), the same implementation the in-app assistant uses. Requires `built_in_mcp_allow_all_dangerous = true`. |
 
 All tool inputs use JSON schemas published in `tools/list`. The handler in
 the bridge translates the curated `kkterm.<module>.*` names into the
@@ -411,7 +457,9 @@ when Settings → General → Debug → Advanced Debugging is enabled; enabling 
 setting writes an `advanced_debugging.enabled` marker so the release logging
 path is visible before the next MCP request. Built-in MCP debug records redact
 terminal and remote-desktop send-text input, terminal buffer reads, Dashboard
-widget source/body JSON, and secret-looking argument fields before writing.
+widget source/body JSON, IT Ops task/script bodies and automation action
+payloads, Batch Run report output, and secret-looking argument fields before
+writing.
 
 ## Platform support
 

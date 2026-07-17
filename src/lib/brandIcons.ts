@@ -224,6 +224,11 @@ export const BRAND_ICON_ENTRIES: BrandIconEntry[] = [
     keywords: ["inkscape", "svg", "vector", "design", "drawing"],
   },
   {
+    id: "keepassxc",
+    label: "KeePassXC",
+    keywords: ["keepassxc", "keepass", "password", "vault", "security", "utility"],
+  },
+  {
     id: "krita",
     label: "Krita",
     keywords: ["krita", "painting", "drawing", "illustration", "design"],
@@ -252,6 +257,11 @@ export const BRAND_ICON_ENTRIES: BrandIconEntry[] = [
     id: "notepadpp",
     label: "Notepad++",
     keywords: ["notepad", "notepad++", "editor", "code", "document", "file"],
+  },
+  {
+    id: "obs-studio",
+    label: "OBS Studio",
+    keywords: ["obs", "obs studio", "video", "recording", "streaming", "multimedia"],
   },
   {
     id: "ollama",
@@ -322,6 +332,11 @@ export const BRAND_ICON_ENTRIES: BrandIconEntry[] = [
     id: "vscode",
     label: "Visual Studio Code",
     keywords: ["vscode", "vs code", "visual studio code", "editor", "code", "developer", "microsoft"],
+  },
+  {
+    id: "vlc",
+    label: "VLC media player",
+    keywords: ["vlc", "video", "audio", "media", "player", "streaming", "multimedia"],
   },
 ];
 

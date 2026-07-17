@@ -96,10 +96,12 @@ interface LoadedContent {
 }
 
 export function FileViewerWorkspace({
+  embeddedDialog = false,
   isActive,
   tab,
   onClose,
 }: {
+  embeddedDialog?: boolean;
   isActive: boolean;
   tab: WorkspaceTab;
   onClose?: () => void;
@@ -247,12 +249,12 @@ export function FileViewerWorkspace({
   // connection (green dot in the rail / connection tree) the moment the file
   // opens, and release it when the tab closes — mirroring the File Explorer.
   useEffect(() => {
-    if (!connectionId) {
+    if (!connectionId || embeddedDialog) {
       return;
     }
     markConnectionSessionStarted(connectionId);
     return () => markConnectionSessionEnded(connectionId);
-  }, [connectionId, markConnectionSessionEnded, markConnectionSessionStarted]);
+  }, [connectionId, embeddedDialog, markConnectionSessionEnded, markConnectionSessionStarted]);
 
   const kinds = probe
     ? availableViewerKinds({ path: filePath, magic: probe.magic, isText: probe.isText })
@@ -444,17 +446,21 @@ export function FileViewerWorkspace({
       style={fontVarStyle}
     >
       <div className="fv-toolbar">
-        <div className="fv-file">
-          <span className="glyph">
-            <FileGlyph path={filePath} size={26} />
-          </span>
-          <span className="name" title={filePath}>
-            {fileBaseName(filePath) || t("connections.fileView")}
-          </span>
-          {dirty ? (
-            <span className="fv-dirty" title={t("workspace.fileViewer.unsaved")} aria-hidden="true" />
-          ) : null}
-        </div>
+        {!embeddedDialog ? (
+          <div className="fv-file">
+            <span className="glyph">
+              <FileGlyph path={filePath} size={26} />
+            </span>
+            <span className="name" title={filePath}>
+              {fileBaseName(filePath) || t("connections.fileView")}
+            </span>
+            {dirty ? (
+              <span className="fv-dirty" title={t("workspace.fileViewer.unsaved")} aria-hidden="true" />
+            ) : null}
+          </div>
+        ) : dirty ? (
+          <span className="fv-dirty" title={t("workspace.fileViewer.unsaved")} aria-hidden="true" />
+        ) : null}
         {kindLabel ? (
           <span className="fv-pill">
             <span className="swatch" style={{ background: tint }} />
@@ -593,7 +599,7 @@ export function FileViewerWorkspace({
         />
       ) : null}
 
-      {content?.truncated ? (
+      {content?.truncated && content.kind !== "text" ? (
         <div className="file-viewer-notice">{t("workspace.fileViewer.truncated")}</div>
       ) : null}
       {saveError ? (
@@ -743,7 +749,13 @@ function FileViewerContent({
     case "text":
     default:
       if (content.truncated) {
-        return <LargeTextViewer text={content.text ?? ""} />;
+        return (
+          <LargeTextViewer
+            encoding={content.encoding}
+            filePath={filePath}
+            text={content.text ?? ""}
+          />
+        );
       }
       return (
         <TextCodeViewer

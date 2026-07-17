@@ -42,9 +42,20 @@ test("installer latest-version UI only treats versioned providers as supported",
       fileName: "CodexInstaller.exe",
     },
   };
+  const hermesDesktop = {
+    id: "hermes-desktop",
+    name: "Hermes Desktop",
+    descriptionEn: "",
+    provider: {
+      kind: "downloadInstaller",
+      url: "https://hermes-assets.nousresearch.com/Hermes-Setup.exe",
+      fileName: "Hermes-Setup.exe",
+    },
+  };
 
   assert.equal(recipeSupportsLatestVersion(antigravity), false);
   assert.equal(recipeSupportsLatestVersion(codexDesktop), false);
+  assert.equal(recipeSupportsLatestVersion(hermesDesktop), false);
   assert.equal(
     latestVersionWebUrlForRecipe(antigravity),
     "https://antigravity.google/cli/install.cmd",
@@ -52,6 +63,10 @@ test("installer latest-version UI only treats versioned providers as supported",
   assert.equal(
     latestVersionWebUrlForRecipe(codexDesktop),
     "https://get.microsoft.com/installer/download/9PLM9XGG6VKS?cid=website_cta_psi",
+  );
+  assert.equal(
+    latestVersionWebUrlForRecipe(hermesDesktop),
+    "https://hermes-assets.nousresearch.com/Hermes-Setup.exe",
   );
   assert.equal(
     recipeSupportsLatestVersion({

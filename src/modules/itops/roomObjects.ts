@@ -216,6 +216,33 @@ function objectCoversCell(object: RoomObject, cell: IsoCell): boolean {
   );
 }
 
+export function roomCellIsBlank(
+  cell: IsoCell,
+  rackCells: Record<string, IsoCell>,
+  objects: RoomObject[],
+): boolean {
+  return (
+    !Object.values(rackCells).some((rackCell) => rackCell.x === cell.x && rackCell.y === cell.y) &&
+    !objects.some((object) => objectCoversCell(object, cell))
+  );
+}
+
+export function roomObjectPlacementIsBlank(
+  cell: IsoCell,
+  kind: RoomObjectKind,
+  rot: Facing,
+  rackCells: Record<string, IsoCell>,
+  objects: RoomObject[],
+): boolean {
+  const span = objectCellSpan(kind, rot);
+  for (let y = cell.y; y < cell.y + span.h; y += 1) {
+    for (let x = cell.x; x < cell.x + span.w; x += 1) {
+      if (!roomCellIsBlank({ x, y }, rackCells, objects)) return false;
+    }
+  }
+  return true;
+}
+
 /** Walls reserve their whole logical floor cell even though their rendered
  *  construction is a thin strip through that cell. */
 export function wallOccupiesCell(

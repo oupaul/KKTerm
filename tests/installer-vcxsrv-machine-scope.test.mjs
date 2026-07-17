@@ -45,7 +45,9 @@ test("only currently dual-scope winget manifests expose the scope selector", () 
 
   assert.deepEqual(scopedWingetRecipes, [
     "cursor",
+    "firefox",
     "git",
+    "google-chrome",
     "lmstudio",
     "powertoys",
     "sharex",

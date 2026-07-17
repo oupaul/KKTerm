@@ -34,6 +34,7 @@ import { ConnectionSidebar } from "./modules/workspace/connections/ConnectionSid
 import { useDashboardStore } from "./modules/dashboard/state/dashboardStore";
 import { useDashboardBackendInvalidation } from "./modules/dashboard/state/invalidation";
 import { useItOpsBackendInvalidation } from "./modules/itops/invalidation";
+import { useItOpsStore } from "./modules/itops/state";
 import {
   loadSiteTreeCollapsed,
   saveSiteTreeCollapsed,
@@ -159,6 +160,12 @@ function App() {
     if (navigation.settingsSectionId) {
       setActiveSettingsSectionId(navigation.settingsSectionId);
     }
+    if (navigation.page === "itops" && (navigation.itopsSiteId || navigation.itopsDestination)) {
+      useItOpsStore.getState().requestNavigation({
+        siteId: navigation.itopsSiteId,
+        destination: navigation.itopsDestination,
+      });
+    }
     navigateToPage(navigation.page);
   }
 
@@ -214,6 +221,7 @@ function App() {
     toggleConnectionPanel,
   } = useWorkspaceChromeLayout(
     resetAllLayouts,
+    appShellRef,
     shouldExpandConnectionPanelOnLaunch(launchPageRef.current),
   );
 

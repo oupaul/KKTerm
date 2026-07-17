@@ -21,6 +21,7 @@ import { ROOM_OBJECT_KINDS, type RoomObjectKind } from "./roomObjects";
 import { ROOM_ZOOM_LEVELS, sanitizeRoomZoom } from "./siteTreeState";
 import { RoomObjectPlanArtwork } from "./RoomObjectArtwork";
 import { RoomObjectIsoArtwork } from "./RoomObjectIsoReference";
+import { centerRoomViewport } from "./roomViewport";
 import { IT_ACCENTS, ItIcon } from "./icons";
 
 /** Accent colour per object kind (乖乖 is green — it has a job to do). Fed to
@@ -53,6 +54,13 @@ export function RoomPlacementFacingArrow({
   /** 2.5D height above the floor plane; omitted in the top-down plan. */
   liftPx?: number;
 }) {
+  const positions = [
+    { x: "50%", y: "calc(100% + 15px)" },
+    { x: "-15px", y: "50%" },
+    { x: "50%", y: "-15px" },
+    { x: "calc(100% + 15px)", y: "50%" },
+  ] as const;
+  const position = positions[facing];
   return (
     <span
       aria-hidden="true"
@@ -60,6 +68,8 @@ export function RoomPlacementFacingArrow({
       style={
         {
           "--placement-facing-angle": `${facing * 90}deg`,
+          "--placement-facing-x": position.x,
+          "--placement-facing-y": position.y,
           ...(liftPx == null ? {} : { "--placement-facing-lift": `${liftPx}px` }),
         } as CSSProperties
       }
@@ -223,7 +233,26 @@ export function useWheelZoom(
  *  completed pan swallows the follow-up click. The scroll element carries
  *  tabIndex 0, so clicking anywhere in the room — floor or a rack button
  *  inside it — puts focus where the keydown listener hears it. */
-export function useRoomPan(ref: RefObject<HTMLDivElement | null>): void {
+export function useRoomPan(
+  ref: RefObject<HTMLDivElement | null>,
+  sceneOrigin: { left: number; top: number },
+): void {
+  const sceneLeft = sceneOrigin.left;
+  const sceneTop = sceneOrigin.top;
+  const previousOriginRef = useRef<{ left: number; top: number } | null>(null);
+  useLayoutEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+    const previous = previousOriginRef.current;
+    if (previous) {
+      node.scrollLeft += sceneLeft - previous.left;
+      node.scrollTop += sceneTop - previous.top;
+    } else {
+      centerRoomViewport(ref);
+    }
+    previousOriginRef.current = { left: sceneLeft, top: sceneTop };
+  }, [ref, sceneLeft, sceneTop]);
+
   useEffect(() => {
     const node = ref.current;
     if (!node) return;
@@ -232,6 +261,9 @@ export function useRoomPan(ref: RefObject<HTMLDivElement | null>): void {
     let button = 1;
     let lastX = 0;
     let lastY = 0;
+    const canPan = () =>
+      node.scrollWidth > node.clientWidth + 1 ||
+      node.scrollHeight > node.clientHeight + 1;
     const engage = (event: PointerEvent) => {
       panning = true;
       node.style.cursor = "grabbing";
@@ -244,9 +276,16 @@ export function useRoomPan(ref: RefObject<HTMLDivElement | null>): void {
     };
     const onPointerDown = (event: PointerEvent) => {
       if (event.button === 0) {
+        if (!canPan()) return;
         // Elements with their own left-button press behaviour opt out.
         const target = event.target as HTMLElement;
-        if (target.closest("button, .rm-bp-rack, .rm-bp-obj, .rm-iso-cab, .rm-iso-obj")) return;
+        if (
+          target.closest(
+            ".rm-bp-rack, .rm-bp-obj, .rm-bp-ctl, .rm-iso-cab, .rm-iso-obj, .rm-iso-ctl",
+          )
+        ) {
+          return;
+        }
       } else if (event.button !== 1) {
         return;
       }
@@ -257,7 +296,6 @@ export function useRoomPan(ref: RefObject<HTMLDivElement | null>): void {
       panning = false;
       if (event.button === 1) {
         event.preventDefault();
-        engage(event);
       }
     };
     const onPointerMove = (event: PointerEvent) => {
@@ -277,6 +315,9 @@ export function useRoomPan(ref: RefObject<HTMLDivElement | null>): void {
     };
     const endPan = (event: PointerEvent) => {
       if (pointerId !== event.pointerId) return;
+      if (button === 1 && !panning) {
+        centerRoomViewport(ref);
+      }
       if (panning && button === 0) {
         // The pan's pointerup still produces a click on whatever is under the
         // cursor; capture-phase, one-shot: swallow it before placement/select
@@ -300,7 +341,7 @@ export function useRoomPan(ref: RefObject<HTMLDivElement | null>): void {
     };
     const onKeyDown = (event: KeyboardEvent) => {
       const delta = KEY_DELTAS[event.key];
-      if (!delta || event.ctrlKey || event.altKey || event.metaKey) return;
+      if (!delta || !canPan() || event.ctrlKey || event.altKey || event.metaKey) return;
       event.preventDefault();
       node.scrollBy({ left: delta[0], top: delta[1] });
     };
@@ -328,9 +369,11 @@ export function useRoomPan(ref: RefObject<HTMLDivElement | null>): void {
 export function RoomZoomRuler({
   zoom,
   onZoomChange,
+  onResetCenter,
 }: {
   zoom: number;
   onZoomChange: (zoom: number) => void;
+  onResetCenter: () => void;
 }) {
   const { t } = useTranslation();
   const level = sanitizeRoomZoom(zoom);
@@ -354,6 +397,15 @@ export function RoomZoomRuler({
           </button>
         );
       })}
+      <button
+        type="button"
+        className="rm-zoomruler-reset"
+        title={t("common.reset")}
+        aria-label={t("common.reset")}
+        onClick={onResetCenter}
+      >
+        <ItIcon name="center" size={14} sw={1.6} />
+      </button>
     </div>
   );
 }
@@ -655,15 +707,15 @@ export function ObjectGlyph({ kind, size = 14 }: { kind: RoomObjectKind; size?: 
 
 // ── Edit-mode object picker ──
 
-/** The armed placement tool: null = move/select, or the object kind the next
- *  cell click will place. */
+/** The armed placement tool: null = move/select, or the object kind whose next
+ *  two clicks choose position and facing. */
 export type RoomTool = RoomObjectKind | null;
 
 /** Full-height right-side picker column shown while editing a spatial room
  *  view: a search box over a grid of preview cards — Racks first, then every
- *  room-object kind. Clicking a card arms it; floor-cell clicks place it under
- *  the cursor. Racks have properties, so the Rack card opens the New Rack
- *  dialog first and the created rack is placed by the following click. */
+ *  room-object kind. Clicking a card arms it; the first floor click locks its
+ *  position and the second confirms its facing. Racks have properties, so the
+ *  Rack card opens the New Rack dialog before the same two-click flow. */
 export function RoomObjectPicker({
   tool,
   onToolChange,

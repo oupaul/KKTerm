@@ -57,6 +57,8 @@ export function RackDialog({
   sites,
   serverRoomsBySite,
   rack,
+  duplicateOf,
+  duplicateName,
   defaultServerRoom,
   defaultGroup,
   placementMode = false,
@@ -67,6 +69,8 @@ export function RackDialog({
   sites: Site[];
   serverRoomsBySite: Record<string, ServerRoom[]>;
   rack?: Rack | null;
+  duplicateOf?: Rack | null;
+  duplicateName?: string;
   /** Prefill the Server Room for a new rack (e.g. added within a room). */
   defaultServerRoom?: string;
   /** Prefill the Group for a new rack (e.g. added within a group section). */
@@ -78,29 +82,33 @@ export function RackDialog({
 }) {
   const { t } = useTranslation();
   const isEdit = !!rack;
+  const isDuplicate = !!duplicateOf;
+  const sourceRack = rack ?? duplicateOf;
+  const isProperties = isEdit || isDuplicate;
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
   const createRack = useItOpsStore((state) => state.createRack);
   const updateRack = useItOpsStore((state) => state.updateRack);
+  const duplicateRack = useItOpsStore((state) => state.duplicateRack);
   const racksBySite = useItOpsStore((state) => state.racksBySite);
   const groupListId = useId();
   const nameInputId = useId();
 
-  const [siteId, setSiteId] = useState(rack?.siteId ?? defaultSiteId);
-  const [name, setName] = useState(rack?.name ?? "");
-  const [serverRoom, setServerRoom] = useState(rack?.serverRoom ?? defaultServerRoom ?? "");
-  const [rackGroup, setRackGroup] = useState(rack?.rackGroup ?? defaultGroup ?? "");
-  const [shell, setShell] = useState<RackShell>(rack?.shell ?? "black");
-  const [heightU, setHeightU] = useState(rack?.heightU ?? 42);
+  const [siteId, setSiteId] = useState(sourceRack?.siteId ?? defaultSiteId);
+  const [name, setName] = useState(duplicateName ?? sourceRack?.name ?? "");
+  const [serverRoom, setServerRoom] = useState(sourceRack?.serverRoom ?? defaultServerRoom ?? "");
+  const [rackGroup, setRackGroup] = useState(sourceRack?.rackGroup ?? defaultGroup ?? "");
+  const [shell, setShell] = useState<RackShell>(sourceRack?.shell ?? "black");
+  const [heightU, setHeightU] = useState(sourceRack?.heightU ?? 42);
   const [heightMode, setHeightMode] = useState<"preset" | "custom">(
-    rack && !HEIGHT_PRESETS.includes(rack.heightU) ? "custom" : "preset",
+    sourceRack && !HEIGHT_PRESETS.includes(sourceRack.heightU) ? "custom" : "preset",
   );
-  const [depthMm, setDepthMm] = useState(rack?.depthMm ?? 1000);
+  const [depthMm, setDepthMm] = useState(sourceRack?.depthMm ?? 1000);
   const [depthMode, setDepthMode] = useState<"preset" | "custom">(
-    rack && !DEPTH_PRESETS.includes(rack.depthMm) ? "custom" : "preset",
+    sourceRack && !DEPTH_PRESETS.includes(sourceRack.depthMm) ? "custom" : "preset",
   );
   // Kept as text so the field can be blank (= capacity unset).
   const [powerCapacity, setPowerCapacity] = useState(
-    rack?.powerCapacityW ? String(rack.powerCapacityW) : "",
+    sourceRack?.powerCapacityW ? String(sourceRack.powerCapacityW) : "",
   );
   const [busy, setBusy] = useState(false);
 
@@ -160,7 +168,10 @@ export function RackDialog({
           : null,
     };
     try {
-      if (isEdit) {
+      if (isDuplicate) {
+        const duplicated = await duplicateRack(siteId, duplicateOf!.id, input);
+        onSaved?.(duplicated, null);
+      } else if (isEdit) {
         await updateRack(siteId, rack!.id, input);
         onSaved?.({ ...rack!, ...input, shell: shell ?? null }, null);
       } else {
@@ -213,7 +224,7 @@ export function RackDialog({
   }
 
   const livePreview: Rack = {
-    ...(rack ?? {
+    ...(sourceRack ?? {
       id: "rack-dialog-preview",
       siteId,
       background: null,
@@ -233,8 +244,8 @@ export function RackDialog({
       <Sheet
         width={700}
         className="rack-dialog"
-        title={isEdit ? t("itops.racks.editTitle") : t("itops.racks.newTitle")}
-        ariaLabel={isEdit ? t("itops.racks.editTitle") : t("itops.racks.newTitle")}
+        title={isProperties ? t("common.properties") : t("itops.racks.newTitle")}
+        ariaLabel={isProperties ? t("common.properties") : t("itops.racks.newTitle")}
         rule
         footer={
           <Actions
@@ -242,11 +253,11 @@ export function RackDialog({
             primary={
               <Btn
                 kind="primary"
-                icon={isEdit ? "check" : "plus"}
+                icon={isProperties ? "check" : "plus"}
                 onClick={() => void handleSave()}
                 disabled={!canSave}
               >
-                {isEdit ? t("itops.actions.save") : t("itops.actions.create")}
+                {isProperties ? t("itops.actions.save") : t("itops.actions.create")}
               </Btn>
             }
           />
@@ -270,7 +281,7 @@ export function RackDialog({
               <Field label={t("itops.racks.siteLabel")} req>
                 <Select
                   value={siteId}
-                  disabled={isEdit || sites.length <= 1}
+                  disabled={isProperties || sites.length <= 1}
                   onChange={(event) => setSiteId(event.currentTarget.value)}
                   options={sites.map((site) => ({ value: site.id, label: site.name }))}
                 />

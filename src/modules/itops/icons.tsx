@@ -43,6 +43,7 @@ export type ItIconName =
   | "chevD"
   | "rotateL"
   | "rotateR"
+  | "center"
   | "stop"
   | "rerun"
   | "bot"
@@ -133,6 +134,12 @@ const GLYPHS: Record<ItIconName, (p: GlyphProps) => ReactNode> = {
   rows: (p) => LineIconGlyph(Rows3, p),
   grid: (p) => LineIconGlyph(Grid2x2, p),
   cube: (p) => LineIconGlyph(Box, p),
+  center: (p) => (
+    <Svg {...p} sw={1.6}>
+      <circle cx="12" cy="12" r="3.5" />
+      <path d="M12 3v3M12 18v3M3 12h3M18 12h3" />
+    </Svg>
+  ),
   run: (p) => (
     <Svg {...p} sw={1.8}>
       <path d="M8 5.5l10 6.5-10 6.5z" />

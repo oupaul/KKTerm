@@ -1,5 +1,5 @@
 import { isTauriRuntime, pickAndSaveFile, type WidgetFilePickFilter } from "../../lib/tauri";
-import type { Rack, RackItem, Site } from "../../types";
+import type { Rack, RackItem, RackMountFace, Site } from "../../types";
 import { groupRackTopology, topologyGroupKey } from "./rackTopology";
 import { normalizeRackItemMetadata, summarizeRackDeviceMetadata } from "./rackInventory";
 import { rackItemXSpan } from "./rackPlacement";
@@ -25,6 +25,7 @@ export interface ItOpsExportLabels {
   ungrouped: string;
   startU: string;
   heightU: string;
+  mountingSide: string;
   type: string;
   label: string;
   status: string;
@@ -32,6 +33,7 @@ export interface ItOpsExportLabels {
   specs: string;
   tags: string;
   deviceCount: (count: number) => string;
+  faceLabel: (face: RackMountFace) => string;
   statusLabel: (status: string) => string;
 }
 
@@ -96,8 +98,9 @@ function itemColor(item: RackItem): string {
   }
 }
 
-function rackDrawing(
+function rackFaceDrawing(
   rack: Rack,
+  face: RackMountFace,
   x: number,
   y: number,
   width: number,
@@ -107,7 +110,7 @@ function rackDrawing(
   const commands: PdfCommand[] = [
     pdfRect(x, y, width, height, "0.10 0.13 0.18", "0.37 0.43 0.51"),
   ];
-  const gutter = Math.max(18, width * 0.13);
+  const gutter = Math.max(4, Math.min(18, width * 0.16));
   const bayX = x + gutter;
   const bayWidth = width - gutter - 5;
   const unitHeight = height / rack.heightU;
@@ -117,6 +120,8 @@ function rackDrawing(
     commands.push(`0.22 0.27 0.34 RG 0.35 w ${bayX} ${lineY} m ${x + width - 5} ${lineY} l S`);
   }
   for (const item of rack.items) {
+    if (item.kind !== "kuaiguai" && (item.mountFace ?? "front") !== face) continue;
+    if (item.kind === "kuaiguai" && face === "rear") continue;
     const itemY = y + (item.startU - 1) * unitHeight + 0.5;
     const itemHeight = Math.max(2, item.heightU * unitHeight - 1);
     // Fractional-width faces take their horizontal strip of the bay so
@@ -125,13 +130,42 @@ function rackDrawing(
     const itemX = bayX + 1 + ((bayWidth - 2) * xStart) / 4;
     const itemWidth = ((bayWidth - 2) * xQuarters) / 4;
     commands.push(pdfRect(itemX, itemY, itemWidth, itemHeight, itemColor(item), "0.08 0.10 0.14"));
-    if (itemHeight >= 8) {
+    if (itemHeight >= 8 && itemWidth >= 14) {
       const name = item.label || kindLabel(item.kind);
       commands.push(pdfText(itemX + 4, itemY + Math.max(2, itemHeight / 2 - 3), Math.min(8, itemHeight - 2), truncate(name, Math.floor(itemWidth / 5.3)), "1 1 1"));
     }
   }
   commands.push(pdfText(x + 4, y + height - 9, 6, `${rack.heightU}U`, "0.72 0.77 0.84"));
   commands.push(pdfText(x + 4, y + 4, 6, "1U", "0.72 0.77 0.84"));
+  return commands;
+}
+
+function rackDrawing(
+  rack: Rack,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  labels: ItOpsExportLabels,
+  kindLabel: (kind: RackItem["kind"]) => string,
+): PdfCommand[] {
+  const hasRearDevices = rack.items.some(
+    (item) => item.kind !== "kuaiguai" && (item.mountFace ?? "front") === "rear",
+  );
+  if (!hasRearDevices) {
+    return rackFaceDrawing(rack, "front", x, y, width, height, kindLabel);
+  }
+
+  const gap = Math.max(2, width * 0.025);
+  const faceWidth = (width - gap) / 2;
+  const commands = [
+    ...rackFaceDrawing(rack, "front", x, y, faceWidth, height, kindLabel),
+    ...rackFaceDrawing(rack, "rear", x + faceWidth + gap, y, faceWidth, height, kindLabel),
+  ];
+  if (width >= 70) {
+    commands.push(pdfText(x + 2, y + height + 3, 6, labels.faceLabel("front"), "0.40 0.45 0.52"));
+    commands.push(pdfText(x + faceWidth + gap + 2, y + height + 3, 6, labels.faceLabel("rear"), "0.40 0.45 0.52"));
+  }
   return commands;
 }
 
@@ -161,7 +195,7 @@ function graphicalPages(doc: ItOpsPdfDocument): PdfCommand[][] {
       commands.push(pdfText(x + 14, y + 116, 8, `${room.racks.length} ${doc.labels.rack}`, "0.42 0.47 0.54"));
       room.racks.slice(0, 4).forEach((rack, rackIndex) => {
         const rx = x + 14 + rackIndex * 49;
-        commands.push(...rackDrawing(rack, rx, y + 18, 39, 86, doc.kindLabel));
+        commands.push(...rackDrawing(rack, rx, y + 18, 39, 86, doc.labels, doc.kindLabel));
         commands.push(pdfText(rx, y + 7, 6, truncate(rack.name, 7)));
       });
     });
@@ -178,7 +212,7 @@ function graphicalPages(doc: ItOpsPdfDocument): PdfCommand[][] {
       const x = 42 + index * 187;
       commands.push(pdfText(x, 512, 12, truncate(rack.name, 22)));
       commands.push(pdfText(x, 496, 7, `${rack.heightU}U / ${rack.depthMm} mm / ${doc.labels.deviceCount(rack.items.length)}`, "0.40 0.45 0.52"));
-      commands.push(...rackDrawing(rack, x, 74, 158, 410, doc.kindLabel));
+      commands.push(...rackDrawing(rack, x, 74, 158, 410, doc.labels, doc.kindLabel));
     });
     pages.push(commands);
   }
@@ -191,9 +225,9 @@ function graphicalPages(doc: ItOpsPdfDocument): PdfCommand[][] {
   for (const chunk of inventoryChunks) {
     const pageNumber = pages.length + 1;
     const commands = pageHeader(doc.title, doc.labels.inventory, pageNumber);
-    const columns = [38, 144, 204, 272, 370, 454, 548];
-    const widths = [106, 60, 68, 98, 84, 94, 206];
-    const headings = [doc.labels.rack, doc.labels.startU, doc.labels.heightU, doc.labels.type, doc.labels.label, doc.labels.status, doc.labels.specs];
+    const columns = [38, 128, 181, 242, 314, 402, 478, 558];
+    const widths = [90, 53, 61, 72, 88, 76, 80, 196];
+    const headings = [doc.labels.rack, doc.labels.startU, doc.labels.heightU, doc.labels.mountingSide, doc.labels.type, doc.labels.label, doc.labels.status, doc.labels.specs];
     commands.push(pdfRect(38, 494, 716, 24, "0.84 0.88 0.93", "0.72 0.77 0.83"));
     headings.forEach((heading, index) => commands.push(pdfText(columns[index] + 5, 502, 7, truncate(heading, Math.floor(widths[index] / 5.2)))));
     chunk.forEach(({ rack, item }, index) => {
@@ -204,6 +238,7 @@ function graphicalPages(doc: ItOpsPdfDocument): PdfCommand[][] {
         rack.name,
         String(item.startU),
         String(item.heightU),
+        doc.labels.faceLabel(item.mountFace ?? "front"),
         doc.kindLabel(item.kind),
         item.label || doc.kindLabel(item.kind),
         doc.labels.statusLabel(metadata.status ?? "online"),
@@ -474,6 +509,7 @@ export function rackExcelBytes({
     return [
       item.startU.toString(),
       item.heightU.toString(),
+      labels.faceLabel(item.mountFace ?? "front"),
       kindLabel(item.kind),
       item.label || kindLabel(item.kind),
       labels.statusLabel(metadata.status ?? "online"),
@@ -483,7 +519,7 @@ export function rackExcelBytes({
     ];
   });
   const tableRows = [
-    [labels.startU, labels.heightU, labels.type, labels.label, labels.status, labels.connection, labels.specs, labels.tags],
+    [labels.startU, labels.heightU, labels.mountingSide, labels.type, labels.label, labels.status, labels.connection, labels.specs, labels.tags],
     ...rows,
   ];
   const title = `${site.name} / ${roomName || unassignedLabel} / ${rack.name}`;

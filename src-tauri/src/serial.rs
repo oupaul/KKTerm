@@ -19,6 +19,7 @@ pub struct NativeSerialTerminalRequest {
     pub session_id: String,
     pub line: String,
     pub speed: u32,
+    pub encoding: crate::sessions::TerminalEncodingState,
 }
 
 impl NativeSerialTerminal {
@@ -81,15 +82,14 @@ pub fn start_native_terminal(
     let reader_closed = Arc::clone(&closed);
     std::thread::spawn(move || {
         let mut buffer = [0_u8; 8192];
+        let mut decoder = crate::sessions::TerminalOutputDecoder::new(request.encoding.clone());
         while !reader_closed.load(Ordering::Relaxed) {
             match reader.read(&mut buffer) {
                 Ok(0) => break,
                 Ok(count) => {
-                    emit_terminal_output(
-                        &app,
-                        &request.session_id,
-                        terminal_text_from_bytes(&buffer[..count]),
-                    );
+                    if let Some(text) = decoder.decode(&buffer[..count]) {
+                        emit_terminal_output(&app, &request.session_id, text);
+                    }
                 }
                 Err(error)
                     if matches!(
@@ -115,21 +115,4 @@ pub fn start_native_terminal(
         writer: port,
         closed,
     })
-}
-
-fn terminal_text_from_bytes(bytes: &[u8]) -> String {
-    bytes.iter().map(|byte| char::from(*byte)).collect()
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn serial_output_preserves_single_byte_control_and_high_bytes() {
-        assert_eq!(
-            terminal_text_from_bytes(&[0x1b, b'[', b'A', 0xff]),
-            "\u{1b}[A\u{ff}"
-        );
-    }
 }

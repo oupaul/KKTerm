@@ -292,6 +292,8 @@ export function ScriptWidgetHost({
   const placeholderRef = useRef<HTMLDivElement | null>(null);
   const bridgeLastAcceptedRef = useRef(new Map<RateLimitedBridgeMessage, number>());
   const activeSubscriptionsRef = useRef<Set<string>>(new Set());
+  const onWidgetContextMenuRef = useRef(onWidgetContextMenu);
+  onWidgetContextMenuRef.current = onWidgetContextMenu;
   // Last `kk.motionTick` timestamp from the iframe rAF wrapper. Reset to
   // Date.now() on iframe mount so a slow first paint doesn't immediately
   // trip the stall watchdog.
@@ -579,32 +581,45 @@ export function ScriptWidgetHost({
 
   // Forward net://event Tauri events to this widget's iframe subscribers.
   useEffect(() => {
+    if (!canUseNetworkTools) {
+      return;
+    }
+
     let unlisten: UnlistenFn | undefined;
     let mounted = true;
-    void (async () => {
-      unlisten = await listen<{ kind: string; subscriptionId: string; payload?: unknown; ok?: boolean; error?: unknown }>(
-        "net://event",
-        (evt) => {
-          if (!mounted) return;
-          const body = evt.payload;
-          if (!body?.subscriptionId) return;
-          if (!activeSubscriptionsRef.current.has(body.subscriptionId)) return;
-          const target = iframeRef.current?.contentWindow;
-          if (!target) return;
-          if (body.kind === "event") {
-            target.postMessage({ kk: true, type: "netEvent", subscriptionId: body.subscriptionId, payload: body.payload }, "*");
-          } else if (body.kind === "done") {
-            target.postMessage({ kk: true, type: "netDone", subscriptionId: body.subscriptionId, ok: body.ok === true, error: body.error }, "*");
-            activeSubscriptionsRef.current.delete(body.subscriptionId);
-          }
-        },
-      );
-    })();
+    void listen<{
+      kind: string;
+      subscriptionId: string;
+      payload?: unknown;
+      ok?: boolean;
+      error?: unknown;
+    }>("net://event", (evt) => {
+      if (!mounted) return;
+      const body = evt.payload;
+      if (!body?.subscriptionId) return;
+      if (!activeSubscriptionsRef.current.has(body.subscriptionId)) return;
+      const target = iframeRef.current?.contentWindow;
+      if (!target) return;
+      if (body.kind === "event") {
+        target.postMessage({ kk: true, type: "netEvent", subscriptionId: body.subscriptionId, payload: body.payload }, "*");
+      } else if (body.kind === "done") {
+        target.postMessage({ kk: true, type: "netDone", subscriptionId: body.subscriptionId, ok: body.ok === true, error: body.error }, "*");
+        activeSubscriptionsRef.current.delete(body.subscriptionId);
+      }
+    })
+      .then((stopListening) => {
+        if (!mounted) {
+          stopListening();
+          return;
+        }
+        unlisten = stopListening;
+      })
+      .catch(() => undefined);
     return () => {
       mounted = false;
       if (unlisten) unlisten();
     };
-  }, []);
+  }, [canUseNetworkTools]);
 
   useEffect(() => {
     const activeSubscriptions = activeSubscriptionsRef.current;
@@ -709,7 +724,7 @@ export function ScriptWidgetHost({
         if (!allowBridgeMessage("widgetContextMenu")) return;
         const frameRect = iframeRef.current?.getBoundingClientRect();
         if (frameRect) {
-          void onWidgetContextMenu({
+          void onWidgetContextMenuRef.current({
             x: frameRect.left + data.x,
             y: frameRect.top + data.y,
           });
@@ -930,7 +945,7 @@ export function ScriptWidgetHost({
       }
       activeSubscriptions.clear();
     };
-  }, [canUseNetworkTools, instance.id, onWidgetContextMenu, updateInstance, setWidgetHealth]);
+  }, [canUseNetworkTools, instance.id, updateInstance, setWidgetHealth]);
 
   if (!parsed) {
     return <div className="dw-script-error">{t("dashboard.invalidScriptWidgetBody")}</div>;

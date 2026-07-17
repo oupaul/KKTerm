@@ -27,6 +27,8 @@ export function ItOpsPage({
   const automations = useItOpsStore((state) => state.automations);
   const activeRun = useItOpsStore((state) => state.activeRun);
   const racksBySite = useItOpsStore((state) => state.racksBySite);
+  const tasks = useItOpsStore((state) => state.tasks);
+  const navigationSnapshot = useItOpsStore((state) => state.navigationSnapshot);
 
   useEffect(() => {
     // Compact rack-topology summary for whichever Sites have had their Rack
@@ -40,6 +42,23 @@ export function ItOpsPage({
       })
       .join(", ");
 
+    const selectedSiteName = navigationSnapshot?.siteId
+      ? (sites.find((site) => site.id === navigationSnapshot.siteId)?.name ??
+        navigationSnapshot.siteId)
+      : null;
+    const selectionSummary = navigationSnapshot
+      ? navigationSnapshot.destination === "taskLibrary"
+        ? "global Task Library"
+        : [
+            selectedSiteName ? `Site "${selectedSiteName}" (id ${navigationSnapshot.siteId})` : "no Site",
+            `destination ${navigationSnapshot.destination}`,
+            navigationSnapshot.serverRoom ? `Server Room "${navigationSnapshot.serverRoom}"` : null,
+            navigationSnapshot.rackId ? `Rack id ${navigationSnapshot.rackId}` : null,
+          ]
+            .filter(Boolean)
+            .join(", ")
+      : "unknown";
+
     onAssistantContextChange({
       contextKind: "itops",
       contextLabel: t("itops.title"),
@@ -47,10 +66,13 @@ export function ItOpsPage({
       sourceLabel: `${t("itops.title")} context`,
       text: [
         "Active Module: IT Ops.",
-        "Tutorial targets: itops.sitesTree for the left Sites navigator and itops.siteView for the right Site topology drill-down.",
-        `Sites (${sites.length}): ${sites.map((group) => `${group.name} [${group.memberIds.length} saved members, ${group.transport}]`).join(", ") || "none"}.`,
+        `Current navigator selection: ${selectionSummary}.`,
+        "Tutorial targets: itops.sitesTree (left navigator), itops.siteView (Site topology drill-down), itops.hostsPanel, itops.hostsRunTask, itops.hostsImport, itops.hostsScan (Hosts page), itops.automationsPanel, itops.automationsNew (Automations page), itops.runHistoryPanel (Run History page), itops.taskLibrary, itops.taskLibraryNew (Task Library).",
+        "Entity tutorial targets highlight one row: itops.site:<siteId>, itops.host:<hostId>, itops.automation:<automationId>, itops.task:<taskId>, itops.run:<runId> — use ids from the itops_* list tools and pass navigation.itopsSiteId/itopsDestination so the destination opens first.",
+        `Sites (${sites.length}): ${sites.map((group) => `${group.name} [id ${group.id}, ${group.memberIds.length} saved members, ${group.transport}]`).join(", ") || "none"}.`,
         `Rack topology (loaded Sites only): ${rackSummary || "none loaded"}.`,
         `Automations (${automations.length}): ${automations.map((automation) => `${automation.name} [${automation.enabled ? "armed" : "disabled"}]`).join(", ") || "none"}.`,
+        `Task Library: ${tasks.length} reusable Tasks (itops_list_tasks reads them).`,
         `Recent completed Batch Runs: ${runHistory.length}.`,
         activeRun
           ? `Live Batch Run: ${activeRun.taskSummary} [${activeRun.state}], ${activeRun.hosts.length} hosts.`
@@ -58,7 +80,7 @@ export function ItOpsPage({
         "For operational instructions, search and read the IT Ops chapter in the KKTerm Operation Manual before answering. Do not infer host output, scripts, secrets, or trigger details from this compact metadata.",
       ].join("\n"),
     });
-  }, [activeRun, automations, sites, onAssistantContextChange, racksBySite, runHistory, t]);
+  }, [activeRun, automations, sites, navigationSnapshot, onAssistantContextChange, racksBySite, runHistory, tasks, t]);
 
   return (
     <section

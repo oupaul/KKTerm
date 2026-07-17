@@ -5,10 +5,12 @@ import {
 } from "./connections/connectionTabContextMenu";
 import { ftpBrowserCommands, localBrowserCommands } from "../../lib/fileBrowserCommands";
 import { TerminalWorkspace } from "./connections/terminal/TerminalWorkspace";
+import { TerminalRecordingsDialog } from "./connections/terminal/TerminalRecordingsDialog";
 import { ConnectionIcon } from "./connections/ConnectionIcon";
 import { ConnectionTypeGlyph } from "./connections/ConnectionGlyph";
 import { CONNECTION_CREATION_OPTIONS } from "./connections/ConnectionMenus";
 import {
+  requestConnectionNewTab,
   requestImportConnections,
   requestNewConnection,
 } from "./connections/connectionSidebarState";
@@ -23,7 +25,7 @@ import type {
 } from "react";
 import { useTranslation } from "react-i18next";
 import { DEFAULT_WORKSPACE_ID, useWorkspaceStore } from "../../store";
-import { workspaceShortcutFromKeyboardEvent } from "./keymap";
+import { activeConnectionForNewTab, workspaceShortcutFromKeyboardEvent } from "./keymap";
 import type { WorkspaceTab } from "../../types";
 
 const SftpWorkspace = lazy(() =>
@@ -424,9 +426,13 @@ export function WorkspaceCanvas({
       event.preventDefault();
       event.stopPropagation();
       switch (action) {
-        case "newTab":
-          state.openLocalTerminal();
+        case "newTab": {
+          const connection = activeConnectionForNewTab(state.tabs, state.activeTabId);
+          if (connection) {
+            requestConnectionNewTab(connection);
+          }
           break;
+        }
         case "closeTab":
           if (state.activeTabId) {
             state.closeTab(state.activeTabId);
@@ -526,6 +532,7 @@ export function WorkspaceCanvas({
         {gitBrowserOverlay}
         {compareOverlay}
         {folderCompareOverlay}
+        <TerminalRecordingsDialog />
       </>
     );
   }
@@ -645,6 +652,7 @@ export function WorkspaceCanvas({
       {gitBrowserOverlay}
       {compareOverlay}
       {folderCompareOverlay}
+      <TerminalRecordingsDialog />
     </Suspense>
   );
 }

@@ -185,6 +185,7 @@ export interface StartTerminalSessionRequest {
   usePsmux?: boolean;
   psmuxSessionId?: string;
   sshBufferLines?: number;
+  textEncoding?: string;
 }
 
 export interface TerminalSessionStarted {
@@ -211,6 +212,25 @@ export interface TerminalRecordingEntry {
   path: string;
   sizeBytes: number;
   modifiedAtMillis?: number;
+  startedAtMillis?: number;
+  durationMillis?: number;
+  connectionIdFragment: string;
+  connectionFolderLabel: string;
+  aiSummary?: string;
+  aiSummaryPreview?: string;
+  aiSummaryModel?: string;
+}
+
+export interface TerminalRecordingSummaryInput {
+  sample: string;
+  preview: string;
+  totalLines: number;
+  sampledLines: number;
+}
+
+export interface ExportTerminalRecordingsResult {
+  destination: string;
+  count: number;
 }
 
 export interface TmuxSession {
@@ -371,6 +391,24 @@ export interface FileViewText {
   bytesRead: number;
   truncated: boolean;
   fromEnd: boolean;
+  mtimeMs: number;
+  detectedEncoding: string;
+}
+
+export interface FileViewTextIndex {
+  totalSize: number;
+  totalLines: number;
+  lineStride: number;
+  checkpointOffsets: number[];
+  mtimeMs: number;
+  detectedEncoding: string;
+}
+
+export interface FileViewTextPage {
+  text: string;
+  startOffset: number;
+  endOffset: number;
+  totalSize: number;
   mtimeMs: number;
   detectedEncoding: string;
 }
@@ -1195,6 +1233,10 @@ type CommandMap = {
     args: { id: string };
     result: void;
   };
+  itops_duplicate_server_room: {
+    args: { id: string; name: string; floorColor: string };
+    result: ServerRoom;
+  };
   itops_create_rack: {
     args: {
       siteId: string;
@@ -1218,6 +1260,22 @@ type CommandMap = {
       heightU: number;
       depthMm: number;
       powerCapacityW?: number | null;
+    };
+    result: Rack;
+  };
+  itops_duplicate_rack: {
+    args: {
+      id: string;
+      name: string;
+      serverRoom: string;
+      rackGroup: string;
+      shell?: string | null;
+      heightU: number;
+      depthMm: number;
+      powerCapacityW?: number | null;
+      gridX?: number | null;
+      gridY?: number | null;
+      facing?: number | null;
     };
     result: Rack;
   };
@@ -1273,6 +1331,7 @@ type CommandMap = {
       label: string;
       startU: number;
       heightU: number;
+      mountFace?: "front" | "rear";
       metadata?: RackItemMetadata;
     };
     result: RackItem;
@@ -1286,11 +1345,12 @@ type CommandMap = {
       metadata?: RackItemMetadata;
       startU?: number;
       heightU?: number;
+      mountFace?: "front" | "rear";
     };
     result: RackItem;
   };
   itops_move_rack_item: {
-    args: { id: string; rackId: string; startU: number; heightU: number; slot?: number };
+    args: { id: string; rackId: string; startU: number; heightU: number; slot?: number; mountFace?: "front" | "rear" };
     result: RackItem;
   };
   itops_remove_rack_item: {
@@ -1812,6 +1872,26 @@ type CommandMap = {
     args: { threadId: string };
     result: null;
   };
+  list_durable_ui_state: {
+    args: { prefix: string };
+    result: { key: string; value: string }[];
+  };
+  get_durable_ui_state: {
+    args: { key: string };
+    result: string | null;
+  };
+  set_durable_ui_state: {
+    args: { key: string; value: string };
+    result: null;
+  };
+  delete_durable_ui_state: {
+    args: { key: string };
+    result: null;
+  };
+  delete_durable_ui_state_by_prefix: {
+    args: { prefix: string };
+    result: null;
+  };
   start_github_copilot_device_flow: {
     args: undefined;
     result: GitHubCopilotDeviceFlow;
@@ -2099,6 +2179,10 @@ type CommandMap = {
     };
     result: null;
   };
+  set_terminal_encoding: {
+    args: { request: { sessionId: string; encoding: string } };
+    result: null;
+  };
   close_terminal_session: {
     args: { sessionId: string };
     result: null;
@@ -2110,6 +2194,8 @@ type CommandMap = {
         connectionId: string;
         connectionName: string;
         initialBuffer: string;
+        rows?: number;
+        cols?: number;
       };
     };
     result: TerminalRecordingInfo;
@@ -2127,6 +2213,34 @@ type CommandMap = {
     };
     result: TerminalRecordingEntry[];
   };
+  list_all_terminal_recordings: {
+    args: undefined;
+    result: TerminalRecordingEntry[];
+  };
+  search_terminal_recordings: {
+    args: { query: string };
+    result: string[];
+  };
+  prepare_terminal_recording_summary: {
+    args: { path: string };
+    result: TerminalRecordingSummaryInput;
+  };
+  save_terminal_recording_summary: {
+    args: {
+      request: {
+        path: string;
+        summary: string;
+        preview: string;
+        providerKind: string;
+        model: string;
+      };
+    };
+    result: null;
+  };
+  export_terminal_recordings: {
+    args: { request: { paths: string[]; destination: string } };
+    result: ExportTerminalRecordingsResult;
+  };
   open_terminal_recordings_folder: {
     args: {
       request: {
@@ -2134,6 +2248,10 @@ type CommandMap = {
         connectionName: string;
       };
     };
+    result: null;
+  };
+  open_terminal_recordings_root: {
+    args: undefined;
     result: null;
   };
   open_terminal_recording: {
@@ -2484,6 +2602,16 @@ type CommandMap = {
   read_file_view_text: {
     args: { request: { path: string; maxBytes: number; fromEnd?: boolean; encoding?: string } };
     result: FileViewText;
+  };
+  index_file_view_text: {
+    args: { request: { path: string; encoding?: string } };
+    result: FileViewTextIndex;
+  };
+  read_file_view_text_page: {
+    args: {
+      request: { path: string; startOffset: number; endOffset: number; encoding?: string };
+    };
+    result: FileViewTextPage;
   };
   read_file_view_bytes: {
     args: { request: { path: string; offset: number; length: number } };
@@ -3345,6 +3473,24 @@ export async function selectSettingsImportFile(options: {
 }
 
 export async function selectSettingsExportFile(options: {
+  title: string;
+  filterName: string;
+  defaultFilename: string;
+}) {
+  if (!isTauriRuntime()) {
+    return null;
+  }
+
+  const selectedPath = await saveDialog({
+    defaultPath: options.defaultFilename,
+    filters: [{ name: options.filterName, extensions: ["zip"] }],
+    title: options.title,
+  });
+
+  return typeof selectedPath === "string" ? selectedPath : null;
+}
+
+export async function selectTerminalRecordingsExportFile(options: {
   title: string;
   filterName: string;
   defaultFilename: string;

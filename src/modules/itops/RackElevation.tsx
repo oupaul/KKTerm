@@ -1,4 +1,4 @@
-// Rack front elevation (docs/SITE.md Rack View). Renders one Rack as a
+// Rack elevation (docs/SITE.md Rack View). Renders one mounting face as a
 // skeuomorphic metal frame — rail caps, a U-number gutter, and a slatted device
 // column — with each Rack Device drawn as an animated <RackDevice> faceplate at
 // its U position (ported from the "IT Ops Racks" design comp). With callbacks
@@ -12,7 +12,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import type { Rack, RackItem, RackItemStatus } from "../../types";
+import type { Rack, RackItem, RackItemStatus, RackMountFace } from "../../types";
 import { ItIcon } from "./icons";
 import { collectBoundConnectionIds, summarizeRackDeviceMetadata } from "./rackInventory";
 import { RackDevice } from "./RackDevice";
@@ -58,9 +58,12 @@ export function RackElevation({
   hideHeader = false,
   editMode = false,
   reserveTopU = 0,
+  showRackTop = true,
   placeSpec,
   onPlaceAt,
   onCancelPlacement,
+  face = "front",
+  onToggleFace,
 }: {
   rack: Rack;
   /** Resolve a placed Connection's host/ip for the faceplate sub-line. */
@@ -81,6 +84,7 @@ export function RackElevation({
     targetRackId: string,
     startU: number,
     xFraction?: number,
+    mountFace?: RackMountFace,
   ) => void;
   onDeleteItem?: (item: RackItem) => void;
   isGhost?: (item: RackItem) => boolean;
@@ -94,17 +98,53 @@ export function RackElevation({
   /** Always keep at least this much headroom (in U) above the cabinet so a
    *  rack-top 乖乖 has room and the rack doesn't shift when one is placed. */
   reserveTopU?: number;
+  /** Rack-top equipment belongs to the cabinet, not either mounting face. */
+  showRackTop?: boolean;
   /** Armed picker placement: the configured device ghosts under the cursor,
    *  snapped to the hovered U slot, and a slot click places it there. */
   placeSpec?: RackItemDraft | null;
   onPlaceAt?: (startU: number, slot?: number) => void;
   /** Right-click while placing disarms (mirrors the room-view pickers). */
   onCancelPlacement?: () => void;
+  /** Cabinet mounting plane currently presented by this elevation. */
+  face?: RackMountFace;
+  /** Optional per-rack face switch shown at the cabinet's top-right corner. */
+  onToggleFace?: () => void;
 }) {
   const { t } = useTranslation();
+  const renderedFaceRef = useRef<RackMountFace>(face);
+  const [displayFace, setDisplayFace] = useState<RackMountFace>(face);
+  const [turning, setTurning] = useState(false);
+  useEffect(() => {
+    if (face === renderedFaceRef.current) {
+      setDisplayFace(face);
+      setTurning(false);
+      return;
+    }
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+      renderedFaceRef.current = face;
+      setDisplayFace(face);
+      setTurning(false);
+      return;
+    }
+    setTurning(true);
+    const swap = window.setTimeout(() => {
+      renderedFaceRef.current = face;
+      setDisplayFace(face);
+    }, 180);
+    const finish = window.setTimeout(() => setTurning(false), 380);
+    return () => {
+      window.clearTimeout(swap);
+      window.clearTimeout(finish);
+    };
+  }, [face]);
   const editable = !!onEditItem;
   const canMove = editMode && !!onMoveItem;
-  const placing = editMode && !!placeSpec && !!onPlaceAt;
+  const placing =
+    editMode &&
+    !!placeSpec &&
+    !!onPlaceAt &&
+    (placeSpec.kind === "kuaiguai" || placeSpec.mountFace === displayFace);
   const rackRef = useRef<HTMLDivElement | null>(null);
   const pointerRef = useRef<{
     draft: RackItemDraft;
@@ -127,6 +167,7 @@ export function RackElevation({
     const xQuarters = widthFractionQuarters(placeSpec?.metadata?.widthFraction);
     const placeSpan = { startU, heightU, xStart: slot * xQuarters, xQuarters };
     const blocked = rack.items.some((item) =>
+      (item.mountFace ?? "front") === displayFace &&
       rackItemsCollide(placeSpan, {
         startU: item.startU,
         heightU: item.heightU,
@@ -160,7 +201,11 @@ export function RackElevation({
         rackHeightU: rack.heightU,
         placeHeightU: placeSpec.heightU,
         placeWidthFraction: placeSpec.metadata?.widthFraction,
-        items: rack.items,
+        items: rack.items.filter(
+          (item) =>
+            isRackTopItem(item, rack.heightU) ||
+            (item.mountFace ?? "front") === displayFace,
+        ),
         allowTop: placeSpec.kind === "kuaiguai",
       });
       const next = {
@@ -206,7 +251,7 @@ export function RackElevation({
       document.removeEventListener("keydown", cancelFromKeyboard, true);
       pointerRef.current = null;
     };
-  }, [onCancelPlacement, onPlaceAt, placeSpec, placing, rack.heightU, rack.items]);
+  }, [displayFace, onCancelPlacement, onPlaceAt, placeSpec, placing, rack.heightU, rack.items]);
 
   const activePointer = pointerGhost?.draft === placeSpec ? pointerGhost : null;
   const placeGhost = placing && activePointer?.snap?.zone === "inside" ? activePointer.snap : null;
@@ -215,11 +260,20 @@ export function RackElevation({
   // Top-to-bottom U numbers: heightU … 1.
   const unitNumbers = Array.from({ length: rack.heightU }, (_, i) => rack.heightU - i);
 
-  // Status tallies for the header pills (passive items default to online).
+  // Status tallies describe the whole cabinet, independent of which mounting
+  // face is currently visible. Rack-top packages are not cabinet devices.
   let online = 0;
   let warning = 0;
   let offline = 0;
-  for (const item of rack.items) {
+  const allCabinetItems = rack.items.filter(
+    (item) => !isRackTopItem(item, rack.heightU),
+  );
+  const visibleItems = rack.items.filter(
+    (item) =>
+      (showRackTop && isRackTopItem(item, rack.heightU)) ||
+      (!isRackTopItem(item, rack.heightU) && (item.mountFace ?? "front") === displayFace),
+  );
+  for (const item of allCabinetItems) {
     const s = itemStatus(item);
     if (s === "warning") warning += 1;
     else if (s === "offline") offline += 1;
@@ -228,14 +282,14 @@ export function RackElevation({
 
   // Stagger the slide-in by visual order (top of rack first).
   const order = new Map(
-    [...rack.items]
+    [...visibleItems]
       .sort((a, b) => b.startU + b.heightU - (a.startU + a.heightU))
       .map((item, index) => [item.id, index] as const),
   );
 
   const cabShell = rack.shell && rack.shell !== "black" ? rack.shell : undefined;
-  const topItems = rack.items.filter((item) => isRackTopItem(item, rack.heightU));
-  const cabinetItems = rack.items.filter((item) => !isRackTopItem(item, rack.heightU));
+  const topItems = visibleItems.filter((item) => isRackTopItem(item, rack.heightU));
+  const cabinetItems = visibleItems.filter((item) => !isRackTopItem(item, rack.heightU));
   const topClearanceU = Math.max(
     0,
     reserveTopU,
@@ -243,14 +297,15 @@ export function RackElevation({
     placing && placeSpec?.kind === "kuaiguai" ? placeSpec.heightU : 0,
   );
   // Placed devices, top-of-rack first, for the detail summary list.
-  const placed = [...rack.items].sort(
+  const placed = [...visibleItems].sort(
     (a, b) => b.startU + b.heightU - (a.startU + a.heightU),
   );
 
   return (
     <div
-      className={`rk${detailed ? " rk-detailed" : ""}${topClearanceU > 0 ? " has-top-item" : ""}`}
+      className={`rk${detailed ? " rk-detailed" : ""}${topClearanceU > 0 ? " has-top-item" : ""}${onToggleFace ? " has-face-toggle" : ""}${turning ? " face-turning" : ""}`}
       data-shell={cabShell}
+      data-face={displayFace}
       data-rack-id={rack.id}
       ref={rackRef}
       style={{
@@ -263,12 +318,15 @@ export function RackElevation({
           <span className="rk-name">{rack.name}</span>
           <span className="rk-meta">
             {t("itops.racks.unitCount", { count: rack.heightU })}
-            {rack.items.length > 0
-              ? `  ·  ${t("itops.racks.deviceCount", { count: rack.items.length })}`
+            {cabinetItems.length > 0
+              ? `  ·  ${t("itops.racks.faceDeviceCount", {
+                  face: t(`itops.racks.face.${displayFace}`),
+                  count: cabinetItems.length,
+                })}`
               : ""}
           </span>
         </div>
-        {rack.items.length > 0 ? (
+        {allCabinetItems.length > 0 ? (
           <div className="rk-pills">
             <span className="rk-pill on" title={t("itops.racks.status.online")}>
               <span className="dot" />
@@ -321,6 +379,21 @@ export function RackElevation({
       </div> : null}
 
       <div className="rk-cabinet">
+        {onToggleFace ? (
+          <button
+            type="button"
+            className="rk-cabinet-flip"
+            title={t("itops.racks.showFace", {
+              face: t(`itops.racks.face.${displayFace === "front" ? "rear" : "front"}`),
+            })}
+            aria-label={t("itops.racks.showFace", {
+              face: t(`itops.racks.face.${displayFace === "front" ? "rear" : "front"}`),
+            })}
+            onClick={onToggleFace}
+          >
+            <ItIcon name="rerun" size={14} />
+          </button>
+        ) : null}
         <div
           className={`rk-top-area${canMove ? " drop-target" : ""}`}
           onDragOver={canMove ? (event) => {
@@ -333,7 +406,7 @@ export function RackElevation({
             event.preventDefault();
             if (!event.dataTransfer.getData("application/x-itops-rack-kuaiguai")) return;
             const itemId = event.dataTransfer.getData("application/x-itops-rack-item");
-            if (itemId) onMoveItem?.(itemId, rack.id, rack.heightU + 1);
+            if (itemId) onMoveItem?.(itemId, rack.id, rack.heightU + 1, undefined, displayFace);
           } : undefined}
         >
           {topItems.map((item) => (
@@ -358,6 +431,7 @@ export function RackElevation({
                   yaw={item.metadata?.yaw ?? null}
                   kuaiguaiSize={item.metadata?.kuaiguaiSize ?? null}
                   kuaiguaiStyle={item.metadata?.kuaiguaiStyle ?? null}
+                  face={displayFace}
                   notes={item.metadata?.notes ?? null}
                   formFactor={item.metadata?.formFactor ?? null}
                   serverPanelStyle={item.metadata?.serverPanelStyle ?? null}
@@ -393,6 +467,7 @@ export function RackElevation({
                 yaw={placeSpec.metadata?.yaw ?? null}
                 kuaiguaiSize={placeSpec.metadata?.kuaiguaiSize ?? null}
                 kuaiguaiStyle={placeSpec.metadata?.kuaiguaiStyle ?? null}
+                face={displayFace}
                 notes={placeSpec.metadata?.notes ?? null}
                 formFactor={placeSpec.metadata?.formFactor ?? null}
                 serverPanelStyle={placeSpec.metadata?.serverPanelStyle ?? null}
@@ -461,7 +536,7 @@ export function RackElevation({
                             0,
                             Math.min(0.999, (event.clientX - rect.left) / Math.max(1, rect.width)),
                           );
-                          onMoveItem?.(itemId, rack.id, u, xFraction);
+                          onMoveItem?.(itemId, rack.id, u, xFraction, displayFace);
                         }
                       : undefined
                   }
@@ -516,6 +591,7 @@ export function RackElevation({
                   yaw={item.metadata?.yaw ?? null}
                   kuaiguaiSize={item.metadata?.kuaiguaiSize ?? null}
                   kuaiguaiStyle={item.metadata?.kuaiguaiStyle ?? null}
+                  face={displayFace}
                   notes={item.metadata?.notes ?? null}
                   formFactor={item.metadata?.formFactor ?? null}
                   serverPanelStyle={item.metadata?.serverPanelStyle ?? null}
@@ -632,6 +708,7 @@ export function RackElevation({
                   yaw={placeSpec.metadata?.yaw ?? null}
                   kuaiguaiSize={placeSpec.metadata?.kuaiguaiSize ?? null}
                   kuaiguaiStyle={placeSpec.metadata?.kuaiguaiStyle ?? null}
+                  face={displayFace}
                   notes={placeSpec.metadata?.notes ?? null}
                   formFactor={placeSpec.metadata?.formFactor ?? null}
                   serverPanelStyle={placeSpec.metadata?.serverPanelStyle ?? null}
@@ -706,6 +783,7 @@ export function RackElevation({
                 yaw={placeSpec.metadata?.yaw ?? null}
                 kuaiguaiSize={placeSpec.metadata?.kuaiguaiSize ?? null}
                 kuaiguaiStyle={placeSpec.metadata?.kuaiguaiStyle ?? null}
+                face={displayFace}
                 notes={placeSpec.metadata?.notes ?? null}
                 formFactor={placeSpec.metadata?.formFactor ?? null}
                 serverPanelStyle={placeSpec.metadata?.serverPanelStyle ?? null}

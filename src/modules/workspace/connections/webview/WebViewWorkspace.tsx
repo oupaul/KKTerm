@@ -782,12 +782,14 @@ export function WebViewWorkspace({
           subtitle: formatWebviewSubtitle(event.payload.url),
           url: event.payload.url,
         });
+        scheduleBoundsPush();
       }),
       listen<WebviewPageLoadEvent>("webview-page-load", (event) => {
         if (event.payload.sessionId !== sessionIdRef.current) {
           return;
         }
         setAddressInput(event.payload.url);
+        scheduleBoundsPush();
         if (event.payload.status === "finished") {
           setFillStatus("");
           void maybeUpdateConnectionIcon(event.payload.url);

@@ -1,6 +1,6 @@
 use futures::StreamExt;
 use github_copilot_sdk::{
-    Client as CopilotSdkClient, CliProgram as CopilotSdkCliProgram,
+    CliProgram as CopilotSdkCliProgram, Client as CopilotSdkClient,
     ClientOptions as CopilotSdkClientOptions, Error as CopilotSdkError,
     ErrorKind as CopilotSdkErrorKind, LogLevel as CopilotSdkLogLevel,
     MessageOptions as CopilotSdkMessageOptions, Model as CopilotSdkModel,
@@ -61,6 +61,7 @@ use crate::assistant_skills::{self, AssistantSkillSummary};
 use crate::dashboard_ids::new_dashboard_id;
 use crate::dashboard_storage as ds;
 use crate::dashboard_validation::{ICONS, drop_unused_script_libraries, normalize_script_body};
+use crate::itops::types::RackMountFace;
 use crate::storage::{
     AiAssistantToolSettings, AiProviderSettings, Storage, ai_provider_secret_owner_id,
 };
@@ -73,6 +74,10 @@ const CODEX_CLI_IGNORE_USER_CONFIG_FLAG: &str = "--ignore-user-config";
 const TUTORIAL_TOOL_KNOWN_TARGETS: &str = concat!(
     "app.activityRailWorkspace, app.activityRailNewWorkspace, app.activityRailDashboard, app.connectionRail, app.activityRailDontSleep, app.activityRailInstaller, app.activityRailSettings, app.connectionsResize, app.aiAssistantResize with navigation page=workspace; ",
     "app.activityRailItOps, itops.sitesTree, itops.siteView with navigation page=itops; ",
+    "itops.hostsPanel, itops.hostsRunTask, itops.hostsImport, itops.hostsScan with navigation page=itops itopsDestination=hosts; ",
+    "itops.automationsPanel, itops.automationsNew with navigation page=itops itopsDestination=automations; ",
+    "itops.runHistoryPanel with navigation page=itops itopsDestination=runHistory; ",
+    "itops.taskLibrary, itops.taskLibraryNew with navigation page=itops itopsDestination=taskLibrary; ",
     "dashboard.views, dashboard.addView, dashboard.editLayout, dashboard.addWidget, dashboard.canvas with navigation page=dashboard; ",
     "connections.panel, connections.search, connections.quickConnect, connections.addConnection, connections.folderControls, connections.tree with navigation page=workspace; ",
     "workspace.tabStrip, workspace.canvas, workspace.emptyState, workspace.statusBar, workspace.hostUsage, workspace.screenshotMenu with navigation page=workspace; ",
@@ -932,7 +937,11 @@ pub(crate) fn parse_playbook_ai_decision(value: &str) -> Result<PlaybookAiDecisi
     };
     let mut decision: PlaybookAiDecision = serde_json::from_str(candidate)
         .map_err(|error| format!("AI node returned an invalid decision: {error}"))?;
-    decision.reason = decision.reason.split_whitespace().collect::<Vec<_>>().join(" ");
+    decision.reason = decision
+        .reason
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ");
     if decision.reason.chars().count() > 500 {
         return Err("AI node decision reason is too long".to_string());
     }
@@ -2934,13 +2943,14 @@ fn ai_tool_definitions_with_skills(
         ));
         tools.push(tool_definition(
             "itops_place_rack_item",
-            "Place one Rack Device into a Rack. Call itops_list_racks first. For an in-cabinet device, startU is its lowest occupied U (1 = bottom) and startU..startU+heightU-1 must fit without overlap. To place a standing Kuai Kuai package on the rack top, use kind \"kuaiguai\", startU = rack.heightU + 1, heightU 4, and metadata.kuaiguaiStyle \"full\"; a laid-down package uses heightU 1 and \"laidDown\". metadata.expiry is an ISO date (YYYY-MM-DD). Only one Kuai Kuai may occupy a rack top. kind \"connection\" requires connectionId; other kinds are passive inventory/visual devices. Metadata never contains secrets.",
+            "Place one Rack Device into a Rack. Call itops_list_racks first. mountFace is front or rear and defaults to front; when the user asks for the back, backside, or rear of a Rack, set mountFace to \"rear\" explicitly. Rack floor-plan facing is unrelated to mounting face, and overlap validation is independent per face. For an in-cabinet device, startU is its lowest occupied U (1 = bottom) and startU..startU+heightU-1 must fit without overlap on that face. To place a standing Kuai Kuai package on the rack top, use kind \"kuaiguai\", startU = rack.heightU + 1, heightU 4, and metadata.kuaiguaiStyle \"full\"; a laid-down package uses heightU 1 and \"laidDown\". metadata.expiry is an ISO date (YYYY-MM-DD). Only one Kuai Kuai may occupy a rack top regardless of face. kind \"connection\" requires connectionId; other kinds are passive inventory/visual devices. Metadata never contains secrets.",
             json!({"type":"object","properties":{
                 "rackId":{"type":"string"},
                 "kind":{"type":"string","enum":["connection","server","storage","switch","router","firewall","pdu","ups","kvm","patchPanel","genericDevice","kuaiguai"]},
                 "label":{"type":"string"},
                 "startU":{"type":"integer","minimum":1},
                 "heightU":{"type":"integer","minimum":1},
+                "mountFace":{"type":"string","enum":["front","rear"]},
                 "connectionId":{"type":"string"},
                 "metadata":{"type":"object","properties":{
                     "expiry":{"type":"string","description":"ISO date in YYYY-MM-DD form"},
@@ -2952,12 +2962,13 @@ fn ai_tool_definitions_with_skills(
         ));
         tools.push(tool_definition(
             "itops_update_rack_item",
-            "Update one Rack Device's kind, label, Connection binding, or metadata by id (position changes go through itops_move_rack_item). kind includes \"kuaiguai\"; its metadata may include expiry (YYYY-MM-DD), kuaiguaiStyle (\"full\"|\"laidDown\"), kuaiguaiSize, and rotation. Submit full new values: omitted metadata clears previously stored metadata, so read the device from itops_list_racks first and resend the fields you want to keep.",
+            "Update one Rack Device's kind, label, mounting face, Connection binding, or metadata by id (position changes go through itops_move_rack_item). mountFace is front or rear; omit it to retain the current face. kind includes \"kuaiguai\"; its metadata may include expiry (YYYY-MM-DD), kuaiguaiStyle (\"full\"|\"laidDown\"), kuaiguaiSize, and rotation. Submit full new values: omitted metadata clears previously stored metadata, so read the device from itops_list_racks first and resend the fields you want to keep.",
             json!({"type":"object","properties":{
                 "id":{"type":"string"},
                 "kind":{"type":"string","enum":["connection","server","storage","switch","router","firewall","pdu","ups","kvm","patchPanel","genericDevice","kuaiguai"]},
                 "label":{"type":"string"},
                 "connectionId":{"type":"string"},
+                "mountFace":{"type":"string","enum":["front","rear"]},
                 "metadata":{"type":"object","properties":{
                     "expiry":{"type":"string","description":"ISO date in YYYY-MM-DD form"},
                     "kuaiguaiStyle":{"type":"string","enum":["full","laidDown"]},
@@ -2968,12 +2979,13 @@ fn ai_tool_definitions_with_skills(
         ));
         tools.push(tool_definition(
             "itops_move_rack_item",
-            "Move and/or resize one Rack Device by id — possibly into a different Rack. The new U span is validated against the target rack (bounds and overlaps).",
+            "Move and/or resize one Rack Device by id — possibly into a different Rack or onto the other mounting face. The new U span is validated against the target rack and face (bounds and overlaps).",
             json!({"type":"object","properties":{
                 "id":{"type":"string"},
                 "rackId":{"type":"string"},
                 "startU":{"type":"integer","minimum":1},
-                "heightU":{"type":"integer","minimum":1}
+                "heightU":{"type":"integer","minimum":1},
+                "mountFace":{"type":"string","enum":["front","rear"]}
             },"required":["id","rackId","startU","heightU"]}),
         ));
         tools.push(tool_definition(
@@ -2985,6 +2997,225 @@ fn ai_tool_definitions_with_skills(
             "itops_list_hosts",
             "List the Hosts of one IT Ops Site by siteId: durable inventory entries addressed by hostname, with kind (physical|vm|container|other), optional parentHostId (the device Host carrying a VM/container), bound Connection ids, and the last connectivity-scan snapshot.",
             json!({"type":"object","properties":{"siteId":{"type":"string"}},"required":["siteId"]}),
+        ));
+        tools.push(tool_definition(
+            "itops_update_site",
+            "Update one IT Ops Site by id. Omitted fields keep their current values; presentation fields (icons, backgrounds) are always preserved. memberIds and filter use full-value semantics when supplied.",
+            json!({"type":"object","properties":{
+                "id":{"type":"string"},
+                "name":{"type":"string","minLength":1},
+                "memberIds":{"type":"array","items":{"type":"string"}},
+                "filter":{"type":"object","properties":{
+                    "types":{"type":"array","items":{"type":"string"}},
+                    "folderId":{"type":["string","null"]}
+                }},
+                "transport":{"type":"string","enum":["ssh","winrm","psexec","auto"]}
+            },"required":["id"]}),
+        ));
+        tools.push(tool_definition(
+            "itops_remove_site",
+            "Delete one IT Ops Site by id, including its Server Rooms, Racks, Rack Devices, and Hosts. Saved Connections and Run History are untouched. The seeded Default Site cannot be deleted.",
+            json!({"type":"object","properties":{"id":{"type":"string"}},"required":["id"]}),
+        ));
+        tools.push(tool_definition(
+            "itops_update_server_room",
+            "Update one Server Room by id. Full-value semantics: read the room via itops_list_server_rooms first and resend both name and floorColor.",
+            json!({"type":"object","properties":{
+                "id":{"type":"string"},
+                "name":{"type":"string","minLength":1},
+                "floorColor":{"type":"string","enum":["default","concrete","graphite","green","blue"]}
+            },"required":["id","name","floorColor"]}),
+        ));
+        tools.push(tool_definition(
+            "itops_delete_server_room",
+            "Delete one Server Room by id, including its Racks and their Rack Device placements. Bound saved Connections are untouched.",
+            json!({"type":"object","properties":{"id":{"type":"string"}},"required":["id"]}),
+        ));
+        tools.push(tool_definition(
+            "itops_update_rack",
+            "Update one Rack by id. Full-value semantics: read the rack via itops_list_racks first and resend every field you want to keep (omitted rackGroup/shell/powerCapacityW are cleared). Shrinking heightU is rejected while placed devices would no longer fit.",
+            json!({"type":"object","properties":{
+                "id":{"type":"string"},
+                "name":{"type":"string","minLength":1},
+                "serverRoom":{"type":"string","minLength":1},
+                "rackGroup":{"type":"string"},
+                "shell":{"type":"string","enum":["black","white","grey"]},
+                "heightU":{"type":"integer","minimum":1,"maximum":100},
+                "depthMm":{"type":"integer","minimum":1,"maximum":5000},
+                "powerCapacityW":{"type":"integer","minimum":0}
+            },"required":["id","name","serverRoom","heightU","depthMm"]}),
+        ));
+        tools.push(tool_definition(
+            "itops_delete_rack",
+            "Delete one Rack by id, including its Rack Device placements. Bound saved Connections are untouched.",
+            json!({"type":"object","properties":{"id":{"type":"string"}},"required":["id"]}),
+        ));
+        tools.push(tool_definition(
+            "itops_create_host",
+            "Create one Host in an IT Ops Site: a durable inventory entry addressed by hostname. parentHostId nests it as a VM/container guest under a device Host. Bind Connections later with itops_update_host.",
+            json!({"type":"object","properties":{
+                "siteId":{"type":"string"},
+                "hostname":{"type":"string","minLength":1},
+                "label":{"type":"string"},
+                "kind":{"type":"string","enum":["physical","vm","container","other"]},
+                "parentHostId":{"type":"string"},
+                "notes":{"type":"string"}
+            },"required":["siteId","hostname"]}),
+        ));
+        tools.push(tool_definition(
+            "itops_update_host",
+            "Update one Host by id. Full-value semantics: read the Host via itops_list_hosts first and resend every field you want to keep — omitted label/kind/parentHostId/connectionIds/notes are cleared or reset. connectionIds are ordered saved Connection ids; the first bound SSH Connection makes the Host runnable in Batch Runs.",
+            json!({"type":"object","properties":{
+                "id":{"type":"string"},
+                "hostname":{"type":"string","minLength":1},
+                "label":{"type":"string"},
+                "kind":{"type":"string","enum":["physical","vm","container","other"]},
+                "parentHostId":{"type":"string"},
+                "connectionIds":{"type":"array","items":{"type":"string"}},
+                "notes":{"type":"string"}
+            },"required":["id","hostname"]}),
+        ));
+        tools.push(tool_definition(
+            "itops_delete_host",
+            "Delete one Host by id. Its child Hosts (VMs/containers) are re-parented one level up rather than deleted. Bound saved Connections are untouched.",
+            json!({"type":"object","properties":{"id":{"type":"string"}},"required":["id"]}),
+        ));
+        tools.push(tool_definition(
+            "itops_import_hosts",
+            "Bulk-import a hostname list into an IT Ops Site's Host inventory. Blank entries and case-insensitive duplicates (within the list or against existing Hosts) are skipped, not errors. Returns the created Hosts plus the skipped count.",
+            json!({"type":"object","properties":{
+                "siteId":{"type":"string"},
+                "hostnames":{"type":"array","items":{"type":"string"},"minItems":1,"maxItems":500}
+            },"required":["siteId","hostnames"]}),
+        ));
+        tools.push(tool_definition(
+            "itops_scan_hosts",
+            "Scan a Site's Hosts (all of them, or only hostIds) for remote-access endpoints with bounded TCP probes: SSH (22), WinRM (5985/5986), and HTTPS (443). Waits for the scan to finish and returns the updated Host list; each Host's scan snapshot is persisted.",
+            json!({"type":"object","properties":{
+                "siteId":{"type":"string"},
+                "hostIds":{"type":"array","items":{"type":"string"}}
+            },"required":["siteId"]}),
+        ));
+        tools.push(tool_definition(
+            "itops_list_tasks",
+            "List the global IT Ops Task Library: reusable script/playbook definitions with id, name, description, applicableOs, kind, a redacted one-line summary, and builtInKey for app-owned read-only built-ins. Use itops_get_task for a full definition.",
+            json!({"type":"object","properties":{}}),
+        ));
+        tools.push(tool_definition(
+            "itops_get_task",
+            "Read one IT Ops Task's full definition by id, including the script body or playbook steps.",
+            json!({"type":"object","properties":{"id":{"type":"string"}},"required":["id"]}),
+        ));
+        tools.push(tool_definition(
+            "itops_create_task",
+            "Create a reusable IT Ops Task in the global Task Library. A Task owns what to execute (a script or an interactive playbook) but never targets; Hosts or an Automation supply targets at launch. applicableOs defaults to [\"any\"]. Sudo steps and secret references must be configured in the Task Library editor, not here.",
+            json!({"type":"object","properties":{
+                "name":{"type":"string","minLength":1},
+                "description":{"type":"string"},
+                "applicableOs":{"type":"array","items":{"type":"string","enum":["any","linux","macos","windows","ciscoIos","ciscoNxos","fortiOs","junos","aristaEos"]}},
+                "task": itops_batch_task_schema()
+            },"required":["name","task"]}),
+        ));
+        tools.push(tool_definition(
+            "itops_update_task",
+            "Update one IT Ops Task by id. Full-value semantics: read the Task via itops_get_task first and resend name, description, applicableOs, and the full task definition. Built-in catalog Tasks are read-only — duplicate them into a user Task instead. Existing sudo credentials are preserved only if their steps are resent unchanged; new sudo steps require the Task Library editor.",
+            json!({"type":"object","properties":{
+                "id":{"type":"string"},
+                "name":{"type":"string","minLength":1},
+                "description":{"type":"string"},
+                "applicableOs":{"type":"array","items":{"type":"string","enum":["any","linux","macos","windows","ciscoIos","ciscoNxos","fortiOs","junos","aristaEos"]}},
+                "task": itops_batch_task_schema()
+            },"required":["id","name","task"]}),
+        ));
+        tools.push(tool_definition(
+            "itops_remove_task",
+            "Delete one user IT Ops Task by id (built-ins cannot be deleted). Completed Run History keeps its redacted task summary; any orphaned task credentials are removed from the vault.",
+            json!({"type":"object","properties":{"id":{"type":"string"}},"required":["id"]}),
+        ));
+        tools.push(tool_definition(
+            "itops_list_automations",
+            "List durable IT Ops Automations: id, name, enabled, the trigger/condition config, the ordered action list, and the optional Site binding (siteId). Enabled rows are armed as live Watchdogs.",
+            json!({"type":"object","properties":{}}),
+        ));
+        tools.push(tool_definition(
+            "itops_create_automation",
+            "Create a durable IT Ops Automation: one trigger + condition (config, a WatchdogConfig whose action must be {\"kind\":\"notify\"}) and an ordered list of IT Ops actions run when it fires (notify, popup, email, webhook, runBatch). enabled defaults to true and arms the rule immediately; siteId binds it to one Site's Automations page. Use itops_test_automation first to dry-run the trigger. RunBatch tasks may not carry sudo steps or secret references.",
+            json!({"type":"object","properties":{
+                "name":{"type":"string","minLength":1},
+                "config": watchdog_config_schema(),
+                "actions": itops_automation_actions_schema(),
+                "enabled":{"type":"boolean"},
+                "siteId":{"type":"string"}
+            },"required":["name","config","actions"]}),
+        ));
+        tools.push(tool_definition(
+            "itops_update_automation",
+            "Update one IT Ops Automation by id. Full-value semantics: read the rule via itops_list_automations first and resend name, config, actions, and siteId. An enabled rule is re-armed with the new definition.",
+            json!({"type":"object","properties":{
+                "id":{"type":"string"},
+                "name":{"type":"string","minLength":1},
+                "config": watchdog_config_schema(),
+                "actions": itops_automation_actions_schema(),
+                "siteId":{"type":"string"}
+            },"required":["id","name","config","actions"]}),
+        ));
+        tools.push(tool_definition(
+            "itops_set_automation_enabled",
+            "Enable (arm) or disable (disarm) one IT Ops Automation by id. Disabled rules stay stored but never poll.",
+            json!({"type":"object","properties":{
+                "id":{"type":"string"},
+                "enabled":{"type":"boolean"}
+            },"required":["id","enabled"]}),
+        ));
+        tools.push(tool_definition(
+            "itops_remove_automation",
+            "Delete one IT Ops Automation by id, disarming its live Watchdog first. Run History produced by the rule is kept.",
+            json!({"type":"object","properties":{"id":{"type":"string"}},"required":["id"]}),
+        ));
+        tools.push(tool_definition(
+            "itops_test_automation",
+            "Dry-run an Automation trigger: sample the config's target once and report the sampled value plus whether the condition would fire right now. No actions are executed and nothing is stored.",
+            json!({"type":"object","properties":{
+                "config": watchdog_config_schema()
+            },"required":["config"]}),
+        ));
+        tools.push(tool_definition(
+            "itops_start_batch_run",
+            "Start a Batch Run against an IT Ops Site: either a reusable Task Library definition by taskId, or an ad-hoc script. Optional scope narrows targets to one Server Room, one Rack, or selected Host ids (Hosts resolve through their first bound SSH Connection). Returns the runId immediately; execution streams in the IT Ops UI and the consolidated report lands in Run History when finished — poll itops_get_run_report to read results. After starting a run, tell the user it is running and yield.",
+            json!({"type":"object","properties":{
+                "siteId":{"type":"string"},
+                "taskId":{"type":"string","description":"A Task Library definition to execute. Exactly one of taskId or script is required."},
+                "script":{"type":"object","properties":{
+                    "body":{"type":"string","minLength":1},
+                    "shell":{"type":"string"}
+                },"required":["body"],"description":"Ad-hoc script to execute. Exactly one of taskId or script is required."},
+                "scope":{"type":"object","properties":{
+                    "serverRoom":{"type":"string"},
+                    "rackId":{"type":"string"},
+                    "hostIds":{"type":"array","items":{"type":"string"}}
+                }}
+            },"required":["siteId"]}),
+        ));
+        tools.push(tool_definition(
+            "itops_cancel_batch_run",
+            "Cancel a live Batch Run by runId. Hosts already finished keep their results; the partial report is still written to Run History.",
+            json!({"type":"object","properties":{"runId":{"type":"string"}},"required":["runId"]}),
+        ));
+        tools.push(tool_definition(
+            "itops_list_run_history",
+            "List completed Batch Run reports, newest first: id, source (manual or automation:<id>), siteId, taskId, redacted task summary, timestamps, and per-host outcome rows (ok, exitCode, durationMs, error) without output text. Use itops_get_run_report for one run's output.",
+            json!({"type":"object","properties":{
+                "siteId":{"type":"string","description":"Only runs for this Site."},
+                "limit":{"type":"integer","minimum":1,"maximum":100}
+            }}),
+        ));
+        tools.push(tool_definition(
+            "itops_get_run_report",
+            "Read one Batch Run's consolidated report by runId, including each host's captured output (tail-capped per host by maxOutputChars, default 4000).",
+            json!({"type":"object","properties":{
+                "runId":{"type":"string"},
+                "maxOutputChars":{"type":"integer","minimum":100,"maximum":20000}
+            },"required":["runId"]}),
         ));
     }
     if settings.connections() {
@@ -3130,9 +3361,9 @@ fn ai_tool_definitions_with_skills(
         tools.push(tool_definition(
             "tutorial_highlight",
             format!(
-                "Show a one-step in-app Tutorial overlay by navigating to a known app surface when needed, highlighting an app-owned target, dimming the rest of the window, and placing a short help balloon beside it. Use this only after the user explicitly asks to be shown where something is, or after the user accepts your offer to navigate. Only pass targetId values explicitly listed in current page context or documented by this tool; do not invent CSS selectors. Known targets include {TUTORIAL_TOOL_KNOWN_TARGETS}. The overlay disappears when the user clicks or presses any key."
+                "Show a one-step in-app Tutorial overlay by navigating to a known app surface when needed, highlighting an app-owned target, dimming the rest of the window, and placing a short help balloon beside it. Use this only after the user explicitly asks to be shown where something is, or after the user accepts your offer to navigate. Only pass targetId values explicitly listed in current page context or documented by this tool; do not invent CSS selectors. Known targets include {TUTORIAL_TOOL_KNOWN_TARGETS}. The current IT Ops page context may additionally list entity-scoped targets (itops.site:<siteId>, itops.host:<hostId>, itops.automation:<automationId>, itops.task:<taskId>, itops.run:<runId>) that highlight one specific row; pair them with navigation.itopsSiteId when the entity belongs to a Site that is not selected. navigation.itopsSiteId and navigation.itopsDestination open one IT Ops Site's navigator destination (hosts, automations, runHistory, serverRooms, site) or the global taskLibrary before highlighting. The overlay disappears when the user clicks or presses any key."
             ),
-            json!({"type":"object","properties":{"targetId":{"type":"string"},"title":{"type":"string","maxLength":80},"body":{"type":"string","maxLength":240},"navigation":{"type":"object","properties":{"page":{"type":"string","enum":["workspace","dashboard","itops","installer","settings"]},"settingsSectionId":{"type":"string","enum":["general-settings","appearance-settings","dashboard-settings","workspace-settings","file-explorer-settings","dont-sleep-settings","installer-settings","credentials-settings","assistant-settings","ssh-settings","terminal-settings","url-settings","rdp-settings","vnc-settings","shortcuts-settings","proxy-settings","about-settings"]}},"additionalProperties":false},"page":{"type":"string","enum":["workspace","dashboard","itops","installer","settings"]},"settingsSectionId":{"type":"string","enum":["general-settings","appearance-settings","dashboard-settings","workspace-settings","file-explorer-settings","dont-sleep-settings","installer-settings","credentials-settings","assistant-settings","ssh-settings","terminal-settings","url-settings","rdp-settings","vnc-settings","shortcuts-settings","proxy-settings","about-settings"]}},"required":["targetId","title","body"]}),
+            json!({"type":"object","properties":{"targetId":{"type":"string"},"title":{"type":"string","maxLength":80},"body":{"type":"string","maxLength":240},"navigation":{"type":"object","properties":{"page":{"type":"string","enum":["workspace","dashboard","itops","installer","settings"]},"settingsSectionId":{"type":"string","enum":["general-settings","appearance-settings","dashboard-settings","workspace-settings","file-explorer-settings","dont-sleep-settings","installer-settings","credentials-settings","assistant-settings","ssh-settings","terminal-settings","url-settings","rdp-settings","vnc-settings","shortcuts-settings","proxy-settings","about-settings"]},"itopsSiteId":{"type":"string","description":"IT Ops only: the Site to select before highlighting."},"itopsDestination":{"type":"string","enum":["site","serverRooms","hosts","automations","runHistory","taskLibrary"],"description":"IT Ops only: which navigator destination to open."}},"additionalProperties":false},"page":{"type":"string","enum":["workspace","dashboard","itops","installer","settings"]},"settingsSectionId":{"type":"string","enum":["general-settings","appearance-settings","dashboard-settings","workspace-settings","file-explorer-settings","dont-sleep-settings","installer-settings","credentials-settings","assistant-settings","ssh-settings","terminal-settings","url-settings","rdp-settings","vnc-settings","shortcuts-settings","proxy-settings","about-settings"]}},"required":["targetId","title","body"]}),
         ));
     }
     if settings.network() {
@@ -3201,7 +3432,16 @@ fn watchdog_create_schema() -> Value {
     json!({
         "type": "object",
         "properties": {
-            "config": {
+            "config": watchdog_config_schema()
+        },
+        "required": ["config"]
+    })
+}
+
+/// The WatchdogConfig object schema, shared by `watchdog_create` and the IT Ops
+/// Automation tools (an Automation's `config` is a WatchdogConfig).
+fn watchdog_config_schema() -> Value {
+    json!({
                 "type": "object",
                 "properties": {
                     "name": { "type": "string", "description": "Short human-readable name shown in the status bar popover, e.g. 'CPU > 90% (5 min)'" },
@@ -3273,10 +3513,145 @@ fn watchdog_create_schema() -> Value {
                     }
                 },
                 "required": ["name", "target", "trigger", "pollMs", "stop", "notification", "action"]
-            }
-        },
-        "required": ["config"]
     })
+}
+
+/// The Batch Task object schema shared by the IT Ops Task, Automation, and
+/// Batch Run tools. Assistant-authored tasks never carry sudo steps or secret
+/// references — those are configured in the Task Library editor.
+fn itops_batch_task_schema() -> Value {
+    json!({
+        "oneOf": [
+            {
+                "type": "object",
+                "properties": {
+                    "kind": { "const": "script" },
+                    "body": { "type": "string", "minLength": 1, "description": "Free-form command/script body sent to each host's transport." },
+                    "shell": { "type": "string", "description": "Optional shell override; omit for the host default." }
+                },
+                "required": ["kind", "body"]
+            },
+            {
+                "type": "object",
+                "properties": {
+                    "kind": { "const": "playbook" },
+                    "name": { "type": "string", "minLength": 1 },
+                    "steps": {
+                        "type": "array",
+                        "minItems": 1,
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "kind": { "type": "string", "enum": ["command", "ai"], "description": "command sends text into the host's shell; ai evaluates the previous step's output. Sudo steps require the Task Library editor." },
+                                "name": { "type": "string", "minLength": 1 },
+                                "send": { "type": "string", "description": "Text sent to the interactive shell (a carriage return is appended). Empty for ai steps." },
+                                "expect": { "type": "string", "description": "Literal output substring to wait for before the next step. Omit to advance immediately." },
+                                "timeoutSeconds": { "type": "integer", "minimum": 1 },
+                                "aiInstruction": { "type": "string", "description": "ai steps only: closed decision instruction evaluated against the previous step's output." }
+                            },
+                            "required": ["name", "send"]
+                        }
+                    }
+                },
+                "required": ["kind", "name", "steps"]
+            }
+        ]
+    })
+}
+
+/// The ordered IT Ops Automation action-list schema (the closed Phase 4 catalog).
+fn itops_automation_actions_schema() -> Value {
+    json!({
+        "type": "array",
+        "items": {
+            "oneOf": [
+                {
+                    "type": "object",
+                    "properties": {
+                        "kind": { "const": "notify" },
+                        "level": { "type": "string", "enum": ["inApp", "toast", "sound"] }
+                    },
+                    "required": ["kind"]
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "kind": { "const": "popup" },
+                        "title": { "type": "string" },
+                        "body": { "type": "string" }
+                    },
+                    "required": ["kind", "title", "body"]
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "kind": { "const": "email" },
+                        "to": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+                        "subject": { "type": "string" },
+                        "body": { "type": "string" }
+                    },
+                    "required": ["kind", "to", "subject", "body"]
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "kind": { "const": "webhook" },
+                        "url": { "type": "string" },
+                        "method": { "type": "string", "description": "HTTP method; defaults to POST." },
+                        "body": { "type": "string" }
+                    },
+                    "required": ["kind", "url"]
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "kind": { "const": "runBatch" },
+                        "siteId": { "type": "string" },
+                        "task": itops_batch_task_schema()
+                    },
+                    "required": ["kind", "siteId", "task"]
+                }
+            ]
+        }
+    })
+}
+
+/// Assistant-authored Batch Tasks may not introduce privileged material:
+/// sudo steps and their secret-vault references are configured in the Task
+/// Library editor. A full-value update may resend an existing sudo step only
+/// when that step remains byte-for-byte unchanged at the same position.
+fn validate_assistant_task(
+    task: &crate::itops::types::BatchTask,
+    existing_task: Option<&crate::itops::types::BatchTask>,
+) -> Result<(), String> {
+    use crate::itops::types::{BatchTask, PlaybookStepKind};
+
+    if let BatchTask::Playbook { steps, .. } = task {
+        let existing_steps = match existing_task {
+            Some(BatchTask::Playbook { steps, .. }) => Some(steps.as_slice()),
+            _ => None,
+        };
+        for (index, step) in steps.iter().enumerate() {
+            let keeps_existing_sudo_step = existing_steps
+                .and_then(|existing| existing.get(index))
+                .is_some_and(|existing| existing == step);
+            match step.kind {
+                PlaybookStepKind::Sudo if keeps_existing_sudo_step => {}
+                PlaybookStepKind::Sudo => {
+                    return Err(
+                        "sudo steps must remain unchanged or be configured in the Task Library editor".to_string(),
+                    );
+                }
+                _ if step.secret_owner_id.is_some() => {
+                    return Err(
+                        "secretOwnerId is reserved for sudo steps configured in the Task Library editor".to_string(),
+                    );
+                }
+                _ => {}
+            }
+        }
+    }
+    Ok(())
 }
 
 fn assistant_use_skill_tool_definition(
@@ -3829,7 +4204,9 @@ async fn run_ai_tool(
         name if tool_settings.dashboard() && name.starts_with("dashboard_") => {
             dashboard_tool(app, name, args)
         }
-        name if tool_settings.itops() && name.starts_with("itops_") => itops_tool(app, name, args),
+        name if tool_settings.itops() && name.starts_with("itops_") => {
+            itops_tool(app, name, args).await
+        }
         name if tool_settings.connections() && name.starts_with("connection_") => {
             connection_tool(app, name, args)
         }
@@ -3929,7 +4306,10 @@ fn tool_requires_allow_all(tool_name: &str) -> bool {
                     | "dashboard_read_widget_source"
                     | "dashboard_check_widget_health"
             ))
-        || (tool_name.starts_with("itops_") && !tool_name.starts_with("itops_list"))
+        || (tool_name.starts_with("itops_")
+            && !(tool_name.starts_with("itops_list")
+                || tool_name.starts_with("itops_get")
+                || tool_name == "itops_test_automation"))
         || matches!(
             tool_name,
             "connection_create"
@@ -4193,17 +4573,37 @@ fn compact_itops_value(mut value: Value) -> Value {
     value
 }
 
+fn optional_itops_mount_face(args: &Value) -> Result<Option<RackMountFace>, String> {
+    match args.get("mountFace") {
+        None | Some(Value::Null) => Ok(None),
+        Some(value) => serde_json::from_value(value.clone())
+            .map(Some)
+            .map_err(|_| "mountFace must be front or rear".to_string()),
+    }
+}
+
 /// IT Ops Module tools shared by the in-app assistant and the built-in MCP
-/// bridge (`kkterm.itops.*`): Site/Server Room/Rack topology reads and
-/// creation, Rack Device placement, and the Host inventory list. Mutations
-/// emit `itops-changed` so the IT Ops Module reloads when a change arrives
-/// from outside its own UI.
-pub(crate) fn itops_tool(app: &tauri::AppHandle, name: &str, args: Value) -> String {
+/// bridge (`kkterm.itops.*`): Site/Server Room/Rack topology, Rack Device
+/// placement, the Host inventory, the global Task Library, durable
+/// Automations, and Batch Runs. Mutations emit `itops-changed` so the IT Ops
+/// Module reloads when a change arrives from outside its own UI.
+pub(crate) async fn itops_tool(app: &tauri::AppHandle, name: &str, args: Value) -> String {
+    use crate::itops::automation_commands as itops_auto_commands;
+    use crate::itops::automation_storage as itops_autos;
+    use crate::itops::commands as itops_commands;
     use crate::itops::host_storage as itops_hosts;
     use crate::itops::ids::new_itops_id;
+    use crate::itops::run_storage as itops_runs;
     use crate::itops::site_storage as itops_topo;
     use crate::itops::storage as itops_sites;
-    use crate::itops::types::{RackItemKind, RackItemMetadata, Transport};
+    use crate::itops::task_commands as itops_task_commands;
+    use crate::itops::task_storage as itops_tasks;
+    use crate::itops::types::{
+        AutomationAction, BatchTask, HostKind, ItopsTask, RackItemKind, RackItemMetadata,
+        RunHistoryEntry, RunScope, SiteFilter, TaskOperatingSystem, Transport,
+    };
+    use crate::watchdog::WatchdogRegistry;
+    use crate::watchdog::types::{WatchdogAction, WatchdogConfig};
 
     fn to_value<T: serde::Serialize>(value: T) -> Value {
         serde_json::to_value(value).unwrap_or(Value::Null)
@@ -4222,7 +4622,8 @@ pub(crate) fn itops_tool(app: &tauri::AppHandle, name: &str, args: Value) -> Str
             .and_then(|value| u32::try_from(value).ok())
     }
     fn required_u32(args: &Value, key: &str) -> Result<u32, String> {
-        optional_u32(args, key).ok_or_else(|| format!("{key} is required and must be a positive integer"))
+        optional_u32(args, key)
+            .ok_or_else(|| format!("{key} is required and must be a positive integer"))
     }
     fn item_kind(args: &Value) -> Result<RackItemKind, String> {
         serde_json::from_value(args.get("kind").cloned().unwrap_or(Value::Null))
@@ -4242,156 +4643,675 @@ pub(crate) fn itops_tool(app: &tauri::AppHandle, name: &str, args: Value) -> Str
             .filter(|value| !value.is_empty())
             .map(str::to_string)
     }
+    fn optional_string(args: &Value, key: &str) -> Option<String> {
+        args.get(key)
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .map(str::to_string)
+    }
+    fn string_array(args: &Value, key: &str) -> Option<Vec<String>> {
+        args.get(key).and_then(Value::as_array).map(|values| {
+            values
+                .iter()
+                .filter_map(Value::as_str)
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
+                .map(str::to_string)
+                .collect()
+        })
+    }
+    fn parse_host_kind(args: &Value) -> Result<HostKind, String> {
+        match args.get("kind") {
+            None | Some(Value::Null) => Ok(HostKind::Physical),
+            Some(value) => serde_json::from_value(value.clone())
+                .map_err(|_| "kind must be physical, vm, container, or other".to_string()),
+        }
+    }
+    fn parse_batch_task(value: Option<&Value>) -> Result<BatchTask, String> {
+        serde_json::from_value(value.cloned().unwrap_or(Value::Null))
+            .map_err(|error| format!("invalid task: {error}"))
+    }
+    fn parse_applicable_os(args: &Value) -> Result<Vec<TaskOperatingSystem>, String> {
+        let parsed: Vec<TaskOperatingSystem> = match args.get("applicableOs") {
+            None | Some(Value::Null) => Vec::new(),
+            Some(value) => serde_json::from_value(value.clone())
+                .map_err(|error| format!("invalid applicableOs: {error}"))?,
+        };
+        if parsed.is_empty() {
+            Ok(vec![TaskOperatingSystem::Any])
+        } else {
+            Ok(parsed)
+        }
+    }
+    fn parse_automation_config(args: &Value) -> Result<WatchdogConfig, String> {
+        let config: WatchdogConfig =
+            serde_json::from_value(args.get("config").cloned().unwrap_or(Value::Null))
+                .map_err(|error| format!("invalid config: {error}"))?;
+        Ok(config)
+    }
+    fn parse_notify_automation_config(args: &Value) -> Result<WatchdogConfig, String> {
+        let config = parse_automation_config(args)?;
+        if !matches!(config.action, WatchdogAction::Notify) {
+            return Err(
+                "config.action must be {\"kind\":\"notify\"} — the Automation's ordered actions list carries the real work".to_string(),
+            );
+        }
+        Ok(config)
+    }
+    fn parse_automation_actions(args: &Value) -> Result<Vec<AutomationAction>, String> {
+        let actions: Vec<AutomationAction> =
+            serde_json::from_value(args.get("actions").cloned().unwrap_or_else(|| json!([])))
+                .map_err(|error| format!("invalid actions: {error}"))?;
+        for action in &actions {
+            if let AutomationAction::RunBatch { task, .. } = action {
+                validate_assistant_task(task, None)?;
+            }
+        }
+        Ok(actions)
+    }
+    /// Compact Task Library projection: metadata plus a redacted summary, never
+    /// full script bodies (itops_get_task returns the full definition).
+    fn compact_task_list(tasks: Vec<ItopsTask>) -> Value {
+        Value::Array(
+            tasks
+                .into_iter()
+                .map(|task| {
+                    json!({
+                        "id": task.id,
+                        "name": task.name,
+                        "description": task.description,
+                        "applicableOs": to_value(&task.applicable_os),
+                        "builtInKey": task.built_in_key,
+                        "kind": match &task.task {
+                            BatchTask::Script { .. } => "script",
+                            BatchTask::Playbook { .. } => "playbook",
+                        },
+                        "summary": task.task.summary(),
+                    })
+                })
+                .collect(),
+        )
+    }
+    /// One run-history entry without per-host output text (itops_get_run_report
+    /// attaches capped output).
+    fn compact_run_entry(entry: &RunHistoryEntry) -> Value {
+        json!({
+            "id": entry.id,
+            "source": entry.source,
+            "siteId": entry.site_id,
+            "taskId": entry.task_id,
+            "taskSummary": entry.task_summary,
+            "startedAt": entry.started_at,
+            "finishedAt": entry.finished_at,
+            "report": {
+                "ok": entry.report.ok,
+                "failed": entry.report.failed,
+                "total": entry.report.total,
+                "hosts": entry.report.hosts.iter().map(|host| json!({
+                    "connectionId": host.connection_id,
+                    "name": host.name,
+                    "host": host.host,
+                    "ok": host.ok,
+                    "exitCode": host.exit_code,
+                    "durationMs": host.duration_ms,
+                    "bytesOut": host.bytes_out,
+                    "error": host.error,
+                })).collect::<Vec<_>>(),
+            }
+        })
+    }
+    fn tail_chars(text: &str, max: usize) -> String {
+        let count = text.chars().count();
+        if count <= max {
+            text.to_string()
+        } else {
+            let tail: String = text.chars().skip(count - max).collect();
+            format!("… (first {} chars truncated)\n{tail}", count - max)
+        }
+    }
 
     let storage = app.state::<Storage>();
-    let result: Result<Value, String> = storage.with_connection_infallible(|conn| match name {
-        "itops_list_sites" => itops_sites::list_sites(conn)
-            .map(|sites| compact_itops_value(to_value(sites)))
-            .map_err(|e| e.to_string()),
-        "itops_create_site" => {
-            let site_name = required_string(&args, "name")?;
-            let member_ids: Vec<String> = args
-                .get("memberIds")
-                .and_then(Value::as_array)
-                .map(|values| {
-                    values
-                        .iter()
-                        .filter_map(Value::as_str)
-                        .map(str::to_string)
-                        .collect()
-                })
-                .unwrap_or_default();
-            let transport: Transport = match args.get("transport") {
-                None | Some(Value::Null) => Transport::Auto,
-                Some(value) => serde_json::from_value(value.clone())
-                    .map_err(|_| "transport must be ssh, winrm, psexec, or auto".to_string())?,
-            };
-            let id = new_itops_id("hg");
-            itops_sites::create_site(
-                conn, &id, &site_name, member_ids, None, transport, None, None, None,
-            )
-            .map(|site| compact_itops_value(to_value(site)))
-            .map_err(|e| e.to_string())
-        }
-        "itops_list_server_rooms" => {
-            let site_id = required_string(&args, "siteId")?;
-            itops_topo::list_server_rooms(conn, &site_id)
-                .map(to_value)
-                .map_err(|e| e.to_string())
-        }
-        "itops_create_server_room" => {
-            let site_id = required_string(&args, "siteId")?;
-            let room_name = required_string(&args, "name")?;
-            let floor_color = arg_string(&args, "floorColor");
-            let floor_color = if floor_color.trim().is_empty() {
-                "default".to_string()
-            } else {
-                floor_color
-            };
-            let id = new_itops_id("room");
-            itops_topo::create_server_room(conn, &id, &site_id, &room_name, &floor_color)
-                .map(to_value)
-                .map_err(|e| e.to_string())
-        }
-        "itops_list_racks" => {
-            let site_id = required_string(&args, "siteId")?;
-            itops_topo::list_racks(conn, &site_id)
-                .map(|racks| compact_itops_value(to_value(racks)))
-                .map_err(|e| e.to_string())
-        }
-        "itops_create_rack" => {
-            let site_id = required_string(&args, "siteId")?;
-            let rack_name = required_string(&args, "name")?;
-            let server_room = required_string(&args, "serverRoom")?;
-            let rack_group = arg_string(&args, "rackGroup");
-            let shell = args
-                .get("shell")
-                .and_then(Value::as_str)
-                .map(str::to_string);
-            let height_u = optional_u32(&args, "heightU").unwrap_or(42);
-            let depth_mm = optional_u32(&args, "depthMm").unwrap_or(1000);
-            let power_capacity_w = optional_u32(&args, "powerCapacityW");
-            let id = new_itops_id("rack");
-            itops_topo::create_rack(
-                conn,
-                &id,
-                &site_id,
-                &rack_name,
-                &server_room,
-                &rack_group,
-                shell.as_deref(),
-                height_u,
-                depth_mm,
-                power_capacity_w,
-            )
-            .map(|rack| compact_itops_value(to_value(rack)))
-            .map_err(|e| e.to_string())
-        }
-        "itops_place_rack_item" => {
-            let rack_id = required_string(&args, "rackId")?;
-            let kind = item_kind(&args)?;
-            let label = arg_string(&args, "label");
-            let start_u = required_u32(&args, "startU")?;
-            let height_u = required_u32(&args, "heightU")?;
-            let metadata = item_metadata(&args)?;
-            let id = new_itops_id("ri");
-            itops_topo::place_rack_item(
-                conn,
-                &id,
-                &rack_id,
-                optional_connection_id(&args),
-                kind,
-                &label,
-                start_u,
-                height_u,
-                metadata,
+
+    // Tools that manage their own storage access, secrets, or runtime state —
+    // they must run outside the shared storage closure (the connection lock is
+    // not reentrant) and may await.
+    let delegated: Option<Result<Value, String>> = match name {
+        "itops_scan_hosts" => Some(
+            async {
+                let site_id = required_string(&args, "siteId")?;
+                let host_ids = string_array(&args, "hostIds").unwrap_or_default();
+                itops_commands::itops_scan_hosts(app.clone(), site_id, host_ids)
+                    .await
+                    .map(to_value)
+            }
+            .await,
+        ),
+        "itops_test_automation" => Some(
+            async {
+                let config = parse_automation_config(&args)?;
+                itops_auto_commands::itops_test_automation(app.clone(), config)
+                    .await
+                    .map(to_value)
+            }
+            .await,
+        ),
+        "itops_update_task" => Some((|| {
+            let id = required_string(&args, "id")?;
+            let task_name = required_string(&args, "name")?;
+            let description = arg_string(&args, "description");
+            let applicable_os = parse_applicable_os(&args)?;
+            let task = parse_batch_task(args.get("task"))?;
+            let existing_task = storage.with_connection_infallible(|conn| {
+                itops_tasks::get_task(conn, &id)
+                    .map_err(|error| error.to_string())?
+                    .ok_or_else(|| "task not found".to_string())
+                    .map(|existing| existing.task)
+            })?;
+            validate_assistant_task(&task, Some(&existing_task))?;
+            itops_task_commands::itops_update_task(
+                app.clone(),
+                id,
+                task_name,
+                description,
+                applicable_os,
+                task,
             )
             .map(to_value)
-            .map_err(|e| e.to_string())
-        }
-        "itops_update_rack_item" => {
+        })()),
+        "itops_remove_task" => Some((|| {
             let id = required_string(&args, "id")?;
-            let kind = item_kind(&args)?;
-            let label = arg_string(&args, "label");
-            let metadata = item_metadata(&args)?;
-            itops_topo::update_rack_item(
-                conn,
-                &id,
-                kind,
-                optional_connection_id(&args),
-                &label,
-                metadata,
-                None,
+            itops_task_commands::itops_remove_task(app.clone(), id).map(|_| json!({"ok": true}))
+        })()),
+        "itops_create_automation" => Some((|| {
+            let rule_name = required_string(&args, "name")?;
+            let config = parse_notify_automation_config(&args)?;
+            let actions = parse_automation_actions(&args)?;
+            let enabled = args.get("enabled").and_then(Value::as_bool).unwrap_or(true);
+            let site_id = optional_string(&args, "siteId");
+            itops_auto_commands::itops_create_automation(
+                app.clone(),
+                app.state::<std::sync::Arc<WatchdogRegistry>>(),
+                app.state::<itops_auto_commands::ItopsAutomationRuntime>(),
+                rule_name,
+                config,
+                actions,
+                enabled,
+                site_id,
             )
             .map(to_value)
-            .map_err(|e| e.to_string())
-        }
-        "itops_move_rack_item" => {
+        })()),
+        "itops_update_automation" => Some((|| {
             let id = required_string(&args, "id")?;
-            let rack_id = required_string(&args, "rackId")?;
-            let start_u = required_u32(&args, "startU")?;
-            let height_u = required_u32(&args, "heightU")?;
-            itops_topo::move_rack_item(conn, &id, &rack_id, start_u, height_u, None)
-                .map(to_value)
-                .map_err(|e| e.to_string())
-        }
-        "itops_remove_rack_item" => {
+            let rule_name = required_string(&args, "name")?;
+            let config = parse_notify_automation_config(&args)?;
+            let actions = parse_automation_actions(&args)?;
+            let site_id = optional_string(&args, "siteId");
+            itops_auto_commands::itops_update_automation(
+                app.clone(),
+                app.state::<std::sync::Arc<WatchdogRegistry>>(),
+                app.state::<itops_auto_commands::ItopsAutomationRuntime>(),
+                id,
+                rule_name,
+                config,
+                actions,
+                site_id,
+            )
+            .map(to_value)
+        })()),
+        "itops_set_automation_enabled" => Some((|| {
             let id = required_string(&args, "id")?;
-            itops_topo::remove_rack_item(conn, &id)
-                .map(|_| json!({"ok": true}))
-                .map_err(|e| e.to_string())
-        }
-        "itops_list_hosts" => {
+            let enabled = args
+                .get("enabled")
+                .and_then(Value::as_bool)
+                .ok_or_else(|| "enabled is required".to_string())?;
+            itops_auto_commands::itops_set_automation_enabled(
+                app.clone(),
+                app.state::<std::sync::Arc<WatchdogRegistry>>(),
+                app.state::<itops_auto_commands::ItopsAutomationRuntime>(),
+                id,
+                enabled,
+            )
+            .map(to_value)
+        })()),
+        "itops_remove_automation" => Some((|| {
+            let id = required_string(&args, "id")?;
+            itops_auto_commands::itops_remove_automation(
+                app.clone(),
+                app.state::<std::sync::Arc<WatchdogRegistry>>(),
+                app.state::<itops_auto_commands::ItopsAutomationRuntime>(),
+                id,
+            )
+            .map(|_| json!({"ok": true}))
+        })()),
+        "itops_start_batch_run" => Some((|| {
             let site_id = required_string(&args, "siteId")?;
-            itops_hosts::list_hosts(conn, &site_id)
+            let task_id = optional_string(&args, "taskId");
+            let script = args.get("script").filter(|value| !value.is_null());
+            let (task, history_task_id) = match (&task_id, script) {
+                (Some(task_id), None) => {
+                    let stored = storage.with_connection_infallible(|conn| {
+                        itops_tasks::get_task(conn, task_id)
+                            .map_err(|error| error.to_string())?
+                            .ok_or_else(|| "task not found".to_string())
+                    })?;
+                    (stored.task, Some(task_id.clone()))
+                }
+                (None, Some(script)) => {
+                    let body = script
+                        .get("body")
+                        .and_then(Value::as_str)
+                        .map(str::trim)
+                        .filter(|value| !value.is_empty())
+                        .ok_or_else(|| "script.body is required".to_string())?
+                        .to_string();
+                    let shell = script
+                        .get("shell")
+                        .and_then(Value::as_str)
+                        .map(str::to_string);
+                    (BatchTask::Script { body, shell }, None)
+                }
+                _ => return Err("pass exactly one of taskId or script".to_string()),
+            };
+            let scope: Option<RunScope> = match args.get("scope") {
+                None | Some(Value::Null) => None,
+                Some(value) => Some(
+                    serde_json::from_value(value.clone())
+                        .map_err(|error| format!("invalid scope: {error}"))?,
+                ),
+            };
+            itops_commands::start_run(app, site_id, task, scope, history_task_id)
+                .map(|run_id| json!({"ok": true, "runId": run_id, "status": "running"}))
+        })()),
+        "itops_cancel_batch_run" => Some((|| {
+            let run_id = required_string(&args, "runId")?;
+            itops_commands::itops_cancel_batch_run(app.clone(), run_id).map(|_| json!({"ok": true}))
+        })()),
+        _ => None,
+    };
+
+    let result: Result<Value, String> = match delegated {
+        Some(result) => result,
+        None => storage.with_connection_infallible(|conn| match name {
+            "itops_list_sites" => itops_sites::list_sites(conn)
+                .map(|sites| compact_itops_value(to_value(sites)))
+                .map_err(|e| e.to_string()),
+            "itops_create_site" => {
+                let site_name = required_string(&args, "name")?;
+                let member_ids: Vec<String> = args
+                    .get("memberIds")
+                    .and_then(Value::as_array)
+                    .map(|values| {
+                        values
+                            .iter()
+                            .filter_map(Value::as_str)
+                            .map(str::to_string)
+                            .collect()
+                    })
+                    .unwrap_or_default();
+                let transport: Transport = match args.get("transport") {
+                    None | Some(Value::Null) => Transport::Auto,
+                    Some(value) => serde_json::from_value(value.clone())
+                        .map_err(|_| "transport must be ssh, winrm, psexec, or auto".to_string())?,
+                };
+                let id = new_itops_id("hg");
+                itops_sites::create_site(
+                    conn, &id, &site_name, member_ids, None, transport, None, None, None,
+                )
+                .map(|site| compact_itops_value(to_value(site)))
+                .map_err(|e| e.to_string())
+            }
+            "itops_list_server_rooms" => {
+                let site_id = required_string(&args, "siteId")?;
+                itops_topo::list_server_rooms(conn, &site_id)
+                    .map(to_value)
+                    .map_err(|e| e.to_string())
+            }
+            "itops_create_server_room" => {
+                let site_id = required_string(&args, "siteId")?;
+                let room_name = required_string(&args, "name")?;
+                let floor_color = arg_string(&args, "floorColor");
+                let floor_color = if floor_color.trim().is_empty() {
+                    "default".to_string()
+                } else {
+                    floor_color
+                };
+                let id = new_itops_id("room");
+                itops_topo::create_server_room(conn, &id, &site_id, &room_name, &floor_color)
+                    .map(to_value)
+                    .map_err(|e| e.to_string())
+            }
+            "itops_list_racks" => {
+                let site_id = required_string(&args, "siteId")?;
+                itops_topo::list_racks(conn, &site_id)
+                    .map(|racks| compact_itops_value(to_value(racks)))
+                    .map_err(|e| e.to_string())
+            }
+            "itops_create_rack" => {
+                let site_id = required_string(&args, "siteId")?;
+                let rack_name = required_string(&args, "name")?;
+                let server_room = required_string(&args, "serverRoom")?;
+                let rack_group = arg_string(&args, "rackGroup");
+                let shell = args
+                    .get("shell")
+                    .and_then(Value::as_str)
+                    .map(str::to_string);
+                let height_u = optional_u32(&args, "heightU").unwrap_or(42);
+                let depth_mm = optional_u32(&args, "depthMm").unwrap_or(1000);
+                let power_capacity_w = optional_u32(&args, "powerCapacityW");
+                let id = new_itops_id("rack");
+                itops_topo::create_rack(
+                    conn,
+                    &id,
+                    &site_id,
+                    &rack_name,
+                    &server_room,
+                    &rack_group,
+                    shell.as_deref(),
+                    height_u,
+                    depth_mm,
+                    power_capacity_w,
+                )
+                .map(|rack| compact_itops_value(to_value(rack)))
+                .map_err(|e| e.to_string())
+            }
+            "itops_place_rack_item" => {
+                let rack_id = required_string(&args, "rackId")?;
+                let kind = item_kind(&args)?;
+                let label = arg_string(&args, "label");
+                let start_u = required_u32(&args, "startU")?;
+                let height_u = required_u32(&args, "heightU")?;
+                let metadata = item_metadata(&args)?;
+                let id = new_itops_id("ri");
+                itops_topo::place_rack_item_on_face(
+                    conn,
+                    &id,
+                    &rack_id,
+                    optional_connection_id(&args),
+                    kind,
+                    &label,
+                    start_u,
+                    height_u,
+                    optional_itops_mount_face(&args)?.unwrap_or_default(),
+                    metadata,
+                )
                 .map(to_value)
                 .map_err(|e| e.to_string())
-        }
-        _ => Err(format!("unknown IT Ops tool: {name}")),
-    });
+            }
+            "itops_update_rack_item" => {
+                let id = required_string(&args, "id")?;
+                let kind = item_kind(&args)?;
+                let label = arg_string(&args, "label");
+                let metadata = item_metadata(&args)?;
+                itops_topo::update_rack_item_on_face(
+                    conn,
+                    &id,
+                    kind,
+                    optional_connection_id(&args),
+                    &label,
+                    metadata,
+                    None,
+                    optional_itops_mount_face(&args)?,
+                )
+                .map(to_value)
+                .map_err(|e| e.to_string())
+            }
+            "itops_move_rack_item" => {
+                let id = required_string(&args, "id")?;
+                let rack_id = required_string(&args, "rackId")?;
+                let start_u = required_u32(&args, "startU")?;
+                let height_u = required_u32(&args, "heightU")?;
+                itops_topo::move_rack_item_to_face(
+                    conn,
+                    &id,
+                    &rack_id,
+                    start_u,
+                    height_u,
+                    None,
+                    optional_itops_mount_face(&args)?,
+                )
+                .map(to_value)
+                .map_err(|e| e.to_string())
+            }
+            "itops_remove_rack_item" => {
+                let id = required_string(&args, "id")?;
+                itops_topo::remove_rack_item(conn, &id)
+                    .map(|_| json!({"ok": true}))
+                    .map_err(|e| e.to_string())
+            }
+            "itops_list_hosts" => {
+                let site_id = required_string(&args, "siteId")?;
+                itops_hosts::list_hosts(conn, &site_id)
+                    .map(to_value)
+                    .map_err(|e| e.to_string())
+            }
+            "itops_update_site" => {
+                let id = required_string(&args, "id")?;
+                let existing = itops_sites::list_sites(conn)
+                    .map_err(|e| e.to_string())?
+                    .into_iter()
+                    .find(|site| site.id == id)
+                    .ok_or_else(|| "site not found".to_string())?;
+                let site_name =
+                    optional_string(&args, "name").unwrap_or_else(|| existing.name.clone());
+                let member_ids =
+                    string_array(&args, "memberIds").unwrap_or_else(|| existing.member_ids.clone());
+                let filter: Option<SiteFilter> = match args.get("filter") {
+                    None => existing.filter.clone(),
+                    Some(Value::Null) => None,
+                    Some(value) => Some(
+                        serde_json::from_value(value.clone())
+                            .map_err(|error| format!("invalid filter: {error}"))?,
+                    ),
+                };
+                let transport: Transport = match args.get("transport") {
+                    None | Some(Value::Null) => existing.transport,
+                    Some(value) => serde_json::from_value(value.clone())
+                        .map_err(|_| "transport must be ssh, winrm, psexec, or auto".to_string())?,
+                };
+                itops_sites::update_site(
+                    conn,
+                    &id,
+                    &site_name,
+                    member_ids,
+                    filter,
+                    transport,
+                    existing.icon_color.as_deref(),
+                    existing.icon_data_url.as_deref(),
+                    existing.icon_background_color.as_deref(),
+                )
+                .map(|site| compact_itops_value(to_value(site)))
+                .map_err(|e| e.to_string())
+            }
+            "itops_remove_site" => {
+                let id = required_string(&args, "id")?;
+                itops_sites::remove_site(conn, &id)
+                    .map(|_| json!({"ok": true}))
+                    .map_err(|e| e.to_string())
+            }
+            "itops_update_server_room" => {
+                let id = required_string(&args, "id")?;
+                let room_name = required_string(&args, "name")?;
+                let floor_color = required_string(&args, "floorColor")?;
+                itops_topo::update_server_room(conn, &id, &room_name, &floor_color)
+                    .map(to_value)
+                    .map_err(|e| e.to_string())
+            }
+            "itops_delete_server_room" => {
+                let id = required_string(&args, "id")?;
+                itops_topo::delete_server_room(conn, &id)
+                    .map(|_| json!({"ok": true}))
+                    .map_err(|e| e.to_string())
+            }
+            "itops_update_rack" => {
+                let id = required_string(&args, "id")?;
+                let rack_name = required_string(&args, "name")?;
+                let server_room = required_string(&args, "serverRoom")?;
+                let rack_group = arg_string(&args, "rackGroup");
+                let shell = args
+                    .get("shell")
+                    .and_then(Value::as_str)
+                    .map(str::to_string);
+                let height_u = required_u32(&args, "heightU")?;
+                let depth_mm = required_u32(&args, "depthMm")?;
+                let power_capacity_w = optional_u32(&args, "powerCapacityW");
+                itops_topo::update_rack(
+                    conn,
+                    &id,
+                    &rack_name,
+                    &server_room,
+                    &rack_group,
+                    shell.as_deref(),
+                    height_u,
+                    depth_mm,
+                    power_capacity_w,
+                )
+                .map(|rack| compact_itops_value(to_value(rack)))
+                .map_err(|e| e.to_string())
+            }
+            "itops_delete_rack" => {
+                let id = required_string(&args, "id")?;
+                itops_topo::delete_rack(conn, &id)
+                    .map(|_| json!({"ok": true}))
+                    .map_err(|e| e.to_string())
+            }
+            "itops_create_host" => {
+                let site_id = required_string(&args, "siteId")?;
+                let hostname = required_string(&args, "hostname")?;
+                let label = arg_string(&args, "label");
+                let kind = parse_host_kind(&args)?;
+                let parent_host_id = optional_string(&args, "parentHostId");
+                let notes = arg_string(&args, "notes");
+                let id = new_itops_id("host");
+                itops_hosts::create_host(
+                    conn,
+                    &id,
+                    &site_id,
+                    &hostname,
+                    &label,
+                    kind,
+                    parent_host_id.as_deref(),
+                    &notes,
+                )
+                .map(to_value)
+                .map_err(|e| e.to_string())
+            }
+            "itops_update_host" => {
+                let id = required_string(&args, "id")?;
+                let hostname = required_string(&args, "hostname")?;
+                let label = arg_string(&args, "label");
+                let kind = parse_host_kind(&args)?;
+                let parent_host_id = optional_string(&args, "parentHostId");
+                let connection_ids = string_array(&args, "connectionIds").unwrap_or_default();
+                let notes = arg_string(&args, "notes");
+                itops_hosts::update_host(
+                    conn,
+                    &id,
+                    &hostname,
+                    &label,
+                    kind,
+                    parent_host_id.as_deref(),
+                    connection_ids,
+                    &notes,
+                )
+                .map(to_value)
+                .map_err(|e| e.to_string())
+            }
+            "itops_delete_host" => {
+                let id = required_string(&args, "id")?;
+                itops_hosts::delete_host(conn, &id)
+                    .map(|_| json!({"ok": true}))
+                    .map_err(|e| e.to_string())
+            }
+            "itops_import_hosts" => {
+                let site_id = required_string(&args, "siteId")?;
+                let hostnames = string_array(&args, "hostnames").unwrap_or_default();
+                if hostnames.is_empty() {
+                    return Err("hostnames is required".to_string());
+                }
+                itops_hosts::import_hosts(conn, &site_id, &hostnames, || new_itops_id("host"))
+                    .map(to_value)
+                    .map_err(|e| e.to_string())
+            }
+            "itops_list_tasks" => itops_tasks::list_tasks(conn)
+                .map(compact_task_list)
+                .map_err(|e| e.to_string()),
+            "itops_get_task" => {
+                let id = required_string(&args, "id")?;
+                itops_tasks::get_task(conn, &id)
+                    .map_err(|e| e.to_string())?
+                    .ok_or_else(|| "task not found".to_string())
+                    .map(to_value)
+            }
+            "itops_create_task" => {
+                let task_name = required_string(&args, "name")?;
+                let description = arg_string(&args, "description");
+                let applicable_os = parse_applicable_os(&args)?;
+                let task = parse_batch_task(args.get("task"))?;
+                validate_assistant_task(&task, None)?;
+                let id = new_itops_id("task");
+                itops_tasks::create_task(conn, &id, &task_name, &description, &applicable_os, &task)
+                    .map(to_value)
+                    .map_err(|e| e.to_string())
+            }
+            "itops_list_automations" => itops_autos::list_automations(conn)
+                .map(to_value)
+                .map_err(|e| e.to_string()),
+            "itops_list_run_history" => {
+                let limit = optional_u32(&args, "limit").unwrap_or(20).clamp(1, 100) as usize;
+                let site_filter = optional_string(&args, "siteId");
+                itops_runs::list_run_history(conn, 500)
+                    .map(|entries| {
+                        Value::Array(
+                            entries
+                                .iter()
+                                .filter(|entry| {
+                                    site_filter
+                                        .as_deref()
+                                        .is_none_or(|site| entry.site_id.as_deref() == Some(site))
+                                })
+                                .take(limit)
+                                .map(compact_run_entry)
+                                .collect(),
+                        )
+                    })
+                    .map_err(|e| e.to_string())
+            }
+            "itops_get_run_report" => {
+                let run_id = required_string(&args, "runId")?;
+                let max_chars = optional_u32(&args, "maxOutputChars")
+                    .unwrap_or(4000)
+                    .clamp(100, 20_000) as usize;
+                let entry = itops_runs::list_run_history(conn, 500)
+                    .map_err(|e| e.to_string())?
+                    .into_iter()
+                    .find(|entry| entry.id == run_id)
+                    .ok_or_else(|| "run not found".to_string())?;
+                let mut value = compact_run_entry(&entry);
+                if let Some(hosts) = value
+                    .pointer_mut("/report/hosts")
+                    .and_then(Value::as_array_mut)
+                {
+                    for (host_value, host) in hosts.iter_mut().zip(entry.report.hosts.iter()) {
+                        if let Some(object) = host_value.as_object_mut() {
+                            object.insert(
+                                "output".to_string(),
+                                Value::String(tail_chars(&host.output, max_chars)),
+                            );
+                        }
+                    }
+                }
+                Ok(value)
+            }
+            _ => Err(format!("unknown IT Ops tool: {name}")),
+        }),
+    };
     match result {
         Ok(value) => {
-            if !name.starts_with("itops_list") {
+            let read_only = name.starts_with("itops_list")
+                || name.starts_with("itops_get")
+                || name == "itops_test_automation";
+            if !read_only {
                 let _ = app.emit("itops-changed", json!({ "source": "aiTool", "tool": name }));
             }
             value.to_string()
@@ -5472,17 +6392,16 @@ fn shell_command_tool(root: &Path, args: Value) -> String {
         })
         .to_string();
     }
-    let output = if shell.eq_ignore_ascii_case("batch") {
-        Command::new("cmd")
-            .args(["/C", &command])
-            .current_dir(root)
-            .output()
+    let mut process = if shell.eq_ignore_ascii_case("batch") {
+        let mut process = Command::new("cmd");
+        process.args(["/C", &command]);
+        process
     } else {
-        Command::new("powershell")
-            .args(["-NoProfile", "-NonInteractive", "-Command", &command])
-            .current_dir(root)
-            .output()
+        let mut process = Command::new("powershell");
+        process.args(["-NoProfile", "-NonInteractive", "-Command", &command]);
+        process
     };
+    let output = crate::installer::proc::no_window(process.current_dir(root)).output();
     match output {
         Ok(output) => {
             let mut text = String::new();

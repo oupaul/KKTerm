@@ -402,15 +402,15 @@ export function BatchRunsTab({ siteId }: {
   const [openReport, setOpenReport] = useState<RunHistoryEntry | null>(null);
 
   if (activeRun && (!siteId || activeRun.siteId === siteId)) {
-    return <div className="it-destination-surface"><RunHistoryHeader /><LiveRunView run={activeRun} /></div>;
+    return <div className="it-destination-surface" data-tutorial-id="itops.runHistoryPanel"><RunHistoryHeader /><LiveRunView run={activeRun} /></div>;
   }
 
   if (openReport) {
-    return <div className="it-destination-surface"><RunHistoryHeader /><RunReportView entry={openReport} onBack={() => setOpenReport(null)} /></div>;
+    return <div className="it-destination-surface" data-tutorial-id="itops.runHistoryPanel"><RunHistoryHeader /><RunReportView entry={openReport} onBack={() => setOpenReport(null)} /></div>;
   }
 
   return (
-    <div className="br it-destination-surface">
+    <div className="br it-destination-surface" data-tutorial-id="itops.runHistoryPanel">
       <RunHistoryHeader />
       {runHistory.length === 0 ? (
         <ItOpsEmptyHint>{t("itops.batchRuns.historyEmptyHint")}</ItOpsEmptyHint>
@@ -425,6 +425,7 @@ export function BatchRunsTab({ siteId }: {
                 key={run.id}
                 type="button"
                 className="member as-button"
+                data-tutorial-id={`itops.run:${run.id}`}
                 onClick={() => setOpenReport(run)}
               >
                 <span className="tile">

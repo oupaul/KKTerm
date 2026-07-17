@@ -27,7 +27,7 @@ use rusqlite::Connection as SqliteConnection;
 use rusqlite::types::{Value as SqlValue, ValueRef};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
-use tauri::{AppHandle, State};
+use tauri::{AppHandle, Manager};
 use time::OffsetDateTime;
 use time::format_description::well_known::Rfc3339;
 use zip::{ZipArchive, ZipWriter, write::SimpleFileOptions};
@@ -285,14 +285,28 @@ struct EncryptedBlob {
 // ── Export ────────────────────────────────────────────────────────────────
 
 #[tauri::command]
-pub fn export_selective_database(
-    storage: State<'_, Storage>,
-    secrets: State<'_, Secrets>,
+pub async fn export_selective_database(
+    app: AppHandle,
     path: String,
     segments: Vec<String>,
     include_credentials: bool,
     passphrase: Option<String>,
 ) -> Result<SelectiveExportInfo, String> {
+    crate::run_blocking_database_command("selective database export", move || {
+        export_selective_database_sync(&app, path, segments, include_credentials, passphrase)
+    })
+    .await
+}
+
+fn export_selective_database_sync(
+    app: &AppHandle,
+    path: String,
+    segments: Vec<String>,
+    include_credentials: bool,
+    passphrase: Option<String>,
+) -> Result<SelectiveExportInfo, String> {
+    let storage = app.state::<Storage>();
+    let secrets = app.state::<Secrets>();
     if segments.is_empty() {
         return Err("select at least one category to export".to_string());
     }
@@ -457,22 +471,37 @@ fn collect_connection_secrets(
 // ── Inspect ─────────────────────────────────────────────────────────────────
 
 #[tauri::command]
-pub fn inspect_selective_database(path: String) -> Result<SelectiveManifest, String> {
-    let (manifest, _data, _secrets) = read_bundle(Path::new(&path))?;
-    Ok(manifest)
+pub async fn inspect_selective_database(path: String) -> Result<SelectiveManifest, String> {
+    crate::run_blocking_command("selective database inspection", move || {
+        let (manifest, _data, _secrets) = read_bundle(Path::new(&path))?;
+        Ok(manifest)
+    })
+    .await
 }
 
 // ── Import ────────────────────────────────────────────────────────────────
 
 #[tauri::command]
-pub fn import_selective_database(
+pub async fn import_selective_database(
     app: AppHandle,
-    storage: State<'_, Storage>,
-    secrets: State<'_, Secrets>,
     path: String,
     actions: HashMap<String, String>,
     passphrase: Option<String>,
 ) -> Result<SelectiveImportResult, String> {
+    crate::run_blocking_database_command("selective database import", move || {
+        import_selective_database_sync(&app, path, actions, passphrase)
+    })
+    .await
+}
+
+fn import_selective_database_sync(
+    app: &AppHandle,
+    path: String,
+    actions: HashMap<String, String>,
+    passphrase: Option<String>,
+) -> Result<SelectiveImportResult, String> {
+    let storage = app.state::<Storage>();
+    let secrets = app.state::<Secrets>();
     let (manifest, data, secrets_blob) = read_bundle(Path::new(&path))?;
     if manifest.format != SELECTIVE_FORMAT {
         return Err(format!("unsupported bundle format {:?}", manifest.format));
@@ -545,7 +574,7 @@ pub fn import_selective_database(
     })?;
 
     if applied.iter().any(|segment| segment == "itops") {
-        crate::itops::automation_commands::reconcile_automations(&app);
+        crate::itops::automation_commands::reconcile_automations(app);
     }
 
     // Write credentials into the active backend, owner ids rewritten via remap.
@@ -648,7 +677,7 @@ fn apply_segment(
                 continue;
             }
             let mut rewritten = row_obj.clone();
-            rewrite_row(tx, table, &mut rewritten, remap)?;
+            rewrite_row(tx, table, &mut rewritten, action, remap)?;
             // On "add", a built-in Task the importer already has (same
             // deterministic id / built_in_key) is kept as-is rather than
             // duplicated; one the importer lacks is inserted.
@@ -675,6 +704,7 @@ fn rewrite_row(
     tx: &rusqlite::Transaction<'_>,
     table: &TableSpec,
     row: &mut Map<String, Value>,
+    action: &str,
     remap: &HashMap<(String, String), String>,
 ) -> Result<(), String> {
     // Primary key.
@@ -691,7 +721,7 @@ fn rewrite_row(
 
     // Workspaces gain a default flag conflict if two rows claim default; on add
     // we keep only the importer's existing default.
-    if table.name == "workspaces" && row.contains_key("is_default") {
+    if action == "add" && table.name == "workspaces" && row.contains_key("is_default") {
         row.insert("is_default".to_string(), Value::from(0));
     }
 
@@ -1996,6 +2026,12 @@ mod tests {
             "ai_coding_usage_accounts",
             "ai_coding_usage_snapshots",
             "installer_tool_state",
+            // Durable frontend UI state (Quick Commands, Child Connection Tabs,
+            // Notes content, favorites, CLI labels, IT Ops layout). Rides in the
+            // whole-database backup but stays out of shareable connection
+            // bundles so a user's local workspace notes/favorites are not
+            // leaked when exporting selected Connections.
+            "durable_ui_state",
         ];
         let covered: Vec<&str> = SEGMENT_ORDER
             .iter()
@@ -2179,7 +2215,7 @@ mod tests {
         let src = SqliteConnection::open_in_memory().unwrap();
         connections_schema(&src);
         src.execute(
-            "INSERT INTO workspaces (id, name, is_default, sort_order) VALUES ('ws-src','Imported',0,0)",
+            "INSERT INTO workspaces (id, name, is_default, sort_order) VALUES ('ws-src','Imported',1,0)",
             [],
         )
         .unwrap();
@@ -2209,19 +2245,19 @@ mod tests {
             .unwrap();
             tx.commit().unwrap();
         }
-        let ids: Vec<String> = {
+        let rows: Vec<(String, i64)> = {
             let mut stmt = dst
-                .prepare("SELECT id FROM workspaces ORDER BY id")
+                .prepare("SELECT id, is_default FROM workspaces ORDER BY id")
                 .unwrap();
-            stmt.query_map([], |row| row.get(0))
+            stmt.query_map([], |row| Ok((row.get(0)?, row.get(1)?)))
                 .unwrap()
                 .collect::<Result<_, _>>()
                 .unwrap()
         };
         assert_eq!(
-            ids,
-            vec!["ws-src".to_string()],
-            "replace wipes old rows and keeps bundle ids"
+            rows,
+            vec![("ws-src".to_string(), 1)],
+            "replace wipes old rows and keeps bundle ids plus the imported default"
         );
     }
 }

@@ -134,8 +134,13 @@ mod platform {
             if GetWindowRect(tooltip_hwnd, &mut tip_rect).is_ok() {
                 let tip_width = tip_rect.right - tip_rect.left;
                 let tip_height = tip_rect.bottom - tip_rect.top;
-                let monitor =
-                    MonitorFromPoint(POINT { x: screen_x, y: screen_y }, MONITOR_DEFAULTTONEAREST);
+                let monitor = MonitorFromPoint(
+                    POINT {
+                        x: screen_x,
+                        y: screen_y,
+                    },
+                    MONITOR_DEFAULTTONEAREST,
+                );
                 let mut monitor_info = MONITORINFO {
                     cbSize: std::mem::size_of::<MONITORINFO>() as u32,
                     ..Default::default()

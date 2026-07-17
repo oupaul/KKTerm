@@ -16,6 +16,7 @@ import type {
   RackServerFormFactor,
   RackServerPanelStyle,
   RackShell,
+  RackMountFace,
 } from "../../types";
 import { KuaiKuaiBag, type KuaiKuaiStyle } from "./KuaiKuaiBag";
 
@@ -34,6 +35,8 @@ export interface RackDeviceProps {
   yaw?: number | null;
   kuaiguaiSize?: "small" | "regular" | "large" | null;
   kuaiguaiStyle?: KuaiKuaiStyle | null;
+  /** Viewed cabinet face; only rack-top 乖乖 currently has distinct artwork. */
+  face?: RackMountFace;
   /** Device notes, scribbled onto a large 乖乖 package's white note panel. */
   notes?: string | null;
   formFactor?: RackServerFormFactor | null;
@@ -111,6 +114,7 @@ export function RackDevice({
   rotation,
   yaw,
   kuaiguaiStyle,
+  face = "front",
   notes,
   formFactor,
   serverPanelStyle,
@@ -157,6 +161,7 @@ export function RackDevice({
           style={kuaiguaiStyle ?? "full"}
           expiry={expiry}
           notes={notes}
+          face={face}
         />
       </div>
     );

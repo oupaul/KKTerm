@@ -21,9 +21,9 @@ use super::site_storage as topo;
 use super::storage as ito;
 use super::types::{
     BatchTask, HostKind, HostScan, HostScanEvent, Rack, RackFacingEntry, RackItem, RackItemKind,
-    RackItemMetadata, RackNetworkPort, RackPlacementEntry, ResolvedHost, RoomIcon, RoomObject,
-    RunEvent, RunEventHost, RunHistoryEntry, RunScope, ServerRoom, Site, SiteFilter, SiteHost,
-    Transport,
+    RackItemMetadata, RackMountFace, RackNetworkPort, RackPlacementEntry, ResolvedHost, RoomIcon,
+    RoomObject, RunEvent, RunEventHost, RunHistoryEntry, RunScope, ServerRoom, Site, SiteFilter,
+    SiteHost, Transport,
 };
 
 fn storage(app: &AppHandle) -> State<'_, crate::storage::Storage> {
@@ -164,14 +164,18 @@ fn now_millis() -> String {
 /// thread, streaming `itops://run` events and writing the consolidated report to
 /// itops_run_history on completion. Returns the run id immediately.
 #[tauri::command]
-pub fn itops_start_batch_run(
+pub async fn itops_start_batch_run(
     app: AppHandle,
     site_id: String,
     task: BatchTask,
     scope: Option<RunScope>,
     task_id: Option<String>,
 ) -> Result<String, String> {
-    start_run(&app, site_id, task, scope, task_id)
+    tauri::async_runtime::spawn_blocking(move || {
+        start_run(&app, site_id, task, scope, task_id)
+    })
+    .await
+    .map_err(|error| format!("batch run preparation task failed: {error}"))?
 }
 
 /// Start a Batch Run; reusable by the command above and the Automation
@@ -369,6 +373,19 @@ pub fn itops_delete_server_room(app: AppHandle, id: String) -> Result<(), String
 }
 
 #[tauri::command]
+pub fn itops_duplicate_server_room(
+    app: AppHandle,
+    id: String,
+    name: String,
+    floor_color: String,
+) -> Result<ServerRoom, String> {
+    storage(&app).with_connection_infallible(|conn| {
+        topo::duplicate_server_room(conn, &id, &name, &floor_color, new_itops_id)
+            .map_err(|error| error.to_string())
+    })
+}
+
+#[tauri::command]
 #[allow(clippy::too_many_arguments)]
 pub fn itops_create_rack(
     app: AppHandle,
@@ -428,6 +445,42 @@ pub fn itops_update_rack(
     })
 }
 
+#[tauri::command]
+#[allow(clippy::too_many_arguments)]
+pub fn itops_duplicate_rack(
+    app: AppHandle,
+    id: String,
+    name: String,
+    server_room: String,
+    rack_group: String,
+    shell: Option<String>,
+    height_u: u32,
+    depth_mm: u32,
+    power_capacity_w: Option<u32>,
+    grid_x: Option<i64>,
+    grid_y: Option<i64>,
+    facing: Option<i64>,
+) -> Result<Rack, String> {
+    storage(&app).with_connection_infallible(|conn| {
+        topo::duplicate_rack(
+            conn,
+            &id,
+            &name,
+            &server_room,
+            &rack_group,
+            shell.as_deref(),
+            height_u,
+            depth_mm,
+            power_capacity_w,
+            grid_x,
+            grid_y,
+            facing,
+            new_itops_id,
+        )
+        .map_err(|error| error.to_string())
+    })
+}
+
 /// Persist Server Room View placements (floor-plan px or 2.5D grid cells) for
 /// a batch of racks in one write — a tile swap moves two cabinets at once.
 #[tauri::command]
@@ -445,10 +498,7 @@ pub fn itops_set_rack_placements(
 /// Persist quarter-turn facings for a batch of racks (Server Room View rotate
 /// controls).
 #[tauri::command]
-pub fn itops_set_rack_facings(
-    app: AppHandle,
-    entries: Vec<RackFacingEntry>,
-) -> Result<(), String> {
+pub fn itops_set_rack_facings(app: AppHandle, entries: Vec<RackFacingEntry>) -> Result<(), String> {
     storage(&app).with_connection_infallible(|conn| {
         topo::set_rack_facings(conn, &entries).map_err(|error| error.to_string())
     })
@@ -560,11 +610,12 @@ pub fn itops_place_rack_item(
     label: String,
     start_u: u32,
     height_u: u32,
+    mount_face: Option<RackMountFace>,
     metadata: Option<RackItemMetadata>,
 ) -> Result<RackItem, String> {
     let id = new_itops_id("ri");
     storage(&app).with_connection_infallible(|conn| {
-        topo::place_rack_item(
+        topo::place_rack_item_on_face(
             conn,
             &id,
             &rack_id,
@@ -573,6 +624,7 @@ pub fn itops_place_rack_item(
             &label,
             start_u,
             height_u,
+            mount_face.unwrap_or_default(),
             metadata.unwrap_or_default(),
         )
         .map_err(|error| error.to_string())
@@ -589,6 +641,7 @@ pub fn itops_update_rack_item(
     metadata: Option<RackItemMetadata>,
     start_u: Option<u32>,
     height_u: Option<u32>,
+    mount_face: Option<RackMountFace>,
 ) -> Result<RackItem, String> {
     let placement = match (start_u, height_u) {
         (Some(start_u), Some(height_u)) => Some((start_u, height_u)),
@@ -596,7 +649,7 @@ pub fn itops_update_rack_item(
         _ => return Err("startU and heightU must be supplied together".to_string()),
     };
     storage(&app).with_connection_infallible(|conn| {
-        topo::update_rack_item(
+        topo::update_rack_item_on_face(
             conn,
             &id,
             kind,
@@ -604,6 +657,7 @@ pub fn itops_update_rack_item(
             &label,
             metadata.unwrap_or_default(),
             placement,
+            mount_face,
         )
         .map_err(|error| error.to_string())
     })
@@ -617,9 +671,10 @@ pub fn itops_move_rack_item(
     start_u: u32,
     height_u: u32,
     slot: Option<u32>,
+    mount_face: Option<RackMountFace>,
 ) -> Result<RackItem, String> {
     storage(&app).with_connection_infallible(|conn| {
-        topo::move_rack_item(conn, &id, &rack_id, start_u, height_u, slot)
+        topo::move_rack_item_to_face(conn, &id, &rack_id, start_u, height_u, slot, mount_face)
             .map_err(|error| error.to_string())
     })
 }
@@ -793,8 +848,7 @@ pub async fn itops_scan_hosts(
     let wanted: Vec<SiteHost> = if host_ids.is_empty() {
         all
     } else {
-        let ids: std::collections::HashSet<&str> =
-            host_ids.iter().map(String::as_str).collect();
+        let ids: std::collections::HashSet<&str> = host_ids.iter().map(String::as_str).collect();
         all.into_iter()
             .filter(|host| ids.contains(host.id.as_str()))
             .collect()

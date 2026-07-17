@@ -46,7 +46,9 @@ pub fn itops_update_task(
                 .map_err(|error| error.to_string())?
                 .ok_or_else(|| "task not found".to_string())?;
             if existing.built_in_key.is_some() {
-                return Err("built-in tasks are read-only; duplicate the task to customize it".to_string());
+                return Err(
+                    "built-in tasks are read-only; duplicate the task to customize it".to_string(),
+                );
             }
             let next_ids = task.secret_owner_ids();
             let removed = existing
@@ -55,8 +57,9 @@ pub fn itops_update_task(
                 .into_iter()
                 .filter(|owner_id| !next_ids.contains(owner_id))
                 .collect::<Vec<_>>();
-            let updated = task_storage::update_task(conn, &id, &name, &description, &applicable_os, &task)
-                .map_err(|error| error.to_string())?;
+            let updated =
+                task_storage::update_task(conn, &id, &name, &description, &applicable_os, &task)
+                    .map_err(|error| error.to_string())?;
             Ok::<_, String>((updated, removed))
         })?;
     let secrets = app.state::<crate::secrets::Secrets>();

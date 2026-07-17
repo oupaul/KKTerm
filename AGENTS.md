@@ -67,6 +67,14 @@ Strong success criteria let you loop independently.
   rail destination. The App Launcher is a Dashboard widget, not a Module.
 - Source placement lives in `docs/ARCHITECTURE.md` → "Frontend Source Map".
   Prefer existing source areas and typed wrappers in `src/lib/tauri.ts`.
+- SQLite schema changes must preserve the current-version startup fast path
+  documented in `docs/ARCHITECTURE.md` → "Schema initialization and
+  migrations". Update `CURRENT_SCHEMA`, bump `SCHEMA_USER_VERSION`, and put the
+  version-gated upgrade below the fast-path return. For every schema or durable
+  seed change, explicitly audit whether current-version startup needs ongoing
+  reconciliation; if it does, update both the fast path and the post-migration
+  seed tail (or their shared helper), keep unchanged reconciliation write-free,
+  and add upgrade plus current-reopen regression coverage.
 - The operation manual ships with the app. Any UI behavior change in a manual
   chapter's scope must update the relevant chapter in `docs/manual/`; reference
   i18n keys, not English labels.

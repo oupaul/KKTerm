@@ -4,7 +4,14 @@
 // itops-scoped CSS classes so the IT Ops surface stays independent of terminal/
 // file-browser styling, while reusing the same Dashboard background machinery.
 
-import { useEffect, useState, type CSSProperties, type JSX, type ReactNode } from "react";
+import {
+  useEffect,
+  useState,
+  type CSSProperties,
+  type JSX,
+  type MouseEventHandler,
+  type ReactNode,
+} from "react";
 import { resolveBackgroundPreset } from "../dashboard/registry/backgroundPresets";
 import { DashboardDynamicBackground } from "../dashboard/registry/dynamicBackgrounds";
 import { loadBackgroundImage } from "../dashboard/state/persistence";
@@ -116,14 +123,19 @@ export function ItOpsBackgroundLayer({
 export function ItOpsBackground({
   background,
   className = "",
+  onContextMenu,
   children,
 }: {
   background: DashboardBackground | null | undefined;
   className?: string;
+  onContextMenu?: MouseEventHandler<HTMLDivElement>;
   children: ReactNode;
 }) {
   return (
-    <div className={`itops-bg-host${background ? " has-bg" : ""} ${className}`.trim()}>
+    <div
+      className={`itops-bg-host${background ? " has-bg" : ""} ${className}`.trim()}
+      onContextMenu={onContextMenu}
+    >
       <ItOpsBackgroundLayer active background={background} />
       <div className="itops-bg-content">{children}</div>
     </div>

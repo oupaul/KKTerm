@@ -229,6 +229,35 @@ fn schema_initialization_is_idempotent_without_initial_data() {
 }
 
 #[test]
+fn current_schema_fast_path_skips_legacy_data_migrations() {
+    let db_path = temp_db_path("current-schema-fast-path");
+    drop(Storage::open(db_path.clone()).expect("initial storage opens"));
+
+    {
+        let connection = rusqlite::Connection::open(&db_path).expect("raw database opens");
+        connection
+            .execute(
+                "INSERT INTO itops_sites
+                    (id, name, sort_order, member_ids_json, filter_json, transport)
+                 VALUES ('default-fleet', 'Default Fleet', 0, '[]', NULL, 'auto')",
+                [],
+            )
+            .expect("legacy-shaped data is inserted");
+    }
+
+    drop(Storage::open(db_path.clone()).expect("current storage reopens"));
+    let connection = rusqlite::Connection::open(db_path).expect("raw database reopens");
+    let name: String = connection
+        .query_row(
+            "SELECT name FROM itops_sites WHERE id = 'default-fleet'",
+            [],
+            |row| row.get(0),
+        )
+        .expect("site remains readable");
+    assert_eq!(name, "Default Fleet");
+}
+
+#[test]
 fn create_connection_can_persist_root_ssh_connection() {
     let storage = Storage::open(temp_db_path("create")).expect("storage opens");
 
@@ -2258,6 +2287,7 @@ fn general_settings_round_trip_through_settings_table() {
                 "itops".to_string(),
             ],
             installer_check_interval_seconds: 604_800,
+            installer_default_provider: "chocolatey".to_string(),
             pinned_connection_ids: vec![
                 " connection-a ".to_string(),
                 "connection-a".to_string(),
@@ -2296,6 +2326,7 @@ fn general_settings_round_trip_through_settings_table() {
     assert!(!updated.show_dont_sleep_on_rail);
     assert_eq!(updated.activity_rail_order[0], "dontSleep");
     assert_eq!(updated.installer_check_interval_seconds, 604_800);
+    assert_eq!(updated.installer_default_provider, "chocolatey");
     assert_eq!(
         updated.pinned_connection_ids,
         vec!["connection-a".to_string(), "connection-b".to_string()]
@@ -2656,6 +2687,7 @@ fn database_backup_import_restores_settings_and_connections() {
                 "itops".to_string(),
             ],
             installer_check_interval_seconds: 86_400,
+            installer_default_provider: "chocolatey".to_string(),
             pinned_connection_ids: vec!["connection-pinned".to_string()],
             allow_clipboard_read: true,
             auto_start_with_windows: true,
@@ -2694,6 +2726,7 @@ fn database_backup_import_restores_settings_and_connections() {
             show_dont_sleep_on_rail: true,
             activity_rail_order: default_activity_rail_order(),
             installer_check_interval_seconds: 86_400,
+            installer_default_provider: "winget".to_string(),
             pinned_connection_ids: Vec::new(),
             allow_clipboard_read: false,
             auto_start_with_windows: false,
@@ -2741,6 +2774,10 @@ fn database_backup_import_restores_settings_and_connections() {
     assert!(!imported.general_settings.show_installer_on_rail);
     assert!(!imported.general_settings.show_it_ops);
     assert!(!imported.general_settings.show_dont_sleep_on_rail);
+    assert_eq!(
+        imported.general_settings.installer_default_provider,
+        "chocolatey"
+    );
     assert_eq!(
         imported.general_settings.activity_rail_order[0],
         "dontSleep"
@@ -2820,6 +2857,8 @@ fn terminal_settings_round_trip_through_settings_table() {
     assert_eq!(defaults.default_transparency, 50);
     assert!(!defaults.use_random_dynamic_background);
     assert!(defaults.confirm_multiline_paste);
+    assert!(!defaults.right_click_paste);
+    assert!(!defaults.auto_record_sessions);
 
     let updated = storage
         .update_terminal_settings(TerminalSettings {
@@ -2833,6 +2872,8 @@ fn terminal_settings_round_trip_through_settings_table() {
             copy_on_select: true,
             allow_osc52_clipboard: true,
             confirm_multiline_paste: false,
+            right_click_paste: true,
+            auto_record_sessions: true,
             default_shell: "pwsh.exe".to_string(),
             custom_shells: vec![TerminalCustomShell {
                 id: "git-bash".to_string(),
@@ -2854,6 +2895,8 @@ fn terminal_settings_round_trip_through_settings_table() {
     assert_eq!(updated.default_transparency, 35);
     assert!(updated.use_random_dynamic_background);
     assert!(updated.copy_on_select);
+    assert!(updated.right_click_paste);
+    assert!(updated.auto_record_sessions);
     assert_eq!(updated.color_scheme, "dracula");
     assert_eq!(updated.hyperlink_rules.len(), 1);
     assert_eq!(
@@ -2957,6 +3000,7 @@ fn ssh_settings_round_trip_through_settings_table() {
     assert!(!defaults.use_random_dynamic_background);
     assert!(defaults.hide_common_port_redirects);
     assert!(defaults.allow_osc52_clipboard);
+    assert!(defaults.auto_trust_new_host_keys);
     assert!(!defaults.managed_x_server_enabled);
     assert_eq!(defaults.x_server_display, 0);
     assert_eq!(defaults.x_server_args, "-multiwindow -clipboard -wgl");
@@ -2971,6 +3015,7 @@ fn ssh_settings_round_trip_through_settings_table() {
             default_proxy_jump: Some("  bastion.internal  ".to_string()),
             default_ssh_compression: "off".to_string(),
             default_ssh_old_protocols: "legacy".to_string(),
+            auto_trust_new_host_keys: true,
             buffer_lines: 12_000,
             default_transparency: 40,
             default_use_tmux_sessions: false,
@@ -3914,6 +3959,79 @@ fn assistant_chat_history_schema_has_list_indexes() {
 
     assert!(indexes.contains(&"idx_assistant_chat_threads_created_at".to_string()));
     assert!(indexes.contains(&"idx_assistant_chat_threads_updated_at".to_string()));
+}
+
+#[test]
+fn durable_ui_state_round_trip_prefix_and_cleanup() {
+    let storage = Storage::open(temp_db_path("durable-ui-state")).expect("storage opens");
+
+    // Missing key reads as None.
+    assert_eq!(
+        storage
+            .get_durable_ui_state("kkterm.quickCommands.web01".to_string())
+            .expect("missing key reads"),
+        None
+    );
+
+    // Upsert then read back.
+    storage
+        .set_durable_ui_state("kkterm.quickCommands.web01".to_string(), "[1]".to_string())
+        .expect("first write");
+    storage
+        .set_durable_ui_state("kkterm.quickCommands.db01".to_string(), "[2]".to_string())
+        .expect("second write");
+    storage
+        .set_durable_ui_state(
+            "kkterm.fileBrowserFavorites.v1".to_string(),
+            "[3]".to_string(),
+        )
+        .expect("favorites write");
+    // Conflict on the same key updates in place.
+    storage
+        .set_durable_ui_state("kkterm.quickCommands.web01".to_string(), "[9]".to_string())
+        .expect("overwrite");
+    assert_eq!(
+        storage
+            .get_durable_ui_state("kkterm.quickCommands.web01".to_string())
+            .expect("key reads"),
+        Some("[9]".to_string())
+    );
+
+    // Prefix listing matches literally (LIKE wildcards in a key are escaped).
+    let quick = storage
+        .list_durable_ui_state("kkterm.quickCommands.".to_string())
+        .expect("prefix lists");
+    assert_eq!(quick.len(), 2);
+
+    // Per-connection cleanup removes only the matching key.
+    storage
+        .delete_durable_ui_state("kkterm.quickCommands.web01".to_string())
+        .expect("delete one");
+    assert_eq!(
+        storage
+            .list_durable_ui_state("kkterm.quickCommands.".to_string())
+            .expect("prefix relists")
+            .len(),
+        1
+    );
+
+    // Namespace cleanup (reset) removes a whole prefix, leaving others intact.
+    storage
+        .delete_durable_ui_state_by_prefix("kkterm.quickCommands.".to_string())
+        .expect("delete prefix");
+    assert!(
+        storage
+            .list_durable_ui_state("kkterm.quickCommands.".to_string())
+            .expect("prefix empty")
+            .is_empty()
+    );
+    assert_eq!(
+        storage
+            .get_durable_ui_state("kkterm.fileBrowserFavorites.v1".to_string())
+            .expect("favorites survive")
+            .as_deref(),
+        Some("[3]")
+    );
 }
 
 #[test]

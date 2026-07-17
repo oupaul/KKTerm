@@ -217,7 +217,7 @@ export function HostsPanel({ siteId }: { siteId: string }) {
   }
 
   return (
-    <div className="it-hosts it-destination-surface">
+    <div className="it-hosts it-destination-surface" data-tutorial-id="itops.hostsPanel">
       <div className="it-destination-page-head">
         <div>
           <h2>{t("itops.tabs.hosts")}</h2>
@@ -229,6 +229,7 @@ export function HostsPanel({ siteId }: { siteId: string }) {
         <button
           type="button"
           className="it-btn primary"
+          data-tutorial-id="itops.hostsRunTask"
           disabled={selectedHostIds.size === 0}
           onClick={() => requestNewBatchRun(siteId, { hostIds: [...selectedHostIds] })}
         >
@@ -250,7 +251,7 @@ export function HostsPanel({ siteId }: { siteId: string }) {
           {t("itops.hosts.hostCount", { count: hosts?.length ?? 0 })}
         </span>
         <span className="it-hosts-sp" />
-        <button type="button" className="it-hosts-action" onClick={() => void rescan([])} disabled={!hosts?.length}>
+        <button type="button" className="it-hosts-action" data-tutorial-id="itops.hostsScan" onClick={() => void rescan([])} disabled={!hosts?.length}>
           <ItIcon name="rerun" size={13} />
           {t("itops.hosts.rescanAllAction")}
         </button>
@@ -258,7 +259,7 @@ export function HostsPanel({ siteId }: { siteId: string }) {
           <ItIcon name="plus" size={13} />
           {t("itops.hosts.addAction")}
         </button>
-        <button type="button" className="it-hosts-action primary" onClick={() => setImportOpen(true)}>
+        <button type="button" className="it-hosts-action primary" data-tutorial-id="itops.hostsImport" onClick={() => setImportOpen(true)}>
           <ItIcon name="download" size={13} />
           {t("itops.hosts.importAction")}
         </button>
@@ -288,6 +289,7 @@ export function HostsPanel({ siteId }: { siteId: string }) {
               <div
                 key={host.id}
                 className="it-host-row"
+                data-tutorial-id={`itops.host:${host.id}`}
                 role="treeitem"
                 aria-level={depth + 1}
                 style={{ paddingLeft: 10 + depth * 22 }}

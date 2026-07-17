@@ -1,5 +1,6 @@
 import type { DashboardBackground } from "../../dashboard/types";
 import type { Connection, TerminalPane, WorkspaceChildConnection, WorkspacePane, WorkspaceTab } from "../../../types";
+import { readDurableUiState, writeDurableUiState } from "../../../lib/durableUiState";
 
 export const CHILD_CONNECTIONS_STORAGE_KEY = "kkterm.workspace.childConnections.v1";
 export const CHILD_CONNECTIONS_UPDATED_EVENT = "kkterm:workspace-child-connections-updated";
@@ -9,7 +10,7 @@ export function loadStoredChildConnections(): WorkspaceChildConnection[] {
     return [];
   }
   try {
-    const parsed = JSON.parse(window.localStorage.getItem(CHILD_CONNECTIONS_STORAGE_KEY) ?? "[]") as unknown;
+    const parsed = JSON.parse(readDurableUiState(CHILD_CONNECTIONS_STORAGE_KEY) ?? "[]") as unknown;
     return Array.isArray(parsed) ? parsed.filter(isStoredChildConnection) : [];
   } catch {
     return [];
@@ -20,10 +21,19 @@ export function persistStoredChildConnections(children: WorkspaceChildConnection
   if (typeof window === "undefined") {
     return;
   }
-  try {
-    window.localStorage.setItem(CHILD_CONNECTIONS_STORAGE_KEY, JSON.stringify(children));
-  } catch {
-    // Storage can be unavailable or full; keep runtime state working.
+  // Child Connection Tabs are durable frontend workspace state: source of truth
+  // is SQLite (backed up, portable), mirrored to the synchronous cache.
+  writeDurableUiState(CHILD_CONNECTIONS_STORAGE_KEY, JSON.stringify(children));
+}
+
+// Drop every saved Child Connection Tab under a deleted parent Connection so the
+// rows do not orphan after the parent is gone.
+export function pruneChildConnectionsForParent(parentConnectionId: string) {
+  const children = loadStoredChildConnections();
+  const next = children.filter((child) => child.parentConnectionId !== parentConnectionId);
+  if (next.length !== children.length) {
+    persistStoredChildConnections(next);
+    notifyStoredChildConnectionsUpdated();
   }
 }
 
@@ -82,6 +92,7 @@ export function syncChildConnectionsFromTabs(
 
     const cwd = pane.cwd.trim();
     const fontSize = pane.fontSize;
+    const textEncoding = pane.textEncoding;
     const terminalOpacity = pane.connection?.terminalOpacity;
     const terminalBackground =
       "terminalBackground" in pane && pane.terminalBackground !== undefined
@@ -89,10 +100,11 @@ export function syncChildConnectionsFromTabs(
         : pane.connection?.terminalBackground;
     const cwdChanged = Boolean(cwd) && child.cwd !== cwd;
     const fontSizeChanged = child.fontSize !== fontSize;
+    const textEncodingChanged = child.textEncoding !== textEncoding;
     const opacityChanged = child.terminalOpacity !== terminalOpacity;
     const backgroundChanged = !backgroundsEqual(child.terminalBackground, terminalBackground);
 
-    if (!cwdChanged && !fontSizeChanged && !opacityChanged && !backgroundChanged) {
+    if (!cwdChanged && !fontSizeChanged && !textEncodingChanged && !opacityChanged && !backgroundChanged) {
       return child;
     }
 
@@ -101,6 +113,7 @@ export function syncChildConnectionsFromTabs(
       ...child,
       cwd: cwdChanged ? cwd : child.cwd,
       fontSize,
+      textEncoding,
       terminalOpacity,
       terminalBackground,
     };

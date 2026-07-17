@@ -1,6 +1,6 @@
 import { ChevronLeft, ChevronRight } from "../lib/reicon";
-import { useEffect, useMemo, useState } from "react";
-import type { PointerEvent as ReactPointerEvent } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { PointerEvent as ReactPointerEvent, RefObject } from "react";
 
 export type PanelLayoutState = {
   collapsed: boolean;
@@ -90,25 +90,77 @@ function removeLayoutStorageKeys() {
 function beginDragResize(
   event: ReactPointerEvent<HTMLButtonElement>,
   onMove: (event: PointerEvent) => void,
+  onEnd: (persistImmediately: boolean) => void,
 ) {
   event.preventDefault();
-  event.currentTarget.setPointerCapture(event.pointerId);
+  const target = event.currentTarget;
+  const pointerId = event.pointerId;
+  let animationFrame: number | null = null;
+  let pendingMove: PointerEvent | null = null;
+  let stopped = false;
+  target.setPointerCapture(pointerId);
   document.body.classList.add("is-resizing-layout");
 
-  const stop = () => {
+  const flushPendingMove = () => {
+    animationFrame = null;
+    const pointerEvent = pendingMove;
+    pendingMove = null;
+    if (pointerEvent) {
+      onMove(pointerEvent);
+    }
+  };
+  const handleMove = (pointerEvent: PointerEvent) => {
+    if (pointerEvent.pointerId === pointerId) {
+      pendingMove = pointerEvent;
+      if (animationFrame === null) {
+        animationFrame = window.requestAnimationFrame(flushPendingMove);
+      }
+    }
+  };
+  const handlePointerEnd = (pointerEvent: PointerEvent) => {
+    if (pointerEvent.pointerId === pointerId) {
+      stop();
+    }
+  };
+  const handleBlur = () => stop();
+  const handleLostPointerCapture = (pointerEvent: PointerEvent) => {
+    if (pointerEvent.pointerId === pointerId) {
+      stop();
+    }
+  };
+  const stop = (persistImmediately = false) => {
+    if (stopped) {
+      return;
+    }
+    stopped = true;
     document.body.classList.remove("is-resizing-layout");
-    window.removeEventListener("pointermove", onMove);
-    window.removeEventListener("pointerup", stop);
-    window.removeEventListener("pointercancel", stop);
+    window.removeEventListener("pointermove", handleMove);
+    window.removeEventListener("pointerup", handlePointerEnd);
+    window.removeEventListener("pointercancel", handlePointerEnd);
+    window.removeEventListener("blur", handleBlur);
+    target.removeEventListener("lostpointercapture", handleLostPointerCapture);
+    if (animationFrame !== null) {
+      window.cancelAnimationFrame(animationFrame);
+      animationFrame = null;
+    }
+    if (target.hasPointerCapture(pointerId)) {
+      target.releasePointerCapture(pointerId);
+    }
+    flushPendingMove();
+    onEnd(persistImmediately);
   };
 
-  window.addEventListener("pointermove", onMove);
-  window.addEventListener("pointerup", stop);
-  window.addEventListener("pointercancel", stop);
+  window.addEventListener("pointermove", handleMove);
+  window.addEventListener("pointerup", handlePointerEnd);
+  window.addEventListener("pointercancel", handlePointerEnd);
+  window.addEventListener("blur", handleBlur);
+  target.addEventListener("lostpointercapture", handleLostPointerCapture);
+  return stop;
 }
 
 export function useWorkspaceChromeLayout(
   resetAllLayouts: () => void,
+  appShellRef: RefObject<HTMLDivElement | null>,
   forceConnectionPanelExpandedOnInitialLoad = false,
 ) {
   const [connectionPanelLayout, setConnectionPanelLayout] = useState(() => {
@@ -134,6 +186,7 @@ export function useWorkspaceChromeLayout(
     ),
   );
   const [animatingPanel, setAnimatingPanel] = useState<AnimatingPanel | null>(null);
+  const activeDragRef = useRef<((persistImmediately?: boolean) => void) | null>(null);
   const prefersReducedMotion = useMemo(
     () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
     [],
@@ -155,6 +208,19 @@ export function useWorkspaceChromeLayout(
     return () => clearTimeout(timer);
   }, [animatingPanel]);
 
+  useEffect(
+    () => () => {
+      activeDragRef.current?.(true);
+      activeDragRef.current = null;
+    },
+    [],
+  );
+
+  function finishActiveDrag() {
+    activeDragRef.current?.();
+    activeDragRef.current = null;
+  }
+
   function beginPanelAnimation(panel: AnimatingPanel) {
     if (!prefersReducedMotion) {
       setAnimatingPanel(panel);
@@ -162,64 +228,121 @@ export function useWorkspaceChromeLayout(
   }
 
   function toggleConnectionPanel() {
+    finishActiveDrag();
     beginPanelAnimation("connection");
     setConnectionPanelLayout((layout) => ({ ...layout, collapsed: !layout.collapsed }));
   }
 
   function expandConnectionPanel() {
+    finishActiveDrag();
     beginPanelAnimation("connection");
     setConnectionPanelLayout((layout) => ({ ...layout, collapsed: false }));
   }
 
   function toggleAiPanel() {
+    finishActiveDrag();
     beginPanelAnimation("ai");
     setAiPanelLayout((layout) => ({ ...layout, collapsed: !layout.collapsed }));
   }
 
   function expandAiPanel() {
+    finishActiveDrag();
     beginPanelAnimation("ai");
     setAiPanelLayout((layout) => ({ ...layout, collapsed: false }));
   }
 
   function handleConnectionPanelResize(event: ReactPointerEvent<HTMLButtonElement>) {
+    finishActiveDrag();
     setAnimatingPanel(null);
     const startX = event.clientX;
     const startWidth = connectionPanelLayout.collapsed
       ? 0
       : connectionPanelLayout.width;
+    let lastWidth = startWidth;
+    let hasMoved = false;
 
-    beginDragResize(event, (pointerEvent) => {
-      const nextWidth = clamp(
-        startWidth + pointerEvent.clientX - startX,
-        CONNECTION_PANEL_MIN_WIDTH,
-        CONNECTION_PANEL_MAX_WIDTH,
-      );
-      setConnectionPanelLayout({
-        collapsed: false,
-        width: nextWidth,
-      });
-    });
+    activeDragRef.current = beginDragResize(
+      event,
+      (pointerEvent) => {
+        const nextWidth = clamp(
+          startWidth + pointerEvent.clientX - startX,
+          CONNECTION_PANEL_MIN_WIDTH,
+          CONNECTION_PANEL_MAX_WIDTH,
+        );
+        if (nextWidth === lastWidth) {
+          return;
+        }
+        hasMoved = true;
+        lastWidth = nextWidth;
+        appShellRef.current?.style.setProperty("--connection-panel-width", `${nextWidth}px`);
+      },
+      (persistImmediately) => {
+        activeDragRef.current = null;
+        if (!hasMoved) {
+          return;
+        }
+        if (persistImmediately) {
+          persistPanelLayout(CONNECTION_PANEL_LAYOUT_KEY, {
+            collapsed: false,
+            width: lastWidth,
+          });
+          return;
+        }
+        setConnectionPanelLayout((layout) =>
+          !layout.collapsed && layout.width === lastWidth
+            ? layout
+            : { collapsed: false, width: lastWidth },
+        );
+      },
+    );
   }
 
   function handleAiPanelResize(event: ReactPointerEvent<HTMLButtonElement>) {
+    finishActiveDrag();
     setAnimatingPanel(null);
     const startX = event.clientX;
     const startWidth = aiPanelLayout.collapsed ? 0 : aiPanelLayout.width;
+    let lastWidth = startWidth;
+    let hasMoved = false;
 
-    beginDragResize(event, (pointerEvent) => {
-      const nextWidth = clamp(
-        startWidth + startX - pointerEvent.clientX,
-        AI_PANEL_MIN_WIDTH,
-        AI_PANEL_MAX_WIDTH,
-      );
-      setAiPanelLayout({
-        collapsed: false,
-        width: nextWidth,
-      });
-    });
+    activeDragRef.current = beginDragResize(
+      event,
+      (pointerEvent) => {
+        const nextWidth = clamp(
+          startWidth + startX - pointerEvent.clientX,
+          AI_PANEL_MIN_WIDTH,
+          AI_PANEL_MAX_WIDTH,
+        );
+        if (nextWidth === lastWidth) {
+          return;
+        }
+        hasMoved = true;
+        lastWidth = nextWidth;
+        appShellRef.current?.style.setProperty("--ai-panel-width", `${nextWidth}px`);
+      },
+      (persistImmediately) => {
+        activeDragRef.current = null;
+        if (!hasMoved) {
+          return;
+        }
+        if (persistImmediately) {
+          persistPanelLayout(AI_PANEL_LAYOUT_KEY, {
+            collapsed: false,
+            width: lastWidth,
+          });
+          return;
+        }
+        setAiPanelLayout((layout) =>
+          !layout.collapsed && layout.width === lastWidth
+            ? layout
+            : { collapsed: false, width: lastWidth },
+        );
+      },
+    );
   }
 
   function resetWorkspaceChromeLayout() {
+    finishActiveDrag();
     removeLayoutStorageKeys();
     resetAllLayouts();
     setConnectionPanelLayout(defaultConnectionPanelLayout);

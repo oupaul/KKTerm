@@ -26,20 +26,20 @@ test("Activity Rail opens Child Connection Tab layouts like the Connection Tree"
   assert.match(
     activityRailSource,
     /generalSettings\.hideTopTabButtons[\s\S]*loadStoredChildConnections\(\)\.filter\([\s\S]*parentConnectionId === item\.connection\.id[\s\S]*openChildConnectionLayout\(item\.connection,\s*childConnections\)/,
-    "when Child Connection Tabs are enabled, rail shortcuts should open the stored child layout instead of reopening the parent Connection",
+    "when no live Tab exists and Child Connection Tabs are enabled, rail shortcuts should open the stored child layout instead of reopening the parent Connection",
   );
   assert.match(
     activityRailSource,
-    /openChildConnectionLayout\(item\.connection,\s*childConnections\);[\s\S]*return;[\s\S]*if \(item\.tabId\)/,
-    "child-layout activation must happen before the generic tab activation fallback",
+    /if \(existingTab\) \{[\s\S]*activateTab\(existingTab\.id\);[\s\S]*return;[\s\S]*generalSettings\.hideTopTabButtons/,
+    "a live Tab must be activated before child-layout reconstruction so an SFTP Tab is not rebuilt as an SSH terminal",
   );
 });
 
 test("Activity Rail returns to sessions living in another Workspace", () => {
   assert.match(
     activityRailSource,
-    /\(existingTab\.workspaceId \?\? DEFAULT_WORKSPACE_ID\) !== activeWorkspaceId[\s\S]*activateTab\(existingTab\.id\);[\s\S]*return;[\s\S]*generalSettings\.hideTopTabButtons/,
-    "a rail click on a session from another Workspace must activate its Tab (switching Workspaces) before the child-layout branch can spawn new sessions in the current Workspace",
+    /if \(existingTab\) \{[\s\S]*activateTab\(existingTab\.id\);[\s\S]*return;[\s\S]*generalSettings\.hideTopTabButtons/,
+    "a rail click on any live Session must activate its exact Tab (and switch Workspaces when needed) before the child-layout branch can spawn new Sessions",
   );
   assert.match(
     activityRailSource,

@@ -308,8 +308,9 @@ fn decrypt_secret(
     let key = derive_key(password, &salt)?;
     let cipher = Aes256Gcm::new_from_slice(&key)
         .map_err(|_| "Could not initialize encrypted SQLite secret cipher".to_string())?;
-    let nonce = Nonce::try_from(nonce_bytes.as_slice())
-        .map_err(|_| "Could not decode encrypted SQLite secret nonce: invalid length".to_string())?;
+    let nonce = Nonce::try_from(nonce_bytes.as_slice()).map_err(|_| {
+        "Could not decode encrypted SQLite secret nonce: invalid length".to_string()
+    })?;
     let plaintext = cipher
         .decrypt(
             &nonce,

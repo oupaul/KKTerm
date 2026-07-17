@@ -9,6 +9,16 @@ const DEFAULT_VCXSRV_ARGS: &str = "-multiwindow -clipboard -wgl";
 const CREATE_NO_WINDOW: u32 = 0x08000000;
 static MANAGED_VCXSRV_PID: AtomicU32 = AtomicU32::new(0);
 static VCXSRV_KNOWN_RUNNING: AtomicBool = AtomicBool::new(false);
+// Launch/stop are check-then-act over one shared OS process; callers run
+// concurrently (async commands and session startup), so control must be
+// serialized or two launches can each pass the running check and spawn.
+static VCXSRV_CONTROL_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+fn control_lock() -> std::sync::MutexGuard<'static, ()> {
+    VCXSRV_CONTROL_LOCK
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+}
 
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -24,6 +34,7 @@ pub fn launch_vcxsrv_if_needed(
     display: u16,
     extra_args: Option<&str>,
 ) -> Result<XServerLaunchResult, String> {
+    let _guard = control_lock();
     let display = display.min(99);
     if VCXSRV_KNOWN_RUNNING.load(Ordering::Relaxed) {
         return Ok(XServerLaunchResult {
@@ -72,11 +83,17 @@ pub fn restart_vcxsrv(
     display: u16,
     extra_args: Option<&str>,
 ) -> Result<XServerLaunchResult, String> {
-    stop_vcxsrv()?;
+    let _guard = control_lock();
+    stop_vcxsrv_locked()?;
     launch_vcxsrv(path_override, display, extra_args)
 }
 
 pub fn stop_vcxsrv() -> Result<(), String> {
+    let _guard = control_lock();
+    stop_vcxsrv_locked()
+}
+
+fn stop_vcxsrv_locked() -> Result<(), String> {
     if !is_vcxsrv_running() {
         VCXSRV_KNOWN_RUNNING.store(false, Ordering::Relaxed);
         return Ok(());
@@ -106,6 +123,7 @@ pub fn stop_vcxsrv() -> Result<(), String> {
 }
 
 pub fn stop_managed_vcxsrv_on_exit() -> Result<(), String> {
+    let _guard = control_lock();
     let pid = MANAGED_VCXSRV_PID.swap(0, Ordering::Relaxed);
     if pid == 0 {
         return Ok(());

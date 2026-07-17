@@ -92,7 +92,7 @@ test("Rack-top Kuai Kuai can be dragged into the cabinet and back onto the rack 
   const elevation = await read("src/modules/itops/RackElevation.tsx");
 
   assert.match(elevation, /rk-top-area[\s\S]*onDragOver[\s\S]*application\/x-itops-rack-kuaiguai/);
-  assert.match(elevation, /onMoveItem\?\.\(itemId, rack\.id, rack\.heightU \+ 1\)/);
+  assert.match(elevation, /onMoveItem\?\.\(itemId, rack\.id, rack\.heightU \+ 1, undefined, displayFace\)/);
   assert.match(elevation, /rk-top-item\$\{canMove \? " draggable"[\s\S]*draggable=\{canMove\}/);
 });
 

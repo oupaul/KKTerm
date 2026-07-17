@@ -29,15 +29,12 @@ test("X server status indicator is settings-derived and renders before Don't Sle
 });
 
 test("VcXsrv is listed as an Install Helper utility", async () => {
-  const installerSource = await readFile(
-    new URL("../src/modules/installer/sections.ts", import.meta.url),
+  const catalog = JSON.parse(await readFile(
+    new URL("../installer/catalog.v1.json", import.meta.url),
     "utf8",
-  );
+  ));
   const manualSource = await readFile(new URL("../docs/manual/18-installer.md", import.meta.url), "utf8");
 
-  assert.match(
-    installerSource,
-    /titleKey: "installer\.section\.utilities",\s*ids: \[[^\]]*"vcxsrv"[^\]]*\]/,
-  );
+  assert.equal(catalog.recipes.find((recipe) => recipe.id === "vcxsrv")?.section, "utilities");
   assert.match(manualSource, /\*\*Utilities\*\* \(`installer\.section\.utilities`\).*VcXsrv/s);
 });

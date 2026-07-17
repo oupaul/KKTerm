@@ -29,6 +29,7 @@ import {
   CHILD_CONNECTIONS_UPDATED_EVENT,
   loadStoredChildConnections,
   persistStoredChildConnections,
+  pruneChildConnectionsForParent,
   syncChildConnectionsFromTabs,
 } from "./childConnections";
 import {
@@ -48,7 +49,7 @@ import {
   shouldDeleteSshSocksProxySecret,
 } from "./credentialUnlockPreflight";
 import { confirmTrustedSshHostKey, connectionPasswordOwnerId, connectionSshSocksProxyPasswordOwnerId, defaultPortForConnectionType, connectionTypeLabel, ftpPortForProtocolSelection, isRemoteDesktopConnectionType, localShellOptionsForPlatform, resolveSshCompression, resolveSshOldProtocols, resolveSshSocksProxyRequest, uniqueRuntimeId, type LocalShellOption } from "./utils";
-import { IMPORT_CONNECTIONS_REQUEST_EVENT, NEW_CONNECTION_REQUEST_EVENT, RECENT_CONNECTION_LIMIT, loadCollapsedFolderIds, loadRecentConnectionIds, notifyConnectionTreeInvalidated, saveCollapsedFolderIds, saveRecentConnectionIds, type NewConnectionRequestDetail } from "./connectionSidebarState";
+import { IMPORT_CONNECTIONS_REQUEST_EVENT, NEW_CONNECTION_REQUEST_EVENT, NEW_CONNECTION_TAB_REQUEST_EVENT, RECENT_CONNECTION_LIMIT, loadCollapsedFolderIds, loadRecentConnectionIds, notifyConnectionTreeInvalidated, saveCollapsedFolderIds, saveRecentConnectionIds, type NewConnectionRequestDetail, type NewConnectionTabRequestDetail } from "./connectionSidebarState";
 import { collectConnectionFolderIds, countConnections, countFolders, filterConnectedConnections, filterConnectionTree, findConnectionInTree, flattenConnections, flattenFolders, visibleFlatConnections as flattenVisibleConnections, withLiveConnectionStatuses } from "./treeUtils";
 import { WorkspaceIcon } from "../workspaceIcons";
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Check, ChevronDown, ChevronRight, CircleDot, Folder, FolderPlus, KeyRound, LayoutDashboard, List, Maximize2, Minimize2, PanelsTopLeft, PanelRight, Pencil, Pin, PinOff, Play, Plus, Radio, RotateCcw, Save, Search, Settings, SquarePlus, Trash2, X } from "../../../lib/reicon";
@@ -77,7 +78,7 @@ import { DeleteConfirmationDialog } from "../../../app/DeleteConfirmationDialog"
 import { DialogPortal } from "../../../app/DialogPortal";
 import { ConfirmSheet, LegacyDialogActions } from "../../../app/ui/dialog";
 import { pushTrayMenu } from "../../../app/trayMenu";
-import { CHILD_CONNECTION_CLOSED_EVENT, DEFAULT_WORKSPACE_ID, appendTmuxSessionId, useWorkspaceStore } from "../../../store";
+import { CHILD_CONNECTION_CLOSED_EVENT, DEFAULT_WORKSPACE_ID, appendTmuxSessionId, forgetConnectionLocalState, useWorkspaceStore } from "../../../store";
 import type { Connection, ConnectionFolder, ConnectionStatus, ConnectionTree, ConnectionType, CreateConnectionRequest, RdpSettings, SplitDirection, SshCompressionMode, SshOldProtocolsMode, SshSettings, StoredCredentialSummary, UpdateConnectionRequest, VncSettings, WorkspaceChildConnection, WorkspaceTab } from "../../../types";
 
 // Pointer travel (px, either axis) before a press is treated as a drag rather
@@ -290,6 +291,7 @@ export function ConnectionSidebar({
   const openChildConnectionInNewTab = useWorkspaceStore((state) => state.openChildConnectionInNewTab);
   const openChildConnectionLayout = useWorkspaceStore((state) => state.openChildConnectionLayout);
   const openConnectionsInPanorama = useWorkspaceStore((state) => state.openConnectionsInPanorama);
+  const openTerminalRecordingsBrowser = useWorkspaceStore((state) => state.openTerminalRecordingsBrowser);
   const updateOpenChildConnectionMetadata = useWorkspaceStore((state) => state.updateOpenChildConnectionMetadata);
   const refreshOpenConnectionMetadata = useWorkspaceStore((state) => state.refreshOpenConnectionMetadata);
   const tabs = useWorkspaceStore((state) => state.tabs);
@@ -647,11 +649,20 @@ export function ConnectionSidebar({
       handleImportRequested();
     }
 
+    function handleNewConnectionTabRequest(event: Event) {
+      const detail = (event as CustomEvent<NewConnectionTabRequestDetail>).detail;
+      if (detail?.connection) {
+        void handleOpenConnectionInNewTab(detail.connection);
+      }
+    }
+
     window.addEventListener(NEW_CONNECTION_REQUEST_EVENT, handleNewConnectionRequest);
     window.addEventListener(IMPORT_CONNECTIONS_REQUEST_EVENT, handleImportConnectionsRequest);
+    window.addEventListener(NEW_CONNECTION_TAB_REQUEST_EVENT, handleNewConnectionTabRequest);
     return () => {
       window.removeEventListener(NEW_CONNECTION_REQUEST_EVENT, handleNewConnectionRequest);
       window.removeEventListener(IMPORT_CONNECTIONS_REQUEST_EVENT, handleImportConnectionsRequest);
+      window.removeEventListener(NEW_CONNECTION_TAB_REQUEST_EVENT, handleNewConnectionTabRequest);
     };
   });
 
@@ -1100,7 +1111,7 @@ export function ConnectionSidebar({
           ...resolveSshSocksProxyRequest(connection),
         },
       });
-      await confirmTrustedSshHostKey(hostKeyPreview);
+      await confirmTrustedSshHostKey(hostKeyPreview, sshSettings);
       const result = await invokeCommand("transfer_ssh_public_key", {
         request: {
           host: connection.host,
@@ -1684,6 +1695,8 @@ export function ConnectionSidebar({
       await invokeCommand("delete_connection", {
         connectionId: connection.id,
       });
+      forgetConnectionLocalState(connection.id);
+      pruneChildConnectionsForParent(connection.id);
       closeOpenTabsForConnection(connection.id);
       await reloadConnectionGroups();
       notifyConnectionTreeInvalidated();
@@ -2021,6 +2034,13 @@ export function ConnectionSidebar({
           iconSvg: nativeMenuIcons.folderPlus,
           action: handleTreeMenuCreateFolder,
         },
+        { kind: "separator" },
+        {
+          kind: "item",
+          label: t("terminal.openRecordings"),
+          iconSvg: nativeMenuIcons.folderOpen,
+          action: () => openTerminalRecordingsBrowser(),
+        },
       ];
     }
 
@@ -2038,6 +2058,17 @@ export function ConnectionSidebar({
         },
         { kind: "separator" },
       );
+      if (isTerminalConnectionType(menu.connection.type)) {
+        items.push(
+          {
+            kind: "item",
+            label: t("terminal.openRecordings"),
+            iconSvg: nativeMenuIcons.folderOpen,
+            action: () => openTerminalRecordingsBrowser(menu.connection.id),
+          },
+          { kind: "separator" },
+        );
+      }
     }
     items.push(
       {

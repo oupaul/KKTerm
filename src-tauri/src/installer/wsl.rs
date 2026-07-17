@@ -187,7 +187,9 @@ pub fn list_installed_distros() -> Result<Vec<WslDistroInfo>, String> {
 }
 
 pub fn list_online_distros() -> Result<Vec<WslOnlineDistro>, String> {
-    Ok(parse_wsl_list_online(&run_wsl_list(&["--list", "--online"])?))
+    Ok(parse_wsl_list_online(&run_wsl_list(&[
+        "--list", "--online",
+    ])?))
 }
 
 pub fn set_default_distro(distro: &str) -> Result<(), String> {

@@ -29,30 +29,38 @@ export function ServerRoomDialog({
   sites,
   defaultSiteId,
   room,
+  duplicateOf,
+  duplicateName,
   onClose,
   onSaved,
 }: {
   sites: Site[];
   defaultSiteId: string;
   room?: ServerRoom | null;
+  duplicateOf?: ServerRoom | null;
+  duplicateName?: string;
   onClose: () => void;
   onSaved: (room: ServerRoom) => void;
 }) {
   const { t } = useTranslation();
   const isEdit = !!room;
+  const isDuplicate = !!duplicateOf;
+  const sourceRoom = room ?? duplicateOf;
+  const isProperties = isEdit || isDuplicate;
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
   const createServerRoom = useItOpsStore((state) => state.createServerRoom);
   const updateServerRoom = useItOpsStore((state) => state.updateServerRoom);
+  const duplicateServerRoom = useItOpsStore((state) => state.duplicateServerRoom);
   const setRoomIcon = useItOpsStore((state) => state.setRoomIcon);
-  const initialSiteId = room?.siteId ?? (defaultSiteId || sites[0]?.id || "");
-  const existingIcon = room
-    ? sites.find((site) => site.id === room.siteId)?.roomIcons?.[room.name]
+  const initialSiteId = sourceRoom?.siteId ?? (defaultSiteId || sites[0]?.id || "");
+  const existingIcon = sourceRoom
+    ? sites.find((site) => site.id === sourceRoom.siteId)?.roomIcons?.[sourceRoom.name]
     : undefined;
 
   const [siteId, setSiteId] = useState(initialSiteId);
-  const [serverRoom, setServerRoom] = useState(room?.name ?? "");
+  const [serverRoom, setServerRoom] = useState(duplicateName ?? sourceRoom?.name ?? "");
   const [floorColor, setFloorColor] = useState<IsoFloorColor>(
-    sanitizeIsoFloor(room?.floorColor),
+    sanitizeIsoFloor(sourceRoom?.floorColor),
   );
   const [iconColor, setIconColor] = useState<string | null>(existingIcon?.iconColor ?? null);
   const [iconDataUrl, setIconDataUrl] = useState<string | null>(existingIcon?.iconDataUrl ?? null);
@@ -77,9 +85,16 @@ export function ServerRoomDialog({
     }
     setBusy(true);
     try {
-      const saved = isEdit
-        ? await updateServerRoom(siteId, room!.id, trimmedServerRoom, floorColor)
-        : await createServerRoom(siteId, trimmedServerRoom, floorColor);
+      const saved = isDuplicate
+        ? await duplicateServerRoom(
+            siteId,
+            duplicateOf!.id,
+            trimmedServerRoom,
+            floorColor,
+          )
+        : isEdit
+          ? await updateServerRoom(siteId, room!.id, trimmedServerRoom, floorColor)
+          : await createServerRoom(siteId, trimmedServerRoom, floorColor);
       const icon = iconColor || iconDataUrl || iconBackgroundColor
         ? { iconColor, iconDataUrl, iconBackgroundColor }
         : null;
@@ -97,20 +112,20 @@ export function ServerRoomDialog({
     <DialogShell onBackdrop={onClose}>
       <Sheet
         width={460}
-        title={isEdit ? t("common.properties") : t("itops.racks.newServerRoomTitle")}
-        ariaLabel={isEdit ? t("common.properties") : t("itops.racks.newServerRoomTitle")}
+        title={isProperties ? t("common.properties") : t("itops.racks.newServerRoomTitle")}
+        ariaLabel={isProperties ? t("common.properties") : t("itops.racks.newServerRoomTitle")}
         footer={
           <Actions
             cancel={<Btn onClick={onClose}>{t("itops.actions.cancel")}</Btn>}
             primary={
               <Btn kind="primary" onClick={() => void handleSave()} disabled={!canSave}>
-                {isEdit ? t("itops.actions.save") : t("itops.actions.create")}
+                {isProperties ? t("itops.actions.save") : t("itops.actions.create")}
               </Btn>
             }
           />
         }
       >
-        {isEdit ? null : <p className="hg-dlg-help">{t("itops.racks.serverRoomCreateHelp")}</p>}
+        {isProperties ? null : <p className="hg-dlg-help">{t("itops.racks.serverRoomCreateHelp")}</p>}
         <div className="connection-type-summary">
           <ConnectionIconPicker
             customIconDataUrls={[]}
@@ -134,7 +149,7 @@ export function ServerRoomDialog({
         <Field label={t("itops.racks.serverRoomSiteLabel")} req>
           <Select
             value={siteId}
-            disabled={isEdit}
+            disabled={isProperties}
             onChange={(event) => setSiteId(event.currentTarget.value)}
             options={sites.map((site) => ({ value: site.id, label: site.name }))}
           />

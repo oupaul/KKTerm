@@ -11,6 +11,7 @@ use std::sync::OnceLock;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
+use super::latest_version::installer_latest_is_newer;
 use super::managed_app::{is_managed_app, managed_app_install_dir, managed_app_marker_path};
 use super::proc::{no_window, npm_program};
 use super::schema::{Catalog, Detection, GithubReleaseLayout, Provider, Recipe};
@@ -96,8 +97,8 @@ pub enum InstallScope {
 
 /// Detect every recipe in the catalog. The frontend only runs this on first
 /// Module entry per session; subsequent visits use the in-memory cache.
-/// Winget-provider recipes share one local Add/Remove Programs registry
-/// snapshot instead of spawning `winget list`.
+/// Recipes share one local Add/Remove Programs plus current-user AppX package
+/// snapshot instead of spawning per-tool detection commands.
 pub fn detect_all(catalog: &Catalog) -> HashMap<String, DetectedState> {
     crate::logging::installer_helper_debug(
         "detect.all.start",
@@ -504,9 +505,9 @@ fn command_output_with_path(program: &str, args: &[&str], path: Option<String>) 
 // ---- Windows installed software / winget -------------------------------
 //
 // Detection is intentionally local-first and cheap: scan Windows Add/Remove
-// Programs registry entries once per sweep, then match each winget recipe
-// against catalog detection aliases. `winget` remains the install/update
-// provider, but detection does not shell out to `winget list`.
+// Programs registry entries and current-user AppX packages once per sweep,
+// then match recipes against catalog detection aliases. `winget` remains the
+// default package-manager provider, but detection does not shell out to it.
 
 #[derive(Default)]
 struct InstalledSoftwareSnapshot {
@@ -617,7 +618,7 @@ fn detect_installed_software_match(
     detection: &Detection,
     snapshot: &InstalledSoftwareSnapshot,
 ) -> DetectedState {
-    let mut global_match = None;
+    let mut best_match = None;
     for entry in &snapshot.entries {
         if !installed_entry_matches(provider_id, detection, entry) {
             continue;
@@ -625,12 +626,35 @@ fn detect_installed_software_match(
         let state = DetectedState::installed(entry.display_version.clone())
             .with_install_location(entry.install_location.clone())
             .with_install_scope(installed_entry_scope(entry));
-        if installed_entry_is_user_scope(entry) {
-            return state;
+        if best_match
+            .as_ref()
+            .is_none_or(|current| installed_state_is_better(&state, current))
+        {
+            best_match = Some(state);
         }
-        global_match.get_or_insert(state);
     }
-    global_match.unwrap_or_else(DetectedState::not_installed)
+    best_match.unwrap_or_else(DetectedState::not_installed)
+}
+
+fn installed_state_is_better(candidate: &DetectedState, current: &DetectedState) -> bool {
+    match (
+        candidate.installed_version.as_deref(),
+        current.installed_version.as_deref(),
+    ) {
+        (Some(candidate_version), Some(current_version)) => {
+            if installer_latest_is_newer(candidate_version, current_version) {
+                return true;
+            }
+            if installer_latest_is_newer(current_version, candidate_version) {
+                return false;
+            }
+        }
+        (Some(_), None) => return true,
+        (None, Some(_)) => return false,
+        (None, None) => {}
+    }
+    candidate.install_scope == Some(InstallScope::User)
+        && current.install_scope != Some(InstallScope::User)
 }
 
 fn installed_entry_matches(
@@ -656,6 +680,15 @@ fn installed_entry_matches(
         .registry_keys
         .iter()
         .any(|key| registry_key == normalize_detection_value(key))
+    {
+        return true;
+    }
+    if registry_key.starts_with("appx\\user\\")
+        && registry_key.rsplit('\\').next().is_some_and(|family| {
+            detection.appx_package_family_names.iter().any(|expected| {
+                normalize_detection_value(expected) == normalize_detection_value(family)
+            })
+        })
     {
         return true;
     }
@@ -693,13 +726,11 @@ fn display_name_matches_alias(display_name: &str, alias: &str) -> bool {
     display_name == alias || display_name == format!("{alias} (user)")
 }
 
-fn installed_entry_is_user_scope(entry: &InstalledSoftwareEntry) -> bool {
-    normalize_detection_value(&entry.registry_key).starts_with("arp\\user\\")
-}
-
 fn installed_entry_scope(entry: &InstalledSoftwareEntry) -> Option<InstallScope> {
     let registry_key = normalize_detection_value(&entry.registry_key);
     if registry_key.starts_with("arp\\user\\") {
+        Some(InstallScope::User)
+    } else if registry_key.starts_with("appx\\user\\") {
         Some(InstallScope::User)
     } else if registry_key.starts_with("arp\\machine\\") {
         Some(InstallScope::Machine)
@@ -728,6 +759,9 @@ mod windows_installed_software {
     use std::ffi::{OsStr, OsString};
     use std::os::windows::ffi::{OsStrExt, OsStringExt};
 
+    use windows::Management::Deployment::PackageManager;
+    use windows::Win32::System::WinRT::{RO_INIT_MULTITHREADED, RoInitialize, RoUninitialize};
+    use windows::core::HSTRING;
     use windows_sys::Win32::Foundation::{ERROR_NO_MORE_ITEMS, ERROR_SUCCESS};
     use windows_sys::Win32::System::Registry::{
         HKEY, HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE, KEY_READ, KEY_WOW64_32KEY, KEY_WOW64_64KEY,
@@ -778,7 +812,52 @@ mod windows_installed_software {
             KEY_WOW64_32KEY,
             &mut entries,
         );
+        scan_appx_packages(&mut entries);
         InstalledSoftwareSnapshot { entries }
+    }
+
+    fn scan_appx_packages(entries: &mut Vec<InstalledSoftwareEntry>) {
+        struct WinRtGuard(bool);
+        impl Drop for WinRtGuard {
+            fn drop(&mut self) {
+                if self.0 {
+                    unsafe { RoUninitialize() };
+                }
+            }
+        }
+        let _winrt = WinRtGuard(unsafe { RoInitialize(RO_INIT_MULTITHREADED) }.is_ok());
+        let Ok(manager) = PackageManager::new() else {
+            return;
+        };
+        let Ok(packages) = manager.FindPackagesByUserSecurityId(&HSTRING::new()) else {
+            return;
+        };
+        let Ok(iterator) = packages.First() else {
+            return;
+        };
+        while iterator.HasCurrent().unwrap_or(false) {
+            if let Ok(package) = iterator.Current()
+                && let Ok(id) = package.Id()
+                && let Ok(family) = id.FamilyName()
+            {
+                let version = id.Version().ok().map(|version| {
+                    format!(
+                        "{}.{}.{}.{}",
+                        version.Major, version.Minor, version.Build, version.Revision
+                    )
+                });
+                let family = family.to_string();
+                entries.push(InstalledSoftwareEntry {
+                    registry_key: format!("AppX\\User\\{family}"),
+                    display_name: None,
+                    display_version: version,
+                    install_location: None,
+                });
+            }
+            if iterator.MoveNext().is_err() {
+                break;
+            }
+        }
     }
 
     fn scan_uninstall_key(
@@ -1110,6 +1189,7 @@ mod tests {
         Recipe {
             id: "test".into(),
             name: "Test".into(),
+            section: super::super::schema::RecipeSection::Internal,
             description_en: String::new(),
             description_locales: HashMap::new(),
             needs: vec![],
@@ -1131,6 +1211,7 @@ mod tests {
                     .iter()
                     .map(|value| (*value).into())
                     .collect(),
+                appx_package_family_names: vec![],
             },
         }
     }
@@ -1143,6 +1224,22 @@ mod tests {
 
         assert!(!state.installed);
         assert_eq!(state.partial_count, Some((1, 3)));
+    }
+
+    #[test]
+    fn appx_family_alias_matches_store_package_without_arp_entry() {
+        let detection = Detection {
+            appx_package_family_names: vec!["OpenAI.Codex_2p2nqsd0c76g0".into()],
+            ..Detection::default()
+        };
+        let entry = InstalledSoftwareEntry {
+            registry_key: "AppX\\User\\OpenAI.Codex_2p2nqsd0c76g0".into(),
+            display_name: Some("ChatGPT".into()),
+            display_version: Some("26.707.9981.0".into()),
+            install_location: None,
+        };
+
+        assert!(installed_entry_matches("codex-desktop", &detection, &entry));
     }
 
     #[test]
@@ -1424,7 +1521,7 @@ mod tests {
                 InstalledSoftwareEntry {
                     registry_key: "ARP\\Machine\\X64\\Cursor_is1".into(),
                     display_name: Some("Cursor".into()),
-                    display_version: Some("3.5.0".into()),
+                    display_version: Some("3.6.21".into()),
                     install_location: Some("C:\\Program Files\\Cursor".into()),
                 },
                 InstalledSoftwareEntry {
@@ -1445,6 +1542,46 @@ mod tests {
         assert_eq!(
             state.install_location.as_deref(),
             Some("C:\\Users\\ryan\\AppData\\Local\\Programs\\Cursor")
+        );
+    }
+
+    #[test]
+    fn installed_software_match_prefers_newer_global_install_over_stale_user_install() {
+        let recipe = winget_recipe_with_detection(
+            "Notepad++.Notepad++",
+            &[],
+            &["Notepad++", "Notepad++ (64-bit x64)"],
+            &[],
+        );
+        let snapshot = InstalledSoftwareSnapshot {
+            entries: vec![
+                InstalledSoftwareEntry {
+                    registry_key: "ARP\\User\\X64\\Notepad++.Notepad++_Microsoft.Winget.Source_8wekyb3d8bbwe"
+                        .into(),
+                    display_name: Some("Notepad++".into()),
+                    display_version: Some("8.9.6.4".into()),
+                    install_location: Some(
+                        "C:\\Users\\ryan\\AppData\\Local\\Microsoft\\WinGet\\Packages\\Notepad++.Notepad++_Microsoft.Winget.Source_8wekyb3d8bbwe"
+                            .into(),
+                    ),
+                },
+                InstalledSoftwareEntry {
+                    registry_key: "ARP\\Machine\\X64\\Notepad++".into(),
+                    display_name: Some("Notepad++ (64-bit x64)".into()),
+                    display_version: Some("8.9.7".into()),
+                    install_location: Some("C:\\Program Files\\Notepad++".into()),
+                },
+            ],
+        };
+
+        let state = detect_installed_software(&recipe, &snapshot);
+
+        assert!(state.installed);
+        assert_eq!(state.installed_version.as_deref(), Some("8.9.7"));
+        assert_eq!(state.install_scope, Some(InstallScope::Machine));
+        assert_eq!(
+            state.install_location.as_deref(),
+            Some("C:\\Program Files\\Notepad++")
         );
     }
 

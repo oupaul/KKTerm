@@ -526,13 +526,13 @@ export function TaskLibrary({ onOpenRunHistory }: { onOpenRunHistory: (siteId: s
   }
 
   return (
-    <div className="it-task-library-page it-destination-surface">
+    <div className="it-task-library-page it-destination-surface" data-tutorial-id="itops.taskLibrary">
       <div className="it-destination-page-head">
         <div>
           <h2>{t("itops.tasks.heading")}</h2>
           <p>{t("itops.tasks.pageDescription")}</p>
         </div>
-        <button type="button" className="it-btn primary" onClick={() => setEditor(null)}>
+        <button type="button" className="it-btn primary" data-tutorial-id="itops.taskLibraryNew" onClick={() => setEditor(null)}>
           <ItIcon name="plus" size={14} />
           {t("itops.tasks.newTitle")}
         </button>
@@ -550,7 +550,7 @@ export function TaskLibrary({ onOpenRunHistory }: { onOpenRunHistory: (siteId: s
           </div>
           {filtered.map((task) => {
             const stats = taskStats.get(task.id) ?? { executions: 0, failures: 0, lastSiteId: null };
-            return <div key={task.id} className="it-task-table-row" role="row">
+            return <div key={task.id} className="it-task-table-row" data-tutorial-id={`itops.task:${task.id}`} role="row">
               <span className="it-task-table-name"><span className="it-task-row-icon"><ItIcon name={taskKind(task) === "script" ? "code" : "book"} size={15} /></span><span><strong>{taskDisplayName(t, task)}{task.builtInKey ? <em>{t("itops.tasks.builtInBadge")}</em> : null}</strong><small>{task.description || t("itops.tasks.noDescription")}</small></span></span>
               <span>{t(`itops.tasks.kind.${taskKind(task)}`)}</span>
               <span className="it-task-os-list">{task.applicableOs.map((os) => <small key={os}>{taskOsLabel(t, os)}</small>)}</span>

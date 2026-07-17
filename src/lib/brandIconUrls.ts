@@ -24,6 +24,7 @@ import gitIcon from "../assets/installer-icons/git.svg?url";
 import githubIcon from "../assets/installer-icons/github.svg?url";
 import hermesAgentIcon from "../assets/installer-icons/hermes-agent.svg?url";
 import inkscapeIcon from "../assets/installer-icons/inkscape.svg?url";
+import keepassxcIcon from "../assets/installer-icons/keepassxc.svg?url";
 import kritaIcon from "../assets/installer-icons/krita.svg?url";
 import langflowIcon from "../assets/installer-icons/langflow.svg?url";
 import linuxIcon from "../assets/installer-icons/linux.svg?url";
@@ -31,6 +32,7 @@ import lmstudioIcon from "../assets/installer-icons/lmstudio.svg?url";
 import n8nIcon from "../assets/installer-icons/n8n.svg?url";
 import nodejsIcon from "../assets/installer-icons/nodedotjs.svg?url";
 import notepadppIcon from "../assets/installer-icons/notepadpp.svg?url";
+import obsStudioIcon from "../assets/installer-icons/obs-studio.svg?url";
 import ohMyPoshIcon from "../assets/installer-icons/oh-my-posh.svg?url";
 import ollamaIcon from "../assets/installer-icons/ollama.svg?url";
 import openClawIcon from "../assets/installer-icons/openclaw.png?url";
@@ -48,6 +50,7 @@ import scrcpyIcon from "../assets/installer-icons/scrcpy.svg?url";
 import shareXIcon from "../assets/installer-icons/sharex.svg?url";
 import sysinternalsSuiteIcon from "../assets/installer-icons/sysinternals-suite.png?url";
 import tailscaleIcon from "../assets/installer-icons/tailscale.svg?url";
+import vlcIcon from "../assets/installer-icons/vlc.svg?url";
 import vscodeIcon from "../assets/installer-icons/vscode.png?url";
 import alacrittyIcon from "../assets/connection-icons/tools/alacritty.svg?url";
 import bashIcon from "../assets/connection-icons/tools/gnubash.svg?url";
@@ -89,12 +92,14 @@ const brandIconUrlById: Record<string, string> = {
   "hermes-agent": hermesAgentIcon,
   "hermes-desktop": hermesAgentIcon,
   inkscape: inkscapeIcon,
+  keepassxc: keepassxcIcon,
   krita: kritaIcon,
   langflow: langflowIcon,
   lmstudio: lmstudioIcon,
   n8n: n8nIcon,
   nodejs: nodejsIcon,
   notepadpp: notepadppIcon,
+  "obs-studio": obsStudioIcon,
   ollama: ollamaIcon,
   "oh-my-posh": ohMyPoshIcon,
   openflowkit: openFlowKitIcon,
@@ -108,6 +113,7 @@ const brandIconUrlById: Record<string, string> = {
   sharex: shareXIcon,
   "sysinternals-suite": sysinternalsSuiteIcon,
   tailscale: tailscaleIcon,
+  vlc: vlcIcon,
   vscode: vscodeIcon,
   "github-copilot": githubCopilotIcon,
   windsurf: windsurfIcon,

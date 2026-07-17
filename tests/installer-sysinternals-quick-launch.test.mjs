@@ -68,12 +68,12 @@ test("GUI tools launch directly; CLI tools are list-only with a terminal button"
 test("Sysinternals backend marks GUI vs CLI tools and gates launching", () => {
   assert.match(
     commandsSource,
-    /gui\("procexp\.exe", "Process Explorer"/,
+    /gui\(\s*"procexp\.exe",\s*"Process Explorer"/,
     "Process Explorer should be a GUI tool",
   );
   assert.match(
     commandsSource,
-    /cli\("psexec\.exe", "PsExec"/,
+    /cli\(\s*"psexec\.exe",\s*"PsExec"/,
     "PsExec should be a CLI (list-only) tool",
   );
   // The launch command refuses CLI tools — they need a terminal and arguments.

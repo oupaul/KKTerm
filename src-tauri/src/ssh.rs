@@ -248,6 +248,7 @@ pub struct NativeSshTerminalRequest {
     pub socks_proxy: Option<String>,
     pub compression: bool,
     pub old_protocols: bool,
+    pub encoding: crate::sessions::TerminalEncodingState,
 }
 
 #[derive(Clone)]
@@ -590,6 +591,7 @@ pub fn start_native_terminal(
         socks_proxy: request.socks_proxy,
         compression: request.compression,
         old_protocols: request.old_protocols,
+        encoding: request.encoding,
     };
     ssh_debug(
         "terminal.start",
@@ -1393,7 +1395,7 @@ async fn run_native_terminal_once(
     // forward-drain below before this function returns and the tokio runtime is
     // torn down. See `forward_tasks` for why draining in-context matters.
     let outcome: Result<TerminalRunOutcome, String> = async {
-        let mut output_decoder = crate::sessions::TerminalOutputDecoder::default();
+        let mut output_decoder = crate::sessions::TerminalOutputDecoder::new(request.encoding.clone());
         loop {
         tokio::select! {
             control = control_rx.recv() => {
@@ -2515,6 +2517,14 @@ fn native_ssh_preferred_algorithms(compression: bool, old_protocols: bool) -> ru
             }
         }
         preferred.cipher = std::borrow::Cow::Owned(cipher);
+
+        let mut mac = preferred.mac.to_vec();
+        if !mac.iter().any(|existing| {
+            existing.as_ref() == russh::mac::HMAC_SHA1.as_ref()
+        }) {
+            mac.push(russh::mac::HMAC_SHA1);
+        }
+        preferred.mac = std::borrow::Cow::Owned(mac);
     }
     preferred
 }
@@ -3414,6 +3424,14 @@ mod tests {
         assert!(!cipher_order.contains(&"aes192-cbc"));
         assert!(!cipher_order.contains(&"aes128-cbc"));
         assert!(!cipher_order.contains(&"3des-cbc"));
+
+        let mac_order: Vec<&str> = config
+            .preferred
+            .mac
+            .iter()
+            .map(|name| name.as_ref())
+            .collect();
+        assert!(!mac_order.contains(&"hmac-sha1"));
     }
 
     #[test]
@@ -3466,6 +3484,31 @@ mod tests {
                 "legacy cipher must not outrank modern ciphers: {order:?}"
             );
         }
+    }
+
+    #[test]
+    fn legacy_mode_appends_sha1_mac_after_modern_defaults() {
+        let config = native_ssh_client_config(true, true);
+        let order: Vec<&str> = config
+            .preferred
+            .mac
+            .iter()
+            .map(|name| name.as_ref())
+            .collect();
+        let modern = order
+            .iter()
+            .position(|name| *name == "hmac-sha2-256")
+            .expect("modern SHA-2 MAC stays advertised");
+
+        let legacy = order
+            .iter()
+            .position(|name| *name == "hmac-sha1")
+            .expect("legacy SHA-1 MAC is advertised only in legacy mode");
+
+        assert!(
+            modern < legacy,
+            "legacy MAC must not outrank modern MACs: {order:?}"
+        );
     }
 
     #[test]
@@ -4017,6 +4060,8 @@ mod tests {
             socks_proxy: None,
             compression: true,
             old_protocols: false,
+            encoding: crate::sessions::TerminalEncodingState::new("utf-8")
+                .expect("UTF-8 encoding"),
         }
     }
 

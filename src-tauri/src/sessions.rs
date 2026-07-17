@@ -1,21 +1,23 @@
 #[cfg(target_os = "windows")]
 use crate::windows_local_pty;
 use crate::{secrets, serial, ssh, storage, telnet, x_server};
+use encoding_rs::{Encoding, UTF_8};
 use portable_pty::{Child, CommandBuilder, MasterPty, PtySize, native_pty_system};
 use serde::{Deserialize, Serialize};
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::{BTreeMap, HashMap, HashSet, VecDeque},
     ffi::OsString,
     fs::{self, File},
-    io::{Read, Write},
+    io::{BufRead, BufReader, Read, Write},
     net::{IpAddr, TcpListener as StdTcpListener},
     path::{Path, PathBuf},
     process::Command as ProcessCommand,
-    sync::Mutex,
+    sync::{Arc, Mutex, RwLock},
     thread,
     time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 use tauri::{AppHandle, Emitter, Manager};
+use zip::{ZipWriter, write::SimpleFileOptions};
 
 pub struct SessionManager {
     sessions: Mutex<HashMap<String, TerminalSession>>,
@@ -27,6 +29,7 @@ pub struct SessionManager {
 
 struct TerminalSession {
     transport: TerminalTransport,
+    encoding: TerminalEncodingState,
 }
 
 struct SshPortForwardSession {
@@ -93,6 +96,44 @@ pub struct StartTerminalSessionRequest {
     pub use_psmux: Option<bool>,
     pub psmux_session_id: Option<String>,
     pub ssh_buffer_lines: Option<u32>,
+    #[serde(default = "default_terminal_encoding")]
+    pub text_encoding: String,
+}
+
+fn default_terminal_encoding() -> String {
+    "utf-8".to_string()
+}
+
+#[derive(Clone)]
+pub(crate) struct TerminalEncodingState(Arc<RwLock<String>>);
+
+impl TerminalEncodingState {
+    pub(crate) fn new(label: &str) -> Result<Self, String> {
+        let normalized = terminal_encoding(label)?;
+        Ok(Self(Arc::new(RwLock::new(
+            normalized.name().to_ascii_lowercase(),
+        ))))
+    }
+    fn label(&self) -> String {
+        self.0
+            .read()
+            .map(|value| value.clone())
+            .unwrap_or_else(|_| "utf-8".to_string())
+    }
+    fn set(&self, label: &str) -> Result<(), String> {
+        let normalized = terminal_encoding(label)?.name().to_ascii_lowercase();
+        *self
+            .0
+            .write()
+            .map_err(|_| "terminal encoding lock is poisoned".to_string())? = normalized;
+        Ok(())
+    }
+}
+
+fn terminal_encoding(label: &str) -> Result<&'static Encoding, String> {
+    Encoding::for_label(label.trim().as_bytes())
+        .filter(|encoding| !matches!(encoding.name(), "UTF-16LE" | "UTF-16BE" | "replacement"))
+        .ok_or_else(|| format!("unsupported terminal text encoding: {label}"))
 }
 
 #[derive(Deserialize)]
@@ -280,6 +321,8 @@ pub struct StartTerminalRecordingRequest {
     pub connection_id: String,
     pub connection_name: String,
     pub initial_buffer: String,
+    pub rows: Option<u16>,
+    pub cols: Option<u16>,
 }
 
 #[derive(Deserialize)]
@@ -306,6 +349,59 @@ pub struct TerminalRecordingEntry {
     pub path: PathBuf,
     pub size_bytes: u64,
     pub modified_at_millis: Option<u128>,
+    pub started_at_millis: Option<u128>,
+    pub duration_millis: Option<u128>,
+    pub connection_id_fragment: String,
+    pub connection_folder_label: String,
+    pub ai_summary: Option<String>,
+    pub ai_summary_preview: Option<String>,
+    pub ai_summary_model: Option<String>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TerminalRecordingSummaryInput {
+    pub sample: String,
+    pub preview: String,
+    pub total_lines: usize,
+    pub sampled_lines: usize,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SaveTerminalRecordingSummaryRequest {
+    pub path: String,
+    pub summary: String,
+    pub preview: String,
+    pub provider_kind: String,
+    pub model: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExportTerminalRecordingsRequest {
+    pub paths: Vec<String>,
+    pub destination: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExportTerminalRecordingsResult {
+    pub destination: PathBuf,
+    pub count: usize,
+}
+
+#[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct TerminalRecordingSummaryCache {
+    version: u8,
+    size_bytes: u64,
+    modified_at_millis: Option<u128>,
+    summary: String,
+    preview: String,
+    provider_kind: String,
+    model: String,
+    generated_at_millis: u128,
 }
 
 #[derive(Deserialize)]
@@ -325,9 +421,19 @@ pub struct ResizeTerminalRequest {
     rows: u16,
 }
 
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SetTerminalEncodingRequest {
+    session_id: String,
+    encoding: String,
+}
+
 struct ActiveTerminalRecording {
     info: TerminalRecordingInfo,
     file: File,
+    // Live output carries VT escape sequences (ConPTY repaints especially);
+    // render them to plain text so the saved .txt stays human-readable.
+    renderer: crate::vt_text::VtTextRenderer,
 }
 
 pub struct TerminalRecordingManager {
@@ -383,6 +489,13 @@ impl TerminalRecordingManager {
     ) -> Result<TerminalRecordingInfo, String> {
         let session_id = required_recording_part("session id", &request.session_id)?;
         let connection_id = required_recording_part("connection id", &request.connection_id)?;
+        let mut active = self
+            .active
+            .lock()
+            .map_err(|_| "terminal recording lock is poisoned".to_string())?;
+        if active.contains_key(&session_id) {
+            return Err("terminal recording is already active".to_string());
+        }
         let connection_name = request.connection_name.trim().to_string();
         let started_at_millis = current_unix_millis();
         let folder = self.connection_folder_at(root, &connection_id, &connection_name)?;
@@ -398,12 +511,16 @@ impl TerminalRecordingManager {
             recording_id_fragment(&session_id, 12)
         );
         let path = folder.join(file_name);
-        let mut file = File::create(&path).map_err(|error| {
-            format!(
-                "failed to create terminal recording {}: {error}",
-                path.display()
-            )
-        })?;
+        let mut file = File::options()
+            .write(true)
+            .create_new(true)
+            .open(&path)
+            .map_err(|error| {
+                format!(
+                    "failed to create terminal recording {}: {error}",
+                    path.display()
+                )
+            })?;
         if !request.initial_buffer.is_empty() {
             file.write_all(request.initial_buffer.as_bytes())
                 .map_err(|error| format!("failed to write terminal recording prelude: {error}"))?;
@@ -427,16 +544,17 @@ impl TerminalRecordingManager {
             started_at_millis,
             path,
         };
-        self.active
-            .lock()
-            .map_err(|_| "terminal recording lock is poisoned".to_string())?
-            .insert(
-                session_id,
-                ActiveTerminalRecording {
-                    info: info.clone(),
-                    file,
-                },
-            );
+        active.insert(
+            session_id,
+            ActiveTerminalRecording {
+                info: info.clone(),
+                file,
+                renderer: crate::vt_text::VtTextRenderer::new(
+                    request.rows.unwrap_or(24),
+                    request.cols.unwrap_or(80),
+                ),
+            },
+        );
         Ok(info)
     }
 
@@ -447,6 +565,15 @@ impl TerminalRecordingManager {
             .map_err(|_| "terminal recording lock is poisoned".to_string())?
             .remove(&session_id);
         if let Some(mut recording) = recording {
+            let tail = recording.renderer.finish();
+            if !tail.is_empty() {
+                recording.file.write_all(tail.as_bytes()).map_err(|error| {
+                    format!(
+                        "failed to write terminal recording {}: {error}",
+                        recording.info.path.display()
+                    )
+                })?;
+            }
             recording.file.flush().map_err(|error| {
                 format!(
                     "failed to flush terminal recording {}: {error}",
@@ -467,14 +594,27 @@ impl TerminalRecordingManager {
         let Some(recording) = active.get_mut(session_id) else {
             return Ok(());
         };
+        let rendered = recording.renderer.feed(data);
+        if rendered.is_empty() {
+            return Ok(());
+        }
         recording
             .file
-            .write_all(data.as_bytes())
+            .write_all(rendered.as_bytes())
             .map_err(|error| format!("failed to write terminal recording: {error}"))?;
         recording
             .file
             .flush()
             .map_err(|error| format!("failed to flush terminal recording: {error}"))
+    }
+
+    fn resize(&self, session_id: &str, rows: u16, cols: u16) {
+        let Ok(mut active) = self.active.lock() else {
+            return;
+        };
+        if let Some(recording) = active.get_mut(session_id) {
+            recording.renderer.resize(rows, cols);
+        }
     }
 
     fn list_recordings_at(
@@ -581,12 +721,559 @@ fn terminal_recording_entry(path: PathBuf) -> Result<TerminalRecordingEntry, Str
         .and_then(|value| value.to_str())
         .unwrap_or("recording.txt")
         .to_string();
+    let started_at_millis = recording_started_at_millis(&file_name);
+    let duration_millis = started_at_millis
+        .zip(modified_at_millis)
+        .map(|(started, modified)| modified.saturating_sub(started));
+    let folder_name = path
+        .parent()
+        .and_then(Path::file_name)
+        .and_then(|value| value.to_str())
+        .unwrap_or("connection");
+    let (connection_folder_label, connection_id_fragment) = folder_name
+        .rsplit_once("--")
+        .map(|(label, id)| (label.to_string(), id.to_string()))
+        .unwrap_or_else(|| (folder_name.to_string(), String::new()));
+    let cached_summary = read_terminal_recording_summary_cache(
+        &path,
+        metadata.len(),
+        modified_at_millis,
+    );
     Ok(TerminalRecordingEntry {
         file_name,
         path,
         size_bytes: metadata.len(),
         modified_at_millis,
+        started_at_millis,
+        duration_millis,
+        connection_id_fragment,
+        connection_folder_label,
+        ai_summary: cached_summary.as_ref().map(|cache| cache.summary.clone()),
+        ai_summary_preview: cached_summary.as_ref().map(|cache| cache.preview.clone()),
+        ai_summary_model: cached_summary.map(|cache| cache.model),
     })
+}
+
+fn recording_started_at_millis(file_name: &str) -> Option<u128> {
+    let stamp = file_name.get(..19)?;
+    let year = stamp.get(0..4)?.parse::<i32>().ok()?;
+    let month = stamp.get(4..6)?.parse::<u8>().ok()?;
+    let day = stamp.get(6..8)?.parse::<u8>().ok()?;
+    if stamp.get(8..9)? != "-" || stamp.get(15..16)? != "-" {
+        return None;
+    }
+    let hour = stamp.get(9..11)?.parse::<u8>().ok()?;
+    let minute = stamp.get(11..13)?.parse::<u8>().ok()?;
+    let second = stamp.get(13..15)?.parse::<u8>().ok()?;
+    let millisecond = stamp.get(16..19)?.parse::<u16>().ok()?;
+    let month = time::Month::try_from(month).ok()?;
+    let date = time::Date::from_calendar_date(year, month, day).ok()?;
+    let time = time::Time::from_hms_milli(hour, minute, second, millisecond).ok()?;
+    let offset = time::UtcOffset::current_local_offset().unwrap_or(time::UtcOffset::UTC);
+    let millis = time::PrimitiveDateTime::new(date, time)
+        .assume_offset(offset)
+        .unix_timestamp_nanos()
+        / 1_000_000;
+    (millis >= 0).then_some(millis as u128)
+}
+
+fn terminal_recording_summary_cache_path(path: &Path) -> PathBuf {
+    let file_name = path
+        .file_name()
+        .and_then(|value| value.to_str())
+        .unwrap_or("recording.txt");
+    path.with_file_name(format!("{file_name}.kkterm-summary.json"))
+}
+
+fn read_terminal_recording_summary_cache(
+    path: &Path,
+    size_bytes: u64,
+    modified_at_millis: Option<u128>,
+) -> Option<TerminalRecordingSummaryCache> {
+    let bytes = fs::read(terminal_recording_summary_cache_path(path)).ok()?;
+    let cache = serde_json::from_slice::<TerminalRecordingSummaryCache>(&bytes).ok()?;
+    (cache.version == 1
+        && cache.size_bytes == size_bytes
+        && cache.modified_at_millis == modified_at_millis
+        && !cache.summary.trim().is_empty())
+    .then_some(cache)
+}
+
+fn validate_terminal_recording_path(root: &Path, requested: &str) -> Result<PathBuf, String> {
+    let canonical_root = root
+        .canonicalize()
+        .map_err(|error| format!("failed to resolve terminal recordings root: {error}"))?;
+    let path = PathBuf::from(requested)
+        .canonicalize()
+        .map_err(|error| format!("failed to resolve terminal recording {requested}: {error}"))?;
+    if !path.starts_with(&canonical_root) {
+        return Err("terminal recording path must stay inside the recordings folder".to_string());
+    }
+    if path.extension().and_then(|value| value.to_str()) != Some("txt") || !path.is_file() {
+        return Err("terminal recording must be a text file".to_string());
+    }
+    Ok(path)
+}
+
+pub(crate) fn list_all_terminal_recordings(
+    root: PathBuf,
+) -> Result<Vec<TerminalRecordingEntry>, String> {
+    let mut recordings = Vec::new();
+    let groups = match fs::read_dir(&root) {
+        Ok(entries) => entries,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(recordings),
+        Err(error) => {
+            return Err(format!(
+                "failed to read terminal recordings root {}: {error}",
+                root.display()
+            ));
+        }
+    };
+    for group in groups
+        .filter_map(Result::ok)
+        .filter(|entry| entry.path().is_dir())
+    {
+        let folders = match fs::read_dir(group.path()) {
+            Ok(entries) => entries,
+            Err(_) => continue,
+        };
+        for folder in folders
+            .filter_map(Result::ok)
+            .filter(|entry| entry.path().is_dir())
+        {
+            let entries = match fs::read_dir(folder.path()) {
+                Ok(entries) => entries,
+                Err(_) => continue,
+            };
+            recordings.extend(
+                entries
+                    .filter_map(Result::ok)
+                    .filter_map(|entry| terminal_recording_entry(entry.path()).ok()),
+            );
+        }
+    }
+    recordings.sort_by(|left, right| {
+        right
+            .started_at_millis
+            .or(right.modified_at_millis)
+            .cmp(&left.started_at_millis.or(left.modified_at_millis))
+            .then_with(|| right.file_name.cmp(&left.file_name))
+    });
+    Ok(recordings)
+}
+
+pub(crate) fn search_terminal_recordings(
+    root: PathBuf,
+    query: &str,
+) -> Result<Vec<PathBuf>, String> {
+    let query = query.trim();
+    if query.is_empty() {
+        return Ok(Vec::new());
+    }
+    if query.contains(['\r', '\n']) {
+        return Err("terminal recording search must stay on one line".to_string());
+    }
+    if !root.exists() {
+        return Ok(Vec::new());
+    }
+
+    let mut ripgrep = ProcessCommand::new("rg");
+    ripgrep.args([
+        "--files-with-matches",
+        "--ignore-case",
+        "--fixed-strings",
+        "--no-messages",
+        "--color",
+        "never",
+        "--glob",
+        "*.txt",
+        "--",
+        query,
+    ]);
+    ripgrep.arg(&root);
+    hide_console_window(&mut ripgrep);
+    if let Ok(output) = ripgrep.output()
+        && (output.status.success() || output.status.code() == Some(1))
+    {
+        return recording_search_paths_from_output(&root, &output.stdout);
+    }
+
+    let mut fallback = if cfg!(windows) {
+        let mut command = ProcessCommand::new("findstr");
+        command.args(["/S", "/I", "/L", "/M", &format!("/C:{query}")]);
+        command.arg(root.join("*.txt"));
+        command
+    } else {
+        let mut command = ProcessCommand::new("grep");
+        command.args(["-RIlF", "--include=*.txt", "--", query]);
+        command.arg(&root);
+        command
+    };
+    hide_console_window(&mut fallback);
+    if let Ok(output) = fallback.output()
+        && (output.status.success() || output.status.code() == Some(1))
+    {
+        return recording_search_paths_from_output(&root, &output.stdout);
+    }
+
+    // Last-resort correctness path for unusually minimal systems where neither
+    // ripgrep nor the platform search command is available.
+    native_terminal_recording_search(&root, query)
+}
+
+fn recording_search_paths_from_output(root: &Path, stdout: &[u8]) -> Result<Vec<PathBuf>, String> {
+    let canonical_root = root
+        .canonicalize()
+        .map_err(|error| format!("failed to resolve terminal recordings root: {error}"))?;
+    let mut paths = Vec::new();
+    for line in String::from_utf8_lossy(stdout).lines() {
+        let candidate = PathBuf::from(line.trim());
+        let candidate = if candidate.is_absolute() {
+            candidate
+        } else {
+            root.join(candidate)
+        };
+        let Ok(candidate) = candidate.canonicalize() else {
+            continue;
+        };
+        if candidate.starts_with(&canonical_root)
+            && candidate.extension().and_then(|value| value.to_str()) == Some("txt")
+            && !paths.contains(&candidate)
+        {
+            paths.push(candidate);
+        }
+    }
+    Ok(paths)
+}
+
+fn native_terminal_recording_search(root: &Path, query: &str) -> Result<Vec<PathBuf>, String> {
+    let needle = query.to_lowercase();
+    let mut matches = Vec::new();
+    for recording in list_all_terminal_recordings(root.to_path_buf())? {
+        let mut file = match File::open(&recording.path) {
+            Ok(file) => file,
+            Err(_) => continue,
+        };
+        let mut text = String::new();
+        if file.read_to_string(&mut text).is_ok() && text.to_lowercase().contains(&needle) {
+            matches.push(recording.path);
+        }
+    }
+    Ok(matches)
+}
+
+pub(crate) fn prepare_terminal_recording_summary(
+    root: PathBuf,
+    requested: &str,
+) -> Result<TerminalRecordingSummaryInput, String> {
+    const FIRST_LIMIT: usize = 24;
+    const LAST_LIMIT: usize = 64;
+    const SALIENT_LIMIT: usize = 96;
+    const PERIODIC_LIMIT: usize = 48;
+    const SAMPLE_BYTES_LIMIT: usize = 24 * 1024;
+
+    let path = validate_terminal_recording_path(&root, requested)?;
+    let file = File::open(&path)
+        .map_err(|error| format!("failed to open terminal recording {}: {error}", path.display()))?;
+    let mut first = Vec::new();
+    let mut last = VecDeque::with_capacity(LAST_LIMIT);
+    let mut salient = Vec::new();
+    let mut periodic = Vec::new();
+    let mut preview = String::new();
+    let mut total_lines = 0usize;
+    let mut bytes = Vec::new();
+    let mut reader = BufReader::new(file);
+    while reader
+        .read_until(b'\n', &mut bytes)
+        .map_err(|error| format!("failed to read terminal recording: {error}"))?
+        > 0
+    {
+        total_lines += 1;
+        let line = clean_terminal_recording_line(&String::from_utf8_lossy(&bytes));
+        bytes.clear();
+        if line.is_empty() {
+            continue;
+        }
+        let numbered = (total_lines, line.clone());
+        if first.len() < FIRST_LIMIT {
+            first.push(numbered.clone());
+        }
+        if last.len() == LAST_LIMIT {
+            last.pop_front();
+        }
+        last.push_back(numbered.clone());
+        if salient.len() < SALIENT_LIMIT && terminal_recording_line_is_salient(&line) {
+            salient.push(numbered.clone());
+        }
+        if periodic.len() < PERIODIC_LIMIT && total_lines % 200 == 0 {
+            periodic.push(numbered);
+        }
+        if preview.is_empty() && terminal_recording_line_looks_like_command(&line) {
+            preview = truncate_recording_line(&line, 180);
+        }
+    }
+
+    if preview.is_empty() {
+        preview = first
+            .first()
+            .map(|(_, line)| truncate_recording_line(line, 180))
+            .unwrap_or_default();
+    }
+
+    let sections = [
+        ("BEGINNING", first),
+        ("COMMANDS AND IMPORTANT OUTPUT", salient),
+        ("PERIODIC SAMPLES", periodic),
+        ("ENDING", last.into_iter().collect()),
+    ];
+    let mut sample = String::new();
+    let mut sampled_lines = 0usize;
+    let mut seen = std::collections::HashSet::new();
+    'sections: for (label, lines) in sections {
+        let mut section_started = false;
+        for (line_number, line) in lines {
+            if !seen.insert(line_number) {
+                continue;
+            }
+            let rendered = format!("{line_number}: {line}\n");
+            let header = if section_started {
+                String::new()
+            } else {
+                format!("\n[{label}]\n")
+            };
+            if sample.len() + header.len() + rendered.len() > SAMPLE_BYTES_LIMIT {
+                break 'sections;
+            }
+            sample.push_str(&header);
+            sample.push_str(&rendered);
+            sampled_lines += 1;
+            section_started = true;
+        }
+    }
+    if sample.is_empty() {
+        sample.push_str("[EMPTY RECORDING]\n");
+    }
+    Ok(TerminalRecordingSummaryInput {
+        sample,
+        preview,
+        total_lines,
+        sampled_lines,
+    })
+}
+
+fn clean_terminal_recording_line(line: &str) -> String {
+    let mut clean = String::with_capacity(line.len().min(520));
+    let mut chars = line.chars().peekable();
+    while let Some(character) = chars.next() {
+        if character == '\u{1b}' {
+            match chars.peek().copied() {
+                Some('[') => {
+                    chars.next();
+                    for next in chars.by_ref() {
+                        if ('@'..='~').contains(&next) {
+                            break;
+                        }
+                    }
+                }
+                Some(']') => {
+                    chars.next();
+                    let mut previous_escape = false;
+                    for next in chars.by_ref() {
+                        if next == '\u{7}' || (previous_escape && next == '\\') {
+                            break;
+                        }
+                        previous_escape = next == '\u{1b}';
+                    }
+                }
+                _ => {}
+            }
+            continue;
+        }
+        if character == '\t' || !character.is_control() {
+            clean.push(character);
+        }
+        if clean.chars().count() >= 500 {
+            clean.push('…');
+            break;
+        }
+    }
+    clean.trim().to_string()
+}
+
+fn terminal_recording_line_looks_like_command(line: &str) -> bool {
+    let trimmed = line.trim_start();
+    trimmed.starts_with("$ ")
+        || trimmed.starts_with("# ")
+        || trimmed.starts_with("> ")
+        || trimmed.starts_with("% ")
+        || trimmed
+            .get(..3)
+            .is_some_and(|prefix| prefix.eq_ignore_ascii_case("PS "))
+}
+
+fn terminal_recording_line_is_salient(line: &str) -> bool {
+    if terminal_recording_line_looks_like_command(line) {
+        return true;
+    }
+    let lower = line.to_lowercase();
+    [
+        "error", "failed", "failure", "warning", "fatal", "panic", "exception",
+        "traceback", "denied", "timeout", "timed out", "not found", "unhealthy",
+        "restarted", "completed", "success", "changed", "created", "deleted",
+    ]
+    .iter()
+    .any(|needle| lower.contains(needle))
+}
+
+fn truncate_recording_line(line: &str, max_chars: usize) -> String {
+    let mut value = line.chars().take(max_chars).collect::<String>();
+    if line.chars().count() > max_chars {
+        value.push('…');
+    }
+    value
+}
+
+pub(crate) fn save_terminal_recording_summary(
+    root: PathBuf,
+    request: SaveTerminalRecordingSummaryRequest,
+) -> Result<(), String> {
+    let path = validate_terminal_recording_path(&root, &request.path)?;
+    let summary = request.summary.trim();
+    if summary.is_empty() {
+        return Err("terminal recording summary cannot be empty".to_string());
+    }
+    if summary.chars().count() > 4_000 {
+        return Err("terminal recording summary is too long".to_string());
+    }
+    let metadata = fs::metadata(&path)
+        .map_err(|error| format!("failed to read terminal recording metadata: {error}"))?;
+    let modified_at_millis = metadata
+        .modified()
+        .ok()
+        .and_then(|time| time.duration_since(UNIX_EPOCH).ok())
+        .map(|duration| duration.as_millis());
+    let cache = TerminalRecordingSummaryCache {
+        version: 1,
+        size_bytes: metadata.len(),
+        modified_at_millis,
+        summary: summary.to_string(),
+        preview: truncate_recording_line(request.preview.trim(), 240),
+        provider_kind: truncate_recording_line(request.provider_kind.trim(), 80),
+        model: truncate_recording_line(request.model.trim(), 160),
+        generated_at_millis: current_unix_millis(),
+    };
+    let bytes = serde_json::to_vec_pretty(&cache)
+        .map_err(|error| format!("failed to serialize terminal recording summary: {error}"))?;
+    let destination = terminal_recording_summary_cache_path(&path);
+    let temporary = destination.with_extension("json.tmp");
+    fs::write(&temporary, bytes)
+        .map_err(|error| format!("failed to write terminal recording summary: {error}"))?;
+    fs::rename(&temporary, &destination)
+        .or_else(|_| {
+            let _ = fs::remove_file(&destination);
+            fs::rename(&temporary, &destination)
+        })
+        .map_err(|error| format!("failed to finalize terminal recording summary: {error}"))
+}
+
+pub(crate) fn export_terminal_recordings(
+    root: PathBuf,
+    request: ExportTerminalRecordingsRequest,
+) -> Result<ExportTerminalRecordingsResult, String> {
+    if request.paths.is_empty() {
+        return Err("select at least one terminal recording to export".to_string());
+    }
+    if request.paths.len() > 2_000 {
+        return Err("too many terminal recordings selected for one export".to_string());
+    }
+    let destination = PathBuf::from(request.destination.trim());
+    if destination.as_os_str().is_empty() {
+        return Err("terminal recording export destination is required".to_string());
+    }
+    let parent = destination
+        .parent()
+        .ok_or_else(|| "terminal recording export destination has no parent folder".to_string())?;
+    fs::create_dir_all(parent)
+        .map_err(|error| format!("failed to create terminal recording export folder: {error}"))?;
+    let canonical_root = root
+        .canonicalize()
+        .map_err(|error| format!("failed to resolve terminal recordings root: {error}"))?;
+    let sources = request
+        .paths
+        .iter()
+        .map(|path| validate_terminal_recording_path(&root, path))
+        .collect::<Result<Vec<_>, _>>()?;
+    let temporary = destination.with_extension("zip.part");
+    let file = File::create(&temporary)
+        .map_err(|error| format!("failed to create terminal recording archive: {error}"))?;
+    let mut archive = ZipWriter::new(file);
+    let options = SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);
+    let mut archive_names = HashSet::new();
+    for source in &sources {
+        source
+            .strip_prefix(&canonical_root)
+            .map_err(|_| "terminal recording path escaped the recordings root".to_string())?;
+        let archive_name = unique_terminal_recording_archive_name(source, &mut archive_names)?;
+        archive
+            .start_file(archive_name, options)
+            .map_err(|error| format!("failed to add terminal recording to archive: {error}"))?;
+        let mut source_file = File::open(source)
+            .map_err(|error| format!("failed to open terminal recording for export: {error}"))?;
+        std::io::copy(&mut source_file, &mut archive)
+            .map_err(|error| format!("failed to write terminal recording archive: {error}"))?;
+    }
+    archive
+        .finish()
+        .map_err(|error| format!("failed to finalize terminal recording archive: {error}"))?;
+    if destination.exists() {
+        fs::remove_file(&destination)
+            .map_err(|error| format!("failed to replace terminal recording archive: {error}"))?;
+    }
+    fs::rename(&temporary, &destination)
+        .map_err(|error| format!("failed to save terminal recording archive: {error}"))?;
+    Ok(ExportTerminalRecordingsResult {
+        destination,
+        count: sources.len(),
+    })
+}
+
+fn unique_terminal_recording_archive_name(
+    source: &Path,
+    used_names: &mut HashSet<String>,
+) -> Result<String, String> {
+    let file_name = source
+        .file_name()
+        .ok_or_else(|| "terminal recording path has no file name".to_string())?
+        .to_string_lossy()
+        .chars()
+        .map(|character| match character {
+            '/' | '\\' => '_',
+            other => other,
+        })
+        .collect::<String>();
+    if used_names.insert(file_name.to_lowercase()) {
+        return Ok(file_name);
+    }
+
+    let file_name_path = Path::new(&file_name);
+    let stem = file_name_path
+        .file_stem()
+        .and_then(|value| value.to_str())
+        .unwrap_or("recording");
+    let extension = file_name_path
+        .extension()
+        .and_then(|value| value.to_str())
+        .filter(|value| !value.is_empty());
+    for suffix in 2_u32.. {
+        let candidate = match extension {
+            Some(extension) => format!("{stem} ({suffix}).{extension}"),
+            None => format!("{stem} ({suffix})"),
+        };
+        if used_names.insert(candidate.to_lowercase()) {
+            return Ok(candidate);
+        }
+    }
+    unreachable!("terminal recording archive suffix range is unbounded")
 }
 
 pub(crate) fn terminal_recordings_root(app: &AppHandle) -> Result<PathBuf, String> {
@@ -615,65 +1302,51 @@ pub(crate) fn emit_terminal_output(app: &AppHandle, session_id: &str, data: Stri
     );
 }
 
-#[derive(Default)]
 pub(crate) struct TerminalOutputDecoder {
-    pending: Vec<u8>,
+    state: TerminalEncodingState,
+    label: String,
+    decoder: encoding_rs::Decoder,
+}
+
+impl Default for TerminalOutputDecoder {
+    fn default() -> Self {
+        Self::new(TerminalEncodingState::new("utf-8").expect("UTF-8 exists"))
+    }
 }
 
 impl TerminalOutputDecoder {
+    pub(crate) fn new(state: TerminalEncodingState) -> Self {
+        let label = state.label();
+        let decoder = terminal_encoding(&label).unwrap_or(UTF_8).new_decoder();
+        Self {
+            state,
+            label,
+            decoder,
+        }
+    }
+
+    fn sync_encoding(&mut self) {
+        let label = self.state.label();
+        if label != self.label {
+            self.label = label;
+            self.decoder = terminal_encoding(&self.label)
+                .unwrap_or(UTF_8)
+                .new_decoder();
+        }
+    }
+
     pub(crate) fn decode(&mut self, bytes: &[u8]) -> Option<String> {
-        if bytes.is_empty() {
-            return None;
-        }
-
-        let mut combined;
-        let mut remaining = if self.pending.is_empty() {
-            bytes
-        } else {
-            combined = std::mem::take(&mut self.pending);
-            combined.extend_from_slice(bytes);
-            &combined
-        };
-        let mut output = String::new();
-
-        loop {
-            match std::str::from_utf8(remaining) {
-                Ok(valid) => {
-                    output.push_str(valid);
-                    break;
-                }
-                Err(error) => {
-                    let valid_up_to = error.valid_up_to();
-                    if valid_up_to > 0 {
-                        output.push_str(
-                            std::str::from_utf8(&remaining[..valid_up_to])
-                                .expect("valid_up_to must bound valid UTF-8"),
-                        );
-                    }
-
-                    match error.error_len() {
-                        Some(invalid_len) => {
-                            output.push('\u{FFFD}');
-                            remaining = &remaining[valid_up_to + invalid_len..];
-                        }
-                        None => {
-                            self.pending.extend_from_slice(&remaining[valid_up_to..]);
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-
+        self.sync_encoding();
+        let mut output = String::with_capacity(bytes.len() * 3 + 8);
+        let _ = self.decoder.decode_to_string(bytes, &mut output, false);
         (!output.is_empty()).then_some(output)
     }
 
     pub(crate) fn finish_lossy(&mut self) -> Option<String> {
-        if self.pending.is_empty() {
-            return None;
-        }
-        let pending = std::mem::take(&mut self.pending);
-        Some(String::from_utf8_lossy(&pending).to_string())
+        self.sync_encoding();
+        let mut output = String::with_capacity(8);
+        let _ = self.decoder.decode_to_string(b"", &mut output, true);
+        (!output.is_empty()).then_some(output)
     }
 }
 
@@ -756,11 +1429,12 @@ fn recording_timestamp_file_part(millis: u128) -> String {
     let timestamp = time::OffsetDateTime::from_unix_timestamp(seconds)
         .unwrap_or(time::OffsetDateTime::UNIX_EPOCH)
         .to_offset(offset);
-    timestamp
+    let timestamp = timestamp
         .format(&time::macros::format_description!(
             "[year][month][day]-[hour][minute][second]"
         ))
-        .unwrap_or_else(|_| millis.to_string())
+        .unwrap_or_else(|_| millis.to_string());
+    format!("{timestamp}-{:03}", millis % 1_000)
 }
 
 impl SessionManager {
@@ -779,6 +1453,14 @@ impl SessionManager {
         root: PathBuf,
         request: StartTerminalRecordingRequest,
     ) -> Result<TerminalRecordingInfo, String> {
+        let session_id = required_recording_part("session id", &request.session_id)?;
+        let sessions = self
+            .sessions
+            .lock()
+            .map_err(|_| "terminal session lock is poisoned".to_string())?;
+        if !sessions.contains_key(&session_id) {
+            return Err("terminal session is not active".to_string());
+        }
         self.recordings.start_recording_at(root, request)
     }
 
@@ -821,6 +1503,7 @@ impl SessionManager {
             .session_id
             .clone()
             .unwrap_or_else(|| make_session_id(&request.title));
+        let encoding = TerminalEncodingState::new(&request.text_encoding)?;
         let is_local_start = request.connection_type.trim().eq_ignore_ascii_case("local");
         let password = connection_password_for(secrets, &request);
         let mut managed_x_server_display = None;
@@ -853,6 +1536,7 @@ impl SessionManager {
                     password,
                     cols: request.cols.unwrap_or(80),
                     rows: request.rows.unwrap_or(24),
+                    encoding: encoding.clone(),
                 },
             )?;
             self.sessions
@@ -862,6 +1546,7 @@ impl SessionManager {
                     session_id.clone(),
                     TerminalSession {
                         transport: TerminalTransport::NativeTelnet(session),
+                        encoding,
                     },
                 );
             return Ok(TerminalSessionStarted {
@@ -889,6 +1574,7 @@ impl SessionManager {
                         .serial_speed
                         .or(request.port.map(u32::from))
                         .unwrap_or(9600),
+                    encoding: encoding.clone(),
                 },
             )?;
             self.sessions
@@ -898,6 +1584,7 @@ impl SessionManager {
                     session_id.clone(),
                     TerminalSession {
                         transport: TerminalTransport::NativeSerial(session),
+                        encoding,
                     },
                 );
             return Ok(TerminalSessionStarted {
@@ -934,6 +1621,7 @@ impl SessionManager {
                     socks_proxy: request.ssh_socks_proxy.clone(),
                     compression: request.ssh_compression.unwrap_or(true),
                     old_protocols: request.ssh_old_protocols.unwrap_or(false),
+                    encoding: encoding.clone(),
                 },
             ) {
                 Ok(session) => {
@@ -946,6 +1634,7 @@ impl SessionManager {
                             session_id.clone(),
                             TerminalSession {
                                 transport: TerminalTransport::NativeSsh(session),
+                                encoding,
                             },
                         );
                     return Ok(TerminalSessionStarted {
@@ -978,6 +1667,7 @@ impl SessionManager {
                     writer: local_pty.writer,
                     child: local_pty.child,
                 },
+                encoding: encoding.clone(),
             };
             self.sessions
                 .lock()
@@ -988,7 +1678,7 @@ impl SessionManager {
             thread::spawn(move || {
                 let mut reader = local_pty.reader;
                 let mut buffer = [0_u8; 8192];
-                let mut decoder = TerminalOutputDecoder::default();
+                let mut decoder = TerminalOutputDecoder::new(encoding);
                 loop {
                     match reader.read(&mut buffer) {
                         Ok(0) => {
@@ -1049,6 +1739,7 @@ impl SessionManager {
                 writer,
                 child,
             },
+            encoding: encoding.clone(),
         };
         self.sessions
             .lock()
@@ -1058,7 +1749,7 @@ impl SessionManager {
         let output_session_id = session_id.clone();
         thread::spawn(move || {
             let mut buffer = [0_u8; 8192];
-            let mut decoder = TerminalOutputDecoder::default();
+            let mut decoder = TerminalOutputDecoder::new(encoding);
             loop {
                 match reader.read(&mut buffer) {
                     Ok(0) => {
@@ -1538,19 +2229,35 @@ impl SessionManager {
         let session = sessions
             .get_mut(&request.session_id)
             .ok_or_else(|| "terminal session was not found".to_string())?;
+        let input = String::from_utf8(request.data)
+            .map_err(|_| "terminal input must be valid UTF-8".to_string())?;
+        let encoding = terminal_encoding(&session.encoding.label())?;
+        let (encoded, _, _) = encoding.encode(&input);
+        let data = encoded.into_owned();
         match &mut session.transport {
             TerminalTransport::Pty { writer, .. } => {
                 writer
-                    .write_all(&request.data)
+                    .write_all(&data)
                     .map_err(|error| format!("failed to write terminal input: {error}"))?;
                 writer
                     .flush()
                     .map_err(|error| format!("failed to flush terminal input: {error}"))
             }
-            TerminalTransport::NativeSsh(session) => session.write_input(request.data),
-            TerminalTransport::NativeTelnet(session) => session.write_input(request.data),
-            TerminalTransport::NativeSerial(session) => session.write_input(request.data),
+            TerminalTransport::NativeSsh(session) => session.write_input(data),
+            TerminalTransport::NativeTelnet(session) => session.write_input(data),
+            TerminalTransport::NativeSerial(session) => session.write_input(data),
         }
+    }
+
+    pub fn set_terminal_encoding(&self, request: SetTerminalEncodingRequest) -> Result<(), String> {
+        let sessions = self
+            .sessions
+            .lock()
+            .map_err(|_| "terminal session lock is poisoned".to_string())?;
+        let session = sessions
+            .get(&request.session_id)
+            .ok_or_else(|| "terminal session was not found".to_string())?;
+        session.encoding.set(&request.encoding)
     }
 
     pub fn resize_terminal(&self, request: ResizeTerminalRequest) -> Result<(), String> {
@@ -1561,7 +2268,7 @@ impl SessionManager {
         let session = sessions
             .get_mut(&request.session_id)
             .ok_or_else(|| "terminal session was not found".to_string())?;
-        match &mut session.transport {
+        let result = match &mut session.transport {
             TerminalTransport::Pty { master, .. } => master
                 .resize(resize_pty_size(&request))
                 .map_err(|error| format!("failed to resize terminal: {error}")),
@@ -1573,7 +2280,13 @@ impl SessionManager {
             ),
             TerminalTransport::NativeTelnet(session) => session.resize(request.cols, request.rows),
             TerminalTransport::NativeSerial(_) => Ok(()),
+        };
+        if result.is_ok() {
+            drop(sessions);
+            self.recordings
+                .resize(&request.session_id, request.rows, request.cols);
         }
+        result
     }
 
     pub fn close_terminal_session(&self, session_id: String) -> Result<(), String> {
@@ -2115,6 +2828,7 @@ fn terminal_request_for_tmux(request: &TmuxConnectionRequest) -> StartTerminalSe
         use_psmux: None,
         psmux_session_id: None,
         ssh_buffer_lines: None,
+        text_encoding: default_terminal_encoding(),
     }
 }
 
@@ -3395,6 +4109,16 @@ mod tests {
     }
 
     #[test]
+    fn terminal_output_decoder_switches_to_big5_for_live_session() {
+        let state = TerminalEncodingState::new("utf-8").expect("UTF-8 encoding");
+        let mut decoder = TerminalOutputDecoder::new(state.clone());
+        state.set("big5").expect("Big5 encoding");
+        let (bytes, _, had_errors) = encoding_rs::BIG5.encode("中文");
+        assert!(!had_errors);
+        assert_eq!(decoder.decode(&bytes), Some("中文".to_string()));
+    }
+
+    #[test]
     fn appimage_path_list_filter_keeps_user_entries_only() {
         use crate::linux_env::filter_appimage_path_list;
 
@@ -3579,6 +4303,7 @@ mod tests {
             use_psmux: None,
             psmux_session_id: None,
             ssh_buffer_lines: None,
+            text_encoding: default_terminal_encoding(),
         }
     }
 
@@ -3719,6 +4444,7 @@ mod tests {
             use_psmux: None,
             psmux_session_id: None,
             ssh_buffer_lines: None,
+            text_encoding: default_terminal_encoding(),
         }
     }
 
@@ -3922,6 +4648,8 @@ mod tests {
                 connection_id: "conn-1234567890abcdef".to_string(),
                 connection_name: "Prod East".to_string(),
                 initial_buffer: "existing line\n".to_string(),
+                rows: None,
+                cols: None,
             })
             .expect("recording starts");
 
@@ -3935,12 +4663,237 @@ mod tests {
 
         assert_eq!(started.path, stopped.path);
         let text = std::fs::read_to_string(&stopped.path).expect("recording file reads");
-        assert_eq!(text, "existing line\nnew line\r\n");
+        assert_eq!(text, "existing line\nnew line\n");
         assert!(
             stopped
                 .path
                 .starts_with(root.join("prod-east").join("prod-east--conn-12345678"))
         );
+    }
+
+    #[test]
+    fn terminal_recording_renders_escape_sequences_to_plain_text() {
+        let root = temp_recording_root("conpty-garble");
+        let manager = TerminalRecordingManager::new_for_root(root);
+        let started = manager
+            .start_recording(StartTerminalRecordingRequest {
+                session_id: "session-123".to_string(),
+                connection_id: "conn-456".to_string(),
+                connection_name: "Local".to_string(),
+                initial_buffer: String::new(),
+                rows: Some(24),
+                cols: Some(80),
+            })
+            .expect("recording starts");
+
+        // ConPTY-style stream: mode sets, title, clear, repaint with erases.
+        manager
+            .record_output(
+                "session-123",
+                "\x1b[?9001h\x1b[?1004h\x1b[?25l\x1b[2J\x1b[m\x1b[HWindows PowerShell\r\n\
+                 \x1b]0;C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe\x07\
+                 \x1b[HWindows PowerShell\x1b[K\r\n\x1b[KPS C:\\Users\\ryan> \x1b[?25h",
+            )
+            .expect("live output records");
+        manager
+            .stop_recording("session-123".to_string())
+            .expect("recording stops")
+            .expect("recording existed");
+
+        let text = std::fs::read_to_string(&started.path).expect("recording file reads");
+        assert_eq!(text, "Windows PowerShell\nPS C:\\Users\\ryan>\n");
+    }
+
+    #[test]
+    fn terminal_recording_rejects_duplicate_start_without_truncating_output() {
+        let root = temp_recording_root("duplicate-start");
+        let manager = TerminalRecordingManager::new_for_root(root);
+        let started = manager
+            .start_recording(StartTerminalRecordingRequest {
+                session_id: "session-123".to_string(),
+                connection_id: "conn-456".to_string(),
+                connection_name: "Production".to_string(),
+                initial_buffer: "existing output".to_string(),
+                rows: None,
+                cols: None,
+            })
+            .expect("first recording starts");
+
+        let duplicate = manager.start_recording(StartTerminalRecordingRequest {
+            session_id: "session-123".to_string(),
+            connection_id: "conn-456".to_string(),
+            connection_name: "Production".to_string(),
+            initial_buffer: "replacement output".to_string(),
+            rows: None,
+            cols: None,
+        });
+
+        assert!(matches!(
+            duplicate,
+            Err(ref message) if message == "terminal recording is already active"
+        ));
+        manager
+            .record_output("session-123", "live output\n")
+            .expect("live output writes");
+        manager
+            .stop_recording("session-123".to_string())
+            .expect("recording stops")
+            .expect("recording existed");
+        let text = std::fs::read_to_string(&started.path).expect("recording file reads");
+        assert_eq!(text, "existing output\nlive output\n");
+    }
+
+    #[test]
+    fn universal_recording_index_search_summary_cache_and_export_share_safe_paths() {
+        let root = temp_recording_root("browser");
+        let manager = TerminalRecordingManager::new_for_root(root.clone());
+        let started = manager
+            .start_recording(StartTerminalRecordingRequest {
+                session_id: "session-browser".to_string(),
+                connection_id: "conn-1234567890abcdef".to_string(),
+                connection_name: "Prod East".to_string(),
+                initial_buffer: "$ sudo systemctl restart nginx\r\n".to_string(),
+                rows: Some(24),
+                cols: Some(80),
+            })
+            .expect("recording starts");
+        for index in 0..500 {
+            manager
+                .record_output(
+                    "session-browser",
+                    &format!(
+                        "line {index}\r\n{}",
+                        if index == 410 {
+                            "ERROR upstream timed out\r\n"
+                        } else {
+                            ""
+                        }
+                    ),
+                )
+                .expect("recording output appends");
+        }
+        manager
+            .stop_recording("session-browser".to_string())
+            .expect("recording stops");
+
+        let indexed = list_all_terminal_recordings(root.clone()).expect("universal index loads");
+        assert_eq!(indexed.len(), 1);
+        assert_eq!(indexed[0].connection_id_fragment, "conn-12345678");
+        assert_eq!(indexed[0].connection_folder_label, "prod-east");
+        assert!(indexed[0].started_at_millis.is_some());
+
+        let matches = search_terminal_recordings(root.clone(), "upstream timed out")
+            .expect("command-based search succeeds");
+        assert_eq!(matches.len(), 1);
+
+        let summary_input = prepare_terminal_recording_summary(
+            root.clone(),
+            started.path.to_string_lossy().as_ref(),
+        )
+        .expect("summary input is prepared");
+        assert_eq!(summary_input.total_lines, 502);
+        assert!(summary_input.sample.len() <= 24 * 1024);
+        assert!(summary_input.sample.contains("systemctl restart nginx"));
+        assert!(summary_input.sample.contains("ERROR upstream timed out"));
+
+        save_terminal_recording_summary(
+            root.clone(),
+            SaveTerminalRecordingSummaryRequest {
+                path: started.path.to_string_lossy().to_string(),
+                summary: "Restarted nginx; a later upstream timeout remained visible.".to_string(),
+                preview: summary_input.preview,
+                provider_kind: "openai".to_string(),
+                model: "test-model".to_string(),
+            },
+        )
+        .expect("summary cache saves");
+        let cached = list_all_terminal_recordings(root.clone()).expect("cached index loads");
+        assert_eq!(
+            cached[0].ai_summary.as_deref(),
+            Some("Restarted nginx; a later upstream timeout remained visible.")
+        );
+        assert_eq!(cached[0].ai_summary_model.as_deref(), Some("test-model"));
+
+        let destination = root.join("export.zip");
+        let exported = export_terminal_recordings(
+            root.clone(),
+            ExportTerminalRecordingsRequest {
+                paths: vec![started.path.to_string_lossy().to_string()],
+                destination: destination.to_string_lossy().to_string(),
+            },
+        )
+        .expect("recording archive exports");
+        assert_eq!(exported.count, 1);
+        let file = File::open(&destination).expect("archive opens");
+        let archive = zip::ZipArchive::new(file).expect("archive is valid");
+        assert_eq!(archive.len(), 1);
+
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn terminal_recording_export_is_flat_and_suffixes_duplicate_file_names() {
+        let root = temp_recording_root("flat-export");
+        let first_folder = root.join("group-a").join("connection-a");
+        let second_folder = root.join("group-b").join("connection-b");
+        fs::create_dir_all(&first_folder).expect("first recording folder exists");
+        fs::create_dir_all(&second_folder).expect("second recording folder exists");
+        let first = first_folder.join("session.log.txt");
+        let second = second_folder.join("session.log.txt");
+        fs::write(&first, "first").expect("first recording writes");
+        fs::write(&second, "second").expect("second recording writes");
+        let destination = root.join("export.zip");
+
+        export_terminal_recordings(
+            root.clone(),
+            ExportTerminalRecordingsRequest {
+                paths: vec![
+                    first.to_string_lossy().to_string(),
+                    second.to_string_lossy().to_string(),
+                ],
+                destination: destination.to_string_lossy().to_string(),
+            },
+        )
+        .expect("recording archive exports");
+
+        let file = File::open(&destination).expect("archive opens");
+        let mut archive = zip::ZipArchive::new(file).expect("archive is valid");
+        let names = (0..archive.len())
+            .map(|index| {
+                archive
+                    .by_index(index)
+                    .expect("archive entry opens")
+                    .name()
+                    .to_string()
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(names, vec!["session.log.txt", "session.log (2).txt"]);
+
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn session_manager_rejects_recording_after_session_closes() {
+        let root = temp_recording_root("closed-session");
+        let manager = SessionManager::new();
+
+        let result = manager.start_terminal_recording(
+            root.clone(),
+            StartTerminalRecordingRequest {
+                session_id: "closed-session".to_string(),
+                connection_id: "conn-456".to_string(),
+                connection_name: "Production".to_string(),
+                initial_buffer: String::new(),
+                rows: None,
+                cols: None,
+            },
+        );
+
+        assert!(matches!(
+            result,
+            Err(ref message) if message == "terminal session is not active"
+        ));
+        assert!(!root.exists());
     }
 
     #[test]

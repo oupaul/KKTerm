@@ -440,7 +440,10 @@ mod tests {
 
         let value = serde_json::to_value(entry).expect("custom font entry should serialize");
 
-        assert_eq!(value.get("isMonospace"), Some(&serde_json::Value::Bool(true)));
+        assert_eq!(
+            value.get("isMonospace"),
+            Some(&serde_json::Value::Bool(true))
+        );
         assert!(value.get("isMonospaced").is_none());
     }
 

@@ -1,16 +1,14 @@
-// Typed deserialization of the Install Helper remote catalog JSON.
+// Typed deserialization of the bundled Install Helper catalog JSON.
 //
-// The schema is closed: every accepted recipe shape is one of five
-// `Provider` variants. There is no `Custom`, no script string, and no URL
-// the app evaluates as code. See ADR 0007 "Recipe shape — structured data
-// only".
+// The schema is closed: every accepted recipe shape uses a known `Provider`
+// variant. There is no `Custom`, no script string, and no URL the app
+// evaluates as code. See ADR 0007 "Recipe shape — structured data only".
 
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
-/// The catalog `schemaVersion` this build understands. A catalog with a
-/// higher version is rejected and the app falls back to its cached copy.
-pub const APP_SUPPORTED_CATALOG_SCHEMA: u32 = 1;
+/// The catalog `schemaVersion` this build understands.
+pub const APP_SUPPORTED_CATALOG_SCHEMA: u32 = 2;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Catalog {
@@ -29,6 +27,10 @@ pub struct Recipe {
     pub id: String,
     /// Brand-untranslated display name, e.g. "VS Code".
     pub name: String,
+    /// User-facing Install Helper section. Internal dependency recipes must
+    /// explicitly use `internal`, so a newly added recipe cannot disappear
+    /// merely because a second frontend visibility registry was not updated.
+    pub section: RecipeSection,
     /// One-line English description shown in the Module page.
     pub description_en: String,
     /// Optional per-locale description overrides. Locale ids match the keys
@@ -44,8 +46,8 @@ pub struct Recipe {
     /// Falls back to a generic icon if absent.
     #[serde(default)]
     pub icon: Option<String>,
-    /// Catalog category tag, used only for UI grouping. Free-form string;
-    /// unknown values bucket under "Other".
+    /// Low-level catalog taxonomy retained for recipe classification and tests.
+    /// Install Helper presentation uses `section`.
     #[serde(default)]
     pub category: Option<String>,
     pub provider: Provider,
@@ -82,6 +84,23 @@ pub struct Recipe {
     pub detection: Detection,
 }
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[serde(rename_all = "camelCase")]
+pub enum RecipeSection {
+    Internal,
+    Essentials,
+    AiAgents,
+    AiPlatforms,
+    Development,
+    Design,
+    Productivity,
+    Multimedia,
+    WindowsPowerUser,
+    RemoteAccess,
+    PackageManagers,
+    Utilities,
+}
+
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Detection {
@@ -96,6 +115,10 @@ pub struct Detection {
     /// version in the display name, e.g. `NVM for Windows 1.2.2`.
     #[serde(default)]
     pub display_name_prefixes: Vec<String>,
+    /// Exact Windows package family names for Store/MSIX apps that may not
+    /// publish an Add/Remove Programs entry.
+    #[serde(default)]
+    pub appx_package_family_names: Vec<String>,
 }
 
 /// One declared step in an install plan, emitted via
@@ -389,6 +412,7 @@ mod tests {
         Recipe {
             id: id.into(),
             name: name.into(),
+            section: RecipeSection::Internal,
             description_en: "".into(),
             description_locales: HashMap::new(),
             needs: vec![],
@@ -463,6 +487,7 @@ mod tests {
         let bundle = Recipe {
             id: "b".into(),
             name: "B".into(),
+            section: RecipeSection::Internal,
             description_en: "".into(),
             description_locales: HashMap::new(),
             needs: vec![],
@@ -613,6 +638,11 @@ mod tests {
             "tailscale",
             "rustdesk",
             "coreutils",
+            "keepassxc",
+            "pencil",
+            "vlc",
+            "obs-studio",
+            "xnview-mp",
             "7zip",
             "sharex",
             "ffmpeg",
@@ -625,6 +655,53 @@ mod tests {
         ] {
             assert!(ids.contains(id), "catalog should include {id}");
         }
+    }
+
+    #[test]
+    fn shipped_catalog_sections_are_explicit_and_requested_tools_are_grouped() {
+        let json = include_str!("../../../installer/catalog.v1.json");
+        let catalog: Catalog =
+            serde_json::from_str(json).expect("shipped catalog JSON should parse");
+
+        let expected = [
+            ("keepassxc", RecipeSection::Utilities),
+            ("notepadpp", RecipeSection::Productivity),
+            ("sharex", RecipeSection::Productivity),
+            ("bentopdf", RecipeSection::Productivity),
+            ("google-chrome", RecipeSection::Productivity),
+            ("firefox", RecipeSection::Productivity),
+            ("acrobat-reader", RecipeSection::Productivity),
+            ("pencil", RecipeSection::Design),
+            ("vlc", RecipeSection::Multimedia),
+            ("obs-studio", RecipeSection::Multimedia),
+            ("xnview-mp", RecipeSection::Multimedia),
+        ];
+        for (id, section) in expected {
+            let recipe = catalog
+                .recipes
+                .iter()
+                .find(|recipe| recipe.id == id)
+                .unwrap_or_else(|| panic!("catalog should include {id}"));
+            assert_eq!(recipe.section, section, "{id} section should match");
+        }
+
+        let internal_ids: HashSet<&str> = catalog
+            .recipes
+            .iter()
+            .filter(|recipe| recipe.section == RecipeSection::Internal)
+            .map(|recipe| recipe.id.as_str())
+            .collect();
+        assert_eq!(
+            internal_ids,
+            HashSet::from([
+                "github-cli",
+                "nvm-windows",
+                "uv",
+                "wsl-ubuntu",
+                "wsl-debian",
+                "poppler",
+            ])
+        );
     }
 
     #[test]
@@ -692,6 +769,13 @@ mod tests {
             &codex.provider,
             Provider::DownloadInstaller { url, file_name, .. } if url.starts_with("https://get.microsoft.com/installer/download/") && file_name == "ChatGPTInstaller.exe"
         ));
+        assert!(
+            codex
+                .detection
+                .appx_package_family_names
+                .iter()
+                .any(|family| family == "OpenAI.Codex_2p2nqsd0c76g0")
+        );
 
         let claude = catalog
             .recipes
@@ -711,7 +795,7 @@ mod tests {
         assert!(matches!(
             &hermes.provider,
             Provider::DownloadInstaller { url, .. }
-                if url == "https://hermes-assets.nousresearch.com/Hermes-Setup.exe?build=c9269fbfb689"
+                if url == "https://hermes-assets.nousresearch.com/Hermes-Setup.exe"
         ));
     }
 
@@ -788,6 +872,7 @@ mod tests {
         let bundle = Recipe {
             id: "node-bundle".into(),
             name: "Node bundle".into(),
+            section: RecipeSection::Internal,
             description_en: "".into(),
             description_locales: HashMap::new(),
             needs: vec![],

@@ -5,6 +5,7 @@ function wingetRecipe(id: string, wingetId: string): Recipe {
   return {
     id,
     name: id,
+    section: "internal",
     descriptionEn: id,
     category: "utilities",
     icon: "Package",
@@ -22,6 +23,7 @@ const catalog: Catalog = {
     {
       id: "node-bundle",
       name: "Node (nvm-windows)",
+      section: "internal",
       descriptionEn: "Node (nvm-windows)",
       category: "runtime",
       icon: "Boxes",
@@ -31,6 +33,7 @@ const catalog: Catalog = {
     {
       id: "antigravity-cli",
       name: "Antigravity CLI",
+      section: "internal",
       descriptionEn: "Antigravity CLI",
       category: "ai-agent",
       icon: "Bot",
@@ -81,6 +84,7 @@ if (antigravityPlan.uacPromptEstimate !== 0) {
 const downloadableWingetRecipe: Recipe = {
   id: "downloadable-winget-app",
   name: "Downloadable winget app",
+  section: "internal",
   descriptionEn: "Downloadable winget app",
   category: "utilities",
   icon: "Package",
@@ -98,6 +102,7 @@ const downloadableWingetRecipe: Recipe = {
 const githubReleaseDownloadableWingetRecipe: Recipe = {
   id: "github-release-downloadable-winget-app",
   name: "GitHub release downloadable winget app",
+  section: "internal",
   descriptionEn: "GitHub release downloadable winget app",
   category: "utilities",
   icon: "Package",
@@ -119,6 +124,7 @@ const catalogWithDownloadProvider: Catalog = {
     {
       id: "winget",
       name: "winget",
+      section: "internal",
       descriptionEn: "winget",
       category: "essentials",
       icon: "Package",
@@ -176,6 +182,7 @@ if (
 const npmBackedWingetRecipe: Recipe = {
   id: "npm-backed-winget-app",
   name: "npm-backed winget app",
+  section: "internal",
   descriptionEn: "npm-backed winget app",
   category: "utilities",
   icon: "Package",
@@ -191,6 +198,7 @@ const catalogWithNpmProvider: Catalog = {
     {
       id: "winget",
       name: "winget",
+      section: "internal",
       descriptionEn: "winget",
       provider: {
         kind: "downloadInstaller",
@@ -201,6 +209,7 @@ const catalogWithNpmProvider: Catalog = {
     {
       id: "node-bundle",
       name: "Node",
+      section: "internal",
       descriptionEn: "Node",
       provider: { kind: "bundle", steps: [] },
     },
@@ -237,6 +246,7 @@ if (
 const chocolateyBackedWingetRecipe: Recipe = {
   id: "choco-backed-winget-app",
   name: "Chocolatey-backed winget app",
+  section: "internal",
   descriptionEn: "Chocolatey-backed winget app",
   category: "utilities",
   icon: "Package",
@@ -253,6 +263,7 @@ const catalogWithChocolateyProvider: Catalog = {
     {
       id: "winget",
       name: "winget",
+      section: "internal",
       descriptionEn: "winget",
       category: "essentials",
       icon: "Package",
@@ -265,6 +276,7 @@ const catalogWithChocolateyProvider: Catalog = {
     {
       id: "chocolatey",
       name: "Chocolatey",
+      section: "internal",
       descriptionEn: "Chocolatey",
       category: "windows-power-user",
       icon: "Package",

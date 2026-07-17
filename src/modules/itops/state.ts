@@ -20,6 +20,7 @@ import type {
   SiteHost,
   ItopsTransport,
   Rack,
+  RackMountFace,
   ServerRoom,
   RackItemKind,
   RackItemMetadata,
@@ -32,6 +33,34 @@ import type {
 import type { DashboardBackground } from "../dashboard/types";
 import type { WatchdogConfig } from "../../watchdog/types";
 import { sanitizeRoomObjects, type RoomObject } from "./roomObjects";
+
+/** A navigator selection requested from outside the Module: which Site to
+ * select and which of its destinations (or the global Task Library) to open. */
+export interface ItOpsNavigationRequest {
+  siteId?: string;
+  destination?:
+    | "site"
+    | "serverRooms"
+    | "hosts"
+    | "automations"
+    | "runHistory"
+    | "taskLibrary";
+}
+
+/** Where the IT Ops navigator currently is. Mirrored by the Sites tab so the
+ * assistant page context can describe the user's position; never persisted. */
+export interface ItOpsNavigationSnapshot {
+  siteId: string | null;
+  destination:
+    | "site"
+    | "serverRooms"
+    | "hosts"
+    | "automations"
+    | "runHistory"
+    | "taskLibrary";
+  serverRoom: string | null;
+  rackId: string | null;
+}
 
 export interface SiteInput {
   name: string;
@@ -68,6 +97,13 @@ export interface RackFacingUpdate {
   facing: number;
 }
 
+export interface RackClonePlacement {
+  gridX: number;
+  gridY: number;
+  /** Quarter turns, 0-3. */
+  facing: number;
+}
+
 export interface PlaceItemInput {
   rackId: string;
   connectionId: string | null;
@@ -75,6 +111,7 @@ export interface PlaceItemInput {
   label: string;
   startU: number;
   heightU: number;
+  mountFace: RackMountFace;
   metadata?: RackItemMetadata;
 }
 
@@ -84,6 +121,7 @@ export interface UpdateItemInput {
   connectionId: string | null;
   label: string;
   metadata?: RackItemMetadata;
+  mountFace?: RackMountFace;
   /** Properties editor only: validate and persist a resize in the same write. */
   startU?: number;
   heightU?: number;
@@ -222,6 +260,16 @@ interface ItOpsState {
    *  Sites tab (which owns the dialog + selection) opens the create flow. */
   newGroupRequest: number;
   requestNewSite: () => void;
+  /** Pending navigator selection requested from outside the Module (the AI
+   *  assistant's tutorial_highlight navigation). The Sites tab consumes and
+   *  clears it once mounted, so a request made before the Module is open
+   *  still applies. */
+  pendingNavigation: ItOpsNavigationRequest | null;
+  requestNavigation: (request: ItOpsNavigationRequest) => void;
+  clearNavigation: () => void;
+  /** The navigator's current position (see ItOpsNavigationSnapshot). */
+  navigationSnapshot: ItOpsNavigationSnapshot | null;
+  setNavigationSnapshot: (snapshot: ItOpsNavigationSnapshot) => void;
   loadSites: () => Promise<void>;
   createSite: (input: SiteInput) => Promise<Site>;
   updateSite: (id: string, input: SiteInput) => Promise<Site>;
@@ -241,10 +289,22 @@ interface ItOpsState {
     floorColor: string,
   ) => Promise<ServerRoom>;
   deleteServerRoom: (siteId: string, id: string) => Promise<void>;
+  duplicateServerRoom: (
+    siteId: string,
+    id: string,
+    name: string,
+    floorColor: string,
+  ) => Promise<ServerRoom>;
   loadRacks: (siteId: string) => Promise<void>;
   createRack: (siteId: string, input: RackInput) => Promise<Rack>;
   updateRack: (siteId: string, id: string, input: RackInput) => Promise<void>;
   deleteRack: (siteId: string, id: string) => Promise<void>;
+  duplicateRack: (
+    siteId: string,
+    id: string,
+    input: RackInput,
+    placement?: RackClonePlacement,
+  ) => Promise<Rack>;
   /** Persist Server Room View placements durably; updates the cache in place. */
   setRackPlacements: (
     siteId: string,
@@ -277,7 +337,14 @@ interface ItOpsState {
   updateRackItem: (siteId: string, input: UpdateItemInput) => Promise<void>;
   moveRackItem: (
     siteId: string,
-    input: { id: string; rackId: string; startU: number; heightU: number; slot?: number },
+    input: {
+      id: string;
+      rackId: string;
+      startU: number;
+      heightU: number;
+      slot?: number;
+      mountFace?: RackMountFace;
+    },
   ) => Promise<void>;
   removeRackItem: (siteId: string, id: string) => Promise<void>;
   refreshRackItemSnmp: (siteId: string, id: string) => Promise<void>;
@@ -360,6 +427,19 @@ export const useItOpsStore = create<ItOpsState>((set, get) => ({
 
   requestNewSite() {
     set({ newGroupRequest: get().newGroupRequest + 1 });
+  },
+
+  pendingNavigation: null,
+  requestNavigation(request) {
+    set({ pendingNavigation: request });
+  },
+  clearNavigation() {
+    set({ pendingNavigation: null });
+  },
+
+  navigationSnapshot: null,
+  setNavigationSnapshot(snapshot) {
+    set({ navigationSnapshot: snapshot });
   },
 
   async loadSites() {
@@ -449,6 +529,16 @@ export const useItOpsStore = create<ItOpsState>((set, get) => ({
     await get().loadServerRooms(siteId);
   },
 
+  async duplicateServerRoom(siteId, id, name, floorColor) {
+    const duplicated = await invokeCommand("itops_duplicate_server_room", {
+      id,
+      name,
+      floorColor,
+    });
+    await Promise.all([get().loadSites(), get().loadServerRooms(siteId), get().loadRacks(siteId)]);
+    return duplicated;
+  },
+
   async loadRacks(siteId) {
     if (!isTauriRuntime()) {
       set({ racksBySite: { ...get().racksBySite, [siteId]: [] } });
@@ -472,6 +562,16 @@ export const useItOpsStore = create<ItOpsState>((set, get) => ({
   async deleteRack(siteId, id) {
     await invokeCommand("itops_delete_rack", { id });
     await get().loadRacks(siteId);
+  },
+
+  async duplicateRack(siteId, id, input, placement) {
+    const duplicated = await invokeCommand("itops_duplicate_rack", {
+      id,
+      ...input,
+      ...placement,
+    });
+    await get().loadRacks(siteId);
+    return duplicated;
   },
 
   async setRackPlacements(siteId, kind, entries) {

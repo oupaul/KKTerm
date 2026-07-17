@@ -122,6 +122,39 @@ for (const targetId of itOpsTargets) {
   }
 }
 
+const itOpsDestinationTargets = [
+  ["itops.hostsPanel", "hosts"],
+  ["itops.automationsNew", "automations"],
+  ["itops.runHistoryPanel", "runHistory"],
+  ["itops.taskLibraryNew", "taskLibrary"],
+  ["itops.host:host-1", "hosts"],
+  ["itops.run:run-1", "runHistory"],
+] as const;
+
+for (const [targetId, destination] of itOpsDestinationTargets) {
+  const navigation = tutorialNavigationForTarget(targetId);
+  if (navigation?.page !== "itops" || navigation.itopsDestination !== destination) {
+    throw new Error(`${targetId} should navigate to the IT Ops ${destination} destination.`);
+  }
+}
+
+const explicitItOpsNavigation = normalizeTutorialNavigationTarget({
+  page: "itops",
+  itopsSiteId: "site-1",
+  itopsDestination: "hosts",
+});
+
+if (
+  explicitItOpsNavigation?.itopsSiteId !== "site-1" ||
+  explicitItOpsNavigation.itopsDestination !== "hosts"
+) {
+  throw new Error("Explicit IT Ops navigation should preserve its Site and destination.");
+}
+
+if (normalizeTutorialNavigationTarget({ page: "itops", itopsSiteId: 42 })) {
+  throw new Error("A non-string IT Ops Site id should be rejected.");
+}
+
 const settingsTargets = [
   ["settings.activityRail", "general-settings"],
   ["settings.workspaceAccess", "general-settings"],

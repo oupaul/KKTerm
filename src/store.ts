@@ -66,6 +66,11 @@ import {
   notifyStoredChildConnectionsUpdated,
   persistStoredChildConnections,
 } from "./modules/workspace/connections/childConnections";
+import {
+  readDurableUiState,
+  removeDurableUiState,
+  writeDurableUiState,
+} from "./lib/durableUiState";
 
 const LAYOUT_STORAGE_PREFIX = "kkterm.layout.";
 const TMUX_SESSION_STORAGE_PREFIX = "kkterm.tmuxSessions.";
@@ -330,7 +335,7 @@ function loadStoredQuickCommands(connectionId: string | undefined): QuickCommand
     return [];
   }
   try {
-    const raw = window.localStorage.getItem(`${QUICK_COMMANDS_STORAGE_PREFIX}${connectionId}`);
+    const raw = readDurableUiState(`${QUICK_COMMANDS_STORAGE_PREFIX}${connectionId}`);
     const parsed = raw ? (JSON.parse(raw) as unknown) : [];
     return Array.isArray(parsed) ? parsed.filter(isQuickCommand) : [];
   } catch {
@@ -342,10 +347,25 @@ function persistQuickCommands(connectionId: string | undefined, commands: QuickC
   if (!connectionId || typeof window === "undefined") {
     return;
   }
+  // Quick Commands are durable per-Connection configuration: source of truth is
+  // SQLite (backed up, portable), mirrored to the synchronous cache.
+  writeDurableUiState(`${QUICK_COMMANDS_STORAGE_PREFIX}${connectionId}`, JSON.stringify(commands));
+}
+
+// Remove a deleted Connection's durable Quick Commands plus its local-only
+// per-Connection reopen hints (layout, tmux session ids, quick-command-bar
+// visibility) so they do not orphan and accumulate.
+export function forgetConnectionLocalState(connectionId: string) {
+  if (typeof window === "undefined") {
+    return;
+  }
+  removeDurableUiState(`${QUICK_COMMANDS_STORAGE_PREFIX}${connectionId}`);
   try {
-    window.localStorage.setItem(`${QUICK_COMMANDS_STORAGE_PREFIX}${connectionId}`, JSON.stringify(commands));
+    window.localStorage.removeItem(`${QUICK_COMMAND_BAR_STORAGE_PREFIX}${connectionId}`);
+    window.localStorage.removeItem(`${LAYOUT_STORAGE_PREFIX}${connectionId}`);
+    window.localStorage.removeItem(`${TMUX_SESSION_STORAGE_PREFIX}${connectionId}`);
   } catch {
-    // Storage may be unavailable (private mode, quota); fail silently.
+    // Storage may be unavailable; nothing durable is lost.
   }
 }
 
@@ -654,6 +674,7 @@ function buildPaneFromStoredLayoutPane(
     buffer: "",
     connection,
     fontSize: storedPane.fontSize,
+    textEncoding: storedPane.textEncoding,
     terminalBackground: storedPane.terminalBackground,
     tmuxSessionId: storedPane.tmuxSessionId,
   };
@@ -730,6 +751,7 @@ type ConnectionPaneOptions = {
   iconBackgroundColor?: string | null;
   iconDataUrl?: string | null;
   fontSize?: number;
+  textEncoding?: string;
   terminalOpacity?: number | null;
   terminalBackground?: TerminalPane["terminalBackground"];
   title?: string;
@@ -847,6 +869,7 @@ function buildPaneForConnection(
     cwd: options?.cwd?.trim() || inheritedTerminalCwdForConnection(connection, focusedPane),
     buffer: "",
     fontSize: options?.fontSize,
+    textEncoding: options?.textEncoding,
     connection: options?.terminalOpacity !== undefined || options?.terminalBackground !== undefined
       ? {
           ...connection,
@@ -1237,6 +1260,13 @@ interface WorkspaceState {
   performanceMetrics: PerformanceMetrics;
   statusBarNotice?: StatusBarNotice;
   localTerminalPopup?: WorkspaceTab;
+  /** App-global Terminal recordings browser. A Connection id is present only
+   * when the browser was opened from that Connection's tree context menu. */
+  terminalRecordingsBrowser?: {
+    initialConnectionId?: string;
+    initialRecordingPath?: string;
+    requestId: number;
+  };
   /** Open Git Browser overlay target (repo root + label); undefined when closed. */
   gitBrowser?: GitBrowserTarget;
   /** App-global "left file" remembered for File Compare; undefined when none picked. */
@@ -1301,6 +1331,7 @@ interface WorkspaceState {
       iconBackgroundColor?: string | null;
       iconDataUrl?: string | null;
       fontSize?: number;
+      textEncoding?: string;
       terminalOpacity?: number | null;
       terminalBackground?: TerminalPane["terminalBackground"];
       title?: string;
@@ -1342,6 +1373,11 @@ interface WorkspaceState {
   openLocalTerminal: (options?: { name?: string; shell?: string }) => void;
   openLocalTerminalHere: (cwd: string, options?: { name?: string; shell?: string }) => void;
   closeLocalTerminalPopup: () => void;
+  openTerminalRecordingsBrowser: (
+    initialConnectionId?: string,
+    initialRecordingPath?: string,
+  ) => void;
+  closeTerminalRecordingsBrowser: () => void;
   openGitBrowser: (repoRoot: string, label: string) => void;
   closeGitBrowser: () => void;
   setCompareLeft: (endpoint: CompareEndpoint) => void;
@@ -1402,6 +1438,7 @@ interface WorkspaceState {
   updateOpenConnectionFileBrowserViewOptions: (connectionId: string, fileBrowserViewOptions: Connection["fileBrowserViewOptions"]) => void;
   updateOpenTerminalPaneAppearance: (tabId: string, paneId: string, appearance: Pick<Connection, "terminalOpacity" | "terminalBackground">) => void;
   updateOpenTerminalPaneFontSize: (tabId: string, paneId: string, fontSize: number) => void;
+  updateOpenTerminalPaneTextEncoding: (tabId: string, paneId: string, textEncoding: string) => void;
   updateOpenTerminalPaneBackground: (tabId: string, paneId: string, terminalBackground: TerminalPane["terminalBackground"]) => void;
   updateOpenTerminalPaneX11ForwardingStatus: (
     tabId: string,
@@ -1448,6 +1485,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   activeSessionCounts: {},
   performanceMetrics: {},
   statusBarNotice: undefined,
+  terminalRecordingsBrowser: undefined,
   documentStatusSlot: null,
   quickCommandsByConnection: {},
   setQuery: (query) => set({ query }),
@@ -1881,6 +1919,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       childConnectionId: options?.childConnectionId,
       cwd: options?.cwd,
       fontSize: options?.fontSize,
+      textEncoding: options?.textEncoding,
       terminalOpacity: options?.terminalOpacity,
       terminalBackground: options?.terminalBackground,
       title: options?.tmuxSessionId ?? options?.title,
@@ -1983,6 +2022,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       iconBackgroundColor: child.iconBackgroundColor,
       iconDataUrl: child.iconDataUrl,
       fontSize: child.fontSize,
+      textEncoding: child.textEncoding,
       terminalOpacity: child.terminalOpacity,
       terminalBackground: child.terminalBackground,
       title: child.tmuxSessionId ?? child.name,
@@ -2054,6 +2094,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
             ...groupPane,
             childConnectionId: child.id,
             fontSize: child.fontSize ?? (isTerminalPane(groupPane) ? groupPane.fontSize : undefined),
+            textEncoding: child.textEncoding ?? (isTerminalPane(groupPane) ? groupPane.textEncoding : undefined),
             connection: connectionForChild(connection, child),
             title: child.tmuxSessionId ?? child.name,
             toolbarTitle: child.name,
@@ -2066,6 +2107,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
             ...existing.pane,
             childConnectionId: child.id,
             fontSize: child.fontSize ?? (isTerminalPane(existing.pane) ? existing.pane.fontSize : undefined),
+            textEncoding: child.textEncoding ?? (isTerminalPane(existing.pane) ? existing.pane.textEncoding : undefined),
             connection: connectionForChild(connection, child),
             title: child.tmuxSessionId ?? child.name,
             toolbarTitle: child.name,
@@ -2076,6 +2118,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
           childConnectionId: child.id,
           cwd: child.cwd,
           fontSize: child.fontSize,
+          textEncoding: child.textEncoding,
           terminalOpacity: child.terminalOpacity,
           terminalBackground: child.terminalBackground,
           title: child.tmuxSessionId ?? child.name,
@@ -2849,6 +2892,15 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     });
   },
   closeLocalTerminalPopup: () => set({ localTerminalPopup: undefined }),
+  openTerminalRecordingsBrowser: (initialConnectionId, initialRecordingPath) =>
+    set({
+      terminalRecordingsBrowser: {
+        initialConnectionId,
+        initialRecordingPath,
+        requestId: Date.now(),
+      },
+    }),
+  closeTerminalRecordingsBrowser: () => set({ terminalRecordingsBrowser: undefined }),
   openGitBrowser: (repoRoot, label) => set({ gitBrowser: { repoRoot, label } }),
   closeGitBrowser: () => set({ gitBrowser: undefined }),
   setCompareLeft: (endpoint) => set({ compareLeft: endpoint }),
@@ -3546,6 +3598,23 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
           if (layout) {
             persistLayout(nextTab.connection.id, serializeLayout(layout, nextTab.panes));
           }
+        }
+        return nextTab;
+      }),
+    }));
+  },
+  updateOpenTerminalPaneTextEncoding: (tabId, paneId, textEncoding) => {
+    set((state) => ({
+      tabs: state.tabs.map((tab) => {
+        if (tab.id !== tabId || tab.kind !== "terminal") return tab;
+        const panes = tab.panes.map((pane) =>
+          isTerminalPane(pane) && pane.id === paneId ? { ...pane, textEncoding } : pane,
+        );
+        if (panes.every((pane, index) => pane === tab.panes[index])) return tab;
+        const nextTab = { ...tab, panes };
+        if (nextTab.connection) {
+          const layout = ensureLayout(nextTab.layout, nextTab.panes);
+          if (layout) persistLayout(nextTab.connection.id, serializeLayout(layout, nextTab.panes));
         }
         return nextTab;
       }),

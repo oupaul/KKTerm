@@ -328,8 +328,7 @@ impl Secrets {
                 .into_iter()
                 .map(str::to_string)
                 .collect(),
-            encrypted_store_exists: SqliteSecretStore::store_exists(&self.db_path)
-                .unwrap_or(false),
+            encrypted_store_exists: SqliteSecretStore::store_exists(&self.db_path).unwrap_or(false),
         }
     }
 
@@ -1074,7 +1073,8 @@ mod tests {
                 std::env::set_var("KKTERM_SECRET_STORE_PASSWORD", value);
             }
         }
-        result.expect("selecting the already active encrypted store should not require env password");
+        result
+            .expect("selecting the already active encrypted store should not require env password");
         assert!(secrets.credential_secret_store_status().unlocked);
     }
 

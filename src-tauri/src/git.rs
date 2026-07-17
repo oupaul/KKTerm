@@ -184,9 +184,8 @@ pub fn log_graph(request: LogRequest) -> Result<Vec<GitCommit>, String> {
     let limit = request.limit.unwrap_or(DEFAULT_LOG_LIMIT).to_string();
     // Custom separators keep multi-line commit bodies parseable without -z:
     // fields joined by US (\x1f), records terminated by RS (\x1e).
-    let format = format!(
-        "--pretty=tformat:%H{US}%P{US}%an{US}%ae{US}%cI{US}%cr{US}%D{US}%s{US}%b{RS}"
-    );
+    let format =
+        format!("--pretty=tformat:%H{US}%P{US}%an{US}%ae{US}%cI{US}%cr{US}%D{US}%s{US}%b{RS}");
     let mut args = vec!["log", "--no-color", "-n", limit.as_str(), format.as_str()];
     if request.all_refs {
         args.push("--all");
@@ -418,12 +417,8 @@ fn sort_branches_default_first(branches: &mut Vec<GitBranch>, default_branch: Op
 
 fn parse_local_branches(repo: &str) -> Result<Vec<GitBranch>, String> {
     // `%(field)` placeholders give a stable, parseable record per branch.
-    let format =
-        "%(refname:short)\u{1f}%(HEAD)\u{1f}%(upstream:short)\u{1f}%(upstream:track)";
-    let stdout = git_text(
-        repo,
-        &["for-each-ref", "--format", format, "refs/heads"],
-    )?;
+    let format = "%(refname:short)\u{1f}%(HEAD)\u{1f}%(upstream:short)\u{1f}%(upstream:track)";
+    let stdout = git_text(repo, &["for-each-ref", "--format", format, "refs/heads"])?;
     let mut branches = Vec::new();
     for (lane, line) in stdout.lines().enumerate() {
         let mut fields = line.split('\u{1f}');
@@ -478,7 +473,12 @@ fn parse_remotes(repo: &str) -> Result<Vec<GitRemote>, String> {
         // would shorten it to the bare remote name and surface a phantom branch.
         let stdout = git_text(
             repo,
-            &["for-each-ref", "--format", "%(refname:lstrip=3)", prefix.as_str()],
+            &[
+                "for-each-ref",
+                "--format",
+                "%(refname:lstrip=3)",
+                prefix.as_str(),
+            ],
         )
         .unwrap_or_default();
         let branches = parse_remote_branches(&stdout);
@@ -1486,8 +1486,16 @@ mod tests {
             full_context: true,
         })
         .unwrap();
-        assert!(changed.iter().any(|line| line.t == "del" && line.c == "beta"));
-        assert!(changed.iter().any(|line| line.t == "add" && line.c == "beta2"));
+        assert!(
+            changed
+                .iter()
+                .any(|line| line.t == "del" && line.c == "beta")
+        );
+        assert!(
+            changed
+                .iter()
+                .any(|line| line.t == "add" && line.c == "beta2")
+        );
 
         let _ = std::fs::remove_dir_all(&dir);
     }

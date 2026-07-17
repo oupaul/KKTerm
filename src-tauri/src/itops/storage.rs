@@ -7,8 +7,8 @@ use std::collections::{HashMap, HashSet};
 
 use rusqlite::{Connection as SqliteConnection, OptionalExtension, params, params_from_iter};
 
+use super::types::{RackItemKind, ResolvedHost, RoomIcon, RunScope, Site, SiteFilter, Transport};
 use crate::dashboard_storage::DashboardBackground;
-use super::types::{Site, SiteFilter, RackItemKind, ResolvedHost, RoomIcon, RunScope, Transport};
 
 #[derive(Debug)]
 pub enum ItopsStorageError {
@@ -52,7 +52,8 @@ fn validate_name(name: &str) -> Result<String> {
 }
 
 fn member_ids_to_json(member_ids: &[String]) -> Result<String> {
-    serde_json::to_string(member_ids).map_err(|error| ItopsStorageError::Validation(error.to_string()))
+    serde_json::to_string(member_ids)
+        .map_err(|error| ItopsStorageError::Validation(error.to_string()))
 }
 
 fn parse_member_ids(raw: &str) -> Vec<String> {
@@ -63,10 +64,11 @@ fn parse_member_ids(raw: &str) -> Vec<String> {
 /// Group never claims dynamic membership it does not have.
 fn filter_to_json(filter: &Option<SiteFilter>) -> Result<Option<String>> {
     match filter {
-        Some(filter) if !filter.is_empty() => Ok(Some(
-            serde_json::to_string(filter)
-                .map_err(|error| ItopsStorageError::Validation(error.to_string()))?,
-        )),
+        Some(filter) if !filter.is_empty() => {
+            Ok(Some(serde_json::to_string(filter).map_err(|error| {
+                ItopsStorageError::Validation(error.to_string())
+            })?))
+        }
         _ => Ok(None),
     }
 }
@@ -166,7 +168,9 @@ fn ensure_default_site(conn: &SqliteConnection) -> Result<()> {
 
 pub fn list_sites(conn: &SqliteConnection) -> Result<Vec<Site>> {
     ensure_default_site(conn)?;
-    let mut stmt = conn.prepare(&format!("SELECT {SELECT_GROUP_COLUMNS} ORDER BY sort_order"))?;
+    let mut stmt = conn.prepare(&format!(
+        "SELECT {SELECT_GROUP_COLUMNS} ORDER BY sort_order"
+    ))?;
     let groups = stmt
         .query_map([], row_to_group)?
         .collect::<rusqlite::Result<Vec<_>>>()?;
@@ -365,8 +369,9 @@ fn fetch_filtered_hosts(
     filter: &SiteFilter,
     transport: Transport,
 ) -> Result<Vec<ResolvedHost>> {
-    let mut sql =
-        String::from("SELECT id, name, host, username, port, connection_type FROM connections WHERE 1 = 1");
+    let mut sql = String::from(
+        "SELECT id, name, host, username, port, connection_type FROM connections WHERE 1 = 1",
+    );
     let mut bind: Vec<String> = Vec::new();
     if !filter.types.is_empty() {
         let placeholders = vec!["?"; filter.types.len()].join(", ");
@@ -444,7 +449,8 @@ pub fn resolve_site_scoped(
             // One inventory Host can bind several Connections (for example
             // SSH plus a management URL). Execution uses its first SSH binding.
             for connection_id in host.connection_ids {
-                let Some(target) = fetch_resolved_host(conn, &connection_id, site.transport)? else {
+                let Some(target) = fetch_resolved_host(conn, &connection_id, site.transport)?
+                else {
                     continue;
                 };
                 if target.connection_type == "ssh" && seen.insert(target.connection_id.clone()) {
@@ -528,21 +534,33 @@ mod tests {
         // Exact rack id matches.
         assert!(rack_matches_scope(
             &rack,
-            &RunScope { rack_id: Some("r1".into()), ..Default::default() }
+            &RunScope {
+                rack_id: Some("r1".into()),
+                ..Default::default()
+            }
         ));
         // Wrong rack id does not.
         assert!(!rack_matches_scope(
             &rack,
-            &RunScope { rack_id: Some("other".into()), ..Default::default() }
+            &RunScope {
+                rack_id: Some("other".into()),
+                ..Default::default()
+            }
         ));
         // Server room matches; a mismatched server room does not.
         assert!(rack_matches_scope(
             &rack,
-            &RunScope { server_room: Some("Room B".into()), ..Default::default() }
+            &RunScope {
+                server_room: Some("Room B".into()),
+                ..Default::default()
+            }
         ));
         assert!(!rack_matches_scope(
             &rack,
-            &RunScope { server_room: Some("Room C".into()), ..Default::default() }
+            &RunScope {
+                server_room: Some("Room C".into()),
+                ..Default::default()
+            }
         ));
     }
 
@@ -624,7 +642,10 @@ mod tests {
         let resolved = resolve_site_scoped(
             &conn,
             &site,
-            &RunScope { host_ids: vec!["host-1".into()], ..Default::default() },
+            &RunScope {
+                host_ids: vec!["host-1".into()],
+                ..Default::default()
+            },
         )
         .unwrap();
         assert_eq!(resolved.len(), 1);
@@ -633,7 +654,10 @@ mod tests {
         let unrunnable = resolve_site_scoped(
             &conn,
             &site,
-            &RunScope { host_ids: vec!["host-2".into()], ..Default::default() },
+            &RunScope {
+                host_ids: vec!["host-2".into()],
+                ..Default::default()
+            },
         )
         .unwrap();
         assert!(unrunnable.is_empty());
@@ -737,7 +761,17 @@ mod tests {
     fn empty_name_is_rejected() {
         let conn = open_test_db();
         assert!(matches!(
-            create_site(&conn, "hg-x", "   ", vec![], None, Transport::Auto, None, None, None),
+            create_site(
+                &conn,
+                "hg-x",
+                "   ",
+                vec![],
+                None,
+                Transport::Auto,
+                None,
+                None,
+                None
+            ),
             Err(ItopsStorageError::Validation(_))
         ));
     }
@@ -797,8 +831,30 @@ mod tests {
     #[test]
     fn reorder_rewrites_sort_order() {
         let conn = open_test_db();
-        create_site(&conn, "a", "A", vec![], None, Transport::Auto, None, None, None).unwrap();
-        create_site(&conn, "b", "B", vec![], None, Transport::Auto, None, None, None).unwrap();
+        create_site(
+            &conn,
+            "a",
+            "A",
+            vec![],
+            None,
+            Transport::Auto,
+            None,
+            None,
+            None,
+        )
+        .unwrap();
+        create_site(
+            &conn,
+            "b",
+            "B",
+            vec![],
+            None,
+            Transport::Auto,
+            None,
+            None,
+            None,
+        )
+        .unwrap();
         reorder_sites(&conn, &["b".to_string(), "a".to_string()]).unwrap();
         let order: Vec<String> = list_sites(&conn)
             .unwrap()

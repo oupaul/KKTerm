@@ -41,13 +41,22 @@ pub fn insert_run_report(
     finished_at: Option<&str>,
     report: &RunReport,
 ) -> Result<RunHistoryEntry> {
-    let report_json =
-        serde_json::to_string(report).map_err(|error| RunStorageError::Serialize(error.to_string()))?;
+    let report_json = serde_json::to_string(report)
+        .map_err(|error| RunStorageError::Serialize(error.to_string()))?;
     conn.execute(
         "INSERT INTO itops_run_history
             (id, source, site_id, task_id, task_summary, started_at, finished_at, report_json)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-        params![id, source, site_id, task_id, task_summary, started_at, finished_at, report_json],
+        params![
+            id,
+            source,
+            site_id,
+            task_id,
+            task_summary,
+            started_at,
+            finished_at,
+            report_json
+        ],
     )?;
     Ok(RunHistoryEntry {
         id: id.to_string(),
@@ -188,8 +197,18 @@ mod tests {
     fn list_is_newest_first_and_limited() {
         let conn = open_test_db();
         for (id, started) in [("a", "2026-01-01T00:00:00Z"), ("b", "2026-01-02T00:00:00Z")] {
-            insert_run_report(&conn, id, "manual", None, None, "t", started, None, &RunReport::default())
-                .unwrap();
+            insert_run_report(
+                &conn,
+                id,
+                "manual",
+                None,
+                None,
+                "t",
+                started,
+                None,
+                &RunReport::default(),
+            )
+            .unwrap();
         }
         let history = list_run_history(&conn, 1).unwrap();
         assert_eq!(history.len(), 1);

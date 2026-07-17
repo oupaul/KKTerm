@@ -44,7 +44,8 @@ fn validate_name(name: &str) -> Result<String> {
 }
 
 fn config_to_json(config: &WatchdogConfig) -> Result<String> {
-    serde_json::to_string(config).map_err(|error| AutomationStorageError::Validation(error.to_string()))
+    serde_json::to_string(config)
+        .map_err(|error| AutomationStorageError::Validation(error.to_string()))
 }
 
 fn parse_config(raw: &str) -> Result<WatchdogConfig> {
@@ -310,7 +311,15 @@ mod tests {
     fn empty_name_is_rejected() {
         let conn = open_test_db();
         assert!(matches!(
-            create_automation(&conn, "a-x", "  ", &sample_config("x", 1.0), &[], true, None),
+            create_automation(
+                &conn,
+                "a-x",
+                "  ",
+                &sample_config("x", 1.0),
+                &[],
+                true,
+                None
+            ),
             Err(AutomationStorageError::Validation(_))
         ));
     }
@@ -318,8 +327,16 @@ mod tests {
     #[test]
     fn config_survives_roundtrip() {
         let conn = open_test_db();
-        create_automation(&conn, "a-2", "CPU", &sample_config("CPU", 90.0), &[], false, None)
-            .unwrap();
+        create_automation(
+            &conn,
+            "a-2",
+            "CPU",
+            &sample_config("CPU", 90.0),
+            &[],
+            false,
+            None,
+        )
+        .unwrap();
         let loaded = &list_automations(&conn).unwrap()[0];
         assert!(!loaded.enabled);
         assert_eq!(loaded.site_id, None);

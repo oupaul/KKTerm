@@ -684,11 +684,7 @@ fn active_icon_theme_name() -> Option<String> {
     source.lookup("org.gnome.desktop.interface", true)?;
     let settings = gio::Settings::new("org.gnome.desktop.interface");
     let name = settings.string("icon-theme").to_string();
-    if name.is_empty() {
-        None
-    } else {
-        Some(name)
-    }
+    if name.is_empty() { None } else { Some(name) }
 }
 
 #[cfg(not(any(

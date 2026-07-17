@@ -3,13 +3,15 @@
 // `itops/storage.rs` (free functions over `&SqliteConnection`, JSON `TEXT` for
 // non-relational fields, integer `sort_order`). Reuses `ItopsStorageError`.
 
-use rusqlite::{Connection as SqliteConnection, OptionalExtension, params};
+use std::collections::HashMap;
+
+use rusqlite::{Connection as SqliteConnection, OptionalExtension, Transaction, params};
 
 use super::inventory::normalize_metadata;
 use super::storage::ItopsStorageError;
 use super::types::{
-    Rack, RackFacingEntry, RackItem, RackItemKind, RackItemMetadata, RackPlacementEntry,
-    RoomObject, ServerRoom,
+    Rack, RackFacingEntry, RackItem, RackItemKind, RackItemMetadata, RackMountFace,
+    RackPlacementEntry, RoomObject, ServerRoom,
 };
 use crate::dashboard_storage::DashboardBackground;
 
@@ -38,12 +40,6 @@ pub struct Span {
 }
 
 impl Span {
-    /// A full-rack-width span (the default for devices without a fractional
-    /// `widthFraction` in their metadata).
-    pub fn full(start_u: u32, height_u: u32) -> Self {
-        Span { start_u, height_u, x_start: 0, x_quarters: 4 }
-    }
-
     /// Exclusive top edge: the first U *above* this item.
     fn end_exclusive(&self) -> u32 {
         self.start_u + self.height_u
@@ -131,9 +127,10 @@ fn validate_item_placement(
             "a rack-top Kuai Kuai package must be at least 1U tall".to_string(),
         ));
     }
-    if existing.iter().any(|(id, span)| {
-        ignore_id != Some(id.as_str()) && span.start_u == rack_height_u + 1
-    }) {
+    if existing
+        .iter()
+        .any(|(id, span)| ignore_id != Some(id.as_str()) && span.start_u == rack_height_u + 1)
+    {
         return Err(ItopsStorageError::Validation(
             "the rack top already holds a Kuai Kuai package".to_string(),
         ));
@@ -265,6 +262,40 @@ fn rename_json_map_key(
         .map_err(|error| ItopsStorageError::Validation(error.to_string()))
 }
 
+fn remove_json_map_key(raw: Option<String>, name: &str) -> Result<Option<String>> {
+    let Some(raw) = raw else {
+        return Ok(None);
+    };
+    let Ok(mut map) = serde_json::from_str::<serde_json::Map<String, serde_json::Value>>(&raw)
+    else {
+        return Ok(Some(raw));
+    };
+    map.remove(name);
+    serde_json::to_string(&map)
+        .map(Some)
+        .map_err(|error| ItopsStorageError::Validation(error.to_string()))
+}
+
+fn copy_json_map_key(
+    raw: Option<String>,
+    source_name: &str,
+    duplicate_name: &str,
+) -> Result<Option<String>> {
+    let Some(raw) = raw else {
+        return Ok(None);
+    };
+    let Ok(mut map) = serde_json::from_str::<serde_json::Map<String, serde_json::Value>>(&raw)
+    else {
+        return Ok(Some(raw));
+    };
+    if let Some(value) = map.get(source_name).cloned() {
+        map.insert(duplicate_name.to_string(), value);
+    }
+    serde_json::to_string(&map)
+        .map(Some)
+        .map_err(|error| ItopsStorageError::Validation(error.to_string()))
+}
+
 /// Update first-class Server Room properties. Renames every name-keyed
 /// dependent in one transaction so racks, fixtures, icons, and backgrounds
 /// cannot split across two room names.
@@ -364,12 +395,167 @@ pub fn delete_server_room(conn: &SqliteConnection, id: &str) -> Result<()> {
     let Some((site_id, name)) = room else {
         return Err(ItopsStorageError::NotFound);
     };
-    conn.execute(
+    let tx = conn.unchecked_transaction()?;
+    tx.execute(
         "DELETE FROM itops_room_objects WHERE site_id = ? AND server_room = ?",
         params![site_id, name],
     )?;
-    conn.execute("DELETE FROM itops_server_rooms WHERE id = ?", params![id])?;
+    // Drop the room's racks too (their items cascade via the FK). The Rack
+    // View delete flow removes racks itself before this call; the assistant /
+    // MCP path relies on this so a deleted room cannot leave orphaned racks
+    // whose name tag resurrects a ghost room grouping.
+    tx.execute(
+        "DELETE FROM itops_site_racks WHERE site_id = ? AND server_room = ?",
+        params![site_id, name],
+    )?;
+    let metadata: Option<(Option<String>, Option<String>)> = tx
+        .query_row(
+            "SELECT room_backgrounds_json, room_icons_json FROM itops_sites WHERE id = ?",
+            params![site_id],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .optional()?;
+    if let Some((backgrounds, icons)) = metadata {
+        tx.execute(
+            "UPDATE itops_sites
+             SET room_backgrounds_json = ?, room_icons_json = ?, updated_at = CURRENT_TIMESTAMP
+             WHERE id = ?",
+            params![
+                remove_json_map_key(backgrounds, &name)?,
+                remove_json_map_key(icons, &name)?,
+                site_id
+            ],
+        )?;
+    }
+    tx.execute("DELETE FROM itops_server_rooms WHERE id = ?", params![id])?;
+    tx.commit()?;
     Ok(())
+}
+
+pub fn duplicate_server_room(
+    conn: &SqliteConnection,
+    id: &str,
+    name: &str,
+    floor_color: &str,
+    mut new_id: impl FnMut(&str) -> String,
+) -> Result<ServerRoom> {
+    let source = conn
+        .query_row(
+            "SELECT id, site_id, name, floor_color, sort_order
+             FROM itops_server_rooms WHERE id = ?",
+            params![id],
+            |row| {
+                Ok(ServerRoom {
+                    id: row.get(0)?,
+                    site_id: row.get(1)?,
+                    name: row.get(2)?,
+                    floor_color: row.get(3)?,
+                    sort_order: row.get(4)?,
+                })
+            },
+        )
+        .optional()?
+        .ok_or(ItopsStorageError::NotFound)?;
+    let duplicate_name = name.trim();
+    if duplicate_name.is_empty() {
+        return Err(ItopsStorageError::Validation(
+            "server room name must not be empty".to_string(),
+        ));
+    }
+    let duplicate: bool = conn.query_row(
+        "SELECT EXISTS(
+            SELECT 1 FROM itops_server_rooms
+            WHERE site_id = ? AND name = ? COLLATE NOCASE
+         )",
+        params![source.site_id, duplicate_name],
+        |row| row.get(0),
+    )?;
+    if duplicate {
+        return Err(ItopsStorageError::Validation(
+            "a server room with that name already exists".to_string(),
+        ));
+    }
+    let floor_color = validate_floor_color(floor_color)?;
+    let source_racks = list_racks(conn, &source.site_id)?
+        .into_iter()
+        .filter(|rack| rack.server_room == source.name)
+        .collect::<Vec<_>>();
+    let source_objects = list_room_objects(conn, &source.site_id, &source.name)?;
+    let metadata: Option<(Option<String>, Option<String>)> = conn
+        .query_row(
+            "SELECT room_backgrounds_json, room_icons_json FROM itops_sites WHERE id = ?",
+            params![source.site_id],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .optional()?;
+    let duplicate_id = new_id("room");
+    let next_sort: i64 = conn.query_row(
+        "SELECT COALESCE(MAX(sort_order), -1) + 1 FROM itops_server_rooms WHERE site_id = ?",
+        params![source.site_id],
+        |row| row.get(0),
+    )?;
+
+    let tx = conn.unchecked_transaction()?;
+    tx.execute(
+        "INSERT INTO itops_server_rooms (id, site_id, name, floor_color, sort_order)
+         VALUES (?, ?, ?, ?, ?)",
+        params![
+            duplicate_id,
+            source.site_id,
+            duplicate_name,
+            floor_color,
+            next_sort
+        ],
+    )?;
+    for rack in &source_racks {
+        insert_rack_clone(
+            &tx,
+            rack,
+            &new_id("rack"),
+            &rack.name,
+            &duplicate_name,
+            true,
+            &mut new_id,
+        )?;
+    }
+    for object in source_objects {
+        tx.execute(
+            "INSERT INTO itops_room_objects (id, site_id, server_room, kind, x, y, z, rot, corner)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            params![
+                new_id("room-object"),
+                source.site_id,
+                duplicate_name,
+                object.kind,
+                object.x,
+                object.y,
+                object.z,
+                object.rot,
+                object.corner
+            ],
+        )?;
+    }
+    if let Some((backgrounds, icons)) = metadata {
+        tx.execute(
+            "UPDATE itops_sites
+             SET room_backgrounds_json = ?, room_icons_json = ?, updated_at = CURRENT_TIMESTAMP
+             WHERE id = ?",
+            params![
+                copy_json_map_key(backgrounds, &source.name, &duplicate_name)?,
+                copy_json_map_key(icons, &source.name, &duplicate_name)?,
+                source.site_id
+            ],
+        )?;
+    }
+    tx.commit()?;
+
+    Ok(ServerRoom {
+        id: duplicate_id,
+        site_id: source.site_id,
+        name: duplicate_name.to_string(),
+        floor_color,
+        sort_order: next_sort,
+    })
 }
 
 fn validate_server_room(conn: &SqliteConnection, site_id: &str, name: &str) -> Result<String> {
@@ -419,7 +605,7 @@ fn parse_metadata(kind: RackItemKind, raw: &str) -> RackItemMetadata {
 fn row_to_item(row: &rusqlite::Row<'_>) -> rusqlite::Result<RackItem> {
     let kind_raw: String = row.get(3)?;
     let kind = RackItemKind::from_db_str(&kind_raw).unwrap_or(RackItemKind::Blank);
-    let metadata_json: String = row.get(7)?;
+    let metadata_json: String = row.get(8)?;
     Ok(RackItem {
         id: row.get(0)?,
         rack_id: row.get(1)?,
@@ -428,11 +614,12 @@ fn row_to_item(row: &rusqlite::Row<'_>) -> rusqlite::Result<RackItem> {
         label: row.get(4)?,
         start_u: row.get(5)?,
         height_u: row.get(6)?,
+        mount_face: RackMountFace::from_db_str(&row.get::<_, String>(7)?),
         metadata: parse_metadata(kind, &metadata_json),
     })
 }
 
-const SELECT_ITEM_COLUMNS: &str = "id, rack_id, connection_id, kind, label, start_u, height_u, metadata_json \
+const SELECT_ITEM_COLUMNS: &str = "id, rack_id, connection_id, kind, label, start_u, height_u, mount_face, metadata_json \
      FROM itops_site_rack_items";
 
 fn list_items_for_rack(conn: &SqliteConnection, rack_id: &str) -> Result<Vec<RackItem>> {
@@ -445,10 +632,38 @@ fn list_items_for_rack(conn: &SqliteConnection, rack_id: &str) -> Result<Vec<Rac
     Ok(items)
 }
 
+fn list_items_for_site(
+    conn: &SqliteConnection,
+    site_id: &str,
+) -> Result<HashMap<String, Vec<RackItem>>> {
+    let mut stmt = conn.prepare(&format!(
+        "SELECT {SELECT_ITEM_COLUMNS}
+         WHERE rack_id IN (SELECT id FROM itops_site_racks WHERE site_id = ?)
+         ORDER BY rack_id, start_u"
+    ))?;
+    let mut items_by_rack: HashMap<String, Vec<RackItem>> = HashMap::new();
+    for item in stmt.query_map(params![site_id], row_to_item)? {
+        let item = item?;
+        items_by_rack
+            .entry(item.rack_id.clone())
+            .or_default()
+            .push(item);
+    }
+    Ok(items_by_rack)
+}
+
 /// Existing spans in a rack, paired with their item ids (for overlap checks).
-fn existing_spans(conn: &SqliteConnection, rack_id: &str) -> Result<Vec<(String, Span)>> {
+fn existing_spans(
+    conn: &SqliteConnection,
+    rack_id: &str,
+    mount_face: RackMountFace,
+    rack_height_u: u32,
+) -> Result<Vec<(String, Span)>> {
     Ok(list_items_for_rack(conn, rack_id)?
         .into_iter()
+        // Rack-top objects are face-independent; in-cabinet devices collide
+        // only with other devices on the same mounting plane.
+        .filter(|item| item.mount_face == mount_face || item.start_u == rack_height_u + 1)
         .map(|item| {
             let (x_start, x_quarters) = metadata_x_span(&item.metadata);
             (
@@ -534,8 +749,12 @@ pub fn list_racks(conn: &SqliteConnection, site_id: &str) -> Result<Vec<Rack>> {
     let mut racks = stmt
         .query_map(params![site_id], row_to_rack)?
         .collect::<rusqlite::Result<Vec<_>>>()?;
+    if racks.is_empty() {
+        return Ok(racks);
+    }
+    let mut items_by_rack = list_items_for_site(conn, site_id)?;
     for rack in &mut racks {
-        rack.items = list_items_for_rack(conn, &rack.id)?;
+        rack.items = items_by_rack.remove(&rack.id).unwrap_or_default();
     }
     Ok(racks)
 }
@@ -710,6 +929,145 @@ pub fn delete_rack(conn: &SqliteConnection, id: &str) -> Result<()> {
         return Err(ItopsStorageError::NotFound);
     }
     Ok(())
+}
+
+fn insert_rack_clone(
+    tx: &Transaction<'_>,
+    source: &Rack,
+    duplicate_id: &str,
+    duplicate_name: &str,
+    server_room: &str,
+    preserve_placement: bool,
+    new_id: &mut impl FnMut(&str) -> String,
+) -> Result<()> {
+    let next_sort: i64 = tx.query_row(
+        "SELECT COALESCE(MAX(sort_order), -1) + 1 FROM itops_site_racks WHERE site_id = ?",
+        params![source.site_id],
+        |row| row.get(0),
+    )?;
+    let background_json = rack_background_to_json(&source.background)?;
+    tx.execute(
+        "INSERT INTO itops_site_racks
+            (id, site_id, name, server_room, rack_group, shell, background_json, height_u,
+             depth_mm, power_capacity_w, floor_x, floor_y, grid_x, grid_y, facing, sort_order)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        params![
+            duplicate_id,
+            source.site_id,
+            duplicate_name,
+            server_room,
+            source.rack_group,
+            source.shell,
+            background_json,
+            source.height_u,
+            source.depth_mm,
+            source.power_capacity_w,
+            preserve_placement.then_some(source.floor_x).flatten(),
+            preserve_placement.then_some(source.floor_y).flatten(),
+            preserve_placement.then_some(source.grid_x).flatten(),
+            preserve_placement.then_some(source.grid_y).flatten(),
+            preserve_placement.then_some(source.facing).flatten(),
+            next_sort
+        ],
+    )?;
+    for item in &source.items {
+        tx.execute(
+            "INSERT INTO itops_site_rack_items
+                (id, rack_id, connection_id, kind, label, start_u, height_u, mount_face, metadata_json)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            params![
+                new_id("ri"),
+                duplicate_id,
+                item.connection_id,
+                item.kind.as_db_str(),
+                item.label,
+                item.start_u,
+                item.height_u,
+                item.mount_face.as_db_str(),
+                metadata_to_json(&item.metadata)?
+            ],
+        )?;
+    }
+    Ok(())
+}
+
+pub fn duplicate_rack(
+    conn: &SqliteConnection,
+    id: &str,
+    name: &str,
+    server_room: &str,
+    rack_group: &str,
+    shell: Option<&str>,
+    height_u: u32,
+    depth_mm: u32,
+    power_capacity_w: Option<u32>,
+    grid_x: Option<i64>,
+    grid_y: Option<i64>,
+    facing: Option<i64>,
+    mut new_id: impl FnMut(&str) -> String,
+) -> Result<Rack> {
+    let placement = match (grid_x, grid_y, facing) {
+        (None, None, None) => None,
+        (Some(x), Some(y), Some(facing)) if x >= 0 && y >= 0 && (0..=3).contains(&facing) => {
+            Some((x, y, facing))
+        }
+        (Some(_), Some(_), Some(facing)) if !(0..=3).contains(&facing) => {
+            return Err(ItopsStorageError::Validation(format!(
+                "rack facing must be 0..=3, got {facing}"
+            )));
+        }
+        (Some(x), Some(y), Some(_)) => {
+            return Err(ItopsStorageError::Validation(format!(
+                "rack grid coordinates must be non-negative, got ({x}, {y})"
+            )));
+        }
+        _ => {
+            return Err(ItopsStorageError::Validation(
+                "rack clone placement requires grid_x, grid_y, and facing together".to_string(),
+            ));
+        }
+    };
+    let mut source = fetch_rack(conn, id)?;
+    let old_height_u = source.height_u;
+    source.name = validate_name(name)?;
+    source.server_room = validate_server_room(conn, &source.site_id, server_room)?;
+    source.rack_group = rack_group.trim().to_string();
+    source.shell = normalize_shell(shell);
+    source.height_u = validate_height(height_u)?;
+    source.depth_mm = validate_depth(depth_mm)?;
+    source.power_capacity_w = validate_power_capacity(power_capacity_w)?;
+    for item in &mut source.items {
+        if item.kind == RackItemKind::Kuaiguai && item.start_u == old_height_u + 1 {
+            item.start_u = source.height_u + 1;
+            continue;
+        }
+        if item.start_u + item.height_u - 1 > source.height_u {
+            return Err(ItopsStorageError::Validation(format!(
+                "cannot shrink to {}U: an item occupies U{}",
+                source.height_u,
+                item.start_u + item.height_u - 1
+            )));
+        }
+    }
+    let duplicate_id = new_id("rack");
+    let tx = conn.unchecked_transaction()?;
+    insert_rack_clone(
+        &tx,
+        &source,
+        &duplicate_id,
+        &source.name,
+        &source.server_room,
+        false,
+        &mut new_id,
+    )?;
+    if let Some((grid_x, grid_y, facing)) = placement {
+        tx.execute(
+            "UPDATE itops_site_racks SET grid_x = ?, grid_y = ?, facing = ? WHERE id = ?",
+            params![grid_x, grid_y, facing, duplicate_id],
+        )?;
+    }
+    tx.commit()?;
+    fetch_rack(conn, &duplicate_id)
 }
 
 pub fn reorder_racks(conn: &SqliteConnection, site_id: &str, ordered_ids: &[String]) -> Result<()> {
@@ -966,23 +1324,55 @@ pub fn place_rack_item(
     height_u: u32,
     metadata: RackItemMetadata,
 ) -> Result<RackItem> {
+    place_rack_item_on_face(
+        conn,
+        id,
+        rack_id,
+        connection_id,
+        kind,
+        label,
+        start_u,
+        height_u,
+        RackMountFace::Front,
+        metadata,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn place_rack_item_on_face(
+    conn: &SqliteConnection,
+    id: &str,
+    rack_id: &str,
+    connection_id: Option<String>,
+    kind: RackItemKind,
+    label: &str,
+    start_u: u32,
+    height_u: u32,
+    mount_face: RackMountFace,
+    metadata: RackItemMetadata,
+) -> Result<RackItem> {
     let connection_id = normalize_item_connection(kind, connection_id)?;
     let metadata = normalize_item_metadata(kind, metadata);
     let rack_height = fetch_rack_height(conn, rack_id)?;
-    let existing = existing_spans(conn, rack_id)?;
+    let existing = existing_spans(conn, rack_id, mount_face, rack_height)?;
     let (x_start, x_quarters) = metadata_x_span(&metadata);
     validate_item_placement(
         kind,
         rack_height,
         &existing,
         None,
-        Span { start_u, height_u, x_start, x_quarters },
+        Span {
+            start_u,
+            height_u,
+            x_start,
+            x_quarters,
+        },
     )?;
     let metadata_json = metadata_to_json(&metadata)?;
     conn.execute(
         "INSERT INTO itops_site_rack_items
-            (id, rack_id, connection_id, kind, label, start_u, height_u, metadata_json)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (id, rack_id, connection_id, kind, label, start_u, height_u, mount_face, metadata_json)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
         params![
             id,
             rack_id,
@@ -991,6 +1381,7 @@ pub fn place_rack_item(
             label.trim(),
             start_u,
             height_u,
+            mount_face.as_db_str(),
             metadata_json
         ],
     )?;
@@ -1002,6 +1393,7 @@ pub fn place_rack_item(
         label: label.trim().to_string(),
         start_u,
         height_u,
+        mount_face,
         metadata,
     })
 }
@@ -1017,7 +1409,31 @@ pub fn update_rack_item(
     metadata: RackItemMetadata,
     placement: Option<(u32, u32)>,
 ) -> Result<RackItem> {
+    update_rack_item_on_face(
+        conn,
+        id,
+        kind,
+        connection_id,
+        label,
+        metadata,
+        placement,
+        None,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn update_rack_item_on_face(
+    conn: &SqliteConnection,
+    id: &str,
+    kind: RackItemKind,
+    connection_id: Option<String>,
+    label: &str,
+    metadata: RackItemMetadata,
+    placement: Option<(u32, u32)>,
+    mount_face: Option<RackMountFace>,
+) -> Result<RackItem> {
     let current = fetch_item(conn, id)?;
+    let mount_face = mount_face.unwrap_or(current.mount_face);
     let rack_height = fetch_rack_height(conn, &current.rack_id)?;
     if current.start_u == rack_height + 1 && kind != RackItemKind::Kuaiguai {
         return Err(ItopsStorageError::Validation(
@@ -1031,7 +1447,7 @@ pub fn update_rack_item(
     // Width/slot and height changes alter the final footprint: validate the
     // combined state before storing any part of the edit.
     let (x_start, x_quarters) = metadata_x_span(&metadata);
-    let existing = existing_spans(conn, &current.rack_id)?;
+    let existing = existing_spans(conn, &current.rack_id, mount_face, rack_height)?;
     validate_item_placement(
         kind,
         rack_height,
@@ -1048,7 +1464,7 @@ pub fn update_rack_item(
     let affected = conn.execute(
         "UPDATE itops_site_rack_items
          SET kind = ?, connection_id = ?, label = ?, start_u = ?, height_u = ?,
-             metadata_json = ?, updated_at = CURRENT_TIMESTAMP
+             mount_face = ?, metadata_json = ?, updated_at = CURRENT_TIMESTAMP
          WHERE id = ?",
         params![
             kind.as_db_str(),
@@ -1056,6 +1472,7 @@ pub fn update_rack_item(
             label.trim(),
             start_u,
             height_u,
+            mount_face.as_db_str(),
             metadata_json,
             id
         ],
@@ -1078,28 +1495,46 @@ pub fn move_rack_item(
     height_u: u32,
     slot: Option<u32>,
 ) -> Result<RackItem> {
+    move_rack_item_to_face(conn, id, rack_id, start_u, height_u, slot, None)
+}
+
+pub fn move_rack_item_to_face(
+    conn: &SqliteConnection,
+    id: &str,
+    rack_id: &str,
+    start_u: u32,
+    height_u: u32,
+    slot: Option<u32>,
+    mount_face: Option<RackMountFace>,
+) -> Result<RackItem> {
     let current = fetch_item(conn, id)?;
+    let mount_face = mount_face.unwrap_or(current.mount_face);
     let mut metadata = current.metadata.clone();
     if slot.is_some() && metadata.width_fraction.is_some() {
         metadata.slot = slot;
         metadata = normalize_metadata(metadata);
     }
     let rack_height = fetch_rack_height(conn, rack_id)?;
-    let existing = existing_spans(conn, rack_id)?;
+    let existing = existing_spans(conn, rack_id, mount_face, rack_height)?;
     let (x_start, x_quarters) = metadata_x_span(&metadata);
     validate_item_placement(
         current.kind,
         rack_height,
         &existing,
         Some(id),
-        Span { start_u, height_u, x_start, x_quarters },
+        Span {
+            start_u,
+            height_u,
+            x_start,
+            x_quarters,
+        },
     )?;
     let metadata_json = metadata_to_json(&metadata)?;
     let affected = conn.execute(
         "UPDATE itops_site_rack_items
-         SET rack_id = ?, start_u = ?, height_u = ?, metadata_json = ?, updated_at = CURRENT_TIMESTAMP
+         SET rack_id = ?, start_u = ?, height_u = ?, mount_face = ?, metadata_json = ?, updated_at = CURRENT_TIMESTAMP
          WHERE id = ?",
-        params![rack_id, start_u, height_u, metadata_json, id],
+        params![rack_id, start_u, height_u, mount_face.as_db_str(), metadata_json, id],
     )?;
     if affected == 0 {
         return Err(ItopsStorageError::NotFound);
@@ -1140,6 +1575,7 @@ mod tests {
         let conn = SqliteConnection::open_in_memory().unwrap();
         conn.execute_batch(
             r#"
+            PRAGMA foreign_keys = ON;
             CREATE TABLE itops_site_racks (
                 id TEXT PRIMARY KEY,
                 site_id TEXT NOT NULL,
@@ -1202,9 +1638,11 @@ mod tests {
                 label TEXT NOT NULL DEFAULT '',
                 start_u INTEGER NOT NULL,
                 height_u INTEGER NOT NULL,
+                mount_face TEXT NOT NULL DEFAULT 'front',
                 metadata_json TEXT NOT NULL DEFAULT '{}',
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (rack_id) REFERENCES itops_site_racks(id) ON DELETE CASCADE
             );
             "#,
         )
@@ -1213,11 +1651,195 @@ mod tests {
     }
 
     fn span(start_u: u32, height_u: u32) -> Span {
-        Span::full(start_u, height_u)
+        Span {
+            start_u,
+            height_u,
+            x_start: 0,
+            x_quarters: 4,
+        }
     }
 
     fn fractional(start_u: u32, height_u: u32, x_start: u32, x_quarters: u32) -> Span {
-        Span { start_u, height_u, x_start, x_quarters }
+        Span {
+            start_u,
+            height_u,
+            x_start,
+            x_quarters,
+        }
+    }
+
+    #[test]
+    fn duplicate_rack_clones_devices_and_resets_room_coordinates() {
+        let conn = open_test_db();
+        create_rack(
+            &conn,
+            "r1",
+            "f1",
+            "Rack-1",
+            "Room B",
+            "Row A",
+            Some("white"),
+            42,
+            1000,
+            Some(8000),
+        )
+        .unwrap();
+        conn.execute(
+            "UPDATE itops_site_racks
+             SET background_json = '{\"kind\":\"preset\",\"preset\":\"mist\"}',
+                 floor_x = 10, floor_y = 20, grid_x = 3, grid_y = 4, facing = 2
+             WHERE id = 'r1'",
+            [],
+        )
+        .unwrap();
+        place_rack_item(
+            &conn,
+            "item-1",
+            "r1",
+            None,
+            RackItemKind::Switch,
+            "Core switch",
+            10,
+            2,
+            RackItemMetadata::default(),
+        )
+        .unwrap();
+
+        let mut sequence = 0;
+        let duplicated = duplicate_rack(
+            &conn,
+            "r1",
+            "Rack-1#2",
+            "Room B",
+            "Row A",
+            Some("white"),
+            42,
+            1000,
+            Some(8000),
+            None,
+            None,
+            None,
+            |prefix| {
+                sequence += 1;
+                format!("{prefix}-copy-{sequence}")
+            },
+        )
+        .unwrap();
+
+        assert_eq!(duplicated.name, "Rack-1#2");
+        assert_eq!(duplicated.rack_group, "Row A");
+        assert_eq!(duplicated.shell.as_deref(), Some("white"));
+        assert_eq!(duplicated.power_capacity_w, Some(8000));
+        assert_eq!(
+            duplicated.background,
+            Some(DashboardBackground::Preset {
+                preset: "mist".to_string()
+            })
+        );
+        assert_eq!(duplicated.items.len(), 1);
+        assert_eq!(duplicated.items[0].label, "Core switch");
+        assert_eq!(duplicated.floor_x, None);
+        assert_eq!(duplicated.floor_y, None);
+        assert_eq!(duplicated.grid_x, None);
+        assert_eq!(duplicated.grid_y, None);
+        assert_eq!(duplicated.facing, None);
+    }
+
+    #[test]
+    fn duplicate_rack_can_commit_directly_to_a_grid_cell_with_facing() {
+        let conn = open_test_db();
+        create_rack(
+            &conn, "r1", "f1", "Rack-1", "Room B", "", None, 42, 1000, None,
+        )
+        .unwrap();
+
+        let duplicated = duplicate_rack(
+            &conn,
+            "r1",
+            "Rack-1#2",
+            "Room B",
+            "",
+            None,
+            42,
+            1000,
+            None,
+            Some(5),
+            Some(6),
+            Some(3),
+            |prefix| format!("{prefix}-copy"),
+        )
+        .unwrap();
+
+        assert_eq!(duplicated.grid_x, Some(5));
+        assert_eq!(duplicated.grid_y, Some(6));
+        assert_eq!(duplicated.facing, Some(3));
+    }
+
+    #[test]
+    fn duplicate_server_room_clones_topology_and_room_metadata() {
+        let conn = open_test_db();
+        create_rack(
+            &conn, "r1", "f1", "Rack-1", "Room B", "", None, 42, 1000, None,
+        )
+        .unwrap();
+        conn.execute(
+            "UPDATE itops_site_racks SET grid_x = 3, grid_y = 4, facing = 1 WHERE id = 'r1'",
+            [],
+        )
+        .unwrap();
+        place_rack_item(
+            &conn,
+            "item-1",
+            "r1",
+            None,
+            RackItemKind::Pdu,
+            "PDU",
+            1,
+            1,
+            RackItemMetadata::default(),
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO itops_room_objects (id, site_id, server_room, kind, x, y, z, rot, corner)
+             VALUES ('object-1', 'f1', 'Room B', 'camera', 2, 3, 4, 1, 2)",
+            [],
+        )
+        .unwrap();
+
+        let mut sequence = 0;
+        let duplicated = duplicate_server_room(&conn, "room-b", "Room B#2", "blue", |prefix| {
+            sequence += 1;
+            format!("{prefix}-copy-{sequence}")
+        })
+        .unwrap();
+
+        assert_eq!(duplicated.name, "Room B#2");
+        assert_eq!(duplicated.floor_color, "blue");
+        let racks = list_racks(&conn, "f1").unwrap();
+        let duplicated_rack = racks
+            .iter()
+            .find(|rack| rack.server_room == duplicated.name)
+            .unwrap();
+        assert_eq!(duplicated_rack.name, "Rack-1");
+        assert_eq!(duplicated_rack.grid_x, Some(3));
+        assert_eq!(duplicated_rack.grid_y, Some(4));
+        assert_eq!(duplicated_rack.facing, Some(1));
+        assert_eq!(duplicated_rack.items.len(), 1);
+        assert_eq!(
+            list_room_objects(&conn, "f1", &duplicated.name)
+                .unwrap()
+                .len(),
+            1
+        );
+        let (backgrounds, icons): (String, String) = conn
+            .query_row(
+                "SELECT room_backgrounds_json, room_icons_json FROM itops_sites WHERE id = 'f1'",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .unwrap();
+        assert!(backgrounds.contains("\"Room B#2\""));
+        assert!(icons.contains("\"Room B#2\""));
     }
 
     #[test]
@@ -1232,17 +1854,35 @@ mod tests {
     #[test]
     fn fractional_widths_share_a_u_row_without_overlapping() {
         // Two half-width devices side by side in the same U do not collide.
-        assert!(!spans_overlap(fractional(10, 1, 0, 2), fractional(10, 1, 2, 2)));
+        assert!(!spans_overlap(
+            fractional(10, 1, 0, 2),
+            fractional(10, 1, 2, 2)
+        ));
         // Same slot collides; a full-width device collides with either half.
-        assert!(spans_overlap(fractional(10, 1, 0, 2), fractional(10, 1, 0, 2)));
+        assert!(spans_overlap(
+            fractional(10, 1, 0, 2),
+            fractional(10, 1, 0, 2)
+        ));
         assert!(spans_overlap(span(10, 1), fractional(10, 1, 2, 2)));
         // Four quarter-width devices tile one U; adjacent quarters don't touch.
-        assert!(!spans_overlap(fractional(10, 1, 0, 1), fractional(10, 1, 1, 1)));
+        assert!(!spans_overlap(
+            fractional(10, 1, 0, 1),
+            fractional(10, 1, 1, 1)
+        ));
         // A half at the left overlaps a quarter in x-slot 1 but not slot 2.
-        assert!(spans_overlap(fractional(10, 1, 0, 2), fractional(10, 1, 1, 1)));
-        assert!(!spans_overlap(fractional(10, 1, 0, 2), fractional(10, 1, 2, 1)));
+        assert!(spans_overlap(
+            fractional(10, 1, 0, 2),
+            fractional(10, 1, 1, 1)
+        ));
+        assert!(!spans_overlap(
+            fractional(10, 1, 0, 2),
+            fractional(10, 1, 2, 1)
+        ));
         // Different U rows never collide regardless of x overlap.
-        assert!(!spans_overlap(fractional(10, 1, 0, 2), fractional(11, 1, 0, 2)));
+        assert!(!spans_overlap(
+            fractional(10, 1, 0, 2),
+            fractional(11, 1, 0, 2)
+        ));
     }
 
     #[test]
@@ -1264,12 +1904,8 @@ mod tests {
     #[test]
     fn only_one_kuaiguai_package_may_occupy_the_rack_top() {
         let top = span(43, 4);
-        assert!(
-            validate_item_placement(RackItemKind::Kuaiguai, 42, &[], None, top).is_ok()
-        );
-        assert!(
-            validate_item_placement(RackItemKind::Server, 42, &[], None, top).is_err()
-        );
+        assert!(validate_item_placement(RackItemKind::Kuaiguai, 42, &[], None, top).is_ok());
+        assert!(validate_item_placement(RackItemKind::Server, 42, &[], None, top).is_err());
         assert!(
             validate_item_placement(
                 RackItemKind::Kuaiguai,
@@ -1311,7 +1947,18 @@ mod tests {
         assert_eq!(listed[0].server_room, "Room B");
         assert_eq!(listed[0].rack_group, "G1");
 
-        let updated = update_rack(&conn, "r1", "A13", "Room C", "G2", None, 24, 1200, Some(8000)).unwrap();
+        let updated = update_rack(
+            &conn,
+            "r1",
+            "A13",
+            "Room C",
+            "G2",
+            None,
+            24,
+            1200,
+            Some(8000),
+        )
+        .unwrap();
         assert_eq!(updated.rack_group, "G2");
         assert_eq!(updated.name, "A13");
         assert_eq!(updated.height_u, 24);
@@ -1328,14 +1975,81 @@ mod tests {
     }
 
     #[test]
+    fn list_racks_preserves_rack_and_item_order_with_empty_racks() {
+        let conn = open_test_db();
+        conn.execute_batch(
+            "INSERT INTO itops_site_racks (id, site_id, name, sort_order) VALUES
+                ('rack-late', 'f1', 'Late', 2),
+                ('rack-empty', 'f1', 'Empty', 1),
+                ('rack-early', 'f1', 'Early', 0),
+                ('rack-other', 'f2', 'Other Site', 0);
+             INSERT INTO itops_site_rack_items
+                (id, rack_id, kind, label, start_u, height_u) VALUES
+                ('late-high', 'rack-late', 'server', 'Late high', 20, 1),
+                ('early-high', 'rack-early', 'server', 'Early high', 11, 1),
+                ('late-low', 'rack-late', 'server', 'Late low', 2, 1),
+                ('early-low', 'rack-early', 'server', 'Early low', 3, 1),
+                ('other-item', 'rack-other', 'server', 'Other', 1, 1);",
+        )
+        .unwrap();
+
+        let racks = list_racks(&conn, "f1").unwrap();
+        assert_eq!(
+            racks
+                .iter()
+                .map(|rack| rack.id.as_str())
+                .collect::<Vec<_>>(),
+            vec!["rack-early", "rack-empty", "rack-late"]
+        );
+        assert_eq!(
+            racks[0]
+                .items
+                .iter()
+                .map(|item| (item.id.as_str(), item.start_u))
+                .collect::<Vec<_>>(),
+            vec![("early-low", 3), ("early-high", 11)]
+        );
+        assert!(racks[1].items.is_empty());
+        assert_eq!(
+            racks[2]
+                .items
+                .iter()
+                .map(|item| (item.id.as_str(), item.start_u))
+                .collect::<Vec<_>>(),
+            vec![("late-low", 2), ("late-high", 20)]
+        );
+    }
+
+    #[test]
     fn rack_power_capacity_normalizes_and_validates() {
         let conn = open_test_db();
         // 0 means "unset" and stores as NULL.
-        let rack =
-            create_rack(&conn, "r1", "f1", "A12", "Room B", "", None, 42, 1000, Some(0)).unwrap();
+        let rack = create_rack(
+            &conn,
+            "r1",
+            "f1",
+            "A12",
+            "Room B",
+            "",
+            None,
+            42,
+            1000,
+            Some(0),
+        )
+        .unwrap();
         assert_eq!(rack.power_capacity_w, None);
-        let updated =
-            update_rack(&conn, "r1", "A12", "Room B", "", None, 42, 1000, Some(12_000)).unwrap();
+        let updated = update_rack(
+            &conn,
+            "r1",
+            "A12",
+            "Room B",
+            "",
+            None,
+            42,
+            1000,
+            Some(12_000),
+        )
+        .unwrap();
         assert_eq!(updated.power_capacity_w, Some(12_000));
         assert_eq!(
             list_racks(&conn, "f1").unwrap()[0].power_capacity_w,
@@ -1343,7 +2057,17 @@ mod tests {
         );
         // Beyond the sanity ceiling is rejected.
         assert!(matches!(
-            update_rack(&conn, "r1", "A12", "Room B", "", None, 42, 1000, Some(1_000_001)),
+            update_rack(
+                &conn,
+                "r1",
+                "A12",
+                "Room B",
+                "",
+                None,
+                42,
+                1000,
+                Some(1_000_001)
+            ),
             Err(ItopsStorageError::Validation(_))
         ));
     }
@@ -1359,15 +2083,27 @@ mod tests {
             &conn,
             RackPlacementKind::Grid,
             &[
-                RackPlacementEntry { id: "a".into(), x: 2.4, y: -1.0 },
-                RackPlacementEntry { id: "gone".into(), x: 1.0, y: 1.0 },
+                RackPlacementEntry {
+                    id: "a".into(),
+                    x: 2.4,
+                    y: -1.0,
+                },
+                RackPlacementEntry {
+                    id: "gone".into(),
+                    x: 1.0,
+                    y: 1.0,
+                },
             ],
         )
         .unwrap();
         set_rack_placements(
             &conn,
             RackPlacementKind::Floor,
-            &[RackPlacementEntry { id: "b".into(), x: 118.5, y: 42.0 }],
+            &[RackPlacementEntry {
+                id: "b".into(),
+                x: 118.5,
+                y: 42.0,
+            }],
         )
         .unwrap();
 
@@ -1384,7 +2120,11 @@ mod tests {
             set_rack_placements(
                 &conn,
                 RackPlacementKind::Floor,
-                &[RackPlacementEntry { id: "a".into(), x: f64::NAN, y: 0.0 }],
+                &[RackPlacementEntry {
+                    id: "a".into(),
+                    x: f64::NAN,
+                    y: 0.0
+                }],
             ),
             Err(ItopsStorageError::Validation(_))
         ));
@@ -1398,9 +2138,15 @@ mod tests {
         set_rack_facings(
             &conn,
             &[
-                RackFacingEntry { id: "a".into(), facing: 3 },
+                RackFacingEntry {
+                    id: "a".into(),
+                    facing: 3,
+                },
                 // Missing ids are skipped like placement writes.
-                RackFacingEntry { id: "gone".into(), facing: 1 },
+                RackFacingEntry {
+                    id: "gone".into(),
+                    facing: 1,
+                },
             ],
         )
         .unwrap();
@@ -1408,7 +2154,13 @@ mod tests {
         assert_eq!(racks[0].facing, Some(3));
 
         assert!(matches!(
-            set_rack_facings(&conn, &[RackFacingEntry { id: "a".into(), facing: 4 }]),
+            set_rack_facings(
+                &conn,
+                &[RackFacingEntry {
+                    id: "a".into(),
+                    facing: 4
+                }]
+            ),
             Err(ItopsStorageError::Validation(_))
         ));
     }
@@ -1587,6 +2339,91 @@ mod tests {
     }
 
     #[test]
+    fn front_and_rear_mounting_faces_validate_independently() {
+        let conn = open_test_db();
+        create_rack(&conn, "r1", "f1", "A12", "Room B", "", None, 42, 1000, None).unwrap();
+
+        let front = place_rack_item_on_face(
+            &conn,
+            "front-device",
+            "r1",
+            None,
+            RackItemKind::Server,
+            "front",
+            20,
+            2,
+            RackMountFace::Front,
+            RackItemMetadata::default(),
+        )
+        .unwrap();
+        let rear = place_rack_item_on_face(
+            &conn,
+            "rear-device",
+            "r1",
+            None,
+            RackItemKind::Switch,
+            "rear",
+            20,
+            2,
+            RackMountFace::Rear,
+            RackItemMetadata::default(),
+        )
+        .unwrap();
+        assert_eq!(front.mount_face, RackMountFace::Front);
+        assert_eq!(rear.mount_face, RackMountFace::Rear);
+
+        assert!(matches!(
+            place_rack_item_on_face(
+                &conn,
+                "rear-overlap",
+                "r1",
+                None,
+                RackItemKind::Pdu,
+                "blocked",
+                21,
+                1,
+                RackMountFace::Rear,
+                RackItemMetadata::default(),
+            ),
+            Err(ItopsStorageError::Validation(_))
+        ));
+
+        assert!(matches!(
+            move_rack_item_to_face(
+                &conn,
+                "front-device",
+                "r1",
+                20,
+                2,
+                None,
+                Some(RackMountFace::Rear),
+            ),
+            Err(ItopsStorageError::Validation(_))
+        ));
+
+        let moved = move_rack_item_to_face(
+            &conn,
+            "front-device",
+            "r1",
+            10,
+            2,
+            None,
+            Some(RackMountFace::Rear),
+        )
+        .unwrap();
+        assert_eq!(moved.mount_face, RackMountFace::Rear);
+
+        let items = &list_racks(&conn, "f1").unwrap()[0].items;
+        assert_eq!(
+            items
+                .iter()
+                .filter(|item| item.mount_face == RackMountFace::Rear)
+                .count(),
+            2
+        );
+    }
+
+    #[test]
     fn fractional_width_devices_place_move_and_update_side_by_side() {
         let conn = open_test_db();
         create_rack(&conn, "r1", "f1", "A12", "Room B", "", None, 42, 1000, None).unwrap();
@@ -1614,17 +2451,59 @@ mod tests {
         assert_eq!(server.metadata.slot, None);
 
         // Two half-width modems share U5: left slot then right slot.
-        place_rack_item(&conn, "m1", "r1", None, RackItemKind::GenericDevice, "modem-a", 5, 1, half(0)).unwrap();
-        place_rack_item(&conn, "m2", "r1", None, RackItemKind::GenericDevice, "modem-b", 5, 1, half(1)).unwrap();
+        place_rack_item(
+            &conn,
+            "m1",
+            "r1",
+            None,
+            RackItemKind::GenericDevice,
+            "modem-a",
+            5,
+            1,
+            half(0),
+        )
+        .unwrap();
+        place_rack_item(
+            &conn,
+            "m2",
+            "r1",
+            None,
+            RackItemKind::GenericDevice,
+            "modem-b",
+            5,
+            1,
+            half(1),
+        )
+        .unwrap();
 
         // A third device cannot take an occupied slot, nor can a full-width
         // device take the row.
         assert!(matches!(
-            place_rack_item(&conn, "m3", "r1", None, RackItemKind::GenericDevice, "modem-c", 5, 1, half(1)),
+            place_rack_item(
+                &conn,
+                "m3",
+                "r1",
+                None,
+                RackItemKind::GenericDevice,
+                "modem-c",
+                5,
+                1,
+                half(1)
+            ),
             Err(ItopsStorageError::Validation(_))
         ));
         assert!(matches!(
-            place_rack_item(&conn, "s1", "r1", None, RackItemKind::Switch, "sw", 5, 1, RackItemMetadata::default()),
+            place_rack_item(
+                &conn,
+                "s1",
+                "r1",
+                None,
+                RackItemKind::Switch,
+                "sw",
+                5,
+                1,
+                RackItemMetadata::default()
+            ),
             Err(ItopsStorageError::Validation(_))
         ));
 
@@ -1634,7 +2513,18 @@ mod tests {
             slot: Some(3),
             ..RackItemMetadata::default()
         };
-        place_rack_item(&conn, "q1", "r1", None, RackItemKind::Router, "r", 6, 1, quarter).unwrap();
+        place_rack_item(
+            &conn,
+            "q1",
+            "r1",
+            None,
+            RackItemKind::Router,
+            "r",
+            6,
+            1,
+            quarter,
+        )
+        .unwrap();
 
         // Moving into the other half's slot is rejected; a free row works and
         // the slot moves with the device.
@@ -1648,11 +2538,28 @@ mod tests {
 
         // Updating a half to full width where the row is shared is rejected.
         assert!(matches!(
-            update_rack_item(&conn, "q1", RackItemKind::Router, None, "r", RackItemMetadata::default(), None),
+            update_rack_item(
+                &conn,
+                "q1",
+                RackItemKind::Router,
+                None,
+                "r",
+                RackItemMetadata::default(),
+                None
+            ),
             Err(ItopsStorageError::Validation(_))
         ));
         // Widening where the row is otherwise free is allowed.
-        update_rack_item(&conn, "m2", RackItemKind::GenericDevice, None, "modem-b", RackItemMetadata::default(), None).unwrap();
+        update_rack_item(
+            &conn,
+            "m2",
+            RackItemKind::GenericDevice,
+            None,
+            "modem-b",
+            RackItemMetadata::default(),
+            None,
+        )
+        .unwrap();
     }
 
     #[test]
@@ -1664,8 +2571,30 @@ mod tests {
             slot: Some(slot),
             ..RackItemMetadata::default()
         };
-        place_rack_item(&conn, "moving", "r1", None, RackItemKind::GenericDevice, "moving", 42, 1, half(0)).unwrap();
-        place_rack_item(&conn, "blocker", "r1", None, RackItemKind::GenericDevice, "blocker", 41, 1, half(1)).unwrap();
+        place_rack_item(
+            &conn,
+            "moving",
+            "r1",
+            None,
+            RackItemKind::GenericDevice,
+            "moving",
+            42,
+            1,
+            half(0),
+        )
+        .unwrap();
+        place_rack_item(
+            &conn,
+            "blocker",
+            "r1",
+            None,
+            RackItemKind::GenericDevice,
+            "blocker",
+            41,
+            1,
+            half(1),
+        )
+        .unwrap();
 
         // The proposed slot change is valid at U42 by itself, but the combined
         // 2U resize would collide at U41. Neither part may persist on failure.
@@ -1763,8 +2692,7 @@ mod tests {
         )
         .unwrap();
 
-        let updated =
-            update_rack(&conn, "r1", "A12", "Room B", "", None, 48, 1000, None).unwrap();
+        let updated = update_rack(&conn, "r1", "A12", "Room B", "", None, 48, 1000, None).unwrap();
         assert_eq!(updated.items[0].start_u, 49);
     }
 
@@ -1785,7 +2713,8 @@ mod tests {
     #[test]
     fn server_room_persists_without_a_rack() {
         let conn = open_test_db();
-        let created = create_server_room(&conn, "room-empty", "f1", " Empty Room ", "default").unwrap();
+        let created =
+            create_server_room(&conn, "room-empty", "f1", " Empty Room ", "default").unwrap();
         assert_eq!(created.name, "Empty Room");
         assert!(
             list_server_rooms(&conn, "f1")
@@ -1830,6 +2759,58 @@ mod tests {
     }
 
     #[test]
+    fn deleting_a_server_room_removes_its_topology_only() {
+        let conn = open_test_db();
+        create_rack(&conn, "r1", "f1", "A12", "Room B", "", None, 42, 1000, None).unwrap();
+        place_rack_item(
+            &conn,
+            "item-1",
+            "r1",
+            None,
+            RackItemKind::Server,
+            "server",
+            1,
+            1,
+            RackItemMetadata::default(),
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO itops_room_objects (id, site_id, server_room, kind, x, y, z, rot)
+             VALUES ('obj-1', 'f1', 'Room B', 'sensor', 0, 0, 0, 0)",
+            [],
+        )
+        .unwrap();
+
+        delete_server_room(&conn, "room-b").unwrap();
+
+        assert!(list_racks(&conn, "f1").unwrap().is_empty());
+        assert!(list_room_objects(&conn, "f1", "Room B").unwrap().is_empty());
+        assert!(
+            list_server_rooms(&conn, "f1")
+                .unwrap()
+                .iter()
+                .all(|room| room.id != "room-b")
+        );
+        let item_count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM itops_site_rack_items WHERE id = 'item-1'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(item_count, 0);
+        let (backgrounds, icons): (String, String) = conn
+            .query_row(
+                "SELECT room_backgrounds_json, room_icons_json FROM itops_sites WHERE id = 'f1'",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .unwrap();
+        assert!(!backgrounds.contains("Room B"));
+        assert!(!icons.contains("Room B"));
+    }
+
+    #[test]
     fn rack_requires_a_server_room_owned_by_its_site() {
         let conn = open_test_db();
         assert!(matches!(
@@ -1837,9 +2818,25 @@ mod tests {
             Err(ItopsStorageError::Validation(_))
         ));
         assert!(matches!(
-            create_rack(&conn, "r-missing", "f1", "A", "Unknown", "", None, 42, 1000, None),
+            create_rack(
+                &conn,
+                "r-missing",
+                "f1",
+                "A",
+                "Unknown",
+                "",
+                None,
+                42,
+                1000,
+                None
+            ),
             Err(ItopsStorageError::Validation(_))
         ));
-        assert!(create_rack(&conn, "r-valid", "f1", "A", "Room B", "", None, 42, 1000, None).is_ok());
+        assert!(
+            create_rack(
+                &conn, "r-valid", "f1", "A", "Room B", "", None, 42, 1000, None
+            )
+            .is_ok()
+        );
     }
 }

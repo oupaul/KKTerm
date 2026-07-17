@@ -1,51 +1,214 @@
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { invokeCommand, type FileViewTextIndex } from "../../../../../lib/tauri";
+import { useWorkspaceStore } from "../../../../../store";
 import { ChromePortals } from "../chrome/FileViewerChromeContext";
 import { FootSeg } from "../chrome/controls";
+import {
+  LARGE_TEXT_LINE_HEIGHT,
+  largeTextVirtualWindow,
+  splitLargeTextPage,
+} from "../largeTextViewerModel";
 
-const LINE_HEIGHT = 20;
-const OVERSCAN = 20;
+const PAGE_CACHE_LIMIT = 12;
+
+interface LoadedPage {
+  lines: string[];
+}
 
 /**
- * Read-only large-text preview. It deliberately avoids CodeMirror/editor state
- * for oversized text slices and renders only the visible line window, keeping
- * mode switches responsive when a file is large enough to be truncated by the
- * bounded reader.
+ * Complete read-only large-text viewer. A sparse backend line index maps the
+ * virtual scrollbar to exact file byte ranges; only nearby pages and visible
+ * DOM rows are retained, so a 100 MB+ file never crosses the bridge whole.
  */
-export function LargeTextViewer({ text }: { text: string }) {
+export function LargeTextViewer({
+  encoding,
+  filePath,
+  text,
+}: {
+  encoding?: string;
+  filePath: string;
+  text: string;
+}) {
   const { t } = useTranslation();
+  const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
   const scrollerRef = useRef<HTMLDivElement | null>(null);
+  const generationRef = useRef(0);
+  const centerPageRef = useRef(0);
+  const loadingPagesRef = useRef(new Set<number>());
+  const pagesRef = useRef(new Map<number, LoadedPage>());
+  const failedPagesRef = useRef(new Set<number>());
   const [viewport, setViewport] = useState({ scrollTop: 0, height: 0 });
+  const [index, setIndex] = useState<FileViewTextIndex | null>(null);
+  const [pages, setPages] = useState<Map<number, LoadedPage>>(() => new Map());
 
-  const lines = useMemo(() => text.split(/\r\n|\n|\r/), [text]);
-  const totalHeight = lines.length * LINE_HEIGHT;
-  const start = Math.max(
-    0,
-    Math.floor(viewport.scrollTop / LINE_HEIGHT) - OVERSCAN,
-  );
-  const visibleCount =
-    Math.ceil((viewport.height || 1) / LINE_HEIGHT) + OVERSCAN * 2;
-  const end = Math.min(lines.length, start + visibleCount);
-  const visibleLines = lines.slice(start, end);
+  const previewLines = useMemo(() => text.split(/\r\n|\n|\r/), [text]);
+  // A truncated prefix may end halfway through its final line. Keep only lines
+  // terminated within the prefix as authoritative preview data.
+  const previewCompleteLineCount = Math.max(0, previewLines.length - 1);
+  const totalLines = index?.totalLines ?? previewLines.length;
+  const virtualWindow = largeTextVirtualWindow({
+    scrollTop: viewport.scrollTop,
+    viewportHeight: viewport.height,
+    totalLines,
+  });
 
-  function updateViewport() {
+  const updateViewport = useCallback(() => {
     const node = scrollerRef.current;
     if (!node) {
       return;
     }
     setViewport({ scrollTop: node.scrollTop, height: node.clientHeight });
-  }
+  }, []);
+
+  useEffect(() => {
+    const node = scrollerRef.current;
+    if (!node) {
+      return;
+    }
+    updateViewport();
+    const observer = new ResizeObserver(updateViewport);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [updateViewport]);
+
+  useEffect(() => {
+    const generation = generationRef.current + 1;
+    generationRef.current = generation;
+    loadingPagesRef.current.clear();
+    failedPagesRef.current.clear();
+    pagesRef.current = new Map();
+    setPages(new Map());
+    setIndex(null);
+
+    void invokeCommand("index_file_view_text", {
+      request: { path: filePath, encoding },
+    })
+      .then((result) => {
+        if (generationRef.current === generation) {
+          setIndex(result);
+          window.requestAnimationFrame(updateViewport);
+        }
+      })
+      .catch(() => {
+        if (generationRef.current === generation) {
+          showStatusBarNotice(t("workspace.fileViewer.largeTextLoadFailed"), {
+            tone: "error",
+          });
+        }
+      });
+
+    return () => {
+      if (generationRef.current === generation) {
+        generationRef.current += 1;
+      }
+    };
+  }, [encoding, filePath, showStatusBarNotice, t, updateViewport]);
+
+  const loadPage = useCallback(
+    async (pageIndex: number) => {
+      if (
+        !index ||
+        pagesRef.current.has(pageIndex) ||
+        loadingPagesRef.current.has(pageIndex)
+      ) {
+        return;
+      }
+      const startOffset = index.checkpointOffsets[pageIndex];
+      if (startOffset === undefined) {
+        return;
+      }
+      const endOffset = index.checkpointOffsets[pageIndex + 1] ?? index.totalSize;
+      const startLine = pageIndex * index.lineStride;
+      const expectedLineCount = Math.min(index.lineStride, index.totalLines - startLine);
+      const generation = generationRef.current;
+      loadingPagesRef.current.add(pageIndex);
+      try {
+        const result = await invokeCommand("read_file_view_text_page", {
+          request: { path: filePath, startOffset, endOffset, encoding },
+        });
+        if (generationRef.current !== generation) {
+          return;
+        }
+        const next = new Map(pagesRef.current);
+        next.set(pageIndex, {
+          lines: splitLargeTextPage(result.text, expectedLineCount),
+        });
+        if (next.size > PAGE_CACHE_LIMIT) {
+          const candidates = [...next.keys()].sort(
+            (left, right) =>
+              Math.abs(right - centerPageRef.current) -
+              Math.abs(left - centerPageRef.current),
+          );
+          while (next.size > PAGE_CACHE_LIMIT) {
+            const candidate = candidates.shift();
+            if (candidate === undefined) {
+              break;
+            }
+            next.delete(candidate);
+          }
+        }
+        pagesRef.current = next;
+        setPages(next);
+      } catch {
+        if (
+          generationRef.current === generation &&
+          !failedPagesRef.current.has(pageIndex)
+        ) {
+          failedPagesRef.current.add(pageIndex);
+          showStatusBarNotice(t("workspace.fileViewer.largeTextLoadFailed"), {
+            tone: "error",
+          });
+        }
+      } finally {
+        loadingPagesRef.current.delete(pageIndex);
+      }
+    },
+    [encoding, filePath, index, showStatusBarNotice, t],
+  );
+
+  useEffect(() => {
+    if (!index || virtualWindow.end <= virtualWindow.start) {
+      return;
+    }
+    const firstPage = Math.floor(virtualWindow.start / index.lineStride);
+    const lastPage = Math.floor((virtualWindow.end - 1) / index.lineStride);
+    const centerPage = Math.floor((firstPage + lastPage) / 2);
+    centerPageRef.current = centerPage;
+    for (let pageIndex = firstPage; pageIndex <= lastPage; pageIndex += 1) {
+      const pageEndLine = Math.min(
+        index.totalLines,
+        (pageIndex + 1) * index.lineStride,
+      );
+      if (pageEndLine <= previewCompleteLineCount) {
+        continue;
+      }
+      void loadPage(pageIndex);
+    }
+  }, [index, loadPage, previewCompleteLineCount, virtualWindow.end, virtualWindow.start]);
+
+  const visibleLineNumbers = useMemo(
+    () =>
+      Array.from(
+        { length: Math.max(0, virtualWindow.end - virtualWindow.start) },
+        (_, index) => virtualWindow.start + index,
+      ),
+    [virtualWindow.end, virtualWindow.start],
+  );
 
   return (
     <div className="fv-large-text-pane">
       <ChromePortals
         footer={
-          <FootSeg>
-            {t("workspace.fileViewer.lineCountOf", {
-              count: lines.length,
-              total: lines.length,
-            })}
-          </FootSeg>
+          <>
+            <FootSeg>
+              {t("workspace.fileViewer.lineCountOf", {
+                count: Math.min(totalLines, virtualWindow.start + 1),
+                total: totalLines,
+              })}
+            </FootSeg>
+            {!index ? <FootSeg>{t("workspace.fileViewer.loading")}</FootSeg> : null}
+          </>
         }
       />
       <div
@@ -58,17 +221,34 @@ export function LargeTextViewer({ text }: { text: string }) {
         }}
         onScroll={updateViewport}
       >
-        <div className="fv-large-text-spacer" style={{ height: totalHeight }}>
+        <div
+          className="fv-large-text-spacer"
+          style={{ height: virtualWindow.totalHeight }}
+        >
           <div
             className="fv-large-text-window"
-            style={{ transform: `translateY(${start * LINE_HEIGHT}px)` }}
+            style={{ transform: `translateY(${virtualWindow.top}px)` }}
           >
-            {visibleLines.map((line, index) => {
-              const lineNumber = start + index + 1;
+            {visibleLineNumbers.map((zeroBasedLine) => {
+              const pageIndex = index
+                ? Math.floor(zeroBasedLine / index.lineStride)
+                : 0;
+              const page = pages.get(pageIndex);
+              const line =
+                zeroBasedLine < previewCompleteLineCount
+                  ? previewLines[zeroBasedLine]
+                  : page?.lines[zeroBasedLine - pageIndex * (index?.lineStride ?? 1)];
+              const lineNumber = zeroBasedLine + 1;
               return (
-                <div className="fv-large-text-line" key={lineNumber}>
+                <div
+                  className={`fv-large-text-line${line === undefined ? " loading" : ""}`}
+                  key={lineNumber}
+                  style={{ height: LARGE_TEXT_LINE_HEIGHT }}
+                >
                   <span className="fv-large-text-ln">{lineNumber}</span>
-                  <span className="fv-large-text-code">{line || "\u00a0"}</span>
+                  <span className="fv-large-text-code">
+                    {line === undefined ? "…" : line || "\u00a0"}
+                  </span>
                 </div>
               );
             })}

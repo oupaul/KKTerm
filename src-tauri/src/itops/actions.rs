@@ -30,7 +30,9 @@ pub fn on_watchdog_trigger(app: &AppHandle, watchdog_id: &str, value: &Value) {
         let automation = app
             .state::<crate::storage::Storage>()
             .with_connection_infallible(|conn| {
-                auto_store::get_automation(conn, &automation_id).ok().flatten()
+                auto_store::get_automation(conn, &automation_id)
+                    .ok()
+                    .flatten()
             });
         let Some(automation) = automation else {
             return;
@@ -66,10 +68,7 @@ fn run_action(app: &AppHandle, automation: &Automation, action: &AutomationActio
         AutomationAction::Webhook { url, method, body } => {
             run_webhook(url, method, body.as_deref());
         }
-        AutomationAction::RunBatch {
-            site_id,
-            task,
-        } => {
+        AutomationAction::RunBatch { site_id, task } => {
             if let Err(error) =
                 super::commands::start_run(app, site_id.clone(), task.clone(), None, None)
             {
@@ -93,7 +92,10 @@ fn emit_action(app: &AppHandle, automation: &Automation, mut payload: Value) {
 }
 
 fn run_email(app: &AppHandle, automation: &Automation, to: &[String], subject: &str, body: &str) {
-    let mut settings = match app.state::<crate::storage::Storage>().ai_provider_settings() {
+    let mut settings = match app
+        .state::<crate::storage::Storage>()
+        .ai_provider_settings()
+    {
         Ok(settings) => settings,
         Err(error) => {
             eprintln!(
@@ -130,10 +132,13 @@ fn run_webhook(url: &str, method: &str, body: Option<&str>) {
         let client = crate::net::proxy::apply_async(reqwest::Client::builder())
             .build()
             .unwrap_or_else(|_| reqwest::Client::new());
-        let method = reqwest::Method::from_bytes(method.as_bytes()).unwrap_or(reqwest::Method::POST);
+        let method =
+            reqwest::Method::from_bytes(method.as_bytes()).unwrap_or(reqwest::Method::POST);
         let mut request = client.request(method, &url);
         if let Some(body) = body {
-            request = request.header("content-type", "application/json").body(body);
+            request = request
+                .header("content-type", "application/json")
+                .body(body);
         }
         if let Err(error) = request.send().await {
             eprintln!("IT Ops automation webhook to {url} failed: {error}");

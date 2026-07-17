@@ -43,7 +43,10 @@ fn validate_parent(
     id: &str,
     parent_host_id: Option<&str>,
 ) -> Result<Option<String>> {
-    let Some(parent_id) = parent_host_id.map(str::trim).filter(|value| !value.is_empty()) else {
+    let Some(parent_id) = parent_host_id
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    else {
         return Ok(None);
     };
     if parent_id == id {
@@ -94,7 +97,12 @@ fn validate_parent(
     Ok(Some(parent_id.to_string()))
 }
 
-fn hostname_taken(conn: &SqliteConnection, site_id: &str, hostname: &str, ignore_id: Option<&str>) -> Result<bool> {
+fn hostname_taken(
+    conn: &SqliteConnection,
+    site_id: &str,
+    hostname: &str,
+    ignore_id: Option<&str>,
+) -> Result<bool> {
     Ok(conn.query_row(
         "SELECT EXISTS(
             SELECT 1 FROM itops_hosts
@@ -255,7 +263,11 @@ pub fn update_host(
 }
 
 /// Persist one Host's connectivity-scan snapshot.
-pub fn set_host_scan(conn: &SqliteConnection, id: &str, scan: Option<HostScan>) -> Result<SiteHost> {
+pub fn set_host_scan(
+    conn: &SqliteConnection,
+    id: &str,
+    scan: Option<HostScan>,
+) -> Result<SiteHost> {
     let affected = conn.execute(
         "UPDATE itops_hosts SET scan_json = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
         params![scan_to_json(&scan)?, id],
@@ -394,11 +406,32 @@ mod tests {
 
         // Duplicate hostname (case-insensitive) in the same site is rejected.
         assert!(matches!(
-            create_host(&conn, "h2", "s1", "WEB-01.EXAMPLE", "", HostKind::Physical, None, ""),
+            create_host(
+                &conn,
+                "h2",
+                "s1",
+                "WEB-01.EXAMPLE",
+                "",
+                HostKind::Physical,
+                None,
+                ""
+            ),
             Err(ItopsStorageError::Validation(_))
         ));
         // The same hostname in another site is fine.
-        assert!(create_host(&conn, "h3", "s2", "web-01.example", "", HostKind::Physical, None, "").is_ok());
+        assert!(
+            create_host(
+                &conn,
+                "h3",
+                "s2",
+                "web-01.example",
+                "",
+                HostKind::Physical,
+                None,
+                ""
+            )
+            .is_ok()
+        );
 
         let updated = update_host(
             &conn,
@@ -407,7 +440,12 @@ mod tests {
             "",
             HostKind::Physical,
             None,
-            vec![" conn-1 ".into(), "conn-1".into(), "conn-2".into(), "".into()],
+            vec![
+                " conn-1 ".into(),
+                "conn-1".into(),
+                "conn-2".into(),
+                "".into(),
+            ],
             "  notes  ",
         )
         .unwrap();
@@ -416,8 +454,14 @@ mod tests {
         assert_eq!(updated.notes, "notes");
 
         delete_host(&conn, "h1").unwrap();
-        assert!(matches!(get_host(&conn, "h1"), Err(ItopsStorageError::NotFound)));
-        assert!(matches!(delete_host(&conn, "h1"), Err(ItopsStorageError::NotFound)));
+        assert!(matches!(
+            get_host(&conn, "h1"),
+            Err(ItopsStorageError::NotFound)
+        ));
+        assert!(matches!(
+            delete_host(&conn, "h1"),
+            Err(ItopsStorageError::NotFound)
+        ));
     }
 
     #[test]
@@ -428,7 +472,16 @@ mod tests {
             Err(ItopsStorageError::Validation(_))
         ));
         assert!(matches!(
-            create_host(&conn, "h1", "s1", "bad host", "", HostKind::Physical, None, ""),
+            create_host(
+                &conn,
+                "h1",
+                "s1",
+                "bad host",
+                "",
+                HostKind::Physical,
+                None,
+                ""
+            ),
             Err(ItopsStorageError::Validation(_))
         ));
     }
@@ -436,30 +489,105 @@ mod tests {
     #[test]
     fn parent_links_validate_site_and_cycles() {
         let conn = open_test_db();
-        create_host(&conn, "dev", "s1", "esx-01", "", HostKind::Physical, None, "").unwrap();
-        let vm = create_host(&conn, "vm", "s1", "vm-01", "", HostKind::Vm, Some("dev"), "").unwrap();
+        create_host(
+            &conn,
+            "dev",
+            "s1",
+            "esx-01",
+            "",
+            HostKind::Physical,
+            None,
+            "",
+        )
+        .unwrap();
+        let vm = create_host(
+            &conn,
+            "vm",
+            "s1",
+            "vm-01",
+            "",
+            HostKind::Vm,
+            Some("dev"),
+            "",
+        )
+        .unwrap();
         assert_eq!(vm.parent_host_id.as_deref(), Some("dev"));
-        let nested =
-            create_host(&conn, "ct", "s1", "ct-01", "", HostKind::Container, Some("vm"), "").unwrap();
+        let nested = create_host(
+            &conn,
+            "ct",
+            "s1",
+            "ct-01",
+            "",
+            HostKind::Container,
+            Some("vm"),
+            "",
+        )
+        .unwrap();
         assert_eq!(nested.parent_host_id.as_deref(), Some("vm"));
 
         // Unknown parent, cross-site parent, self-parent, and cycles all fail.
         assert!(matches!(
-            create_host(&conn, "x1", "s1", "x-01", "", HostKind::Vm, Some("nope"), ""),
+            create_host(
+                &conn,
+                "x1",
+                "s1",
+                "x-01",
+                "",
+                HostKind::Vm,
+                Some("nope"),
+                ""
+            ),
             Err(ItopsStorageError::Validation(_))
         ));
-        create_host(&conn, "other", "s2", "other-01", "", HostKind::Physical, None, "").unwrap();
+        create_host(
+            &conn,
+            "other",
+            "s2",
+            "other-01",
+            "",
+            HostKind::Physical,
+            None,
+            "",
+        )
+        .unwrap();
         assert!(matches!(
-            create_host(&conn, "x2", "s1", "x-02", "", HostKind::Vm, Some("other"), ""),
+            create_host(
+                &conn,
+                "x2",
+                "s1",
+                "x-02",
+                "",
+                HostKind::Vm,
+                Some("other"),
+                ""
+            ),
             Err(ItopsStorageError::Validation(_))
         ));
         assert!(matches!(
-            update_host(&conn, "dev", "esx-01", "", HostKind::Physical, Some("dev"), vec![], ""),
+            update_host(
+                &conn,
+                "dev",
+                "esx-01",
+                "",
+                HostKind::Physical,
+                Some("dev"),
+                vec![],
+                ""
+            ),
             Err(ItopsStorageError::Validation(_))
         ));
         // dev -> ct would cycle: ct's chain already contains dev.
         assert!(matches!(
-            update_host(&conn, "dev", "esx-01", "", HostKind::Physical, Some("ct"), vec![], ""),
+            update_host(
+                &conn,
+                "dev",
+                "esx-01",
+                "",
+                HostKind::Physical,
+                Some("ct"),
+                vec![],
+                ""
+            ),
             Err(ItopsStorageError::Validation(_))
         ));
     }
@@ -467,13 +595,46 @@ mod tests {
     #[test]
     fn deleting_a_host_promotes_children_to_its_parent() {
         let conn = open_test_db();
-        create_host(&conn, "dev", "s1", "esx-01", "", HostKind::Physical, None, "").unwrap();
-        create_host(&conn, "vm", "s1", "vm-01", "", HostKind::Vm, Some("dev"), "").unwrap();
-        create_host(&conn, "ct", "s1", "ct-01", "", HostKind::Container, Some("vm"), "").unwrap();
+        create_host(
+            &conn,
+            "dev",
+            "s1",
+            "esx-01",
+            "",
+            HostKind::Physical,
+            None,
+            "",
+        )
+        .unwrap();
+        create_host(
+            &conn,
+            "vm",
+            "s1",
+            "vm-01",
+            "",
+            HostKind::Vm,
+            Some("dev"),
+            "",
+        )
+        .unwrap();
+        create_host(
+            &conn,
+            "ct",
+            "s1",
+            "ct-01",
+            "",
+            HostKind::Container,
+            Some("vm"),
+            "",
+        )
+        .unwrap();
 
         // Removing the middle VM re-parents its container onto the device.
         delete_host(&conn, "vm").unwrap();
-        assert_eq!(get_host(&conn, "ct").unwrap().parent_host_id.as_deref(), Some("dev"));
+        assert_eq!(
+            get_host(&conn, "ct").unwrap().parent_host_id.as_deref(),
+            Some("dev")
+        );
         // Removing the device promotes the container to top level.
         delete_host(&conn, "dev").unwrap();
         assert_eq!(get_host(&conn, "ct").unwrap().parent_host_id, None);
@@ -482,7 +643,17 @@ mod tests {
     #[test]
     fn import_skips_blank_and_duplicate_hostnames() {
         let conn = open_test_db();
-        create_host(&conn, "h0", "s1", "existing", "", HostKind::Physical, None, "").unwrap();
+        create_host(
+            &conn,
+            "h0",
+            "s1",
+            "existing",
+            "",
+            HostKind::Physical,
+            None,
+            "",
+        )
+        .unwrap();
         let mut next = 0;
         let result = import_hosts(
             &conn,
@@ -502,7 +673,11 @@ mod tests {
         )
         .unwrap();
         assert_eq!(
-            result.hosts.iter().map(|host| host.hostname.as_str()).collect::<Vec<_>>(),
+            result
+                .hosts
+                .iter()
+                .map(|host| host.hostname.as_str())
+                .collect::<Vec<_>>(),
             vec!["web-01", "web-02"]
         );
         assert_eq!(result.skipped, 4);
@@ -515,7 +690,17 @@ mod tests {
     #[test]
     fn scan_snapshot_persists_and_clears() {
         let conn = open_test_db();
-        create_host(&conn, "h1", "s1", "web-01", "", HostKind::Physical, None, "").unwrap();
+        create_host(
+            &conn,
+            "h1",
+            "s1",
+            "web-01",
+            "",
+            HostKind::Physical,
+            None,
+            "",
+        )
+        .unwrap();
         let scanned = set_host_scan(
             &conn,
             "h1",

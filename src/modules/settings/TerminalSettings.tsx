@@ -29,6 +29,10 @@ import { customShellPresetsForPlatform, findCustomShellPreset } from "./customSh
 import { SettingsSectionHeader, useSettingsSaveRegistration } from "./shared";
 import { ToggleSwitch } from "./ToggleSwitch";
 
+function IncludesSshBadge({ label }: { label: string }) {
+  return <span className="terminal-ssh-scope-badge">{label}</span>;
+}
+
 /** CSS font stack for a font family picked from the custom or system font list. */
 function terminalFontCssValue(family: string) {
   return `"${family}", monospace`;
@@ -444,7 +448,10 @@ export function TerminalSettings() {
       />
 
       <fieldset className="settings-subsection settings-fieldset">
-        <legend>{t("settings.terminalText")}</legend>
+        <legend>
+          {t("settings.terminalText")}
+          <IncludesSshBadge label={t("settings.includesSsh")} />
+        </legend>
         <div>
           <p className="field-hint">{t("settings.terminalTextHint")}</p>
         </div>
@@ -661,6 +668,21 @@ export function TerminalSettings() {
               <small>{t("settings.randomDynamicBackgroundOnCreateHint")}</small>
             </span>
           </label>
+          <label className="settings-toggle-row">
+            <ToggleSwitch
+              checked={draft.autoRecordSessions}
+              onChange={(checked) =>
+                setDraft((settings) => ({ ...settings, autoRecordSessions: checked }))
+              }
+            />
+            <span>
+              <strong>
+                {t("settings.autoRecordSessions")}
+                <IncludesSshBadge label={t("settings.includesSsh")} />
+              </strong>
+              <small>{t("settings.autoRecordSessionsHint")}</small>
+            </span>
+          </label>
         </div>
       </fieldset>
 
@@ -708,7 +730,11 @@ export function TerminalSettings() {
               </button>
             </div>
           ))}
-          <button className="toolbar-button" onClick={handleAddCustomShell} type="button">
+          <button
+            className="toolbar-button settings-inline-add-button"
+            onClick={handleAddCustomShell}
+            type="button"
+          >
             <Plus size={15} />
             {t("settings.addCustomShell")}
           </button>
@@ -716,7 +742,10 @@ export function TerminalSettings() {
       </fieldset>
 
       <fieldset className="settings-subsection settings-fieldset">
-        <legend>{t("settings.terminalIntegrations")}</legend>
+        <legend>
+          {t("settings.terminalIntegrations")}
+          <IncludesSshBadge label={t("settings.includesSsh")} />
+        </legend>
         <div>
           <p className="field-hint">{t("settings.terminalIntegrationsHint")}</p>
         </div>
@@ -749,7 +778,10 @@ export function TerminalSettings() {
       </fieldset>
 
       <fieldset className="settings-subsection settings-fieldset">
-        <legend>{t("settings.hyperlinkRules")}</legend>
+        <legend>
+          {t("settings.hyperlinkRules")}
+          <IncludesSshBadge label={t("settings.includesSsh")} />
+        </legend>
         <div>
           <p className="field-hint">{t("settings.hyperlinkRulesHint")}</p>
         </div>
@@ -786,7 +818,11 @@ export function TerminalSettings() {
               </button>
             </div>
           ))}
-          <button className="toolbar-button" onClick={handleAddHyperlinkRule} type="button">
+          <button
+            className="toolbar-button settings-inline-add-button"
+            onClick={handleAddHyperlinkRule}
+            type="button"
+          >
             <Plus size={15} />
             {t("settings.addHyperlinkRule")}
           </button>
@@ -807,7 +843,10 @@ export function TerminalSettings() {
               }
             />
             <span>
-              <strong>{t("settings.copyOnSelect")}</strong>
+              <strong>
+                {t("settings.copyOnSelect")}
+                <IncludesSshBadge label={t("settings.includesSsh")} />
+              </strong>
               <small>{t("settings.copyOnSelectHint")}</small>
             </span>
           </label>
@@ -830,7 +869,25 @@ export function TerminalSettings() {
               }
             />
             <span>
-              <strong>{t("settings.confirmMultilinePaste")}</strong>
+              <strong>
+                {t("settings.confirmMultilinePaste")}
+                <IncludesSshBadge label={t("settings.includesSsh")} />
+              </strong>
+            </span>
+          </label>
+          <label className="settings-toggle-row">
+            <ToggleSwitch
+              checked={draft.rightClickPaste}
+              onChange={(checked) =>
+                setDraft((settings) => ({ ...settings, rightClickPaste: checked }))
+              }
+            />
+            <span>
+              <strong>
+                {t("settings.rightClickPaste")}
+                <IncludesSshBadge label={t("settings.includesSsh")} />
+              </strong>
+              <small>{t("settings.rightClickPasteHint")}</small>
             </span>
           </label>
         </div>

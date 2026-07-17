@@ -24,10 +24,10 @@ use tauri::AppHandle;
 
 #[cfg(any(windows, unix))]
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-#[cfg(target_os = "windows")]
-use tokio::net::windows::named_pipe::ServerOptions;
 #[cfg(unix)]
 use tokio::net::UnixListener;
+#[cfg(target_os = "windows")]
+use tokio::net::windows::named_pipe::ServerOptions;
 
 const PROTOCOL_VERSION: &str = "2025-03-26";
 const SERVER_NAME: &str = "kkterm-cli";
@@ -200,7 +200,9 @@ pub fn start_if_enabled(
     {
         let _ = (app, allow_all_dangerous);
         crate::logging::mcp_debug("bridge.unsupported_platform", &json!({}));
-        eprintln!("kkterm built-in MCP server: transport is unsupported on this platform; bridge disabled.");
+        eprintln!(
+            "kkterm built-in MCP server: transport is unsupported on this platform; bridge disabled."
+        );
     }
 }
 
@@ -612,8 +614,14 @@ fn redact_bridge_response(response: &Value) -> Value {
     let Some(result) = redacted.get_mut("result").and_then(Value::as_object_mut) else {
         return redacted;
     };
-    if let Some(structured) = result.get_mut("structuredContent") {
-        *structured = redact_sensitive_debug_value(structured);
+    if result.contains_key("structuredContent") {
+        // The response envelope does not carry the tool name, so it cannot
+        // apply tool-specific redaction safely. `bridge.tool_result` already
+        // logs the useful, name-aware redacted copy.
+        result.insert(
+            "structuredContent".to_string(),
+            Value::String("[REDACTED: see bridge.tool_result]".to_string()),
+        );
         if result.contains_key("content") {
             result.insert(
                 "content".to_string(),
@@ -648,6 +656,18 @@ fn redact_tool_arguments(name: &str, arguments: &Value) -> Value {
                 }
             }
         }
+        // Task/script bodies may embed sensitive material (docs/ITOPS.md).
+        "kkterm.itops.tasks.dangerous.create" | "kkterm.itops.tasks.dangerous.update" => {
+            redact_object_key(&mut redacted, "task");
+        }
+        "kkterm.itops.runs.dangerous.start" => {
+            redact_object_key(&mut redacted, "script");
+        }
+        // runBatch actions embed full task bodies.
+        "kkterm.itops.automations.dangerous.create"
+        | "kkterm.itops.automations.dangerous.update" => {
+            redact_object_key(&mut redacted, "actions");
+        }
         _ => {}
     }
     redacted
@@ -657,7 +677,18 @@ fn redact_tool_result(name: &str, result: &Value) -> Value {
     match name {
         "kkterm.workspace.sessions.read_buffer"
         | "kkterm.dashboard.read_widget_source"
-        | "kkterm.app.dangerous.capture_window" => Value::String("[REDACTED]".to_string()),
+        | "kkterm.app.dangerous.capture_window"
+        // Task reads and mutation responses contain the full script/playbook.
+        | "kkterm.itops.tasks.get"
+        | "kkterm.itops.tasks.dangerous.create"
+        | "kkterm.itops.tasks.dangerous.update"
+        // Automation responses contain runBatch task bodies in their actions.
+        | "kkterm.itops.automations.list"
+        | "kkterm.itops.automations.dangerous.create"
+        | "kkterm.itops.automations.dangerous.update"
+        | "kkterm.itops.automations.dangerous.set_enabled"
+        // Run reports replay captured remote command output.
+        | "kkterm.itops.runs.get_report" => Value::String("[REDACTED]".to_string()),
         _ => redact_sensitive_debug_value(result),
     }
 }
@@ -1113,37 +1144,115 @@ async fn dispatch_tool(app: &AppHandle, name: &str, args: Value) -> Result<Value
         // publishes, validates required fields itself, and reports failures
         // as {"ok": false, "error": …}, so forward arguments unchanged.
         "kkterm.itops.sites.list" => {
-            parse_tool_json(&crate::ai::itops_tool(app, "itops_list_sites", json!({})))
+            parse_tool_json(&crate::ai::itops_tool(app, "itops_list_sites", json!({})).await)
         }
         "kkterm.itops.sites.create" => {
-            parse_tool_json(&crate::ai::itops_tool(app, "itops_create_site", args))
+            parse_tool_json(&crate::ai::itops_tool(app, "itops_create_site", args).await)
+        }
+        "kkterm.itops.sites.update" => {
+            parse_tool_json(&crate::ai::itops_tool(app, "itops_update_site", args).await)
+        }
+        "kkterm.itops.sites.remove" => {
+            parse_tool_json(&crate::ai::itops_tool(app, "itops_remove_site", args).await)
         }
         "kkterm.itops.server_rooms.list" => {
-            parse_tool_json(&crate::ai::itops_tool(app, "itops_list_server_rooms", args))
+            parse_tool_json(&crate::ai::itops_tool(app, "itops_list_server_rooms", args).await)
         }
         "kkterm.itops.server_rooms.create" => {
-            parse_tool_json(&crate::ai::itops_tool(app, "itops_create_server_room", args))
+            parse_tool_json(&crate::ai::itops_tool(app, "itops_create_server_room", args).await)
+        }
+        "kkterm.itops.server_rooms.update" => {
+            parse_tool_json(&crate::ai::itops_tool(app, "itops_update_server_room", args).await)
+        }
+        "kkterm.itops.server_rooms.remove" => {
+            parse_tool_json(&crate::ai::itops_tool(app, "itops_delete_server_room", args).await)
         }
         "kkterm.itops.racks.list" => {
-            parse_tool_json(&crate::ai::itops_tool(app, "itops_list_racks", args))
+            parse_tool_json(&crate::ai::itops_tool(app, "itops_list_racks", args).await)
         }
         "kkterm.itops.racks.create" => {
-            parse_tool_json(&crate::ai::itops_tool(app, "itops_create_rack", args))
+            parse_tool_json(&crate::ai::itops_tool(app, "itops_create_rack", args).await)
+        }
+        "kkterm.itops.racks.update" => {
+            parse_tool_json(&crate::ai::itops_tool(app, "itops_update_rack", args).await)
+        }
+        "kkterm.itops.racks.remove" => {
+            parse_tool_json(&crate::ai::itops_tool(app, "itops_delete_rack", args).await)
         }
         "kkterm.itops.rack_items.place" => {
-            parse_tool_json(&crate::ai::itops_tool(app, "itops_place_rack_item", args))
+            parse_tool_json(&crate::ai::itops_tool(app, "itops_place_rack_item", args).await)
         }
         "kkterm.itops.rack_items.update" => {
-            parse_tool_json(&crate::ai::itops_tool(app, "itops_update_rack_item", args))
+            parse_tool_json(&crate::ai::itops_tool(app, "itops_update_rack_item", args).await)
         }
         "kkterm.itops.rack_items.move" => {
-            parse_tool_json(&crate::ai::itops_tool(app, "itops_move_rack_item", args))
+            parse_tool_json(&crate::ai::itops_tool(app, "itops_move_rack_item", args).await)
         }
         "kkterm.itops.rack_items.remove" => {
-            parse_tool_json(&crate::ai::itops_tool(app, "itops_remove_rack_item", args))
+            parse_tool_json(&crate::ai::itops_tool(app, "itops_remove_rack_item", args).await)
         }
         "kkterm.itops.hosts.list" => {
-            parse_tool_json(&crate::ai::itops_tool(app, "itops_list_hosts", args))
+            parse_tool_json(&crate::ai::itops_tool(app, "itops_list_hosts", args).await)
+        }
+        "kkterm.itops.hosts.create" => {
+            parse_tool_json(&crate::ai::itops_tool(app, "itops_create_host", args).await)
+        }
+        "kkterm.itops.hosts.update" => {
+            parse_tool_json(&crate::ai::itops_tool(app, "itops_update_host", args).await)
+        }
+        "kkterm.itops.hosts.remove" => {
+            parse_tool_json(&crate::ai::itops_tool(app, "itops_delete_host", args).await)
+        }
+        "kkterm.itops.hosts.import" => {
+            parse_tool_json(&crate::ai::itops_tool(app, "itops_import_hosts", args).await)
+        }
+        "kkterm.itops.hosts.scan" => {
+            parse_tool_json(&crate::ai::itops_tool(app, "itops_scan_hosts", args).await)
+        }
+        "kkterm.itops.tasks.list" => {
+            parse_tool_json(&crate::ai::itops_tool(app, "itops_list_tasks", json!({})).await)
+        }
+        "kkterm.itops.tasks.get" => {
+            parse_tool_json(&crate::ai::itops_tool(app, "itops_get_task", args).await)
+        }
+        "kkterm.itops.tasks.dangerous.create" => {
+            parse_tool_json(&crate::ai::itops_tool(app, "itops_create_task", args).await)
+        }
+        "kkterm.itops.tasks.dangerous.update" => {
+            parse_tool_json(&crate::ai::itops_tool(app, "itops_update_task", args).await)
+        }
+        "kkterm.itops.tasks.remove" => {
+            parse_tool_json(&crate::ai::itops_tool(app, "itops_remove_task", args).await)
+        }
+        "kkterm.itops.automations.list" => {
+            parse_tool_json(&crate::ai::itops_tool(app, "itops_list_automations", json!({})).await)
+        }
+        "kkterm.itops.automations.dangerous.create" => {
+            parse_tool_json(&crate::ai::itops_tool(app, "itops_create_automation", args).await)
+        }
+        "kkterm.itops.automations.dangerous.update" => {
+            parse_tool_json(&crate::ai::itops_tool(app, "itops_update_automation", args).await)
+        }
+        "kkterm.itops.automations.dangerous.set_enabled" => {
+            parse_tool_json(&crate::ai::itops_tool(app, "itops_set_automation_enabled", args).await)
+        }
+        "kkterm.itops.automations.remove" => {
+            parse_tool_json(&crate::ai::itops_tool(app, "itops_remove_automation", args).await)
+        }
+        "kkterm.itops.automations.test" => {
+            parse_tool_json(&crate::ai::itops_tool(app, "itops_test_automation", args).await)
+        }
+        "kkterm.itops.runs.dangerous.start" => {
+            parse_tool_json(&crate::ai::itops_tool(app, "itops_start_batch_run", args).await)
+        }
+        "kkterm.itops.runs.cancel" => {
+            parse_tool_json(&crate::ai::itops_tool(app, "itops_cancel_batch_run", args).await)
+        }
+        "kkterm.itops.runs.list" => {
+            parse_tool_json(&crate::ai::itops_tool(app, "itops_list_run_history", args).await)
+        }
+        "kkterm.itops.runs.get_report" => {
+            parse_tool_json(&crate::ai::itops_tool(app, "itops_get_run_report", args).await)
         }
         // -- Workspace: SFTP/FTP file browser ------------------------------
         "kkterm.workspace.file_browser.list" => {
@@ -1336,6 +1445,9 @@ async fn dispatch_tool(app: &AppHandle, name: &str, args: Value) -> Result<Value
             let screenshot = serde_json::to_value(screenshot).map_err(|error| error.to_string())?;
             Ok(json!({"ok": true, "windowId": window_id, "screenshot": screenshot}))
         }
+        "kkterm.app.dangerous.tutorial_highlight" => {
+            parse_tool_json(&crate::ai::live_session_tool(app, "tutorial_highlight", args).await)
+        }
         other => Err(format!("unknown tool: {other}")),
     }
 }
@@ -1517,6 +1629,20 @@ mod tests {
             ),
             json!("[REDACTED]")
         );
+        assert_eq!(
+            redact_tool_result(
+                "kkterm.itops.tasks.get",
+                &json!({"task": {"kind": "script", "body": "token=secret"}})
+            ),
+            json!("[REDACTED]")
+        );
+        assert_eq!(
+            redact_tool_result(
+                "kkterm.itops.automations.list",
+                &json!([{"actions": [{"kind": "runBatch", "task": {"kind": "script", "body": "token=secret"}}]}])
+            ),
+            json!("[REDACTED]")
+        );
     }
 
     #[test]
@@ -1538,8 +1664,8 @@ mod tests {
             "[REDACTED: see bridge.tool_result]"
         );
         assert_eq!(
-            redacted["result"]["structuredContent"]["bodyJson"],
-            "[REDACTED]"
+            redacted["result"]["structuredContent"],
+            "[REDACTED: see bridge.tool_result]"
         );
     }
 
@@ -1643,6 +1769,32 @@ mod tests {
         assert!(names.contains(&"kkterm.itops.rack_items.move".to_string()));
         assert!(names.contains(&"kkterm.itops.rack_items.remove".to_string()));
         assert!(names.contains(&"kkterm.itops.hosts.list".to_string()));
+        assert!(names.contains(&"kkterm.itops.sites.update".to_string()));
+        assert!(names.contains(&"kkterm.itops.sites.remove".to_string()));
+        assert!(names.contains(&"kkterm.itops.server_rooms.update".to_string()));
+        assert!(names.contains(&"kkterm.itops.server_rooms.remove".to_string()));
+        assert!(names.contains(&"kkterm.itops.racks.update".to_string()));
+        assert!(names.contains(&"kkterm.itops.racks.remove".to_string()));
+        assert!(names.contains(&"kkterm.itops.hosts.create".to_string()));
+        assert!(names.contains(&"kkterm.itops.hosts.update".to_string()));
+        assert!(names.contains(&"kkterm.itops.hosts.remove".to_string()));
+        assert!(names.contains(&"kkterm.itops.hosts.import".to_string()));
+        assert!(names.contains(&"kkterm.itops.hosts.scan".to_string()));
+        assert!(names.contains(&"kkterm.itops.tasks.list".to_string()));
+        assert!(names.contains(&"kkterm.itops.tasks.get".to_string()));
+        assert!(names.contains(&"kkterm.itops.tasks.dangerous.create".to_string()));
+        assert!(names.contains(&"kkterm.itops.tasks.dangerous.update".to_string()));
+        assert!(names.contains(&"kkterm.itops.tasks.remove".to_string()));
+        assert!(names.contains(&"kkterm.itops.automations.list".to_string()));
+        assert!(names.contains(&"kkterm.itops.automations.dangerous.create".to_string()));
+        assert!(names.contains(&"kkterm.itops.automations.dangerous.update".to_string()));
+        assert!(names.contains(&"kkterm.itops.automations.dangerous.set_enabled".to_string()));
+        assert!(names.contains(&"kkterm.itops.automations.remove".to_string()));
+        assert!(names.contains(&"kkterm.itops.automations.test".to_string()));
+        assert!(names.contains(&"kkterm.itops.runs.dangerous.start".to_string()));
+        assert!(names.contains(&"kkterm.itops.runs.cancel".to_string()));
+        assert!(names.contains(&"kkterm.itops.runs.list".to_string()));
+        assert!(names.contains(&"kkterm.itops.runs.get_report".to_string()));
         // Network surface
         assert!(names.contains(&"kkterm.network.ping".to_string()));
         assert!(names.contains(&"kkterm.network.dns".to_string()));
@@ -1659,6 +1811,7 @@ mod tests {
         // App window capture surface
         assert!(names.contains(&"kkterm.app.list_windows".to_string()));
         assert!(names.contains(&"kkterm.app.dangerous.capture_window".to_string()));
+        assert!(names.contains(&"kkterm.app.dangerous.tutorial_highlight".to_string()));
         // Guard against drifting back to the pre-Option-B flat namespace.
         for name in &names {
             assert!(

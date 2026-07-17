@@ -17,3 +17,17 @@ test("Settings Import routes selective backups and full settings ZIP backups", a
   assert.match(general, /import_settings_database/);
   assert.match(general, /onFullImport=\{handleImportFullSettings\}/);
 });
+
+test("Selective replace import closes live workspace tabs before replacing workspace data", async () => {
+  const dialog = await readFile(new URL("../src/modules/settings/SelectiveImportDialog.tsx", import.meta.url), "utf8");
+
+  assert.match(
+    dialog,
+    /actions\.workspaces === "replace" \|\| actions\.connections === "replace"/,
+  );
+  assert.match(
+    dialog,
+    /if \(replacesWorkspaceData \|\| actions\.settings === "replace"\) \{\s*closeAllTabs\(\);\s*\}/s,
+  );
+  assert.match(dialog, /importedConnections \|\| result\.applied\.includes\("workspaces"\)/);
+});

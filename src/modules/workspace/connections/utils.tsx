@@ -327,7 +327,10 @@ export function resolveSshSocksProxyRequest(
   };
 }
 
-export async function confirmTrustedSshHostKey(preview: SshHostKeyPreview) {
+export async function confirmTrustedSshHostKey(
+  preview: SshHostKeyPreview,
+  sshSettings: Pick<SshSettings, "autoTrustNewHostKeys">,
+) {
   if (preview.status === "trusted") {
     return;
   }
@@ -359,15 +362,19 @@ export async function confirmTrustedSshHostKey(preview: SshHostKeyPreview) {
     return;
   }
 
-  const shouldTrust = await confirmNativeDialog(
-    `${preview.host}:${preview.port}\n\n${preview.algorithm} ${preview.fingerprint}`,
-    {
-      kind: "warning",
-      title: i18next.t("terminal.trustHostKey"),
-    },
-  );
-  if (shouldTrust !== true) {
-    throw new Error(i18next.t("terminal.hostKeyNotTrusted"));
+  // Auto-trust applies only to a never-before-seen host key (TOFU); a changed
+  // key is the MITM signal and always keeps the warning dialog above.
+  if (!sshSettings.autoTrustNewHostKeys) {
+    const shouldTrust = await confirmNativeDialog(
+      `${preview.host}:${preview.port}\n\n${preview.algorithm} ${preview.fingerprint}`,
+      {
+        kind: "warning",
+        title: i18next.t("terminal.trustHostKey"),
+      },
+    );
+    if (shouldTrust !== true) {
+      throw new Error(i18next.t("terminal.hostKeyNotTrusted"));
+    }
   }
 
   await invokeCommand("trust_ssh_host_key", {

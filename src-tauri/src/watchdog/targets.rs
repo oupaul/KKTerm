@@ -168,7 +168,9 @@ fn cron_matches_fields(
 }
 
 fn cron_field_matches(field: &str, value: u32) -> bool {
-    field.split(',').any(|part| cron_part_matches(part.trim(), value))
+    field
+        .split(',')
+        .any(|part| cron_part_matches(part.trim(), value))
 }
 
 fn cron_part_matches(part: &str, value: u32) -> bool {
@@ -382,7 +384,10 @@ mod tests {
         assert!(size1.is_some());
 
         // Append a non-matching line: no fire.
-        let mut file = std::fs::OpenOptions::new().append(true).open(&path).unwrap();
+        let mut file = std::fs::OpenOptions::new()
+            .append(true)
+            .open(&path)
+            .unwrap();
         file.write_all(b"all good\n").unwrap();
         file.flush().unwrap();
         let (size2, matched2) = scan_log_appended(&path_str, size1, "ERROR");

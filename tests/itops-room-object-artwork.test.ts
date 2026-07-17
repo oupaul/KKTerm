@@ -17,6 +17,8 @@ test("snapped placement arrows encode facing and 2.5D lift", () => {
 
   assert.match(arrow, /class="rm-placement-facing-arrow"/);
   assert.match(arrow, /--placement-facing-angle:270deg/);
+  assert.match(arrow, /--placement-facing-x:calc\(100% \+ 15px\)/);
+  assert.match(arrow, /--placement-facing-y:50%/);
   assert.match(arrow, /--placement-facing-lift:92px/);
   assert.match(arrow, /aria-hidden="true"/);
 });
@@ -121,6 +123,8 @@ test("snapped 2.5D previews do not flatten the reference model", async () => {
     );
   }
   assert.doesNotMatch(css, /\.rm-iso-obj\.ghost \{[^}]*opacity:/s);
+  assert.doesNotMatch(css, /\.rm-iso-cab\.ghost \{[^}]*opacity:/s);
+  assert.match(css, /\.rm-iso-cab\.ghost\.blocked \.rm-iso-face \{[^}]*opacity:/s);
   assert.doesNotMatch(css, /\.itops-page \.rm-iso-obj-model \{[^}]*filter:/s);
   assert.match(
     css,

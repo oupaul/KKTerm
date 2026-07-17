@@ -261,6 +261,7 @@ export type RackItemKind =
   | "kuaiguai";
 
 export type RackItemStatus = "online" | "warning" | "offline";
+export type RackMountFace = "front" | "rear";
 
 export type RackServerFormFactor = "rack" | "tower";
 // Fractional faceplate width: several small devices (e.g. two modems) can
@@ -325,6 +326,8 @@ export interface RackItemMetadata {
   kuaiguaiStyle?: "full" | "laidDown" | null;
   /** Optional rack-top corner selected in a Server Room spatial view. */
   rackTopCorner?: 0 | 1 | 2 | 3 | null;
+  /** Optional rack-top facing selected by the spatial two-click placement flow. */
+  rackTopFacing?: 0 | 1 | 2 | 3 | null;
   /** Hardware model used for the graphical device preview, e.g. Dell 740XD. */
   vendor?: string | null;
   /** Server chassis presentation. Tower servers render at half rack width. */
@@ -352,6 +355,8 @@ export interface RackItem {
   // Bottom-most U occupied (1-based) and height in U.
   startU: number;
   heightU: number;
+  // Structural mounting plane; independent from the Rack's room-facing angle.
+  mountFace: RackMountFace;
   metadata: RackItemMetadata;
 }
 
@@ -619,6 +624,7 @@ export interface TerminalPane {
   buffer: string;
   connection?: Connection;
   fontSize?: number;
+  textEncoding?: string;
   terminalBackground?: DashboardBackground | null;
   tmuxSessionId?: string;
   tmuxUnavailable?: boolean;
@@ -720,6 +726,7 @@ export interface StoredLayoutPane {
   title?: string;
   cwd?: string;
   fontSize?: number;
+  textEncoding?: string;
   terminalBackground?: DashboardBackground | null;
   tmuxSessionId?: string;
   url?: string;
@@ -733,6 +740,8 @@ export interface TerminalCustomShell {
   name: string;
   commandLine: string;
 }
+
+export type InstallerDefaultProvider = "winget" | "chocolatey";
 
 export interface GeneralSettings {
   autoBackupEnabled: boolean;
@@ -750,6 +759,7 @@ export interface GeneralSettings {
   showDontSleepOnRail: boolean;
   activityRailOrder: ActivityRailItemId[];
   installerCheckIntervalSeconds: number;
+  installerDefaultProvider: InstallerDefaultProvider;
   pinnedConnectionIds: string[];
   allowClipboardRead: boolean;
   autoStartWithWindows: boolean;
@@ -935,6 +945,12 @@ export interface TerminalSettings {
   copyOnSelect: boolean;
   allowOsc52Clipboard: boolean;
   confirmMultilinePaste: boolean;
+  /** Right-click pastes the clipboard instead of opening the context menu
+   * (Shift+right-click still opens the menu). */
+  rightClickPaste: boolean;
+  /** Every new terminal Session starts with recording active, as if the
+   * record button was pressed. */
+  autoRecordSessions: boolean;
   defaultShell: string;
   customShells: TerminalCustomShell[];
   /** Global default terminal color scheme id; each terminal-type Connection
@@ -1014,6 +1030,9 @@ export interface SshSettings {
   defaultProxyJump?: string;
   defaultSshCompression: SshCompressionMode;
   defaultSshOldProtocols: SshOldProtocolsMode;
+  /** Trust a never-before-seen host key without the fingerprint confirmation
+   * dialog. Changed host keys always still prompt. */
+  autoTrustNewHostKeys: boolean;
   bufferLines: number;
   defaultTransparency: number;
   defaultUseTmuxSessions: boolean;
@@ -1264,6 +1283,7 @@ export interface WorkspaceChildConnection {
   tmuxSessionId?: string;
   cwd?: string;
   fontSize?: number;
+  textEncoding?: string;
   terminalOpacity?: number | null;
   terminalBackground?: DashboardBackground | null;
   iconColor?: string | null;

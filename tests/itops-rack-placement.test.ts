@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { RackItem, RackItemMetadata } from "../src/types";
+import type { RackItem, RackItemMetadata, RackMountFace } from "../src/types";
 import { rackItemKindSupportsFractionalWidth } from "../src/modules/itops/rackInventory";
 import {
   firstAvailableRackUnit,
@@ -15,12 +15,14 @@ function item(
   heightU: number,
   kind: RackItem["kind"] = "server",
   metadata: RackItemMetadata = {},
+  mountFace: RackMountFace = "front",
 ): RackItem {
   return {
     id: `${kind}-${startU}`,
     rackId: "rack-1",
     kind,
     label: "",
+    mountFace,
     startU,
     heightU,
     metadata,
@@ -189,4 +191,25 @@ test("full-width picker entries stay disabled when only a fractional gap remains
   };
   assert.equal(firstAvailableRackUnit(rack, 4), null);
   assert.equal(firstAvailableRackUnit(rack, 1), 1);
+});
+
+test("front and rear rack faces have independent available U space", () => {
+  const rack = {
+    id: "rack-1",
+    siteId: "site-1",
+    name: "A1",
+    serverRoom: "Room A",
+    rackGroup: "",
+    shell: null,
+    background: null,
+    heightU: 2,
+    sortOrder: 0,
+    items: [
+      item(1, 2, "server", {}, "front"),
+      item(1, 1, "switch", {}, "rear"),
+    ],
+  };
+
+  assert.equal(firstAvailableRackUnit(rack, 4, "front"), null);
+  assert.equal(firstAvailableRackUnit(rack, 4, "rear"), 2);
 });

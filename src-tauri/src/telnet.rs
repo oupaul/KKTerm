@@ -46,6 +46,7 @@ pub struct NativeTelnetTerminalRequest {
     pub password: String,
     pub cols: u16,
     pub rows: u16,
+    pub encoding: crate::sessions::TerminalEncodingState,
 }
 
 #[derive(Clone, Copy)]
@@ -499,7 +500,8 @@ pub fn start_native_terminal(
             recent_output: String::new(),
         };
         let mut buffer = [0_u8; 8192];
-        let mut output_decoder = crate::sessions::TerminalOutputDecoder::default();
+        let mut output_decoder =
+            crate::sessions::TerminalOutputDecoder::new(request.encoding.clone());
         loop {
             match reader.read(&mut buffer) {
                 Ok(0) => {

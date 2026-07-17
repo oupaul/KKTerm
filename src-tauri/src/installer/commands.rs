@@ -1009,72 +1009,282 @@ fn quick_launch_affordance(tool_id: &str) -> Vec<QuickLaunchEntry> {
     match tool_id {
         "sysinternals-suite" => vec![
             // GUI tools — open a window when launched with no arguments.
-            gui("procexp.exe", "Process Explorer", "Advanced process viewer: handles, loaded DLLs, and the full process tree."),
-            gui("procmon.exe", "Process Monitor", "Real-time file system, registry, process, thread, and network activity."),
-            gui("autoruns.exe", "Autoruns", "Everything configured to start automatically at boot and logon."),
-            gui("tcpview.exe", "TCPView", "Live view of TCP and UDP endpoints and their owning processes."),
-            gui("zoomit.exe", "ZoomIt", "Screen zoom, drawing, and break-timer tool for presentations."),
-            gui("rammap.exe", "RAMMap", "Detailed breakdown of how Windows is using physical memory."),
-            gui("vmmap.exe", "VMMap", "Analyze a process's virtual and physical memory usage."),
-            gui("diskview.exe", "DiskView", "Graphical map showing where files are located on a disk."),
-            gui("dbgview.exe", "DebugView", "Capture kernel and application debug output without a debugger."),
-            gui("winobj.exe", "WinObj", "Browse the Windows Object Manager namespace."),
-            gui("accessenum.exe", "AccessEnum", "Audit who has access across a file or registry tree."),
-            gui("shareenum.exe", "ShareEnum", "Scan network file shares and review their security."),
-            gui("adexplorer.exe", "AD Explorer", "Browse, edit, and snapshot Active Directory databases."),
-            gui("adinsight.exe", "ADInsight", "Real-time LDAP activity monitor for Active Directory."),
-            gui("bginfo.exe", "BgInfo", "Paint system information onto the desktop background."),
-            gui("desktops.exe", "Desktops", "Run applications across up to four virtual desktops."),
-            gui("disk2vhd.exe", "Disk2vhd", "Capture a VHD image of a live physical disk."),
-            gui("rdcman.exe", "RDCMan", "Manage many Remote Desktop connections from one window."),
-            gui("diskmon.exe", "DiskMon", "Capture and display all hard-disk read/write activity."),
-            gui("autologon.exe", "Autologon", "Configure Windows to log on automatically."),
+            gui(
+                "procexp.exe",
+                "Process Explorer",
+                "Advanced process viewer: handles, loaded DLLs, and the full process tree.",
+            ),
+            gui(
+                "procmon.exe",
+                "Process Monitor",
+                "Real-time file system, registry, process, thread, and network activity.",
+            ),
+            gui(
+                "autoruns.exe",
+                "Autoruns",
+                "Everything configured to start automatically at boot and logon.",
+            ),
+            gui(
+                "tcpview.exe",
+                "TCPView",
+                "Live view of TCP and UDP endpoints and their owning processes.",
+            ),
+            gui(
+                "zoomit.exe",
+                "ZoomIt",
+                "Screen zoom, drawing, and break-timer tool for presentations.",
+            ),
+            gui(
+                "rammap.exe",
+                "RAMMap",
+                "Detailed breakdown of how Windows is using physical memory.",
+            ),
+            gui(
+                "vmmap.exe",
+                "VMMap",
+                "Analyze a process's virtual and physical memory usage.",
+            ),
+            gui(
+                "diskview.exe",
+                "DiskView",
+                "Graphical map showing where files are located on a disk.",
+            ),
+            gui(
+                "dbgview.exe",
+                "DebugView",
+                "Capture kernel and application debug output without a debugger.",
+            ),
+            gui(
+                "winobj.exe",
+                "WinObj",
+                "Browse the Windows Object Manager namespace.",
+            ),
+            gui(
+                "accessenum.exe",
+                "AccessEnum",
+                "Audit who has access across a file or registry tree.",
+            ),
+            gui(
+                "shareenum.exe",
+                "ShareEnum",
+                "Scan network file shares and review their security.",
+            ),
+            gui(
+                "adexplorer.exe",
+                "AD Explorer",
+                "Browse, edit, and snapshot Active Directory databases.",
+            ),
+            gui(
+                "adinsight.exe",
+                "ADInsight",
+                "Real-time LDAP activity monitor for Active Directory.",
+            ),
+            gui(
+                "bginfo.exe",
+                "BgInfo",
+                "Paint system information onto the desktop background.",
+            ),
+            gui(
+                "desktops.exe",
+                "Desktops",
+                "Run applications across up to four virtual desktops.",
+            ),
+            gui(
+                "disk2vhd.exe",
+                "Disk2vhd",
+                "Capture a VHD image of a live physical disk.",
+            ),
+            gui(
+                "rdcman.exe",
+                "RDCMan",
+                "Manage many Remote Desktop connections from one window.",
+            ),
+            gui(
+                "diskmon.exe",
+                "DiskMon",
+                "Capture and display all hard-disk read/write activity.",
+            ),
+            gui(
+                "autologon.exe",
+                "Autologon",
+                "Configure Windows to log on automatically.",
+            ),
             // CLI tools — list-only; run them from the command prompt.
-            cli("accesschk.exe", "AccessChk", "Show effective permissions for files, keys, services, and more."),
-            cli("handle.exe", "Handle", "List open handles, or find which process has a file open."),
-            cli("listdlls.exe", "ListDLLs", "List the DLLs loaded into running processes."),
-            cli("procdump.exe", "ProcDump", "Generate process crash/hang dumps from the command line."),
+            cli(
+                "accesschk.exe",
+                "AccessChk",
+                "Show effective permissions for files, keys, services, and more.",
+            ),
+            cli(
+                "handle.exe",
+                "Handle",
+                "List open handles, or find which process has a file open.",
+            ),
+            cli(
+                "listdlls.exe",
+                "ListDLLs",
+                "List the DLLs loaded into running processes.",
+            ),
+            cli(
+                "procdump.exe",
+                "ProcDump",
+                "Generate process crash/hang dumps from the command line.",
+            ),
             cli("psexec.exe", "PsExec", "Run programs on remote systems."),
-            cli("pslist.exe", "PsList", "List detailed process and thread statistics."),
-            cli("pskill.exe", "PsKill", "Kill processes by name or PID, locally or remotely."),
-            cli("psinfo.exe", "PsInfo", "Gather system information, including installed hotfixes."),
-            cli("psservice.exe", "PsService", "View and control Windows services."),
-            cli("psloggedon.exe", "PsLoggedon", "Show who is logged on, locally and via shares."),
-            cli("psloglist.exe", "PsLogList", "Dump event log records from the command line."),
-            cli("psping.exe", "PsPing", "Measure latency and bandwidth, including TCP/UDP."),
-            cli("psshutdown.exe", "PsShutdown", "Shut down or restart local and remote computers."),
-            cli("pssuspend.exe", "PsSuspend", "Suspend and resume processes."),
-            cli("psgetsid.exe", "PsGetSid", "Display the SID of a computer or user account."),
-            cli("pspasswd.exe", "PsPasswd", "Change account passwords locally or remotely."),
-            cli("psfile.exe", "PsFile", "Show files opened remotely over the network."),
-            cli("sigcheck.exe", "Sigcheck", "Verify file signatures and versions; query VirusTotal."),
-            cli("streams.exe", "Streams", "Reveal and delete NTFS alternate data streams."),
-            cli("strings.exe", "Strings", "Extract printable strings from binary files."),
-            cli("sdelete.exe", "SDelete", "Securely delete files and wipe free space."),
-            cli("du.exe", "Disk Usage (DU)", "Report disk space used by a directory tree."),
-            cli("coreinfo.exe", "Coreinfo", "Map logical processors to sockets, cores, and NUMA nodes."),
+            cli(
+                "pslist.exe",
+                "PsList",
+                "List detailed process and thread statistics.",
+            ),
+            cli(
+                "pskill.exe",
+                "PsKill",
+                "Kill processes by name or PID, locally or remotely.",
+            ),
+            cli(
+                "psinfo.exe",
+                "PsInfo",
+                "Gather system information, including installed hotfixes.",
+            ),
+            cli(
+                "psservice.exe",
+                "PsService",
+                "View and control Windows services.",
+            ),
+            cli(
+                "psloggedon.exe",
+                "PsLoggedon",
+                "Show who is logged on, locally and via shares.",
+            ),
+            cli(
+                "psloglist.exe",
+                "PsLogList",
+                "Dump event log records from the command line.",
+            ),
+            cli(
+                "psping.exe",
+                "PsPing",
+                "Measure latency and bandwidth, including TCP/UDP.",
+            ),
+            cli(
+                "psshutdown.exe",
+                "PsShutdown",
+                "Shut down or restart local and remote computers.",
+            ),
+            cli(
+                "pssuspend.exe",
+                "PsSuspend",
+                "Suspend and resume processes.",
+            ),
+            cli(
+                "psgetsid.exe",
+                "PsGetSid",
+                "Display the SID of a computer or user account.",
+            ),
+            cli(
+                "pspasswd.exe",
+                "PsPasswd",
+                "Change account passwords locally or remotely.",
+            ),
+            cli(
+                "psfile.exe",
+                "PsFile",
+                "Show files opened remotely over the network.",
+            ),
+            cli(
+                "sigcheck.exe",
+                "Sigcheck",
+                "Verify file signatures and versions; query VirusTotal.",
+            ),
+            cli(
+                "streams.exe",
+                "Streams",
+                "Reveal and delete NTFS alternate data streams.",
+            ),
+            cli(
+                "strings.exe",
+                "Strings",
+                "Extract printable strings from binary files.",
+            ),
+            cli(
+                "sdelete.exe",
+                "SDelete",
+                "Securely delete files and wipe free space.",
+            ),
+            cli(
+                "du.exe",
+                "Disk Usage (DU)",
+                "Report disk space used by a directory tree.",
+            ),
+            cli(
+                "coreinfo.exe",
+                "Coreinfo",
+                "Map logical processors to sockets, cores, and NUMA nodes.",
+            ),
             cli("contig.exe", "Contig", "Defragment individual files."),
-            cli("ntfsinfo.exe", "NTFSInfo", "Show detailed NTFS volume information."),
-            cli("junction.exe", "Junction", "Create and inspect NTFS directory junctions."),
-            cli("movefile.exe", "MoveFile", "Schedule file move/delete operations for next boot."),
-            cli("pendmoves.exe", "PendMoves", "List file operations queued for the next boot."),
-            cli("pipelist.exe", "PipeList", "List named pipes and their instance counts."),
-            cli("logonsessions.exe", "LogonSessions", "List the active logon sessions on the system."),
-            cli("clockres.exe", "ClockRes", "Show the resolution of the system clock."),
-            cli("hex2dec.exe", "Hex2dec", "Convert numbers between hexadecimal and decimal."),
+            cli(
+                "ntfsinfo.exe",
+                "NTFSInfo",
+                "Show detailed NTFS volume information.",
+            ),
+            cli(
+                "junction.exe",
+                "Junction",
+                "Create and inspect NTFS directory junctions.",
+            ),
+            cli(
+                "movefile.exe",
+                "MoveFile",
+                "Schedule file move/delete operations for next boot.",
+            ),
+            cli(
+                "pendmoves.exe",
+                "PendMoves",
+                "List file operations queued for the next boot.",
+            ),
+            cli(
+                "pipelist.exe",
+                "PipeList",
+                "List named pipes and their instance counts.",
+            ),
+            cli(
+                "logonsessions.exe",
+                "LogonSessions",
+                "List the active logon sessions on the system.",
+            ),
+            cli(
+                "clockres.exe",
+                "ClockRes",
+                "Show the resolution of the system clock.",
+            ),
+            cli(
+                "hex2dec.exe",
+                "Hex2dec",
+                "Convert numbers between hexadecimal and decimal.",
+            ),
             cli("sync.exe", "Sync", "Flush cached file data to disk."),
-            cli("whois.exe", "Whois", "Look up domain registration and IP ownership."),
-            cli("regjump.exe", "RegJump", "Open Registry Editor directly at a given path."),
-            cli("ru.exe", "Registry Usage (RU)", "Report the registry space used by a key."),
+            cli(
+                "whois.exe",
+                "Whois",
+                "Look up domain registration and IP ownership.",
+            ),
+            cli(
+                "regjump.exe",
+                "RegJump",
+                "Open Registry Editor directly at a given path.",
+            ),
+            cli(
+                "ru.exe",
+                "Registry Usage (RU)",
+                "Report the registry space used by a key.",
+            ),
         ],
         _ => vec![],
     }
 }
 
 #[tauri::command]
-pub async fn installer_list_quick_launch(
-    tool_id: String,
-) -> Result<Vec<QuickLaunchEntry>, String> {
+pub async fn installer_list_quick_launch(tool_id: String) -> Result<Vec<QuickLaunchEntry>, String> {
     Ok(quick_launch_affordance(&tool_id))
 }
 
@@ -1276,7 +1486,10 @@ fn flowise_managed_env() -> Vec<(&'static str, String)> {
     vec![
         (
             "DATABASE_PATH",
-            data_dir.join("database.sqlite").to_string_lossy().into_owned(),
+            data_dir
+                .join("database.sqlite")
+                .to_string_lossy()
+                .into_owned(),
         ),
         (
             "SECRETKEY_PATH",
@@ -2242,9 +2455,11 @@ mod tests {
         assert!(psexec.cli, "PsExec is a command-line tool");
 
         // Every entry carries a label and a description for the searchable list.
-        assert!(entries
-            .iter()
-            .all(|entry| !entry.label.is_empty() && !entry.description.is_empty()));
+        assert!(
+            entries
+                .iter()
+                .all(|entry| !entry.label.is_empty() && !entry.description.is_empty())
+        );
         // The suite ships dozens of tools, including both GUI and CLI ones.
         assert!(entries.len() > 30);
         assert!(entries.iter().any(|entry| entry.cli));
@@ -2342,9 +2557,10 @@ mod tests {
                 *key == "BLOB_STORAGE_PATH"
                     && value.ends_with(r"installer\apps\flowise\data\storage")
             }));
-            assert!(env
-                .iter()
-                .any(|(key, value)| *key == "STORAGE_TYPE" && value == "local"));
+            assert!(
+                env.iter()
+                    .any(|(key, value)| *key == "STORAGE_TYPE" && value == "local")
+            );
         }
     }
 

@@ -171,6 +171,7 @@ const macosTemplateNativeIconsBySvg = new Map<string, MenuIcon>([
   [nativeMenuIcons.arrowRight, "GoRight"],
   [nativeMenuIcons.arrowUp, "GoRight"],
   [nativeMenuIcons.camera, "QuickLook"],
+  [nativeMenuIcons.copy, "MultipleDocuments"],
   [nativeMenuIcons.download, "Path"],
   [nativeMenuIcons.folderOpen, "GoRight"],
   [nativeMenuIcons.folderPlus, "Add"],

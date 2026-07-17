@@ -13,7 +13,7 @@ use std::{
 use time::{OffsetDateTime, format_description::well_known::Rfc3339};
 use zip::{ZipArchive, ZipWriter, write::SimpleFileOptions};
 
-const SCHEMA_USER_VERSION: i32 = 47;
+const SCHEMA_USER_VERSION: i32 = 49;
 
 const DEFAULT_TERMINAL_OPACITY: u8 = 50;
 
@@ -249,6 +249,19 @@ CREATE TABLE IF NOT EXISTS assistant_memories (
 CREATE INDEX IF NOT EXISTS idx_assistant_memories_scope
     ON assistant_memories(scope, updated_at DESC);
 
+-- Durable frontend UI state that used to live only in localStorage: Quick
+-- Commands, Child Connection Tabs, Notes widget content, file-browser
+-- favorites, and remembered CLI account labels. Key is a namespaced string
+-- ("quickCommands:<connectionId>", "childConnections", "notes:<instanceId>",
+-- "fileBrowserFavorites", "cliAccountLabels"); value is an opaque frontend JSON
+-- blob. Non-secret, backed up with the database, and cleared by the Settings
+-- reset and per-connection delete flows. v49.
+CREATE TABLE IF NOT EXISTS durable_ui_state (
+    key        TEXT PRIMARY KEY,
+    value      TEXT NOT NULL,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS ai_coding_usage_accounts (
     provider TEXT PRIMARY KEY CHECK (provider IN ('codex', 'claudeCode')),
     account_label TEXT,
@@ -447,6 +460,8 @@ CREATE TABLE IF NOT EXISTS itops_site_rack_items (
     label         TEXT NOT NULL DEFAULT '',
     start_u       INTEGER NOT NULL,
     height_u      INTEGER NOT NULL DEFAULT 1,
+    -- Structural mounting plane. Existing rows remain front-mounted. v48.
+    mount_face    TEXT NOT NULL DEFAULT 'front',
     metadata_json TEXT NOT NULL DEFAULT '{}',
     created_at    TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at    TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -524,6 +539,8 @@ pub struct GeneralSettings {
     activity_rail_order: Vec<String>,
     #[serde(default = "default_installer_check_interval_seconds")]
     installer_check_interval_seconds: u32,
+    #[serde(default = "default_installer_default_provider")]
+    installer_default_provider: String,
     #[serde(default)]
     pinned_connection_ids: Vec<String>,
     #[serde(default = "default_allow_clipboard_read")]
@@ -672,6 +689,10 @@ pub struct TerminalSettings {
     #[serde(default = "default_allow_osc52_clipboard")]
     allow_osc52_clipboard: bool,
     confirm_multiline_paste: bool,
+    #[serde(default)]
+    right_click_paste: bool,
+    #[serde(default)]
+    auto_record_sessions: bool,
     default_shell: String,
     #[serde(default)]
     custom_shells: Vec<TerminalCustomShell>,
@@ -786,6 +807,8 @@ pub struct SshSettings {
     default_ssh_compression: String,
     #[serde(default = "default_ssh_old_protocols")]
     default_ssh_old_protocols: String,
+    #[serde(default)]
+    auto_trust_new_host_keys: bool,
     #[serde(default = "default_ssh_buffer_lines")]
     buffer_lines: u32,
     #[serde(default = "default_terminal_transparency")]
@@ -1731,9 +1754,24 @@ pub struct AssistantMemoryRecord {
     pub updated_at: String,
 }
 
+/// One durable frontend UI-state entry: a namespaced key mapping to an opaque
+/// JSON string the frontend owns. Backs data that used to live only in
+/// `localStorage` (Quick Commands, Child Connection Tabs, Notes widget content,
+/// file-browser favorites, remembered CLI account labels) so it survives a
+/// reinstall, rides along in database backups/exports, and is cleared by the
+/// Settings reset and per-connection delete flows. Never holds secrets.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DurableUiStateRecord {
+    pub key: String,
+    pub value: String,
+}
+
 mod settings;
 
 mod connections;
+
+mod durable_ui_state;
 
 impl Storage {
     pub fn open(db_path: PathBuf) -> Result<Self, String> {
@@ -1981,6 +2019,15 @@ impl Storage {
         let stored_version: i32 = connection
             .pragma_query_value(None, "user_version", |row| row.get(0))
             .map_err(to_storage_error)?;
+        // A current database only needs runtime-owned seed reconciliation. Skip
+        // historical schema probes and data backfills entirely on normal startup.
+        if stored_version == SCHEMA_USER_VERSION {
+            crate::dashboard_storage::seed_default(&connection)
+                .map_err(|err| format!("dashboard seed failed: {err:?}"))?;
+            crate::itops::task_storage::sync_builtin_catalog(&connection)
+                .map_err(|err| format!("IT Ops Task catalog seed failed: {err}"))?;
+            return Ok(());
+        }
         // The Dashboard tables get rebuilt only when the user's stored
         // version predates the last Dashboard-schema-changing migration
         // (v16). Pure-additive schema bumps after v16 (v17 added
@@ -2210,6 +2257,14 @@ impl Storage {
         // v41: durable rack facing (the itops_room_objects table itself comes
         // from CURRENT_SCHEMA's CREATE TABLE IF NOT EXISTS).
         ensure_column(&connection, "itops_site_racks", "facing", "INTEGER")?;
+        // v48: Rack Devices may occupy independent front and rear mounting
+        // planes. Existing placements remain front-mounted.
+        ensure_column(
+            &connection,
+            "itops_site_rack_items",
+            "mount_face",
+            "TEXT NOT NULL DEFAULT 'front'",
+        )?;
         // v42: the 2.5D floor finish belongs to the durable Server Room rather
         // than app-wide local UI state.
         ensure_column(
@@ -4887,6 +4942,10 @@ fn required_field(field: &str, value: String) -> Result<String, String> {
     }
 }
 
+fn default_installer_default_provider() -> String {
+    "winget".to_string()
+}
+
 fn default_general_settings() -> GeneralSettings {
     GeneralSettings {
         auto_backup_enabled: true,
@@ -4904,6 +4963,7 @@ fn default_general_settings() -> GeneralSettings {
         show_dont_sleep_on_rail: default_show_dont_sleep_on_rail(),
         activity_rail_order: default_activity_rail_order(),
         installer_check_interval_seconds: default_installer_check_interval_seconds(),
+        installer_default_provider: default_installer_default_provider(),
         pinned_connection_ids: Vec::new(),
         allow_clipboard_read: default_allow_clipboard_read(),
         auto_start_with_windows: false,
@@ -5097,6 +5157,8 @@ fn default_terminal_settings() -> TerminalSettings {
         copy_on_select: false,
         allow_osc52_clipboard: default_allow_osc52_clipboard(),
         confirm_multiline_paste: true,
+        right_click_paste: false,
+        auto_record_sessions: false,
         default_shell: if cfg!(target_os = "windows") {
             "powershell.exe".to_string()
         } else {
@@ -5139,6 +5201,7 @@ fn default_ssh_settings() -> SshSettings {
         default_proxy_jump: None,
         default_ssh_compression: default_ssh_compression(),
         default_ssh_old_protocols: default_ssh_old_protocols(),
+        auto_trust_new_host_keys: true,
         buffer_lines: default_ssh_buffer_lines(),
         default_transparency: default_terminal_transparency(),
         default_use_tmux_sessions: default_use_tmux_sessions(),
@@ -5506,6 +5569,15 @@ fn validate_general_settings(mut settings: GeneralSettings) -> Result<GeneralSet
     settings.installer_check_interval_seconds = match settings.installer_check_interval_seconds {
         3_600 | 86_400 | 604_800 | 2_592_000 => settings.installer_check_interval_seconds,
         _ => default_installer_check_interval_seconds(),
+    };
+    settings.installer_default_provider = match settings
+        .installer_default_provider
+        .trim()
+        .to_lowercase()
+        .as_str()
+    {
+        "chocolatey" => "chocolatey".to_string(),
+        _ => default_installer_default_provider(),
     };
     settings.workspace_shortcuts = sanitize_workspace_shortcuts(settings.workspace_shortcuts);
     settings.proxy_mode = match settings.proxy_mode.trim().to_lowercase().as_str() {

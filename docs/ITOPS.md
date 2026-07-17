@@ -78,14 +78,18 @@ credentials.
 Racks grouped by the optional per-Rack `rack_group` tag.
 
 **Rack** — a durable fixed-height cabinet in one Site and one Server Room.
-It stores Rack Devices at U positions but owns no live Session state.
+It stores Rack Devices at U positions on independent Front and Rear mounting
+faces but owns no live Session state.
 
 **Rack View** — the single-Rack drill-down stage where Rack Devices are
-opened, placed, or edited.
+opened, placed, or edited. It shows Front and Rear elevations side by side
+when both faces contain devices, and always exposes both while editing.
 
-**Rack Device** — a visual device occupying a U span in a Rack. It may be
-Connection-backed or passive. It is stored in `itops_site_rack_items`; older
-code/schema may still use the `RackItem` name.
+**Rack Device** — a visual device occupying a U span on a Rack's Front or Rear
+mounting face. Each face validates U-space independently; a rack-top 乖乖 item
+belongs to the whole cabinet. A device may be Connection-backed or passive. It
+is stored in `itops_site_rack_items`; older code/schema may still use the
+`RackItem` name.
 
 **Rack Device Type** — the finite device kind that controls faceplate
 rendering and properties; it is not a Connection type.
@@ -419,18 +423,29 @@ drill-down views own an icon-only Edit / Export toolbar: edit mode gates free
 placement, Rack Device drag/drop, empty-slot add affordances, and destructive
 controls; normal mode remains an inspect/open surface. Site and Server Room
 exports save a graphical PDF report with topology summaries, scaled rack elevations,
-placed Rack Device faceplates, paginated inventory data, and platform-rendered Unicode
+Front and Rear Rack Device faceplates, paginated inventory data including mounting side, and platform-rendered Unicode
 text for localized names and labels. Rack View also saves an
 Excel-readable inventory table.
 An empty Server Room uses explanatory guidance with an inline New Rack action.
 An empty Rack uses an inline Edit mode action that reveals the Rack Device
 picker.
-In the Server Room floor-plan and 2.5D object picker, a successfully placed Wall
-remains armed for continuous placement. Every snapped fixture or Rack preview
-shows a high-contrast facing arrow that follows the 2.5D view angle and turns
-red with the blocked target. A Wall reserves its entire logical grid cell even
+In the Server Room floor-plan and 2.5D object picker, Rack and fixture placement
+uses two clicks: the first locks the floor position, moving the pointer selects
+one of four facings with a high-contrast arrow on that side, and the second
+commits both position and facing. The arrow follows the 2.5D view angle and
+turns red when the selected facing cannot fit. A successfully placed Wall
+remains armed for continuous placement. A Wall reserves its entire logical grid cell even
 though its construction is drawn as a thin segment: Rack and object placement
 or dragging cannot enter that cell, and a Wall cannot replace any occupant.
+The floor plan pans only when its current zoom or room bounds overflow the pane,
+so it cannot be dragged away to expose background gaps. The 2.5D view keeps
+scrollable camera margin around its projected room. In either spatial view,
+drag blank floor with the left mouse button, drag with the middle button, or
+focus the room and use the arrow keys to pan. The target button below the zoom
+levels, or a middle-button click without dragging, resets the camera to center.
+The room background remains editable from empty elevation and 2.5D space. In
+Floor Plan mode, the opaque blueprint grid stays edge-to-edge and the saved
+room background is visible only behind the shared toolbar.
 The Rack hover detail card shared by both spatial views mounts outside their
 clipping canvases and flips or clamps within the visible room at every edge.
 The Rack configuration dialog exposes
@@ -440,12 +455,25 @@ in that Server Room while preserving the configured Rack settings. Right-click,
 Escape, selecting another app control, leaving edit mode, switching layouts, or
 navigating away cancels either continuous tool and deletes only an unplaced
 pending Rack.
+In the floor plan and 2.5D layouts, Shift-clicking an existing Rack or room
+object arms a temporary deep-copy draft instead. The cursor ghost preserves
+the source facing and configuration. One click on a blank floor cell commits
+the copy at that cell; cancellation creates nothing. Rack copies receive the
+next available `#N` name and clone their Rack Devices in the same atomic write
+as the new grid placement and facing.
 Site, Server Room, and Rack tree rows share one native context-menu contract:
 Properties is always the final item, separated from the commands above it.
 Delete sits above Properties and routes to the shared danger `ConfirmSheet`;
 the seeded Default Site shows Delete disabled. A Server Room also places
 `itops.racks.addRackAction` above Delete and opens the New Rack dialog already
-scoped to that Server Room.
+scoped to that Server Room. Server Room and Rack rows also expose
+`itops.actions.duplicate`: it opens the existing Properties dialog with the
+next available `#N` suffix beginning at `#2` and the source properties
+prefilled. Save performs the deep copy; Cancel creates nothing. A Rack copy
+includes its cabinet properties, background, and Rack Devices but starts
+without overlapping floor-plan or 2.5D coordinates. A Server Room copy
+includes its finish, icon, background, room objects, Racks, Rack Devices, and
+internal spatial layout.
 When the virtual Server Rooms row is selected, an `itops.racks.sortAction`
 icon button appears immediately left of the tree-wide collapse/expand controls.
 Its `itops.racks.sortAscending` and `itops.racks.sortDescending` native menu
@@ -486,18 +514,50 @@ i18n rules in `AGENTS.md`. New dialogs/sheets follow
 ## AI Assistant integration
 
 IT Ops commands are registered as approval-gated assistant tools, the
-same model Dashboard uses. The assistant may draft a Site or an
-Automation (trigger + condition + actions) from a typed schema; a
-successful mutating tool emits an `itops-changed` backend event that
-reloads the IT Ops store so the new rule appears without restart. The
-Rack Device placement schema includes `kuaiguai` and documents the rack-top
-virtual position (`startU = rack.heightU + 1`) plus expiry/style metadata, so
-assistant and built-in MCP calls preserve the same placement invariant as the UI. The
-page-context payload is a compact projection — Site names/counts,
-Automation names/states, recent run summaries — never full run output,
-streamed host buffers, secrets, or credential references. Mutating
-actions (starting a Batch Run, enabling an Automation) go through the
-existing approval flow; the assistant cannot run a site task silently.
+same model Dashboard uses. The `itops_*` tool surface covers the Module's
+operations end to end: Site/Server Room/Rack/Rack Device lifecycle, Host
+inventory (create/update/delete/import/scan), the global Task Library
+(list/get/create/update/remove, with built-ins read-only), durable
+Automations (list/create/update/set-enabled/remove plus a one-shot
+`itops_test_automation` dry run), and Batch Runs
+(start/cancel/run-history/report). A successful mutating tool emits an
+`itops-changed` backend event that reloads the IT Ops store so the change
+appears without restart. The Rack Device placement schema includes
+`mountFace` (`front` or `rear`, default `front`) plus `kuaiguai`; assistant
+requests for the back, backside, or rear explicitly map to `mountFace: "rear"`
+instead of the Rack's unrelated floor-plan facing. The schema documents the
+rack-top virtual position (`startU = rack.heightU + 1`) plus expiry/style
+metadata, so assistant and built-in MCP calls preserve the same placement
+invariant as the UI.
+
+Assistant-authored Batch Tasks (Task definitions, Automation `runBatch`
+payloads, ad-hoc run scripts) may never introduce sudo steps or
+secret-vault references — those are configured only in the Task Library
+editor, and a full-value Task update may only resend the sudo steps the
+stored Task already carries. An assistant-created Automation's watchdog
+`config.action` must stay `notify`; the ordered IT Ops actions list
+carries the real work. Run-history reads return compact per-host outcome
+rows; `itops_get_run_report` attaches per-host output tail-capped by
+`maxOutputChars`.
+
+The page-context projection includes the current navigator selection
+(Site, destination, drill-down), Site names/ids/counts, Automation
+names/states, the Task Library count, recent run counts, and the
+registered tutorial targets — never full run output, streamed host
+buffers, secrets, or credential references. The `tutorial_highlight`
+tool's navigation payload accepts `itopsSiteId` and `itopsDestination`
+(`site | serverRooms | hosts | automations | runHistory | taskLibrary`)
+so the assistant can open a specific Site destination before
+highlighting; destination pages carry static targets
+(`itops.hostsPanel`, `itops.automationsNew`, `itops.taskLibrary`, …, see
+`src/app/tutorialNavigationModel.ts`) and rows carry entity-scoped
+targets (`itops.site:<id>`, `itops.host:<id>`, `itops.automation:<id>`,
+`itops.task:<id>`, `itops.run:<id>`). Mutating actions (starting a Batch
+Run, enabling an Automation) go through the existing approval flow; the
+assistant cannot run a site task silently. Over the built-in MCP bridge
+the same tools are published under `kkterm.itops.*`, with
+task-authoring, automation-mutating, and run-starting tools in
+`dangerous` sub-namespaces (see `docs/MCP.md`).
 
 ## Migration from Watchdog
 
@@ -520,11 +580,15 @@ durable IT Ops rules while live run state remains in-memory.
 
 ## Concrete Data Model
 
-This historical section grounds the original durable shape in the existing storage conventions
-(`src-tauri/src/storage.rs`). The schema is a single idempotent
-`CURRENT_SCHEMA` string of `CREATE TABLE IF NOT EXISTS` statements applied
-via `execute_batch` with `PRAGMA user_version`; adding tables is additive
-and only requires bumping `SCHEMA_USER_VERSION` (currently 26 → 27).
+This historical section grounds the original durable shape in the existing
+storage conventions (`src-tauri/src/storage.rs`). `CURRENT_SCHEMA` defines the
+current baseline with idempotent `CREATE TABLE IF NOT EXISTS` statements, while
+`PRAGMA user_version` selects either the migration path or the current-version
+startup fast path. Adding tables requires updating `CURRENT_SCHEMA`, bumping
+`SCHEMA_USER_VERSION`, adding a version-gated upgrade, and auditing whether any
+ongoing seed reconciliation must also run on the fast path; follow
+`docs/ARCHITECTURE.md` → "Schema initialization and migrations". The original
+change described here was schema 26 → 27.
 Ordered lists use an integer `sort_order` column, matching
 `dashboard_widget_instances`. It predates the Site rename and topology tables;
 use the Scope, Domain Concepts, and `docs/SITE.md` sections above for current
@@ -800,7 +864,8 @@ here so the design is not lost; sequence them by demand.
 renamed to **Site** across the product: the table is `itops_sites`, the
 run-history soft reference is `site_id`, and commands/i18n use the Site term.
 The Site topology layer adds per-Site **Server Rooms**, **Racks**, and **Rack
-Devices**. Racks are drawn as full 42U rack elevations and may hold placed
+Devices**. Racks are drawn as full rack elevations with independent Front and
+Rear mounting planes and may hold placed
 Connections (click to open ssh/rdp/vnc/etc.) or passive items (switch, PDU,
 patch panel). Scoped Batch Runs use Server Room / Rack scope. See
 `docs/SITE.md` for the detailed data model and product terminology.

@@ -95,7 +95,9 @@ pub fn apply_async(builder: reqwest::ClientBuilder) -> reqwest::ClientBuilder {
 }
 
 /// Apply the cached global proxy to a blocking `reqwest` client builder.
-pub fn apply_blocking(builder: reqwest::blocking::ClientBuilder) -> reqwest::blocking::ClientBuilder {
+pub fn apply_blocking(
+    builder: reqwest::blocking::ClientBuilder,
+) -> reqwest::blocking::ClientBuilder {
     match current() {
         GlobalProxy::System => builder,
         GlobalProxy::Direct => builder.no_proxy(),

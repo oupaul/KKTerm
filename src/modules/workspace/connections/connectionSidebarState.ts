@@ -1,13 +1,18 @@
-import type { ConnectionType } from "../../../types";
+import type { Connection, ConnectionType } from "../../../types";
 
 const RECENT_CONNECTION_STORAGE_KEY = "kkterm.recentConnectionIds";
 const COLLAPSED_FOLDER_IDS_KEY = "kkterm.collapsedFolderIds";
 export const NEW_CONNECTION_REQUEST_EVENT = "kkterm:new-connection-request";
 export const IMPORT_CONNECTIONS_REQUEST_EVENT = "kkterm:import-connections-request";
+export const NEW_CONNECTION_TAB_REQUEST_EVENT = "kkterm:new-connection-tab-request";
 
 export type NewConnectionRequestDetail = {
   connectionType: ConnectionType;
   openAfterCreate?: boolean;
+};
+
+export type NewConnectionTabRequestDetail = {
+  connection: Connection;
 };
 
 export const RECENT_CONNECTION_LIMIT = 50;
@@ -83,4 +88,12 @@ export function requestNewConnection(
 
 export function requestImportConnections() {
   window.dispatchEvent(new CustomEvent(IMPORT_CONNECTIONS_REQUEST_EVENT));
+}
+
+export function requestConnectionNewTab(connection: Connection) {
+  window.dispatchEvent(
+    new CustomEvent<NewConnectionTabRequestDetail>(NEW_CONNECTION_TAB_REQUEST_EVENT, {
+      detail: { connection },
+    }),
+  );
 }
