@@ -238,6 +238,21 @@ test("dialog-kit confirmations suppress an intersecting native RDP surface", asy
   );
 });
 
+test("dialog-kit confirmations suppress an intersecting native URL WebView surface", async () => {
+  const nativeOverlaySource = await readFile(
+    new URL("../src/modules/workspace/nativeOverlay.ts", import.meta.url),
+    "utf8",
+  );
+  const webviewSelectors =
+    nativeOverlaySource.match(/const WEBVIEW_BLOCKING_OVERLAY_SELECTOR = \[([\s\S]*?)\]\.join/)?.[1] ?? "";
+
+  assert.match(
+    webviewSelectors,
+    /"\.kk-dlg-backdrop"/,
+    "ConfirmSheet's shared backdrop should suppress an intersecting native URL WebView",
+  );
+});
+
 
 test("Connection import dialog participates in RDP overlay parking", async () => {
   const importDialogSource = await readFile(
