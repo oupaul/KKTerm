@@ -82,9 +82,29 @@ test("existing catalog tools carry their user-facing sections in the catalog", (
   }
 });
 
-test("Productivity contains Notepad++, ShareX, and BentoPDF", () => {
-  for (const id of ["notepadpp", "sharex", "bentopdf"]) {
+test("Productivity contains browsers, Acrobat Reader, Notepad++, ShareX, and BentoPDF", () => {
+  for (const id of [
+    "google-chrome",
+    "firefox",
+    "acrobat-reader",
+    "notepadpp",
+    "sharex",
+    "bentopdf",
+  ]) {
     assertSection(id, "productivity");
+  }
+});
+
+test("Productivity browsers and PDF reader use verified package providers", () => {
+  for (const [id, wingetId, chocolateyId] of [
+    ["google-chrome", "Google.Chrome", "googlechrome"],
+    ["firefox", "Mozilla.Firefox", "firefox"],
+    ["acrobat-reader", "Adobe.Acrobat.Reader.64-bit", "adobereader"],
+  ]) {
+    const tool = recipe(id);
+    assert.deepEqual(tool.provider, { kind: "winget", id: wingetId });
+    assert.deepEqual(tool.chocolateyProvider, { kind: "chocolatey", id: chocolateyId });
+    assert.ok(tool.options?.includes("provider"));
   }
 });
 
