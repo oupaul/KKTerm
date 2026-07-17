@@ -1,47 +1,58 @@
-const NATIVE_BLOCKING_OVERLAY_SELECTOR = [
-  ".sftp-context-menu",
-  ".sftp-properties-popover",
-  ".screenshot-region-overlay",
+// DOM UI cannot reliably out-z-order the separate native windows used by URL
+// Connections and Windows RDP. Both runtimes therefore watch the same set of
+// potentially intersecting overlays, then apply their own suppression action:
+// URL captures a snapshot and hides its WebviewWindow; RDP captures a snapshot
+// and parks only its ActiveX HWND.
+const INTERSECTING_NATIVE_SURFACE_OVERLAY_SELECTOR = [
   ".assistant-image-preview-backdrop",
-  ".transfer-conflict-backdrop",
   ".connection-dialog-backdrop",
   ".kk-dlg-backdrop",
   ".app-launcher-dialog-backdrop",
+  ".app-launcher-menu",
+  ".ai-coding-add-menu",
   ".settings-backdrop",
   ".settings-page",
+  // The status notice popup is anchored to the top title-bar band and can
+  // overlap the top edge of either native Session surface.
   ".status-popup",
   ".tutorial-overlay",
   ".dw-catalog-backdrop",
   ".dw-customize",
-  ".tree-drag-preview",
-  ".dock-overlay",
-].join(", ");
-
-const WEBVIEW_BLOCKING_OVERLAY_SELECTOR = [
-  ".connection-dialog-backdrop",
-  ".kk-dlg-backdrop",
-  ".settings-backdrop",
-  ".dw-catalog-backdrop",
+  ".dw-customize-dismiss-layer",
+  ".dashboard-tab-gradient-popover",
+  ".dw-bg-popover",
+  ".terminal-actions-menu",
+  ".terminal-bg-popover",
+  ".tmux-session-menu-portal",
+  ".sftp-protocol-menu",
+  ".sftp-recent-menu",
+  ".sftp-viewopts-menu",
+  ".sftp-bg-popover",
+  ".fv-menu",
+  ".fv-bg-popover",
+  ".git-adv-backdrop",
   ".screenshot-region-overlay",
-  // The status notice popup is anchored to the top title-bar band and overlaps the
-  // top of the URL Connection's native browser surface. Suppress the live WebView with
-  // a snapshot while the popup is visible so the popup is not clipped behind the browser.
-  ".status-popup",
   ".tree-drag-preview",
   ".dock-overlay",
 ].join(", ");
 
 export function documentHasRdpBlockingOverlay(surface: Element | null) {
-  return documentHasNativeBlockingOverlay(surface);
+  return documentHasNativeBlockingOverlay(
+    surface,
+    INTERSECTING_NATIVE_SURFACE_OVERLAY_SELECTOR,
+  );
 }
 
 export function documentHasWebviewBlockingOverlay(surface: Element | null) {
-  return documentHasNativeBlockingOverlay(surface, WEBVIEW_BLOCKING_OVERLAY_SELECTOR);
+  return documentHasNativeBlockingOverlay(
+    surface,
+    INTERSECTING_NATIVE_SURFACE_OVERLAY_SELECTOR,
+  );
 }
 
 function documentHasNativeBlockingOverlay(
   surface: Element | null,
-  selector = NATIVE_BLOCKING_OVERLAY_SELECTOR,
+  selector: string,
 ) {
   const surfaceRect = visibleRect(surface);
   if (!surfaceRect) {

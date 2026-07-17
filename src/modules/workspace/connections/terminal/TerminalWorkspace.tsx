@@ -6,7 +6,7 @@ import { CUSTOM_FONTS_LOADED_EVENT } from "../../../../lib/customFonts";
 import { ScreenshotMenu } from "../../ScreenshotMenu";
 
 import { ConnectionGlyph } from "../ConnectionGlyph";
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Bot, Check, FileText, Folder, FolderOpen, Mouse, ChevronRight, Circle, ClipboardPaste, Copy, Menu, Monitor, Network, Palette, PanelBottom, Pencil, Radio, RefreshCw, Save, Scan, Search, SplitSquareHorizontal, Square, Type, X } from "../../../../lib/reicon";
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Bot, Check, FileText, Folder, FolderOpen, Mouse, ChevronRight, Circle, Copy, Menu, Monitor, Network, Palette, PanelBottom, Pencil, Radio, RefreshCw, Save, Scan, Search, SplitSquareHorizontal, Square, Type, X } from "../../../../lib/reicon";
 import { listen } from "@tauri-apps/api/event";
 import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -49,6 +49,8 @@ import { SshPortForwardingDialog, hasEnabledSshPortForwardings } from "./SshPort
 import { startEnabledSshPortForwardings } from "./sshPortForwardingModel";
 import { classifyEnvironmentShell, prepareLocalStartup } from "../connection-dialog/environmentVariables";
 import { readSshApplyStartupToExistingTmux } from "../connection-dialog/sshStartupScript";
+import { showNativeContextMenu } from "../../../../lib/nativeContextMenu";
+import { nativeMenuIcons } from "../../../../lib/nativeMenuIcons";
 
 const SftpWorkspace = lazy(() =>
   import("../sftp/SftpWorkspace").then(({ SftpWorkspace }) => ({
@@ -70,12 +72,6 @@ const RemoteDesktopWorkspace = lazy(() =>
     default: RemoteDesktopWorkspace,
   })),
 );
-
-type TerminalContextMenuState = {
-  x: number;
-  y: number;
-  hasSelection: boolean;
-};
 
 const TMUX_MOUSE_MODE_EVENT = "kkterm:tmux-mouse-mode";
 const TMUX_UNAVAILABLE_MARKER = "[KKTerm: tmux not found, using normal shell]";
@@ -1651,7 +1647,6 @@ function TerminalPaneView({
   const [actionsMenuOpen, setActionsMenuOpen] = useState(false);
   const [backgroundPopoverOpen, setBackgroundPopoverOpen] = useState(false);
   const [hasTerminalSelection, setHasTerminalSelection] = useState(false);
-  const [contextMenu, setContextMenu] = useState<TerminalContextMenuState | null>(null);
   const [multilinePasteConfirmationOpen, setMultilinePasteConfirmationOpen] = useState(false);
   const [recordingInfo, setRecordingInfo] = useState<TerminalRecordingInfo | null>(null);
   const [recordingBusy, setRecordingBusy] = useState(false);
@@ -1980,7 +1975,6 @@ function TerminalPaneView({
           if (selection) {
             void writeToClipboard(selection);
             updateTerminalSelection(selection);
-            setContextMenu(null);
             return false;
           }
           return true;
@@ -2453,7 +2447,6 @@ function TerminalPaneView({
       updateTerminalSelection("");
       setRecordingInfo(null);
       setRecordingBusy(false);
-      setContextMenu(null);
       setQuickSelect(null);
       setSearchResult({ resultIndex: -1, resultCount: 0, found: true });
       terminal.dispose();
@@ -2491,26 +2484,6 @@ function TerminalPaneView({
     // Update the wheel override on tmux/mouse changes; handleTmuxWheelScroll is recreated each render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pane.tmuxSessionId, tmuxMouseEnabled]);
-
-  useEffect(() => {
-    if (!contextMenu) {
-      return;
-    }
-
-    const handlePointerDown = () => setContextMenu(null);
-    const handleKeyDown = (event: globalThis.KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setContextMenu(null);
-      }
-    };
-
-    window.addEventListener("pointerdown", handlePointerDown);
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      window.removeEventListener("pointerdown", handlePointerDown);
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [contextMenu]);
 
   useEffect(() => {
     if (!isActive) {
@@ -2739,20 +2712,17 @@ function TerminalPaneView({
     if (text) {
       void writeToClipboard(text);
     }
-    setContextMenu(null);
     terminalRendererRef.current?.focus();
   }
 
   async function handlePasteIntoTerminal() {
     const text = await readFromClipboard();
     if (!text) {
-      setContextMenu(null);
       terminalRendererRef.current?.focus();
       return;
     }
 
     terminalRendererRef.current?.paste(text);
-    setContextMenu(null);
     terminalRendererRef.current?.focus();
   }
 
@@ -2769,11 +2739,24 @@ function TerminalPaneView({
 
     const selection = terminalRendererRef.current?.getSelection() ?? "";
     updateTerminalSelection(selection);
-    setContextMenu({
-      x: event.clientX,
-      y: event.clientY,
-      hasSelection: Boolean(selection),
-    });
+    void showNativeContextMenu(
+      [
+        {
+          kind: "item",
+          label: t("terminal.copy"),
+          iconSvg: nativeMenuIcons.copy,
+          disabled: !selection,
+          action: handleCopyTerminalSelection,
+        },
+        {
+          kind: "item",
+          label: t("terminal.paste"),
+          iconSvg: nativeMenuIcons.clipboardPaste,
+          action: () => void handlePasteIntoTerminal(),
+        },
+      ],
+      { x: event.clientX, y: event.clientY },
+    );
   }
 
   async function startTerminalRecording(sessionId: string, connection: Connection) {
@@ -3133,7 +3116,7 @@ function TerminalPaneView({
               <Menu size={13} />
             </button>
             {actionsMenuOpen ? (
-              <div className="terminal-menu" role="menu">
+              <div className="terminal-menu terminal-actions-menu" role="menu">
                 {isSshPane && pane.connection ? (
                   <button
                     className="terminal-menu-item"
@@ -3517,14 +3500,6 @@ function TerminalPaneView({
           <div className="terminal-quick-select-help">{t("terminal.quickSelectHint")}</div>
         </div>
       ) : null}
-      {contextMenu ? (
-        <TerminalContextMenu
-          menu={contextMenu}
-          onClose={() => setContextMenu(null)}
-          onCopy={handleCopyTerminalSelection}
-          onPaste={() => void handlePasteIntoTerminal()}
-        />
-      ) : null}
       {multilinePasteConfirmationOpen ? (
         <ConfirmDialog
           confirmIcon="copy"
@@ -3537,77 +3512,6 @@ function TerminalPaneView({
         />
       ) : null}
     </article>
-  );
-}
-
-function TerminalContextMenu({
-  menu,
-  onClose,
-  onCopy,
-  onPaste,
-}: {
-  menu: TerminalContextMenuState;
-  onClose: () => void;
-  onCopy: () => void;
-  onPaste: () => void;
-}) {
-  const menuRef = useRef<HTMLDivElement>(null);
-  const { t } = useTranslation();
-
-  useLayoutEffect(() => {
-    const node = menuRef.current;
-    if (!node) {
-      return;
-    }
-
-    const bounds = node.getBoundingClientRect();
-    const left = Math.min(menu.x, window.innerWidth - bounds.width - 8);
-    const top = Math.min(menu.y, window.innerHeight - bounds.height - 8);
-    node.style.left = `${Math.max(8, left)}px`;
-    node.style.top = `${Math.max(8, top)}px`;
-  }, [menu.x, menu.y]);
-
-  // Portal to document.body so the menu escapes any ancestor CSS transform
-  // (eg. react-grid-layout's translated grid item when the terminal is
-  // embedded in a Dashboard connection widget) and any overflow:hidden clip.
-  return createPortal(
-    <div
-      className="terminal-context-menu"
-      onContextMenu={(event) => event.preventDefault()}
-      onPointerDown={(event) => event.stopPropagation()}
-      ref={menuRef}
-      role="menu"
-    >
-      <button
-        disabled={!menu.hasSelection}
-        onClick={() => {
-          onCopy();
-          onClose();
-        }}
-        role="menuitem"
-        type="button"
-      >
-        <span className="menu-item-label">
-          <Copy size={14} />
-          <span>{t("terminal.copy")}</span>
-        </span>
-        <kbd>{t("terminal.copyShortcut")}</kbd>
-      </button>
-      <button
-        onClick={() => {
-          onPaste();
-          onClose();
-        }}
-        role="menuitem"
-        type="button"
-      >
-        <span className="menu-item-label">
-          <ClipboardPaste size={14} />
-          <span>{t("terminal.paste")}</span>
-        </span>
-      </button>
-    </div>,
-    document.body,
   );
 }
 

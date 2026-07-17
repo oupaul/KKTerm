@@ -162,12 +162,7 @@ test("standalone connection tabs expose dock targets and split through the same 
   );
   assert.match(
     nativeOverlaySource,
-    /NATIVE_BLOCKING_OVERLAY_SELECTOR[\s\S]*"\.tree-drag-preview"[\s\S]*"\.dock-overlay"/,
-    "RDP/VNC native surfaces should be suppressed while drag previews and dock overlays cross them",
-  );
-  assert.match(
-    nativeOverlaySource,
-    /WEBVIEW_BLOCKING_OVERLAY_SELECTOR[\s\S]*"\.tree-drag-preview"[\s\S]*"\.dock-overlay"/,
-    "URL WebView2 surfaces should be suppressed while drag previews and dock overlays cross them",
+    /INTERSECTING_NATIVE_SURFACE_OVERLAY_SELECTOR[\s\S]*"\.tree-drag-preview"[\s\S]*"\.dock-overlay"/,
+    "RDP/VNC and URL native surfaces should be suppressed while drag previews and dock overlays cross them",
   );
 });

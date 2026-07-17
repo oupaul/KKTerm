@@ -46,7 +46,6 @@ export interface DashboardCanvasProps {
   onOpenBackground: () => void;
   onToggleEditMode: () => void;
   onRequestWidgetDelete: (request: DashboardWidgetDeleteRequest) => void;
-  suppressNativeWebviews: boolean;
 }
 
 export function DashboardCanvas({
@@ -58,7 +57,6 @@ export function DashboardCanvas({
   onOpenBackground,
   onToggleEditMode,
   onRequestWidgetDelete,
-  suppressNativeWebviews,
 }: DashboardCanvasProps) {
   const { t } = useTranslation();
   const editMode = useDashboardStore((s) => s.editMode);
@@ -160,7 +158,6 @@ export function DashboardCanvas({
               isViewActive={isViewActive}
               onCustomize={onCustomize}
               onRequestDelete={onRequestWidgetDelete}
-              suppressNativeWebviews={suppressNativeWebviews}
             />
           </div>
         ))}

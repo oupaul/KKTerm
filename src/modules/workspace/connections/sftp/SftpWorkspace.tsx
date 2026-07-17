@@ -24,6 +24,8 @@ import type { Connection, FileBrowserViewOptions, FileEntry, FtpConnectionOption
 import type { DashboardBackground } from "../../../dashboard/types";
 import { FILE_PANE_ZOOM_DEFAULT, FilePane } from "./SftpFilePane";
 import { fileBrowserConnectionIconSrc } from "../fileBrowserConnectionIcons";
+import { showNativeContextMenu, type NativeContextMenuItem } from "../../../../lib/nativeContextMenu";
+import { nativeMenuIcons } from "../../../../lib/nativeMenuIcons";
 import type { CompareEndpoint } from "../../../compare/compareTypes";
 import {
   fileExplorerTerminalOptionsForPlatform,
@@ -32,7 +34,6 @@ import {
 import {
   ConfirmRemoteDeleteDialog,
   NewRemoteFolderDialog,
-  SftpContextMenu,
   SftpPropertiesPopup,
   TransferConflictDialog,
 } from "./SftpOverlays";
@@ -231,7 +232,6 @@ export function SftpWorkspace({
   const [selectedRemoteNames, setSelectedRemoteNames] = useState<string[]>([]);
   const [transfers, setTransfers] = useState<TransferRecord[]>([]);
   const [fileClipboard, setFileClipboard] = useState<FileClipboard | null>(null);
-  const [contextMenu, setContextMenu] = useState<SftpContextMenuState | null>(null);
   const [propertiesState, setPropertiesState] = useState<FilePropertiesState | null>(null);
   const [transferConflict, setTransferConflict] = useState<TransferConflictState | null>(null);
   const [newRemoteFolderOpen, setNewRemoteFolderOpen] = useState(false);
@@ -1573,7 +1573,7 @@ export function SftpWorkspace({
       setSelectedRemoteNames(nextNames);
     }
 
-    setContextMenu({
+    const menu: SftpContextMenuState = {
       side,
       names: nextNames,
       x: event.clientX,
@@ -1585,7 +1585,122 @@ export function SftpWorkspace({
         (side === "local" ? localFiles : remoteFiles).some(
           (file) => file.name === nextNames[0] && file.kind === "file",
         ),
-    });
+    };
+
+    // A single file is always compare-selectable; a folder only when local,
+    // since Folder Compare mirrors local paths (remote trees are not mirrored).
+    const compareEntry =
+      menu.names.length === 1
+        ? (menu.side === "local" ? localFiles : remoteFiles).find(
+            (file) => file.name === menu.names[0],
+          )
+        : undefined;
+    const compareEntryIsFolder = compareEntry?.kind === "folder";
+    const canSelectForCompare =
+      !!compareEntry &&
+      !(menu.side === "local" && isLocalDrivePicker) &&
+      (compareEntryIsFolder ? menu.side === "local" : true);
+    const isSameAsLeft =
+      menu.side === "local" &&
+      !isLocalDrivePicker &&
+      !!localPath &&
+      compareLeft?.localPath === joinLocalPath(localPath, menu.names[0] ?? "");
+    const typesMatch = !!compareLeft && !!compareLeft.isDirectory === compareEntryIsFolder;
+    const hasSelection = menu.names.length > 0;
+    const canCutOrCopy = menu.mutable && hasSelection;
+    const items: NativeContextMenuItem[] = [];
+
+    if (!isLocalFilesBrowser) {
+      items.push({
+        kind: "item",
+        label: menu.side === "remote" ? t("sftp.download") : t("sftp.upload"),
+        iconSvg: menu.side === "remote" ? nativeMenuIcons.download : nativeMenuIcons.upload,
+        disabled: !hasSelection,
+        action: () => handleContextTransfer(menu),
+      });
+    }
+    items.push(
+      {
+        kind: "item",
+        label: t("common.open"),
+        iconSvg: nativeMenuIcons.folderOpen,
+        disabled: !(menu.names.length === 1 && menu.openable),
+        action: () => handleContextOpen(menu),
+      },
+      { kind: "separator" },
+      {
+        kind: "item",
+        label: t("common.cut"),
+        iconSvg: nativeMenuIcons.scissors,
+        disabled: !canCutOrCopy,
+        action: () => handleContextCut(menu),
+      },
+      {
+        kind: "item",
+        label: t("common.copy"),
+        iconSvg: nativeMenuIcons.copy,
+        disabled: !canCutOrCopy,
+        action: () => handleContextCopy(menu),
+      },
+      {
+        kind: "item",
+        label: t("common.paste"),
+        iconSvg: nativeMenuIcons.clipboardPaste,
+        disabled: !menu.canPaste,
+        action: () => handleContextPaste(menu),
+      },
+      { kind: "separator" },
+      {
+        kind: "item",
+        label: t("sftp.renameItem"),
+        iconSvg: nativeMenuIcons.pencil,
+        disabled: !(menu.mutable && menu.names.length === 1),
+        action: () => handleContextRename(menu),
+      },
+      {
+        kind: "item",
+        label: t("sftp.copyPath"),
+        iconSvg: nativeMenuIcons.copy,
+        disabled: !hasSelection,
+        action: () => handleContextCopyPath(menu),
+      },
+      {
+        kind: "item",
+        label: t("sftp.deleteLabel"),
+        iconSvg: nativeMenuIcons.trash,
+        disabled: !(menu.mutable && hasSelection),
+        action: () => handleContextDelete(menu),
+      },
+      { kind: "separator" },
+      {
+        kind: "item",
+        label: t("compare.selectLeft"),
+        iconSvg: nativeMenuIcons.columns,
+        disabled: !canSelectForCompare,
+        action: () => handleContextSelectLeft(menu),
+      },
+    );
+    if (compareLeft) {
+      items.push({
+        kind: "item",
+        label: t("compare.compareTo", { name: compareLeft.label }),
+        iconSvg: nativeMenuIcons.gitCompare,
+        disabled: !(canSelectForCompare && typesMatch && !isSameAsLeft),
+        action: () => handleContextCompareTo(menu),
+      });
+    }
+    items.push(
+      { kind: "separator" },
+      {
+        kind: "item",
+        label: t("sftp.getInfo"),
+        iconSvg: nativeMenuIcons.info,
+        disabled: !hasSelection,
+        action: () => handleContextProperties(menu),
+      },
+    );
+
+    void showNativeContextMenu(items, { x: event.clientX, y: event.clientY });
   };
 
   const handleContextTransfer = (menu: SftpContextMenuState) => {
@@ -1594,7 +1709,6 @@ export function SftpWorkspace({
     } else {
       handleDownload(menu.names);
     }
-    setContextMenu(null);
   };
 
   const handleContextOpen = (menu: SftpContextMenuState) => {
@@ -1606,7 +1720,6 @@ export function SftpWorkspace({
         void handleOpenRemoteFile(name);
       }
     }
-    setContextMenu(null);
   };
 
   const handleContextRename = (menu: SftpContextMenuState) => {
@@ -1625,17 +1738,14 @@ export function SftpWorkspace({
         requestId: Date.now(),
       });
     }
-    setContextMenu(null);
   };
 
   const handleContextCut = (menu: SftpContextMenuState) => {
     void writeFileClipboard(menu, "cut");
-    setContextMenu(null);
   };
 
   const handleContextCopy = (menu: SftpContextMenuState) => {
     void writeFileClipboard(menu, "copy");
-    setContextMenu(null);
   };
 
   const handleContextPaste = (menu: SftpContextMenuState) => {
@@ -1650,7 +1760,6 @@ export function SftpWorkspace({
         await pasteRemotePaths(clipboard.operation, clipboard.paths, menu.side);
       }
     })();
-    setContextMenu(null);
   };
 
   const handleContextCopyPath = (menu: SftpContextMenuState) => {
@@ -1664,7 +1773,6 @@ export function SftpWorkspace({
           : joinRemotePath(remotePath, name);
       void navigator.clipboard?.writeText(fullPath);
     }
-    setContextMenu(null);
   };
 
   const handleContextDelete = (menu: SftpContextMenuState) => {
@@ -1673,7 +1781,6 @@ export function SftpWorkspace({
     } else if (menu.side === "remote") {
       void handleDeleteRemotePath(menu.names);
     }
-    setContextMenu(null);
   };
 
   const handleOpenProperties = async (side: FilePaneSide, names: string[]) => {
@@ -1712,7 +1819,6 @@ export function SftpWorkspace({
 
   const handleContextProperties = (menu: SftpContextMenuState) => {
     void handleOpenProperties(menu.side, menu.names);
-    setContextMenu(null);
   };
 
   // Resolve a single selected file to a local readable path for File Compare.
@@ -1768,7 +1874,6 @@ export function SftpWorkspace({
   };
 
   const handleContextSelectLeft = (menu: SftpContextMenuState) => {
-    setContextMenu(null);
     const name = menu.names[0];
     if (!name) {
       return;
@@ -1784,7 +1889,6 @@ export function SftpWorkspace({
   };
 
   const handleContextCompareTo = (menu: SftpContextMenuState) => {
-    setContextMenu(null);
     const name = menu.names[0];
     const left = compareLeft;
     if (!name || !left) {
@@ -2139,49 +2243,6 @@ export function SftpWorkspace({
           onCancel={(transfer) => void handleCancelTransfer(transfer)}
         />
       ) : null}
-      {contextMenu ? (() => {
-        // A single file is always compare-selectable; a folder only when local,
-        // since Folder Compare mirrors local paths (remote trees aren't mirrored).
-        const compareEntry =
-          contextMenu.names.length === 1
-            ? (contextMenu.side === "local" ? localFiles : remoteFiles).find(
-                (file) => file.name === contextMenu.names[0],
-              )
-            : undefined;
-        const compareEntryIsFolder = compareEntry?.kind === "folder";
-        const canSelectForCompare =
-          !!compareEntry &&
-          !(contextMenu.side === "local" && isLocalDrivePicker) &&
-          (compareEntryIsFolder ? contextMenu.side === "local" : true);
-        const isSameAsLeft =
-          contextMenu.side === "local" &&
-          !isLocalDrivePicker &&
-          !!localPath &&
-          compareLeft?.localPath === joinLocalPath(localPath, contextMenu.names[0] ?? "");
-        // Only compare like-with-like: folder↔folder or file↔file.
-        const typesMatch = !!compareLeft && !!compareLeft.isDirectory === compareEntryIsFolder;
-        return (
-        <SftpContextMenu
-          menu={contextMenu}
-          onClose={() => setContextMenu(null)}
-          onCopy={handleContextCopy}
-          onCopyPath={handleContextCopyPath}
-          onCut={handleContextCut}
-          onDelete={handleContextDelete}
-          onOpen={handleContextOpen}
-          onPaste={handleContextPaste}
-          onProperties={handleContextProperties}
-          onRename={handleContextRename}
-          onSelectLeftForCompare={handleContextSelectLeft}
-          onCompareToLeft={handleContextCompareTo}
-          compareLeftLabel={compareLeft?.label ?? null}
-          canSelectForCompare={canSelectForCompare}
-          canCompareToLeft={!!compareLeft && canSelectForCompare && typesMatch && !isSameAsLeft}
-          showTransfer={!isLocalFilesBrowser}
-          onTransfer={handleContextTransfer}
-        />
-        );
-      })() : null}
       {propertiesState ? (
         <SftpPropertiesPopup
           properties={propertiesState}

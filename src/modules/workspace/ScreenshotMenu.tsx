@@ -135,7 +135,7 @@ export function ScreenshotMenu({
         y: bounds.bottom,
       },
     );
-    if (opened) {
+    if (opened || isTauriRuntime()) {
       setMenuOpen(false);
       return;
     }

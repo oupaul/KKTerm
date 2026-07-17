@@ -163,6 +163,22 @@ Strong success criteria let you loop independently.
 - Simple command menus in Workspace use Tauri native context menus through
   `src/lib/nativeContextMenu.ts`; do not replace them with DOM menus unless the
   menu needs forms or custom interactive content.
+- CSS `z-index` cannot raise React UI above a URL Connection `WebviewWindow` or
+  the Windows RDP ActiveX HWND. Any right-click menu that can intersect either
+  native surface must use `src/lib/nativeContextMenu.ts`, including menus in
+  split Panes and Dashboard Connection widgets. If a menu truly needs forms,
+  sliders, live previews, or other custom interaction, keep it as DOM UI and
+  register its narrow visible selector in
+  `src/modules/workspace/nativeOverlay.ts` instead of relying on placement.
+- Any app-owned dialog, popover, drag preview, or other DOM overlay that may
+  intersect a URL or RDP native surface must participate in the shared
+  intersection registry in `src/modules/workspace/nativeOverlay.ts`. URL
+  Connections use snapshot-then-hide; RDP uses snapshot-then-park for its
+  ActiveX HWND only. Do not bypass the URL snapshot by merely setting the
+  WebView inactive, and never reuse the RDP parking commands for URL WebView2.
+  Full-window dialogs must also portal to `document.body` through the shared
+  dialog primitives. Extend `tests/native-surface-overlay-policy.test.mjs` when
+  adding a qualifying menu or overlay.
 - Validate local Windows terminal focus/input, WebView2, RDP/VNC, keychain,
   native menus, title-bar close, and OS integration in the real Tauri desktop
   runtime, not standalone Vite/browser preview.
