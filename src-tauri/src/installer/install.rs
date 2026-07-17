@@ -29,7 +29,7 @@ const FAILURE_OUTPUT_DETAIL_MAX_CHARS: usize = 500;
 const WINGET_NO_APPLICABLE_UPGRADE_EXIT_CODE: i32 = 0x8A15_002B_u32 as i32;
 
 use super::detect::{
-    GithubReleaseMarker, InstallScope, detect_chocolatey_package, detect_one,
+    GithubReleaseMarker, InstallScope, detect_chocolatey_package, detect_one, detect_winget,
     github_release_install_dir, github_release_marker_path,
 };
 use super::events::ProgressEvent;
@@ -124,7 +124,7 @@ fn install_recipe_by_provider(
     let options = effective_install_options(recipe, options);
     let provider = selected_install_provider(recipe, &options);
     match provider {
-        Provider::Winget { id } => install_winget(&recipe.id, id, &options, cancel, emit),
+        Provider::Winget { id } => install_winget(recipe, id, &options, cancel, emit),
         Provider::Chocolatey { id } => install_chocolatey(&recipe.id, id, &options, cancel, emit),
         Provider::Npm { pkg } => install_npm(&recipe.id, pkg, &options, cancel, emit),
         Provider::UvPip { package } => install_uv_pip(&recipe.id, package, &options, cancel, emit),
@@ -948,16 +948,17 @@ fn winget_scope_option_for_detected_scope(scope: Option<InstallScope>) -> String
 // ---- winget ------------------------------------------------------------
 
 fn install_winget(
-    tool_id: &str,
+    recipe: &Recipe,
     winget_id: &str,
     options: &InstallOptions,
     cancel: Arc<AtomicBool>,
     emit: &EventSink,
 ) -> Result<Option<String>, String> {
+    let tool_id = &recipe.id;
     if tool_id == "uv" {
         ensure_uv_is_not_running()?;
     }
-    let already_installed = super::detect::detect_winget_recipe_by_id(winget_id).installed;
+    let already_installed = detect_winget(recipe).installed;
     let verb = if already_installed {
         "upgrade"
     } else {

@@ -557,7 +557,7 @@ fn load_installed_software_snapshot() -> InstalledSoftwareSnapshot {
     InstalledSoftwareSnapshot::default()
 }
 
-fn detect_winget(recipe: &Recipe) -> DetectedState {
+pub(super) fn detect_winget(recipe: &Recipe) -> DetectedState {
     let cell = installed_software_snapshot_cell();
     let mut guard = cell.lock().unwrap();
     if guard.is_none() {
@@ -568,19 +568,6 @@ fn detect_winget(recipe: &Recipe) -> DetectedState {
     }
     let snapshot = guard.as_ref().unwrap();
     detect_installed_software(recipe, snapshot)
-}
-
-pub fn detect_winget_recipe_by_id(winget_id: &str) -> DetectedState {
-    let cell = installed_software_snapshot_cell();
-    let mut guard = cell.lock().unwrap();
-    if guard.is_none() {
-        drop(guard);
-        let parsed = load_installed_software_snapshot();
-        *cell.lock().unwrap() = Some(parsed);
-        guard = cell.lock().unwrap();
-    }
-    let snapshot = guard.as_ref().unwrap();
-    detect_installed_software_match(winget_id, &Detection::default(), snapshot)
 }
 
 fn detect_installed_software_aliases(recipe: &Recipe) -> DetectedState {
