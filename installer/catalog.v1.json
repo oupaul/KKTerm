@@ -2419,6 +2419,156 @@
       }
     },
     {
+      "id": "google-chrome",
+      "name": "Google Chrome",
+      "section": "productivity",
+      "descriptionEn": "Web browser with Google account sync and a broad extension ecosystem.",
+      "category": "browser",
+      "icon": "Chrome",
+      "needs": [
+        "winget"
+      ],
+      "homepage": "https://www.google.com/chrome/",
+      "releaseNotesUrl": "https://chromereleases.googleblog.com/",
+      "detection": {
+        "displayNames": [
+          "Google Chrome"
+        ],
+        "displayNamePrefixes": [
+          "Google Chrome "
+        ]
+      },
+      "provider": {
+        "kind": "winget",
+        "id": "Google.Chrome"
+      },
+      "chocolateyProvider": {
+        "kind": "chocolatey",
+        "id": "googlechrome"
+      },
+      "options": [
+        "provider",
+        "scope",
+        "version"
+      ],
+      "descriptionLocales": {
+        "fr": "Navigateur Web avec synchronisation de compte Google et un vaste écosystème d’extensions.",
+        "it": "Browser web con sincronizzazione dell’account Google e un vasto ecosistema di estensioni.",
+        "de": "Webbrowser mit Google-Kontosynchronisierung und einem umfangreichen Erweiterungsangebot.",
+        "es": "Navegador web con sincronización de la cuenta de Google y un amplio ecosistema de extensiones.",
+        "es-MX": "Navegador web con sincronización de la cuenta de Google y un amplio ecosistema de extensiones.",
+        "pt-BR": "Navegador da Web com sincronização da conta Google e um amplo ecossistema de extensões.",
+        "zh-TW": "網頁瀏覽器，支援 Google 帳戶同步與豐富的擴充功能。",
+        "zh-CN": "支持 Google 帐号同步和丰富扩展程序的网页浏览器。",
+        "ja": "Google アカウント同期と豊富な拡張機能に対応するウェブブラウザー。",
+        "ko": "Google 계정 동기화와 폭넓은 확장 프로그램을 지원하는 웹 브라우저입니다.",
+        "th": "เว็บเบราว์เซอร์ที่รองรับการซิงค์บัญชี Google และส่วนขยายที่หลากหลาย",
+        "id": "Browser web dengan sinkronisasi akun Google dan ekosistem ekstensi yang luas.",
+        "vi": "Trình duyệt web hỗ trợ đồng bộ tài khoản Google và hệ sinh thái tiện ích mở rộng phong phú."
+      }
+    },
+    {
+      "id": "firefox",
+      "name": "Mozilla Firefox",
+      "section": "productivity",
+      "descriptionEn": "Open-source web browser with privacy controls and cross-device sync.",
+      "category": "browser",
+      "icon": "Globe",
+      "needs": [
+        "winget"
+      ],
+      "homepage": "https://www.mozilla.org/firefox/",
+      "releaseNotesUrl": "https://www.mozilla.org/firefox/releases/",
+      "detection": {
+        "displayNames": [
+          "Mozilla Firefox"
+        ],
+        "displayNamePrefixes": [
+          "Mozilla Firefox (",
+          "Mozilla Firefox "
+        ]
+      },
+      "provider": {
+        "kind": "winget",
+        "id": "Mozilla.Firefox"
+      },
+      "chocolateyProvider": {
+        "kind": "chocolatey",
+        "id": "firefox"
+      },
+      "options": [
+        "provider",
+        "scope",
+        "version"
+      ],
+      "descriptionLocales": {
+        "fr": "Navigateur Web open source avec des contrôles de confidentialité et une synchronisation entre appareils.",
+        "it": "Browser web open source con controlli della privacy e sincronizzazione tra dispositivi.",
+        "de": "Open-Source-Webbrowser mit Datenschutzfunktionen und geräteübergreifender Synchronisierung.",
+        "es": "Navegador web de código abierto con controles de privacidad y sincronización entre dispositivos.",
+        "es-MX": "Navegador web de código abierto con controles de privacidad y sincronización entre dispositivos.",
+        "pt-BR": "Navegador da Web de código aberto com controles de privacidade e sincronização entre dispositivos.",
+        "zh-TW": "開放原始碼網頁瀏覽器，提供隱私控制與跨裝置同步。",
+        "zh-CN": "具有隐私控制和跨设备同步功能的开源网页浏览器。",
+        "ja": "プライバシー制御とデバイス間同期に対応するオープンソースのウェブブラウザー。",
+        "ko": "개인정보 보호 기능과 기기 간 동기화를 지원하는 오픈 소스 웹 브라우저입니다.",
+        "th": "เว็บเบราว์เซอร์โอเพนซอร์สพร้อมการควบคุมความเป็นส่วนตัวและการซิงค์ข้ามอุปกรณ์",
+        "id": "Browser web sumber terbuka dengan kontrol privasi dan sinkronisasi lintas perangkat.",
+        "vi": "Trình duyệt web mã nguồn mở có tính năng kiểm soát quyền riêng tư và đồng bộ giữa các thiết bị."
+      }
+    },
+    {
+      "id": "acrobat-reader",
+      "name": "Adobe Acrobat Reader",
+      "section": "productivity",
+      "descriptionEn": "PDF reader for viewing, printing, signing, and commenting on documents.",
+      "category": "documents",
+      "icon": "FileText",
+      "needs": [
+        "winget"
+      ],
+      "homepage": "https://www.adobe.com/acrobat/pdf-reader.html",
+      "releaseNotesUrl": "https://www.adobe.com/devnet-docs/acrobatetk/tools/ReleaseNotesDC/",
+      "detection": {
+        "displayNames": [
+          "Adobe Acrobat Reader",
+          "Adobe Acrobat Reader DC",
+          "Adobe Acrobat (64-bit)"
+        ],
+        "displayNamePrefixes": [
+          "Adobe Acrobat Reader ",
+          "Adobe Acrobat Reader DC "
+        ]
+      },
+      "provider": {
+        "kind": "winget",
+        "id": "Adobe.Acrobat.Reader.64-bit"
+      },
+      "chocolateyProvider": {
+        "kind": "chocolatey",
+        "id": "adobereader"
+      },
+      "options": [
+        "provider",
+        "version"
+      ],
+      "descriptionLocales": {
+        "fr": "Lecteur PDF permettant d’afficher, d’imprimer, de signer et de commenter des documents.",
+        "it": "Lettore PDF per visualizzare, stampare, firmare e commentare documenti.",
+        "de": "PDF-Reader zum Anzeigen, Drucken, Signieren und Kommentieren von Dokumenten.",
+        "es": "Lector de PDF para ver, imprimir, firmar y comentar documentos.",
+        "es-MX": "Lector de PDF para ver, imprimir, firmar y comentar documentos.",
+        "pt-BR": "Leitor de PDF para visualizar, imprimir, assinar e comentar documentos.",
+        "zh-TW": "PDF 閱讀器，可檢視、列印、簽署文件及加入註解。",
+        "zh-CN": "用于查看、打印、签署文档和添加注释的 PDF 阅读器。",
+        "ja": "文書の表示、印刷、署名、コメントに対応する PDF リーダー。",
+        "ko": "문서 보기, 인쇄, 서명 및 주석 추가를 지원하는 PDF 리더입니다.",
+        "th": "โปรแกรมอ่าน PDF สำหรับดู พิมพ์ ลงนาม และแสดงความคิดเห็นในเอกสาร",
+        "id": "Pembaca PDF untuk melihat, mencetak, menandatangani, dan mengomentari dokumen.",
+        "vi": "Trình đọc PDF để xem, in, ký và chú thích tài liệu."
+      }
+    },
+    {
       "id": "openflowkit",
       "name": "OpenFlowKit",
       "section": "design",
