@@ -20,11 +20,11 @@ limited to small app-identification assets.
 
 ## Sources
 
-- `7zip.svg`, `anthropic.svg`, `blender.svg`, `bun.svg`, `cursor.svg`,
-  `drawio.svg`, `excalidraw.svg`, `ffmpeg.svg`, `git.svg`, `inkscape.svg`,
-  `krita.svg`, `langflow.svg`, `n8n.svg`, `notepadpp.svg`, `ollama.svg`,
-  `obs-studio.svg`, `rust.svg`, `rustdesk.svg`, `sharex.svg`, `tailscale.svg`,
-  `vlc.svg`: Simple Icons CDN
+- `7zip.svg`, `anthropic.svg`, `audacity.svg`, `blender.svg`, `bun.svg`,
+  `cursor.svg`, `drawio.svg`, `excalidraw.svg`, `ffmpeg.svg`, `git.svg`,
+  `inkscape.svg`, `krita.svg`, `langflow.svg`, `n8n.svg`, `notepadpp.svg`,
+  `obsidian.svg`, `ollama.svg`, `obs-studio.svg`, `rust.svg`, `rustdesk.svg`,
+  `sharex.svg`, `tailscale.svg`, `vlc.svg`: Simple Icons CDN
   (`git.svg` uses the official Git brand color `#F05032`; `blender.svg` uses
   the official Blender orange `#E87D0D`; `keepassxc.svg` uses the official
   KeePassXC green `#6CAC4D`).
