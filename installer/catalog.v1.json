@@ -1578,6 +1578,9 @@
       "detection": {
         "displayNames": [
           "Claude"
+        ],
+        "appxPackageFamilyNames": [
+          "Claude_pzs8sxrjxfjjc"
         ]
       },
       "provider": {

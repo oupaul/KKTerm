@@ -271,6 +271,14 @@ test("Hermes Desktop retains its direct installer source", () => {
   });
 });
 
+test("Claude Desktop detection covers the official Windows MSIX package", () => {
+  assert.ok(
+    recipe("claude-desktop").detection?.appxPackageFamilyNames?.includes(
+      "Claude_pzs8sxrjxfjjc",
+    ),
+  );
+});
+
 test("managed server apps depend on NSSM for service registration", () => {
   for (const id of ["n8n", "ollama"]) {
     assert.ok(recipe(id).needs?.includes("nssm"));
