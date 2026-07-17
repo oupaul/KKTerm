@@ -2448,6 +2448,7 @@
     "newSubfolderIn": "新規サブフォルダを作成：",
     "newConnection": "新規接続",
     "rename": "名前を変更",
+    "duplicate": "複製",
     "changeIcon": "アイコンを変更",
     "openAllInFolder": "すべての接続を開く",
     "openAllInTabs": "個別のタブで",

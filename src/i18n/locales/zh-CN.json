@@ -2448,6 +2448,7 @@
     "newSubfolderIn": "在…新建子文件夹",
     "newConnection": "新建连接",
     "rename": "重命名",
+    "duplicate": "复制",
     "changeIcon": "更改图标",
     "openAllInFolder": "打开所有连接",
     "openAllInTabs": "在独立标签页中",
