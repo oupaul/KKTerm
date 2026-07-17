@@ -13,6 +13,7 @@ import sevenZip from "../../assets/installer-icons/7zip.svg?url";
 import anthropic from "../../assets/installer-icons/anthropic.svg?url";
 import antigravity from "../../assets/installer-icons/antigravity.svg?url";
 import astral from "../../assets/installer-icons/astral.svg?url";
+import audacity from "../../assets/installer-icons/audacity.svg?url";
 import bentopdf from "../../assets/installer-icons/bentopdf.svg?url";
 import blender from "../../assets/installer-icons/blender.svg?url";
 import bruno from "../../assets/installer-icons/bruno.svg?url";
@@ -41,6 +42,7 @@ import n8n from "../../assets/installer-icons/n8n.svg?url";
 import nodedotjs from "../../assets/installer-icons/nodedotjs.svg?url";
 import notepadpp from "../../assets/installer-icons/notepadpp.svg?url";
 import obsStudio from "../../assets/installer-icons/obs-studio.svg?url";
+import obsidian from "../../assets/installer-icons/obsidian.svg?url";
 import ollama from "../../assets/installer-icons/ollama.svg?url";
 import ohMyPosh from "../../assets/installer-icons/oh-my-posh.svg?url";
 import openflowkit from "../../assets/installer-icons/openflowkit.svg?url";
@@ -68,6 +70,8 @@ const RECIPE_ICON_URLS: Record<string, string> = {
   cursor,
   notepadpp,
   "obs-studio": obsStudio,
+  obsidian,
+  audacity,
   "nvm-windows": nodedotjs,
   "node-bundle": nodedotjs,
   uv: astral,
