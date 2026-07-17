@@ -24,6 +24,7 @@ import type {
   VncSettings,
   WorkspaceTab,
 } from "../../../../types";
+import { normalizeRdpSharedLocalFolders } from "./rdpLocalResources";
 import {
   registerRdpTextSender,
   registerRemoteDesktopController,
@@ -1930,10 +1931,15 @@ function resolveRdpOptions(
   }
   return {
     colorDepth: overrides.colorDepth ?? defaults.colorDepth,
+    administrativeSession: overrides.administrativeSession ?? defaults.administrativeSession,
     redirectClipboard: overrides.redirectClipboard ?? defaults.redirectClipboard,
     redirectDrives: overrides.redirectDrives ?? defaults.redirectDrives,
     driveSelection: overrides.driveSelection ?? defaults.driveSelection,
-    sharedLocalFolder: overrides.sharedLocalFolder ?? defaults.sharedLocalFolder,
+    sharedLocalFolders: normalizeRdpSharedLocalFolders(
+      overrides.sharedLocalFolders ?? defaults.sharedLocalFolders,
+      overrides.sharedLocalFolder ?? defaults.sharedLocalFolder,
+    ),
+    sharedLocalFolder: undefined,
     bitmapCache: overrides.bitmapCache ?? defaults.bitmapCache,
     performanceProfile: overrides.performanceProfile ?? defaults.performanceProfile,
     remoteResolution: overrides.remoteResolution ?? defaults.remoteResolution,

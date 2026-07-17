@@ -22,6 +22,31 @@ export function rdpDriveSelectionSummary(selection: RdpDriveSelection) {
   return normalized.mode === "all" ? null : normalized.drives.join(", ");
 }
 
+export function normalizeRdpSharedLocalFolders(
+  folders: string[] | null | undefined,
+  legacyFolder?: string | null,
+) {
+  const values = folders && folders.length > 0 ? folders : legacyFolder ? [legacyFolder] : [];
+  return Array.from(new Set(values.map((folder) => folder.trim()).filter(Boolean)));
+}
+
+export function parseRdpSharedLocalFolders(
+  value: FormDataEntryValue | null,
+  fallback: string[],
+) {
+  if (typeof value !== "string" || !value) {
+    return normalizeRdpSharedLocalFolders(fallback);
+  }
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed)
+      ? normalizeRdpSharedLocalFolders(parsed.filter((folder): folder is string => typeof folder === "string"))
+      : normalizeRdpSharedLocalFolders(fallback);
+  } catch {
+    return normalizeRdpSharedLocalFolders(fallback);
+  }
+}
+
 export function parseRdpDriveSelection(value: FormDataEntryValue | null, fallback: RdpDriveSelection) {
   if (typeof value !== "string" || !value) {
     return normalizeRdpDriveSelection(fallback);

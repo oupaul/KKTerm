@@ -87,7 +87,7 @@ use ironrdp_rdpdr_native::backend::NixRdpdrBackend;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     path::{Component, Path, PathBuf},
     sync::{Arc, Mutex, MutexGuard},
 };
@@ -150,6 +150,10 @@ pub struct StartRdpClientSessionRequest {
     desktop_width: Option<u16>,
     #[serde(default)]
     desktop_height: Option<u16>,
+    #[serde(default)]
+    administrative_session: bool,
+    #[serde(default)]
+    shared_local_folders: Vec<String>,
     #[serde(default)]
     shared_local_folder: Option<String>,
 }
@@ -307,8 +311,10 @@ impl RdpClientSessionManager {
         let username = request.username.clone();
         let password = request.password.clone().unwrap_or_default();
         let domain = request.domain.clone();
-        let shared_local_folder =
-            validate_shared_local_folder(request.shared_local_folder.as_deref())?;
+        let shared_local_folders = validate_shared_local_folders(
+            &request.shared_local_folders,
+            request.shared_local_folder.as_deref(),
+        )?;
 
         rdp_debug(
             "ironrdp.start.request",
@@ -320,6 +326,8 @@ impl RdpClientSessionManager {
                 domain.as_deref(),
                 width,
                 height,
+                request.administrative_session,
+                shared_local_folders.len(),
             ),
         );
 
@@ -333,7 +341,8 @@ impl RdpClientSessionManager {
             domain,
             width,
             height,
-            shared_local_folder,
+            request.administrative_session,
+            shared_local_folders,
         )) {
             Ok(result) => result,
             Err(error) => {
@@ -504,6 +513,8 @@ fn rdp_client_start_debug_payload(
     domain: Option<&str>,
     desktop_width: u16,
     desktop_height: u16,
+    administrative_session: bool,
+    shared_local_folder_count: usize,
 ) -> Value {
     json!({
         "sessionId": session_id,
@@ -513,6 +524,8 @@ fn rdp_client_start_debug_payload(
         "domain": domain,
         "desktopWidth": desktop_width,
         "desktopHeight": desktop_height,
+        "administrativeSession": administrative_session,
+        "sharedLocalFolderCount": shared_local_folder_count,
         "security": {
             "enableCredSsp": true,
             "enableTls": false,
@@ -923,16 +936,31 @@ fn tls_error_kind(error: &std::io::Error) -> String {
     format!("{:?}", error.kind())
 }
 
-fn validate_shared_local_folder(value: Option<&str>) -> Result<Option<PathBuf>, String> {
-    let Some(value) = value.map(str::trim).filter(|value| !value.is_empty()) else {
-        return Ok(None);
+fn validate_shared_local_folders(
+    values: &[String],
+    legacy_value: Option<&str>,
+) -> Result<Vec<PathBuf>, String> {
+    let values = if values.is_empty() {
+        legacy_value.into_iter().collect::<Vec<_>>()
+    } else {
+        values.iter().map(String::as_str).collect()
     };
-    let root = std::fs::canonicalize(value)
-        .map_err(|error| format!("RDP shared local folder is unavailable: {error}"))?;
-    if !root.is_dir() {
-        return Err("RDP shared local folder must be a directory".to_string());
+    let mut roots = Vec::new();
+    for value in values {
+        let value = value.trim();
+        if value.is_empty() {
+            continue;
+        }
+        let root = std::fs::canonicalize(value)
+            .map_err(|error| format!("RDP shared local folder is unavailable: {error}"))?;
+        if !root.is_dir() {
+            return Err("RDP shared local folder must be a directory".to_string());
+        }
+        if !roots.contains(&root) {
+            roots.push(root);
+        }
     }
-    Ok(Some(root))
+    Ok(roots)
 }
 
 #[derive(Debug)]
@@ -1014,6 +1042,147 @@ impl RdpdrBackend for ContainedNixRdpdrBackend {
     }
 }
 
+#[derive(Debug)]
+struct RdpSharedFolderDevice {
+    device_id: u32,
+    name: String,
+    root: PathBuf,
+}
+
+fn rdp_shared_folder_devices(roots: &[PathBuf]) -> Vec<RdpSharedFolderDevice> {
+    let mut names = HashSet::new();
+    roots
+        .iter()
+        .enumerate()
+        .map(|(index, root)| {
+            let base = root
+                .file_name()
+                .and_then(|name| name.to_str())
+                .filter(|name| !name.is_empty())
+                .unwrap_or("KKTerm Share");
+            let mut name = base.to_string();
+            let mut suffix = 2;
+            while !names.insert(name.to_lowercase()) {
+                name = format!("{base} {suffix}");
+                suffix += 1;
+            }
+            RdpSharedFolderDevice {
+                device_id: u32::try_from(index + 1).expect("RDP shared-folder count fits in u32"),
+                name,
+                root: root.clone(),
+            }
+        })
+        .collect()
+}
+
+#[derive(Debug)]
+struct MultiRootNixRdpdrBackend {
+    drives: HashMap<u32, ContainedNixRdpdrBackend>,
+}
+
+impl MultiRootNixRdpdrBackend {
+    fn new(shares: &[RdpSharedFolderDevice]) -> Self {
+        Self {
+            drives: shares
+                .iter()
+                .map(|share| {
+                    (
+                        share.device_id,
+                        ContainedNixRdpdrBackend::new(share.root.clone()),
+                    )
+                })
+                .collect(),
+        }
+    }
+
+    fn drive_mut(
+        &mut self,
+        device_id: u32,
+    ) -> ironrdp::pdu::PduResult<&mut ContainedNixRdpdrBackend> {
+        self.drives.get_mut(&device_id).ok_or_else(|| {
+            ironrdp::pdu::pdu_other_err!("RDP shared-folder request used an unknown device id")
+        })
+    }
+}
+
+impl AsAny for MultiRootNixRdpdrBackend {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
+}
+
+impl RdpdrBackend for MultiRootNixRdpdrBackend {
+    fn handle_server_device_announce_response(
+        &mut self,
+        pdu: ServerDeviceAnnounceResponse,
+    ) -> ironrdp::pdu::PduResult<()> {
+        self.drive_mut(pdu.device_id)?
+            .handle_server_device_announce_response(pdu)
+    }
+
+    fn handle_scard_call(
+        &mut self,
+        request: DeviceControlRequest<ScardIoCtlCode>,
+        call: ScardCall,
+    ) -> ironrdp::pdu::PduResult<()> {
+        self.drive_mut(request.header.device_id)?
+            .handle_scard_call(request, call)
+    }
+
+    fn handle_drive_io_request(
+        &mut self,
+        request: ServerDriveIoRequest,
+    ) -> ironrdp::pdu::PduResult<Vec<ironrdp::svc::SvcMessage>> {
+        let device_id = rdp_drive_request_device_id(&request);
+        self.drive_mut(device_id)?.handle_drive_io_request(request)
+    }
+
+    fn handle_user_logged_on(
+        &mut self,
+        rdpdr: &mut Rdpdr,
+    ) -> ironrdp::pdu::PduResult<Vec<ironrdp::svc::SvcMessage>> {
+        let mut messages = Vec::new();
+        for backend in self.drives.values_mut() {
+            messages.extend(backend.handle_user_logged_on(rdpdr)?);
+        }
+        Ok(messages)
+    }
+}
+
+fn rdp_drive_request_device_id(request: &ServerDriveIoRequest) -> u32 {
+    match request {
+        ServerDriveIoRequest::ServerCreateDriveRequest(request) => {
+            request.device_io_request.device_id
+        }
+        ServerDriveIoRequest::ServerDriveQueryInformationRequest(request) => {
+            request.device_io_request.device_id
+        }
+        ServerDriveIoRequest::DeviceCloseRequest(request) => request.device_io_request.device_id,
+        ServerDriveIoRequest::ServerDriveQueryDirectoryRequest(request) => {
+            request.device_io_request.device_id
+        }
+        ServerDriveIoRequest::ServerDriveNotifyChangeDirectoryRequest(request) => {
+            request.device_io_request.device_id
+        }
+        ServerDriveIoRequest::ServerDriveQueryVolumeInformationRequest(request) => {
+            request.device_io_request.device_id
+        }
+        ServerDriveIoRequest::DeviceControlRequest(request) => request.header.device_id,
+        ServerDriveIoRequest::DeviceReadRequest(request) => request.device_io_request.device_id,
+        ServerDriveIoRequest::DeviceWriteRequest(request) => request.device_io_request.device_id,
+        ServerDriveIoRequest::ServerDriveSetInformationRequest(request) => {
+            request.device_io_request.device_id
+        }
+        ServerDriveIoRequest::ServerDriveLockControlRequest(request) => {
+            request.device_io_request.device_id
+        }
+    }
+}
+
 fn validate_rdp_remote_path(root: &Path, remote_path: &str) -> Result<(), String> {
     if remote_path.contains('\0') {
         return Err("RDP shared folder path contains a null byte".to_string());
@@ -1058,7 +1227,8 @@ async fn rdp_connect<R: tauri::Runtime>(
     domain: Option<String>,
     width: u16,
     height: u16,
-    shared_local_folder: Option<PathBuf>,
+    administrative_session: bool,
+    shared_local_folders: Vec<PathBuf>,
 ) -> Result<(ironrdp::connector::ConnectionResult, UpgradedFramed), String> {
     // CredSSP/NTLM needs the domain separated from the username. Split a
     // `DOMAIN\user` login into (domain, user); otherwise keep the requested
@@ -1080,7 +1250,8 @@ async fn rdp_connect<R: tauri::Runtime>(
         domain.as_deref(),
         width,
         height,
-        shared_local_folder.as_deref(),
+        administrative_session,
+        &shared_local_folders,
         TlsBackend::Rustls,
     )
     .await
@@ -1111,7 +1282,8 @@ async fn rdp_connect<R: tauri::Runtime>(
                 domain.as_deref(),
                 width,
                 height,
-                shared_local_folder.as_deref(),
+                administrative_session,
+                &shared_local_folders,
                 TlsBackend::NativeTls,
             )
             .await
@@ -1137,7 +1309,8 @@ async fn rdp_connect_attempt<R: tauri::Runtime>(
     domain: Option<&str>,
     width: u16,
     height: u16,
-    shared_local_folder: Option<&Path>,
+    administrative_session: bool,
+    shared_local_folders: &[PathBuf],
     backend: TlsBackend,
 ) -> Result<(ironrdp::connector::ConnectionResult, UpgradedFramed), ConnectAttemptError> {
     use ironrdp::connector::{
@@ -1197,6 +1370,7 @@ async fn rdp_connect_attempt<R: tauri::Runtime>(
             password: password.to_string(),
         },
         domain: domain.map(str::to_string),
+        administrative_session,
         enable_tls: false,
         enable_credssp: true,
         desktop_size: DesktopSize { width, height },
@@ -1256,22 +1430,22 @@ async fn rdp_connect_attempt<R: tauri::Runtime>(
         app.clone(),
         session_id.to_string(),
     ))));
-    if let Some(root) = shared_local_folder {
-        let share_name = root
-            .file_name()
-            .and_then(|name| name.to_str())
-            .filter(|name| !name.is_empty())
-            .unwrap_or("KKTerm Share")
-            .to_string();
+    if !shared_local_folders.is_empty() {
+        let shares = rdp_shared_folder_devices(shared_local_folders);
         // RDPDR must be advertised together with RDPSND for Windows servers
         // to send device-redirection traffic back to the client.
         connector.attach_static_channel(Rdpsnd::new(Box::new(NoopRdpsndBackend)));
         connector.attach_static_channel(
             Rdpdr::new(
-                Box::new(ContainedNixRdpdrBackend::new(root.to_path_buf())),
+                Box::new(MultiRootNixRdpdrBackend::new(&shares)),
                 "KKTerm".to_string(),
             )
-            .with_drives(Some(vec![(1, share_name)])),
+            .with_drives(Some(
+                shares
+                    .iter()
+                    .map(|share| (share.device_id, share.name.clone()))
+                    .collect(),
+            )),
         );
     }
     let should_upgrade = match connect_begin(&mut framed, &mut connector).await {
@@ -2120,7 +2294,8 @@ mod tests {
             None,
             1280,
             800,
-            None,
+            false,
+            Vec::new(),
         )
         .await
         {
@@ -2155,6 +2330,8 @@ mod tests {
             Some("EXAMPLE"),
             1440,
             900,
+            true,
+            2,
         );
 
         assert_eq!(payload["sessionId"], "rdp-1");
@@ -2164,6 +2341,8 @@ mod tests {
         assert_eq!(payload["domain"], "EXAMPLE");
         assert_eq!(payload["desktopWidth"], 1440);
         assert_eq!(payload["desktopHeight"], 900);
+        assert_eq!(payload["administrativeSession"], true);
+        assert_eq!(payload["sharedLocalFolderCount"], 2);
         assert_eq!(payload["security"]["enableCredSsp"], true);
         assert_eq!(payload["security"]["enableTls"], false);
         assert!(payload.get("password").is_none());
@@ -2178,6 +2357,38 @@ mod tests {
         assert!(request.domain.is_none());
         assert_eq!(request.desktop_width(), DEFAULT_RDP_WIDTH);
         assert_eq!(request.desktop_height(), DEFAULT_RDP_HEIGHT);
+        assert!(!request.administrative_session);
+        assert!(request.shared_local_folders.is_empty());
+    }
+
+    #[test]
+    fn shared_folder_devices_use_distinct_ids_names_and_backends() {
+        let roots = vec![
+            PathBuf::from("/one/share"),
+            PathBuf::from("/two/share"),
+            PathBuf::from("/three/other"),
+        ];
+        let shares = rdp_shared_folder_devices(&roots);
+
+        assert_eq!(
+            shares
+                .iter()
+                .map(|share| share.device_id)
+                .collect::<Vec<_>>(),
+            vec![1, 2, 3]
+        );
+        assert_eq!(
+            shares
+                .iter()
+                .map(|share| share.name.as_str())
+                .collect::<Vec<_>>(),
+            vec!["share", "share 2", "other"]
+        );
+        let backend = MultiRootNixRdpdrBackend::new(&shares);
+        assert_eq!(backend.drives.len(), 3);
+        assert!(backend.drives.contains_key(&1));
+        assert!(backend.drives.contains_key(&2));
+        assert!(backend.drives.contains_key(&3));
     }
 
     #[test]

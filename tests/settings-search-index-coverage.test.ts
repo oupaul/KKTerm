@@ -112,7 +112,7 @@ const NON_SEARCHABLE_KEYS: Record<SettingsSectionId, readonly string[]> = {
     "settings.noUrlDataShards", "settings.urlDataShardCleared",
     "settings.urlSettingsSaved", "settings.urlUserAgentDefaultPlaceholder",
   ],
-  "rdp-settings": ["settings.rdpSettingsSaved", "settings.rdpSharedFolderRequired"],
+  "rdp-settings": ["settings.rdpSettingsSaved", "settings.rdpSharedFoldersRequired"],
   "vnc-settings": ["settings.vncSettingsSaved"],
   "dont-sleep-settings": ["settings.dontSleepSettingsSaved"],
   "shortcuts-settings": [

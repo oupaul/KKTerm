@@ -890,12 +890,16 @@ impl Default for RdpDriveSelection {
 pub struct RdpSettings {
     #[serde(default = "default_rdp_color_depth")]
     color_depth: u16,
+    #[serde(default)]
+    administrative_session: bool,
     #[serde(default = "default_remote_desktop_true")]
     redirect_clipboard: bool,
     #[serde(default)]
     redirect_drives: bool,
     #[serde(default)]
     drive_selection: RdpDriveSelection,
+    #[serde(default)]
+    shared_local_folders: Vec<String>,
     #[serde(default)]
     shared_local_folder: Option<String>,
     #[serde(default = "default_remote_desktop_true")]
@@ -1547,11 +1551,15 @@ pub struct RdpConnectionOptions {
     #[serde(default)]
     color_depth: Option<u16>,
     #[serde(default)]
+    administrative_session: Option<bool>,
+    #[serde(default)]
     redirect_clipboard: Option<bool>,
     #[serde(default)]
     redirect_drives: Option<bool>,
     #[serde(default)]
     drive_selection: Option<RdpDriveSelection>,
+    #[serde(default)]
+    shared_local_folders: Option<Vec<String>>,
     #[serde(default)]
     shared_local_folder: Option<String>,
     #[serde(default)]
@@ -4698,9 +4706,11 @@ fn normalize_rdp_connection_options(
         return Ok(Some(RdpConnectionOptions {
             inherit_defaults: true,
             color_depth: None,
+            administrative_session: None,
             redirect_clipboard: None,
             redirect_drives: None,
             drive_selection: None,
+            shared_local_folders: None,
             shared_local_folder: None,
             bitmap_cache: None,
             performance_profile: None,
@@ -4714,7 +4724,11 @@ fn normalize_rdp_connection_options(
     if let Some(selection) = options.drive_selection {
         options.drive_selection = Some(normalize_rdp_drive_selection(selection)?);
     }
-    options.shared_local_folder = normalize_optional_text(options.shared_local_folder);
+    let folders = normalize_rdp_shared_local_folders(
+        options.shared_local_folders.take().unwrap_or_default(),
+        options.shared_local_folder.take(),
+    );
+    options.shared_local_folders = Some(folders);
     if let Some(profile) = options.performance_profile {
         options.performance_profile = Some(validate_remote_desktop_performance_profile(profile)?);
     }
@@ -5278,9 +5292,11 @@ fn default_url_settings() -> UrlSettings {
 fn default_rdp_settings() -> RdpSettings {
     RdpSettings {
         color_depth: default_rdp_color_depth(),
+        administrative_session: false,
         redirect_clipboard: true,
         redirect_drives: false,
         drive_selection: RdpDriveSelection::All,
+        shared_local_folders: Vec::new(),
         shared_local_folder: None,
         bitmap_cache: true,
         performance_profile: default_remote_desktop_performance_profile(),
@@ -6083,12 +6099,34 @@ pub(crate) fn normalize_url_proxy(value: Option<String>) -> Result<Option<String
 fn validate_rdp_settings(mut settings: RdpSettings) -> Result<RdpSettings, String> {
     settings.color_depth = validate_rdp_color_depth(settings.color_depth)?;
     settings.drive_selection = normalize_rdp_drive_selection(settings.drive_selection)?;
-    settings.shared_local_folder = normalize_optional_text(settings.shared_local_folder);
+    settings.shared_local_folders = normalize_rdp_shared_local_folders(
+        settings.shared_local_folders,
+        settings.shared_local_folder.take(),
+    );
     settings.performance_profile =
         validate_remote_desktop_performance_profile(settings.performance_profile)?;
     settings.remote_resolution = validate_remote_desktop_resolution(settings.remote_resolution)?;
     settings.view_mode = validate_remote_desktop_view_mode(settings.view_mode)?;
     Ok(settings)
+}
+
+fn normalize_rdp_shared_local_folders(
+    folders: Vec<String>,
+    legacy_folder: Option<String>,
+) -> Vec<String> {
+    let values = if folders.is_empty() {
+        legacy_folder.into_iter().collect()
+    } else {
+        folders
+    };
+    let mut normalized = Vec::new();
+    for folder in values {
+        let folder = folder.trim();
+        if !folder.is_empty() && !normalized.iter().any(|value| value == folder) {
+            normalized.push(folder.to_string());
+        }
+    }
+    normalized
 }
 
 fn normalize_rdp_drive_selection(

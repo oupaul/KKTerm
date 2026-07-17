@@ -9,7 +9,11 @@ import { defaultWslConnectionName, distroFromWslShell } from "./connection-dialo
 import { LocalFilesConnectionFields } from "./connection-dialog/LocalFilesConnectionFields";
 import { FileViewConnectionFields } from "./connection-dialog/FileViewConnectionFields";
 import { RdpConnectionFields, RdpConnectionOptions } from "./connection-dialog/RdpConnectionFields";
-import { parseRdpDriveSelection } from "./remote-desktop/rdpLocalResources";
+import {
+  normalizeRdpSharedLocalFolders,
+  parseRdpDriveSelection,
+  parseRdpSharedLocalFolders,
+} from "./remote-desktop/rdpLocalResources";
 import {
   resolvePanoramaConnections,
   shouldConfirmPanorama,
@@ -4675,9 +4679,9 @@ function ConnectionDialog({
     const rdpDriveSelection = inheritRdpDefaults
       ? rdpSettings.driveSelection
       : parseRdpDriveSelection(form.get("rdpDriveSelection"), rdpSettings.driveSelection);
-    const rdpSharedLocalFolder = inheritRdpDefaults
-      ? rdpSettings.sharedLocalFolder
-      : String(form.get("rdpSharedLocalFolder") ?? "").trim() || undefined;
+    const rdpSharedLocalFolders = inheritRdpDefaults
+      ? normalizeRdpSharedLocalFolders(rdpSettings.sharedLocalFolders, rdpSettings.sharedLocalFolder)
+      : parseRdpSharedLocalFolders(form.get("rdpSharedLocalFolders"), []);
     const redirectsRdpLocalResources = inheritRdpDefaults
       ? rdpSettings.redirectDrives
       : form.get("rdpRedirectDrives") === "on";
@@ -4685,9 +4689,9 @@ function ConnectionDialog({
       connectionType === "rdp"
       && !isWindowsPlatform()
       && redirectsRdpLocalResources
-      && !rdpSharedLocalFolder
+      && rdpSharedLocalFolders.length === 0
     ) {
-      setRdpLocalResourceError(t("settings.rdpSharedFolderRequired"));
+      setRdpLocalResourceError(t("settings.rdpSharedFoldersRequired"));
       return;
     }
     const inheritVncDefaults = form.get("vncInheritDefaults") === "on";
@@ -4776,6 +4780,9 @@ function ConnectionDialog({
               colorDepth: inheritRdpDefaults
                 ? rdpSettings.colorDepth
                 : Number(String(form.get("rdpColorDepth") ?? rdpSettings.colorDepth)) as RdpSettings["colorDepth"],
+              administrativeSession: inheritRdpDefaults
+                ? rdpSettings.administrativeSession
+                : form.get("rdpAdministrativeSession") === "on",
               redirectClipboard: inheritRdpDefaults
                 ? rdpSettings.redirectClipboard
                 : form.get("rdpRedirectClipboard") === "on",
@@ -4783,7 +4790,8 @@ function ConnectionDialog({
                 ? rdpSettings.redirectDrives
                 : form.get("rdpRedirectDrives") === "on",
               driveSelection: rdpDriveSelection,
-              sharedLocalFolder: rdpSharedLocalFolder,
+              sharedLocalFolders: rdpSharedLocalFolders,
+              sharedLocalFolder: undefined,
               bitmapCache: inheritRdpDefaults
                 ? rdpSettings.bitmapCache
                 : form.get("rdpBitmapCache") === "on",

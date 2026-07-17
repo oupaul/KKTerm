@@ -144,9 +144,11 @@ export const defaultUrlSettings: UrlSettings = {
 
 export const defaultRdpSettings: RdpSettings = {
   colorDepth: 32,
+  administrativeSession: false,
   redirectClipboard: true,
   redirectDrives: false,
   driveSelection: { mode: "all" },
+  sharedLocalFolders: [],
   sharedLocalFolder: "",
   bitmapCache: true,
   performanceProfile: "balanced",

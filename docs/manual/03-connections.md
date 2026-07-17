@@ -132,7 +132,7 @@ Connection form-validation error.
 
 Local terminal Add/Edit Connection uses the `connections.shell` tabbed selector for the local shell choice and still stores the selected `localShell` value on the Connection.
 
-RDP Add/Edit Connection can inherit its local-resource choice from Settings or override it for that Connection. Redirection remains off by default. On Windows, enabling it initially redirects all local drives and `settings.rdpChooseDrives` opens a Sheet for choosing all drives or a selected subset; a temporarily unavailable saved drive remains visible and selected through `settings.rdpUnavailableDrive`. On macOS and Linux, IronRDP exposes exactly one folder chosen with `settings.rdpChooseFolder`; the Windows drive selector is not shown.
+RDP Add/Edit Connection can inherit its administrative-session and local-resource choices from Settings or override them for that Connection. `settings.rdpAdministrativeSession` remains off by default and requests a server administration session; it does not elevate the selected account. Redirection also remains off by default. On Windows, enabling it initially redirects all local drives and `settings.rdpChooseDrives` opens a Sheet for choosing all drives or a selected subset; a temporarily unavailable saved drive remains visible and selected through `settings.rdpUnavailableDrive`. On macOS and Linux, `settings.rdpAddFolder` can add multiple folders, each exposed by IronRDP as a separate redirected drive; the Windows drive selector is not shown.
 
 Beside `connections.localStartupScript`, the wand action
 `connections.cliAccountAlternateProfileHint` opens the guided

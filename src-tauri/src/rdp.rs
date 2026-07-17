@@ -275,6 +275,8 @@ mod platform {
     pub struct RdpSessionOptions {
         #[serde(default = "default_color_depth")]
         color_depth: u16,
+        #[serde(default)]
+        administrative_session: bool,
         #[serde(default = "default_true")]
         redirect_clipboard: bool,
         #[serde(default)]
@@ -1554,6 +1556,11 @@ mod platform {
         if let Some(advanced) = get_advanced_settings(dispatch) {
             let _ = set_property_bool(&advanced, "AllowPromptingForCredentials", true);
             let _ = set_property_i32(&advanced, "RDPPort", i32::from(port));
+            let _ = set_property_bool(
+                &advanced,
+                "ConnectToAdministerServer",
+                options.administrative_session,
+            );
             let _ = set_property_bool(&advanced, "EnableCredSspSupport", true);
             // The embedded MsRdpClient ActiveX has no UI to show the server-auth
             // certificate-trust warning that mstsc.exe displays on first contact.
@@ -1618,6 +1625,7 @@ mod platform {
         fn default() -> Self {
             Self {
                 color_depth: default_color_depth(),
+                administrative_session: false,
                 redirect_clipboard: true,
                 redirect_drives: false,
                 drive_selection: RdpDriveSelection::All,
@@ -3375,6 +3383,8 @@ mod platform {
     #[serde(rename_all = "camelCase")]
     pub struct RdpSessionOptions {
         pub color_depth: u16,
+        #[serde(default)]
+        pub administrative_session: bool,
         pub redirect_clipboard: bool,
         pub redirect_drives: bool,
         pub bitmap_cache: bool,

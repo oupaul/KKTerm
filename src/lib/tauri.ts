@@ -997,6 +997,9 @@ export interface StartRdpClientSessionRequest {
   password?: string;
   desktopWidth?: number;
   desktopHeight?: number;
+  administrativeSession?: boolean;
+  sharedLocalFolders?: string[];
+  /** Legacy single-folder payload accepted by older backends. */
   sharedLocalFolder?: string;
 }
 

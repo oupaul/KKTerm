@@ -192,6 +192,8 @@ pub struct Config {
     pub enable_credssp: bool,
     pub credentials: Credentials,
     pub domain: Option<String>,
+    /// Request the server's administrative session (the `mstsc /admin` behavior).
+    pub administrative_session: bool,
     /// The build number of the client.
     pub client_build: u32,
     /// Name of the client computer

@@ -1104,9 +1104,12 @@ export type RdpDriveSelection =
 
 export interface RdpSettings {
   colorDepth: RdpColorDepth;
+  administrativeSession: boolean;
   redirectClipboard: boolean;
   redirectDrives: boolean;
   driveSelection: RdpDriveSelection;
+  sharedLocalFolders: string[];
+  /** Legacy single-folder setting retained for backward-compatible imports. */
   sharedLocalFolder?: string;
   bitmapCache: boolean;
   performanceProfile: RdpPerformanceProfile;
@@ -1117,9 +1120,12 @@ export interface RdpSettings {
 export interface RdpConnectionOptions {
   inheritDefaults: boolean;
   colorDepth?: RdpColorDepth;
+  administrativeSession?: boolean;
   redirectClipboard?: boolean;
   redirectDrives?: boolean;
   driveSelection?: RdpDriveSelection;
+  sharedLocalFolders?: string[];
+  /** Legacy single-folder setting retained for backward-compatible imports. */
   sharedLocalFolder?: string;
   bitmapCache?: boolean;
   performanceProfile?: RdpPerformanceProfile;
