@@ -84,7 +84,7 @@ import {
   stepRoomZoom,
 } from "./siteTreeState";
 import { ItIcon } from "./icons";
-import { centerRoomViewport, roomPanFrame } from "./roomViewport";
+import { centerRoomViewport, roomPanFrame, roomScrollCenter } from "./roomViewport";
 import {
   OBJECT_ACCENTS,
   RoomRackHoverCard,
@@ -527,7 +527,11 @@ export function ServerRoomIsoView({
     viewport ?? { w: sceneW, h: sceneH },
     { w: sceneW, h: sceneH },
   );
-  useRoomPan(scrollRef, { left: panFrame.sceneLeft, top: panFrame.sceneTop });
+  const panCenter = roomScrollCenter(
+    viewport ?? { w: sceneW, h: sceneH },
+    { w: panFrame.w, h: panFrame.h },
+  );
+  useRoomPan(scrollRef, panCenter);
   const floorDiag = Math.max(viewW - 48, (viewH - Math.ceil(maxTop) - 84) / ISO_TILT_COS);
   const { floorCols, floorRows, offX, offY } = expandIsoFloorFrame(
     gridCols,
