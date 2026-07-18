@@ -554,6 +554,30 @@
   font-size: 12px;
 }
 
+.installer-launcher__options {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+}
+
+.installer-launcher__field {
+  display: grid;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.installer-launcher__field select,
+.installer-launcher__field input {
+  width: 100%;
+  min-width: 0;
+  color: var(--text);
+  font-family: var(--app-ui-font-family);
+  font-size: 13px;
+  font-weight: 400;
+}
+
 .installer-tool-dialog {
   position: relative;
   min-width: 32rem;

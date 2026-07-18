@@ -141,3 +141,47 @@ test("installer latest-version UI supports one-step bundles only", async () => {
     false,
   );
 });
+
+test("standalone uv uses its supported source-specific latest check", async () => {
+  const { recipeSupportsManagedLatestVersion } = await importTypeScriptModule(
+    new URL("../src/modules/installer/latestSupport.ts", import.meta.url),
+  );
+  const pythonBundle = {
+    id: "python-bundle",
+    name: "Python (uv)",
+    descriptionEn: "",
+    provider: { kind: "bundle", steps: ["uv"] },
+  };
+
+  assert.equal(recipeSupportsManagedLatestVersion(pythonBundle), true);
+  assert.equal(
+    recipeSupportsManagedLatestVersion(pythonBundle, {
+      installSource: "officialScript",
+    }),
+    true,
+  );
+  assert.equal(
+    recipeSupportsManagedLatestVersion(
+      {
+        id: "uv",
+        name: "uv",
+        descriptionEn: "",
+        provider: { kind: "winget", id: "astral-sh.uv" },
+      },
+      { installSource: "officialScript" },
+    ),
+    true,
+  );
+  assert.equal(
+    recipeSupportsManagedLatestVersion(
+      {
+        id: "other-tool",
+        name: "Other tool",
+        descriptionEn: "",
+        provider: { kind: "winget", id: "Example.Other" },
+      },
+      { installSource: "officialScript" },
+    ),
+    false,
+  );
+});

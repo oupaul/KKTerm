@@ -830,47 +830,6 @@
       }
     },
     {
-      "id": "cursor-cli",
-      "name": "Cursor Agent CLI",
-      "section": "aiAgents",
-      "descriptionEn": "Cursor Agent CLI (cursor-agent / agent). Ships with Cursor; also installable from cursor.com/cli.",
-      "category": "ai",
-      "icon": "Bot",
-      "homepage": "https://cursor.com/cli",
-      "needs": [
-        "winget"
-      ],
-      "provider": {
-        "kind": "winget",
-        "id": "Anysphere.Cursor"
-      },
-      "downloadProvider": {
-        "kind": "downloadInstaller",
-        "url": "https://downloads.cursor.com/production/e7a7e93f4d75f8272503ecf33cedbaae10114a15/win32/x64/user-setup/CursorUserSetup-x64-3.6.21.exe",
-        "fileName": "CursorUserSetup-x64-3.6.21.exe"
-      },
-      "options": [
-        "provider",
-        "scope",
-        "version"
-      ],
-      "descriptionLocales": {
-        "zh-TW": "Cursor Agent CLI（cursor-agent / agent）。隨 Cursor 安裝提供，也可從 cursor.com/cli 安裝。",
-        "zh-CN": "Cursor Agent CLI（cursor-agent / agent）。随 Cursor 安装提供，也可从 cursor.com/cli 安装。",
-        "ja": "Cursor Agent CLI（cursor-agent / agent）。Cursor に同梱され、cursor.com/cli からもインストールできます。",
-        "ko": "Cursor Agent CLI(cursor-agent / agent). Cursor와 함께 제공되며 cursor.com/cli에서도 설치할 수 있습니다.",
-        "de": "Cursor Agent CLI (cursor-agent / agent). Wird mit Cursor geliefert; auch unter cursor.com/cli installierbar.",
-        "fr": "Cursor Agent CLI (cursor-agent / agent). Fourni avec Cursor ; également installable depuis cursor.com/cli.",
-        "es": "Cursor Agent CLI (cursor-agent / agent). Se incluye con Cursor; también se puede instalar desde cursor.com/cli.",
-        "es-MX": "Cursor Agent CLI (cursor-agent / agent). Se incluye con Cursor; también se puede instalar desde cursor.com/cli.",
-        "pt-BR": "Cursor Agent CLI (cursor-agent / agent). Vem com o Cursor; também instalável em cursor.com/cli.",
-        "it": "Cursor Agent CLI (cursor-agent / agent). Incluso con Cursor; installabile anche da cursor.com/cli.",
-        "vi": "Cursor Agent CLI (cursor-agent / agent). Đi kèm Cursor; cũng có thể cài từ cursor.com/cli.",
-        "th": "Cursor Agent CLI (cursor-agent / agent) มาพร้อม Cursor และติดตั้งได้จาก cursor.com/cli",
-        "id": "Cursor Agent CLI (cursor-agent / agent). Menyertai Cursor; juga dapat dipasang dari cursor.com/cli."
-      }
-    },
-    {
       "id": "antigravity-cli",
       "name": "Antigravity CLI",
       "section": "aiAgents",
@@ -898,6 +857,36 @@
         "vi": "Tác nhân dòng lệnh AntiGravity của Google, được cài đặt cùng với trình cài đặt lệnh Windows chính thức.",
         "id": "Agen baris perintah Antigravitasi Google, diinstal dengan penginstal perintah resmi Windows.",
         "th": "เอเจนต์บรรทัดคำสั่ง Antigravity ของ Google ซึ่งติดตั้งด้วยโปรแกรมติดตั้งคำสั่ง Windows อย่างเป็นทางการ"
+      }
+    },
+    {
+      "id": "cursor-cli",
+      "name": "Cursor Agent CLI",
+      "section": "aiAgents",
+      "descriptionEn": "Cursor's official command-line coding agent, installed with the native Windows PowerShell installer.",
+      "category": "ai-agent",
+      "icon": "Bot",
+      "homepage": "https://cursor.com/cli",
+      "provider": {
+        "kind": "downloadInstaller",
+        "url": "https://cursor.com/install?win32=true",
+        "fileName": "cursor-agent-install.ps1"
+      },
+      "options": [],
+      "descriptionLocales": {
+        "fr": "Agent de codage officiel en ligne de commande de Cursor, installé avec le programme d’installation PowerShell natif pour Windows.",
+        "de": "Offizieller Kommandozeilen-Coding-Agent von Cursor, installiert mit dem nativen Windows-PowerShell-Installationsprogramm.",
+        "it": "Agente di programmazione ufficiale da riga di comando di Cursor, installato con il programma di installazione PowerShell nativo per Windows.",
+        "es-MX": "Agente de programación oficial de línea de comandos de Cursor, instalado con el instalador nativo de PowerShell para Windows.",
+        "es": "Agente de programación oficial de línea de comandos de Cursor, instalado con el instalador nativo de PowerShell para Windows.",
+        "pt-BR": "Agente de programação oficial de linha de comando do Cursor, instalado com o instalador PowerShell nativo para Windows.",
+        "zh-CN": "Cursor 官方命令行编程代理，通过原生 Windows PowerShell 安装程序安装。",
+        "zh-TW": "Cursor 官方命令列程式開發代理，透過原生 Windows PowerShell 安裝程式安裝。",
+        "ja": "Cursor の公式コマンドラインコーディングエージェント。Windows 用のネイティブ PowerShell インストーラーでインストールされます。",
+        "ko": "Cursor의 공식 명령줄 코딩 에이전트로, Windows용 네이티브 PowerShell 설치 프로그램으로 설치됩니다.",
+        "vi": "Tác nhân lập trình dòng lệnh chính thức của Cursor, được cài đặt bằng trình cài đặt PowerShell gốc dành cho Windows.",
+        "id": "Agen pengodean baris perintah resmi Cursor, dipasang dengan penginstal PowerShell native untuk Windows.",
+        "th": "เอเจนต์เขียนโค้ดผ่านบรรทัดคำสั่งอย่างเป็นทางการของ Cursor ซึ่งติดตั้งด้วยโปรแกรมติดตั้ง PowerShell แบบเนทีฟสำหรับ Windows"
       }
     },
     {

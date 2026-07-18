@@ -6,13 +6,26 @@
 
 import { useTranslation } from "react-i18next";
 import type { MouseEvent } from "react";
-import { invokeCommand, isTauriRuntime } from "../../lib/tauri";
+import {
+  invokeCommand,
+  isTauriRuntime,
+  selectInstallerGuiLauncherFile,
+} from "../../lib/tauri";
 import { useWorkspaceStore } from "../../store";
 import { iconUrlForRecipe, FALLBACK_ICON_URL } from "./icons";
-import { launchKindForRecipe } from "./launch";
+import {
+  launchKindForRecipe,
+  readGuiLauncherPath,
+  removeGuiLauncherPath,
+  writeGuiLauncherPath,
+} from "./launch";
 import { useInstallerStore } from "./state";
 import { useToolStatus } from "./useToolStatus";
-import { localizedDescription, type Recipe } from "./types";
+import {
+  isOfficialScriptInstall,
+  localizedDescription,
+  type Recipe,
+} from "./types";
 
 export function ToolRow({ recipe }: { recipe: Recipe }) {
   const { t, i18n } = useTranslation();
@@ -22,6 +35,8 @@ export function ToolRow({ recipe }: { recipe: Recipe }) {
   const showStatusBarNotice = useWorkspaceStore(
     (state) => state.showStatusBarNotice,
   );
+  const detected = useInstallerStore((s) => s.detected[recipe.id]);
+  const officialScript = isOfficialScriptInstall(detected);
 
   const {
     isInstalled,
@@ -57,16 +72,53 @@ export function ToolRow({ recipe }: { recipe: Recipe }) {
   // open the info dialog that already hosts their launcher surface.
   const launchKind = isInstalled && !busy ? launchKindForRecipe(recipe.id) : null;
 
+  async function launchGuiApp() {
+    if (!isTauriRuntime()) return;
+    const customPath = readGuiLauncherPath(recipe.id);
+    let launched: boolean;
+    try {
+      try {
+        launched = await invokeCommand("installer_launch_app", {
+          toolId: recipe.id,
+          ...(customPath ? { customPath } : {}),
+        });
+      } catch (error) {
+        if (!customPath) throw error;
+        removeGuiLauncherPath(recipe.id);
+        launched = await invokeCommand("installer_launch_app", {
+          toolId: recipe.id,
+        });
+      }
+      if (launched) return;
+
+      const selectedPath = await selectInstallerGuiLauncherFile({
+        title: t("installer.launcher.selectAppTitle", { name: recipe.name }),
+        filterName: t("installer.launcher.applicationFiles"),
+      });
+      if (!selectedPath) return;
+
+      launched = await invokeCommand("installer_launch_app", {
+        toolId: recipe.id,
+        customPath: selectedPath,
+      });
+      if (!launched) {
+        showStatusBarNotice(t("installer.launcher.selectedAppFailed"), {
+          tone: "error",
+        });
+        return;
+      }
+      writeGuiLauncherPath(recipe.id, selectedPath);
+    } catch {
+      showStatusBarNotice(t("installer.launcher.selectedAppFailed"), {
+        tone: "error",
+      });
+    }
+  }
+
   function handleRunClick(event: MouseEvent<HTMLButtonElement>) {
     event.stopPropagation();
     if (launchKind === "gui") {
-      if (!isTauriRuntime()) return;
-      void invokeCommand("installer_launch_app", { toolId: recipe.id }).catch(
-        (error) => {
-          const message = error instanceof Error ? error.message : String(error);
-          showStatusBarNotice(message, { tone: "error" });
-        },
-      );
+      void launchGuiApp();
     } else if (launchKind === "cli") {
       openLauncherDialog(recipe.id);
     } else {
@@ -86,10 +138,15 @@ export function ToolRow({ recipe }: { recipe: Recipe }) {
         ? t("installer.status.installing")
         : t("installer.status.uninstalling")
       : partial
-        ? t("installer.status.partial", {
-            installed: partial[0],
-            total: partial[1],
-          })
+        ? officialScript
+          ? t("installer.status.partialOfficialScript", {
+              installed: partial[0],
+              total: partial[1],
+            })
+          : t("installer.status.partial", {
+              installed: partial[0],
+              total: partial[1],
+            })
         : hasUpdate && installedVersion && latestSeen
           ? `${installedVersion} -> ${latestSeen}`
           : latestError ?? installedDisplayText;
@@ -104,14 +161,21 @@ export function ToolRow({ recipe }: { recipe: Recipe }) {
       ? t("installer.status.installing")
       : t("installer.status.uninstalling")
     : partial
-      ? t("installer.status.partial", {
-          installed: partial[0],
-          total: partial[1],
-        })
+      ? officialScript
+        ? t("installer.status.partialOfficialScript", {
+            installed: partial[0],
+            total: partial[1],
+          })
+        : t("installer.status.partial", {
+            installed: partial[0],
+            total: partial[1],
+          })
       : hasUpdate
         ? t("installer.actions.update")
         : isInstalled
-          ? t("installer.section.installed")
+          ? officialScript
+            ? t("installer.status.installedOfficialScript")
+            : t("installer.section.installed")
           : t("installer.status.notInstalled");
   const description = localizedDescription(recipe, i18n.language);
 

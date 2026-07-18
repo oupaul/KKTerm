@@ -14,8 +14,8 @@ pub(crate) struct AcpStdioSession {
     rx: mpsc::Receiver<String>,
     /// Polled between received lines (≤250ms latency). When it reports true
     /// the in-flight request aborts and `Drop` kills the CLI child process.
-    /// Set only for interactive streaming runs so Stop cancels Codex/Claude
-    /// CLI sessions the same way it cancels HTTP provider runs.
+    /// Set only for interactive streaming runs so Stop cancels CLI-backed
+    /// sessions the same way it cancels HTTP provider runs.
     cancel_probe: Option<Box<dyn Fn() -> bool>>,
 }
 
@@ -217,7 +217,7 @@ fn run_acp_agent_turn(
     settings: &AiProviderSettings,
     prompt_started: &mut bool,
 ) -> Result<String, String> {
-    let spec = acp_command_spec(backend, cli_command);
+    let spec = acp_command_spec(backend, cli_command, model);
     let cwd = app
         .path()
         .app_data_dir()
@@ -553,7 +553,11 @@ pub(crate) fn acp_content_text(content: &Value) -> Option<String> {
     None
 }
 
-pub(crate) fn acp_command_spec(backend: AiCliBackendKind, cli_command: &str) -> AcpCommandSpec {
+pub(crate) fn acp_command_spec(
+    backend: AiCliBackendKind,
+    cli_command: &str,
+    model: &str,
+) -> AcpCommandSpec {
     match backend {
         AiCliBackendKind::Codex => AcpCommandSpec {
             program: npx_command(),
@@ -572,11 +576,19 @@ pub(crate) fn acp_command_spec(backend: AiCliBackendKind, cli_command: &str) -> 
             label: "Claude ACP",
         },
         // Cursor ships a native ACP stdio server (`agent acp` / `cursor-agent acp`).
-        AiCliBackendKind::Cursor => AcpCommandSpec {
-            program: cli_command.to_string(),
-            args: vec!["acp".to_string()],
-            label: "Cursor ACP",
-        },
+        AiCliBackendKind::Cursor => {
+            let mut args = Vec::new();
+            if !model.is_empty() && model != "default" && model != "auto" {
+                args.push("--model".to_string());
+                args.push(model.to_string());
+            }
+            args.push("acp".to_string());
+            AcpCommandSpec {
+                program: cli_command.to_string(),
+                args,
+                label: "Cursor ACP",
+            }
+        }
     }
 }
 
@@ -623,7 +635,8 @@ pub(crate) fn default_cli_command(provider: AiCliBackendKind) -> &'static str {
     match provider {
         AiCliBackendKind::Codex => "codex",
         AiCliBackendKind::ClaudeCode => "claude",
-        // Prefer the Open Design / npm-shim name; discovery also tries `agent`.
+        // The ACP registry uses `cursor-agent`; current Cursor releases also
+        // expose `agent`, which discovery accepts as a fallback.
         AiCliBackendKind::Cursor => "cursor-agent",
     }
 }
@@ -692,7 +705,8 @@ pub(crate) fn cli_backend_command_names(provider: AiCliBackendKind) -> &'static 
         AiCliBackendKind::ClaudeCode => &["claude.exe", "claude.cmd"],
         #[cfg(not(target_os = "windows"))]
         AiCliBackendKind::ClaudeCode => &["claude"],
-        // Open Design uses `cursor-agent`; Cursor docs expose `agent` (often ~/.local/bin/agent).
+        // Cursor's installer exposes both names; prefer the product-specific
+        // alias before the generic `agent` command.
         #[cfg(target_os = "windows")]
         AiCliBackendKind::Cursor => &[
             "cursor-agent.exe",
@@ -709,6 +723,9 @@ pub(crate) fn common_user_bin_candidates(names: &[&str]) -> Vec<PathBuf> {
     let mut roots = Vec::new();
     if let Some(profile) = std::env::var_os("USERPROFILE") {
         roots.push(PathBuf::from(&profile).join(".local").join("bin"));
+    }
+    if let Some(home) = std::env::var_os("HOME") {
+        roots.push(PathBuf::from(home).join(".local").join("bin"));
     }
     if let Some(nvm_symlink) = std::env::var_os("NVM_SYMLINK") {
         roots.push(PathBuf::from(nvm_symlink));
@@ -823,7 +840,7 @@ pub(crate) fn cli_backend_status(
                         false
                     })
             }
-            // Open Design's cursorAgentDef uses `status` as a cheap auth probe.
+            // Cursor documents `status` as its authentication probe.
             AiCliBackendKind::Cursor => {
                 run_cli_capture(&command, &["status"], Some(Duration::from_secs(20)))
                     .map(|output| cursor_auth_status_logged_in(&output))
@@ -862,10 +879,12 @@ pub(crate) fn claude_auth_status_logged_in(output: &str) -> bool {
 
 /// `cursor-agent status` / `agent status` output is not a stable machine schema.
 /// Treat clear "not logged in" phrases as unauthenticated; otherwise accept a
-/// successful status probe (aligned with Open Design's authProbe opt-in).
+/// successful status probe, matching Cursor's documented status command.
 pub(crate) fn cursor_auth_status_logged_in(output: &str) -> bool {
     let lower = output.to_lowercase();
     !(lower.contains("not logged")
+        || lower.contains("not authenticated")
+        || lower.contains("not signed in")
         || lower.contains("logged out")
         || lower.contains("unauthenticated")
         || (lower.contains("please run") && lower.contains("login"))
@@ -984,15 +1003,15 @@ pub(crate) fn cli_agent_invocation(
             stdin: Some(prompt.to_string()),
             prompt_delivery: "stdin",
         },
-        // Aligned with Open Design cursorAgentDef: --print + stdin prompt.
+        // Keep the setup-failure fallback read-only. Cursor's Ask mode enforces
+        // a read-only sandbox even when broader execution permissions are set.
         // Do not pass `-` as an argv sentinel (Cursor treats it as the prompt).
-        // Use text output for one-shot capture; skip --trust (old builds reject it).
         AiCliBackendKind::Cursor => {
             let mut args = vec![
                 "--print".to_string(),
                 "--output-format".to_string(),
                 "text".to_string(),
-                "--force".to_string(),
+                "--mode=ask".to_string(),
             ];
             if !model.is_empty() && model != "default" && model != "auto" {
                 args.push("--model".to_string());

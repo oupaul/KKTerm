@@ -1,15 +1,16 @@
 // Launch classification for installed Install Helper tools. The tile-level
 // Run button picks its behavior from `launchKindForRecipe`:
-//   * "gui"   — start the installed program directly through the closed
-//               backend allow-list (`installer_launch_app`).
-//   * "cli"   — open the mini launcher dialog: sample commands plus a button
-//               that opens a terminal (`installer_open_terminal_launcher`).
+//   * "gui"   — start the installed program through the automatic backend
+//               allow-list or an explicitly selected per-tool fallback
+//               (`installer_launch_app`).
+//   * "cli"   — open the mini launcher dialog and then a terminal through
+//               `installer_open_terminal_launcher`.
 //   * "webUi" — open the installed info dialog, which already carries the
 //               managed web app launcher (Run/Stop, Open web UI, service
 //               registration).
 //   * "suite" — open the installed info dialog, which already carries the
 //               searchable quick-launch list (Sysinternals, Coreutils).
-// Recipes not listed here get no Run button. The CLI sample lists mirror the
+// Recipes not listed here get no Run button. The CLI command map mirrors the
 // Rust `terminal_launch_affordance` entries in
 // src-tauri/src/installer/commands.rs — keep both sides in sync.
 
@@ -20,8 +21,10 @@ export type LaunchKind = "gui" | "cli" | "webUi" | "suite";
 /// Directory-scoped coding agents: their mini launcher remembers the project
 /// folders they were opened in and can open a terminal at a chosen folder.
 const CODING_AGENT_CLI_RECIPES = new Set<string>([
+  "antigravity-cli",
   "claude-code-cli",
   "codex-cli",
+  "cursor-cli",
   "kimi-code-cli",
   "grok-build",
   "opencode",
@@ -32,10 +35,155 @@ const CODING_AGENT_CLI_RECIPES = new Set<string>([
 /// `DURABLE_UI_STATE_PREFIXES` so it survives reinstalls and is wiped by
 /// Settings → Reset All Settings.
 const RECENT_LAUNCH_FOLDERS_KEY = "kkterm.installerLauncherRecentPaths.v1";
+const CODING_AGENT_LAUNCH_OPTIONS_KEY = "kkterm.installerLauncherOptions.v1";
+const GUI_LAUNCHER_PATHS_KEY = "kkterm.installerGuiLauncherPaths.v1";
 const MAX_RECENT_LAUNCH_FOLDERS = 20;
+
+export interface CodingAgentLaunchSettings {
+  preset: string;
+  arguments: string;
+}
+
+export interface CodingAgentLaunchOption {
+  value: string;
+}
+
+const CODING_AGENT_LAUNCH_OPTIONS: Record<string, CodingAgentLaunchOption[]> = {
+  "antigravity-cli": [
+    { value: "--sandbox=true" },
+    { value: "--dangerously-skip-permissions" },
+    { value: "--sandbox=false" },
+  ],
+  "claude-code-cli": [
+    { value: "--permission-mode plan" },
+    { value: "--permission-mode auto" },
+    { value: "--permission-mode acceptEdits" },
+    { value: "--dangerously-skip-permissions" },
+    { value: "--continue" },
+  ],
+  "codex-cli": [
+    { value: "--sandbox workspace-write --ask-for-approval on-request" },
+    { value: "--sandbox workspace-write --ask-for-approval never" },
+    { value: "--dangerously-bypass-approvals-and-sandbox" },
+    { value: "--search" },
+  ],
+  "cursor-cli": [
+    { value: "--mode=ask" },
+    { value: "--mode=plan" },
+    { value: "--sandbox=enabled" },
+    { value: "--auto-review" },
+    { value: "--continue" },
+  ],
+  "kimi-code-cli": [
+    { value: "--auto" },
+    { value: "--yolo" },
+    { value: "--plan" },
+    { value: "--continue" },
+  ],
+  "grok-build": [
+    { value: "--permission-mode auto" },
+    { value: "--permission-mode acceptEdits" },
+    { value: "--always-approve" },
+    { value: "--minimal" },
+    { value: "--continue" },
+  ],
+  opencode: [
+    { value: "--auto" },
+    { value: "--continue" },
+    { value: "--pure" },
+  ],
+};
 
 export function cliLauncherUsesProjectFolders(recipeId: string): boolean {
   return CODING_AGENT_CLI_RECIPES.has(recipeId);
+}
+
+export function codingAgentLaunchOptionsForRecipe(
+  recipeId: string,
+): CodingAgentLaunchOption[] | null {
+  return CODING_AGENT_LAUNCH_OPTIONS[recipeId] ?? null;
+}
+
+function readAllCodingAgentLaunchSettings(): Record<
+  string,
+  CodingAgentLaunchSettings
+> {
+  try {
+    const raw = readDurableUiState(CODING_AGENT_LAUNCH_OPTIONS_KEY);
+    if (!raw) return {};
+    const parsed: unknown = JSON.parse(raw);
+    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+      return {};
+    }
+    const result: Record<string, CodingAgentLaunchSettings> = {};
+    for (const [toolId, value] of Object.entries(parsed)) {
+      if (typeof value !== "object" || value === null || Array.isArray(value)) {
+        continue;
+      }
+      const candidate = value as Partial<CodingAgentLaunchSettings>;
+      result[toolId] = {
+        preset: typeof candidate.preset === "string" ? candidate.preset : "",
+        arguments:
+          typeof candidate.arguments === "string" ? candidate.arguments : "",
+      };
+    }
+    return result;
+  } catch {
+    return {};
+  }
+}
+
+export function readCodingAgentLaunchSettings(
+  recipeId: string,
+): CodingAgentLaunchSettings {
+  return (
+    readAllCodingAgentLaunchSettings()[recipeId] ?? { preset: "", arguments: "" }
+  );
+}
+
+export function writeCodingAgentLaunchSettings(
+  recipeId: string,
+  settings: CodingAgentLaunchSettings,
+): void {
+  const all = readAllCodingAgentLaunchSettings();
+  all[recipeId] = settings;
+  writeDurableUiState(CODING_AGENT_LAUNCH_OPTIONS_KEY, JSON.stringify(all));
+}
+
+function readAllGuiLauncherPaths(): Record<string, string> {
+  try {
+    const raw = readDurableUiState(GUI_LAUNCHER_PATHS_KEY);
+    if (!raw) return {};
+    const parsed: unknown = JSON.parse(raw);
+    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+      return {};
+    }
+    return Object.fromEntries(
+      Object.entries(parsed).filter(
+        (entry): entry is [string, string] =>
+          typeof entry[1] === "string" && entry[1].trim().length > 0,
+      ),
+    );
+  } catch {
+    return {};
+  }
+}
+
+export function readGuiLauncherPath(recipeId: string): string | null {
+  return readAllGuiLauncherPaths()[recipeId] ?? null;
+}
+
+export function writeGuiLauncherPath(recipeId: string, path: string): void {
+  const all = readAllGuiLauncherPaths();
+  all[recipeId] = path;
+  writeDurableUiState(GUI_LAUNCHER_PATHS_KEY, JSON.stringify(all));
+}
+
+export function removeGuiLauncherPath(recipeId: string): void {
+  const all = readAllGuiLauncherPaths();
+  if (!(recipeId in all)) return;
+  delete all[recipeId];
+  writeDurableUiState(GUI_LAUNCHER_PATHS_KEY, JSON.stringify(all));
 }
 
 function readAllRecentLaunchFolders(): Record<string, string[]> {
@@ -137,10 +285,38 @@ const WEB_UI_LAUNCH_RECIPES = new Set<string>([
 /// quick-launch list. Mirrors the Rust `quick_launch_affordance` entries.
 const SUITE_LAUNCH_RECIPES = new Set<string>(["sysinternals-suite", "coreutils"]);
 
-/// Sample usage lines for command-line tools, shown in the mini launcher
-/// dialog and echoed by the spawned terminal. Format: `command  —  what it
-/// does`; the first entry's command doubles as the terminal prefill on the
-/// Rust side.
+/// Base commands for every command-line launcher. Coding agents deliberately
+/// have no sample list; their launcher exposes curated options instead.
+const CLI_LAUNCH_COMMANDS: Record<string, string> = {
+  git: "git",
+  winget: "winget",
+  chocolatey: "choco",
+  "node-bundle": "node",
+  "python-bundle": "python",
+  wsl: "wsl",
+  nssm: "nssm",
+  "oh-my-posh": "oh-my-posh",
+  "antigravity-cli": "agy",
+  "claude-code-cli": "claude",
+  "codex-cli": "codex",
+  "cursor-cli": "agent",
+  "kimi-code-cli": "kimi",
+  "grok-build": "grok",
+  opencode: "opencode",
+  rustup: "rustup",
+  bun: "bun",
+  ripgrep: "rg",
+  jq: "jq",
+  fzf: "fzf",
+  ffmpeg: "ffmpeg",
+  scrcpy: "scrcpy",
+  psmux: "psmux",
+  "hermes-agent": "hermes",
+  openclaw: "openclaw",
+};
+
+/// Sample usage lines for non-agent command-line tools, shown in the mini
+/// launcher dialog and echoed by the spawned terminal.
 const CLI_LAUNCH_SAMPLES: Record<string, string[]> = {
   git: [
     "git clone <url>  —  copy a remote repository",
@@ -179,26 +355,6 @@ const CLI_LAUNCH_SAMPLES: Record<string, string[]> = {
   "oh-my-posh": [
     "oh-my-posh init pwsh | Invoke-Expression  —  try it in this session",
     "oh-my-posh font install  —  install a Nerd Font",
-  ],
-  "claude-code-cli": [
-    "claude  —  start Claude Code in this directory",
-    "claude --help  —  list commands and flags",
-  ],
-  "codex-cli": [
-    "codex  —  start Codex in this directory",
-    "codex --help  —  list commands and flags",
-  ],
-  "kimi-code-cli": [
-    "kimi  —  start Kimi Code in this directory",
-    "kimi --help  —  list commands and flags",
-  ],
-  "grok-build": [
-    "grok  —  start Grok Build in this directory",
-    "grok --help  —  list commands and flags",
-  ],
-  opencode: [
-    "opencode  —  start OpenCode in this directory",
-    "opencode --help  —  list commands and flags",
   ],
   rustup: [
     "rustup show  —  show the active toolchain",
@@ -250,7 +406,7 @@ const CLI_LAUNCH_SAMPLES: Record<string, string[]> = {
 
 export function launchKindForRecipe(recipeId: string): LaunchKind | null {
   if (GUI_LAUNCH_RECIPES.has(recipeId)) return "gui";
-  if (recipeId in CLI_LAUNCH_SAMPLES) return "cli";
+  if (recipeId in CLI_LAUNCH_COMMANDS) return "cli";
   if (WEB_UI_LAUNCH_RECIPES.has(recipeId)) return "webUi";
   if (SUITE_LAUNCH_RECIPES.has(recipeId)) return "suite";
   return null;
@@ -258,6 +414,10 @@ export function launchKindForRecipe(recipeId: string): LaunchKind | null {
 
 export function cliLaunchSamplesForRecipe(recipeId: string): string[] | null {
   return CLI_LAUNCH_SAMPLES[recipeId] ?? null;
+}
+
+export function cliLaunchCommandForRecipe(recipeId: string): string | null {
+  return CLI_LAUNCH_COMMANDS[recipeId] ?? null;
 }
 
 /// Whether a suite's quick-launch terminal opens elevated (Sysinternals) or

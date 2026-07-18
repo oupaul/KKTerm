@@ -12,12 +12,7 @@ export const cursorProvider: AiProviderDefinition = {
   allowsCustomBaseUrl: false,
   allowsCustomModel: true,
   apiKeyLabel: "Cursor Agent CLI",
-  modelOptions: [
-    { id: "auto", label: "Auto", recommended: true },
-    { id: "sonnet-4", label: "sonnet-4" },
-    { id: "sonnet-4-thinking", label: "sonnet-4-thinking" },
-    { id: "gpt-5", label: "gpt-5" },
-  ],
+  modelOptions: [{ id: "auto", label: "Auto", recommended: true }],
   settingsFields: HOSTED_PROVIDER_WITHOUT_KEY_SETTINGS_FIELDS,
   capabilities: ["chat", "streaming", "toolCalling", "mcpReady"],
 };

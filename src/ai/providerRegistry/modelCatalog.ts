@@ -38,16 +38,12 @@ export const AI_PROVIDER_MODEL_CATALOG: AiProviderModelCatalog = {
       { id: "claude-haiku-4-5-20251001", label: "Claude Haiku 4.5 snapshot", supportsImageInput: true },
     ],
   },
-  // Account-bound ids from `cursor-agent models`; keep a small fallback list.
+  // Cursor model ids are account-bound and change independently of KKTerm.
+  // Keep Auto curated and let users enter an id reported by `agent models`.
   cursor: {
     defaultModel: "auto",
     defaultReasoningEffort: "medium",
-    models: [
-      { id: "auto", label: "Auto", recommended: true },
-      { id: "sonnet-4", label: "sonnet-4" },
-      { id: "sonnet-4-thinking", label: "sonnet-4-thinking" },
-      { id: "gpt-5", label: "gpt-5" },
-    ],
+    models: [{ id: "auto", label: "Auto", recommended: true }],
   },
   openrouter: {
     defaultModel: "openai/gpt-5.5",

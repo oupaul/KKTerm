@@ -308,6 +308,18 @@ test("Kimi Code and Grok Build expose every verified Windows provider", () => {
   assert.ok(grok.options?.includes("version"));
 });
 
+test("Cursor Agent CLI uses the official native Windows installer", () => {
+  const cursor = recipe("cursor-cli");
+  assert.equal(cursor.section, "aiAgents");
+  assert.deepEqual(cursor.needs, undefined);
+  assert.deepEqual(cursor.provider, {
+    kind: "downloadInstaller",
+    url: "https://cursor.com/install?win32=true",
+    fileName: "cursor-agent-install.ps1",
+  });
+  assert.deepEqual(cursor.options, []);
+});
+
 test("Claude Desktop detection covers the official Windows MSIX package", () => {
   assert.ok(
     recipe("claude-desktop").detection?.appxPackageFamilyNames?.includes(

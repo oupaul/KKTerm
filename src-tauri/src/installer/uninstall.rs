@@ -28,6 +28,12 @@ pub fn uninstall_recipe(
     );
     let result = if recipe.id == "n8n" {
         uninstall_managed_app(&recipe.id, emit)
+    } else if recipe.id == "cursor-cli" {
+        uninstall_cursor_cli(cancel, emit)
+    } else if recipe.id == "uv" && detect_one(recipe).is_official_script_install() {
+        // A standalone receipt proves Astral owns this binary; it does not
+        // authorize `winget uninstall`, which could target a separate copy.
+        Err("this uv installation is managed by Astral's standalone installer; remove it using Astral's documented standalone uninstall steps".into())
     } else if let Some(Provider::Chocolatey { id }) = recipe.chocolatey_provider.as_ref()
         && detect_chocolatey_package(id).installed
     {
@@ -116,6 +122,39 @@ fn official_cli_uninstall_script(bin_dir: &std::path::Path, executable_names: &[
         .join(", ");
     format!(
         "$ErrorActionPreference = 'Stop'; $bin = {quoted_bin_dir}; @({quoted_names}) | ForEach-Object {{ $file = Join-Path $bin $_; if (Test-Path -LiteralPath $file -PathType Leaf) {{ Remove-Item -LiteralPath $file -Force }} }}; $userPath = [Environment]::GetEnvironmentVariable('Path', 'User'); if ($userPath) {{ $target = $bin.TrimEnd('\\'); $entries = @($userPath -split ';' | Where-Object {{ $_ -and $_.TrimEnd('\\') -ine $target }}); [Environment]::SetEnvironmentVariable('Path', ($entries -join ';'), 'User') }}; exit 0"
+    )
+}
+
+fn uninstall_cursor_cli(cancel: Arc<AtomicBool>, emit: &EventSink) -> Result<(), String> {
+    let local_app_data = std::env::var_os("LOCALAPPDATA")
+        .map(std::path::PathBuf::from)
+        .ok_or_else(|| "LOCALAPPDATA is unavailable".to_string())?;
+    let install_dir = local_app_data.join("cursor-agent");
+
+    emit(ProgressEvent::Step {
+        tool_id: "cursor-cli".into(),
+        message: format!("Removing Cursor Agent CLI from {}", install_dir.display()),
+    });
+    super::install::run_streamed_public(
+        "powershell",
+        &[
+            "-NoProfile".into(),
+            "-ExecutionPolicy".into(),
+            "Bypass".into(),
+            "-Command".into(),
+            cursor_cli_uninstall_script(&install_dir),
+        ],
+        "cursor-cli",
+        cancel,
+        emit,
+    )
+}
+
+fn cursor_cli_uninstall_script(install_dir: &std::path::Path) -> String {
+    let quoted_install_dir =
+        super::install::powershell_single_quote(&install_dir.to_string_lossy());
+    format!(
+        "$ErrorActionPreference = 'Stop'; $target = {quoted_install_dir}; if (Test-Path -LiteralPath $target -PathType Container) {{ Remove-Item -LiteralPath $target -Recurse -Force }}; $userPath = [Environment]::GetEnvironmentVariable('Path', 'User'); if ($userPath) {{ $normalizedTarget = $target.TrimEnd('\\'); $entries = @($userPath -split ';' | Where-Object {{ $_ -and $_.TrimEnd('\\') -ine $normalizedTarget }}); [Environment]::SetEnvironmentVariable('Path', ($entries -join ';'), 'User') }}; exit 0"
     )
 }
 
@@ -349,5 +388,17 @@ mod tests {
         assert!(script.contains("SetEnvironmentVariable('Path'"));
         assert!(!script.contains("Remove-Item -LiteralPath $bin"));
         assert!(!script.contains("-Recurse"));
+    }
+
+    #[test]
+    fn cursor_cli_uninstall_removes_only_the_vendor_managed_directory_and_path_entry() {
+        let script = cursor_cli_uninstall_script(std::path::Path::new(
+            r"C:\Users\ryan\AppData\Local\cursor-agent",
+        ));
+
+        assert!(script.contains(r"$target = 'C:\Users\ryan\AppData\Local\cursor-agent'"));
+        assert!(script.contains("Remove-Item -LiteralPath $target -Recurse -Force"));
+        assert!(script.contains("SetEnvironmentVariable('Path'"));
+        assert!(!script.contains("$env:LOCALAPPDATA"));
     }
 }

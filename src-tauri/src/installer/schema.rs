@@ -836,6 +836,22 @@ mod tests {
                     && file_name == "antigravity-cli-install.cmd"
         ));
 
+        let cursor = catalog
+            .recipes
+            .iter()
+            .find(|recipe| recipe.id == "cursor-cli")
+            .expect("catalog should include Cursor Agent CLI");
+        assert_eq!(cursor.name, "Cursor Agent CLI");
+        assert_eq!(cursor.category.as_deref(), Some("ai-agent"));
+        assert!(cursor.needs.is_empty());
+        assert!(cursor.options.is_empty());
+        assert!(matches!(
+            &cursor.provider,
+            Provider::DownloadInstaller { url, file_name, .. }
+                if url == "https://cursor.com/install?win32=true"
+                    && file_name == "cursor-agent-install.ps1"
+        ));
+
         let opencode = catalog
             .recipes
             .iter()

@@ -45,8 +45,8 @@ test("every distinct Install Helper artwork is available to Connection icons", a
 for (const { id, asset } of [
   { id: "claude-code-cli", asset: "claude-code.svg" },
   { id: "codex-cli", asset: "codex.svg" },
-  { id: "cursor-cli", asset: "cursor.svg" },
   { id: "codex-desktop", asset: "codex.svg" },
+  { id: "cursor-cli", asset: "cursor.svg" },
   { id: "kimi-code-cli", asset: "kimi.svg" },
   { id: "grok-build", asset: "grok.svg" },
   { id: "ffmpeg", asset: "ffmpeg.svg" },

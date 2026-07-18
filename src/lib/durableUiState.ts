@@ -27,6 +27,8 @@ export const DURABLE_UI_STATE_PREFIXES = [
   "kkterm.fileBrowserFavorites.v1",
   "kkterm.cliAccountLabels.v1",
   "kkterm.installerLauncherRecentPaths.v1",
+  "kkterm.installerLauncherOptions.v1",
+  "kkterm.installerGuiLauncherPaths.v1",
   "kkterm.itopsFreePlacement",
   "kkterm.itopsRackFacing",
   "kkterm.itopsRoomObjects",

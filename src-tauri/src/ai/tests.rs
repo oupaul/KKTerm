@@ -239,10 +239,10 @@ fn acp_jsonrpc_id_preserves_string_permission_ids() {
 
 #[test]
 fn acp_command_specs_use_registry_adapters() {
-    let codex = acp_command_spec(AiCliBackendKind::Codex, "codex");
+    let codex = acp_command_spec(AiCliBackendKind::Codex, "codex", "gpt-5.6");
     assert!(codex.args.iter().any(|arg| arg.contains("codex-acp")));
 
-    let claude = acp_command_spec(AiCliBackendKind::ClaudeCode, "claude");
+    let claude = acp_command_spec(AiCliBackendKind::ClaudeCode, "claude", "claude-opus-4.8");
     assert!(
         claude
             .args
@@ -250,10 +250,17 @@ fn acp_command_specs_use_registry_adapters() {
             .any(|arg| arg.contains("claude-agent-acp"))
     );
 
-    let cursor = acp_command_spec(AiCliBackendKind::Cursor, "C:\\Tools\\cursor-agent.cmd");
+    let cursor = acp_command_spec(
+        AiCliBackendKind::Cursor,
+        "C:\\Tools\\cursor-agent.cmd",
+        "composer-2",
+    );
     assert_eq!(cursor.program, "C:\\Tools\\cursor-agent.cmd");
-    assert_eq!(cursor.args, vec!["acp".to_string()]);
+    assert_eq!(cursor.args, vec!["--model", "composer-2", "acp"]);
     assert_eq!(cursor.label, "Cursor ACP");
+
+    let cursor_auto = acp_command_spec(AiCliBackendKind::Cursor, "cursor-agent", "auto");
+    assert_eq!(cursor_auto.args, vec!["acp"]);
 }
 
 #[test]
@@ -448,6 +455,17 @@ fn claude_auth_status_requires_logged_in_json() {
 }
 
 #[test]
+fn cursor_auth_status_rejects_logged_out_output() {
+    assert!(cursor_auth_status_logged_in(
+        "Authenticated as user@example.com"
+    ));
+    assert!(!cursor_auth_status_logged_in("Not authenticated"));
+    assert!(!cursor_auth_status_logged_in(
+        "Not signed in. Please run agent login."
+    ));
+}
+
+#[test]
 fn cli_capture_honors_timeout() {
     let started = Instant::now();
     #[cfg(target_os = "windows")]
@@ -611,7 +629,8 @@ fn cursor_cli_agent_prompt_is_sent_over_stdin_not_argv() {
     assert_eq!(invocation.prompt_delivery, "stdin");
     assert_eq!(invocation.stdin.as_deref(), Some(prompt.as_str()));
     assert!(invocation.args.iter().any(|arg| arg == "--print"));
-    assert!(invocation.args.iter().any(|arg| arg == "--force"));
+    assert!(invocation.args.iter().any(|arg| arg == "--mode=ask"));
+    assert!(!invocation.args.iter().any(|arg| arg == "--force"));
     assert!(!invocation.args.iter().any(|arg| arg == "-"));
     assert!(
         invocation.args.iter().all(|arg| arg.len() < 1_000),
@@ -2210,6 +2229,56 @@ fn chat_response_parser_accepts_reasoning_aliases() {
         chat_response_reasoning(&completion.choices[0].message).as_deref(),
         Some("Used a normalized gateway field.")
     );
+}
+
+#[test]
+fn chat_response_parser_treats_null_tool_calls_as_empty() {
+    let completion: OpenAiCompatibleChatResponse = serde_json::from_value(json!({
+        "choices": [
+            {
+                "message": {
+                    "content": "Done",
+                    "tool_calls": null
+                }
+            }
+        ]
+    }))
+    .expect("chat response with null tool_calls deserializes");
+
+    assert!(completion.choices[0].message.tool_calls.is_empty());
+}
+
+#[test]
+fn chat_optional_content_and_array_fields_accept_null() {
+    let completion: OpenAiCompatibleChatResponse = serde_json::from_value(json!({
+        "choices": [
+            {
+                "message": {
+                    "content": null,
+                    "reasoning_details": null
+                }
+            }
+        ]
+    }))
+    .expect("chat response with null optional fields deserializes");
+
+    assert!(completion.choices[0].message.content.is_empty());
+    assert!(completion.choices[0].message.reasoning_details.is_empty());
+
+    let chunk: ChatSseChunk = serde_json::from_value(json!({
+        "choices": [
+            {
+                "delta": {
+                    "reasoning_details": null,
+                    "tool_calls": null
+                }
+            }
+        ]
+    }))
+    .expect("chat SSE chunk with null optional arrays deserializes");
+
+    assert!(chunk.choices[0].delta.reasoning_details.is_empty());
+    assert!(chunk.choices[0].delta.tool_calls.is_empty());
 }
 
 #[test]

@@ -3308,13 +3308,14 @@ type CommandMap = {
   };
   installer_open_terminal_launcher: {
     // `path` opens the terminal in a remembered/chosen project folder for
-    // directory-scoped coding agents; omitted for the plain launcher.
-    args: { toolId: string; path?: string };
+    // directory-scoped coding agents. `arguments` is inserted into the new
+    // terminal's editable command line; neither value is executed in-process.
+    args: { toolId: string; path?: string; arguments?: string };
     result: void;
   };
   installer_launch_app: {
-    args: { toolId: string };
-    result: void;
+    args: { toolId: string; customPath?: string };
+    result: boolean;
   };
   installer_list_quick_launch: {
     args: { toolId: string };
@@ -3474,6 +3475,29 @@ function notifyCredentialUnlockRequired(error: unknown) {
   if (isCredentialUnlockRequiredError(error)) {
     dispatchCredentialUnlockRequired();
   }
+}
+
+export async function selectInstallerGuiLauncherFile(options: {
+  title: string;
+  filterName: string;
+}) {
+  if (!isTauriRuntime()) {
+    return null;
+  }
+
+  const selectedPath = await openDialog({
+    directory: false,
+    filters: [
+      {
+        name: options.filterName,
+        extensions: ["exe", "com", "bat", "cmd", "lnk"],
+      },
+    ],
+    multiple: false,
+    title: options.title,
+  });
+
+  return typeof selectedPath === "string" ? selectedPath : null;
 }
 
 export async function selectSettingsImportFile(options: {

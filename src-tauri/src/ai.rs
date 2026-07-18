@@ -6843,16 +6843,24 @@ struct OpenAiCompatibleChoice {
 
 #[derive(Deserialize)]
 struct OpenAiCompatibleResponseMessage {
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_null_default")]
     content: String,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_null_default")]
     tool_calls: Vec<OpenAiToolCall>,
     #[serde(default)]
     reasoning_content: Option<String>,
     #[serde(default)]
     reasoning: Option<String>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_null_default")]
     reasoning_details: Vec<ReasoningDetail>,
+}
+
+fn deserialize_null_default<'de, D, T>(deserializer: D) -> Result<T, D::Error>
+where
+    D: serde::Deserializer<'de>,
+    T: Deserialize<'de> + Default,
+{
+    Option::<T>::deserialize(deserializer).map(Option::unwrap_or_default)
 }
 
 fn chat_sse_delta_reasoning(delta: &ChatSseDelta) -> Option<String> {

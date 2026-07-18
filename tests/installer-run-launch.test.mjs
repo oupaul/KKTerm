@@ -36,8 +36,10 @@ test("installed tiles expose a Run button routed by launch kind", async () => {
   );
 });
 
-test("mini launcher dialog shows samples and opens a terminal", async () => {
+test("coding-agent launcher shows persisted options instead of samples", async () => {
   const dialog = await read("../src/modules/installer/InstallerToolDialog.tsx");
+  const launch = await read("../src/modules/installer/launch.ts");
+  const durable = await read("../src/lib/durableUiState.ts");
 
   assert.match(dialog, /function LauncherBody/);
   assert.match(
@@ -45,11 +47,19 @@ test("mini launcher dialog shows samples and opens a terminal", async () => {
     /installer\.launcher\.title/,
     "launcher dialog title should be translated",
   );
+  assert.match(dialog, /codingAgentLaunchOptionsForRecipe\(recipe\.id\)/);
+  assert.match(dialog, /installer\.launcher\.commonOption/);
+  assert.match(dialog, /installer\.launcher\.arguments/);
+  assert.match(dialog, /readCodingAgentLaunchSettings\(recipe\.id\)/);
+  assert.match(dialog, /writeCodingAgentLaunchSettings\(recipe\.id/);
+  assert.match(dialog, /arguments: launchArguments/);
   assert.match(
     dialog,
-    /cliLaunchSamplesForRecipe\(recipe\.id\)/,
-    "launcher dialog should render the shared CLI samples",
+    /codingAgentOptions \? \([\s\S]*installer\.launcher\.commonOption[\s\S]*\) : \([\s\S]*installer\.launcher\.samples/,
+    "samples should only render on the non-coding-agent branch",
   );
+  assert.match(launch, /kkterm\.installerLauncherOptions\.v1/);
+  assert.match(durable, /"kkterm\.installerLauncherOptions\.v1"/);
   assert.match(
     dialog,
     /installer\.launcher\.openTerminal/,
@@ -59,6 +69,30 @@ test("mini launcher dialog shows samples and opens a terminal", async () => {
     dialog,
     /installer_open_terminal_launcher/,
     "open terminal should call the backend terminal launcher",
+  );
+});
+
+test("terminal launchers use the Windows shell from the GUI-subsystem app", async () => {
+  const commands = await read("../src-tauri/src/installer/commands.rs");
+  const launcher = commands.match(
+    /#\[cfg\(target_os = "windows"\)\]\s*fn spawn_terminal_launcher[\s\S]*?\n\}/,
+  )?.[0];
+
+  assert.ok(launcher, "the Windows terminal launcher should exist");
+  assert.match(
+    launcher,
+    /ShellExecuteW\(/,
+    "a release GUI-subsystem process should ask the Windows shell to create the interactive console",
+  );
+  assert.match(
+    commands,
+    /fn build_terminal_launcher_shell_parameters[\s\S]*-EncodedCommand/,
+    "the generated PowerShell setup should cross ShellExecute without command-line quoting loss",
+  );
+  assert.doesNotMatch(
+    launcher,
+    /const CREATE_NEW_CONSOLE|Command::new\("powershell"\)/,
+    "the console must not inherit invalid standard handles from the GUI-subsystem parent",
   );
 });
 
@@ -85,15 +119,15 @@ test("frontend launch classification stays in sync with the Rust allow-lists", a
     );
   }
 
-  // Every frontend CLI sample entry has a Rust terminal launcher.
+  // Every frontend CLI launcher entry has a Rust terminal launcher.
   const cliBlock = launch.match(
-    /CLI_LAUNCH_SAMPLES: Record<string, string\[\]> = \{([\s\S]*?)\n\};/,
+    /CLI_LAUNCH_COMMANDS: Record<string, string> = \{([\s\S]*?)\n\};/,
   )?.[1];
-  assert.ok(cliBlock, "launch.ts should declare the CLI sample map");
-  const cliIds = [...cliBlock.matchAll(/^  (?:"([^"]+)"|([\w-]+)): \[/gm)].map(
+  assert.ok(cliBlock, "launch.ts should declare the CLI command map");
+  const cliIds = [...cliBlock.matchAll(/^  (?:"([^"]+)"|([\w-]+)):/gm)].map(
     (match) => match[1] ?? match[2],
   );
-  assert.ok(cliIds.length > 15, "CLI sample map should cover the catalog's command-line tools");
+  assert.ok(cliIds.length > 15, "CLI command map should cover the catalog's command-line tools");
   const terminalAffordance = commands.match(
     /fn terminal_launch_affordance[\s\S]*?\n\}\n/,
   )?.[0];
@@ -123,17 +157,17 @@ test("coding-agent launchers remember project folders", async () => {
   )?.[1];
   assert.ok(agentBlock, "launch.ts should declare the coding-agent set");
   const agentIds = [...agentBlock.matchAll(/"([^"]+)"/g)].map((match) => match[1]);
-  for (const id of ["claude-code-cli", "codex-cli", "kimi-code-cli", "grok-build", "opencode"]) {
+  for (const id of ["antigravity-cli", "claude-code-cli", "codex-cli", "cursor-cli", "kimi-code-cli", "grok-build", "opencode"]) {
     assert.ok(agentIds.includes(id), `${id} should remember launch folders`);
   }
   for (const id of agentIds) {
-    const sampleKey = /^[A-Za-z_$][\w$]*$/.test(id)
+    const commandKey = /^[A-Za-z_$][\w$]*$/.test(id)
       ? `(?:${id}|["']${id}["'])`
       : `["']${id}["']`;
     assert.match(
       launch,
-      new RegExp(`${sampleKey}: \\[`),
-      `${id} should also have CLI launcher samples`,
+      new RegExp(`${commandKey}:`),
+      `${id} should also have a CLI launcher command`,
     );
   }
 
@@ -153,11 +187,12 @@ test("coding-agent launchers remember project folders", async () => {
 
   // Backend validates the requested folder before spawning there.
   assert.match(commands, /path: Option<String>/);
+  assert.match(commands, /arguments: Option<String>/);
   assert.match(commands, /fn validated_launch_dir/);
-  assert.match(commands, /command\.current_dir\(dir\)/);
+  assert.match(commands, /let working_directory = working_dir\.map/);
 });
 
-test("GUI launch runs through a closed backend allow-list", async () => {
+test("GUI automatic launch runs through a closed backend allow-list", async () => {
   const commands = await read("../src-tauri/src/installer/commands.rs");
 
   assert.match(
@@ -180,6 +215,59 @@ test("GUI launch runs through a closed backend allow-list", async () => {
     /shell:AppsFolder/,
     "Store apps should launch through shell:AppsFolder",
   );
+  assert.match(
+    commands,
+    /Get-StartApps/,
+    "registered Start-menu AppIDs should be resolved before guessed paths",
+  );
+  assert.match(
+    commands,
+    /DisplayIcon/,
+    "matching uninstall registrations should supply their authoritative executable",
+  );
+  assert.match(
+    commands,
+    /Test-AllowedExe/,
+    "registered executables should remain inside the tool-specific allow-list",
+  );
+  assert.match(
+    commands,
+    /Test-LaunchableAppId/,
+    "Start-menu help pages and URLs should not be treated as app launch targets",
+  );
+  assert.match(
+    commands,
+    /Get-VersionSortKey/,
+    "duplicate uninstall registrations should prefer the newest version",
+  );
+});
+
+test("GUI launch falls back to a persisted user-selected executable or shortcut", async () => {
+  const toolRow = await read("../src/modules/installer/ToolRow.tsx");
+  const launch = await read("../src/modules/installer/launch.ts");
+  const durable = await read("../src/lib/durableUiState.ts");
+  const tauri = await read("../src/lib/tauri.ts");
+  const commands = await read("../src-tauri/src/installer/commands.rs");
+
+  assert.match(toolRow, /readGuiLauncherPath\(recipe\.id\)/);
+  assert.match(toolRow, /selectInstallerGuiLauncherFile/);
+  assert.match(toolRow, /customPath: selectedPath/);
+  assert.match(toolRow, /writeGuiLauncherPath\(recipe\.id, selectedPath\)/);
+  assert.match(toolRow, /removeGuiLauncherPath\(recipe\.id\)/);
+  assert.match(toolRow, /installer\.launcher\.selectAppTitle/);
+  assert.match(toolRow, /installer\.launcher\.selectedAppFailed/);
+
+  assert.match(launch, /kkterm\.installerGuiLauncherPaths\.v1/);
+  assert.match(durable, /"kkterm\.installerGuiLauncherPaths\.v1"/);
+  assert.match(tauri, /extensions: \["exe", "com", "bat", "cmd", "lnk"\]/);
+  assert.match(tauri, /args: \{ toolId: string; customPath\?: string \}/);
+  assert.match(tauri, /result: boolean/);
+
+  assert.match(commands, /custom_path: Option<String>/);
+  assert.match(commands, /fn validated_custom_gui_launcher/);
+  assert.match(commands, /fn is_supported_custom_gui_launcher/);
+  assert.match(commands, /"exe" \| "com" \| "bat" \| "cmd" \| "lnk"/);
+  assert.match(commands, /if let Some\(path\) = custom_path/);
 });
 
 test("Coreutils quick launch opens a plain terminal, Sysinternals stays elevated", async () => {
