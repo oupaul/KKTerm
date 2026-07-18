@@ -3243,6 +3243,31 @@ fn ai_tool_definitions_with_skills(
     }
     if settings.connections() {
         tools.push(tool_definition(
+            "workspace_list",
+            "List KKTerm Workspaces. A Workspace is a durable container for saved Connections; it is not a live Session or Tab.",
+            json!({"type":"object","properties":{}}),
+        ));
+        tools.push(tool_definition(
+            "workspace_create",
+            "Create one Workspace. importConnectionIds optionally copies saved Connections from any existing Workspace into the new Workspace; the copies are independent durable Connections.",
+            workspace_create_schema(),
+        ));
+        tools.push(tool_definition(
+            "workspace_rename",
+            "Rename or restyle one Workspace by id. Submit the full icon fields you want to retain.",
+            workspace_rename_schema(),
+        ));
+        tools.push(tool_definition(
+            "workspace_reorder",
+            "Reorder Workspaces by supplying every Workspace id in the desired order.",
+            json!({"type":"object","properties":{"orderedIds":{"type":"array","items":{"type":"string"}}},"required":["orderedIds"],"additionalProperties":false}),
+        ));
+        tools.push(tool_definition(
+            "workspace_delete",
+            "Delete one non-default Workspace by id. This also deletes every saved Connection and Connection folder owned by that Workspace; the frontend closes Tabs and live Sessions owned by the removed Workspace when it reloads.",
+            json!({"type":"object","properties":{"id":{"type":"string"}},"required":["id"],"additionalProperties":false}),
+        ));
+        tools.push(tool_definition(
             "connection_list",
             "List all saved KKTerm Connections and folders. Connections are durable saved resources, not live Sessions.",
             json!({"type":"object","properties":{}}),
@@ -3279,8 +3304,8 @@ fn ai_tool_definitions_with_skills(
         ));
         tools.push(tool_definition(
             "connection_folder_create",
-            "Create a Connection folder. Use parentFolderId null for a root folder.",
-            json!({"type":"object","properties":{"name":{"type":"string","minLength":1},"parentFolderId":{"type":["string","null"]}},"required":["name","parentFolderId"],"additionalProperties":false}),
+            "Create a Connection folder. Use parentFolderId null for a root folder and workspaceId to select its owning Workspace.",
+            json!({"type":"object","properties":{"name":{"type":"string","minLength":1},"parentFolderId":{"type":["string","null"]},"workspaceId":{"type":["string","null"]}},"required":["name","parentFolderId"],"additionalProperties":false}),
         ));
         tools.push(tool_definition(
             "connection_folder_rename",
@@ -3702,45 +3727,36 @@ fn assistant_use_skill_tool_definition(
 }
 
 fn connection_request_schema(include_id: bool) -> Value {
-    let mut properties = serde_json::Map::new();
-    if include_id {
-        properties.insert("id".to_string(), json!({"type":"string"}));
-    }
-    properties.extend([
-        ("name".to_string(), json!({"type":"string","minLength":1})),
-        (
-            "type".to_string(),
-            json!({"type":"string","enum":["local","ssh","telnet","serial","url","rdp","vnc","ftp"]}),
-        ),
-        ("folderId".to_string(), json!({"type":["string","null"]})),
-        ("host".to_string(), json!({"type":"string"})),
-        ("user".to_string(), json!({"type":"string"})),
-        ("port".to_string(), json!({"type":["integer","null"],"minimum":1,"maximum":65535})),
-        ("keyPath".to_string(), json!({"type":["string","null"]})),
-        ("proxyJump".to_string(), json!({"type":["string","null"]})),
-        (
-            "authMethod".to_string(),
-            json!({"type":["string","null"],"enum":["keyFile","password","agent",null]}),
-        ),
-        ("localShell".to_string(), json!({"type":["string","null"]})),
-        ("localStartupDirectory".to_string(), json!({"type":["string","null"]})),
-        ("localStartupScript".to_string(), json!({"type":["string","null"]})),
-        ("url".to_string(), json!({"type":["string","null"]})),
-        ("dataPartition".to_string(), json!({"type":["string","null"]})),
-        ("useTmuxSessions".to_string(), json!({"type":["boolean","null"]})),
-        ("usePsmuxSessions".to_string(), json!({"type":["boolean","null"]})),
-        ("serialLine".to_string(), json!({"type":["string","null"]})),
-        ("serialSpeed".to_string(), json!({"type":["integer","null"],"minimum":1})),
-    ]);
-    let mut required = vec![json!("name"), json!("type")];
-    if include_id {
-        required.insert(0, json!("id"));
-    }
+    crate::mcp_tool_catalog::connection_input_schema(include_id.then_some("id"))
+}
+
+fn workspace_create_schema() -> Value {
     json!({
-        "type": "object",
-        "properties": properties,
-        "required": required,
-        "additionalProperties": true
+        "type":"object",
+        "properties":{
+            "name":{"type":"string","minLength":1},
+            "icon":{"type":["string","null"]},
+            "iconColor":{"type":["string","null"]},
+            "iconBackgroundColor":{"type":["string","null"]},
+            "importConnectionIds":{"type":"array","items":{"type":"string"}}
+        },
+        "required":["name"],
+        "additionalProperties":false
+    })
+}
+
+fn workspace_rename_schema() -> Value {
+    json!({
+        "type":"object",
+        "properties":{
+            "id":{"type":"string"},
+            "name":{"type":"string","minLength":1},
+            "icon":{"type":["string","null"]},
+            "iconColor":{"type":["string","null"]},
+            "iconBackgroundColor":{"type":["string","null"]}
+        },
+        "required":["id","name"],
+        "additionalProperties":false
     })
 }
 
@@ -4227,6 +4243,9 @@ async fn run_ai_tool(
         name if tool_settings.itops() && name.starts_with("itops_") => {
             itops_tool(app, name, args).await
         }
+        name if tool_settings.connections() && name.starts_with("workspace_") => {
+            workspace_tool(app, name, args)
+        }
         name if tool_settings.connections() && name.starts_with("connection_") => {
             connection_tool(app, name, args)
         }
@@ -4332,7 +4351,11 @@ fn tool_requires_allow_all(tool_name: &str) -> bool {
                 || tool_name == "itops_test_automation"))
         || matches!(
             tool_name,
-            "connection_create"
+            "workspace_create"
+                | "workspace_rename"
+                | "workspace_reorder"
+                | "workspace_delete"
+                | "connection_create"
                 | "connection_update"
                 | "connection_rename"
                 | "connection_move"
@@ -4456,6 +4479,68 @@ fn tool_permission_required_result(tool_name: &str) -> String {
         "message": "The user did not approve this tool call in chat."
     })
     .to_string()
+}
+
+pub(crate) fn workspace_tool(app: &tauri::AppHandle, name: &str, args: Value) -> String {
+    let storage = app.state::<Storage>();
+    let result: Result<Value, String> = match name {
+        "workspace_list" => storage
+            .list_workspaces()
+            .map(|workspaces| serde_json::to_value(workspaces).unwrap_or(Value::Null)),
+        "workspace_create" => {
+            serde_json::from_value::<crate::storage::CreateWorkspaceRequest>(args)
+                .map_err(|error| format!("invalid workspace_create request: {error}"))
+                .and_then(|request| {
+                    storage
+                        .create_workspace(request)
+                        .map(|workspace| serde_json::to_value(workspace).unwrap_or(Value::Null))
+                })
+        }
+        "workspace_rename" => {
+            serde_json::from_value::<crate::storage::RenameWorkspaceRequest>(args)
+                .map_err(|error| format!("invalid workspace_rename request: {error}"))
+                .and_then(|request| {
+                    storage
+                        .rename_workspace(request)
+                        .map(|workspace| serde_json::to_value(workspace).unwrap_or(Value::Null))
+                })
+        }
+        "workspace_reorder" => {
+            serde_json::from_value::<crate::storage::ReorderWorkspacesRequest>(args)
+                .map_err(|error| format!("invalid workspace_reorder request: {error}"))
+                .and_then(|request| {
+                    storage
+                        .reorder_workspaces(request)
+                        .map(|workspaces| serde_json::to_value(workspaces).unwrap_or(Value::Null))
+                })
+        }
+        "workspace_delete" => {
+            let id = arg_string(&args, "id");
+            if id.is_empty() {
+                Err("workspace_delete requires id".to_string())
+            } else {
+                storage.delete_workspace(id).map(|_| json!({"ok": true}))
+            }
+        }
+        _ => Err("Unknown Workspace tool".to_string()),
+    };
+
+    match result {
+        Ok(value) => {
+            if name != "workspace_list" {
+                let _ = app.emit(
+                    "workspaces-changed",
+                    json!({ "source": "aiTool", "tool": name }),
+                );
+                let _ = app.emit(
+                    "connection-tree-changed",
+                    json!({ "source": "aiTool", "tool": name }),
+                );
+            }
+            value.to_string()
+        }
+        Err(error) => json!({ "ok": false, "error": error }).to_string(),
+    }
 }
 
 pub(crate) fn connection_tool(app: &tauri::AppHandle, name: &str, args: Value) -> String {

@@ -258,6 +258,15 @@ export function ActivityRail({
       try {
         const list = await invokeCommand("list_workspaces");
         if (!disposed) {
+          const removedWorkspaceIds = useWorkspaceStore
+            .getState()
+            .workspaces.filter(
+              (workspace) => !list.some((item) => item.id === workspace.id),
+            )
+            .map((workspace) => workspace.id);
+          for (const workspaceId of removedWorkspaceIds) {
+            closeWorkspaceTabs(workspaceId);
+          }
           setWorkspaces(list);
         }
       } catch {
@@ -265,10 +274,18 @@ export function ActivityRail({
       }
     }
     void loadWorkspaces();
+    const unlistenPromise = isTauriRuntime()
+      ? listen("workspaces-changed", () => {
+          void loadWorkspaces();
+        })
+      : null;
     return () => {
       disposed = true;
+      if (unlistenPromise) {
+        void unlistenPromise.then((unlisten) => unlisten());
+      }
     };
-  }, [setWorkspaces]);
+  }, [closeWorkspaceTabs, setWorkspaces]);
 
   async function reloadWorkspaces() {
     try {

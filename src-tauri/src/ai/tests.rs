@@ -3776,6 +3776,10 @@ fn prompt_permission_mode_blocks_mutating_tools() {
     assert!(tool_requires_allow_all("shell_command"));
     assert!(tool_requires_allow_all("dashboard_create_widget"));
     assert!(tool_requires_allow_all("dashboard_reset"));
+    assert!(tool_requires_allow_all("workspace_create"));
+    assert!(tool_requires_allow_all("workspace_rename"));
+    assert!(tool_requires_allow_all("workspace_reorder"));
+    assert!(tool_requires_allow_all("workspace_delete"));
     assert!(tool_requires_allow_all("connection_create"));
     assert!(tool_requires_allow_all("connection_open"));
     assert!(tool_requires_allow_all("connection_update"));
@@ -3798,6 +3802,7 @@ fn prompt_permission_mode_blocks_mutating_tools() {
     assert!(tool_requires_allow_all("send_email"));
     assert!(!tool_requires_allow_all("dashboard_load_state"));
     assert!(!tool_requires_allow_all("dashboard_read_widget_source"));
+    assert!(!tool_requires_allow_all("workspace_list"));
     assert!(!tool_requires_allow_all("connection_list"));
     assert!(!tool_requires_allow_all("session_state"));
     assert!(!tool_requires_allow_all("session_activate_tab"));
@@ -3991,6 +3996,11 @@ fn tool_definitions_include_connection_management_tools() {
     let tools = ai_tool_definitions(&settings);
     let names: Vec<&str> = tools.iter().map(|tool| tool.function.name).collect();
 
+    assert!(names.contains(&"workspace_list"));
+    assert!(names.contains(&"workspace_create"));
+    assert!(names.contains(&"workspace_rename"));
+    assert!(names.contains(&"workspace_reorder"));
+    assert!(names.contains(&"workspace_delete"));
     assert!(names.contains(&"connection_list"));
     assert!(names.contains(&"connection_create"));
     assert!(names.contains(&"connection_open"));

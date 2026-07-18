@@ -2337,7 +2337,7 @@
       },
       "connections": {
         "label": "Connections",
-        "description": "List, create, edit, and delete saved Connections."
+        "description": "List, create, edit, and delete Workspaces, Connection folders, and saved Connections."
       },
       "sessions": {
         "label": "Live Sessions",
