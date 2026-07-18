@@ -698,13 +698,16 @@ pub(crate) fn common_user_bin_candidates(names: &[&str]) -> Vec<PathBuf> {
 }
 
 pub(crate) fn path_cli_backend_candidates(provider: AiCliBackendKind) -> Vec<PathBuf> {
-    let Some(path) = std::env::var_os("PATH") else {
-        return Vec::new();
-    };
-    bin_candidates_from_roots(
-        std::env::split_paths(&path).collect(),
-        cli_backend_command_names(provider),
-    )
+    let paths = [
+        std::env::var_os("PATH"),
+        crate::installer::install::refreshed_path_public().map(Into::into),
+    ];
+    let roots = paths
+        .into_iter()
+        .flatten()
+        .flat_map(|path| std::env::split_paths(&path).collect::<Vec<_>>())
+        .collect();
+    bin_candidates_from_roots(roots, cli_backend_command_names(provider))
 }
 
 pub(crate) fn bin_candidates_from_roots(roots: Vec<PathBuf>, names: &[&str]) -> Vec<PathBuf> {
