@@ -965,7 +965,7 @@
       "title": "{{name}} を実行",
       "body": "{{name}} はターミナル ウィンドウで実行するコマンドライン ツールです。",
       "samples": "コマンド例",
-      "commonOption": "一般的なオプション",
+      "commonOption": "よく使うオプション",
       "defaultOption": "追加オプションなし",
       "arguments": "追加の引数",
       "selectAppTitle": "{{name}} 用のアプリを選択",

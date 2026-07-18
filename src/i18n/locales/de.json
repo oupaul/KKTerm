@@ -965,7 +965,7 @@
       "title": "{{name}} ausführen",
       "body": "{{name}} ist ein Befehlszeilentool, das in einem Terminalfenster läuft.",
       "samples": "Beispielbefehle",
-      "commonOption": "Allgemeine Option",
+      "commonOption": "Gängige Option",
       "defaultOption": "Keine zusätzliche Option",
       "arguments": "Zusätzliche Argumente",
       "selectAppTitle": "App für {{name}} auswählen",
