@@ -961,6 +961,12 @@
       "launch": "Lancer",
       "noMatches": "Aucun outil ne correspond à votre recherche."
     },
+    "launcher": {
+      "title": "Exécuter {{name}}",
+      "body": "{{name}} est un outil en ligne de commande qui s'exécute dans une fenêtre de terminal.",
+      "samples": "Exemples de commandes",
+      "openTerminal": "Ouvrir le terminal"
+    },
     "stepper": {
       "failedBadge": "Échec"
     },

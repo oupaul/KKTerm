@@ -911,7 +911,158 @@ struct TerminalLaunchAffordance {
 }
 
 fn terminal_launch_affordance(tool_id: &str) -> Option<TerminalLaunchAffordance> {
+    /// Plain PATH-resolved CLI tool: no venv activation, no setup lines.
+    fn plain(prefill: &str, hints: &[&str]) -> Option<TerminalLaunchAffordance> {
+        Some(TerminalLaunchAffordance {
+            activate_ps1: None,
+            setup_lines: vec![],
+            prefill: prefill.into(),
+            hints: hints.iter().map(|hint| (*hint).to_string()).collect(),
+        })
+    }
     match tool_id {
+        "git" => plain(
+            "git status",
+            &[
+                "git clone <url>  —  copy a remote repository",
+                "git status  —  show changed files",
+                "git log --oneline -20  —  recent commits",
+            ],
+        ),
+        "winget" => plain(
+            "winget search ",
+            &[
+                "winget search <name>  —  find a package",
+                "winget install <id>  —  install a package",
+                "winget upgrade --all  —  update everything",
+            ],
+        ),
+        "chocolatey" => plain(
+            "choco search ",
+            &[
+                "choco search <name>  —  find a package",
+                "choco install <id>  —  install a package (admin)",
+                "choco upgrade all  —  update everything (admin)",
+            ],
+        ),
+        "node-bundle" => plain(
+            "node --version",
+            &[
+                "node --version  —  check the active Node runtime",
+                "npm install <package>  —  add a package to a project",
+                "nvm list  —  show installed Node versions",
+            ],
+        ),
+        "python-bundle" => plain(
+            "python --version",
+            &[
+                "python --version  —  check the active Python runtime",
+                "uv venv  —  create a virtual environment",
+                "uv pip install <package>  —  install into the environment",
+            ],
+        ),
+        "wsl" => plain(
+            "wsl --list --verbose",
+            &[
+                "wsl  —  open the default Linux distribution",
+                "wsl --list --verbose  —  show installed distributions",
+                "wsl --update  —  update the WSL kernel",
+            ],
+        ),
+        "nssm" => plain(
+            "nssm",
+            &[
+                "nssm install <service>  —  register a service (admin)",
+                "nssm status <service>  —  check a service",
+            ],
+        ),
+        "oh-my-posh" => plain(
+            "oh-my-posh init pwsh | Invoke-Expression",
+            &[
+                "oh-my-posh init pwsh | Invoke-Expression  —  try it in this session",
+                "oh-my-posh font install  —  install a Nerd Font",
+            ],
+        ),
+        "claude-code-cli" => plain(
+            "claude",
+            &[
+                "claude  —  start Claude Code in this directory",
+                "claude --help  —  list commands and flags",
+            ],
+        ),
+        "codex-cli" => plain(
+            "codex",
+            &[
+                "codex  —  start Codex in this directory",
+                "codex --help  —  list commands and flags",
+            ],
+        ),
+        "opencode" => plain(
+            "opencode",
+            &[
+                "opencode  —  start OpenCode in this directory",
+                "opencode --help  —  list commands and flags",
+            ],
+        ),
+        "rustup" => plain(
+            "rustup show",
+            &[
+                "rustup show  —  show the active toolchain",
+                "rustup update  —  update Rust",
+                "cargo new <name>  —  create a project",
+            ],
+        ),
+        "bun" => plain(
+            "bun --version",
+            &[
+                "bun init  —  create a project",
+                "bun install  —  install dependencies",
+                "bun run <script>  —  run a package script",
+            ],
+        ),
+        "ripgrep" => plain(
+            "rg \"TODO\"",
+            &[
+                "rg \"pattern\"  —  search the current directory",
+                "rg -i \"error\" -g \"*.log\"  —  case-insensitive search in .log files",
+                "rg --files  —  list searchable files",
+            ],
+        ),
+        "jq" => plain(
+            "jq . ",
+            &[
+                "jq . data.json  —  pretty-print JSON",
+                "Get-Content data.json | jq \".items[0]\"  —  pick a field from piped JSON",
+            ],
+        ),
+        "fzf" => plain(
+            "fzf",
+            &[
+                "fzf  —  fuzzy-pick a file from the current directory",
+                "Get-ChildItem -Recurse -Name | fzf  —  fuzzy-filter any list",
+            ],
+        ),
+        "ffmpeg" => plain(
+            "ffmpeg",
+            &[
+                "ffmpeg -i input.mp4 output.mp3  —  convert media",
+                "ffprobe input.mp4  —  inspect a media file",
+            ],
+        ),
+        "scrcpy" => plain(
+            "scrcpy",
+            &[
+                "scrcpy  —  mirror a USB-connected Android device",
+                "scrcpy --tcpip=<ip>  —  connect over Wi-Fi",
+            ],
+        ),
+        "psmux" => plain(
+            "psmux",
+            &[
+                "psmux  —  start a terminal multiplexer session",
+                "psmux --help  —  list commands and flags",
+            ],
+        ),
         "hermes-agent" => {
             let activate = managed_app_install_dir("hermes-agent")
                 .join(".venv")
@@ -962,6 +1113,229 @@ pub async fn installer_open_terminal_launcher(tool_id: String) -> Result<(), Str
     })
     .await
     .map_err(|error| format!("failed to open terminal launcher: {error}"))?
+}
+
+/// One way to locate an installed GUI app's executable. Candidates are tried
+/// in order; the first one that resolves is launched.
+enum GuiLaunchCandidate {
+    /// Bare executable name resolved through the refreshed PATH
+    /// (`Get-Command`) and the Windows `App Paths` registry.
+    Command(&'static str),
+    /// Absolute path with `%VAR%` environment tokens; may contain one `*`
+    /// glob (e.g. versioned Blender install directories). When the glob
+    /// matches several directories the highest-sorting path wins.
+    Path(&'static str),
+    /// MSIX/Store app launched via `shell:AppsFolder` by Appx package name.
+    Appx(&'static str),
+}
+
+/// Curated executable candidates for installed GUI apps that the tile-level
+/// Run button can start directly. This closed per-tool allow-list is the only
+/// set of programs `installer_launch_app` will spawn.
+fn gui_launch_affordance(tool_id: &str) -> Vec<GuiLaunchCandidate> {
+    use GuiLaunchCandidate::{Appx, Command, Path};
+    match tool_id {
+        "vscode" => vec![
+            Path("%LOCALAPPDATA%\\Programs\\Microsoft VS Code\\Code.exe"),
+            Path("%ProgramFiles%\\Microsoft VS Code\\Code.exe"),
+            Command("code"),
+        ],
+        "cursor" => vec![
+            Path("%LOCALAPPDATA%\\Programs\\cursor\\Cursor.exe"),
+            Command("cursor"),
+        ],
+        "notepadpp" => vec![
+            Command("notepad++.exe"),
+            Path("%ProgramFiles%\\Notepad++\\notepad++.exe"),
+        ],
+        "docker-desktop" => vec![Path("%ProgramFiles%\\Docker\\Docker\\Docker Desktop.exe")],
+        "comfyui" => vec![Path(
+            "%LOCALAPPDATA%\\Programs\\@comfyorgcomfyui-electron\\ComfyUI.exe",
+        )],
+        "lmstudio" => vec![
+            Path("%LOCALAPPDATA%\\Programs\\LM Studio\\LM Studio.exe"),
+            Path("%LOCALAPPDATA%\\Programs\\lm-studio\\LM Studio.exe"),
+            Path("%LOCALAPPDATA%\\LM-Studio\\LM Studio.exe"),
+        ],
+        "bruno" => vec![
+            Path("%LOCALAPPDATA%\\Programs\\Bruno\\Bruno.exe"),
+            Path("%ProgramFiles%\\Bruno\\Bruno.exe"),
+        ],
+        "claude-desktop" => vec![Path("%LOCALAPPDATA%\\AnthropicClaude\\claude.exe")],
+        "codex-desktop" => vec![Appx("OpenAI.Codex")],
+        "powertoys" => vec![
+            Path("%ProgramFiles%\\PowerToys\\PowerToys.exe"),
+            Path("%LOCALAPPDATA%\\PowerToys\\PowerToys.exe"),
+        ],
+        "powershell-7" => vec![
+            Command("pwsh.exe"),
+            Path("%ProgramFiles%\\PowerShell\\7\\pwsh.exe"),
+        ],
+        "everything" => vec![
+            Path("%ProgramFiles%\\Everything\\Everything.exe"),
+            Path("%ProgramFiles(x86)%\\Everything\\Everything.exe"),
+            Command("Everything.exe"),
+        ],
+        "ditto" => vec![
+            Path("%ProgramFiles%\\Ditto\\Ditto.exe"),
+            Path("%ProgramFiles(x86)%\\Ditto\\Ditto.exe"),
+        ],
+        "keepassxc" => vec![
+            Path("%ProgramFiles%\\KeePassXC\\KeePassXC.exe"),
+            Command("keepassxc.exe"),
+        ],
+        "7zip" => vec![Path("%ProgramFiles%\\7-Zip\\7zFM.exe")],
+        "sharex" => vec![
+            Path("%ProgramFiles%\\ShareX\\ShareX.exe"),
+            Command("sharex.exe"),
+        ],
+        "tailscale" => vec![Path("%ProgramFiles%\\Tailscale\\tailscale-ipn.exe")],
+        "rustdesk" => vec![
+            Path("%ProgramFiles%\\RustDesk\\rustdesk.exe"),
+            Command("rustdesk.exe"),
+        ],
+        "google-chrome" => vec![
+            Command("chrome.exe"),
+            Path("%ProgramFiles%\\Google\\Chrome\\Application\\chrome.exe"),
+            Path("%LOCALAPPDATA%\\Google\\Chrome\\Application\\chrome.exe"),
+        ],
+        "firefox" => vec![
+            Command("firefox.exe"),
+            Path("%ProgramFiles%\\Mozilla Firefox\\firefox.exe"),
+            Path("%LOCALAPPDATA%\\Mozilla Firefox\\firefox.exe"),
+        ],
+        "acrobat-reader" => vec![
+            Command("Acrobat.exe"),
+            Path("%ProgramFiles%\\Adobe\\Acrobat DC\\Acrobat\\Acrobat.exe"),
+            Command("AcroRd32.exe"),
+        ],
+        "obsidian" => vec![
+            Path("%LOCALAPPDATA%\\Programs\\Obsidian\\Obsidian.exe"),
+            Path("%LOCALAPPDATA%\\Obsidian\\Obsidian.exe"),
+        ],
+        "drawio" => vec![Path("%ProgramFiles%\\draw.io\\draw.io.exe")],
+        "krita" => vec![
+            Command("krita.exe"),
+            Path("%ProgramFiles%\\Krita (x64)\\bin\\krita.exe"),
+        ],
+        "inkscape" => vec![
+            Command("inkscape.exe"),
+            Path("%ProgramFiles%\\Inkscape\\bin\\inkscape.exe"),
+        ],
+        "blender" => vec![
+            Command("blender-launcher.exe"),
+            Path("%ProgramFiles%\\Blender Foundation\\Blender *\\blender-launcher.exe"),
+            Path("%ProgramFiles%\\Blender Foundation\\Blender *\\blender.exe"),
+        ],
+        "pencil" => vec![
+            Path("%ProgramFiles%\\Pencil\\Pencil.exe"),
+            Path("%LOCALAPPDATA%\\Programs\\Pencil\\Pencil.exe"),
+        ],
+        "vlc" => vec![
+            Path("%ProgramFiles%\\VideoLAN\\VLC\\vlc.exe"),
+            Command("vlc.exe"),
+        ],
+        "obs-studio" => vec![Path("%ProgramFiles%\\obs-studio\\bin\\64bit\\obs64.exe")],
+        "xnview-mp" => vec![Path("%ProgramFiles%\\XnViewMP\\xnviewmp.exe")],
+        "audacity" => vec![Path("%ProgramFiles%\\Audacity\\Audacity.exe")],
+        "vcxsrv" => vec![Path("%ProgramFiles%\\VcXsrv\\xlaunch.exe")],
+        _ => vec![],
+    }
+}
+
+/// Launch an installed GUI app from the tile-level Run button. Resolves the
+/// curated candidate list in order and starts the first hit detached, at
+/// normal (non-elevated) integrity. Waits only for the short resolver script,
+/// not the launched app, so failures surface as an error message.
+#[tauri::command]
+pub async fn installer_launch_app(tool_id: String) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let candidates = gui_launch_affordance(&tool_id);
+        if candidates.is_empty() {
+            return Err(format!("tool `{tool_id}` does not have an app launcher"));
+        }
+        run_gui_launch(&tool_id, &candidates)
+    })
+    .await
+    .map_err(|error| format!("failed to launch app: {error}"))?
+}
+
+/// PowerShell that tries each candidate in order and starts the first hit.
+/// `Start-Process` gets the executable's own directory as the working
+/// directory because some apps (e.g. OBS Studio) refuse to start elsewhere.
+fn build_gui_launch_ps_command(candidates: &[GuiLaunchCandidate]) -> String {
+    let mut parts: Vec<String> = vec![
+        "$ErrorActionPreference = 'SilentlyContinue'".into(),
+        "function Start-Hit([string]$exe) { Start-Process -FilePath $exe -WorkingDirectory (Split-Path -Parent $exe); exit 0 }".into(),
+    ];
+    for candidate in candidates {
+        match candidate {
+            GuiLaunchCandidate::Path(path) => {
+                let escaped = path.replace('\'', "''");
+                parts.push(format!(
+                    "$p = [Environment]::ExpandEnvironmentVariables('{escaped}'); \
+                     $hit = Get-Item -Path $p -ErrorAction SilentlyContinue | \
+                     Sort-Object -Property FullName -Descending | Select-Object -First 1; \
+                     if ($hit) {{ Start-Hit $hit.FullName }}"
+                ));
+            }
+            GuiLaunchCandidate::Command(name) => {
+                let escaped = name.replace('\'', "''");
+                parts.push(format!(
+                    "$cmd = Get-Command '{escaped}' -ErrorAction SilentlyContinue | Select-Object -First 1; \
+                     if ($cmd -and $cmd.Source) {{ Start-Hit $cmd.Source }}"
+                ));
+                parts.push(format!(
+                    "$ap = Get-ItemProperty -Path ('HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\{escaped}'), ('HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\{escaped}') -ErrorAction SilentlyContinue | Select-Object -First 1; \
+                     if ($ap.'(default)') {{ $exe = [Environment]::ExpandEnvironmentVariables($ap.'(default)'.Trim('\"')); if (Test-Path -LiteralPath $exe) {{ Start-Hit $exe }} }}"
+                ));
+            }
+            GuiLaunchCandidate::Appx(package) => {
+                let escaped = package.replace('\'', "''");
+                parts.push(format!(
+                    "$pkg = Get-AppxPackage -Name '{escaped}' -ErrorAction SilentlyContinue | Select-Object -First 1; \
+                     if ($pkg) {{ $appId = (Get-AppxPackageManifest $pkg).Package.Applications.Application | Select-Object -First 1 -ExpandProperty Id; \
+                     if ($appId) {{ Start-Process ('shell:AppsFolder\\' + $pkg.PackageFamilyName + '!' + $appId); exit 0 }} }}"
+                ));
+            }
+        }
+    }
+    parts.push("exit 1".into());
+    parts.join("; ")
+}
+
+#[cfg(target_os = "windows")]
+fn run_gui_launch(tool_id: &str, candidates: &[GuiLaunchCandidate]) -> Result<(), String> {
+    let ps = build_gui_launch_ps_command(candidates);
+    let mut cmd = Command::new("powershell");
+    cmd.args([
+        "-NoProfile",
+        "-NonInteractive",
+        "-WindowStyle",
+        "Hidden",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-Command",
+        &ps,
+    ]);
+    use std::os::windows::process::CommandExt;
+    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+    cmd.creation_flags(CREATE_NO_WINDOW);
+    if let Some(path) = super::install::refreshed_path_public() {
+        cmd.env("PATH", path);
+    }
+    let output = cmd
+        .output()
+        .map_err(|error| format!("failed to launch `{tool_id}`: {error}"))?;
+    if !output.status.success() {
+        return Err(format!("could not locate an executable for `{tool_id}`"));
+    }
+    Ok(())
+}
+
+#[cfg(not(target_os = "windows"))]
+fn run_gui_launch(_tool_id: &str, _candidates: &[GuiLaunchCandidate]) -> Result<(), String> {
+    Err("app launch is only available on Windows".into())
 }
 
 /// One utility exposed in an installed tool suite's mini launcher. Used by
@@ -1279,6 +1653,29 @@ fn quick_launch_affordance(tool_id: &str) -> Vec<QuickLaunchEntry> {
                 "Report the registry space used by a key.",
             ),
         ],
+        "coreutils" => vec![
+            // All command-line: listed for discovery, run from the terminal.
+            cli("ls", "ls", "List directory contents."),
+            cli("cat", "cat", "Print file contents."),
+            cli("cp", "cp", "Copy files and directories."),
+            cli("mv", "mv", "Move or rename files and directories."),
+            cli("rm", "rm", "Delete files and directories."),
+            cli("mkdir", "mkdir", "Create directories."),
+            cli("head", "head", "Show the first lines of a file."),
+            cli("tail", "tail", "Show the last lines of a file."),
+            cli("sort", "sort", "Sort lines of text."),
+            cli("uniq", "uniq", "Filter adjacent duplicate lines."),
+            cli("wc", "wc", "Count lines, words, and bytes."),
+            cli("cut", "cut", "Extract fields or columns from lines."),
+            cli("tr", "tr", "Translate or delete characters."),
+            cli("tee", "tee", "Copy stdin to stdout and a file."),
+            cli("touch", "touch", "Create files or update timestamps."),
+            cli("du", "du", "Report disk usage per directory."),
+            cli("date", "date", "Print or format the current date and time."),
+            cli("seq", "seq", "Print a sequence of numbers."),
+            cli("base64", "base64", "Encode or decode base64 data."),
+            cli("sha256sum", "sha256sum", "Compute SHA-256 file checksums."),
+        ],
         _ => vec![],
     }
 }
@@ -1311,19 +1708,27 @@ pub async fn installer_launch_quick_command(
     .map_err(|error| format!("failed to launch quick command: {error}"))?
 }
 
-/// Open a standard elevated PowerShell prompt so a suite's command-line tools
-/// (e.g. Sysinternals `handle`, `psexec`, `sigcheck`) can be run with their own
-/// arguments. Only available for tools that expose a quick launcher.
+/// Open a PowerShell prompt so a suite's command-line tools can be run with
+/// their own arguments. Sysinternals opens **elevated** because most of its
+/// tools require admin integrity (e.g. `handle`, `psexec`, `sigcheck`);
+/// Coreutils opens a normal prompt with usage hints. Only available for
+/// tools that expose a quick launcher.
 #[tauri::command]
 pub async fn installer_open_quick_launch_terminal(tool_id: String) -> Result<(), String> {
-    tauri::async_runtime::spawn_blocking(move || {
-        if quick_launch_affordance(&tool_id).is_empty() {
-            return Err(format!("tool `{tool_id}` does not have a quick launcher"));
-        }
-        spawn_elevated_powershell()
+    tauri::async_runtime::spawn_blocking(move || match tool_id.as_str() {
+        "sysinternals-suite" => spawn_elevated_powershell(),
+        "coreutils" => spawn_terminal_launcher(&TerminalLaunchAffordance {
+            activate_ps1: None,
+            setup_lines: vec![],
+            prefill: "ls".into(),
+            hints: vec![
+                "Coreutils commands are on PATH — e.g. ls, cat, head, tail, sort, wc.".into(),
+            ],
+        }),
+        _ => Err(format!("tool `{tool_id}` does not have a quick launcher")),
     })
     .await
-    .map_err(|error| format!("failed to open elevated PowerShell: {error}"))?
+    .map_err(|error| format!("failed to open quick-launch terminal: {error}"))?
 }
 
 fn service_affordance(tool_id: &str) -> Option<ManagedServiceAffordance> {
@@ -2433,6 +2838,109 @@ mod tests {
                 .iter()
                 .any(|hint| hint.starts_with("openclaw onboard --install-daemon")),
             "OpenClaw launcher should point users to onboarding"
+        );
+    }
+
+    #[test]
+    fn cli_terminal_launchers_cover_curated_command_line_tools() {
+        for tool_id in [
+            "git",
+            "winget",
+            "chocolatey",
+            "node-bundle",
+            "python-bundle",
+            "wsl",
+            "nssm",
+            "oh-my-posh",
+            "claude-code-cli",
+            "codex-cli",
+            "opencode",
+            "rustup",
+            "bun",
+            "ripgrep",
+            "jq",
+            "fzf",
+            "ffmpeg",
+            "scrcpy",
+            "psmux",
+            "hermes-agent",
+            "openclaw",
+        ] {
+            let affordance = terminal_launch_affordance(tool_id)
+                .unwrap_or_else(|| panic!("`{tool_id}` should expose a terminal launcher"));
+            assert!(
+                !affordance.prefill.is_empty(),
+                "`{tool_id}` launcher should prefill a starter command"
+            );
+            assert!(
+                !affordance.hints.is_empty(),
+                "`{tool_id}` launcher should show sample usage hints"
+            );
+        }
+        assert!(
+            terminal_launch_affordance("vscode").is_none(),
+            "GUI apps launch directly instead of through the terminal launcher"
+        );
+    }
+
+    #[test]
+    fn gui_launch_affordance_is_a_closed_allow_list() {
+        // GUI apps expose at least one executable candidate.
+        for tool_id in [
+            "vscode",
+            "google-chrome",
+            "firefox",
+            "acrobat-reader",
+            "blender",
+            "obs-studio",
+            "7zip",
+        ] {
+            assert!(
+                !gui_launch_affordance(tool_id).is_empty(),
+                "`{tool_id}` should expose GUI launch candidates"
+            );
+        }
+        // CLI tools and unknown ids resolve to nothing.
+        assert!(gui_launch_affordance("git").is_empty());
+        assert!(gui_launch_affordance("ripgrep").is_empty());
+        assert!(gui_launch_affordance("does-not-exist").is_empty());
+    }
+
+    #[test]
+    fn gui_launch_ps_resolves_paths_commands_and_appx() {
+        let command = build_gui_launch_ps_command(&[
+            GuiLaunchCandidate::Path("%ProgramFiles%\\Blender Foundation\\Blender *\\blender.exe"),
+            GuiLaunchCandidate::Command("chrome.exe"),
+            GuiLaunchCandidate::Appx("OpenAI.Codex"),
+        ]);
+
+        // Env tokens expand at resolve time; globs pick the highest match.
+        assert!(command.contains("[Environment]::ExpandEnvironmentVariables"));
+        assert!(command.contains("Sort-Object -Property FullName -Descending"));
+        // Bare names consult PATH and the App Paths registry.
+        assert!(command.contains("Get-Command 'chrome.exe'"));
+        assert!(command.contains("App Paths\\chrome.exe"));
+        // Store apps launch through shell:AppsFolder.
+        assert!(command.contains("Get-AppxPackage -Name 'OpenAI.Codex'"));
+        assert!(command.contains("shell:AppsFolder"));
+        // Apps start from their own directory (OBS refuses to start elsewhere).
+        assert!(command.contains("-WorkingDirectory (Split-Path -Parent $exe)"));
+        // No hit is an error the frontend can surface.
+        assert!(command.ends_with("exit 1"));
+    }
+
+    #[test]
+    fn coreutils_quick_launch_lists_cli_utilities() {
+        let entries = quick_launch_affordance("coreutils");
+        assert!(entries.len() >= 15);
+        assert!(
+            entries.iter().all(|entry| entry.cli),
+            "Coreutils utilities are terminal commands, not launchable GUI tools"
+        );
+        assert!(
+            entries
+                .iter()
+                .any(|entry| entry.command.eq_ignore_ascii_case("ls"))
         );
     }
 

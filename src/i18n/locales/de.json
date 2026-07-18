@@ -961,6 +961,12 @@
       "launch": "Starten",
       "noMatches": "Keine Tools entsprechen deiner Suche."
     },
+    "launcher": {
+      "title": "{{name}} ausführen",
+      "body": "{{name}} ist ein Befehlszeilentool, das in einem Terminalfenster läuft.",
+      "samples": "Beispielbefehle",
+      "openTerminal": "Terminal öffnen"
+    },
     "stepper": {
       "failedBadge": "Fehlgeschlagen"
     },

@@ -199,6 +199,21 @@ export const BRAND_ICON_ENTRIES: BrandIconEntry[] = [
     keywords: ["ffmpeg", "video", "audio", "media", "command", "cli"],
   },
   {
+    id: "firefox",
+    label: "Mozilla Firefox",
+    keywords: ["firefox", "mozilla", "browser", "web", "internet"],
+  },
+  {
+    id: "google-chrome",
+    label: "Google Chrome",
+    keywords: ["chrome", "google", "browser", "web", "internet"],
+  },
+  {
+    id: "acrobat-reader",
+    label: "Adobe Acrobat Reader",
+    keywords: ["acrobat", "adobe", "reader", "pdf", "document"],
+  },
+  {
     id: "flowise",
     label: "Flowise",
     keywords: ["flowise", "ai", "assistant", "workflow", "developer"],

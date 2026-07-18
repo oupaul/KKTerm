@@ -961,6 +961,12 @@
       "launch": "启动",
       "noMatches": "没有与搜索匹配的工具。"
     },
+    "launcher": {
+      "title": "运行 {{name}}",
+      "body": "{{name}} 是命令行工具，需要在终端窗口中运行。",
+      "samples": "命令示例",
+      "openTerminal": "打开终端"
+    },
     "stepper": {
       "failedBadge": "失败"
     },

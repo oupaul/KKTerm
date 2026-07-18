@@ -6,7 +6,10 @@
 
 import { useTranslation } from "react-i18next";
 import type { MouseEvent } from "react";
+import { invokeCommand, isTauriRuntime } from "../../lib/tauri";
+import { useWorkspaceStore } from "../../store";
 import { iconUrlForRecipe, FALLBACK_ICON_URL } from "./icons";
+import { launchKindForRecipe } from "./launch";
 import { useInstallerStore } from "./state";
 import { useToolStatus } from "./useToolStatus";
 import { localizedDescription, type Recipe } from "./types";
@@ -15,6 +18,10 @@ export function ToolRow({ recipe }: { recipe: Recipe }) {
   const { t, i18n } = useTranslation();
   const openInfoDialog = useInstallerStore((s) => s.openInfoDialog);
   const openStepperDialog = useInstallerStore((s) => s.openStepperDialog);
+  const openLauncherDialog = useInstallerStore((s) => s.openLauncherDialog);
+  const showStatusBarNotice = useWorkspaceStore(
+    (state) => state.showStatusBarNotice,
+  );
 
   const {
     isInstalled,
@@ -43,6 +50,28 @@ export function ToolRow({ recipe }: { recipe: Recipe }) {
   function handleActionClick(event: MouseEvent<HTMLButtonElement>) {
     event.stopPropagation();
     handleOpen();
+  }
+
+  // Run button for installed tools. GUI apps start directly; command-line
+  // tools open the mini launcher dialog; managed web apps and tool suites
+  // open the info dialog that already hosts their launcher surface.
+  const launchKind = isInstalled && !busy ? launchKindForRecipe(recipe.id) : null;
+
+  function handleRunClick(event: MouseEvent<HTMLButtonElement>) {
+    event.stopPropagation();
+    if (launchKind === "gui") {
+      if (!isTauriRuntime()) return;
+      void invokeCommand("installer_launch_app", { toolId: recipe.id }).catch(
+        (error) => {
+          const message = error instanceof Error ? error.message : String(error);
+          showStatusBarNotice(message, { tone: "error" });
+        },
+      );
+    } else if (launchKind === "cli") {
+      openLauncherDialog(recipe.id);
+    } else {
+      openInfoDialog(recipe.id);
+    }
   }
 
   const installedVersionText = isInstalled
@@ -150,17 +179,30 @@ export function ToolRow({ recipe }: { recipe: Recipe }) {
           >
             {statusLabel}
           </span>
-          {!isInstalled || hasUpdate ? (
-            <button
-              type="button"
-              className="installer-tile__action primary"
-              onClick={handleActionClick}
-              disabled={retrieving}
-            >
-              {hasUpdate
-                ? t("installer.actions.update")
-                : t("installer.actions.install")}
-            </button>
+          {launchKind || !isInstalled || hasUpdate ? (
+            <span className="installer-tile__action-group">
+              {launchKind ? (
+                <button
+                  type="button"
+                  className="installer-tile__action"
+                  onClick={handleRunClick}
+                >
+                  {t("installer.actions.run")}
+                </button>
+              ) : null}
+              {!isInstalled || hasUpdate ? (
+                <button
+                  type="button"
+                  className="installer-tile__action primary"
+                  onClick={handleActionClick}
+                  disabled={retrieving}
+                >
+                  {hasUpdate
+                    ? t("installer.actions.update")
+                    : t("installer.actions.install")}
+                </button>
+              ) : null}
+            </span>
           ) : null}
         </div>
       </div>

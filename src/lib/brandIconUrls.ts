@@ -1,6 +1,7 @@
 import { brandIconIdFromRef, isKnownBrandIconId } from "./brandIcons";
 import defaultIcon from "../assets/installer-icons/default.svg?url";
 import sevenZipIcon from "../assets/installer-icons/7zip.svg?url";
+import acrobatReaderIcon from "../assets/installer-icons/acrobat-reader.svg?url";
 import anthropicIcon from "../assets/installer-icons/anthropic.svg?url";
 import antigravityIcon from "../assets/installer-icons/antigravity.svg?url";
 import audacityIcon from "../assets/installer-icons/audacity.svg?url";
@@ -19,10 +20,12 @@ import drawioIcon from "../assets/installer-icons/drawio.svg?url";
 import everythingIcon from "../assets/installer-icons/everything.png?url";
 import excalidrawIcon from "../assets/installer-icons/excalidraw.svg?url";
 import ffmpegIcon from "../assets/installer-icons/ffmpeg.svg?url";
+import firefoxIcon from "../assets/installer-icons/firefox.svg?url";
 import flowiseIcon from "../assets/installer-icons/flowise.png?url";
 import geminiIcon from "../assets/installer-icons/gemini.svg?url";
 import gitIcon from "../assets/installer-icons/git.svg?url";
 import githubIcon from "../assets/installer-icons/github.svg?url";
+import googleChromeIcon from "../assets/installer-icons/google-chrome.svg?url";
 import hermesAgentIcon from "../assets/installer-icons/hermes-agent.svg?url";
 import inkscapeIcon from "../assets/installer-icons/inkscape.svg?url";
 import keepassxcIcon from "../assets/installer-icons/keepassxc.svg?url";
@@ -89,6 +92,9 @@ const brandIconUrlById: Record<string, string> = {
   everything: everythingIcon,
   excalidraw: excalidrawIcon,
   ffmpeg: ffmpegIcon,
+  firefox: firefoxIcon,
+  "google-chrome": googleChromeIcon,
+  "acrobat-reader": acrobatReaderIcon,
   flowise: flowiseIcon,
   git: gitIcon,
   "github-cli": githubIcon,

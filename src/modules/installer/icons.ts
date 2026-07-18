@@ -10,6 +10,7 @@
 
 import defaultIcon from "../../assets/installer-icons/default.svg?url";
 import sevenZip from "../../assets/installer-icons/7zip.svg?url";
+import acrobatReader from "../../assets/installer-icons/acrobat-reader.svg?url";
 import anthropic from "../../assets/installer-icons/anthropic.svg?url";
 import antigravity from "../../assets/installer-icons/antigravity.svg?url";
 import astral from "../../assets/installer-icons/astral.svg?url";
@@ -28,9 +29,11 @@ import drawio from "../../assets/installer-icons/drawio.svg?url";
 import everything from "../../assets/installer-icons/everything.png?url";
 import excalidraw from "../../assets/installer-icons/excalidraw.svg?url";
 import ffmpeg from "../../assets/installer-icons/ffmpeg.svg?url";
+import firefox from "../../assets/installer-icons/firefox.svg?url";
 import flowise from "../../assets/installer-icons/flowise.png?url";
 import git from "../../assets/installer-icons/git.svg?url";
 import github from "../../assets/installer-icons/github.svg?url";
+import googleChrome from "../../assets/installer-icons/google-chrome.svg?url";
 import hermesAgent from "../../assets/installer-icons/hermes-agent.svg?url";
 import inkscape from "../../assets/installer-icons/inkscape.svg?url";
 import keepassxc from "../../assets/installer-icons/keepassxc.svg?url";
@@ -113,6 +116,9 @@ const RECIPE_ICON_URLS: Record<string, string> = {
   rustdesk,
   scrcpy,
   "7zip": sevenZip,
+  "google-chrome": googleChrome,
+  firefox,
+  "acrobat-reader": acrobatReader,
   sharex,
   ffmpeg,
   excalidraw,

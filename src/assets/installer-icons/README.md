@@ -29,6 +29,16 @@ limited to small app-identification assets.
   the official Blender orange `#E87D0D`; `keepassxc.svg` uses the official
   KeePassXC green `#6CAC4D`).
 - `openai.svg`: Simple Icons npm package.
+- `google-chrome.svg`: Simple Icons CDN (`googlechrome`, official Chrome blue
+  `#4285F4`; trademark notice applies).
+- `firefox.svg`: Simple Icons CDN (`firefoxbrowser`, official Firefox orange
+  `#FF7139`; trademark notice applies).
+- `acrobat-reader.svg`: Simple Icons npm package `simple-icons@5.24.0`
+  (`adobeacrobatreader`, recolored to the Simple Icons Acrobat red `#EC1C24`).
+  Adobe later asked Simple Icons to drop its marks, so current releases no
+  longer ship this icon; keep usage limited to small app-identification tiles
+  and recheck Adobe brand guidance before any larger use (trademark notice
+  applies).
 - `open-webui.png`: `open-webui/open-webui`, `backend/open_webui/static/favicon-96x96.png`.
 - `flowise.png`: `FlowiseAI/Flowise`, `packages/ui/public/favicon-32x32.png`.
 - `vscode.png`: `microsoft/vscode`, `resources/win32/code_70x70.png`.

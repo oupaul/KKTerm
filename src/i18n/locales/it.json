@@ -961,6 +961,12 @@
       "launch": "Avvia",
       "noMatches": "Nessuno strumento corrisponde alla ricerca."
     },
+    "launcher": {
+      "title": "Esegui {{name}}",
+      "body": "{{name}} è uno strumento da riga di comando che si esegue in una finestra del terminale.",
+      "samples": "Comandi di esempio",
+      "openTerminal": "Apri terminale"
+    },
     "stepper": {
       "failedBadge": "Non riuscito"
     },

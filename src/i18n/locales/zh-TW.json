@@ -961,6 +961,12 @@
       "launch": "啟動",
       "noMatches": "沒有符合搜尋的工具。"
     },
+    "launcher": {
+      "title": "執行 {{name}}",
+      "body": "{{name}} 是命令列工具，需在終端機視窗中執行。",
+      "samples": "指令範例",
+      "openTerminal": "開啟終端機"
+    },
     "stepper": {
       "failedBadge": "失敗"
     },

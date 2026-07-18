@@ -3310,6 +3310,10 @@ type CommandMap = {
     args: { toolId: string };
     result: void;
   };
+  installer_launch_app: {
+    args: { toolId: string };
+    result: void;
+  };
   installer_list_quick_launch: {
     args: { toolId: string };
     result: import("../modules/installer/types").QuickLaunchEntry[];

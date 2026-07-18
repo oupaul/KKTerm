@@ -26,6 +26,7 @@ import {
   resolveInstallPlan,
 } from "./dag";
 import { iconUrlForRecipe, FALLBACK_ICON_URL } from "./icons";
+import { cliLaunchSamplesForRecipe, suiteTerminalIsElevated } from "./launch";
 import { InstallerConfirmDialog } from "./InstallerConfirmDialog";
 import { installRecipeAndWait } from "./progress";
 import { ToggleSwitch } from "../settings/ToggleSwitch";
@@ -75,6 +76,8 @@ export function InstallerToolDialog() {
       >
         {open.mode === "stepper" ? (
           <StepperBody recipe={recipe} />
+        ) : open.mode === "launcher" ? (
+          <LauncherBody recipe={recipe} />
         ) : (
           <InfoBody recipe={recipe} />
         )}
@@ -474,7 +477,9 @@ function InstalledInfoBody({ recipe }: { recipe: Recipe }) {
                   className="secondary-button installer-tool-dialog__quick-launch-terminal"
                   onClick={() => void handleOpenQuickLaunchTerminal()}
                 >
-                  {t("installer.quickLaunch.openTerminal")}
+                  {suiteTerminalIsElevated(recipe.id)
+                    ? t("installer.quickLaunch.openTerminal")
+                    : t("installer.launcher.openTerminal")}
                 </button>
               ) : null}
             </div>
@@ -1123,6 +1128,73 @@ function StepperList({
 }
 
 // =================================================================
+// Launcher mode — mini launcher for installed command-line tools
+// =================================================================
+
+function LauncherBody({ recipe }: { recipe: Recipe }) {
+  const { t } = useTranslation();
+  const closeDialog = useInstallerStore((s) => s.closeDialog);
+  const showStatusBarNotice = useWorkspaceStore(
+    (state) => state.showStatusBarNotice,
+  );
+  const samples = cliLaunchSamplesForRecipe(recipe.id) ?? [];
+
+  async function handleOpenTerminal() {
+    if (!isTauriRuntime()) return;
+    try {
+      await invokeCommand("installer_open_terminal_launcher", {
+        toolId: recipe.id,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      showStatusBarNotice(message, { tone: "error" });
+    }
+  }
+
+  return (
+    <>
+      <header className="installer-tool-dialog__header">
+        <ToolIcon recipe={recipe} />
+        <div>
+          <h2>{t("installer.launcher.title", { name: recipe.name })}</h2>
+        </div>
+      </header>
+      <div className="installer-tool-dialog__body">
+        <p className="installer-tool-dialog__desc">
+          {t("installer.launcher.body", { name: recipe.name })}
+        </p>
+        <dl className="installer-tool-dialog__grid">
+          <Row label={t("installer.launcher.samples")}>
+            <span style={{ display: "flex", flexDirection: "column", gap: "0.2rem" }}>
+              {samples.map((sample, i) => (
+                <code key={i}>{sample}</code>
+              ))}
+            </span>
+          </Row>
+        </dl>
+      </div>
+      <LegacyDialogActions
+        className="installer-tool-dialog__actions"
+        primary={
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={() => void handleOpenTerminal()}
+          >
+            {t("installer.launcher.openTerminal")}
+          </button>
+        }
+        cancel={
+          <button type="button" className="toolbar-button" onClick={closeDialog}>
+            {t("common.close")}
+          </button>
+        }
+      />
+    </>
+  );
+}
+
+// =================================================================
 // Small shared helpers
 // =================================================================
 
@@ -1535,27 +1607,8 @@ function workspaceConnectionSpecForRecipe(
 function terminalLaunchAffordanceForRecipe(
   recipe: Recipe,
 ): { hints: string[] } | null {
-  switch (recipe.id) {
-    case "hermes-agent":
-      return {
-        hints: [
-          "hermes setup  —  configure providers and accounts",
-          "hermes postinstall  —  optional dependencies",
-          "hermes doctor  —  health check",
-          "hermes  —  start chatting",
-        ],
-      };
-    case "openclaw":
-      return {
-        hints: [
-          "openclaw onboard --install-daemon  —  setup and managed startup",
-          "openclaw doctor  —  check configuration",
-          "openclaw gateway status  —  verify gateway",
-        ],
-      };
-    default:
-      return null;
-  }
+  const hints = cliLaunchSamplesForRecipe(recipe.id);
+  return hints ? { hints } : null;
 }
 
 function serviceAffordanceForRecipe(recipe: Recipe): { name: string } | null {

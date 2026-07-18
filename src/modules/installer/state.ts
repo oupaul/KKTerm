@@ -55,7 +55,9 @@ interface OpenDialog {
   toolId: string;
   /// "info" — installed/not-installed details. "stepper" — install in
   /// progress or just completed; the dialog body renders the stepper.
-  mode: "info" | "stepper";
+  /// "launcher" — mini launcher for installed command-line tools: sample
+  /// commands plus an open-terminal action.
+  mode: "info" | "stepper" | "launcher";
 }
 
 /// Catalog roll-up published by the Install Helper page so the global app
@@ -118,6 +120,7 @@ interface InstallerStoreState {
   applyProgress: (event: ProgressEvent) => void;
   openInfoDialog: (toolId: string) => void;
   openStepperDialog: (toolId: string) => void;
+  openLauncherDialog: (toolId: string) => void;
   closeDialog: () => void;
   openWslManager: () => void;
   closeWslManager: () => void;
@@ -377,6 +380,8 @@ export const useInstallerStore = create<InstallerStoreState>((set) => ({
   openInfoDialog: (toolId) => set({ openDialog: { toolId, mode: "info" } }),
   openStepperDialog: (toolId) =>
     set({ openDialog: { toolId, mode: "stepper" } }),
+  openLauncherDialog: (toolId) =>
+    set({ openDialog: { toolId, mode: "launcher" } }),
   closeDialog: () => set({ openDialog: null }),
   openWslManager: () => set({ wslManagerOpen: true }),
   closeWslManager: () => set({ wslManagerOpen: false }),

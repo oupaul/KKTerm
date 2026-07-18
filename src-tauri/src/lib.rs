@@ -4422,6 +4422,7 @@ pub fn run() {
             installer::commands::installer_run_web_ui,
             installer::commands::installer_stop_web_ui,
             installer::commands::installer_open_terminal_launcher,
+            installer::commands::installer_launch_app,
             installer::commands::installer_list_quick_launch,
             installer::commands::installer_launch_quick_command,
             installer::commands::installer_open_quick_launch_terminal,

@@ -961,6 +961,12 @@
       "launch": "起動",
       "noMatches": "検索に一致するツールはありません。"
     },
+    "launcher": {
+      "title": "{{name}} を実行",
+      "body": "{{name}} はターミナル ウィンドウで実行するコマンドライン ツールです。",
+      "samples": "コマンド例",
+      "openTerminal": "ターミナルを開く"
+    },
     "stepper": {
       "failedBadge": "失敗"
     },

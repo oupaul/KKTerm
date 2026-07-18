@@ -961,6 +961,12 @@
       "launch": "Khởi chạy",
       "noMatches": "Không có công cụ nào khớp với tìm kiếm của bạn."
     },
+    "launcher": {
+      "title": "Chạy {{name}}",
+      "body": "{{name}} là công cụ dòng lệnh chạy trong cửa sổ terminal.",
+      "samples": "Lệnh mẫu",
+      "openTerminal": "Mở terminal"
+    },
     "stepper": {
       "failedBadge": "Thất bại"
     },

@@ -961,6 +961,12 @@
       "launch": "실행",
       "noMatches": "검색과 일치하는 도구가 없습니다."
     },
+    "launcher": {
+      "title": "{{name}} 실행",
+      "body": "{{name}}은(는) 터미널 창에서 실행하는 명령줄 도구입니다.",
+      "samples": "명령 예시",
+      "openTerminal": "터미널 열기"
+    },
     "stepper": {
       "failedBadge": "실패"
     },
