@@ -2337,7 +2337,7 @@
       },
       "connections": {
         "label": "連線",
-        "description": "列出、建立、編輯和刪除已儲存的連線。"
+        "description": "列出、建立、編輯和刪除工作區、連線資料夾和已儲存的連線。"
       },
       "sessions": {
         "label": "即時工作階段",

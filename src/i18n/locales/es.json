@@ -2337,7 +2337,7 @@
       },
       "connections": {
         "label": "Conexiones",
-        "description": "Listar, crear, editar y eliminar conexiones guardadas."
+        "description": "Listar, crear, editar y eliminar espacios de trabajo, carpetas de conexiones y conexiones guardadas."
       },
       "sessions": {
         "label": "Sesiones activas",
@@ -3949,7 +3949,7 @@
     "errorPrefix": "Error del Asistente IA",
     "providerError": "Error de configuración del proveedor de IA",
     "copilotConnectRequired": "Conecta GitHub Copilot en Configuración antes de que el Asistente IA pueda chatear.",
-    "cursorCliRequired": "Activa Cursor Agent CLI en Ajustes antes de que el asistente de IA pueda chatear.",
+    "cursorCliRequired": "Activa Cursor Agent CLI en Ajustes antes de que el Asistente IA pueda chatear.",
     "chargingBeacon": "Cargando la baliza de respuesta",
     "preparingResponse": "Preparando respuesta...",
     "extensionDraftPrompt": "Crear un borrador de extensión de KKTerm para: ",

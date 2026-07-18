@@ -2337,7 +2337,7 @@
       },
       "connections": {
         "label": "连接",
-        "description": "列出、创建、编辑和删除已保存的连接。"
+        "description": "列出、创建、编辑和删除工作区、连接文件夹和已保存的连接。"
       },
       "sessions": {
         "label": "实时会话",

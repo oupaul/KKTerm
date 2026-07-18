@@ -2337,7 +2337,7 @@
       },
       "connections": {
         "label": "연결",
-        "description": "저장된 연결 나열, 생성, 편집 및 삭제."
+        "description": "작업 영역, 연결 폴더 및 저장된 연결 나열, 생성, 편집, 삭제."
       },
       "sessions": {
         "label": "라이브 세션",

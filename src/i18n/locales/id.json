@@ -2337,7 +2337,7 @@
       },
       "connections": {
         "label": "Koneksi",
-        "description": "Daftar, buat, edit, dan hapus koneksi tersimpan."
+        "description": "Buat daftar, buat, edit, dan hapus ruang kerja, folder koneksi, dan koneksi tersimpan."
       },
       "sessions": {
         "label": "Sesi langsung",
@@ -3949,7 +3949,7 @@
     "errorPrefix": "Error AI Assistant",
     "providerError": "Error pengaturan penyedia AI",
     "copilotConnectRequired": "Hubungkan GitHub Copilot di Pengaturan sebelum AI Assistant dapat mengobrol.",
-    "cursorCliRequired": "Aktifkan Cursor Agent CLI di Pengaturan sebelum asisten AI dapat mengobrol.",
+    "cursorCliRequired": "Aktifkan Cursor Agent CLI di Pengaturan sebelum AI Assistant dapat mengobrol.",
     "chargingBeacon": "Mengisi suar jawaban",
     "preparingResponse": "Menyiapkan respons...",
     "extensionDraftPrompt": "Buat draf ekstensi KKTerm untuk: ",

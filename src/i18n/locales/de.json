@@ -2337,7 +2337,7 @@
       },
       "connections": {
         "label": "Verbindungen",
-        "description": "Gespeicherte Verbindungen auflisten, erstellen, bearbeiten und löschen."
+        "description": "Arbeitsbereiche, Verbindungsordner und gespeicherte Verbindungen auflisten, erstellen, bearbeiten und löschen."
       },
       "sessions": {
         "label": "Live-Sitzungen",

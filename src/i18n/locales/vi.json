@@ -2337,7 +2337,7 @@
       },
       "connections": {
         "label": "Kết nối",
-        "description": "Liệt kê, tạo, chỉnh sửa và xóa các kết nối đã lưu."
+        "description": "Liệt kê, tạo, chỉnh sửa và xóa các không gian làm việc, thư mục kết nối và kết nối đã lưu."
       },
       "sessions": {
         "label": "Phiên trực tiếp",
@@ -3949,7 +3949,7 @@
     "errorPrefix": "AI Assistant error",
     "providerError": "AI provider settings error",
     "copilotConnectRequired": "Kết nối GitHub Copilot trong Cài đặt trước khi AI Assistant có thể trò chuyện.",
-    "cursorCliRequired": "Bật Cursor Agent CLI trong Cài đặt trước khi trợ lý AI có thể trò chuyện.",
+    "cursorCliRequired": "Bật Cursor Agent CLI trong Cài đặt trước khi AI Assistant có thể trò chuyện.",
     "chargingBeacon": "Charging the answer beacon",
     "preparingResponse": "Đang chuẩn bị phản hồi...",
     "extensionDraftPrompt": "Tạo bản nháp tiện ích mở rộng KKTerm cho: ",

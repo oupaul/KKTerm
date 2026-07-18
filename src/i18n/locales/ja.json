@@ -2337,7 +2337,7 @@
       },
       "connections": {
         "label": "接続",
-        "description": "保存された接続の一覧表示、作成、編集、削除。"
+        "description": "ワークスペース、接続フォルダー、保存された接続の一覧表示、作成、編集、削除。"
       },
       "sessions": {
         "label": "ライブセッション",
@@ -3949,7 +3949,7 @@
     "errorPrefix": "AIアシスタントエラー",
     "providerError": "AIプロバイダー設定エラー",
     "copilotConnectRequired": "AIアシスタントがチャットできるようにするには、設定でGitHub Copilotに接続してください。",
-    "cursorCliRequired": "AI アシスタントでチャットする前に、設定で Cursor Agent CLI を有効にしてください。",
+    "cursorCliRequired": "AIアシスタントでチャットする前に、設定で Cursor Agent CLI を有効にしてください。",
     "chargingBeacon": "応答ビーコンを充電中",
     "preparingResponse": "応答を準備中...",
     "extensionDraftPrompt": "KKTerm拡張機能のドラフトを作成：",
