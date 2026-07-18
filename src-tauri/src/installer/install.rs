@@ -196,6 +196,11 @@ fn selected_install_provider<'a>(recipe: &'a Recipe, options: &InstallOptions) -
             return provider;
         }
     }
+    if let Some(provider @ Provider::DownloadInstaller { .. }) = recipe.download_provider.as_ref() {
+        if super::detect::detect_official_cli_installer(&recipe.id).is_some() {
+            return provider;
+        }
+    }
     &recipe.provider
 }
 
@@ -736,6 +741,16 @@ fn downloaded_installer_powershell_script(download_path: &PathBuf, tool_id: &str
         );
     }
 
+    if download_path
+        .extension()
+        .is_some_and(|extension| extension.eq_ignore_ascii_case("ps1"))
+    {
+        return format!(
+            "$ErrorActionPreference = 'Stop'; & {}; if ($LASTEXITCODE) {{ exit $LASTEXITCODE }}; exit 0",
+            powershell_single_quote(&download_path.to_string_lossy())
+        );
+    }
+
     format!(
         "$p = Start-Process -FilePath {} -Wait -PassThru; exit $p.ExitCode",
         powershell_single_quote(&download_path.to_string_lossy())
@@ -805,7 +820,7 @@ fn run_downloaded_installer(
     )
 }
 
-fn powershell_single_quote(value: &str) -> String {
+pub(super) fn powershell_single_quote(value: &str) -> String {
     format!("'{}'", value.replace('\'', "''"))
 }
 
@@ -3081,6 +3096,18 @@ mod tests {
         assert!(script.contains("Add-AppxPackage -RegisterByFamilyName -MainPackage"));
         assert!(script.contains("Microsoft.DesktopAppInstaller_8wekyb3d8bbwe"));
         assert!(script.contains("Add-AppxPackage -Path"));
+    }
+
+    #[test]
+    fn powershell_installer_downloads_execute_in_process() {
+        let script = downloaded_installer_powershell_script(
+            &PathBuf::from(r"C:\Temp\install.ps1"),
+            "kimi-code-cli",
+        );
+
+        assert!(script.contains("& 'C:\\Temp\\install.ps1'"));
+        assert!(script.contains("$LASTEXITCODE"));
+        assert!(!script.contains("Start-Process -FilePath"));
     }
 
     #[test]

@@ -860,6 +860,93 @@
       }
     },
     {
+      "id": "kimi-code-cli",
+      "name": "Kimi Code CLI",
+      "section": "aiAgents",
+      "descriptionEn": "Moonshot AI's Kimi Code CLI coding agent. Install with WinGet, the official native script, or npm; Git for Windows is required.",
+      "category": "ai-agent",
+      "icon": "Bot",
+      "needs": [
+        "winget",
+        "git"
+      ],
+      "homepage": "https://moonshotai.github.io/kimi-code/",
+      "releaseNotesUrl": "https://github.com/MoonshotAI/kimi-code/releases",
+      "provider": {
+        "kind": "winget",
+        "id": "MoonshotAI.KimiCodeCLI"
+      },
+      "downloadProvider": {
+        "kind": "downloadInstaller",
+        "url": "https://code.kimi.com/kimi-code/install.ps1",
+        "fileName": "kimi-code-install.ps1"
+      },
+      "npmProvider": {
+        "kind": "npm",
+        "pkg": "@moonshot-ai/kimi-code"
+      },
+      "options": [
+        "provider",
+        "version"
+      ],
+      "descriptionLocales": {
+        "fr": "Agent de codage Kimi Code CLI de Moonshot AI. Installation avec WinGet, le script natif officiel ou npm ; Git pour Windows est requis.",
+        "it": "Agente di programmazione Kimi Code CLI di Moonshot AI. Installabile con WinGet, lo script nativo ufficiale o npm; richiede Git per Windows.",
+        "de": "Kimi Code CLI-Coding-Agent von Moonshot AI. Installation über WinGet, das offizielle native Skript oder npm; Git für Windows ist erforderlich.",
+        "es": "Agente de programación Kimi Code CLI de Moonshot AI. Se instala con WinGet, el script nativo oficial o npm; requiere Git para Windows.",
+        "es-MX": "Agente de programación Kimi Code CLI de Moonshot AI. Se instala con WinGet, el script nativo oficial o npm; requiere Git para Windows.",
+        "pt-BR": "Agente de programação Kimi Code CLI da Moonshot AI. Instale com WinGet, o script nativo oficial ou npm; requer Git para Windows.",
+        "zh-TW": "Moonshot AI 的 Kimi Code CLI 程式開發代理。可透過 WinGet、官方原生指令碼或 npm 安裝；需要 Git for Windows。",
+        "zh-CN": "Moonshot AI 的 Kimi Code CLI 编程代理。可通过 WinGet、官方原生脚本或 npm 安装；需要 Git for Windows。",
+        "ja": "Moonshot AI の Kimi Code CLI コーディングエージェント。WinGet、公式ネイティブスクリプト、または npm でインストールでき、Git for Windows が必要です。",
+        "ko": "Moonshot AI의 Kimi Code CLI 코딩 에이전트입니다. WinGet, 공식 네이티브 스크립트 또는 npm으로 설치할 수 있으며 Git for Windows가 필요합니다.",
+        "th": "เอเจนต์เขียนโค้ด Kimi Code CLI ของ Moonshot AI ติดตั้งได้ด้วย WinGet, สคริปต์เนทีฟอย่างเป็นทางการ หรือ npm และต้องใช้ Git for Windows",
+        "id": "Agen pengodean Kimi Code CLI dari Moonshot AI. Instal dengan WinGet, skrip native resmi, atau npm; memerlukan Git for Windows.",
+        "vi": "Tác nhân lập trình Kimi Code CLI của Moonshot AI. Cài đặt bằng WinGet, tập lệnh gốc chính thức hoặc npm; yêu cầu Git for Windows."
+      }
+    },
+    {
+      "id": "grok-build",
+      "name": "Grok Build",
+      "section": "aiAgents",
+      "descriptionEn": "xAI's Grok Build coding agent for interactive, headless, and ACP workflows. Install with WinGet or the official native script.",
+      "category": "ai-agent",
+      "icon": "Bot",
+      "needs": [
+        "winget"
+      ],
+      "homepage": "https://docs.x.ai/build/overview",
+      "releaseNotesUrl": "https://docs.x.ai/developers/release-notes",
+      "provider": {
+        "kind": "winget",
+        "id": "xAI.GrokBuild"
+      },
+      "downloadProvider": {
+        "kind": "downloadInstaller",
+        "url": "https://x.ai/cli/install.ps1",
+        "fileName": "grok-build-install.ps1"
+      },
+      "options": [
+        "provider",
+        "version"
+      ],
+      "descriptionLocales": {
+        "fr": "Agent de codage Grok Build de xAI pour les flux interactifs, sans interface et ACP. Installation avec WinGet ou le script natif officiel.",
+        "it": "Agente di programmazione Grok Build di xAI per flussi interattivi, headless e ACP. Installabile con WinGet o con lo script nativo ufficiale.",
+        "de": "Grok Build-Coding-Agent von xAI für interaktive, Headless- und ACP-Workflows. Installation über WinGet oder das offizielle native Skript.",
+        "es": "Agente de programación Grok Build de xAI para flujos interactivos, sin interfaz y ACP. Se instala con WinGet o el script nativo oficial.",
+        "es-MX": "Agente de programación Grok Build de xAI para flujos interactivos, sin interfaz y ACP. Se instala con WinGet o el script nativo oficial.",
+        "pt-BR": "Agente de programação Grok Build da xAI para fluxos interativos, headless e ACP. Instale com WinGet ou o script nativo oficial.",
+        "zh-TW": "xAI 的 Grok Build 程式開發代理，支援互動式、無介面及 ACP 工作流程。可透過 WinGet 或官方原生指令碼安裝。",
+        "zh-CN": "xAI 的 Grok Build 编程代理，支持交互式、无界面及 ACP 工作流。可通过 WinGet 或官方原生脚本安装。",
+        "ja": "xAI の Grok Build コーディングエージェント。対話型、ヘッドレス、ACP ワークフローに対応し、WinGet または公式ネイティブスクリプトでインストールできます。",
+        "ko": "대화형, 헤드리스 및 ACP 워크플로를 위한 xAI의 Grok Build 코딩 에이전트입니다. WinGet 또는 공식 네이티브 스크립트로 설치할 수 있습니다.",
+        "th": "เอเจนต์เขียนโค้ด Grok Build ของ xAI สำหรับเวิร์กโฟลว์แบบโต้ตอบ แบบไม่มีส่วนติดต่อ และ ACP ติดตั้งได้ด้วย WinGet หรือสคริปต์เนทีฟอย่างเป็นทางการ",
+        "id": "Agen pengodean Grok Build dari xAI untuk alur kerja interaktif, headless, dan ACP. Instal dengan WinGet atau skrip native resmi.",
+        "vi": "Tác nhân lập trình Grok Build của xAI cho quy trình tương tác, không giao diện và ACP. Cài đặt bằng WinGet hoặc tập lệnh gốc chính thức."
+      }
+    },
+    {
       "id": "ollama",
       "name": "Ollama",
       "section": "aiPlatforms",

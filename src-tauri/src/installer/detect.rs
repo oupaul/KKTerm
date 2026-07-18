@@ -204,6 +204,10 @@ pub fn detect_one(recipe: &Recipe) -> DetectedState {
                 {
                     npm_state.with_install_provider(Some("npm"))
                 } else if !state.installed
+                    && let Some(cli_state) = detect_official_cli_installer(&recipe.id)
+                {
+                    cli_state.with_install_provider(Some("downloadInstaller"))
+                } else if !state.installed
                     && let Some(cli_state) = detect_winget_cli_fallback(&recipe.id)
                 {
                     cli_state.with_install_provider(Some("winget"))
@@ -441,6 +445,43 @@ fn chocolatey_package_from_limit_output(output: &str, package_id: &str) -> Optio
         }
     }
     None
+}
+
+pub(super) fn detect_official_cli_installer(tool_id: &str) -> Option<DetectedState> {
+    let (_command, relative_path) = official_cli_install_spec(tool_id)?;
+    let home = std::env::var_os("USERPROFILE").map(PathBuf::from)?;
+    let executable = home.join(relative_path);
+    if !executable.is_file() {
+        return None;
+    }
+    let program = executable.to_string_lossy().into_owned();
+    let version = command_version(&program, &["--version"])
+        .and_then(|line| version_token_from_line(&line).or(Some(line)));
+    Some(
+        DetectedState::installed(version).with_install_location(
+            executable
+                .parent()
+                .map(|path| path.to_string_lossy().into_owned()),
+        ),
+    )
+}
+
+fn official_cli_install_spec(tool_id: &str) -> Option<(&'static str, &'static str)> {
+    match tool_id {
+        "kimi-code-cli" => Some(("kimi", ".kimi-code\\bin\\kimi.exe")),
+        "grok-build" => Some(("grok", ".grok\\bin\\grok.exe")),
+        _ => None,
+    }
+}
+
+fn version_token_from_line(line: &str) -> Option<String> {
+    line.split_whitespace()
+        .map(|token| token.trim_matches(|ch: char| !ch.is_ascii_alphanumeric() && ch != '.'))
+        .map(|token| token.trim_start_matches('v'))
+        .find(|token| {
+            token.contains('.') && token.chars().next().is_some_and(|ch| ch.is_ascii_digit())
+        })
+        .map(String::from)
 }
 
 fn detect_winget_cli_fallback(tool_id: &str) -> Option<DetectedState> {
@@ -1380,6 +1421,32 @@ mod tests {
             parse_version_line(&String::from_utf8_lossy(&output.stdout)).as_deref(),
             Some("24.11.1")
         );
+    }
+
+    #[test]
+    fn official_cli_install_specs_cover_kimi_code_and_grok_build() {
+        assert_eq!(
+            official_cli_install_spec("kimi-code-cli"),
+            Some(("kimi", ".kimi-code\\bin\\kimi.exe"))
+        );
+        assert_eq!(
+            official_cli_install_spec("grok-build"),
+            Some(("grok", ".grok\\bin\\grok.exe"))
+        );
+        assert_eq!(official_cli_install_spec("unknown"), None);
+    }
+
+    #[test]
+    fn official_cli_version_parser_extracts_version_tokens() {
+        assert_eq!(
+            version_token_from_line("kimi-code 0.27.0").as_deref(),
+            Some("0.27.0")
+        );
+        assert_eq!(
+            version_token_from_line("grok v0.2.103").as_deref(),
+            Some("0.2.103")
+        );
+        assert_eq!(version_token_from_line("unknown"), None);
     }
 
     #[test]

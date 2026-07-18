@@ -31,9 +31,11 @@ import ffmpeg from "../../assets/installer-icons/ffmpeg.svg?url";
 import flowise from "../../assets/installer-icons/flowise.png?url";
 import git from "../../assets/installer-icons/git.svg?url";
 import github from "../../assets/installer-icons/github.svg?url";
+import grok from "../../assets/installer-icons/grok.svg?url";
 import hermesAgent from "../../assets/installer-icons/hermes-agent.svg?url";
 import inkscape from "../../assets/installer-icons/inkscape.svg?url";
 import keepassxc from "../../assets/installer-icons/keepassxc.svg?url";
+import kimi from "../../assets/installer-icons/kimi.svg?url";
 import krita from "../../assets/installer-icons/krita.svg?url";
 import langflow from "../../assets/installer-icons/langflow.svg?url";
 import linux from "../../assets/installer-icons/linux.svg?url";
@@ -83,6 +85,8 @@ const RECIPE_ICON_URLS: Record<string, string> = {
   "claude-code-cli": claudeCode,
   "codex-cli": codex,
   "antigravity-cli": antigravity,
+  "kimi-code-cli": kimi,
+  "grok-build": grok,
   ollama,
   n8n,
   "open-webui": openWebui,

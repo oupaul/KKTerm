@@ -46,6 +46,8 @@ for (const { id, asset } of [
   { id: "claude-code-cli", asset: "claude-code.svg" },
   { id: "codex-cli", asset: "codex.svg" },
   { id: "codex-desktop", asset: "codex.svg" },
+  { id: "kimi-code-cli", asset: "kimi.svg" },
+  { id: "grok-build", asset: "grok.svg" },
   { id: "ffmpeg", asset: "ffmpeg.svg" },
   { id: "oh-my-posh", asset: "oh-my-posh.svg" },
   { id: "bentopdf", asset: "bentopdf.svg" },

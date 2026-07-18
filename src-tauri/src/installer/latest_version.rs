@@ -18,7 +18,7 @@ pub fn latest_version(recipe: &Recipe) -> LatestVersionResult {
         &json!({ "toolId": recipe.id, "provider": provider_kind(&recipe.provider) }),
     );
     let provider = latest_provider_for_recipe(recipe);
-    let result = match provider {
+    let provider_latest = || match provider {
         Provider::Winget { id } => winget_latest(id),
         Provider::Chocolatey { id } => chocolatey_latest(id),
         Provider::Npm { pkg } => npm_latest_for_recipe(pkg, recipe.release_notes_url.as_deref()),
@@ -28,6 +28,15 @@ pub fn latest_version(recipe: &Recipe) -> LatestVersionResult {
         Provider::WindowsFeature { .. } => Ok(None),
         Provider::WslDistro { .. } => Ok(None),
         Provider::Bundle { .. } => Ok(None),
+    };
+    let result = if let Some(url) = official_cli_latest_url(&recipe.id) {
+        official_cli_latest(&recipe.id, url).or_else(|official_error| {
+            provider_latest().map_err(|provider_error| {
+                format!("{official_error}; provider fallback also failed: {provider_error}")
+            })
+        })
+    } else {
+        provider_latest()
     };
     match &result {
         Ok(latest) => crate::logging::installer_helper_debug(
@@ -92,6 +101,49 @@ fn latest_provider_for_recipe(recipe: &Recipe) -> &Provider {
         }
     }
     &recipe.provider
+}
+
+fn official_cli_latest_url(tool_id: &str) -> Option<&'static str> {
+    match tool_id {
+        "kimi-code-cli" => Some("https://code.kimi.com/kimi-code/latest"),
+        "grok-build" => Some("https://x.ai/cli/stable"),
+        _ => None,
+    }
+}
+
+fn official_cli_latest(tool_id: &str, url: &str) -> LatestVersionResult {
+    let client = crate::net::proxy::apply_blocking(reqwest::blocking::Client::builder())
+        .user_agent("KKTerm-Installer/1")
+        .timeout(std::time::Duration::from_secs(15))
+        .build()
+        .map_err(|error| format!("latest-version client build failed: {error}"))?;
+    let body = client
+        .get(url)
+        .send()
+        .and_then(|response| response.error_for_status())
+        .and_then(|response| response.text())
+        .map_err(|error| {
+            format!("official latest-version lookup for `{tool_id}` failed: {error}")
+        })?;
+    official_cli_version_pointer(&body)
+        .map(Some)
+        .ok_or_else(|| {
+            format!("official latest-version lookup for `{tool_id}` returned an invalid version")
+        })
+}
+
+fn official_cli_version_pointer(body: &str) -> Option<String> {
+    let version = body.lines().next()?.trim().trim_start_matches('v');
+    if version.is_empty()
+        || !version.contains('.')
+        || !version.chars().next().is_some_and(|ch| ch.is_ascii_digit())
+        || !version
+            .chars()
+            .all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '.' | '-' | '+'))
+    {
+        return None;
+    }
+    Some(version.to_string())
 }
 
 fn winget_latest(id: &str) -> LatestVersionResult {
@@ -447,6 +499,20 @@ fn command_error_text(stderr: &[u8], stdout: &[u8]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn official_cli_version_pointers_accept_current_release_shapes() {
+        assert_eq!(
+            official_cli_version_pointer("0.27.0\n"),
+            Some("0.27.0".into())
+        );
+        assert_eq!(
+            official_cli_version_pointer("v0.2.103\r\n"),
+            Some("0.2.103".into())
+        );
+        assert_eq!(official_cli_version_pointer("not-a-version\n"), None);
+        assert_eq!(official_cli_version_pointer("0.2.103<script>\n"), None);
+    }
 
     #[test]
     fn npm_registry_document_returns_dist_tag_latest() {

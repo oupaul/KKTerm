@@ -24,6 +24,16 @@ export const BRAND_ICON_ENTRIES: BrandIconEntry[] = [
     keywords: ["opencode", "ai", "agent", "coding", "cli"],
   },
   {
+    id: "kimi-code-cli",
+    label: "Kimi Code CLI",
+    keywords: ["kimi", "moonshot", "ai", "agent", "coding", "cli"],
+  },
+  {
+    id: "grok-build",
+    label: "Grok Build",
+    keywords: ["grok", "xai", "x.ai", "ai", "agent", "coding", "cli"],
+  },
+  {
     id: "cursor",
     label: "Cursor",
     keywords: ["cursor", "ai", "ide", "editor", "coding"],

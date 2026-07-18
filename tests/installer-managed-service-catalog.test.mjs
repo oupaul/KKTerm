@@ -271,6 +271,43 @@ test("Hermes Desktop retains its direct installer source", () => {
   });
 });
 
+test("Kimi Code and Grok Build expose every verified Windows provider", () => {
+  const kimi = recipe("kimi-code-cli");
+  assert.equal(kimi.section, "aiAgents");
+  assert.deepEqual(kimi.needs, ["winget", "git"]);
+  assert.deepEqual(kimi.provider, {
+    kind: "winget",
+    id: "MoonshotAI.KimiCodeCLI",
+  });
+  assert.deepEqual(kimi.downloadProvider, {
+    kind: "downloadInstaller",
+    url: "https://code.kimi.com/kimi-code/install.ps1",
+    fileName: "kimi-code-install.ps1",
+  });
+  assert.deepEqual(kimi.npmProvider, {
+    kind: "npm",
+    pkg: "@moonshot-ai/kimi-code",
+  });
+  assert.ok(kimi.options?.includes("provider"));
+  assert.ok(kimi.options?.includes("version"));
+
+  const grok = recipe("grok-build");
+  assert.equal(grok.section, "aiAgents");
+  assert.deepEqual(grok.needs, ["winget"]);
+  assert.deepEqual(grok.provider, {
+    kind: "winget",
+    id: "xAI.GrokBuild",
+  });
+  assert.deepEqual(grok.downloadProvider, {
+    kind: "downloadInstaller",
+    url: "https://x.ai/cli/install.ps1",
+    fileName: "grok-build-install.ps1",
+  });
+  assert.equal(grok.npmProvider, undefined);
+  assert.ok(grok.options?.includes("provider"));
+  assert.ok(grok.options?.includes("version"));
+});
+
 test("Claude Desktop detection covers the official Windows MSIX package", () => {
   assert.ok(
     recipe("claude-desktop").detection?.appxPackageFamilyNames?.includes(

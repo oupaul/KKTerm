@@ -41,6 +41,8 @@ limited to small app-identification assets.
 - `opencode.svg`: `sst/opencode`, `packages/console/app/src/asset/brand/opencode-logo-dark-square.svg`.
 - `claude-code.svg`: LobeHub Icons `@lobehub/icons-static-svg`, `claudecode-color.svg`.
 - `codex.svg`: LobeHub Icons `@lobehub/icons-static-svg`, `codex-color.svg`.
+- `kimi.svg`: Simple Icons CDN, `kimi`.
+- `grok.svg`: LobeHub Icons `@lobehub/icons-static-svg`, `grok.svg`.
 - `comfyui.svg`: LobeHub Icons `@lobehub/icons-static-svg`, `comfyui-color.svg`.
 - `lmstudio.svg`: LobeHub Icons `@lobehub/icons-static-svg`, `lmstudio.svg`
   (monochrome mark recolored to the official LM Studio Fuchsia Blue `#6F42C1`).
