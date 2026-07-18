@@ -186,9 +186,10 @@ export const AI_PROVIDER_MODEL_CATALOG: AiProviderModelCatalog = {
     ],
   },
   opencode: {
-    defaultModel: "kimi-k2.6",
+    defaultModel: "kimi-k3",
     defaultReasoningEffort: "medium",
     models: [
+      { id: "kimi-k3", label: "Kimi K3", recommended: true, supportsImageInput: false },
       { id: "kimi-k2.6", label: "Kimi K2.6", recommended: true, supportsImageInput: false },
       { id: "deepseek-v4-flash", label: "DeepSeek V4 Flash", recommended: true, supportsImageInput: false },
       { id: "deepseek-v4-pro", label: "DeepSeek V4 Pro", recommended: true, supportsImageInput: false },
