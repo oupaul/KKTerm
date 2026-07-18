@@ -898,9 +898,11 @@
       "addedToWorkspace": "\"{{name}}\" agregado a Conexiones.",
       "serviceRemoved": "La eliminación del servicio de Windows terminó.",
       "partial": "Instalado parcialmente ({{installed}}/{{total}})",
+      "partialOfficialScript": "Instalado parcialmente ({{installed}}/{{total}}, script oficial)",
       "noVersion": "(versión desconocida)",
       "web": "Web",
       "notInstalled": "No instalado",
+      "installedOfficialScript": "Instalado (script oficial)",
       "retrieving": "Obteniendo...",
       "neverChecked": "Nunca"
     },
@@ -930,6 +932,7 @@
     "dialog": {
       "installLocation": "Ubicación de instalación",
       "provider": "Proveedor",
+      "providerOfficialScript": "Script oficial",
       "installedVersion": "Versión instalada",
       "latestVersion": "Última versión",
       "lastChecked": "Última comprobación",

@@ -16,6 +16,8 @@ use super::managed_app::{is_managed_app, managed_app_install_dir, managed_app_ma
 use super::proc::{no_window, npm_program};
 use super::schema::{Catalog, Detection, GithubReleaseLayout, Provider, Recipe};
 
+pub(super) const OFFICIAL_SCRIPT_INSTALL_SOURCE: &str = "officialScript";
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DetectedState {
@@ -38,6 +40,11 @@ pub struct DetectedState {
     /// Best-effort provider that detected and will manage this installed tool.
     #[serde(default)]
     pub install_provider: Option<String>,
+    /// Detection provenance that is not a management provider. Keeping this
+    /// separate prevents an official-script install from being routed through
+    /// the catalog's WinGet update/uninstall path.
+    #[serde(default)]
+    pub install_source: Option<String>,
     /// Unix timestamp from the most recent detection pass. Cached registry
     /// results carry this so the UI can show how stale the snapshot is.
     pub last_checked_at: Option<i64>,
@@ -53,6 +60,7 @@ impl DetectedState {
             install_scope: None,
             runtime_version: None,
             install_provider: None,
+            install_source: None,
             last_checked_at: None,
         }
     }
@@ -65,6 +73,7 @@ impl DetectedState {
             install_scope: None,
             runtime_version: None,
             install_provider: None,
+            install_source: None,
             last_checked_at: None,
         }
     }
@@ -81,6 +90,13 @@ impl DetectedState {
             self.install_provider = provider.map(String::from);
         }
         self
+    }
+    pub fn with_install_source(mut self, source: Option<&str>) -> Self {
+        self.install_source = source.map(String::from);
+        self
+    }
+    pub fn is_official_script_install(&self) -> bool {
+        self.install_source.as_deref() == Some(OFFICIAL_SCRIPT_INSTALL_SOURCE)
     }
     pub fn with_last_checked_at(mut self, checked_at: Option<i64>) -> Self {
         self.last_checked_at = checked_at;
@@ -208,6 +224,11 @@ pub fn detect_one(recipe: &Recipe) -> DetectedState {
                 {
                     cli_state.with_install_provider(Some("downloadInstaller"))
                 } else if !state.installed
+                    && recipe.id == "uv"
+                    && let Some(cli_state) = detect_astral_standalone_uv()
+                {
+                    cli_state.with_install_source(Some(OFFICIAL_SCRIPT_INSTALL_SOURCE))
+                } else if !state.installed
                     && let Some(cli_state) = detect_winget_cli_fallback(&recipe.id)
                 {
                     cli_state.with_install_provider(Some("winget"))
@@ -297,7 +318,9 @@ fn bundle_detected_state(
     total: u32,
 ) -> DetectedState {
     match bundle_id {
-        "node-bundle" => return runtime_bundle_detected_state(child_states, detect_node_version),
+        "node-bundle" => {
+            return runtime_bundle_detected_state(child_states, |_| detect_node_version());
+        }
         "python-bundle" => {
             return runtime_bundle_detected_state(child_states, detect_uv_python_313_version);
         }
@@ -328,6 +351,7 @@ fn default_bundle_detected_state(child_states: &[&DetectedState], total: u32) ->
             install_scope: None,
             runtime_version: None,
             install_provider: None,
+            install_source: None,
             last_checked_at: None,
         }
     }
@@ -335,29 +359,42 @@ fn default_bundle_detected_state(child_states: &[&DetectedState], total: u32) ->
 
 fn runtime_bundle_detected_state(
     child_states: &[&DetectedState],
-    detect_runtime_version: fn() -> Option<String>,
+    detect_runtime_version: fn(Option<&Path>) -> Option<String>,
 ) -> DetectedState {
     let manager_installed = child_states.iter().all(|state| state.installed);
     if !manager_installed {
         return default_bundle_detected_state(child_states, child_states.len() as u32);
     }
-    match detect_runtime_version() {
+    let manager_provider = child_states
+        .first()
+        .and_then(|state| state.install_provider.clone());
+    let manager_source = child_states
+        .first()
+        .and_then(|state| state.install_source.clone());
+    let manager_location = child_states
+        .first()
+        .and_then(|state| state.install_location.clone());
+    match detect_runtime_version(manager_location.as_deref().map(Path::new)) {
         Some(version) => {
             let manager_version = child_states
                 .first()
                 .and_then(|state| state.installed_version.clone());
             let mut state = DetectedState::installed(manager_version);
             state.runtime_version = Some(version);
+            state.install_location = manager_location;
+            state.install_provider = manager_provider;
+            state.install_source = manager_source;
             state
         }
         None => DetectedState {
             installed: false,
             installed_version: None,
             partial_count: Some((child_states.len() as u32, child_states.len() as u32 + 1)),
-            install_location: None,
+            install_location: manager_location,
             install_scope: None,
             runtime_version: None,
-            install_provider: None,
+            install_provider: manager_provider,
+            install_source: manager_source,
             last_checked_at: None,
         },
     }
@@ -367,8 +404,17 @@ fn detect_node_version() -> Option<String> {
     command_version("node", &["--version"])
 }
 
-fn detect_uv_python_313_version() -> Option<String> {
-    let output = command_output_with_refreshed_path("uv", &["python", "find", "3.13"])?;
+fn detect_uv_python_313_version(manager_location: Option<&Path>) -> Option<String> {
+    // A standalone uv install may have been found by its receipt even when
+    // KKTerm's process PATH is stale. Prefer that exact binary so the bundle
+    // does not regress from "uv detected" to "Python partially installed".
+    let manager_program = manager_location
+        .and_then(standalone_uv_executable)
+        .map(|path| path.to_string_lossy().into_owned());
+    let output = command_output_with_refreshed_path(
+        manager_program.as_deref().unwrap_or("uv"),
+        &["python", "find", "3.13"],
+    )?;
     if !output.status.success() {
         return None;
     }
@@ -528,6 +574,77 @@ fn winget_cli_fallback_command(tool_id: &str) -> Option<(&'static str, &'static 
     }
 }
 
+fn detect_astral_standalone_uv() -> Option<DetectedState> {
+    let refreshed_path = super::install::refreshed_path_public();
+    let candidates = standalone_uv_bin_path_candidates(
+        std::env::var_os("PATH").as_deref(),
+        refreshed_path.as_deref(),
+        std::env::var_os("UV_INSTALL_DIR").as_deref(),
+        std::env::var_os("USERPROFILE").as_deref(),
+        std::env::var_os("HOME").as_deref(),
+    );
+    let (bin_dir, executable) = candidates
+        .into_iter()
+        .find_map(|dir| standalone_uv_executable(&dir).map(|executable| (dir, executable)))?;
+    let program = executable.to_string_lossy().into_owned();
+    let version = command_version(&program, &["--version"])?;
+    Some(
+        DetectedState::installed(Some(version))
+            .with_install_location(Some(bin_dir.to_string_lossy().into_owned())),
+    )
+}
+
+fn standalone_uv_bin_path_candidates(
+    current_path: Option<&std::ffi::OsStr>,
+    refreshed_path: Option<&str>,
+    uv_install_dir: Option<&std::ffi::OsStr>,
+    user_profile: Option<&std::ffi::OsStr>,
+    home: Option<&std::ffi::OsStr>,
+) -> Vec<PathBuf> {
+    let mut candidates = Vec::new();
+    if let Some(path) = uv_install_dir {
+        push_unique_path(&mut candidates, PathBuf::from(path));
+    }
+    for root in [user_profile, home].into_iter().flatten() {
+        let root = PathBuf::from(root);
+        // `.local\bin` is the current default. `.cargo\bin` recognizes
+        // standalone installs created before uv 0.5 without broad directory
+        // scanning or confusing a package-manager binary for Astral's script.
+        push_unique_path(&mut candidates, root.join(".local").join("bin"));
+        push_unique_path(&mut candidates, root.join(".cargo").join("bin"));
+    }
+    for path in current_path
+        .into_iter()
+        .flat_map(std::env::split_paths)
+        .chain(
+            refreshed_path
+                .into_iter()
+                .flat_map(|path| std::env::split_paths(std::ffi::OsStr::new(path))),
+        )
+    {
+        push_unique_path(&mut candidates, path);
+    }
+    candidates
+}
+
+fn push_unique_path(paths: &mut Vec<PathBuf>, candidate: PathBuf) {
+    let candidate_text = candidate.to_string_lossy();
+    if !paths
+        .iter()
+        .any(|path| path.to_string_lossy().eq_ignore_ascii_case(&candidate_text))
+    {
+        paths.push(candidate);
+    }
+}
+
+fn standalone_uv_executable(bin_dir: &Path) -> Option<PathBuf> {
+    let executable = bin_dir.join(format!("uv{}", std::env::consts::EXE_SUFFIX));
+    // Astral's installer writes this receipt next to uv and `uv self update`
+    // uses it to prove ownership. Requiring both files is what keeps a pipx,
+    // Scoop, Cargo, or unrelated PATH copy from being mislabeled as standalone.
+    (executable.is_file() && bin_dir.join("uv-receipt.json").is_file()).then_some(executable)
+}
+
 fn command_version(program: &str, args: &[&str]) -> Option<String> {
     let output = command_output_with_refreshed_path(program, args)?;
     if !output.status.success() {
@@ -543,10 +660,18 @@ fn parse_version_line(text: &str) -> Option<String> {
         .map(str::trim)
         .find(|line| !line.is_empty())
         .map(|line| {
-            line.trim_start_matches("Python ")
-                .trim_start_matches('v')
-                .to_string()
+            let trimmed = line.trim_start_matches("Python ").trim_start_matches('v');
+            // Prefer the first version-shaped token so lines like
+            // `uv 0.11.29 (hash date)` and `PowerShell 7.5.0` compare cleanly
+            // against winget/latest-version strings.
+            extract_first_version_token(trimmed).unwrap_or_else(|| trimmed.to_string())
         })
+}
+
+fn extract_first_version_token(text: &str) -> Option<String> {
+    text.split(|c: char| !(c.is_ascii_alphanumeric() || c == '.' || c == '-'))
+        .find(|part| part.chars().next().is_some_and(|c| c.is_ascii_digit()))
+        .map(|part| part.to_string())
 }
 
 fn command_output_with_refreshed_path(program: &str, args: &[&str]) -> Option<Output> {
@@ -1324,7 +1449,7 @@ mod tests {
     #[test]
     fn runtime_bundle_reports_partial_when_manager_exists_without_runtime() {
         let manager = DetectedState::installed(Some("1.0.0".into()));
-        let state = runtime_bundle_detected_state(&[&manager], || None);
+        let state = runtime_bundle_detected_state(&[&manager], |_| None);
 
         assert!(!state.installed);
         assert_eq!(state.partial_count, Some((1, 2)));
@@ -1333,7 +1458,7 @@ mod tests {
     #[test]
     fn runtime_bundle_reports_runtime_version() {
         let manager = DetectedState::installed(Some("1.0.0".into()));
-        let state = runtime_bundle_detected_state(&[&manager], || Some("3.13.5".into()));
+        let state = runtime_bundle_detected_state(&[&manager], |_| Some("3.13.5".into()));
 
         assert!(state.installed);
         assert_eq!(state.installed_version.as_deref(), Some("1.0.0"));
@@ -1367,6 +1492,18 @@ mod tests {
     }
 
     #[test]
+    fn parse_version_line_extracts_uv_cli_version() {
+        assert_eq!(
+            parse_version_line("uv 0.11.29 (be17d132a 2026-03-18)\n").as_deref(),
+            Some("0.11.29")
+        );
+        assert_eq!(
+            parse_version_line("PowerShell 7.5.0\n").as_deref(),
+            Some("7.5.0")
+        );
+    }
+
+    #[test]
     fn oh_my_posh_has_cli_detection_fallback() {
         assert_eq!(
             winget_cli_fallback_command("oh-my-posh"),
@@ -1381,6 +1518,62 @@ mod tests {
             winget_cli_fallback_command("powershell-7"),
             Some(("pwsh", &["--version"][..]))
         );
+    }
+
+    #[test]
+    fn standalone_uv_detection_requires_astral_receipt() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let bin = temp.path().join("bin");
+        std::fs::create_dir(&bin).unwrap();
+        let executable = bin.join(format!("uv{}", std::env::consts::EXE_SUFFIX));
+        std::fs::write(&executable, b"test").unwrap();
+
+        assert_eq!(standalone_uv_executable(&bin), None);
+
+        std::fs::write(bin.join("uv-receipt.json"), b"{}").unwrap();
+        assert_eq!(standalone_uv_executable(&bin), Some(executable));
+    }
+
+    #[test]
+    fn standalone_uv_candidates_cover_custom_default_legacy_and_path_locations() {
+        let separator = if cfg!(target_os = "windows") {
+            ";"
+        } else {
+            ":"
+        };
+        let current_path = format!("path-one{separator}path-two");
+        let refreshed_path = format!("path-two{separator}persisted-path");
+        let candidates = standalone_uv_bin_path_candidates(
+            Some(std::ffi::OsStr::new(&current_path)),
+            Some(&refreshed_path),
+            Some(std::ffi::OsStr::new("custom-uv")),
+            Some(std::ffi::OsStr::new("user-profile")),
+            None,
+        );
+
+        assert_eq!(candidates[0], PathBuf::from("custom-uv"));
+        assert!(candidates.contains(&PathBuf::from("user-profile/.local/bin")));
+        assert!(candidates.contains(&PathBuf::from("user-profile/.cargo/bin")));
+        assert!(candidates.contains(&PathBuf::from("path-one")));
+        assert!(candidates.contains(&PathBuf::from("persisted-path")));
+        assert_eq!(
+            candidates
+                .iter()
+                .filter(|path| **path == PathBuf::from("path-two"))
+                .count(),
+            1
+        );
+    }
+
+    #[test]
+    fn runtime_bundle_propagates_manager_install_source() {
+        let manager = DetectedState::installed(Some("0.11.29".into()))
+            .with_install_source(Some("officialScript"));
+        let state = runtime_bundle_detected_state(&[&manager], |_| Some("3.13.5".into()));
+
+        assert!(state.installed);
+        assert_eq!(state.install_source.as_deref(), Some("officialScript"));
+        assert_eq!(state.runtime_version.as_deref(), Some("3.13.5"));
     }
 
     #[test]

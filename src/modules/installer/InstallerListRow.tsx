@@ -11,7 +11,11 @@ import { isTauriRuntime, openExternalUrl } from "../../lib/tauri";
 import { iconUrlForRecipe, FALLBACK_ICON_URL } from "./icons";
 import { latestVersionWebUrlForRecipe } from "./latestSupport";
 import { useInstallerStore } from "./state";
-import { localizedDescription, type Recipe } from "./types";
+import {
+  isOfficialScriptInstall,
+  localizedDescription,
+  type Recipe,
+} from "./types";
 import { useToolStatus, type StatusTone } from "./useToolStatus";
 
 function StatusPill({ tone, label }: { tone: StatusTone; label: string }) {
@@ -37,6 +41,8 @@ export function InstallerListRow({ recipe }: { recipe: Recipe }) {
   const { t, i18n } = useTranslation();
   const openInfoDialog = useInstallerStore((s) => s.openInfoDialog);
   const openStepperDialog = useInstallerStore((s) => s.openStepperDialog);
+  const detected = useInstallerStore((s) => s.detected[recipe.id]);
+  const officialScript = isOfficialScriptInstall(detected);
 
   const {
     isInstalled,
@@ -100,12 +106,19 @@ export function InstallerListRow({ recipe }: { recipe: Recipe }) {
       : statusTone === "update"
         ? t("installer.actions.update")
         : statusTone === "installed"
-          ? t("installer.section.installed")
+          ? officialScript
+            ? t("installer.status.installedOfficialScript")
+            : t("installer.section.installed")
           : statusTone === "partial"
-            ? t("installer.status.partial", {
-                installed: partial?.[0] ?? 0,
-                total: partial?.[1] ?? 0,
-              })
+            ? officialScript
+              ? t("installer.status.partialOfficialScript", {
+                  installed: partial?.[0] ?? 0,
+                  total: partial?.[1] ?? 0,
+                })
+              : t("installer.status.partial", {
+                  installed: partial?.[0] ?? 0,
+                  total: partial?.[1] ?? 0,
+                })
             : t("installer.status.notInstalled");
 
   return (

@@ -30,6 +30,10 @@ pub fn uninstall_recipe(
         uninstall_managed_app(&recipe.id, emit)
     } else if recipe.id == "cursor-cli" {
         uninstall_cursor_cli(cancel, emit)
+    } else if recipe.id == "uv" && detect_one(recipe).is_official_script_install() {
+        // A standalone receipt proves Astral owns this binary; it does not
+        // authorize `winget uninstall`, which could target a separate copy.
+        Err("this uv installation is managed by Astral's standalone installer; remove it using Astral's documented standalone uninstall steps".into())
     } else if let Some(Provider::Chocolatey { id }) = recipe.chocolatey_provider.as_ref()
         && detect_chocolatey_package(id).installed
     {

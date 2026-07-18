@@ -6,7 +6,9 @@ use std::process::Command;
 use serde::Deserialize;
 use serde_json::json;
 
-use super::detect::{detect_chocolatey_package, detect_npm_provider, github_release_marker_path};
+use super::detect::{
+    detect_chocolatey_package, detect_npm_provider, detect_one, github_release_marker_path,
+};
 use super::proc::no_window;
 use super::schema::{Catalog, Provider, Recipe};
 
@@ -63,9 +65,18 @@ pub fn latest_version_in_catalog(recipe: &Recipe, catalog: &Catalog) -> LatestVe
                 .iter()
                 .find(|r| r.id == steps[0])
                 .ok_or_else(|| format!("bundle step `{}` not found", steps[0]))?;
+            if child.id == "uv" && detect_one(child).is_official_script_install() {
+                // `uv self update` follows Astral's release channel, so use the
+                // same upstream project for availability instead of WinGet's
+                // independently published package metadata.
+                return github_latest("astral-sh/uv");
+            }
             return latest_version(child);
         }
         return Ok(None);
+    }
+    if recipe.id == "uv" && detect_one(recipe).is_official_script_install() {
+        return github_latest("astral-sh/uv");
     }
     latest_version(recipe)
 }

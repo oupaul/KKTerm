@@ -898,9 +898,11 @@
       "addedToWorkspace": "เพิ่ม \"{{name}}\" ไปยังการเชื่อมต่อแล้ว",
       "serviceRemoved": "ลบบริการ Windows เสร็จสมบูรณ์แล้ว",
       "partial": "ติดตั้งบางส่วน ({{installed}}/{{total}})",
+      "partialOfficialScript": "ติดตั้งบางส่วน ({{installed}}/{{total}}, สคริปต์ทางการ)",
       "noVersion": "(ไม่ทราบเวอร์ชัน)",
       "web": "Web",
       "notInstalled": "ยังไม่ได้ติดตั้ง",
+      "installedOfficialScript": "ติดตั้งแล้ว (สคริปต์ทางการ)",
       "retrieving": "กำลังดึงข้อมูล...",
       "neverChecked": "ไม่เคย"
     },
@@ -930,6 +932,7 @@
     "dialog": {
       "installLocation": "ตำแหน่งติดตั้ง",
       "provider": "ผู้ให้บริการ",
+      "providerOfficialScript": "สคริปต์ทางการ",
       "installedVersion": "เวอร์ชันที่ติดตั้ง",
       "latestVersion": "เวอร์ชันล่าสุด",
       "lastChecked": "ตรวจสอบล่าสุด",

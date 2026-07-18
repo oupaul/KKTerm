@@ -898,9 +898,11 @@
       "addedToWorkspace": "「{{name}}」を接続に追加しました。",
       "serviceRemoved": "Windows サービスの削除が完了しました。",
       "partial": "一部インストール済み ({{installed}}/{{total}})",
+      "partialOfficialScript": "一部インストール済み ({{installed}}/{{total}}、公式スクリプト)",
       "noVersion": "(バージョン不明)",
       "web": "Web",
       "notInstalled": "未インストール",
+      "installedOfficialScript": "インストール済み (公式スクリプト)",
       "retrieving": "取得中...",
       "neverChecked": "未確認"
     },
@@ -930,6 +932,7 @@
     "dialog": {
       "installLocation": "インストール先",
       "provider": "プロバイダー",
+      "providerOfficialScript": "公式スクリプト",
       "installedVersion": "インストール済みバージョン",
       "latestVersion": "最新バージョン",
       "lastChecked": "最終確認",
