@@ -14,8 +14,8 @@ pub(crate) struct AcpStdioSession {
     rx: mpsc::Receiver<String>,
     /// Polled between received lines (≤250ms latency). When it reports true
     /// the in-flight request aborts and `Drop` kills the CLI child process.
-    /// Set only for interactive streaming runs so Stop cancels Codex/Claude
-    /// CLI sessions the same way it cancels HTTP provider runs.
+    /// Set only for interactive streaming runs so Stop cancels CLI-backed
+    /// sessions the same way it cancels HTTP provider runs.
     cancel_probe: Option<Box<dyn Fn() -> bool>>,
 }
 
@@ -172,16 +172,18 @@ pub(crate) struct AcpRunFailure {
 
 pub(crate) fn run_acp_agent_command(
     backend: AiCliBackendKind,
+    cli_command: &str,
     model: &str,
     prompt: &str,
     app: &tauri::AppHandle,
     settings: &AiProviderSettings,
 ) -> Result<String, AcpRunFailure> {
-    run_acp_agent_command_streaming(backend, model, prompt, None, app, settings)
+    run_acp_agent_command_streaming(backend, cli_command, model, prompt, None, app, settings)
 }
 
 pub(crate) fn run_acp_agent_command_streaming(
     backend: AiCliBackendKind,
+    cli_command: &str,
     model: &str,
     prompt: &str,
     channel: Option<&Channel<Value>>,
@@ -191,6 +193,7 @@ pub(crate) fn run_acp_agent_command_streaming(
     let mut prompt_started = false;
     run_acp_agent_turn(
         backend,
+        cli_command,
         model,
         prompt,
         channel,
@@ -206,6 +209,7 @@ pub(crate) fn run_acp_agent_command_streaming(
 
 fn run_acp_agent_turn(
     backend: AiCliBackendKind,
+    cli_command: &str,
     model: &str,
     prompt: &str,
     channel: Option<&Channel<Value>>,
@@ -213,7 +217,7 @@ fn run_acp_agent_turn(
     settings: &AiProviderSettings,
     prompt_started: &mut bool,
 ) -> Result<String, String> {
-    let spec = acp_command_spec(backend);
+    let spec = acp_command_spec(backend, cli_command, model);
     let cwd = app
         .path()
         .app_data_dir()
@@ -549,7 +553,11 @@ pub(crate) fn acp_content_text(content: &Value) -> Option<String> {
     None
 }
 
-pub(crate) fn acp_command_spec(backend: AiCliBackendKind) -> AcpCommandSpec {
+pub(crate) fn acp_command_spec(
+    backend: AiCliBackendKind,
+    cli_command: &str,
+    model: &str,
+) -> AcpCommandSpec {
     match backend {
         AiCliBackendKind::Codex => AcpCommandSpec {
             program: npx_command(),
@@ -567,6 +575,20 @@ pub(crate) fn acp_command_spec(backend: AiCliBackendKind) -> AcpCommandSpec {
             ],
             label: "Claude ACP",
         },
+        // Cursor ships a native ACP stdio server (`agent acp` / `cursor-agent acp`).
+        AiCliBackendKind::Cursor => {
+            let mut args = Vec::new();
+            if !model.is_empty() && model != "default" && model != "auto" {
+                args.push("--model".to_string());
+                args.push(model.to_string());
+            }
+            args.push("acp".to_string());
+            AcpCommandSpec {
+                program: cli_command.to_string(),
+                args,
+                label: "Cursor ACP",
+            }
+        }
     }
 }
 
@@ -604,6 +626,7 @@ pub fn open_ai_cli_backend_auth(
     let auth_command = match provider {
         AiCliBackendKind::Codex => format!("{} login", shell_quote(&command)),
         AiCliBackendKind::ClaudeCode => format!("{} auth login", shell_quote(&command)),
+        AiCliBackendKind::Cursor => format!("{} login", shell_quote(&command)),
     };
     spawn_external_terminal(&auth_command)
 }
@@ -612,6 +635,9 @@ pub(crate) fn default_cli_command(provider: AiCliBackendKind) -> &'static str {
     match provider {
         AiCliBackendKind::Codex => "codex",
         AiCliBackendKind::ClaudeCode => "claude",
+        // The ACP registry uses `cursor-agent`; current Cursor releases also
+        // expose `agent`, which discovery accepts as a fallback.
+        AiCliBackendKind::Cursor => "cursor-agent",
     }
 }
 
@@ -652,7 +678,7 @@ pub(crate) fn cli_backend_discovery_candidates(provider: AiCliBackendKind) -> Ve
         common_user_bin_candidates(cli_backend_command_names(provider)),
         match provider {
             AiCliBackendKind::Codex => codex_vscode_extension_candidates(),
-            AiCliBackendKind::ClaudeCode => Vec::new(),
+            AiCliBackendKind::ClaudeCode | AiCliBackendKind::Cursor => Vec::new(),
         },
     )
 }
@@ -679,6 +705,17 @@ pub(crate) fn cli_backend_command_names(provider: AiCliBackendKind) -> &'static 
         AiCliBackendKind::ClaudeCode => &["claude.exe", "claude.cmd"],
         #[cfg(not(target_os = "windows"))]
         AiCliBackendKind::ClaudeCode => &["claude"],
+        // Cursor's installer exposes both names; prefer the product-specific
+        // alias before the generic `agent` command.
+        #[cfg(target_os = "windows")]
+        AiCliBackendKind::Cursor => &[
+            "cursor-agent.exe",
+            "cursor-agent.cmd",
+            "agent.exe",
+            "agent.cmd",
+        ],
+        #[cfg(not(target_os = "windows"))]
+        AiCliBackendKind::Cursor => &["cursor-agent", "agent"],
     }
 }
 
@@ -686,6 +723,9 @@ pub(crate) fn common_user_bin_candidates(names: &[&str]) -> Vec<PathBuf> {
     let mut roots = Vec::new();
     if let Some(profile) = std::env::var_os("USERPROFILE") {
         roots.push(PathBuf::from(&profile).join(".local").join("bin"));
+    }
+    if let Some(home) = std::env::var_os("HOME") {
+        roots.push(PathBuf::from(home).join(".local").join("bin"));
     }
     if let Some(nvm_symlink) = std::env::var_os("NVM_SYMLINK") {
         roots.push(PathBuf::from(nvm_symlink));
@@ -800,6 +840,15 @@ pub(crate) fn cli_backend_status(
                         false
                     })
             }
+            // Cursor documents `status` as its authentication probe.
+            AiCliBackendKind::Cursor => {
+                run_cli_capture(&command, &["status"], Some(Duration::from_secs(20)))
+                    .map(|output| cursor_auth_status_logged_in(&output))
+                    .unwrap_or_else(|message| {
+                        error = Some(message);
+                        false
+                    })
+            }
         }
     } else {
         false
@@ -826,6 +875,20 @@ pub(crate) fn claude_auth_status_logged_in(output: &str) -> bool {
             .unwrap_or(true),
         Err(_) => true,
     }
+}
+
+/// `cursor-agent status` / `agent status` output is not a stable machine schema.
+/// Treat clear "not logged in" phrases as unauthenticated; otherwise accept a
+/// successful status probe, matching Cursor's documented status command.
+pub(crate) fn cursor_auth_status_logged_in(output: &str) -> bool {
+    let lower = output.to_lowercase();
+    !(lower.contains("not logged")
+        || lower.contains("not authenticated")
+        || lower.contains("not signed in")
+        || lower.contains("logged out")
+        || lower.contains("unauthenticated")
+        || (lower.contains("please run") && lower.contains("login"))
+        || lower.contains("authentication required"))
 }
 
 pub(crate) fn run_cli_agent_command(
@@ -887,6 +950,7 @@ pub(crate) fn run_cli_agent_command(
             match backend {
                 AiCliBackendKind::Codex => "Codex CLI",
                 AiCliBackendKind::ClaudeCode => "Claude Code CLI",
+                AiCliBackendKind::Cursor => "Cursor Agent CLI",
             }
         ));
     }
@@ -939,6 +1003,26 @@ pub(crate) fn cli_agent_invocation(
             stdin: Some(prompt.to_string()),
             prompt_delivery: "stdin",
         },
+        // Keep the setup-failure fallback read-only. Cursor's Ask mode enforces
+        // a read-only sandbox even when broader execution permissions are set.
+        // Do not pass `-` as an argv sentinel (Cursor treats it as the prompt).
+        AiCliBackendKind::Cursor => {
+            let mut args = vec![
+                "--print".to_string(),
+                "--output-format".to_string(),
+                "text".to_string(),
+                "--mode=ask".to_string(),
+            ];
+            if !model.is_empty() && model != "default" && model != "auto" {
+                args.push("--model".to_string());
+                args.push(model.to_string());
+            }
+            CliAgentInvocation {
+                args,
+                stdin: Some(prompt.to_string()),
+                prompt_delivery: "stdin",
+            }
+        }
     }
 }
 

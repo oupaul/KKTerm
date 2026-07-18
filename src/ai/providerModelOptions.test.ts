@@ -53,6 +53,15 @@ if (!grokDefinition.modelOptions.some((model) => model.id === "grok-4.5" && mode
   throw new Error("Grok curated models should include Grok 4.5.");
 }
 
+const cursorDefinition = getAiProviderDefinition("cursor");
+if (
+  cursorDefinition.defaultModel !== "auto" ||
+  cursorDefinition.modelOptions.length !== 1 ||
+  cursorDefinition.modelOptions[0]?.id !== "auto"
+) {
+  throw new Error("Cursor should curate only Auto because account model ids are dynamic.");
+}
+
 const curatedOpenAiModels = selectModelOptionsForProvider({
   customModel: "",
   provider: openAiDefinition,

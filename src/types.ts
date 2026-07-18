@@ -1188,6 +1188,7 @@ export type AiProviderKind =
   | "azure-openai"
   | "litellm"
   | "github-copilot"
+  | "cursor"
   | "ollama"
   | "ollama-cloud"
   | "nvidia"
@@ -1241,8 +1242,10 @@ export interface AiProviderSettings {
   builtInMcpAllowAllDangerous: boolean;
   useCodexCli: boolean;
   useClaudeCli: boolean;
+  useCursorCli: boolean;
   claudeCliPath?: string;
   codexCliPath?: string;
+  cursorCliPath?: string;
   disabledSkillNames: string[];
   customSkillsEnabled: boolean;
   tools: AiAssistantToolSettings;

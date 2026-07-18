@@ -3515,8 +3515,10 @@ fn ai_provider_settings_round_trip_through_settings_table() {
             built_in_mcp_allow_all_dangerous: false,
             use_codex_cli: false,
             use_claude_cli: false,
+            use_cursor_cli: false,
             claude_cli_path: Some("  C:\\Tools\\claude.exe  ".to_string()),
             codex_cli_path: Some("  codex  ".to_string()),
+            cursor_cli_path: Some("  cursor-agent  ".to_string()),
             disabled_skill_names: vec!["ssh-helper".to_string(), "bad name".to_string()],
             custom_skills_enabled: true,
             tools: default_ai_assistant_tool_settings(),
@@ -3551,6 +3553,7 @@ fn ai_provider_settings_round_trip_through_settings_table() {
         Some("C:\\Tools\\claude.exe")
     );
     assert_eq!(updated.codex_cli_path.as_deref(), Some("codex"));
+    assert_eq!(updated.cursor_cli_path.as_deref(), Some("cursor-agent"));
     assert_eq!(updated.disabled_skill_names, vec!["ssh-helper".to_string()]);
 
     let reloaded = storage
@@ -3663,8 +3666,10 @@ fn ai_provider_settings_reject_invalid_tool_permission_mode() {
             built_in_mcp_allow_all_dangerous: false,
             use_codex_cli: false,
             use_claude_cli: false,
+            use_cursor_cli: false,
             claude_cli_path: None,
             codex_cli_path: None,
+            cursor_cli_path: None,
             disabled_skill_names: Vec::new(),
             custom_skills_enabled: true,
             tools: default_ai_assistant_tool_settings(),
@@ -3709,8 +3714,10 @@ fn ai_provider_settings_reject_invalid_base_url() {
             built_in_mcp_allow_all_dangerous: false,
             use_codex_cli: false,
             use_claude_cli: false,
+            use_cursor_cli: false,
             claude_cli_path: None,
             codex_cli_path: None,
+            cursor_cli_path: None,
             disabled_skill_names: Vec::new(),
             custom_skills_enabled: true,
             tools: default_ai_assistant_tool_settings(),
@@ -3758,8 +3765,10 @@ fn ai_provider_settings_reject_blank_model() {
             built_in_mcp_allow_all_dangerous: false,
             use_codex_cli: false,
             use_claude_cli: false,
+            use_cursor_cli: false,
             claude_cli_path: None,
             codex_cli_path: None,
+            cursor_cli_path: None,
             disabled_skill_names: Vec::new(),
             custom_skills_enabled: true,
             tools: default_ai_assistant_tool_settings(),
@@ -3805,8 +3814,10 @@ fn ai_provider_settings_trim_and_limit_custom_instructions() {
             built_in_mcp_allow_all_dangerous: false,
             use_codex_cli: false,
             use_claude_cli: false,
+            use_cursor_cli: false,
             claude_cli_path: None,
             codex_cli_path: None,
+            cursor_cli_path: None,
             disabled_skill_names: Vec::new(),
             custom_skills_enabled: true,
             tools: default_ai_assistant_tool_settings(),
@@ -3866,8 +3877,10 @@ fn ai_provider_settings_keep_cli_policy_suggest_only() {
             built_in_mcp_allow_all_dangerous: false,
             use_codex_cli: false,
             use_claude_cli: false,
+            use_cursor_cli: false,
             claude_cli_path: Some("claude".to_string()),
             codex_cli_path: Some("codex".to_string()),
+            cursor_cli_path: Some("cursor-agent".to_string()),
             disabled_skill_names: Vec::new(),
             custom_skills_enabled: true,
             tools: default_ai_assistant_tool_settings(),

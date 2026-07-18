@@ -59,8 +59,10 @@ export function providerDefaultsFor(kind: AiProviderKind): AiProviderSettings {
     builtInMcpAllowAllDangerous: false,
     useCodexCli: false,
     useClaudeCli: false,
+    useCursorCli: definition.kind === "cursor",
     claudeCliPath: "",
     codexCliPath: "",
+    cursorCliPath: "",
     disabledSkillNames: [],
     customSkillsEnabled: true,
     tools: DEFAULT_AI_ASSISTANT_TOOLS,
@@ -121,8 +123,10 @@ export function normalizeAiProviderDraft(draft: AiProviderSettings): AiProviderS
     builtInMcpAllowAllDangerous: Boolean(draft.builtInMcpAllowAllDangerous),
     useCodexCli: definition.kind === "openai" ? Boolean(draft.useCodexCli) : false,
     useClaudeCli: definition.kind === "anthropic" ? Boolean(draft.useClaudeCli) : false,
+    useCursorCli: definition.kind === "cursor" ? Boolean(draft.useCursorCli) : false,
     claudeCliPath: draft.claudeCliPath?.trim() ?? "",
     codexCliPath: draft.codexCliPath?.trim() ?? "",
+    cursorCliPath: draft.cursorCliPath?.trim() ?? "",
     disabledSkillNames: normalizeDisabledSkillNames(draft.disabledSkillNames),
     customSkillsEnabled: Boolean(draft.customSkillsEnabled ?? true),
     tools: { ...DEFAULT_AI_ASSISTANT_TOOLS, ...(draft.tools ?? {}) },
@@ -201,7 +205,8 @@ function normalizeSmtpPort(value: number | undefined): number {
 export function providerNeedsApiKey(settings: AiProviderSettings) {
   if (
     (settings.providerKind === "openai" && settings.useCodexCli) ||
-    (settings.providerKind === "anthropic" && settings.useClaudeCli)
+    (settings.providerKind === "anthropic" && settings.useClaudeCli) ||
+    (settings.providerKind === "cursor" && settings.useCursorCli)
   ) {
     return false;
   }
@@ -216,9 +221,13 @@ export function validateAiProviderForChat(
   const definition = getAiProviderDefinition(normalized.providerKind);
   if (
     (normalized.providerKind === "openai" && normalized.useCodexCli) ||
-    (normalized.providerKind === "anthropic" && normalized.useClaudeCli)
+    (normalized.providerKind === "anthropic" && normalized.useClaudeCli) ||
+    (normalized.providerKind === "cursor" && normalized.useCursorCli)
   ) {
     return normalized;
+  }
+  if (normalized.providerKind === "cursor" && !normalized.useCursorCli) {
+    throw new Error(i18next.t("ai.cursorCliRequired"));
   }
   if (definition.kind === "github-copilot" && !hasApiKey) {
     throw new Error(i18next.t("ai.copilotConnectRequired"));

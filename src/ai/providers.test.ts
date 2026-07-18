@@ -35,6 +35,27 @@ try {
 
 validateAiProviderForChat(copilotSettings, true);
 
+const cursorSettings = providerDefaultsFor("cursor");
+if (!cursorSettings.useCursorCli) {
+  throw new Error("Cursor should default to its required local CLI backend.");
+}
+if (getAiProviderDefinition("cursor").requiresApiKey) {
+  throw new Error("Cursor should use the CLI's cached authentication instead of an API key.");
+}
+validateAiProviderForChat(cursorSettings, false);
+try {
+  validateAiProviderForChat({ ...cursorSettings, useCursorCli: false }, false);
+  throw new Error("Cursor should require its CLI backend before chat.");
+} catch (error) {
+  const message = error instanceof Error ? error.message : String(error);
+  if (!message.includes("Enable Cursor Agent CLI")) {
+    throw Object.assign(
+      new Error(`Cursor should fail with the CLI requirement, got: ${message}`),
+      { cause: error },
+    );
+  }
+}
+
 const ollamaDefinition = getAiProviderDefinition("ollama");
 if (ollamaDefinition.modelListStrategy !== "ollamaTags" || !ollamaDefinition.strictModelList) {
   throw new Error("Ollama should refresh from native tags and treat pulled models as strict.");

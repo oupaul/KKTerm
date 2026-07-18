@@ -1063,7 +1063,7 @@ export interface AiProviderModelOption {
   supportsImageInput?: boolean | null;
 }
 
-export type AiCliBackendKind = "codex" | "claudeCode";
+export type AiCliBackendKind = "codex" | "claudeCode" | "cursor";
 
 export interface GitHubCopilotCliStatus {
   installed: boolean;

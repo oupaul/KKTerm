@@ -256,6 +256,7 @@ pub type AiProviderModelOption = CopilotModelOption;
 pub enum AiCliBackendKind {
     Codex,
     ClaudeCode,
+    Cursor,
 }
 
 #[derive(Clone, Serialize)]
@@ -1170,6 +1171,11 @@ fn provider_for_settings(settings: &AiProviderSettings) -> Result<AgentProviderA
             settings.claude_cli_path().map(str::to_string),
         )));
     }
+    if settings.use_cursor_cli() {
+        return Ok(AgentProviderAdapter::Cli(CliAgentProvider::cursor(
+            settings.cursor_cli_path().map(str::to_string),
+        )));
+    }
     provider_for(settings.provider_kind())
 }
 
@@ -1208,6 +1214,15 @@ impl CliAgentProvider {
             provider_kind: "anthropic",
             label: "Claude Code CLI",
             command: resolve_cli_backend_command(AiCliBackendKind::ClaudeCode, command),
+        }
+    }
+
+    fn cursor(command: Option<String>) -> Self {
+        Self {
+            backend: AiCliBackendKind::Cursor,
+            provider_kind: "cursor",
+            label: "Cursor Agent CLI",
+            command: resolve_cli_backend_command(AiCliBackendKind::Cursor, command),
         }
     }
 }
@@ -1305,24 +1320,31 @@ impl AgentProvider for CliAgentProvider {
         let app_for_acp = _app.clone();
         let settings_for_acp = settings.clone();
         let output = tauri::async_runtime::spawn_blocking(move || {
-            run_acp_agent_command(backend, &model, &prompt, &app_for_acp, &settings_for_acp)
-                .or_else(|acp_failure| {
-                    if !should_fallback_from_acp_error(&acp_failure) {
-                        return Err(acp_failure.error);
-                    }
-                    ai_interaction_debug!(
-                        "agent.cli_acp_fallback",
-                        json!({
-                            "backend": backend,
-                            "error": acp_failure.error,
-                            "promptStarted": acp_failure.prompt_started,
-                            "model": &model,
-                            "promptBytes": prompt.len(),
-                            "promptChars": prompt.chars().count(),
-                        })
-                    );
-                    run_cli_agent_command(backend, &command, &model, &prompt, None)
-                })
+            run_acp_agent_command(
+                backend,
+                &command,
+                &model,
+                &prompt,
+                &app_for_acp,
+                &settings_for_acp,
+            )
+            .or_else(|acp_failure| {
+                if !should_fallback_from_acp_error(&acp_failure) {
+                    return Err(acp_failure.error);
+                }
+                ai_interaction_debug!(
+                    "agent.cli_acp_fallback",
+                    json!({
+                        "backend": backend,
+                        "error": acp_failure.error,
+                        "promptStarted": acp_failure.prompt_started,
+                        "model": &model,
+                        "promptBytes": prompt.len(),
+                        "promptChars": prompt.chars().count(),
+                    })
+                );
+                run_cli_agent_command(backend, &command, &model, &prompt, None)
+            })
         })
         .await
         .map_err(|error| format!("failed to run {label}: {error}"))??;
@@ -1365,6 +1387,7 @@ impl AgentProvider for CliAgentProvider {
             move || {
                 run_acp_agent_command_streaming(
                     backend,
+                    &command,
                     &model,
                     &prompt,
                     Some(&channel),

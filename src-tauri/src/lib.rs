@@ -1399,6 +1399,7 @@ async fn get_ai_cli_backend_status(
     let configured_path = match provider {
         ai::AiCliBackendKind::Codex => settings.codex_cli_path().map(str::to_string),
         ai::AiCliBackendKind::ClaudeCode => settings.claude_cli_path().map(str::to_string),
+        ai::AiCliBackendKind::Cursor => settings.cursor_cli_path().map(str::to_string),
     };
     Ok(ai::ai_cli_backend_status(provider, configured_path).await)
 }
@@ -1412,6 +1413,7 @@ fn open_ai_cli_backend_auth(
     let configured_path = match provider {
         ai::AiCliBackendKind::Codex => settings.codex_cli_path().map(str::to_string),
         ai::AiCliBackendKind::ClaudeCode => settings.claude_cli_path().map(str::to_string),
+        ai::AiCliBackendKind::Cursor => settings.cursor_cli_path().map(str::to_string),
     };
     ai::open_ai_cli_backend_auth(provider, configured_path)
 }

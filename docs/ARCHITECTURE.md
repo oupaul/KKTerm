@@ -390,9 +390,10 @@ Assistant input construction follows a minimum-context rule:
 v0.1 providers:
 
 - OpenAI-compatible endpoint with BYO API key.
-- Anthropic and OpenAI can optionally delegate assistant turns to local Claude Code CLI / Codex CLI backends when the matching Settings toggle is enabled. These modes prefer an Agent Client Protocol stdio adapter for the selected vendor CLI and fall back to documented one-shot CLI command mode if ACP is unavailable. They use the vendor CLI's own cached authentication, disable the API key entry, and are intentionally not full parity with KKTerm's native HTTP/tool-calling loop.
+- Anthropic and OpenAI can optionally delegate assistant turns to local Claude Code CLI / Codex CLI backends when the matching Settings toggle is enabled. Cursor is a CLI-only provider (`settings.useCursorCli`) that uses the local Cursor Agent CLI (`cursor-agent` / `agent`). These modes prefer an Agent Client Protocol stdio adapter for the selected vendor CLI — including Cursor's native `acp` mode — and fall back to documented one-shot CLI command mode if ACP is unavailable. Cursor's one-shot fallback runs in read-only Ask mode and never passes `--force`. The CLI modes use the vendor CLI's own cached authentication, disable the API key entry, and are intentionally not full parity with KKTerm's native HTTP/tool-calling loop.
 - Claude Code CLI path.
 - Codex CLI path.
+- Cursor Agent CLI path.
 
 The AI source area must enforce permission-bounded execution. Prompt mode is the default tool permission mode; mutating tools return a structured `permissionRequired` result instead of running. Allow All is an explicit user setting that lets enabled tools run automatically. CLI integrations should be constrained to suggest-only/ask-before-execute where possible.
 

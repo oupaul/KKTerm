@@ -32,6 +32,9 @@ pub(super) fn provider_for(kind: &str) -> Result<AgentProviderAdapter, String> {
             "Anthropic support needs a provider adapter; DeepSeek and OpenAI-compatible providers are wired first."
                 .to_string(),
         ),
+        "cursor" => Err(
+            "Cursor Agent CLI must be enabled in Settings to use the Cursor provider.".to_string(),
+        ),
         "github-copilot" => Ok(AgentProviderAdapter::GitHubCopilot(GitHubCopilotProvider)),
         _ => Err("AI provider is not supported by the agent runner".to_string()),
     }

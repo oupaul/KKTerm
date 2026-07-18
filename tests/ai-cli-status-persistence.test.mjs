@@ -66,6 +66,43 @@ test("AI CLI status persistence round-trips manual check result with timestamp",
   );
 });
 
+test("AI CLI status persistence round-trips cursor backend status", async () => {
+  const {
+    readStoredAiCliBackendStatus,
+    writeStoredAiCliBackendStatus,
+  } = await loadPersistenceModule();
+  const storage = memoryStorage();
+
+  writeStoredAiCliBackendStatus(
+    "cursor",
+    {
+      provider: "cursor",
+      command: "C:\\Users\\Tester\\.local\\bin\\cursor-agent.cmd",
+      installed: true,
+      authenticated: true,
+      version: "2026.1.0",
+      error: null,
+    },
+    "2026-07-18T03:30:00.000Z",
+    storage,
+  );
+
+  assert.equal(
+    JSON.stringify(readStoredAiCliBackendStatus("cursor", storage)),
+    JSON.stringify({
+      checkedAt: "2026-07-18T03:30:00.000Z",
+      status: {
+        provider: "cursor",
+        command: "C:\\Users\\Tester\\.local\\bin\\cursor-agent.cmd",
+        installed: true,
+        authenticated: true,
+        version: "2026.1.0",
+        error: null,
+      },
+    }),
+  );
+});
+
 test("AI CLI status persistence ignores malformed or mismatched stored results", async () => {
   const { readStoredAiCliBackendStatus } = await loadPersistenceModule();
   const storage = memoryStorage();

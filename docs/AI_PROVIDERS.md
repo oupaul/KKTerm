@@ -43,12 +43,17 @@ state.
 
 OpenAI and Anthropic can also be routed through their local coding CLIs when the
 user enables the Settings toggles `settings.useCodexCli` or
-`settings.useClaudeCli`. This is not the same runtime as the HTTP provider
-adapters: KKTerm first tries an Agent Client Protocol (ACP) stdio backend using
-the registry adapters for Codex and Claude Agent. If the ACP adapter is not
+`settings.useClaudeCli`. Cursor is a CLI-only provider: select the Cursor
+provider and enable `settings.useCursorCli` to route through the local Cursor
+Agent CLI (`cursor-agent` / `agent`). This is not the same runtime as the HTTP
+provider adapters: KKTerm first tries an Agent Client Protocol (ACP) stdio
+backend — registry adapters for Codex and Claude Agent, or the native
+`agent acp` / `cursor-agent acp` server for Cursor. If the ACP adapter is not
 available or fails to initialize, KKTerm falls back to the documented one-shot
-vendor CLI commands (`codex exec` or `claude -p`) using the vendor CLI's own
-cached authentication. The fallback is strictly a setup-failure path: once the
+vendor CLI commands (`codex exec`, `claude -p`, or Cursor `--print --mode=ask`
+with a stdin prompt) using the vendor CLI's own cached authentication. Cursor's
+fallback must stay in Ask mode and must never pass `--force`. The fallback is
+strictly a setup-failure path: once the
 ACP `session/prompt` turn has been dispatched, an error or timeout surfaces to
 the user instead of re-running the same turn through the one-shot command,
 because the ACP agent may already have streamed text or executed kkterm MCP
@@ -178,10 +183,10 @@ keychain under provider-specific AI API key owners. When adding settings:
    durable settings table unless the storage model is redesigned.
 4. Add or update storage tests that round-trip the new persisted setting.
 
-`useCodexCli` and `useClaudeCli` are non-secret booleans. They are only honored
-for `openai` and `anthropic` respectively; validation clears them for other
-providers. CLI paths remain optional non-secret overrides, while CLI auth
-material stays owned by the vendor CLI.
+`useCodexCli`, `useClaudeCli`, and `useCursorCli` are non-secret booleans. They
+are only honored for `openai`, `anthropic`, and `cursor` respectively;
+validation clears them for other providers. CLI paths remain optional
+non-secret overrides, while CLI auth material stays owned by the vendor CLI.
 
 The generic `openai-compatible` provider exposes `apiMode` so users can choose
 Chat Completions or Responses request mode for custom endpoints. The backend

@@ -1090,9 +1090,13 @@ pub struct AiProviderSettings {
     #[serde(default)]
     use_claude_cli: bool,
     #[serde(default)]
+    use_cursor_cli: bool,
+    #[serde(default)]
     claude_cli_path: Option<String>,
     #[serde(default)]
     codex_cli_path: Option<String>,
+    #[serde(default)]
+    cursor_cli_path: Option<String>,
     #[serde(default)]
     disabled_skill_names: Vec<String>,
     #[serde(default = "default_custom_assistant_skills_enabled")]
@@ -1188,12 +1192,20 @@ impl AiProviderSettings {
         self.provider_kind == "anthropic" && self.use_claude_cli
     }
 
+    pub(crate) fn use_cursor_cli(&self) -> bool {
+        self.provider_kind == "cursor" && self.use_cursor_cli
+    }
+
     pub(crate) fn claude_cli_path(&self) -> Option<&str> {
         self.claude_cli_path.as_deref()
     }
 
     pub(crate) fn codex_cli_path(&self) -> Option<&str> {
         self.codex_cli_path.as_deref()
+    }
+
+    pub(crate) fn cursor_cli_path(&self) -> Option<&str> {
+        self.cursor_cli_path.as_deref()
     }
 
     pub(crate) fn disabled_skill_names(&self) -> &[String] {
@@ -5437,8 +5449,10 @@ fn default_ai_provider_settings() -> AiProviderSettings {
         built_in_mcp_allow_all_dangerous: false,
         use_codex_cli: false,
         use_claude_cli: false,
+        use_cursor_cli: false,
         claude_cli_path: None,
         codex_cli_path: None,
+        cursor_cli_path: None,
         disabled_skill_names: Vec::new(),
         custom_skills_enabled: default_custom_assistant_skills_enabled(),
         tools: default_ai_assistant_tool_settings(),
@@ -6258,6 +6272,7 @@ fn validate_ai_provider_settings(
         "ollama-cloud" | "ollama_cloud" | "ollama cloud" => "ollama-cloud".to_string(),
         "nvidia" => "nvidia".to_string(),
         "opencode" | "open-code" | "open_code" | "open code" => "opencode".to_string(),
+        "cursor" => "cursor".to_string(),
         "openai-compatible" | "openai_compatible" | "openai compatible" => {
             "openai-compatible".to_string()
         }
@@ -6321,8 +6336,10 @@ fn validate_ai_provider_settings(
     settings.extra_headers = settings.extra_headers.trim().to_string();
     settings.use_codex_cli = settings.provider_kind == "openai" && settings.use_codex_cli;
     settings.use_claude_cli = settings.provider_kind == "anthropic" && settings.use_claude_cli;
+    settings.use_cursor_cli = settings.provider_kind == "cursor" && settings.use_cursor_cli;
     settings.claude_cli_path = trim_optional(settings.claude_cli_path);
     settings.codex_cli_path = trim_optional(settings.codex_cli_path);
+    settings.cursor_cli_path = trim_optional(settings.cursor_cli_path);
     settings.disabled_skill_names =
         crate::assistant_skills::normalize_skill_names(settings.disabled_skill_names);
 

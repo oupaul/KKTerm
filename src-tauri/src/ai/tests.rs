@@ -239,16 +239,28 @@ fn acp_jsonrpc_id_preserves_string_permission_ids() {
 
 #[test]
 fn acp_command_specs_use_registry_adapters() {
-    let codex = acp_command_spec(AiCliBackendKind::Codex);
+    let codex = acp_command_spec(AiCliBackendKind::Codex, "codex", "gpt-5.6");
     assert!(codex.args.iter().any(|arg| arg.contains("codex-acp")));
 
-    let claude = acp_command_spec(AiCliBackendKind::ClaudeCode);
+    let claude = acp_command_spec(AiCliBackendKind::ClaudeCode, "claude", "claude-opus-4.8");
     assert!(
         claude
             .args
             .iter()
             .any(|arg| arg.contains("claude-agent-acp"))
     );
+
+    let cursor = acp_command_spec(
+        AiCliBackendKind::Cursor,
+        "C:\\Tools\\cursor-agent.cmd",
+        "composer-2",
+    );
+    assert_eq!(cursor.program, "C:\\Tools\\cursor-agent.cmd");
+    assert_eq!(cursor.args, vec!["--model", "composer-2", "acp"]);
+    assert_eq!(cursor.label, "Cursor ACP");
+
+    let cursor_auto = acp_command_spec(AiCliBackendKind::Cursor, "cursor-agent", "auto");
+    assert_eq!(cursor_auto.args, vec!["acp"]);
 }
 
 #[test]
@@ -443,6 +455,17 @@ fn claude_auth_status_requires_logged_in_json() {
 }
 
 #[test]
+fn cursor_auth_status_rejects_logged_out_output() {
+    assert!(cursor_auth_status_logged_in(
+        "Authenticated as user@example.com"
+    ));
+    assert!(!cursor_auth_status_logged_in("Not authenticated"));
+    assert!(!cursor_auth_status_logged_in(
+        "Not signed in. Please run agent login."
+    ));
+}
+
+#[test]
 fn cli_capture_honors_timeout() {
     let started = Instant::now();
     #[cfg(target_os = "windows")]
@@ -562,16 +585,20 @@ fn windows_external_terminal_command_line_handles_paths_with_spaces() {
 fn cli_backend_command_names_include_windows_npm_shims() {
     let codex_names = cli_backend_command_names(AiCliBackendKind::Codex);
     let claude_names = cli_backend_command_names(AiCliBackendKind::ClaudeCode);
+    let cursor_names = cli_backend_command_names(AiCliBackendKind::Cursor);
 
     #[cfg(target_os = "windows")]
     {
         assert!(codex_names.contains(&"codex.cmd"));
         assert!(claude_names.contains(&"claude.cmd"));
+        assert!(cursor_names.contains(&"cursor-agent.cmd"));
+        assert!(cursor_names.contains(&"agent.cmd"));
     }
     #[cfg(not(target_os = "windows"))]
     {
         assert_eq!(codex_names, &["codex"]);
         assert_eq!(claude_names, &["claude"]);
+        assert_eq!(cursor_names, &["cursor-agent", "agent"]);
     }
 }
 
@@ -591,6 +618,31 @@ fn claude_cli_agent_prompt_is_sent_over_stdin_not_argv() {
             .args
             .iter()
             .any(|arg| arg == "--no-session-persistence")
+    );
+}
+
+#[test]
+fn cursor_cli_agent_prompt_is_sent_over_stdin_not_argv() {
+    let prompt = "x".repeat(40_000);
+    let invocation = cli_agent_invocation(AiCliBackendKind::Cursor, "sonnet-4", &prompt);
+
+    assert_eq!(invocation.prompt_delivery, "stdin");
+    assert_eq!(invocation.stdin.as_deref(), Some(prompt.as_str()));
+    assert!(invocation.args.iter().any(|arg| arg == "--print"));
+    assert!(invocation.args.iter().any(|arg| arg == "--mode=ask"));
+    assert!(!invocation.args.iter().any(|arg| arg == "--force"));
+    assert!(!invocation.args.iter().any(|arg| arg == "-"));
+    assert!(
+        invocation.args.iter().all(|arg| arg.len() < 1_000),
+        "Cursor fallback argv must stay small enough for Windows CreateProcess"
+    );
+    assert_eq!(
+        invocation
+            .args
+            .windows(2)
+            .find(|pair| pair[0] == "--model")
+            .map(|pair| pair[1].as_str()),
+        Some("sonnet-4")
     );
 }
 
