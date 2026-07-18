@@ -110,6 +110,7 @@ function InstalledInfoBody({ recipe }: { recipe: Recipe }) {
   const detected = useInstallerStore((s) => s.detected[recipe.id]);
   const toolState = useInstallerStore((s) => s.toolState[recipe.id]);
   const latestError = useInstallerStore((s) => s.checkError[recipe.id]);
+  const checking = useInstallerStore((s) => s.checking);
   const allDetected = useInstallerStore((s) => s.detected);
   const catalog = useInstallerStore((s) => s.catalog);
   const closeDialog = useInstallerStore((s) => s.closeDialog);
@@ -208,6 +209,18 @@ function InstalledInfoBody({ recipe }: { recipe: Recipe }) {
       useInstallerStore.getState().setToolStates(states);
     } catch {
       // ignore — non-fatal
+    }
+  }
+
+  async function handleRefreshLatest() {
+    if (!isTauriRuntime()) return;
+    try {
+      await invokeCommand("installer_check_latest_versions", {
+        toolIds: [recipe.id],
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      showStatusBarNotice(message, { tone: "error" });
     }
   }
 
@@ -422,13 +435,14 @@ function InstalledInfoBody({ recipe }: { recipe: Recipe }) {
               {version}
             </Row>
           ) : null}
-          {supportsLatestVersion && (latestError || latest) ? (
+          {supportsLatestVersion ? (
             <Row label={t("installer.dialog.latestVersion")}>
-              <span
-                className={latestError ? "installer-tool-dialog__value-error" : undefined}
-              >
-                {latestError ?? latest}
-              </span>
+              <LatestVersionValue
+                error={latestError}
+                value={latest}
+                checking={checking}
+                onRefresh={() => void handleRefreshLatest()}
+              />
             </Row>
           ) : latestWebUrl ? (
             <Row label={t("installer.dialog.latestVersion")}>
@@ -733,7 +747,7 @@ function NotInstalledInfoBody({ recipe }: { recipe: Recipe }) {
     setOptions((prev) => ({ ...prev, [key]: value }));
   }
 
-  async function handleCheckNow() {
+  async function handleRefreshLatest() {
     if (!isTauriRuntime()) return;
     try {
       await invokeCommand("installer_check_latest_versions", {
@@ -851,22 +865,12 @@ function NotInstalledInfoBody({ recipe }: { recipe: Recipe }) {
           ) : null}
           {supportsLatestVersion ? (
             <Row label={t("installer.dialog.latestVersion")}>
-              {latestError ? (
-                <span className="installer-tool-dialog__value-error">
-                  {latestError}
-                </span>
-              ) : toolState?.latestVersionSeen ?? (
-                <button
-                  type="button"
-                  className="installer-tool-dialog__inline-action"
-                  onClick={() => void handleCheckNow()}
-                  disabled={checking}
-                >
-                  {checking
-                    ? t("installer.dialog.checkingDots")
-                    : t("installer.dialog.checkNow")}
-                </button>
-              )}
+              <LatestVersionValue
+                error={latestError}
+                value={toolState?.latestVersionSeen ?? null}
+                checking={checking}
+                onRefresh={() => void handleRefreshLatest()}
+              />
             </Row>
           ) : latestWebUrl ? (
             <Row label={t("installer.dialog.latestVersion")}>
@@ -1297,6 +1301,37 @@ function Row({
       <dt>{label}</dt>
       <dd>{children}</dd>
     </>
+  );
+}
+
+function LatestVersionValue({
+  checking,
+  error,
+  onRefresh,
+  value,
+}: {
+  checking: boolean;
+  error: string | null | undefined;
+  onRefresh: () => void;
+  value: string | null;
+}) {
+  const { t } = useTranslation();
+  return (
+    <span className="installer-tool-dialog__latest-value">
+      {error ? (
+        <span className="installer-tool-dialog__value-error">{error}</span>
+      ) : (
+        value
+      )}
+      <button
+        type="button"
+        className="installer-tool-dialog__inline-action"
+        onClick={onRefresh}
+        disabled={checking}
+      >
+        {checking ? t("installer.dialog.checkingDots") : t("installer.refresh")}
+      </button>
+    </span>
   );
 }
 

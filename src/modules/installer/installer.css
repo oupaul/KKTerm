@@ -649,6 +649,12 @@
   color: var(--red);
 }
 
+.installer-tool-dialog__latest-value {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
 .installer-tool-dialog__inline-action {
   background: none;
   border: none;
