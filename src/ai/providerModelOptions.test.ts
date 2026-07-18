@@ -53,6 +53,14 @@ if (!grokDefinition.modelOptions.some((model) => model.id === "grok-4.5" && mode
   throw new Error("Grok curated models should include Grok 4.5.");
 }
 
+const opencodeDefinition = getAiProviderDefinition("opencode");
+if (opencodeDefinition.defaultModel !== "kimi-k3") {
+  throw new Error(`OpenCode should default to Kimi K3, got: ${opencodeDefinition.defaultModel}`);
+}
+if (!opencodeDefinition.modelOptions.some((model) => model.id === "kimi-k3" && model.recommended)) {
+  throw new Error("OpenCode curated models should include Kimi K3.");
+}
+
 const cursorDefinition = getAiProviderDefinition("cursor");
 if (
   cursorDefinition.defaultModel !== "auto" ||
