@@ -27,6 +27,7 @@ const HEARTBEAT_INTERVAL_SECS: u64 = 10;
 const RECENT_PROCESS_OUTPUT_LINES: usize = 40;
 const FAILURE_OUTPUT_DETAIL_MAX_CHARS: usize = 500;
 const WINGET_NO_APPLICABLE_UPGRADE_EXIT_CODE: i32 = 0x8A15_002B_u32 as i32;
+const WINGET_NO_INSTALLED_PACKAGE_EXIT_CODE: i32 = 0x8A15_0014_u32 as i32;
 
 use super::detect::{
     GithubReleaseMarker, InstallScope, detect_chocolatey_package, detect_one, detect_winget,
@@ -969,10 +970,19 @@ fn install_winget(
         message: format!("winget {verb} --id {winget_id}"),
     });
     let args = winget_command_args(verb, winget_id, options);
-    if winget_should_run_elevated(winget_id, options) {
-        run_streamed_elevated("winget", &args, tool_id, cancel, emit)?;
+    let run_elevated = winget_should_run_elevated(winget_id, options);
+    let result = run_winget_command(&args, run_elevated, tool_id, cancel.clone(), emit);
+    if already_installed && is_winget_no_installed_package_error(result.as_ref().err()) {
+        emit(ProgressEvent::Step {
+            tool_id: tool_id.into(),
+            message: format!(
+                "winget upgrade could not match the installed package; retrying winget install --id {winget_id}"
+            ),
+        });
+        let install_args = winget_command_args("install", winget_id, options);
+        run_winget_command(&install_args, run_elevated, tool_id, cancel, emit)?;
     } else {
-        run_streamed("winget", &args, tool_id, cancel, emit)?;
+        result?;
     }
     if winget_tool_should_add_links_to_path(tool_id) {
         if let Some(dir) = winget_links_dir() {
@@ -983,6 +993,27 @@ fn install_winget(
     // a subsequent detect_one() reads the local installed-software inventory.
     // Returning None lets the caller decide whether to re-detect.
     Ok(None)
+}
+
+fn run_winget_command(
+    args: &[String],
+    run_elevated: bool,
+    tool_id: &str,
+    cancel: Arc<AtomicBool>,
+    emit: &EventSink,
+) -> Result<(), String> {
+    if run_elevated {
+        run_streamed_elevated("winget", args, tool_id, cancel, emit)
+    } else {
+        run_streamed("winget", args, tool_id, cancel, emit)
+    }
+}
+
+fn is_winget_no_installed_package_error(error: Option<&String>) -> bool {
+    error.is_some_and(|error| {
+        error.contains(&WINGET_NO_INSTALLED_PACKAGE_EXIT_CODE.to_string())
+            || error.contains("No installed package found matching input criteria")
+    })
 }
 
 fn winget_should_run_elevated(winget_id: &str, options: &InstallOptions) -> bool {
@@ -2920,6 +2951,27 @@ mod tests {
             -1_978_335_189,
         ));
         assert!(!is_nonfatal_winget_upgrade_exit("winget", &upgrade_args, 1));
+    }
+
+    #[test]
+    fn winget_no_installed_package_error_is_retryable() {
+        let numeric = format!(
+            "elevated `winget` exited with status {}: No installed package found matching input criteria.",
+            WINGET_NO_INSTALLED_PACKAGE_EXIT_CODE
+        );
+        assert!(is_winget_no_installed_package_error(Some(&numeric)));
+
+        let localized_status_only = format!(
+            "`winget` exited with status {}",
+            WINGET_NO_INSTALLED_PACKAGE_EXIT_CODE
+        );
+        assert!(is_winget_no_installed_package_error(Some(
+            &localized_status_only
+        )));
+
+        let unrelated = "`winget` exited with status 1".to_string();
+        assert!(!is_winget_no_installed_package_error(Some(&unrelated)));
+        assert!(!is_winget_no_installed_package_error(None));
     }
 
     #[test]
