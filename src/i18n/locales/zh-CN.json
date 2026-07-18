@@ -898,9 +898,11 @@
       "addedToWorkspace": "已将「{{name}}」添加到连接。",
       "serviceRemoved": "Windows 服务移除已完成。",
       "partial": "部分已安装 ({{installed}}/{{total}})",
+      "partialOfficialScript": "部分已安装 ({{installed}}/{{total}}，官方脚本)",
       "noVersion": "（版本未知）",
       "web": "Web",
       "notInstalled": "未安装",
+      "installedOfficialScript": "已安装 (官方脚本)",
       "retrieving": "正在获取...",
       "neverChecked": "从未"
     },
@@ -930,6 +932,7 @@
     "dialog": {
       "installLocation": "安装位置",
       "provider": "提供者",
+      "providerOfficialScript": "官方脚本",
       "installedVersion": "已安装版本",
       "latestVersion": "最新版本",
       "lastChecked": "上次检查",

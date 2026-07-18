@@ -898,9 +898,11 @@
       "addedToWorkspace": "Đã thêm \"{{name}}\" vào Kết nối.",
       "serviceRemoved": "Gỡ dịch vụ Windows đã hoàn tất.",
       "partial": "Đã cài đặt một phần ({{installed}}/{{total}})",
+      "partialOfficialScript": "Đã cài đặt một phần ({{installed}}/{{total}}, script chính thức)",
       "noVersion": "(không rõ phiên bản)",
       "web": "Web",
       "notInstalled": "Chưa cài đặt",
+      "installedOfficialScript": "Đã cài đặt (script chính thức)",
       "retrieving": "Đang lấy dữ liệu...",
       "neverChecked": "Chưa bao giờ"
     },
@@ -930,6 +932,7 @@
     "dialog": {
       "installLocation": "Vị trí cài đặt",
       "provider": "Nhà cung cấp",
+      "providerOfficialScript": "Script chính thức",
       "installedVersion": "Phiên bản đã cài đặt",
       "latestVersion": "Phiên bản mới nhất",
       "lastChecked": "Kiểm tra lần cuối",

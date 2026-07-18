@@ -898,9 +898,11 @@
       "addedToWorkspace": "Added \"{{name}}\" to Connections.",
       "serviceRemoved": "Windows service removal completed.",
       "partial": "Partially installed ({{installed}}/{{total}})",
+      "partialOfficialScript": "Partially installed ({{installed}}/{{total}}, official script)",
       "noVersion": "(version unknown)",
       "web": "Web",
       "notInstalled": "Not installed",
+      "installedOfficialScript": "Installed (official script)",
       "retrieving": "Retrieving...",
       "neverChecked": "Never"
     },
@@ -930,6 +932,7 @@
     "dialog": {
       "installLocation": "Install location",
       "provider": "Provider",
+      "providerOfficialScript": "Official script",
       "installedVersion": "Installed version",
       "latestVersion": "Latest version",
       "lastChecked": "Last checked",

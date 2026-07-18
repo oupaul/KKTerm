@@ -46,16 +46,18 @@ import { notifyConnectionTreeInvalidated } from "../workspace/connections/connec
 import { isInstallerUpdateAvailable } from "./versionCompare";
 import {
   latestVersionWebUrlForRecipe,
+  recipeSupportsManagedLatestVersion,
   recipeSupportsLatestVersion,
 } from "./latestSupport";
-import type {
-  DetectedState,
-  InstallOptions,
-  ManagedWebUiStatus,
-  Provider,
-  QuickLaunchEntry,
-  Recipe,
-  RecipeOption,
+import {
+  isOfficialScriptInstall,
+  type DetectedState,
+  type InstallOptions,
+  type ManagedWebUiStatus,
+  type Provider,
+  type QuickLaunchEntry,
+  type Recipe,
+  type RecipeOption,
 } from "./types";
 import type { CreateConnectionRequest } from "../../types";
 
@@ -138,8 +140,12 @@ function InstalledInfoBody({ recipe }: { recipe: Recipe }) {
     recipe.descriptionLocales?.[i18n.language] ?? recipe.descriptionEn;
   const version = detected?.installedVersion ?? null;
   const latest = toolState?.latestVersionSeen ?? null;
-  const supportsLatestVersion = recipeSupportsLatestVersion(recipe);
+  const supportsLatestVersion = recipeSupportsManagedLatestVersion(
+    recipe,
+    detected,
+  );
   const latestWebUrl = latestVersionWebUrlForRecipe(recipe);
+  const officialScript = isOfficialScriptInstall(detected);
   const hasUpdate =
     supportsLatestVersion && isInstallerUpdateAvailable(latest, version);
   const webUi = webUiAffordanceForRecipe(recipe);
@@ -427,9 +433,11 @@ function InstalledInfoBody({ recipe }: { recipe: Recipe }) {
             </Row>
           ) : null}
           <Row label={t("installer.dialog.provider")}>
-            {providerSummary(installedProvider)}
+            {officialScript
+              ? t("installer.dialog.providerOfficialScript")
+              : providerSummary(installedProvider)}
           </Row>
-          {installMode ? (
+          {installMode && !officialScript ? (
             <Row label={t("installer.options.scope")}>
               {installModeLabel(installMode, t)}
             </Row>
@@ -448,7 +456,7 @@ function InstalledInfoBody({ recipe }: { recipe: Recipe }) {
                 onRefresh={() => void handleRefreshLatest()}
               />
             </Row>
-          ) : latestWebUrl ? (
+          ) : !officialScript && latestWebUrl ? (
             <Row label={t("installer.dialog.latestVersion")}>
               <ExternalLink href={latestWebUrl}>{t("installer.status.web")}</ExternalLink>
             </Row>
@@ -567,13 +575,18 @@ function InstalledInfoBody({ recipe }: { recipe: Recipe }) {
       <LegacyDialogActions
         className="installer-tool-dialog__actions"
         extraLeft={<>
-        <button
-          type="button"
-          className="secondary-button danger"
-          onClick={attemptUninstall}
-        >
-          {t("installer.actions.uninstall")}
-        </button>
+        {/* The receipt authorizes `uv self update`, but it still does not prove
+            WinGet owns an uninstallable package. Keep only Uninstall hidden so
+            the backend cannot remove a separate catalog-provider copy. */}
+        {!officialScript ? (
+          <button
+            type="button"
+            className="secondary-button danger"
+            onClick={attemptUninstall}
+          >
+            {t("installer.actions.uninstall")}
+          </button>
+        ) : null}
         {isWsl ? (
           <button
             type="button"
