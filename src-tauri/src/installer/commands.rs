@@ -2486,28 +2486,51 @@ fn spawn_terminal_launcher(
     affordance: &TerminalLaunchAffordance,
     working_dir: Option<&std::path::Path>,
 ) -> Result<(), String> {
-    let ps_command = build_terminal_launcher_ps_command(affordance);
-    let mut command = Command::new("powershell");
-    command.args([
-        "-NoExit",
-        "-NoLogo",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-Command",
-        &ps_command,
-    ]);
-    use std::os::windows::process::CommandExt;
-    const CREATE_NEW_CONSOLE: u32 = 0x0000_0010;
-    command.creation_flags(CREATE_NEW_CONSOLE);
-    if let Some(dir) = working_dir {
-        command.current_dir(dir);
+    use std::os::windows::ffi::OsStrExt;
+    use std::ptr::{null, null_mut};
+    use windows_sys::Win32::UI::{Shell::ShellExecuteW, WindowsAndMessaging::SW_SHOWNORMAL};
+
+    // KKTerm's release binary uses the Windows GUI subsystem and therefore has
+    // no interactive standard handles to inherit. `Command::spawn` with
+    // CREATE_NEW_CONSOLE can leave the delegated Windows Terminal tab blank;
+    // ShellExecute creates the console through the Windows shell instead.
+    let parameters = build_terminal_launcher_shell_parameters(
+        affordance,
+        super::install::refreshed_path_public().as_deref(),
+    );
+    let file = "powershell.exe"
+        .encode_utf16()
+        .chain(std::iter::once(0))
+        .collect::<Vec<u16>>();
+    let parameters = parameters
+        .encode_utf16()
+        .chain(std::iter::once(0))
+        .collect::<Vec<u16>>();
+    let working_directory = working_dir.map(|dir| {
+        dir.as_os_str()
+            .encode_wide()
+            .chain(std::iter::once(0))
+            .collect::<Vec<u16>>()
+    });
+    let result = unsafe {
+        ShellExecuteW(
+            null_mut(),
+            null(),
+            file.as_ptr(),
+            parameters.as_ptr(),
+            working_directory
+                .as_ref()
+                .map(|value| value.as_ptr())
+                .unwrap_or(null()),
+            SW_SHOWNORMAL,
+        )
+    } as isize;
+
+    if result <= 32 {
+        return Err(format!(
+            "failed to spawn terminal (ShellExecuteW code {result})"
+        ));
     }
-    if let Some(path) = super::install::refreshed_path_public() {
-        command.env("PATH", path);
-    }
-    command
-        .spawn()
-        .map_err(|e| format!("failed to spawn terminal: {e}"))?;
     Ok(())
 }
 
@@ -2631,6 +2654,26 @@ fn build_terminal_launcher_ps_command(affordance: &TerminalLaunchAffordance) -> 
         "function global:prompt {{ if (-not $global:__kkt_pf) {{ $global:__kkt_pf = $true; if (Get-Module PSReadLine) {{ [Microsoft.PowerShell.PSConsoleReadLine]::Insert('{prefill_escaped}') }} }}; 'PS ' + (Get-Location) + '> ' }}"
     ));
     parts.join("; ")
+}
+
+fn build_terminal_launcher_shell_parameters(
+    affordance: &TerminalLaunchAffordance,
+    refreshed_path: Option<&str>,
+) -> String {
+    use base64::{Engine as _, engine::general_purpose::STANDARD};
+
+    let mut ps_command = build_terminal_launcher_ps_command(affordance);
+    if let Some(path) = refreshed_path {
+        ps_command = format!("$env:PATH = {}; {ps_command}", ps_single_quote(path));
+    }
+    let utf16_le = ps_command
+        .encode_utf16()
+        .flat_map(u16::to_le_bytes)
+        .collect::<Vec<u8>>();
+    format!(
+        "-NoExit -NoLogo -NoProfile -ExecutionPolicy Bypass -EncodedCommand {}",
+        STANDARD.encode(utf16_le)
+    )
 }
 
 #[cfg(target_os = "windows")]
@@ -2972,6 +3015,8 @@ mod tests {
 
     #[test]
     fn terminal_launcher_prefill_uses_psreadline_type() {
+        use base64::{Engine as _, engine::general_purpose::STANDARD};
+
         let affordance = TerminalLaunchAffordance {
             activate_ps1: None,
             setup_lines: vec![],
@@ -2984,6 +3029,24 @@ mod tests {
         assert!(command.contains("Import-Module PSReadLine"));
         assert!(command.contains("[Microsoft.PowerShell.PSConsoleReadLine]::Insert"));
         assert!(!command.contains("PSReadLine.PSConsoleReadLine"));
+
+        let parameters =
+            build_terminal_launcher_shell_parameters(&affordance, Some(r"C:\Tools;C:\Windows"));
+        let encoded = parameters
+            .split_whitespace()
+            .last()
+            .expect("encoded command argument");
+        let bytes = STANDARD.decode(encoded).expect("valid base64 command");
+        let words = bytes
+            .chunks_exact(2)
+            .map(|chunk| u16::from_le_bytes([chunk[0], chunk[1]]))
+            .collect::<Vec<_>>();
+        let decoded = String::from_utf16(&words).expect("valid UTF-16LE command");
+
+        assert!(parameters.contains("-NoProfile"));
+        assert!(parameters.contains("-EncodedCommand"));
+        assert!(decoded.starts_with("$env:PATH = 'C:\\Tools;C:\\Windows'; "));
+        assert!(decoded.contains("hermes setup"));
     }
 
     #[test]

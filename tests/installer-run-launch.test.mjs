@@ -72,6 +72,30 @@ test("coding-agent launcher shows persisted options instead of samples", async (
   );
 });
 
+test("terminal launchers use the Windows shell from the GUI-subsystem app", async () => {
+  const commands = await read("../src-tauri/src/installer/commands.rs");
+  const launcher = commands.match(
+    /#\[cfg\(target_os = "windows"\)\]\s*fn spawn_terminal_launcher[\s\S]*?\n\}/,
+  )?.[0];
+
+  assert.ok(launcher, "the Windows terminal launcher should exist");
+  assert.match(
+    launcher,
+    /ShellExecuteW\(/,
+    "a release GUI-subsystem process should ask the Windows shell to create the interactive console",
+  );
+  assert.match(
+    commands,
+    /fn build_terminal_launcher_shell_parameters[\s\S]*-EncodedCommand/,
+    "the generated PowerShell setup should cross ShellExecute without command-line quoting loss",
+  );
+  assert.doesNotMatch(
+    launcher,
+    /const CREATE_NEW_CONSOLE|Command::new\("powershell"\)/,
+    "the console must not inherit invalid standard handles from the GUI-subsystem parent",
+  );
+});
+
 test("frontend launch classification stays in sync with the Rust allow-lists", async () => {
   const launch = await read("../src/modules/installer/launch.ts");
   const commands = await read("../src-tauri/src/installer/commands.rs");
@@ -165,7 +189,7 @@ test("coding-agent launchers remember project folders", async () => {
   assert.match(commands, /path: Option<String>/);
   assert.match(commands, /arguments: Option<String>/);
   assert.match(commands, /fn validated_launch_dir/);
-  assert.match(commands, /command\.current_dir\(dir\)/);
+  assert.match(commands, /let working_directory = working_dir\.map/);
 });
 
 test("GUI automatic launch runs through a closed backend allow-list", async () => {
