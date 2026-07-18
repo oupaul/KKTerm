@@ -26,7 +26,7 @@ test("official-script provenance stays separate from management providers", asyn
   assert.equal(isOfficialScriptInstall({ installProvider: "winget" }), false);
 });
 
-test("official-script installs hide destructive WinGet management actions", async () => {
+test("official-script installs expose safe updates but hide WinGet uninstall", async () => {
   const dialogSource = await readFile(
     new URL("../src/modules/installer/InstallerToolDialog.tsx", import.meta.url),
     "utf8",
@@ -44,7 +44,7 @@ test("official-script installs hide destructive WinGet management actions", asyn
   );
 });
 
-test("backend independently blocks catalog management for standalone uv", async () => {
+test("backend routes standalone uv updates by receipt and still blocks uninstall", async () => {
   const [installSource, uninstallSource, latestSource] = await Promise.all([
     readFile(
       new URL("../src-tauri/src/installer/install.rs", import.meta.url),
@@ -60,15 +60,28 @@ test("backend independently blocks catalog management for standalone uv", async 
     ),
   ]);
 
-  for (const source of [installSource, uninstallSource]) {
-    assert.match(
-      source,
-      /recipe\.id == "uv" && detect_one\(recipe\)\.is_official_script_install\(\)/,
-    );
-  }
+  assert.match(
+    installSource,
+    /update_astral_standalone_uv\(&detected, cancel, emit\)/,
+    "official updates must bypass the catalog provider",
+  );
+  assert.match(
+    installSource,
+    /!executable\.is_file\(\) \|\| !bin_dir\.join\("uv-receipt\.json"\)\.is_file\(\)/,
+    "the update target must revalidate Astral's executable and receipt",
+  );
+  assert.match(
+    installSource,
+    /run_streamed\(\s*&executable\.to_string_lossy\(\),\s*&\["self"\.into\(\), "update"\.into\(\)\]/,
+    "the exact receipt-backed executable must run uv self update",
+  );
+  assert.match(
+    uninstallSource,
+    /recipe\.id == "uv" && detect_one\(recipe\)\.is_official_script_install\(\)/,
+  );
   assert.match(
     latestSource,
-    /child\.id == "uv" && detect_one\(child\)\.is_official_script_install\(\)[\s\S]*return Ok\(None\)/,
-    "direct backend latest checks must not cache WinGet metadata for the standalone Python bundle",
+    /child\.id == "uv" && detect_one\(child\)\.is_official_script_install\(\)[\s\S]*return github_latest\("astral-sh\/uv"\)/,
+    "latest checks must follow the same Astral channel used by self update",
   );
 });

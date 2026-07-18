@@ -32,11 +32,17 @@ export function recipeSupportsManagedLatestVersion(
   recipe: Recipe,
   detected?: DetectedState | null,
 ): boolean {
-  // The catalog's latest version is actionable only through its provider.
-  // A receipt-backed standalone uv copy is real, but sending its update or
-  // uninstall through WinGet would target a different installation channel.
+  // Receipt-backed uv is the one source-specific exception: the backend checks
+  // Astral's release channel and runs the exact binary's `uv self update`.
+  // Keep every other unmanaged source away from the catalog provider route.
+  const supportsOfficialUvUpdate =
+    recipe.id === "uv" ||
+    (recipe.provider.kind === "bundle" &&
+      recipe.provider.steps.length === 1 &&
+      recipe.provider.steps[0] === "uv");
   return (
-    detected?.installSource !== "officialScript" &&
+    (detected?.installSource !== "officialScript" ||
+      supportsOfficialUvUpdate) &&
     recipeSupportsLatestVersion(recipe)
   );
 }

@@ -575,9 +575,9 @@ function InstalledInfoBody({ recipe }: { recipe: Recipe }) {
       <LegacyDialogActions
         className="installer-tool-dialog__actions"
         extraLeft={<>
-        {/* The receipt proves this is Astral's install, not that WinGet owns
-            it. Hide destructive catalog-provider actions for the same reason
-            updates are suppressed: the backend must not target another copy. */}
+        {/* The receipt authorizes `uv self update`, but it still does not prove
+            WinGet owns an uninstallable package. Keep only Uninstall hidden so
+            the backend cannot remove a separate catalog-provider copy. */}
         {!officialScript ? (
           <button
             type="button"

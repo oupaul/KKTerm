@@ -62,11 +62,17 @@ pub fn install_recipe(
         selected_install_provider(recipe, &effective_install_options(recipe, options)),
         Provider::Chocolatey { .. }
     );
-    let result = if recipe.id == "uv" && detect_one(recipe).is_official_script_install() {
-        // The catalog provider is WinGet, but this binary belongs to Astral's
-        // standalone channel. Keep the backend guard even though the UI hides
-        // Update so direct command callers cannot install over a different copy.
-        Err("this uv installation is managed by Astral's standalone installer; update it with `uv self update`".into())
+    let result = if recipe.id == "uv" {
+        let detected = detect_one(recipe);
+        if detected.is_official_script_install() {
+            // The catalog provider is WinGet, but the receipt-backed binary
+            // belongs to Astral. Dispatch through that exact executable so UI,
+            // Update all, and direct command callers cannot update a different
+            // `uv` that happens to appear earlier on PATH.
+            update_astral_standalone_uv(&detected, cancel, emit)
+        } else {
+            install_recipe_by_provider(recipe, options, cancel, emit)
+        }
     } else if use_selected_provider_directly {
         install_recipe_by_provider(recipe, options, cancel, emit)
     } else if recipe.id == "n8n" || recipe.id == "flowise" || recipe.id == "openclaw" {
@@ -119,6 +125,53 @@ pub fn install_recipe(
         ),
     }
     result
+}
+
+fn update_astral_standalone_uv(
+    detected: &super::detect::DetectedState,
+    cancel: Arc<AtomicBool>,
+    emit: &EventSink,
+) -> Result<Option<String>, String> {
+    ensure_uv_is_not_running()?;
+    let executable = astral_standalone_uv_executable(detected)?;
+    emit(ProgressEvent::Step {
+        tool_id: "uv".into(),
+        message: "uv self update".into(),
+    });
+    run_streamed(
+        &executable.to_string_lossy(),
+        &["self".into(), "update".into()],
+        "uv",
+        cancel,
+        emit,
+    )?;
+    // Detection reads the replaced binary immediately after the terminal
+    // event, so returning None avoids trusting human-oriented command output
+    // as the installed version.
+    Ok(None)
+}
+
+fn astral_standalone_uv_executable(
+    detected: &super::detect::DetectedState,
+) -> Result<PathBuf, String> {
+    if !detected.is_official_script_install() {
+        return Err("uv is not installed through Astral's standalone installer".into());
+    }
+    let bin_dir = detected
+        .install_location
+        .as_deref()
+        .map(PathBuf::from)
+        .ok_or("Astral uv install location is unavailable; refresh detection and try again")?;
+    let executable = bin_dir.join(format!("uv{}", std::env::consts::EXE_SUFFIX));
+    // Revalidate both files at execution time. The detected state may have
+    // come from the registry cache, and a stale path must never fall back to
+    // a package-manager executable when performing an in-place self-update.
+    if !executable.is_file() || !bin_dir.join("uv-receipt.json").is_file() {
+        return Err(
+            "Astral uv executable or receipt is missing; refresh detection and try again".into(),
+        );
+    }
+    Ok(executable)
 }
 
 fn install_recipe_by_provider(
@@ -3500,6 +3553,44 @@ mod tests {
         assert_eq!(args[0], "upgrade");
         assert!(args.contains(&"astral-sh.uv".to_string()));
         assert!(args.contains(&"--verbose-logs".to_string()));
+    }
+
+    #[test]
+    fn standalone_uv_update_uses_the_receipt_backed_executable() {
+        let temp = tempfile::tempdir().unwrap();
+        let executable = temp
+            .path()
+            .join(format!("uv{}", std::env::consts::EXE_SUFFIX));
+        std::fs::write(&executable, b"uv").unwrap();
+        std::fs::write(temp.path().join("uv-receipt.json"), b"{}").unwrap();
+        let detected = super::super::detect::DetectedState::installed(Some("0.1.0".into()))
+            .with_install_location(Some(temp.path().to_string_lossy().into_owned()))
+            .with_install_source(Some("officialScript"));
+
+        assert_eq!(
+            astral_standalone_uv_executable(&detected).unwrap(),
+            executable
+        );
+    }
+
+    #[test]
+    fn standalone_uv_update_revalidates_the_receipt() {
+        let temp = tempfile::tempdir().unwrap();
+        std::fs::write(
+            temp.path()
+                .join(format!("uv{}", std::env::consts::EXE_SUFFIX)),
+            b"uv",
+        )
+        .unwrap();
+        let detected = super::super::detect::DetectedState::installed(Some("0.1.0".into()))
+            .with_install_location(Some(temp.path().to_string_lossy().into_owned()))
+            .with_install_source(Some("officialScript"));
+
+        assert!(
+            astral_standalone_uv_executable(&detected)
+                .unwrap_err()
+                .contains("receipt is missing")
+        );
     }
 
     #[test]

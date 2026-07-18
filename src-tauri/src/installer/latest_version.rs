@@ -66,17 +66,17 @@ pub fn latest_version_in_catalog(recipe: &Recipe, catalog: &Catalog) -> LatestVe
                 .find(|r| r.id == steps[0])
                 .ok_or_else(|| format!("bundle step `{}` not found", steps[0]))?;
             if child.id == "uv" && detect_one(child).is_official_script_install() {
-                // The frontend normally filters this request, but the backend
-                // must independently avoid caching a WinGet latest version for
-                // a bundle whose manager came from Astral's standalone channel.
-                return Ok(None);
+                // `uv self update` follows Astral's release channel, so use the
+                // same upstream project for availability instead of WinGet's
+                // independently published package metadata.
+                return github_latest("astral-sh/uv");
             }
             return latest_version(child);
         }
         return Ok(None);
     }
     if recipe.id == "uv" && detect_one(recipe).is_official_script_install() {
-        return Ok(None);
+        return github_latest("astral-sh/uv");
     }
     latest_version(recipe)
 }

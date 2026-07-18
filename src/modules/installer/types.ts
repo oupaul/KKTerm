@@ -112,9 +112,9 @@ export interface DetectedState {
   runtimeVersion?: string | null;
   /// Best-effort provider that detected and will manage this installed tool.
   installProvider?: ProviderKind | null;
-  /// Provenance for an install KKTerm can recognize but cannot safely manage
-  /// through the catalog provider. Kept separate from installProvider so an
-  /// official script is never accidentally treated as a WinGet provider.
+  /// Provenance that is not itself a catalog provider. Kept separate from
+  /// installProvider so source-specific actions such as `uv self update` can
+  /// never be mistaken for WinGet update or uninstall ownership.
   installSource?: DetectedInstallSource | null;
   /// Unix timestamp from the last completed detection pass. Cached Windows
   /// registry snapshots use this so the tile can show how stale it is.
