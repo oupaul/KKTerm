@@ -864,6 +864,7 @@
       "update": "อัปเดต",
       "uninstall": "ถอนการติดตั้ง",
       "run": "เรียกใช้",
+      "start": "เริ่ม",
       "stop": "หยุด",
       "openWebUi": "เปิด UI เว็บ",
       "installService": "ติดตั้งบริการ",
@@ -984,6 +985,9 @@
       "failedBadge": "ล้มเหลว"
     },
     "steps": {
+      "resolveDependencyPlan": "แก้ไขแผนการขึ้นต่อกัน",
+      "ensureNodeLts": "ตรวจสอบว่ามี Node LTS พร้อมใช้งาน",
+      "installNamed": "ติดตั้ง {{name}}",
       "resolve": "แก้ไขเวอร์ชัน",
       "download": "ดาวน์โหลด",
       "verifyChecksum": "ตรวจสอบ checksum",

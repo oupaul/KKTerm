@@ -864,6 +864,7 @@
       "update": "Update",
       "uninstall": "Uninstall",
       "run": "Run",
+      "start": "Start",
       "stop": "Stop",
       "openWebUi": "Open web UI",
       "installService": "Install service",
@@ -984,6 +985,9 @@
       "failedBadge": "Failed"
     },
     "steps": {
+      "resolveDependencyPlan": "Resolve dependency plan",
+      "ensureNodeLts": "Ensure Node LTS is present",
+      "installNamed": "Install {{name}}",
       "resolve": "Resolve version",
       "download": "Download",
       "verifyChecksum": "Verify checksum",

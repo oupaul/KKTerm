@@ -2,13 +2,13 @@
 // The frontend subscribes once on Module mount and routes events to per-tool
 // dialog/stepper state by `tool_id`.
 //
-// Stepper protocol: a provider runner that supports the n8n-style stepper
-// emits `Plan` once before any work, then brackets each step with
+// Stepper protocol: the frontend seeds a shared staged template for every
+// operation. A provider runner with more precise stages emits `Plan` once
+// before any work, replacing that default, then brackets each step with
 // `StepStarted` / `StepFinished`. `Stdout` / `Stderr` / `Progress` carry an
 // optional `step_id` so the frontend can route the line / ratio to the
 // active step row. The legacy `Step { message }` variant remains for
-// providers that have not been migrated to the structured plan yet and
-// is rendered as a generic log line.
+// providers that use the default template and advances its active action row.
 //
 // Check-for-updates protocol: a fire-and-forget check emits one
 // `CheckStarted` with the full id list, then one `CheckResult` per tool
@@ -53,10 +53,9 @@ pub enum ProgressEvent {
         ok: bool,
         error: Option<String>,
     },
-    /// Legacy free-form step label. Kept for providers that have not been
-    /// migrated to the `Plan`/`StepStarted`/`StepFinished` protocol; the
-    /// frontend renders these as generic log lines when a `Plan` is in
-    /// effect, or as today's current-step label otherwise.
+    /// Free-form provider activity. Kept for providers that use the frontend's
+    /// default staged template; the frontend advances the action row and keeps
+    /// the message as current-step context.
     Step {
         tool_id: String,
         message: String,

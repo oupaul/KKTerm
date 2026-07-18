@@ -33,7 +33,7 @@ test("installed tiles expose a Run button routed by launch kind", async () => {
   assert.match(
     runAction,
     /openLauncherDialog\(recipe\.id\)/,
-    "CLI and suite tools should open a separate Run dialog",
+    "CLI, suite, and managed web UI tools should open a separate Run dialog",
   );
   assert.match(
     toolRow,

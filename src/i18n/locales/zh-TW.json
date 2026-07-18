@@ -864,6 +864,7 @@
       "update": "更新",
       "uninstall": "解除安裝",
       "run": "執行",
+      "start": "啟動",
       "stop": "停止",
       "openWebUi": "開啟 Web UI",
       "installService": "安裝服務",
@@ -984,6 +985,9 @@
       "failedBadge": "失敗"
     },
     "steps": {
+      "resolveDependencyPlan": "解析相依性方案",
+      "ensureNodeLts": "確認 Node LTS 已就緒",
+      "installNamed": "安裝 {{name}}",
       "resolve": "解析版本",
       "download": "下載",
       "verifyChecksum": "驗證校驗和",

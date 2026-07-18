@@ -864,6 +864,7 @@
       "update": "Cập nhật",
       "uninstall": "Gỡ cài đặt",
       "run": "Chạy",
+      "start": "Khởi động",
       "stop": "Dừng",
       "openWebUi": "Mở giao diện web",
       "installService": "Cài đặt dịch vụ",
@@ -984,6 +985,9 @@
       "failedBadge": "Thất bại"
     },
     "steps": {
+      "resolveDependencyPlan": "Phân giải kế hoạch phụ thuộc",
+      "ensureNodeLts": "Đảm bảo Node LTS sẵn sàng",
+      "installNamed": "Cài đặt {{name}}",
       "resolve": "Xác định phiên bản",
       "download": "Tải xuống",
       "verifyChecksum": "Xác minh checksum",

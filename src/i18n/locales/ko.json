@@ -864,6 +864,7 @@
       "update": "업데이트",
       "uninstall": "제거",
       "run": "실행",
+      "start": "시작",
       "stop": "중지",
       "openWebUi": "웹 UI 열기",
       "installService": "서비스 설치",
@@ -984,6 +985,9 @@
       "failedBadge": "실패"
     },
     "steps": {
+      "resolveDependencyPlan": "종속성 계획 확인",
+      "ensureNodeLts": "Node LTS 사용 가능 여부 확인",
+      "installNamed": "{{name}} 설치",
       "resolve": "버전 확인",
       "download": "다운로드",
       "verifyChecksum": "체크섬 확인",

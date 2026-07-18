@@ -2,11 +2,13 @@
 // inline expanding tile body — single click on a tile opens this. Modes:
 //   * "info" — installed: location, provider, versions, pin, update/uninstall.
 //             not installed: homepage, release notes, latest, prereqs, options.
-//   * "stepper" — install in progress or just completed; renders the n8n-style
-//                 step list with per-step logs. Pressing Install from "info"
-//                 mode flips the dialog to "stepper".
-//   * "launcher" — standard CLI Run setup, or a suite-specific searchable
-//                  launcher kept separate from installation details.
+//   * "stepper" — install in progress or just completed; renders the shared
+//                 staged template (or a provider-declared replacement) with
+//                 per-step logs. Pressing Install from "info" flips the
+//                 dialog to "stepper".
+//   * "launcher" — managed web-app controls, standard CLI Run setup, or a
+//                  suite-specific searchable launcher kept separate from
+//                  installation details.
 //
 // Honors AGENTS.md dialog rules: concise title, a single footer dismiss path,
 // and host-platform footer buttons at bottom right.
@@ -35,7 +37,6 @@ import {
 } from "./dag";
 import { iconUrlForRecipe, FALLBACK_ICON_URL } from "./icons";
 import {
-  cliLaunchCommandForRecipe,
   cliLaunchSamplesForRecipe,
   cliLauncherUsesProjectFolders,
   codingAgentCommandReferenceUrlForRecipe,
@@ -158,44 +159,9 @@ function InstalledInfoBody({ recipe }: { recipe: Recipe }) {
   const officialScript = isOfficialScriptInstall(detected);
   const hasUpdate =
     supportsLatestVersion && isInstallerUpdateAvailable(latest, version);
-  const webUi = webUiAffordanceForRecipe(recipe);
-  const hasWebUi = webUi !== null;
-  const service = serviceAffordanceForRecipe(recipe);
-  const terminalLaunch = terminalLaunchAffordanceForRecipe(recipe);
   const workspaceSpec = workspaceConnectionSpecForRecipe(recipe);
   const installMode = installModeForInstalledRecipe(detected);
   const runAction = useInstallerRunAction(recipe);
-  const [webUiStatus, setWebUiStatus] = useState<ManagedWebUiStatus | null>(
-    null,
-  );
-  const statusRefreshInFlight = useRef(false);
-  useEffect(() => {
-    if (!hasWebUi || !isTauriRuntime()) {
-      setWebUiStatus(null);
-      return;
-    }
-    let cancelled = false;
-    async function refresh() {
-      if (statusRefreshInFlight.current) return;
-      statusRefreshInFlight.current = true;
-      try {
-        const status = await invokeCommand("installer_get_web_ui_status", {
-          toolId: recipe.id,
-        });
-        if (!cancelled) setWebUiStatus(status);
-      } catch {
-        if (!cancelled) setWebUiStatus(null);
-      } finally {
-        statusRefreshInFlight.current = false;
-      }
-    }
-    void refresh();
-    const timer = window.setInterval(() => void refresh(), 10_000);
-    return () => {
-      cancelled = true;
-      window.clearInterval(timer);
-    };
-  }, [recipe.id, hasWebUi]);
 
   async function handleTogglePin() {
     if (!isTauriRuntime()) return;
@@ -261,65 +227,6 @@ function InstalledInfoBody({ recipe }: { recipe: Recipe }) {
       await invokeCommand("installer_uninstall_recipe", { toolId: recipe.id });
     } catch {
       // backend emits Failed
-    }
-  }
-
-  async function handleRunWebUi() {
-    if (!webUi || !isTauriRuntime()) return;
-    try {
-      await invokeCommand("installer_run_web_ui", { toolId: recipe.id });
-      await refreshManagedWebUiStatus(recipe.id, setWebUiStatus);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      showStatusBarNotice(message, { tone: "error" });
-    }
-  }
-
-  async function handleStopWebUi() {
-    if (!webUi || !isTauriRuntime()) return;
-    try {
-      await invokeCommand("installer_stop_web_ui", { toolId: recipe.id });
-      await refreshManagedWebUiStatus(recipe.id, setWebUiStatus);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      showStatusBarNotice(message, { tone: "error" });
-    }
-  }
-
-  function handleOpenWebUi() {
-    if (!webUi) return;
-    const url = webUiStatus?.url ?? webUi.url;
-    if (!isTauriRuntime()) {
-      window.open(url, "_blank", "noopener,noreferrer");
-      return;
-    }
-    void openExternalUrl(url).catch((error) => {
-      const message = error instanceof Error ? error.message : String(error);
-      showStatusBarNotice(message, { tone: "error" });
-    });
-  }
-
-  async function handleInstallService() {
-    if (!service || !isTauriRuntime()) return;
-    try {
-      await invokeCommand("installer_install_service", { toolId: recipe.id });
-      showStatusBarNotice(t("installer.status.serviceInstalled"));
-      await refreshManagedWebUiStatus(recipe.id, setWebUiStatus);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      showStatusBarNotice(message, { tone: "error" });
-    }
-  }
-
-  async function handleRemoveService() {
-    if (!service || !isTauriRuntime()) return;
-    try {
-      await invokeCommand("installer_remove_service", { toolId: recipe.id });
-      showStatusBarNotice(t("installer.status.serviceRemoved"));
-      await refreshManagedWebUiStatus(recipe.id, setWebUiStatus);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      showStatusBarNotice(message, { tone: "error" });
     }
   }
 
@@ -401,37 +308,6 @@ function InstalledInfoBody({ recipe }: { recipe: Recipe }) {
               {formatTimestamp(toolState.lastCheckAt)}
             </Row>
           ) : null}
-          {webUi ? (
-            <Row label={t("installer.dialog.webUi")}>
-              <ExternalLink href={webUi.url} />
-            </Row>
-          ) : null}
-          {service ? (
-            <Row label={t("installer.dialog.windowsService")}>
-              <code>{service.name}</code>
-            </Row>
-          ) : null}
-          {webUi ? (
-            <Row label={t("installer.dialog.runtimeStatus")}>
-              {webUiStatus?.running
-                ? t("installer.status.running")
-                : t("installer.status.stopped")}
-            </Row>
-          ) : null}
-          {service && webUiStatus?.serviceInstalled ? (
-            <Row label={t("installer.dialog.serviceStartup")}>
-              {webUiStatus.startup ?? t("installer.status.unknown")}
-            </Row>
-          ) : null}
-          {terminalLaunch && terminalLaunch.hints.length > 0 ? (
-            <Row label={t("installer.dialog.runHints")}>
-              <span style={{ display: "flex", flexDirection: "column", gap: "0.2rem" }}>
-                {terminalLaunch.hints.map((hint, i) => (
-                  <code key={i}>{hint}</code>
-                ))}
-              </span>
-            </Row>
-          ) : null}
         </dl>
         {supportsLatestVersion ? (
           <label className="installer-tool-dialog__pin">
@@ -472,51 +348,6 @@ function InstalledInfoBody({ recipe }: { recipe: Recipe }) {
             {t("installer.actions.addToWorkspace")}
           </button>
         ) : null}
-        {webUi ? (
-          <>
-            <button
-              type="button"
-              className="secondary-button"
-              onClick={() =>
-                webUiStatus?.running
-                  ? void handleStopWebUi()
-                  : void handleRunWebUi()
-              }
-            >
-              {webUiStatus?.running
-                ? t("installer.actions.stop")
-                : t("installer.actions.run")}
-            </button>
-            <button
-              type="button"
-              className="secondary-button"
-              onClick={handleOpenWebUi}
-            >
-              {t("installer.actions.openWebUi")}
-            </button>
-          </>
-        ) : null}
-        {service ? (
-          <>
-            {!webUiStatus?.serviceInstalled ? (
-              <button
-                type="button"
-                className="secondary-button"
-                onClick={() => void handleInstallService()}
-              >
-                {t("installer.actions.registerService")}
-              </button>
-            ) : (
-              <button
-                type="button"
-                className="secondary-button"
-                onClick={() => void handleRemoveService()}
-              >
-                {t("installer.actions.removeService")}
-              </button>
-            )}
-          </>
-        ) : null}
         {hasUpdate ? (
           <button
             type="button"
@@ -530,9 +361,16 @@ function InstalledInfoBody({ recipe }: { recipe: Recipe }) {
         primary={
           runAction.launchKind === "gui" ||
           runAction.launchKind === "cli" ||
-          runAction.launchKind === "suite" ? (
+          runAction.launchKind === "suite" ||
+          runAction.launchKind === "webUi" ? (
             <Btn
-              icon={runAction.launchKind === "gui" ? undefined : "terminal"}
+              icon={
+                runAction.launchKind === "gui"
+                  ? undefined
+                  : runAction.launchKind === "webUi"
+                    ? "globe"
+                    : "terminal"
+              }
               onClick={runAction.run}
             >
               {t("installer.actions.run")}
@@ -873,7 +711,11 @@ function StepperBody({ recipe }: { recipe: Recipe }) {
             {t("installer.status.cancelled")}
           </p>
         ) : null}
-        <StepperList stepper={stepper} inFlight={inFlight} />
+        <StepperList
+          recipeName={recipe.name}
+          stepper={stepper}
+          inFlight={inFlight}
+        />
       </div>
       <LegacyDialogActions
         className="installer-tool-dialog__actions"
@@ -889,9 +731,11 @@ function StepperBody({ recipe }: { recipe: Recipe }) {
 }
 
 function StepperList({
+  recipeName,
   stepper,
   inFlight,
 }: {
+  recipeName: string;
   stepper:
     | ReturnType<typeof useInstallerStore.getState>["stepperState"][string]
     | undefined;
@@ -902,36 +746,11 @@ function StepperList({
     {},
   );
 
-  // No declared plan yet (legacy provider or stepper opened before plan
-  // event lands). Fall back to today's single-current-step view from
-  // inFlight so the user always sees activity.
-  const hasPlan = !!stepper && stepper.plan.length > 0;
+  // beginInFlight seeds the shared three-stage template synchronously. A
+  // provider-declared plan may replace it before this component renders.
+  if (!stepper || stepper.plan.length === 0) return null;
 
-  if (!hasPlan) {
-    return (
-      <div className="installer-stepper installer-stepper--legacy">
-        {inFlight?.currentStep ? (
-          <div className="installer-stepper__legacy-step">
-            {inFlight.currentStep}
-          </div>
-        ) : null}
-        {inFlight?.ratio != null ? (
-          <progress
-            className="installer-stepper__bar"
-            value={inFlight.ratio}
-            max={1}
-          />
-        ) : null}
-        {inFlight?.log && inFlight.log.length > 0 ? (
-          <pre className="installer-stepper__log" aria-live="polite">
-            {inFlight.log.slice(-30).join("\n")}
-          </pre>
-        ) : null}
-      </div>
-    );
-  }
-
-  const active = stepper!.activeStepId;
+  const active = stepper.activeStepId;
   function isExpanded(stepId: string): boolean {
     if (stepId in manualExpanded) return manualExpanded[stepId]!;
     return stepId === active;
@@ -939,12 +758,12 @@ function StepperList({
 
   return (
     <ol className="installer-stepper">
-      {stepper!.plan.map((step) => {
-        const status = (stepper!.status[step.id] ?? "pending") as StepStatus;
+      {stepper.plan.map((step) => {
+        const status = (stepper.status[step.id] ?? "pending") as StepStatus;
         const expanded = isExpanded(step.id);
-        const log = stepper!.logs[step.id] ?? [];
-        const duration = stepper!.durations[step.id];
-        const error = stepper!.errors[step.id];
+        const log = stepper.logs[step.id] ?? [];
+        const duration = stepper.durations[step.id];
+        const error = stepper.errors[step.id];
         const ratio =
           status === "running" && inFlight?.ratio != null ? inFlight.ratio : null;
         return (
@@ -970,7 +789,10 @@ function StepperList({
                 aria-hidden="true"
               />
               <span className="installer-stepper__label">
-                {t(step.labelKey, { defaultValue: step.id })}
+                {t(step.labelKey, {
+                  name: recipeName,
+                  defaultValue: step.id,
+                })}
               </span>
               <span className="installer-stepper__meta">
                 {status === "done" && duration != null
@@ -979,15 +801,17 @@ function StepperList({
                     ? `${Math.round(ratio * 100)}%`
                     : status === "failed"
                       ? t("installer.stepper.failedBadge")
+                      : status === "cancelled"
+                        ? t("installer.status.cancelled")
                       : ""}
               </span>
             </button>
             {expanded ? (
               <div className="installer-stepper__row-body">
-                {status === "running" && ratio != null ? (
+                {status === "running" ? (
                   <progress
                     className="installer-stepper__bar"
-                    value={ratio}
+                    value={ratio ?? undefined}
                     max={1}
                   />
                 ) : null}
@@ -1017,10 +841,186 @@ function StepperList({
 const RECENT_LAUNCH_FOLDERS_VISIBLE = 5;
 
 function LauncherBody({ recipe }: { recipe: Recipe }) {
-  return launchKindForRecipe(recipe.id) === "suite" ? (
+  const launchKind = launchKindForRecipe(recipe.id);
+  return launchKind === "webUi" ? (
+    <ManagedWebUiLauncherBody recipe={recipe} />
+  ) : launchKind === "suite" ? (
     <SuiteLauncherBody recipe={recipe} />
   ) : (
     <CliLauncherBody recipe={recipe} />
+  );
+}
+
+function ManagedWebUiLauncherBody({ recipe }: { recipe: Recipe }) {
+  const { t } = useTranslation();
+  const detected = useInstallerStore((s) => s.detected[recipe.id]);
+  const closeDialog = useInstallerStore((s) => s.closeDialog);
+  const showStatusBarNotice = useWorkspaceStore(
+    (state) => state.showStatusBarNotice,
+  );
+  const webUi = webUiAffordanceForRecipe(recipe);
+  const hasWebUi = webUi !== null;
+  const service = serviceAffordanceForRecipe(recipe);
+  const [status, setStatus] = useState<ManagedWebUiStatus | null>(null);
+  const [actionInFlight, setActionInFlight] = useState(false);
+  const statusRefreshInFlight = useRef(false);
+
+  useEffect(() => {
+    if (!hasWebUi || !isTauriRuntime()) return;
+    let cancelled = false;
+    async function refresh() {
+      if (statusRefreshInFlight.current) return;
+      statusRefreshInFlight.current = true;
+      try {
+        const next = await invokeCommand("installer_get_web_ui_status", {
+          toolId: recipe.id,
+        });
+        if (!cancelled) setStatus(next);
+      } catch {
+        if (!cancelled) setStatus(null);
+      } finally {
+        statusRefreshInFlight.current = false;
+      }
+    }
+    void refresh();
+    const timer = window.setInterval(() => void refresh(), 10_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [recipe.id, hasWebUi]);
+
+  async function handleRunAction(
+    command: "installer_run_web_ui" | "installer_stop_web_ui",
+  ) {
+    if (!webUi || !isTauriRuntime() || actionInFlight) return;
+    setActionInFlight(true);
+    try {
+      await invokeCommand(command, { toolId: recipe.id });
+      await refreshManagedWebUiStatus(recipe.id, setStatus);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      showStatusBarNotice(message, { tone: "error" });
+    } finally {
+      setActionInFlight(false);
+    }
+  }
+
+  function handleOpenWebUi() {
+    if (!webUi || !status?.running) return;
+    const url = status.url ?? webUi.url;
+    if (!isTauriRuntime()) {
+      window.open(url, "_blank", "noopener,noreferrer");
+      return;
+    }
+    void openExternalUrl(url).catch((error) => {
+      const message = error instanceof Error ? error.message : String(error);
+      showStatusBarNotice(message, { tone: "error" });
+    });
+  }
+
+  async function handleServiceAction() {
+    if (!service || !isTauriRuntime() || actionInFlight) return;
+    setActionInFlight(true);
+    const removing = status?.serviceInstalled ?? false;
+    try {
+      await invokeCommand(
+        removing ? "installer_remove_service" : "installer_install_service",
+        { toolId: recipe.id },
+      );
+      showStatusBarNotice(
+        t(
+          removing
+            ? "installer.status.serviceRemoved"
+            : "installer.status.serviceInstalled",
+        ),
+      );
+      await refreshManagedWebUiStatus(recipe.id, setStatus);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      showStatusBarNotice(message, { tone: "error" });
+    } finally {
+      setActionInFlight(false);
+    }
+  }
+
+  if (!webUi) return null;
+
+  return (
+    <>
+      <ToolDialogHeader
+        recipe={recipe}
+        title={t("installer.launcher.title", { name: recipe.name })}
+        version={detected?.installedVersion ?? null}
+      />
+      <div className="installer-tool-dialog__body">
+        <dl className="installer-tool-dialog__grid">
+          <Row label={t("installer.dialog.runtimeStatus")}>
+            {status
+              ? status.running
+                ? t("installer.status.running")
+                : t("installer.status.stopped")
+              : t("installer.dialog.checkingDots")}
+          </Row>
+          <Row label={t("installer.dialog.webUi")}>
+            <code>{status?.url ?? webUi.url}</code>
+          </Row>
+          {service ? (
+            <Row label={t("installer.dialog.windowsService")}>
+              <code>{service.name}</code>
+              {" · "}
+              {status?.serviceInstalled
+                ? status.serviceState ?? t("installer.status.unknown")
+                : t("installer.status.notInstalled")}
+            </Row>
+          ) : null}
+          {service && status?.serviceInstalled ? (
+            <Row label={t("installer.dialog.serviceStartup")}>
+              {status.startup ?? t("installer.status.unknown")}
+            </Row>
+          ) : null}
+        </dl>
+      </div>
+      <LegacyDialogActions
+        className="installer-tool-dialog__actions"
+        extraLeft={
+          service ? (
+            <Btn disabled={actionInFlight} onClick={() => void handleServiceAction()}>
+              {status?.serviceInstalled
+                ? t("installer.actions.removeService")
+                : t("installer.actions.registerService")}
+            </Btn>
+          ) : null
+        }
+        primary={
+          <>
+            <Btn
+              disabled={!status?.running || actionInFlight}
+              onClick={handleOpenWebUi}
+            >
+              {t("installer.actions.openWebUi")}
+            </Btn>
+            <Btn
+              kind="primary"
+              icon="bolt"
+              disabled={!status || actionInFlight}
+              onClick={() =>
+                void handleRunAction(
+                  status?.running
+                    ? "installer_stop_web_ui"
+                    : "installer_run_web_ui",
+                )
+              }
+            >
+              {status?.running
+                ? t("installer.actions.stop")
+                : t("installer.actions.start")}
+            </Btn>
+          </>
+        }
+        cancel={<Btn onClick={closeDialog}>{t("common.close")}</Btn>}
+      />
+    </>
   );
 }
 
@@ -1806,13 +1806,6 @@ function workspaceConnectionSpecForRecipe(
     default:
       return null;
   }
-}
-
-function terminalLaunchAffordanceForRecipe(
-  recipe: Recipe,
-): { hints: string[] } | null {
-  if (!cliLaunchCommandForRecipe(recipe.id)) return null;
-  return { hints: cliLaunchSamplesForRecipe(recipe.id) ?? [] };
 }
 
 function serviceAffordanceForRecipe(recipe: Recipe): { name: string } | null {

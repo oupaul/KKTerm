@@ -864,6 +864,7 @@
       "update": "Atualizar",
       "uninstall": "Desinstalar",
       "run": "Executar",
+      "start": "Iniciar",
       "stop": "Parar",
       "openWebUi": "Abrir interface web",
       "installService": "Instalar serviço",
@@ -984,6 +985,9 @@
       "failedBadge": "Falhou"
     },
     "steps": {
+      "resolveDependencyPlan": "Resolver o plano de dependências",
+      "ensureNodeLts": "Verificar se o Node LTS está disponível",
+      "installNamed": "Instalar {{name}}",
       "resolve": "Resolver versão",
       "download": "Baixar",
       "verifyChecksum": "Verificar checksum",

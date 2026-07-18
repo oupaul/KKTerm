@@ -17,7 +17,6 @@ import type { Recipe } from "./types";
 /** Shared Run routing for Gallery tiles, List rows, and installed details. */
 export function useInstallerRunAction(recipe: Recipe) {
   const { t } = useTranslation();
-  const openInfoDialog = useInstallerStore((s) => s.openInfoDialog);
   const openLauncherDialog = useInstallerStore((s) => s.openLauncherDialog);
   const showStatusBarNotice = useWorkspaceStore(
     (state) => state.showStatusBarNotice,
@@ -70,10 +69,12 @@ export function useInstallerRunAction(recipe: Recipe) {
   function run() {
     if (launchKind === "gui") {
       void launchGuiApp();
-    } else if (launchKind === "cli" || launchKind === "suite") {
+    } else if (
+      launchKind === "cli" ||
+      launchKind === "suite" ||
+      launchKind === "webUi"
+    ) {
       openLauncherDialog(recipe.id);
-    } else if (launchKind === "webUi") {
-      openInfoDialog(recipe.id);
     }
   }
 

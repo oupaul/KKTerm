@@ -40,7 +40,7 @@ use super::managed_app::{
 };
 use super::options::InstallOptions;
 use super::proc::{no_window, npm_program};
-use super::schema::{GithubReleaseLayout, Provider, Recipe, RecipeOption};
+use super::schema::{GithubReleaseLayout, PlanStep, Provider, Recipe, RecipeOption};
 
 pub type EventSink = Box<dyn Fn(ProgressEvent) + Send + Sync>;
 
@@ -283,27 +283,93 @@ fn install_managed_npm_app(
     cancel: Arc<AtomicBool>,
     emit: &EventSink,
 ) -> Result<Option<String>, String> {
+    emit(ProgressEvent::Plan {
+        tool_id: tool_id.into(),
+        steps: vec![
+            PlanStep {
+                id: "resolve-dependency-plan".into(),
+                label_key: "installer.steps.resolveDependencyPlan".into(),
+            },
+            PlanStep {
+                id: "ensure-node-lts".into(),
+                label_key: "installer.steps.ensureNodeLts".into(),
+            },
+            PlanStep {
+                id: "install-managed-npm-app".into(),
+                label_key: "installer.steps.installNamed".into(),
+            },
+        ],
+    });
+
     let install_dir = managed_app_install_dir(tool_id);
     let data_dir = managed_app_data_dir(tool_id);
-    std::fs::create_dir_all(&install_dir).map_err(|e| e.to_string())?;
-    std::fs::create_dir_all(&data_dir).map_err(|e| e.to_string())?;
-    let package_json = install_dir.join("package.json");
-    if !package_json.exists() {
-        std::fs::write(
-            &package_json,
-            "{\n  \"private\": true,\n  \"dependencies\": {}\n}\n",
+    run_install_step(tool_id, "resolve-dependency-plan", emit, || {
+        std::fs::create_dir_all(&install_dir).map_err(|e| e.to_string())?;
+        std::fs::create_dir_all(&data_dir).map_err(|e| e.to_string())?;
+        let package_json = install_dir.join("package.json");
+        if !package_json.exists() {
+            std::fs::write(
+                &package_json,
+                "{\n  \"private\": true,\n  \"dependencies\": {}\n}\n",
+            )
+            .map_err(|e| e.to_string())?;
+        }
+        Ok(())
+    })?;
+
+    run_install_step(tool_id, "ensure-node-lts", emit, || {
+        run_streamed_with_refreshed_path_public(
+            "node",
+            &["--version".into()],
+            tool_id,
+            cancel.clone(),
+            emit,
         )
-        .map_err(|e| e.to_string())?;
-    }
+    })?;
+
     let args = managed_npm_install_args(tool_id, &[managed_npm_spec(pkg, options)]);
-    emit(ProgressEvent::Step {
+    run_install_step(tool_id, "install-managed-npm-app", emit, || {
+        emit(ProgressEvent::Step {
+            tool_id: tool_id.into(),
+            message: format!("npm install --prefix {}", install_dir.display()),
+        });
+        run_streamed_with_refreshed_path_public(npm_program(), &args, tool_id, cancel, emit)?;
+        let version = detect_managed_npm_version(pkg, &install_dir);
+        write_managed_app_marker(tool_id, version.clone())?;
+        Ok(version)
+    })
+}
+
+fn run_install_step<T>(
+    tool_id: &str,
+    step_id: &str,
+    emit: &EventSink,
+    action: impl FnOnce() -> Result<T, String>,
+) -> Result<T, String> {
+    emit(ProgressEvent::StepStarted {
         tool_id: tool_id.into(),
-        message: format!("npm install --prefix {}", install_dir.display()),
+        step_id: step_id.into(),
     });
-    run_streamed_with_refreshed_path_public(npm_program(), &args, tool_id, cancel, emit)?;
-    let version = detect_managed_npm_version(pkg, &install_dir);
-    write_managed_app_marker(tool_id, version.clone())?;
-    Ok(version)
+    match action() {
+        Ok(value) => {
+            emit(ProgressEvent::StepFinished {
+                tool_id: tool_id.into(),
+                step_id: step_id.into(),
+                ok: true,
+                error: None,
+            });
+            Ok(value)
+        }
+        Err(error) => {
+            emit(ProgressEvent::StepFinished {
+                tool_id: tool_id.into(),
+                step_id: step_id.into(),
+                ok: false,
+                error: Some(error.clone()),
+            });
+            Err(error)
+        }
+    }
 }
 
 fn install_managed_excalidraw(
@@ -3441,6 +3507,49 @@ mod tests {
         assert!(args.contains(&"--prefix".to_string()));
         assert!(args.contains(&"n8n@1.2.3".to_string()));
         assert!(!args.contains(&"-g".to_string()));
+    }
+
+    #[test]
+    fn structured_install_step_brackets_success_and_failure() {
+        let events = Arc::new(Mutex::new(Vec::new()));
+        let captured = events.clone();
+        let emit: EventSink = Box::new(move |event| captured.lock().unwrap().push(event));
+
+        assert_eq!(
+            run_install_step("n8n", "install-managed-npm-app", &emit, || Ok(7)),
+            Ok(7)
+        );
+        let failure = run_install_step(
+            "n8n",
+            "install-managed-npm-app",
+            &emit,
+            || Err::<(), _>("npm failed".into()),
+        );
+        assert_eq!(failure, Err("npm failed".into()));
+
+        let events = events.lock().unwrap();
+        assert!(matches!(
+            &events[0],
+            ProgressEvent::StepStarted { tool_id, step_id }
+                if tool_id == "n8n" && step_id == "install-managed-npm-app"
+        ));
+        assert!(matches!(
+            &events[1],
+            ProgressEvent::StepFinished { ok: true, error: None, .. }
+        ));
+        assert!(matches!(
+            &events[2],
+            ProgressEvent::StepStarted { tool_id, step_id }
+                if tool_id == "n8n" && step_id == "install-managed-npm-app"
+        ));
+        assert!(matches!(
+            &events[3],
+            ProgressEvent::StepFinished {
+                ok: false,
+                error: Some(error),
+                ..
+            } if error == "npm failed"
+        ));
     }
 
     #[test]

@@ -505,9 +505,7 @@ pub async fn installer_run_web_ui(tool_id: String) -> Result<(), String> {
         &json!({ "toolId": &tool_id }),
     );
     tauri::async_runtime::spawn_blocking(move || {
-        let affordance = web_ui_affordance(&tool_id)
-            .ok_or_else(|| format!("tool `{tool_id}` does not expose a managed web UI"))?;
-        spawn_web_ui_affordance(&affordance)
+        start_web_ui_for_tool(&tool_id)
     })
     .await
     .map_err(|error| format!("failed to start managed web UI: {error}"))?
@@ -2310,6 +2308,24 @@ fn web_ui_status(tool_id: &str, affordance: &WebUiAffordance) -> ManagedWebUiSta
             .map(|port| format!("http://localhost:{port}"))
             .unwrap_or_else(|| affordance.url.to_string()),
     }
+}
+
+fn start_web_ui_for_tool(tool_id: &str) -> Result<(), String> {
+    let affordance = web_ui_affordance(tool_id)
+        .ok_or_else(|| format!("tool `{tool_id}` does not expose a managed web UI"))?;
+    if let Some(service) = service_affordance(tool_id) {
+        match query_service_state(&service.service_name).as_deref() {
+            Some("RUNNING" | "START_PENDING") => return Ok(()),
+            Some(_) => {
+                return run_elevated_cmd_script(
+                    &service_control_script(&service.service_name, "start"),
+                    &format!("start service {}", service.service_name),
+                );
+            }
+            None => {}
+        }
+    }
+    spawn_web_ui_affordance(&affordance)
 }
 
 fn stop_web_ui_for_tool(tool_id: &str) -> Result<(), String> {

@@ -864,6 +864,7 @@
       "update": "Perbarui",
       "uninstall": "Copot pemasangan",
       "run": "Jalankan",
+      "start": "Mulai",
       "stop": "Hentikan",
       "openWebUi": "Buka UI web",
       "installService": "Instal layanan",
@@ -984,6 +985,9 @@
       "failedBadge": "Gagal"
     },
     "steps": {
+      "resolveDependencyPlan": "Selesaikan rencana dependensi",
+      "ensureNodeLts": "Pastikan Node LTS tersedia",
+      "installNamed": "Instal {{name}}",
       "resolve": "Tentukan versi",
       "download": "Unduh",
       "verifyChecksum": "Verifikasi checksum",

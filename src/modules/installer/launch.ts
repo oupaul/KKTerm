@@ -5,8 +5,7 @@
 //               (`installer_launch_app`).
 //   * "cli"   — open the mini launcher dialog and then a terminal through
 //               `installer_open_terminal_launcher`.
-//   * "webUi" — open the installed info dialog, which carries the managed web
-//               app controls (Run/Stop, Open web UI, service registration).
+//   * "webUi" — open the managed web-app Run dialog.
 //   * "suite" — open a dedicated searchable Run dialog (Sysinternals,
 //               Coreutils), kept separate from installation details.
 // Recipes not listed here get no Run button. The CLI command map mirrors the

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-test("installed n8n dialog exposes Run and Open web UI actions", async () => {
+test("n8n Run dialog exposes Start and Open web UI actions", async () => {
   const source = await readFile(
     new URL("../src/modules/installer/InstallerToolDialog.tsx", import.meta.url),
     "utf8",
@@ -11,7 +11,7 @@ test("installed n8n dialog exposes Run and Open web UI actions", async () => {
   assert.match(
     source,
     /webUiAffordanceForRecipe\(recipe\)/,
-    "InstalledInfoBody should derive web UI affordances from the installed recipe",
+    "the managed Run dialog should derive web UI affordances from the recipe",
   );
   assert.match(
     source,
@@ -25,8 +25,8 @@ test("installed n8n dialog exposes Run and Open web UI actions", async () => {
   );
   assert.match(
     source,
-    /installer\.actions\.run/,
-    "Run action label should be translated",
+    /installer\.actions\.start/,
+    "Start action label should be translated",
   );
   assert.match(
     source,
@@ -61,7 +61,7 @@ test("installed BentoPDF dialog exposes its local PDF tools endpoint", async () 
   );
   assert.match(
     source,
-    /webUiStatus\?\.url \?\? webUi\.url/,
+    /status\?\.url \?\? webUi\.url/,
     "Open web UI should use the backend-reported URL when BentoPDF picked another free port",
   );
 });
@@ -84,36 +84,82 @@ test("installed OpenFlowKit dialog exposes its local diagramming endpoint", asyn
   );
 });
 
-test("managed web UI tools expose Windows service helper actions", async () => {
+test("managed web UI controls live in the dedicated Run dialog", async () => {
   const source = await readFile(
     new URL("../src/modules/installer/InstallerToolDialog.tsx", import.meta.url),
     "utf8",
   );
+  const runAction = await readFile(
+    new URL("../src/modules/installer/useInstallerRunAction.ts", import.meta.url),
+    "utf8",
+  );
+  const backend = await readFile(
+    new URL("../src-tauri/src/installer/commands.rs", import.meta.url),
+    "utf8",
+  );
+  const installedInfo = source.match(
+    /function InstalledInfoBody[\s\S]*?function NotInstalledInfoBody/,
+  )?.[0];
+  const managedRun = source.match(
+    /function ManagedWebUiLauncherBody[\s\S]*?function CliLauncherBody/,
+  )?.[0];
 
+  assert.ok(installedInfo, "the installed-details component should exist");
+  assert.ok(managedRun, "managed web apps should have a specialized Run dialog");
   assert.match(
-    source,
+    runAction,
+    /launchKind === "webUi"[\s\S]*openLauncherDialog\(recipe\.id\)/,
+    "base-view and Details Run actions should open the managed Run dialog",
+  );
+  assert.doesNotMatch(
+    installedInfo,
+    /installer_(?:get|run|stop)_web_ui|installer_(?:install|remove)_service/,
+    "installation Details should not own runtime or service operations",
+  );
+  assert.doesNotMatch(
+    installedInfo,
+    /installer\.dialog\.(?:webUi|windowsService|runtimeStatus|serviceStartup)/,
+    "installation Details should not mix in runtime or service metadata",
+  );
+  assert.match(
+    managedRun,
     /serviceAffordanceForRecipe\(recipe\)/,
-    "InstalledInfoBody should derive service affordances from the installed recipe",
+    "the managed Run dialog should derive service affordances from the recipe",
   );
   assert.match(
-    source,
+    managedRun,
+    /installer_run_web_ui/,
+    "Start should invoke the managed web UI helper",
+  );
+  assert.match(
+    managedRun,
     /installer_install_service/,
-    "Install service should invoke the dedicated backend helper",
+    "Register as service should invoke the dedicated backend helper",
   );
   assert.match(
-    source,
+    managedRun,
     /installer_remove_service/,
     "Remove service should invoke the dedicated backend helper",
   );
   assert.match(
-    source,
+    managedRun,
+    /installer\.actions\.openWebUi/,
+    "Open web UI action label should be translated",
+  );
+  assert.match(
+    managedRun,
     /installer\.actions\.registerService/,
     "Register service action label should be translated",
   );
   assert.match(
-    source,
+    managedRun,
     /installer\.actions\.removeService/,
     "Remove service action label should be translated",
+  );
+  assert.match(
+    backend,
+    /fn start_web_ui_for_tool[\s\S]*query_service_state[\s\S]*service_control_script\(&service\.service_name, "start"\)[\s\S]*spawn_web_ui_affordance/,
+    "Start should restart a registered stopped service and only spawn a normal process when no service is registered",
   );
 });
 
@@ -190,7 +236,7 @@ test("managed web UI status polling is throttled", async () => {
   assert.match(
     source,
     /10_000/,
-    "Status polling should be slow enough not to make the properties dialog sluggish",
+    "Status polling should be slow enough not to make the Run dialog sluggish",
   );
 });
 

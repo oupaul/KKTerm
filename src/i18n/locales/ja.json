@@ -864,6 +864,7 @@
       "update": "更新",
       "uninstall": "アンインストール",
       "run": "実行",
+      "start": "開始",
       "stop": "停止",
       "openWebUi": "Web UI を開く",
       "installService": "サービスをインストール",
@@ -984,6 +985,9 @@
       "failedBadge": "失敗"
     },
     "steps": {
+      "resolveDependencyPlan": "依存関係プランを解決",
+      "ensureNodeLts": "Node LTS が利用可能か確認",
+      "installNamed": "{{name}} をインストール",
       "resolve": "バージョンを解決",
       "download": "ダウンロード",
       "verifyChecksum": "チェックサムを検証",
