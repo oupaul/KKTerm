@@ -3428,6 +3428,32 @@ fn command_for(request: &StartTerminalSessionRequest) -> Result<CommandBuilder, 
             sanitize_linux_appimage_environment(&mut command);
             set_terminal_environment(&mut command);
             command.arg("-tt");
+            // Legacy-protocol parity with the native russh path
+            // (native_ssh_preferred_algorithms). Modern OpenSSH disables SHA-1
+            // key exchange, ssh-rsa host keys, and CBC ciphers by default, so a
+            // legacy device (old routers/switches offering only
+            // diffie-hellman-group*-sha1) fails negotiation — including on the
+            // interactive fallback used for keyboard-interactive auth. When the
+            // connection opts into legacy protocols, re-enable those algorithms
+            // with `+` so modern algorithms still take precedence when offered.
+            if request.ssh_old_protocols.unwrap_or(false) {
+                // Only algorithms modern OpenSSH still *knows* (but disables by
+                // default) can be re-enabled with `+`. ssh-dss (DSA) was removed
+                // outright in OpenSSH 9+, so listing it makes the whole
+                // HostKeyAlgorithms value invalid ("Bad key types"); ssh-rsa
+                // (SHA-1 RSA) is what legacy devices actually present and is
+                // still recognized, so it is the only legacy host-key type added.
+                for option in [
+                    "KexAlgorithms=+diffie-hellman-group-exchange-sha1,diffie-hellman-group14-sha1,diffie-hellman-group1-sha1",
+                    "HostKeyAlgorithms=+ssh-rsa",
+                    "PubkeyAcceptedAlgorithms=+ssh-rsa",
+                    "Ciphers=+aes256-cbc,aes192-cbc,aes128-cbc,3des-cbc",
+                    "MACs=+hmac-sha1",
+                ] {
+                    command.arg("-o");
+                    command.arg(option);
+                }
+            }
             if let Some(port) = request.port {
                 command.arg("-p");
                 command.arg(port.to_string());
@@ -4508,6 +4534,78 @@ mod tests {
             psmux_session_id: None,
             ssh_buffer_lines: None,
             text_encoding: default_terminal_encoding(),
+        }
+    }
+
+    fn argv_strings(command: &CommandBuilder) -> Vec<String> {
+        command
+            .get_argv()
+            .iter()
+            .map(|arg| arg.to_string_lossy().into_owned())
+            .collect()
+    }
+
+    #[test]
+    fn ssh_command_omits_legacy_algorithms_by_default() {
+        let command = command_for(&ssh_request()).expect("ssh command builds");
+        let argv = argv_strings(&command);
+        assert!(
+            !argv.iter().any(|arg| arg.starts_with("KexAlgorithms=")),
+            "modern SSH connections must not weaken the algorithm set: {argv:?}"
+        );
+    }
+
+    #[test]
+    fn ssh_command_adds_legacy_algorithms_when_old_protocols_enabled() {
+        let mut request = ssh_request();
+        request.ssh_old_protocols = Some(true);
+        let command = command_for(&request).expect("ssh command builds");
+        let argv = argv_strings(&command);
+        // The legacy KEX set is what old routers/switches (and the failing
+        // interactive fallback) need; `+` keeps modern algorithms preferred.
+        assert!(
+            argv.iter().any(|arg| arg
+                == "KexAlgorithms=+diffie-hellman-group-exchange-sha1,diffie-hellman-group14-sha1,diffie-hellman-group1-sha1"),
+            "legacy KEX must be offered when old protocols are enabled: {argv:?}"
+        );
+        assert!(
+            argv.iter().any(|arg| arg == "HostKeyAlgorithms=+ssh-rsa"),
+            "legacy host-key algorithms must be offered: {argv:?}"
+        );
+        // ssh-dss was removed in OpenSSH 9+, so it must never be requested — it
+        // would make the whole HostKeyAlgorithms value invalid ("Bad key types").
+        assert!(
+            !argv.iter().any(|arg| arg.contains("ssh-dss")),
+            "ssh-dss must not be requested (removed in modern OpenSSH): {argv:?}"
+        );
+        assert!(
+            argv.iter().any(|arg| arg.starts_with("Ciphers=+")),
+            "legacy CBC ciphers must be offered: {argv:?}"
+        );
+    }
+
+    #[test]
+    fn mosh_command_bootstraps_over_ssh_or_reports_missing_client() {
+        let mut request = ssh_request();
+        request.connection_type = "mosh".to_string();
+        request.port = Some(2022);
+        request.key_path = Some("/home/ops/.ssh/id_ed25519".to_string());
+        match command_for(&request) {
+            Ok(command) => {
+                // Mosh is installed on this host: verify it targets user@host and
+                // threads the SSH port/key through mosh's --ssh option.
+                let argv = argv_strings(&command);
+                assert!(argv.iter().any(|arg| arg == "admin@example.internal"), "{argv:?}");
+                assert!(
+                    argv.iter().any(|arg| arg
+                        == "--ssh=ssh -p 2022 -i /home/ops/.ssh/id_ed25519"),
+                    "{argv:?}"
+                );
+            }
+            Err(message) => {
+                // Mosh is absent (typical CI): the error must be the actionable hint.
+                assert!(message.contains("Mosh client not found"), "{message}");
+            }
         }
     }
 
