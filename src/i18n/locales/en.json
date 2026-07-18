@@ -971,6 +971,7 @@
       "commonOption": "Common option",
       "defaultOption": "No extra option",
       "arguments": "Additional arguments",
+      "commandReference": "Command-line parameter reference",
       "selectAppTitle": "Choose an app for {{name}}",
       "applicationFiles": "Applications and shortcuts",
       "selectedAppFailed": "Could not launch the selected app.",

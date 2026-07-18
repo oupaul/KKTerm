@@ -971,6 +971,7 @@
       "commonOption": "Opsi umum",
       "defaultOption": "Tanpa opsi tambahan",
       "arguments": "Argumen tambahan",
+      "commandReference": "Referensi parameter baris perintah",
       "selectAppTitle": "Pilih aplikasi untuk {{name}}",
       "applicationFiles": "Aplikasi dan pintasan",
       "selectedAppFailed": "Aplikasi yang dipilih tidak dapat dijalankan.",

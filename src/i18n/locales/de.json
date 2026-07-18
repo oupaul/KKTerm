@@ -971,6 +971,7 @@
       "commonOption": "Gängige Option",
       "defaultOption": "Keine zusätzliche Option",
       "arguments": "Zusätzliche Argumente",
+      "commandReference": "Referenz der Befehlszeilenparameter",
       "selectAppTitle": "App für {{name}} auswählen",
       "applicationFiles": "Anwendungen und Verknüpfungen",
       "selectedAppFailed": "Die ausgewählte App konnte nicht gestartet werden.",

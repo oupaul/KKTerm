@@ -971,6 +971,7 @@
       "commonOption": "Tùy chọn phổ biến",
       "defaultOption": "Không có tùy chọn bổ sung",
       "arguments": "Đối số bổ sung",
+      "commandReference": "Tham chiếu tham số dòng lệnh",
       "selectAppTitle": "Chọn ứng dụng cho {{name}}",
       "applicationFiles": "Ứng dụng và lối tắt",
       "selectedAppFailed": "Không thể khởi chạy ứng dụng đã chọn.",

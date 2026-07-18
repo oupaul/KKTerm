@@ -971,6 +971,7 @@
       "commonOption": "常用选项",
       "defaultOption": "无附加选项",
       "arguments": "其他参数",
+      "commandReference": "命令行参数参考",
       "selectAppTitle": "为 {{name}} 选择应用",
       "applicationFiles": "应用和快捷方式",
       "selectedAppFailed": "无法启动所选应用。",

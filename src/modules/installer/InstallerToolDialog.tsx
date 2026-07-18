@@ -31,6 +31,7 @@ import {
   cliLaunchCommandForRecipe,
   cliLaunchSamplesForRecipe,
   cliLauncherUsesProjectFolders,
+  codingAgentCommandReferenceUrlForRecipe,
   codingAgentLaunchOptionsForRecipe,
   readCodingAgentLaunchSettings,
   readRecentLaunchFolders,
@@ -1164,6 +1165,8 @@ function LauncherBody({ recipe }: { recipe: Recipe }) {
   );
   const samples = cliLaunchSamplesForRecipe(recipe.id) ?? [];
   const codingAgentOptions = codingAgentLaunchOptionsForRecipe(recipe.id);
+  const commandReferenceUrl =
+    codingAgentCommandReferenceUrlForRecipe(recipe.id);
   const usesProjectFolders = cliLauncherUsesProjectFolders(recipe.id);
   const [launchSettings, setLaunchSettings] = useState(() =>
     readCodingAgentLaunchSettings(recipe.id),
@@ -1226,6 +1229,13 @@ function LauncherBody({ recipe }: { recipe: Recipe }) {
         </p>
         {codingAgentOptions ? (
           <div className="installer-launcher__options">
+            {commandReferenceUrl ? (
+              <span className="installer-launcher__reference">
+                <ExternalLink href={commandReferenceUrl}>
+                  {t("installer.launcher.commandReference")}
+                </ExternalLink>
+              </span>
+            ) : null}
             <label className="installer-launcher__field">
               <span>{t("installer.launcher.commonOption")}</span>
               <select

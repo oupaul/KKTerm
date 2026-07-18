@@ -2708,7 +2708,7 @@ fn build_terminal_launcher_ps_command(
     } else {
         let prefill_escaped = affordance.prefill.replace('\'', "''");
         parts.push(format!(
-            "function global:prompt {{ if (-not $global:__kkt_pf) {{ $global:__kkt_pf = $true; if (Get-Module PSReadLine) {{ [Microsoft.PowerShell.PSConsoleReadLine]::Insert('{prefill_escaped}') }} }}; 'PS ' + (Get-Location) + '> ' }}"
+            "$null = Register-EngineEvent -SourceIdentifier PowerShell.OnIdle -MaxTriggerCount 1 -Action {{ if (Get-Module PSReadLine) {{ [Microsoft.PowerShell.PSConsoleReadLine]::Insert('{prefill_escaped}') }} }}"
         ));
     }
     parts.join("; ")
@@ -2723,14 +2723,17 @@ fn build_terminal_launcher_shell_parameters(
 
     let mut ps_command = build_terminal_launcher_ps_command(affordance, execute);
     if let Some(path) = refreshed_path {
-        ps_command = format!("$env:PATH = {}; {ps_command}", ps_single_quote(path));
+        ps_command = format!(
+            "$__kkt_refreshed_path = {}; $__kkt_path_entries = [System.Collections.Generic.List[string]]::new(); foreach ($__kkt_path_entry in @(($env:PATH -split ';') + ($__kkt_refreshed_path -split ';'))) {{ if ($__kkt_path_entry -and -not ($__kkt_path_entries -contains $__kkt_path_entry)) {{ $__kkt_path_entries.Add($__kkt_path_entry) }} }}; $env:PATH = $__kkt_path_entries -join ';'; Remove-Variable __kkt_refreshed_path, __kkt_path_entries, __kkt_path_entry -ErrorAction SilentlyContinue; {ps_command}",
+            ps_single_quote(path)
+        );
     }
     let utf16_le = ps_command
         .encode_utf16()
         .flat_map(u16::to_le_bytes)
         .collect::<Vec<u8>>();
     format!(
-        "-NoExit -NoLogo -NoProfile -ExecutionPolicy Bypass -EncodedCommand {}",
+        "-NoExit -NoLogo -ExecutionPolicy Bypass -EncodedCommand {}",
         STANDARD.encode(utf16_le)
     )
 }
@@ -3073,7 +3076,7 @@ mod tests {
     }
 
     #[test]
-    fn terminal_launcher_prefill_uses_psreadline_type() {
+    fn terminal_launcher_prefill_preserves_profile_prompt() {
         use base64::{Engine as _, engine::general_purpose::STANDARD};
 
         let affordance = TerminalLaunchAffordance {
@@ -3088,6 +3091,8 @@ mod tests {
         assert!(command.contains("Import-Module PSReadLine"));
         assert!(command.contains("[Microsoft.PowerShell.PSConsoleReadLine]::Insert"));
         assert!(!command.contains("PSReadLine.PSConsoleReadLine"));
+        assert!(command.contains("PowerShell.OnIdle"));
+        assert!(!command.contains("function global:prompt"));
 
         let parameters =
             build_terminal_launcher_shell_parameters(
@@ -3106,9 +3111,12 @@ mod tests {
             .collect::<Vec<_>>();
         let decoded = String::from_utf16(&words).expect("valid UTF-16LE command");
 
-        assert!(parameters.contains("-NoProfile"));
+        assert!(!parameters.contains("-NoProfile"));
         assert!(parameters.contains("-EncodedCommand"));
-        assert!(decoded.starts_with("$env:PATH = 'C:\\Tools;C:\\Windows'; "));
+        assert!(decoded.contains("$__kkt_refreshed_path = 'C:\\Tools;C:\\Windows'"));
+        assert!(decoded.contains("$env:PATH -split ';'"));
+        assert!(decoded.contains("$__kkt_refreshed_path -split ';'"));
+        assert!(!decoded.starts_with("$env:PATH ="));
         assert!(decoded.contains("hermes setup"));
     }
 

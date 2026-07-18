@@ -560,6 +560,16 @@
   gap: 10px;
 }
 
+.installer-launcher__reference {
+  justify-self: end;
+  color: var(--accent);
+  font-size: 12px;
+}
+
+.installer-launcher__reference a {
+  color: inherit;
+}
+
 .installer-launcher__field {
   display: grid;
   gap: 6px;

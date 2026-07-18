@@ -94,6 +94,17 @@ const CODING_AGENT_LAUNCH_OPTIONS: Record<string, CodingAgentLaunchOption[]> = {
   ],
 };
 
+const CODING_AGENT_COMMAND_REFERENCE_URLS: Record<string, string> = {
+  "antigravity-cli": "https://antigravity.google/docs/cli-reference",
+  "claude-code-cli": "https://code.claude.com/docs/en/cli-usage",
+  "codex-cli": "https://developers.openai.com/codex/cli/reference/",
+  "cursor-cli": "https://docs.cursor.com/en/cli/reference/parameters",
+  "kimi-code-cli":
+    "https://www.kimi.com/code/docs/en/kimi-code-cli/reference/kimi-command.html",
+  "grok-build": "https://docs.x.ai/build/cli/reference",
+  opencode: "https://opencode.ai/docs/cli/",
+};
+
 export function cliLauncherUsesProjectFolders(recipeId: string): boolean {
   return CODING_AGENT_CLI_RECIPES.has(recipeId);
 }
@@ -102,6 +113,12 @@ export function codingAgentLaunchOptionsForRecipe(
   recipeId: string,
 ): CodingAgentLaunchOption[] | null {
   return CODING_AGENT_LAUNCH_OPTIONS[recipeId] ?? null;
+}
+
+export function codingAgentCommandReferenceUrlForRecipe(
+  recipeId: string,
+): string | null {
+  return CODING_AGENT_COMMAND_REFERENCE_URLS[recipeId] ?? null;
 }
 
 function readAllCodingAgentLaunchSettings(): Record<

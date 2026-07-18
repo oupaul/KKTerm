@@ -971,6 +971,7 @@
       "commonOption": "일반 옵션",
       "defaultOption": "추가 옵션 없음",
       "arguments": "추가 인수",
+      "commandReference": "명령줄 매개변수 참조",
       "selectAppTitle": "{{name}}용 앱 선택",
       "applicationFiles": "애플리케이션 및 바로 가기",
       "selectedAppFailed": "선택한 앱을 실행할 수 없습니다.",

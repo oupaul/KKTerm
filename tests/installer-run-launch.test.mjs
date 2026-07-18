@@ -67,8 +67,11 @@ test("coding-agent launcher shows persisted options instead of samples", async (
     "launcher dialog title should be translated",
   );
   assert.match(dialog, /codingAgentLaunchOptionsForRecipe\(recipe\.id\)/);
+  assert.match(dialog, /codingAgentCommandReferenceUrlForRecipe\(recipe\.id\)/);
   assert.match(dialog, /installer\.launcher\.commonOption/);
   assert.match(dialog, /installer\.launcher\.arguments/);
+  assert.match(dialog, /installer\.launcher\.commandReference/);
+  assert.match(dialog, /<ExternalLink href=\{commandReferenceUrl\}>/);
   assert.match(dialog, /readCodingAgentLaunchSettings\(recipe\.id\)/);
   assert.match(dialog, /writeCodingAgentLaunchSettings\(recipe\.id/);
   assert.match(dialog, /arguments: launchArguments/);
@@ -83,6 +86,22 @@ test("coding-agent launcher shows persisted options instead of samples", async (
     "samples should only render on the non-coding-agent branch",
   );
   assert.match(launch, /kkterm\.installerLauncherOptions\.v1/);
+  const referenceBlock = launch.match(
+    /CODING_AGENT_COMMAND_REFERENCE_URLS: Record<string, string> = \{([\s\S]*?)\n\};/,
+  )?.[1];
+  assert.ok(referenceBlock, "launch.ts should declare coding-agent reference URLs");
+  for (const [id, domain] of [
+    ["antigravity-cli", "antigravity.google"],
+    ["claude-code-cli", "code.claude.com"],
+    ["codex-cli", "developers.openai.com"],
+    ["cursor-cli", "docs.cursor.com"],
+    ["kimi-code-cli", "www.kimi.com"],
+    ["grok-build", "docs.x.ai"],
+    ["opencode", "opencode.ai"],
+  ]) {
+    assert.match(referenceBlock, new RegExp(`"?${id}"?:`));
+    assert.match(referenceBlock, new RegExp(domain.replaceAll(".", "\\.")));
+  }
   assert.match(durable, /"kkterm\.installerLauncherOptions\.v1"/);
   assert.match(dialog, /usesProjectFolders[\s\S]*installer\.actions\.run/);
   assert.match(dialog, /installer\.launcher\.openTerminal/);

@@ -971,6 +971,7 @@
       "commonOption": "常用選項",
       "defaultOption": "無額外選項",
       "arguments": "其他引數",
+      "commandReference": "命令列參數參考",
       "selectAppTitle": "選擇用於 {{name}} 的應用程式",
       "applicationFiles": "應用程式與捷徑",
       "selectedAppFailed": "無法啟動所選的應用程式。",

@@ -971,6 +971,7 @@
       "commonOption": "よく使うオプション",
       "defaultOption": "追加オプションなし",
       "arguments": "追加の引数",
+      "commandReference": "コマンドライン引数リファレンス",
       "selectAppTitle": "{{name}} 用のアプリを選択",
       "applicationFiles": "アプリケーションとショートカット",
       "selectedAppFailed": "選択したアプリを起動できませんでした。",

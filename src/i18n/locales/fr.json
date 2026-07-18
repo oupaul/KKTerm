@@ -971,6 +971,7 @@
       "commonOption": "Option courante",
       "defaultOption": "Aucune option supplémentaire",
       "arguments": "Arguments supplémentaires",
+      "commandReference": "Référence des paramètres de ligne de commande",
       "selectAppTitle": "Choisir une application pour {{name}}",
       "applicationFiles": "Applications et raccourcis",
       "selectedAppFailed": "Impossible de lancer l’application sélectionnée.",

@@ -971,6 +971,7 @@
       "commonOption": "ตัวเลือกทั่วไป",
       "defaultOption": "ไม่มีตัวเลือกเพิ่มเติม",
       "arguments": "อาร์กิวเมนต์เพิ่มเติม",
+      "commandReference": "ข้อมูลอ้างอิงพารามิเตอร์บรรทัดคำสั่ง",
       "selectAppTitle": "เลือกแอปสำหรับ {{name}}",
       "applicationFiles": "แอปพลิเคชันและทางลัด",
       "selectedAppFailed": "ไม่สามารถเปิดแอปที่เลือกได้",
