@@ -139,6 +139,9 @@ export interface ManagedWebUiStatus {
   serviceInstalled: boolean;
   serviceState: string | null;
   startup: string | null;
+  nodeVersion: string | null;
+  nodeRuntimeVersion: string | null;
+  nodeRequirement: string | null;
   url?: string | null;
 }
 

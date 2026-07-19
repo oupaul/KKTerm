@@ -900,7 +900,19 @@ function ManagedWebUiLauncherBody({ recipe }: { recipe: Recipe }) {
       await refreshManagedWebUiStatus(recipe.id, setStatus);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      showStatusBarNotice(message, { tone: "error" });
+      showStatusBarNotice(
+        command === "installer_run_web_ui" && status?.nodeRequirement
+          ? t("installer.status.nodeStartFailed", {
+              name: recipe.name,
+              current: status.nodeVersion ?? t("installer.status.unknown"),
+              runtime:
+                status.nodeRuntimeVersion ?? t("installer.status.unknown"),
+              requirement: status.nodeRequirement,
+              reason: message,
+            })
+          : message,
+        { tone: "error" },
+      );
     } finally {
       setActionInFlight(false);
     }
@@ -965,6 +977,16 @@ function ManagedWebUiLauncherBody({ recipe }: { recipe: Recipe }) {
           <Row label={t("installer.dialog.webUi")}>
             <code>{status?.url ?? webUi.url}</code>
           </Row>
+          {status?.nodeRequirement ? (
+            <Row label={t("installer.dialog.nodeRuntime")}>
+              {t("installer.dialog.nodeVersionSummary", {
+                current: status.nodeVersion ?? t("installer.status.unknown"),
+                runtime:
+                  status.nodeRuntimeVersion ?? t("installer.status.unknown"),
+                requirement: status.nodeRequirement,
+              })}
+            </Row>
+          ) : null}
           {service ? (
             <Row label={t("installer.dialog.windowsService")}>
               <code>{service.name}</code>

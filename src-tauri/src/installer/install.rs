@@ -318,13 +318,7 @@ fn install_managed_npm_app(
     })?;
 
     run_install_step(tool_id, "ensure-node-lts", emit, || {
-        run_streamed_with_refreshed_path_public(
-            "node",
-            &["--version".into()],
-            tool_id,
-            cancel.clone(),
-            emit,
-        )
+        ensure_node_lts_for_managed_npm(tool_id, cancel.clone(), emit)
     })?;
 
     let args = managed_npm_install_args(tool_id, &[managed_npm_spec(pkg, options)]);
@@ -369,6 +363,36 @@ fn run_install_step<T>(
             });
             Err(error)
         }
+    }
+}
+
+fn ensure_node_lts_for_managed_npm(
+    tool_id: &str,
+    cancel: Arc<AtomicBool>,
+    emit: &EventSink,
+) -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    {
+        for args in [["install", "lts"], ["use", "lts"]] {
+            run_streamed_with_refreshed_path_public(
+                "nvm",
+                &args.into_iter().map(str::to_string).collect::<Vec<_>>(),
+                tool_id,
+                cancel.clone(),
+                emit,
+            )?;
+        }
+        Ok(())
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        run_streamed_with_refreshed_path_public(
+            "node",
+            &["--version".into()],
+            tool_id,
+            cancel,
+            emit,
+        )
     }
 }
 
@@ -2068,6 +2092,15 @@ pub fn run_streamed_with_refreshed_path_public(
 
 pub fn refreshed_path_public() -> Option<String> {
     refreshed_path()
+}
+
+pub fn refreshed_nvm_home_public() -> Option<String> {
+    let environment = refreshed_environment();
+    environment
+        .vars
+        .get("NVM_HOME")
+        .cloned()
+        .or_else(|| std::env::var("NVM_HOME").ok())
 }
 
 /// Run an admin-only command (Chocolatey) **elevated**, raising one UAC prompt

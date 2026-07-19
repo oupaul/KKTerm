@@ -27,6 +27,16 @@ test("managed npm installs drive the three-stage progress design", async () => {
   );
   assert.match(source, /fn run_install_step<[\s\S]*?ProgressEvent::StepStarted/);
   assert.match(source, /fn run_install_step<[\s\S]*?ProgressEvent::StepFinished/);
+  assert.match(
+    managedNpm,
+    /ensure_node_lts_for_managed_npm/,
+    "the Node stage should activate a current LTS instead of accepting any installed Node build",
+  );
+  assert.match(
+    source,
+    /fn ensure_node_lts_for_managed_npm[\s\S]*?"install"[\s\S]*?"lts"[\s\S]*?"use"[\s\S]*?"lts"/,
+    "managed npm installs should install and activate the current Node LTS",
+  );
 });
 
 test("installer log panels have a defined readable terminal foreground", async () => {

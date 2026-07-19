@@ -161,6 +161,36 @@ test("managed web UI controls live in the dedicated Run dialog", async () => {
     /fn start_web_ui_for_tool[\s\S]*query_service_state[\s\S]*service_control_script\(&service\.service_name, "start"\)[\s\S]*spawn_web_ui_affordance/,
     "Start should restart a registered stopped service and only spawn a normal process when no service is registered",
   );
+  assert.match(
+    backend,
+    /compatible_managed_node_runtime[\s\S]*process\.release\.lts[\s\S]*semver\.js/,
+    "managed npm launchers should select an installed LTS that satisfies the package's Node engine range",
+  );
+  assert.match(
+    backend,
+    /managed_node_package_entrypoint[\s\S]*get\("bin"\)[\s\S]*managed_npm_direct_launch_args/,
+    "managed npm launchers should run the package entry point directly instead of falling back through the global npm shim",
+  );
+  assert.match(
+    backend,
+    /service_runtime_start_script[\s\S]*Application[\s\S]*AppParameters[\s\S]*nssm \{action\}/,
+    "starting an existing service should repair its pinned Node runtime before invoking NSSM",
+  );
+  assert.match(
+    backend,
+    /struct ManagedWebUiStatus[\s\S]*node_version: Option<String>[\s\S]*node_runtime_version: Option<String>[\s\S]*node_requirement: Option<String>/,
+    "managed Node web app status should report the current nvm version, selected launch runtime, and package requirement",
+  );
+  assert.match(
+    managedRun,
+    /installer\.dialog\.nodeRuntime[\s\S]*installer\.dialog\.nodeVersionSummary/,
+    "the Run dialog should display Node runtime details for managed Node web apps",
+  );
+  assert.match(
+    managedRun,
+    /installer\.status\.nodeStartFailed/,
+    "a failed Start action should include the Node runtime context in its status-bar error",
+  );
 });
 
 test("installed dialog uses a switch for pin version", async () => {
