@@ -1,5 +1,16 @@
 const VERSION_TAG = /^v(\d+\.\d+\.\d+)$/;
 
+// Windows, macOS, and Linux assets are built and attached to the same GitHub
+// Release by separate, staggered jobs/scripts. A manifest missing any of
+// these must never replace the public "current" manifest, or updater clients
+// on the platforms that haven't landed yet will find a version bump with no
+// matching platform entry and hard-fail instead of just not updating yet.
+export const REQUIRED_PLATFORMS = ["windows-x64", "windows-arm64", "darwin-aarch64", "darwin-x86_64", "linux-x86_64"];
+
+export function missingRequiredPlatforms(manifest) {
+  return REQUIRED_PLATFORMS.filter((platform) => !manifest.platforms[platform]);
+}
+
 export function versionFromTag(tag) {
   const match = VERSION_TAG.exec(tag ?? "");
   if (!match) throw new Error(`Invalid release tag: ${tag ?? ""}`);

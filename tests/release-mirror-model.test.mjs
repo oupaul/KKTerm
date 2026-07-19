@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   buildReleaseManifest,
+  missingRequiredPlatforms,
   recognizedReleaseAssets,
   versionFromTag,
 } from "../scripts/release-mirror-model.mjs";
@@ -90,6 +91,35 @@ test("adds signed staggered macOS and Linux updater entries", () => {
     "https://kkterm.ryantsai.com/releases/v0.1.93/kkterm-0.1.93-macos-universal.app.tar.gz",
   );
   assert.equal(manifest.platforms["linux-x86_64"].signature_asset, "kkterm-0.1.93-linux-x86_64.AppImage.sig");
+});
+
+test("flags a Windows-only manifest as missing macOS and Linux platforms", () => {
+  const manifest = buildReleaseManifest(release, "https://kkterm.ryantsai.com");
+  assert.deepEqual(missingRequiredPlatforms(manifest), [
+    "windows-arm64",
+    "darwin-aarch64",
+    "darwin-x86_64",
+    "linux-x86_64",
+  ]);
+});
+
+test("reports no missing platforms once macOS and Linux stagger in", () => {
+  const manifest = buildReleaseManifest(
+    {
+      ...release,
+      assets: [
+        ...release.assets,
+        { name: "kkterm-0.1.93-windows-arm64-setup.exe" },
+        { name: "kkterm-0.1.93-windows-arm64-setup.exe.sha256" },
+        { name: "kkterm-0.1.93-macos-universal.app.tar.gz" },
+        { name: "kkterm-0.1.93-macos-universal.app.tar.gz.sig" },
+        { name: "kkterm-0.1.93-linux-x86_64.AppImage" },
+        { name: "kkterm-0.1.93-linux-x86_64.AppImage.sig" },
+      ],
+    },
+    "https://kkterm.ryantsai.com",
+  );
+  assert.deepEqual(missingRequiredPlatforms(manifest), []);
 });
 
 test("rejects draft, prerelease, and malformed release tags", () => {
