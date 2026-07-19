@@ -1,9 +1,8 @@
 # Portable Mode Plan
 
-Status: **Accepted for implementation** (Windows portable v1 decisions approved
-2026-07-19; implementation has not started yet).
+Status: **Implemented and verified** (Windows portable v1, 2026-07-19).
 
-This document plans a portable distribution of KKTerm: a ZIP the user unpacks
+This document defines the portable distribution of KKTerm: a ZIP the user unpacks
 to a writable local folder or removable drive that runs without an installer,
 keeps KKTerm-owned durable state next to the executable, and can coexist with a
 normally installed KKTerm on the same machine.
@@ -203,10 +202,18 @@ In portable mode:
   an in-memory (per-run) cache. Detection gets marginally slower, correctness
   unchanged.
 - **Install Helper managed apps** (`%LOCALAPPDATA%\KKTerm\installer\apps`):
-  *stays machine-local by design.* The Install Helper installs machine tools
-  (Node, Docker, n8n, …) — those are host state, not user data, and cannot
-  meaningfully live on a stick. The Install Helper UI in portable mode gets a
-  small caption noting installs apply to the current machine.
+  *stay machine-local by design.* This includes each managed web app's
+  executable/runtime, database, uploads, models, logs, and service definition
+  (for example n8n, Flowise, Open WebUI, Langflow, and Ollama). Background
+  services must remain runnable when the portable drive is absent, so their
+  command lines and working directories must never point into portable
+  `data/`. Installed and portable KKTerm instances on the same Windows account
+  intentionally discover and control the same machine-local app installation.
+  The portable folder keeps only KKTerm's Install Helper preferences and
+  transient UI state; deleting that folder neither stops nor uninstalls a
+  managed app or its Windows service. The Install Helper UI in portable mode
+  gets a small persistent caption noting that installs, app data, and services
+  apply to the current machine and remain after the portable folder is removed.
 - **File associations / protocol handlers / shortcuts**: none are registered
   at runtime today (installer-only) — keep it that way; nothing to do.
 - **WebView2 runtime**: the ZIP has no `downloadBootstrapper`. On startup, if
@@ -306,6 +313,18 @@ pending file per key under `docs/localization_todo/`).
     matching portable download rather than offering installer handoff.
   - About → portable badge, exact data path, and Open Data Folder action.
   - Install Helper → caption that installs are machine-local.
+- **Installed-to-portable creator**: installed Windows exposes
+  `settings.portableCreatorAction` under General → Settings data. Its two-step
+  wizard selects the existing selective-export categories and an empty local
+  or removable destination, then copies the running architecture's executable,
+  CLI, manual, and bundled Assistant Skills and creates a launch-ready
+  `data/kkterm.sqlite3`. Connections require Workspaces. Credentials and
+  encrypted-secret rows are never copied; auto-start is forced off and the
+  portable credential backend returns to the normal first-run encrypted-file
+  recommendation. Creation is staged inside the selected folder, rejects
+  network/non-empty/install-directory targets, rolls back only files it placed,
+  and writes the portable marker last. The completion state can open the folder
+  or launch the new portable instance alongside the installed instance.
 - **No permanent mode chrome**: do not add a title-bar badge, alternate theme,
   or duplicate product identity. Portable mode stays inspectable in About and
   appears only where it changes a decision.
@@ -382,6 +401,23 @@ after phases 1–4 are complete.
 5. **Later / out of scope for v1** — portable self-update/staging/rollback,
    macOS/Linux portable modes, network-share roots, cloud-synchronized roots,
    full-database encryption, and a machine-local WebView2 profile redirect.
+
+### Implementation verification
+
+The implementation ships `package:portable`, `package:portable:arm64`, and
+`smoke:portable`. Current x64 and ARM64 release builds produce checksummed ZIPs
+with the correct PE architecture, marker, CLI, operation manual, and Assistant
+Skills, and no pre-created `data` folder. The x64 packaged-runtime smoke covers
+portable data/WebView/log creation, resource resolution, same-root activation,
+installed-path and registry isolation, and clean SQLite WAL checkpointing.
+ARM64 cross-build and archive validation run on x64; execution still requires
+an ARM64 Windows runner or device.
+
+Installed Windows builds also ship the Settings portable-copy creator. Rust
+coverage verifies selective database creation, credential/auto-start
+normalization, category dependencies, empty-folder protection, and recursive
+resource copying; frontend policy coverage guards the installed-only launcher
+and the no-credentials contract.
 
 ---
 

@@ -49,6 +49,14 @@ export interface ReorderWorkspacesRequest {
   orderedIds: string[];
 }
 export type ConnectionStatus = "connected" | "idle" | "offline";
+export interface AppModeInfo {
+  mode: "installed" | "portable";
+  dataDir: string;
+}
+export interface CreatedPortableCopy {
+  destination: string;
+  executable: string;
+}
 export type SshAuthMethod = "keyFile" | "password" | "agent";
 
 /**

@@ -8,6 +8,7 @@ import {
   isAppUpdateDownloadCancelled,
   isDebugBuild,
   openReleaseDownloadPage,
+  openPortableUpdateDownload,
   startAppUpdateDownload,
   type AppUpdate,
 } from "../lib/appUpdates";
@@ -133,6 +134,7 @@ export function AppUpdatePrompt({
 
   const canDownloadAndInstall =
     update?.installStrategy === "tauri-updater" || Boolean(update?.installer);
+  const portableUpdate = update?.installStrategy === "portable-manual";
 
   function handleUpdateNotesClick(event: MouseEvent<HTMLDivElement>) {
     const link = (event.target as Element | null)?.closest("a");
@@ -217,7 +219,11 @@ export function AppUpdatePrompt({
         <header className="connection-dialog-header compact">
           <div>
             <p className="panel-label">{t("settings.softwareUpdates")}</p>
-            <h2>{t("settings.updateAvailableTitle")}</h2>
+            <h2>
+              {portableUpdate
+                ? t("settings.portableUpdateAvailableTitle")
+                : t("settings.updateAvailableTitle")}
+            </h2>
           </div>
         </header>
         <p className="field-hint">
@@ -226,6 +232,9 @@ export function AppUpdatePrompt({
             version: update.version,
           })}
         </p>
+        {portableUpdate ? (
+          <p className="field-hint">{t("settings.portableUpdateInstructions")}</p>
+        ) : null}
         {renderedUpdateBody ? (
           <div
             className="app-update-notes"
@@ -246,7 +255,19 @@ export function AppUpdatePrompt({
             <ExternalLink size={15} />
             {t("settings.updateOpenDownloadPage")}
           </button>}
-          primary={canDownloadAndInstall ? (
+          primary={portableUpdate ? (
+            <button
+              className="approve-button"
+              onClick={() => {
+                void openPortableUpdateDownload(update);
+                setUpdate(null);
+              }}
+              type="button"
+            >
+              <Download size={15} />
+              {t("settings.portableUpdateDownload")}
+            </button>
+          ) : canDownloadAndInstall ? (
             <button
               className="approve-button"
               disabled={installing}

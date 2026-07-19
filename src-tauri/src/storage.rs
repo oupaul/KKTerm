@@ -1820,6 +1820,13 @@ impl Storage {
         self.db_path.clone()
     }
 
+    pub fn checkpoint_wal(&self) -> Result<(), String> {
+        let connection = self.lock()?;
+        connection
+            .execute_batch("PRAGMA wal_checkpoint(TRUNCATE);")
+            .map_err(to_storage_error)
+    }
+
     pub fn database_folder(&self) -> Result<String, String> {
         let parent = self
             .db_path

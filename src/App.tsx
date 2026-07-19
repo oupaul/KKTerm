@@ -12,6 +12,7 @@ import {
   type BaseModulePage,
 } from "./app/appNavigationPersistence";
 import { AppUpdatePrompt } from "./app/AppUpdatePrompt";
+import { PortableOnboardingDialog } from "./app/PortableOnboardingDialog";
 import { TitleBar } from "./app/TitleBar";
 import {
   findTutorialTargetElement,
@@ -48,6 +49,10 @@ import { currentPlatform, supportsInstallerHelper } from "./lib/platform";
 import { useBootstrapSettings } from "./lib/settings";
 import { CREDENTIAL_UNLOCK_REQUIRED_EVENT, invokeCommand } from "./lib/tauri";
 import type { CredentialUnlockRequestDetail } from "./lib/credentialUnlock";
+import {
+  PORTABLE_IMPORT_REQUEST_KEY,
+  PORTABLE_ONBOARDING_COMPLETED_KEY,
+} from "./lib/portableMode";
 import { EncryptedSecretStoreDialog } from "./modules/settings/EncryptedSecretStoreDialog";
 import type { SettingsAssistantContext } from "./modules/settings/settingsAssistantContext";
 import type { SettingsSectionId } from "./modules/settings/settingsAssistantContext";
@@ -99,6 +104,8 @@ function App() {
     useState<SettingsSectionId>("general-settings");
   const previousBasePageRef = useRef<BaseModulePage>(launchPageRef.current);
   const [credentialUnlockDialogOpen, setCredentialUnlockDialogOpen] = useState(false);
+  const [credentialUnlockLaunchPrompt, setCredentialUnlockLaunchPrompt] = useState(false);
+  const [portableOnboardingOpen, setPortableOnboardingOpen] = useState(false);
   const [credentialUnlockStoreExists, setCredentialUnlockStoreExists] =
     useState<boolean | undefined>(undefined);
   const [credentialUnlockBusy, setCredentialUnlockBusy] = useState(false);
@@ -225,7 +232,8 @@ function App() {
     shouldExpandConnectionPanelOnLaunch(launchPageRef.current),
   );
 
-  const { generalSettingsReady } = useBootstrapSettings();
+  const { appModeReady, credentialSettingsReady, generalSettingsReady } = useBootstrapSettings();
+  const appModeInfo = useWorkspaceStore((state) => state.appModeInfo);
   useDashboardBackendInvalidation();
   useItOpsBackendInvalidation();
   useDebugFrontendHeartbeat();
@@ -241,6 +249,54 @@ function App() {
     connectionPanelLayout,
     connectionPanelAnimating,
   });
+
+  useEffect(() => {
+    if (!appModeReady || !credentialSettingsReady || appModeInfo.mode !== "portable") {
+      return;
+    }
+    try {
+      setPortableOnboardingOpen(
+        window.localStorage.getItem(PORTABLE_ONBOARDING_COMPLETED_KEY) !== "1",
+      );
+    } catch {
+      setPortableOnboardingOpen(true);
+    }
+  }, [appModeInfo.mode, appModeReady, credentialSettingsReady]);
+
+  function completePortableOnboarding() {
+    try {
+      window.localStorage.setItem(PORTABLE_ONBOARDING_COMPLETED_KEY, "1");
+    } catch {
+      // The dialog can still be dismissed for this launch.
+    }
+    setPortableOnboardingOpen(false);
+  }
+
+  function openPortableImport() {
+    completePortableOnboarding();
+    try {
+      window.sessionStorage.setItem(PORTABLE_IMPORT_REQUEST_KEY, "1");
+    } catch {
+      // General Settings still exposes Import if session storage is unavailable.
+    }
+    setActiveSettingsSectionId("general-settings");
+    navigateToPage("settings");
+  }
+
+  function openPortableEncryptedStorageSetup() {
+    completePortableOnboarding();
+    setCredentialUnlockError(null);
+    setCredentialUnlockLaunchPrompt(true);
+    void invokeCommand("credential_secret_store_status", undefined)
+      .then((status) => {
+        setCredentialUnlockStoreExists(status.encryptedStoreExists);
+        setCredentialUnlockDialogOpen(true);
+      })
+      .catch(() => {
+        setCredentialUnlockStoreExists(undefined);
+        setCredentialUnlockDialogOpen(true);
+      });
+  }
 
   useEffect(() => {
     const credentialUnlockCompletions = credentialUnlockCompletionsRef.current;
@@ -282,6 +338,7 @@ function App() {
       setCredentialUnlockError(null);
       await invokeCommand("configure_encrypted_file_secret_store", { request });
       setCredentialUnlockDialogOpen(false);
+      setCredentialUnlockLaunchPrompt(false);
       setCredentialUnlockStoreExists(true);
       window.dispatchEvent(new CustomEvent("kkterm:credential-store-status-changed"));
       completeCredentialUnlockRequests(true);
@@ -483,14 +540,23 @@ function App() {
           encryptedStoreExists={credentialUnlockStoreExists}
           error={credentialUnlockError}
           initialMode={credentialUnlockStoreExists === false ? "create" : "unlock"}
-          launchPrompt={false}
+          launchPrompt={credentialUnlockLaunchPrompt}
           platform={currentPlatform()}
           onCancel={() => {
             setCredentialUnlockDialogOpen(false);
+            setCredentialUnlockLaunchPrompt(false);
             setCredentialUnlockError(null);
             completeCredentialUnlockRequests(false);
           }}
           onSubmit={configureCredentialUnlockStore}
+        />
+      ) : null}
+      {portableOnboardingOpen ? (
+        <PortableOnboardingDialog
+          dataDir={appModeInfo.dataDir}
+          onImport={openPortableImport}
+          onLater={completePortableOnboarding}
+          onSetupEncryptedStorage={openPortableEncryptedStorageSetup}
         />
       ) : null}
       {statusBarEnabled ? (

@@ -48,6 +48,13 @@ impl Storage {
     }
 
     pub fn credential_settings(&self) -> Result<CredentialSettings, String> {
+        self.credential_settings_with_default(None)
+    }
+
+    pub fn credential_settings_with_default(
+        &self,
+        default_secret_store: Option<&str>,
+    ) -> Result<CredentialSettings, String> {
         let connection = self.lock()?;
         let value = connection
             .query_row(
@@ -62,7 +69,13 @@ impl Storage {
             Some(value) => serde_json::from_str(&value)
                 .map(validate_credential_settings)
                 .map_err(|error| format!("credential settings are invalid: {error}"))?,
-            None => Ok(default_credential_settings()),
+            None => {
+                let mut settings = default_credential_settings();
+                if let Some(secret_store) = default_secret_store {
+                    settings.secret_store = secret_store.to_string();
+                }
+                validate_credential_settings(settings)
+            }
         }
     }
 
@@ -85,6 +98,21 @@ impl Storage {
             )
             .map_err(to_storage_error)?;
         Ok(settings)
+    }
+
+    pub(crate) fn prepare_for_portable_copy(&self) -> Result<(), String> {
+        let mut general = self.general_settings()?;
+        general.auto_start_with_windows = false;
+        self.update_general_settings(general)?;
+
+        let connection = self.lock()?;
+        connection
+            .execute("DELETE FROM settings WHERE key = 'credentials'", [])
+            .map_err(to_storage_error)?;
+        connection
+            .execute("DELETE FROM encrypted_secret_store_entries", [])
+            .map_err(to_storage_error)?;
+        Ok(())
     }
 
     pub fn app_launcher_settings(&self) -> Result<AppLauncherSettings, String> {

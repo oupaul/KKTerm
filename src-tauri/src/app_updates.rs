@@ -47,6 +47,7 @@ pub async fn download_app_update(
     job_id: String,
     request: DownloadAndInstallAppUpdateRequest,
 ) -> Result<(), String> {
+    validate_installer_update_mode(&app)?;
     validate_job_id(&job_id)?;
     let cancellation = DOWNLOAD_CANCELLATIONS
         .lock()
@@ -85,6 +86,7 @@ pub fn install_downloaded_app_update(
     app: tauri::AppHandle,
     request: DownloadAndInstallAppUpdateRequest,
 ) -> Result<(), String> {
+    validate_installer_update_mode(&app)?;
     validate_update_request(&request)?;
     let installer_path = update_installer_path(&app, &request.asset_name)?;
     let checksum_urls = update_asset_urls(
@@ -102,6 +104,16 @@ pub fn install_downloaded_app_update(
 
     spawn_installer_after_exit(&installer_path, std::process::id())?;
     app.exit(0);
+    Ok(())
+}
+
+fn validate_installer_update_mode(app: &tauri::AppHandle) -> Result<(), String> {
+    if app.state::<crate::app_paths::AppPaths>().is_portable() {
+        return Err(
+            "installer updates are not supported in portable mode; download the portable ZIP instead"
+                .to_string(),
+        );
+    }
     Ok(())
 }
 
@@ -140,11 +152,7 @@ fn download_app_update_sync(
 }
 
 fn update_installer_path(app: &tauri::AppHandle, asset_name: &str) -> Result<PathBuf, String> {
-    let update_dir = app
-        .path()
-        .app_cache_dir()
-        .map_err(|error| format!("failed to resolve app cache directory: {error}"))?
-        .join("updates");
+    let update_dir = crate::app_paths::cache_dir(app)?.join("updates");
     fs::create_dir_all(&update_dir).map_err(|error| {
         format!(
             "failed to create update download directory {}: {error}",

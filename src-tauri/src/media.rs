@@ -71,31 +71,11 @@ pub(crate) fn load_custom_font_data_sync(
 
 /// Root directory for user-writable media (fonts, dashboard backgrounds).
 ///
-/// On macOS the `.app` bundle is read-only and code-signed, and on Linux the
-/// AppImage runs from a read-only squashfs mount (`.deb`/`.rpm` install to a
-/// root-owned `/usr/bin`), so media cannot live next to the executable as it
-/// does on Windows. Use the writable app-data directory there instead, which
-/// the `$APPDATA/<dir>/**/*` asset-protocol scopes in `tauri.conf.json` match
-/// (`~/Library/Application Support/<id>` on macOS, `~/.local/share/<id>` on
-/// Linux).
-#[cfg(not(target_os = "windows"))]
+/// Installed Windows keeps media beside the executable, while installed macOS
+/// and Linux use the app data directory. Portable Windows redirects both media
+/// folders into its managed data root.
 fn media_root(app: &tauri::AppHandle) -> Result<PathBuf, String> {
-    app.path()
-        .app_data_dir()
-        .map_err(|error| format!("failed to resolve app data directory: {error}"))
-}
-
-/// Windows keeps media next to the executable: the installer is a per-user
-/// (`currentUser`) install under `%LOCALAPPDATA%`, so the executable directory
-/// is already writable. This is covered by the `$RESOURCE/<dir>/**/*` scopes.
-#[cfg(target_os = "windows")]
-fn media_root(_app: &tauri::AppHandle) -> Result<PathBuf, String> {
-    let exe_path = std::env::current_exe()
-        .map_err(|error| format!("failed to resolve app executable path: {error}"))?;
-    exe_path
-        .parent()
-        .map(Path::to_path_buf)
-        .ok_or_else(|| "failed to resolve app executable folder".to_string())
+    crate::app_paths::media_dir(app)
 }
 
 pub(crate) fn custom_fonts_folder(app: &tauri::AppHandle) -> Result<PathBuf, String> {

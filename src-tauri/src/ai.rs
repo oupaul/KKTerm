@@ -1679,10 +1679,7 @@ async fn run_copilot_sdk(
     token: &str,
     prompt: &str,
 ) -> Result<String, String> {
-    let app_data_dir = app
-        .path()
-        .app_data_dir()
-        .map_err(|error| format!("failed to locate app data directory: {error}"))?;
+    let app_data_dir = crate::app_paths::data_dir(app)?;
     fs::create_dir_all(&app_data_dir)
         .map_err(|error| format!("failed to create app data directory: {error}"))?;
 
@@ -1760,10 +1757,7 @@ pub async fn list_copilot_models(
     app: &tauri::AppHandle,
     token: &str,
 ) -> Result<Vec<CopilotModelOption>, String> {
-    let app_data_dir = app
-        .path()
-        .app_data_dir()
-        .map_err(|error| format!("failed to locate app data directory: {error}"))?;
+    let app_data_dir = crate::app_paths::data_dir(app)?;
     fs::create_dir_all(&app_data_dir)
         .map_err(|error| format!("failed to create app data directory: {error}"))?;
 

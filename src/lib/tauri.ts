@@ -23,6 +23,8 @@ import type {
   AppearanceSettings,
   AiProviderSettings,
   AppBootstrap,
+  AppModeInfo,
+  CreatedPortableCopy,
   AppLauncherLaunchMode,
   AppLauncherSettings,
   ConfigureEncryptedFileSecretStoreRequest,
@@ -1613,6 +1615,18 @@ type CommandMap = {
   get_general_settings: {
     args: undefined;
     result: GeneralSettings;
+  };
+  get_app_mode: {
+    args: undefined;
+    result: AppModeInfo;
+  };
+  create_portable_copy: {
+    args: { request: { destination: string; segments: string[] } };
+    result: CreatedPortableCopy;
+  };
+  launch_portable_copy: {
+    args: { destination: string };
+    result: void;
   };
   update_general_settings: {
     args: { request: GeneralSettings };
@@ -3620,6 +3634,20 @@ export async function selectSelectiveExportFile(options: {
   const selectedPath = await saveDialog({
     defaultPath: options.defaultFilename,
     filters: [{ name: options.filterName, extensions: ["kkbackup"] }],
+    title: options.title,
+  });
+
+  return typeof selectedPath === "string" ? selectedPath : null;
+}
+
+export async function selectPortableDestination(options: { title: string }) {
+  if (!isTauriRuntime()) {
+    return null;
+  }
+
+  const selectedPath = await openDialog({
+    directory: true,
+    multiple: false,
     title: options.title,
   });
 

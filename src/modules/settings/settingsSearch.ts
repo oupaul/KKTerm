@@ -26,6 +26,7 @@ export const SETTINGS_SEARCH_KEYS: Record<SettingsSectionId, readonly string[]> 
     "settings.useDirectxScreenCapture", "settings.statusBar", "settings.statusBarVisible",
     "settings.statusBarMonitor", "settings.statusBarMonitorInterval", "settings.settingsData",
     "settings.exportSettings", "settings.importSettings", "settings.openDatabaseFolder",
+    "settings.portableCreatorAction",
     "settings.autoBackup", "settings.lastBackup", "settings.lastCheckedAt",
     "settings.sectionDontSleep", "settings.settingsDataActions", "settings.resetAllSettings",
     "settings.debug", "settings.advancedDebugging",
@@ -75,6 +76,7 @@ export const SETTINGS_SEARCH_KEYS: Record<SettingsSectionId, readonly string[]> 
     "settings.credentialStorage", "settings.credentialStorageBackend",
     "settings.credentialsStored", "settings.savedWebsitePasswords",
     "settings.widgetCredentialsStored", "settings.credentialStorageFile",
+    "settings.credentialStorageFilePortable", "settings.portableCredentialStorageOsWarning",
     "settings.credentialStorageSwitchNote", "settings.credentialsHint",
     "settings.credentialsTitle", "settings.deleteCredential",
     "settings.encryptedSecretStoreSetupAction", "settings.widgetCredentialsHint",
@@ -190,7 +192,8 @@ export const SETTINGS_SEARCH_KEYS: Record<SettingsSectionId, readonly string[]> 
   ],
   "about-settings": [
     "settings.version", "settings.developer", "settings.license", "settings.repository",
-    "settings.github", "settings.appSlogan",
+    "settings.github", "settings.appSlogan", "settings.portableMode",
+    "settings.portableDataFolder", "settings.openPortableDataFolder",
   ],
 };
 

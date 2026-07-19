@@ -90,6 +90,8 @@ export function prependDirectDownloads(context, releaseNotes) {
     "## Direct Downloads",
     `* 💻 [Download for Windows (64-bit)](${releaseBaseUrl}/kkterm-${assetVersion}-windows-x64-setup.exe)`,
     `* 💻 [Download for Windows (ARM64)](${releaseBaseUrl}/kkterm-${assetVersion}-windows-arm64-setup.exe)`,
+    `* 📦 [Portable for Windows (64-bit)](${releaseBaseUrl}/kkterm-${assetVersion}-windows-x64-portable.zip)`,
+    `* 📦 [Portable for Windows (ARM64)](${releaseBaseUrl}/kkterm-${assetVersion}-windows-arm64-portable.zip)`,
     "",
     releaseNotes.trim(),
     "",

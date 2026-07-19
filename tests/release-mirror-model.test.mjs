@@ -19,6 +19,8 @@ const release = {
   assets: [
     { name: "kkterm-0.1.93-windows-x64-setup.exe" },
     { name: "kkterm-0.1.93-windows-x64-setup.exe.sha256" },
+    { name: "kkterm-0.1.93-windows-x64-portable.zip" },
+    { name: "kkterm-0.1.93-windows-x64-portable.zip.sha256" },
     { name: "notes.txt" },
   ],
 };
@@ -42,6 +44,8 @@ test("recognizes only version-matching KKTerm release assets", () => {
     [
       "kkterm-0.1.93-windows-x64-setup.exe",
       "kkterm-0.1.93-windows-x64-setup.exe.sha256",
+      "kkterm-0.1.93-windows-x64-portable.zip",
+      "kkterm-0.1.93-windows-x64-portable.zip.sha256",
       "kkterm-0.1.93-macos-universal.dmg",
       "kkterm-0.1.93-macos-universal.dmg.sha256",
       "kkterm-0.1.93-macos-universal.app.tar.gz",
@@ -64,6 +68,11 @@ test("builds a Windows-only manifest without incomplete staggered platforms", ()
         url: "https://kkterm.ryantsai.com/releases/v0.1.93/kkterm-0.1.93-windows-x64-setup.exe",
         checksum_url:
           "https://kkterm.ryantsai.com/releases/v0.1.93/kkterm-0.1.93-windows-x64-setup.exe.sha256",
+      },
+      "windows-x64-portable": {
+        url: "https://kkterm.ryantsai.com/releases/v0.1.93/kkterm-0.1.93-windows-x64-portable.zip",
+        checksum_url:
+          "https://kkterm.ryantsai.com/releases/v0.1.93/kkterm-0.1.93-windows-x64-portable.zip.sha256",
       },
     },
   });
@@ -97,6 +106,7 @@ test("flags a Windows-only manifest as missing macOS and Linux platforms", () =>
   const manifest = buildReleaseManifest(release, "https://kkterm.ryantsai.com");
   assert.deepEqual(missingRequiredPlatforms(manifest), [
     "windows-arm64",
+    "windows-arm64-portable",
     "darwin-aarch64",
     "darwin-x86_64",
     "linux-x86_64",
@@ -111,6 +121,8 @@ test("reports no missing platforms once macOS and Linux stagger in", () => {
         ...release.assets,
         { name: "kkterm-0.1.93-windows-arm64-setup.exe" },
         { name: "kkterm-0.1.93-windows-arm64-setup.exe.sha256" },
+        { name: "kkterm-0.1.93-windows-arm64-portable.zip" },
+        { name: "kkterm-0.1.93-windows-arm64-portable.zip.sha256" },
         { name: "kkterm-0.1.93-macos-universal.app.tar.gz" },
         { name: "kkterm-0.1.93-macos-universal.app.tar.gz.sig" },
         { name: "kkterm-0.1.93-linux-x86_64.AppImage" },

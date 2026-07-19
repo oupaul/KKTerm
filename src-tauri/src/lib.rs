@@ -1,6 +1,7 @@
 mod ai;
 mod ai_coding_usage;
 mod app_launcher;
+mod app_paths;
 mod app_tray;
 mod app_updates;
 mod assistant_skills;
@@ -32,6 +33,9 @@ mod net;
 mod pc_info;
 mod performance;
 mod power;
+mod portable_creator;
+#[cfg(target_os = "windows")]
+mod portable_single_instance;
 mod rdp;
 #[cfg(not(target_os = "windows"))]
 mod rdp_client;
@@ -753,7 +757,13 @@ fn update_general_settings(
     webviews: tauri::State<'_, webview::WebviewSessionManager>,
     request: storage::GeneralSettings,
 ) -> Result<storage::GeneralSettings, String> {
-    auto_start::sync_auto_start_with_windows(request.auto_start_with_windows())?;
+    if app.state::<app_paths::AppPaths>().is_portable() {
+        if request.auto_start_with_windows() {
+            return Err("auto-start is not supported in portable mode".to_string());
+        }
+    } else {
+        auto_start::sync_auto_start_with_windows(request.auto_start_with_windows())?;
+    }
     let saved = storage.update_general_settings(request)?;
     net::proxy::set(net::proxy::from_settings(
         saved.proxy_mode(),
@@ -804,9 +814,21 @@ fn update_dashboard_settings(
 
 #[tauri::command]
 fn get_credential_settings(
+    app: tauri::AppHandle,
     storage: tauri::State<'_, storage::Storage>,
 ) -> Result<storage::CredentialSettings, String> {
-    storage.credential_settings()
+    credential_settings_for_mode(&app, &storage)
+}
+
+fn credential_settings_for_mode(
+    app: &tauri::AppHandle,
+    storage: &storage::Storage,
+) -> Result<storage::CredentialSettings, String> {
+    if app.state::<app_paths::AppPaths>().is_portable() {
+        storage.credential_settings_with_default(Some("file"))
+    } else {
+        storage.credential_settings()
+    }
 }
 
 #[tauri::command]
@@ -880,7 +902,7 @@ async fn import_settings_database(
             let storage = worker_app.state::<storage::Storage>();
             let snapshot = storage.import_database_zip(path.into())?;
             let general_settings = storage.general_settings()?;
-            let credential_settings = storage.credential_settings()?;
+            let credential_settings = credential_settings_for_mode(&worker_app, &storage)?;
             Ok((snapshot, general_settings, credential_settings))
         })
         .await?;
@@ -3729,23 +3751,89 @@ fn configure_macos_updater<R: tauri::Runtime>(builder: tauri::Builder<R>) -> tau
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    logging::init();
+    let launch_context = match app_paths::LaunchContext::detect() {
+        Ok(context) => context,
+        Err(error) => {
+            app_paths::show_startup_error(&error);
+            return;
+        }
+    };
+    #[cfg(target_os = "windows")]
+    let portable_instance = if let Some(data_root) = launch_context.portable_data_dir() {
+        match portable_single_instance::claim(data_root) {
+            Ok(portable_single_instance::Claim::Primary(guard)) => Some(guard),
+            Ok(portable_single_instance::Claim::Secondary) => return,
+            Err(error) => {
+                app_paths::show_startup_error(&error);
+                return;
+            }
+        }
+    } else {
+        None
+    };
+    #[cfg(target_os = "windows")]
+    if launch_context.is_portable() && !app_paths::webview2_runtime_available() {
+        app_paths::show_webview2_required_error();
+        return;
+    }
+    if let Some(webview_data_dir) = launch_context.portable_webview_data_dir() {
+        // SAFETY: this runs on the process entry thread before Tauri, Wry, or
+        // any worker thread is created. Installed mode does not alter the
+        // environment and therefore retains Tauri's existing WebView2 profile.
+        unsafe {
+            std::env::set_var("WEBVIEW2_USER_DATA_FOLDER", webview_data_dir);
+        }
+    }
+    if let Some(logs_dir) = launch_context.portable_logs_dir() {
+        logging::init_in_directory(logs_dir);
+    } else {
+        logging::init();
+    }
     // The heartbeat is started from `setup` once the main window's AppHandle
     // exists, so the native UI-thread liveness probe has a window to ping.
 
-    configure_macos_updater(configure_single_instance(tauri::Builder::default()))
+    let builder = if launch_context.is_portable() {
+        // Portable mode has an app-owned data-root-scoped instance identity;
+        // the stock Windows plugin uses the static application identifier.
+        tauri::Builder::default()
+    } else {
+        configure_single_instance(tauri::Builder::default())
+    };
+
+    configure_macos_updater(builder)
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_opener::init())
-        .setup(|app| {
-            let app_data_dir = app.path().app_data_dir().map_err(|error| {
-                setup_error(format!("failed to resolve app data directory: {error}"))
-            })?;
-            let db_path = app_data_dir.join("kkterm.sqlite3");
-            let mcp_bridge_dir = app_data_dir.clone();
+        .setup(move |app| {
+            let paths = app_paths::AppPaths::resolve(app.handle(), &launch_context)
+                .map_err(setup_error)?;
+            let portable_mode = paths.is_portable();
+            let db_path = paths.data_dir().join("kkterm.sqlite3");
+            let mcp_bridge_dir = paths.data_dir().to_path_buf();
+            installer::cache::set_portable_mode(portable_mode);
+            if portable_mode {
+                for folder in ["backgrounds", "fonts"] {
+                    let folder = paths.media_dir().join(folder);
+                    fs::create_dir_all(&folder).map_err(|error| {
+                        setup_error(format!(
+                            "failed to create portable media directory {}: {error}",
+                            folder.display()
+                        ))
+                    })?;
+                    app.asset_protocol_scope()
+                        .allow_directory(&folder, true)
+                        .map_err(|error| setup_error(error.to_string()))?;
+                }
+            }
+            app.manage(paths);
             let storage = storage::Storage::open(db_path).map_err(setup_error)?;
             let general_settings = storage.general_settings().map_err(setup_error)?;
-            let credential_settings = storage.credential_settings().map_err(setup_error)?;
+            let credential_settings = if portable_mode {
+                storage.credential_settings_with_default(Some("file"))
+            } else {
+                storage.credential_settings()
+            }
+            .map_err(setup_error)?;
             let ai_provider_settings = storage.ai_provider_settings().map_err(setup_error)?;
             net::proxy::set(net::proxy::from_settings(
                 general_settings.proxy_mode(),
@@ -3810,10 +3898,12 @@ pub fn run() {
             if let Err(error) = storage.backup_if_enabled_for_startup() {
                 eprintln!("failed to create automatic database backup at startup: {error}");
             }
-            if let Err(error) =
-                auto_start::sync_auto_start_with_windows(general_settings.auto_start_with_windows())
-            {
-                eprintln!("{error}");
+            if !app.state::<app_paths::AppPaths>().is_portable() {
+                if let Err(error) = auto_start::sync_auto_start_with_windows(
+                    general_settings.auto_start_with_windows(),
+                ) {
+                    eprintln!("{error}");
+                }
             }
             let webview_additional_browser_args = if apply_webview_stability {
                 #[cfg(target_os = "windows")]
@@ -3850,13 +3940,21 @@ pub fn run() {
                     window_state::restore_main_window(&main_window, main_window_settings);
                 app.manage(window_state::MainWindowState::new(initial_window_settings));
             }
+            #[cfg(target_os = "windows")]
+            if let Some(portable_instance) = portable_instance {
+                portable_instance
+                    .start_activation_listener(app.handle().clone(), restore_main_window);
+                app.manage(portable_instance);
+            }
             if let Err(error) = app_tray::install(app, "KKTerm") {
                 eprintln!("{error}");
             }
             app.manage(app_tray::TrayState::new(
                 general_settings.minimize_to_tray(),
             ));
-            if general_settings.auto_start_with_windows() {
+            if general_settings.auto_start_with_windows()
+                && !app.state::<app_paths::AppPaths>().is_portable()
+            {
                 if let Some(main_webview) = app.get_webview_window(window_state::MAIN_WINDOW_LABEL)
                 {
                     let main_window = main_webview.as_ref().window();
@@ -3921,6 +4019,8 @@ pub fn run() {
                 ai_provider_settings.built_in_mcp_server_enabled(),
                 ai_provider_settings.built_in_mcp_allow_all_dangerous(),
             );
+            app_paths::start_portable_smoke_test_if_requested(app.handle())
+                .map_err(setup_error)?;
             Ok(())
         })
         .on_window_event(|window, event| {
@@ -3989,6 +4089,9 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             // ── App lifecycle, window, diagnostics & updates
             app_bootstrap,
+            app_paths::get_app_mode,
+            portable_creator::create_portable_copy,
+            portable_creator::launch_portable_copy,
             is_debug_build,
             app_updates::get_app_update_target_triple,
             app_updates::download_app_update,
@@ -4465,8 +4568,18 @@ pub fn run() {
         ])
         .build(tauri::generate_context!())
         .expect("error while building KKTerm")
-        .run(|_app, event| {
+        .run(|app, event| {
             if matches!(event, tauri::RunEvent::Exit) {
+                if app
+                    .try_state::<app_paths::AppPaths>()
+                    .is_some_and(|paths| paths.is_portable())
+                {
+                    if let Some(storage) = app.try_state::<storage::Storage>() {
+                        if let Err(error) = storage.checkpoint_wal() {
+                            eprintln!("failed to checkpoint portable database on exit: {error}");
+                        }
+                    }
+                }
                 if let Err(error) = x_server::stop_managed_vcxsrv_on_exit() {
                     eprintln!("failed to stop managed VcXsrv on exit: {error}");
                 }

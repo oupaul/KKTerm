@@ -19,12 +19,12 @@ on:
         default: false
         type: boolean
       skip_build:
-        description: "Use existing Windows release artifacts instead of building the installers"
+        description: "Use existing Windows release artifacts instead of building the installers and portable ZIPs"
         required: false
         default: false
         type: boolean
       skip_smoke:
-        description: "Skip Windows installer smoke test"
+        description: "Skip Windows installer and portable smoke tests"
         required: false
         default: false
         type: boolean
@@ -83,7 +83,7 @@ jobs:
         run: |
           # Windows owns versioning: this increments package/Tauri/Cargo versions,
           # generates notes, commits/tags, pushes main, creates the GitHub Release,
-          # and uploads x64 + ARM64 installer assets.
+          # and uploads x64 + ARM64 installer and portable assets.
           $releaseArgs = @("-File", "scripts/release-github-both-arch.ps1")
           if ("${{ inputs.increment_version }}" -eq "false") { $releaseArgs += "-NoVersionIncrement" }
           if ("${{ inputs.draft }}" -eq "true") { $releaseArgs += "-Draft" }

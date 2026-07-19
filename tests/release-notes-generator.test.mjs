@@ -94,6 +94,8 @@ test("prependDirectDownloads places Windows release links before generated notes
     notes,
     /https:\/\/github\.com\/ryantsai\/KKTerm\/releases\/download\/v0\.1\.32\/kkterm-0\.1\.32-windows-arm64-setup\.exe/,
   );
+  assert.match(notes, /kkterm-0\.1\.32-windows-x64-portable\.zip/);
+  assert.match(notes, /kkterm-0\.1\.32-windows-arm64-portable\.zip/);
   assert.ok(notes.indexOf("## Direct Downloads") < notes.indexOf("# KKTerm v0.1.32"));
 });
 

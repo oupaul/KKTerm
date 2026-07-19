@@ -4595,6 +4595,40 @@ fn rename_workspace_updates_icon_properties() {
     assert_eq!(persisted.icon_color.as_deref(), Some("#16a34a"));
 }
 
+#[test]
+fn portable_credential_default_applies_only_until_the_user_saves_a_choice() {
+    let storage = Storage::open(temp_db_path("portable-credential-default"))
+        .expect("storage opens");
+
+    assert_eq!(
+        storage
+            .credential_settings()
+            .expect("installed default loads")
+            .secret_store,
+        default_secret_store()
+    );
+    assert_eq!(
+        storage
+            .credential_settings_with_default(Some("file"))
+            .expect("portable default loads")
+            .secret_store,
+        "file"
+    );
+
+    storage
+        .update_credential_settings(CredentialSettings {
+            secret_store: "os".to_string(),
+        })
+        .expect("explicit choice is saved");
+    assert_eq!(
+        storage
+            .credential_settings_with_default(Some("file"))
+            .expect("saved choice loads")
+            .secret_store,
+        "os"
+    );
+}
+
 fn temp_db_path(name: &str) -> PathBuf {
     let unique = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)

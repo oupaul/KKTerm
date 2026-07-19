@@ -71,6 +71,7 @@ export function CredentialsSettings() {
   const { t } = useTranslation();
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
   const credentialSettings = useWorkspaceStore((state) => state.credentialSettings);
+  const portableMode = useWorkspaceStore((state) => state.appModeInfo.mode === "portable");
   const setCredentialSettings = useWorkspaceStore((state) => state.setCredentialSettings);
   const aiProviderSettings = useWorkspaceStore((state) => state.aiProviderSettings);
   const setAiProviderHasApiKey = useWorkspaceStore((state) => state.setAiProviderHasApiKey);
@@ -292,7 +293,7 @@ export function CredentialsSettings() {
             >
               {availableSecretStores.map((store) => (
                 <option key={store} value={store}>
-                  {t(secretStoreLabelKey(store))}
+                  {t(secretStoreLabelKey(store, portableMode))}
                 </option>
               ))}
             </select>
@@ -315,6 +316,9 @@ export function CredentialsSettings() {
           ) : null}
         </div>
         <p className="field-hint settings-security-note">{t(securityReminderKey)}</p>
+        {portableMode && selectedSecretStore === "os" ? (
+          <p className="kk-dlg-warn">{t("settings.portableCredentialStorageOsWarning")}</p>
+        ) : null}
         <p className="field-hint">{t("settings.credentialStorageSwitchNote")}</p>
       </fieldset>
 
@@ -399,10 +403,12 @@ export function CredentialsSettings() {
   );
 }
 
-function secretStoreLabelKey(store: SecretStoreKind) {
+function secretStoreLabelKey(store: SecretStoreKind, portableMode = false) {
   switch (store) {
     case "file":
-      return "settings.credentialStorageFile";
+      return portableMode
+        ? "settings.credentialStorageFilePortable"
+        : "settings.credentialStorageFile";
     case "os":
     default:
       return "settings.credentialStorageOs";

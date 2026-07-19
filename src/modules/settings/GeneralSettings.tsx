@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   BedSingle,
+  Copy,
   Download,
   FolderOpen,
   Gauge,
@@ -62,9 +63,11 @@ import {
 import { useLastUpdateCheckAt } from "../../lib/lastUpdateCheck";
 import { resetDurableUiState } from "../../lib/durableUiState";
 import { CHILD_CONNECTIONS_UPDATED_EVENT } from "../workspace/connections/childConnections";
+import { PORTABLE_IMPORT_REQUEST_KEY } from "../../lib/portableMode";
 import { ABOUT_PRODUCT } from "./aboutData";
 import { SelectiveExportDialog } from "./SelectiveExportDialog";
 import { SelectiveImportDialog } from "./SelectiveImportDialog";
+import { PortableCreatorDialog } from "./PortableCreatorDialog";
 import {
   SettingsSectionHeader,
   SettingsSummary,
@@ -137,6 +140,7 @@ export function GeneralSettings() {
   const [currentLanguage, setCurrentLanguage] =
     useState<SupportedLanguage>(detectLanguage);
   const generalSettings = useWorkspaceStore((state) => state.generalSettings);
+  const portableMode = useWorkspaceStore((state) => state.appModeInfo.mode === "portable");
   const setGeneralSettings = useWorkspaceStore(
     (state) => state.setGeneralSettings,
   );
@@ -170,6 +174,7 @@ export function GeneralSettings() {
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [selectiveExportOpen, setSelectiveExportOpen] = useState(false);
   const [selectiveImportOpen, setSelectiveImportOpen] = useState(false);
+  const [portableCreatorOpen, setPortableCreatorOpen] = useState(false);
   const [draggedRailItem, setDraggedRailItem] = useState<ActivityRailItemId | null>(null);
   const hasChanges =
     JSON.stringify(draft) !== JSON.stringify(generalSettings) ||
@@ -178,6 +183,17 @@ export function GeneralSettings() {
   useEffect(() => {
     setDraft(generalSettings);
   }, [generalSettings]);
+
+  useEffect(() => {
+    try {
+      if (window.sessionStorage.getItem(PORTABLE_IMPORT_REQUEST_KEY) === "1") {
+        window.sessionStorage.removeItem(PORTABLE_IMPORT_REQUEST_KEY);
+        setSelectiveImportOpen(true);
+      }
+    } catch {
+      // Session storage can be unavailable; Settings remains usable manually.
+    }
+  }, []);
 
   async function handleSave() {
     try {
@@ -246,7 +262,9 @@ export function GeneralSettings() {
           invokeCommand("update_rdp_settings", { request: defaultRdpSettings }),
           invokeCommand("update_vnc_settings", { request: defaultVncSettings }),
           invokeCommand("update_credential_settings", {
-            request: defaultCredentialSettings,
+            request: portableMode
+              ? { ...defaultCredentialSettings, secretStore: "file" }
+              : defaultCredentialSettings,
           }),
           invokeCommand("update_ai_provider_settings", {
             request: defaultAiProviderSettings,
@@ -294,7 +312,11 @@ export function GeneralSettings() {
         setDashboardSettings(dashboardSettings);
       } else {
         setGeneralSettings(defaultGeneralSettings);
-        setCredentialSettings(defaultCredentialSettings);
+        setCredentialSettings(
+          portableMode
+            ? { ...defaultCredentialSettings, secretStore: "file" }
+            : defaultCredentialSettings,
+        );
         setDashboardSettings(defaultDashboardSettings);
         setTerminalSettings(defaultTerminalSettings);
         setAppearanceSettings(defaultAppearanceSettings);
@@ -497,7 +519,7 @@ export function GeneralSettings() {
             <p className="field-hint">{t("settings.workspaceAccessHint")}</p>
           </div>
           <div className="settings-toggle-list">
-            {windowsPlatform ? (
+            {windowsPlatform && !portableMode ? (
               <label className="settings-toggle-row">
                 <ToggleSwitch
                   checked={draft.autoStartWithWindows}
@@ -661,6 +683,16 @@ export function GeneralSettings() {
             <Upload size={16} />
             {t("settings.importSettings")}
           </button>
+          {windowsPlatform && !portableMode ? (
+            <button
+              className="secondary-button"
+              type="button"
+              onClick={() => setPortableCreatorOpen(true)}
+            >
+              <Copy size={16} />
+              {t("settings.portableCreatorAction")}
+            </button>
+          ) : null}
           <button
             className="secondary-button"
             type="button"
@@ -771,6 +803,9 @@ export function GeneralSettings() {
           onClose={() => setSelectiveImportOpen(false)}
           onFullImport={handleImportFullSettings}
         />
+      ) : null}
+      {portableCreatorOpen ? (
+        <PortableCreatorDialog onClose={() => setPortableCreatorOpen(false)} />
       ) : null}
     </section>
   );

@@ -822,10 +822,7 @@ impl WebviewSessionManager {
             // Environments sharing one user-data folder must use compatible
             // options. Isolate each effective proxy so direct, HTTP, and SOCKS5
             // URL Sessions can coexist without an argument mismatch.
-            let data_directory = app
-                .path()
-                .app_data_dir()
-                .map_err(|error| format!("failed to resolve URL proxy data directory: {error}"))?
+            let data_directory = crate::app_paths::data_dir(app)?
                 .join("url-webview-profiles")
                 .join(proxy_data_directory_key(proxy_url.as_str()));
             builder = builder.data_directory(data_directory);

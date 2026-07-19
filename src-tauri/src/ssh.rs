@@ -20,7 +20,7 @@ use std::{
     thread::{self, JoinHandle},
     time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt, copy_bidirectional},
     net::{TcpListener, TcpStream},
@@ -669,11 +669,7 @@ pub fn start_native_terminal(
 }
 
 pub fn app_known_hosts_path(app: &AppHandle) -> Result<PathBuf, String> {
-    Ok(app
-        .path()
-        .app_data_dir()
-        .map_err(|error| format!("failed to resolve app data directory: {error}"))?
-        .join("ssh_known_hosts"))
+    Ok(crate::app_paths::data_dir(app)?.join("ssh_known_hosts"))
 }
 
 pub fn inspect_host_key(

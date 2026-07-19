@@ -11,6 +11,7 @@ export function contentTypeForKey(key: string) {
   if (key.endsWith(".json")) return "application/json; charset=utf-8";
   if (key.endsWith(".sha256") || key.endsWith(".sig")) return "text/plain; charset=utf-8";
   if (key.endsWith(".exe")) return "application/vnd.microsoft.portable-executable";
+  if (key.endsWith(".zip")) return "application/zip";
   if (key.endsWith(".dmg")) return "application/x-apple-diskimage";
   return "application/octet-stream";
 }
