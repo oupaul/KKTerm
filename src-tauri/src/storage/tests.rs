@@ -4615,18 +4615,23 @@ fn portable_credential_default_applies_only_until_the_user_saves_a_choice() {
         "file"
     );
 
-    storage
-        .update_credential_settings(CredentialSettings {
-            secret_store: "os".to_string(),
-        })
-        .expect("explicit choice is saved");
-    assert_eq!(
+    // Linux offers only the "file" store, so a differing saved choice can only
+    // be exercised where the OS keystore is a valid option.
+    #[cfg(not(target_os = "linux"))]
+    {
         storage
-            .credential_settings_with_default(Some("file"))
-            .expect("saved choice loads")
-            .secret_store,
-        "os"
-    );
+            .update_credential_settings(CredentialSettings {
+                secret_store: "os".to_string(),
+            })
+            .expect("explicit choice is saved");
+        assert_eq!(
+            storage
+                .credential_settings_with_default(Some("file"))
+                .expect("saved choice loads")
+                .secret_store,
+            "os"
+        );
+    }
 }
 
 fn temp_db_path(name: &str) -> PathBuf {

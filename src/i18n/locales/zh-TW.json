@@ -1875,7 +1875,7 @@
     "resetAllSettings": "重設所有設定",
     "resetAllSettingsConfirm": "將所有設定頁面重設為預設值、關閉開啟中的工作階段、重設已儲存的版面配置、清除已儲存的語言覆寫，並移除已儲存的 AI/電子郵件密鑰？",
     "resetAllSettingsComplete": "所有設定已重設為預設值。",
-   "settingsDataActions": "設定匯出與匯入操作",
+    "settingsDataActions": "設定匯出與匯入操作",
     "portableCreatorAction": "Create Portable Copy…",
     "portableCreatorTitle": "Create Portable Copy",
     "portableCreatorStepContent": "Step 1 of 2 · Choose data",

@@ -1875,7 +1875,7 @@
     "resetAllSettings": "すべての設定をリセット",
     "resetAllSettingsConfirm": "すべての設定ページをデフォルトにリセットし、開いているセッションを閉じ、保存されたレイアウトをリセットし、保存された言語の上書きをクリアし、保存された AI/メールのシークレットを削除しますか？",
     "resetAllSettingsComplete": "すべての設定がデフォルトにリセットされました。",
-   "settingsDataActions": "設定のエクスポートとインポート操作",
+    "settingsDataActions": "設定のエクスポートとインポート操作",
     "portableCreatorAction": "Create Portable Copy…",
     "portableCreatorTitle": "Create Portable Copy",
     "portableCreatorStepContent": "Step 1 of 2 · Choose data",

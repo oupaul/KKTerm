@@ -1875,7 +1875,7 @@
     "resetAllSettings": "Reimposta tutte le impostazioni",
     "resetAllSettingsConfirm": "Reimpostare tutte le pagine Impostazioni ai valori predefiniti, chiudere le Sessioni aperte, reimpostare i layout salvati, cancellare la lingua salvata e rimuovere i segreti IA/email salvati?",
     "resetAllSettingsComplete": "Tutte le impostazioni reimpostate ai valori predefiniti.",
-   "settingsDataActions": "Azioni di esportazione e importazione delle impostazioni",
+    "settingsDataActions": "Azioni di esportazione e importazione delle impostazioni",
     "portableCreatorAction": "Create Portable Copy…",
     "portableCreatorTitle": "Create Portable Copy",
     "portableCreatorStepContent": "Step 1 of 2 · Choose data",

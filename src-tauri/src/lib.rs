@@ -755,12 +755,13 @@ fn update_general_settings(
     tray_state: tauri::State<'_, app_tray::TrayState>,
     power: tauri::State<'_, power::DontSleepManager>,
     webviews: tauri::State<'_, webview::WebviewSessionManager>,
-    request: storage::GeneralSettings,
+    mut request: storage::GeneralSettings,
 ) -> Result<storage::GeneralSettings, String> {
     if app.state::<app_paths::AppPaths>().is_portable() {
-        if request.auto_start_with_windows() {
-            return Err("auto-start is not supported in portable mode".to_string());
-        }
+        // Auto-start is unsupported and hidden in portable mode, but imported
+        // installed-mode backups can still carry the flag; drop it instead of
+        // failing every later settings save.
+        request.set_auto_start_with_windows(false);
     } else {
         auto_start::sync_auto_start_with_windows(request.auto_start_with_windows())?;
     }

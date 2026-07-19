@@ -1875,7 +1875,7 @@
     "resetAllSettings": "Reset Semua Pengaturan",
     "resetAllSettingsConfirm": "Reset semua halaman Pengaturan ke default, tutup Sesi yang terbuka, reset tata letak tersimpan, hapus penggantian bahasa tersimpan, dan hapus rahasia AI/email tersimpan?",
     "resetAllSettingsComplete": "Semua pengaturan direset ke default.",
-   "settingsDataActions": "Tindakan ekspor dan impor pengaturan",
+    "settingsDataActions": "Tindakan ekspor dan impor pengaturan",
     "portableCreatorAction": "Create Portable Copy…",
     "portableCreatorTitle": "Create Portable Copy",
     "portableCreatorStepContent": "Step 1 of 2 · Choose data",

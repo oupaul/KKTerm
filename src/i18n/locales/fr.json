@@ -1875,7 +1875,7 @@
     "resetAllSettings": "Réinitialiser tous les paramètres",
     "resetAllSettingsConfirm": "Réinitialiser toutes les pages de paramètres aux valeurs par défaut, fermer les sessions ouvertes, réinitialiser les dispositions enregistrées, effacer la langue enregistrée et supprimer les secrets IA/e-mail enregistrés ?",
     "resetAllSettingsComplete": "Tous les paramètres réinitialisés aux valeurs par défaut.",
-   "settingsDataActions": "Actions d’exportation et d’importation des paramètres",
+    "settingsDataActions": "Actions d’exportation et d’importation des paramètres",
     "portableCreatorAction": "Create Portable Copy…",
     "portableCreatorTitle": "Create Portable Copy",
     "portableCreatorStepContent": "Step 1 of 2 · Choose data",

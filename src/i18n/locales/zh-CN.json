@@ -1875,7 +1875,7 @@
     "resetAllSettings": "重置所有设置",
     "resetAllSettingsConfirm": "将所有设置页面重置为默认值、关闭打开中的会话、重置已保存的布局、清除已保存的语言覆盖，并移除已保存的 AI/电子邮件密钥？",
     "resetAllSettingsComplete": "所有设置已重置为默认值。",
-   "settingsDataActions": "设置导出和导入操作",
+    "settingsDataActions": "设置导出和导入操作",
     "portableCreatorAction": "Create Portable Copy…",
     "portableCreatorTitle": "Create Portable Copy",
     "portableCreatorStepContent": "Step 1 of 2 · Choose data",

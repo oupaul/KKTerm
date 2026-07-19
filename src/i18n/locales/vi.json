@@ -1875,7 +1875,7 @@
     "resetAllSettings": "Đặt lại Tất cả Cài đặt",
     "resetAllSettingsConfirm": "Đặt lại tất cả trang Cài đặt về mặc định, đóng các Phiên đang mở, đặt lại bố cục đã lưu, xóa ghi đè ngôn ngữ đã lưu và xóa bí mật AI/email đã lưu?",
     "resetAllSettingsComplete": "Tất cả cài đặt đã được đặt lại về mặc định.",
-   "settingsDataActions": "Thao tác xuất và nhập cài đặt",
+    "settingsDataActions": "Thao tác xuất và nhập cài đặt",
     "portableCreatorAction": "Create Portable Copy…",
     "portableCreatorTitle": "Create Portable Copy",
     "portableCreatorStepContent": "Step 1 of 2 · Choose data",

@@ -1875,7 +1875,7 @@
     "resetAllSettings": "모든 설정 초기화",
     "resetAllSettingsConfirm": "모든 설정 페이지를 기본값으로 초기화하고, 열린 세션을 닫고, 저장된 레이아웃을 초기화하고, 저장된 언어 재정의를 지우며, 저장된 AI/이메일 비밀 값을 삭제하시겠습니까?",
     "resetAllSettingsComplete": "모든 설정이 기본값으로 초기화되었습니다.",
-   "settingsDataActions": "설정 내보내기 및 가져오기 작업",
+    "settingsDataActions": "설정 내보내기 및 가져오기 작업",
     "portableCreatorAction": "Create Portable Copy…",
     "portableCreatorTitle": "Create Portable Copy",
     "portableCreatorStepContent": "Step 1 of 2 · Choose data",

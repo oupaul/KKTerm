@@ -1875,7 +1875,7 @@
     "resetAllSettings": "รีเซ็ตการตั้งค่าทั้งหมด",
     "resetAllSettingsConfirm": "รีเซ็ตหน้าการตั้งค่าทั้งหมดเป็นค่าเริ่มต้น ปิดเซสชันที่เปิดอยู่ รีเซ็ตเค้าโครงที่บันทึกไว้ ล้างภาษาที่บันทึกไว้ และลบความลับ AI/อีเมลที่บันทึกไว้หรือไม่",
     "resetAllSettingsComplete": "รีเซ็ตการตั้งค่าทั้งหมดเป็นค่าเริ่มต้นแล้ว",
-   "settingsDataActions": "การส่งออกและนำเข้าการตั้งค่า",
+    "settingsDataActions": "การส่งออกและนำเข้าการตั้งค่า",
     "portableCreatorAction": "Create Portable Copy…",
     "portableCreatorTitle": "Create Portable Copy",
     "portableCreatorStepContent": "Step 1 of 2 · Choose data",

@@ -467,6 +467,9 @@ mod tests {
         fs::remove_dir_all(root).unwrap();
     }
 
+    // Forced portable mode is rejected on non-Windows targets, so this
+    // Windows-only behavior can only be exercised there.
+    #[cfg(target_os = "windows")]
     #[test]
     fn portable_detection_creates_and_probes_the_sibling_data_directory() {
         let (exe, root) = temp_executable("portable-write");
@@ -477,6 +480,8 @@ mod tests {
         fs::remove_dir_all(root).unwrap();
     }
 
+    // The marker only activates portable mode on Windows.
+    #[cfg(target_os = "windows")]
     #[test]
     fn marker_enables_portable_mode() {
         let (exe, root) = temp_executable("marker");

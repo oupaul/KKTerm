@@ -606,6 +606,10 @@ impl GeneralSettings {
         self.auto_start_with_windows
     }
 
+    pub(crate) fn set_auto_start_with_windows(&mut self, enabled: bool) {
+        self.auto_start_with_windows = enabled;
+    }
+
     pub(crate) fn minimize_to_tray(&self) -> bool {
         self.minimize_to_tray
     }

@@ -1875,7 +1875,7 @@
     "resetAllSettings": "Alle Einstellungen zurücksetzen",
     "resetAllSettingsConfirm": "Alle Einstellungsseiten auf Standardwerte zurücksetzen, offene Sitzungen schließen, gespeicherte Layouts zurücksetzen, die gespeicherte Sprachüberschreibung löschen und gespeicherte KI-/E-Mail-Geheimnisse entfernen?",
     "resetAllSettingsComplete": "Alle Einstellungen auf Standardwerte zurückgesetzt.",
-   "settingsDataActions": "Aktionen zum Exportieren und Importieren von Einstellungen",
+    "settingsDataActions": "Aktionen zum Exportieren und Importieren von Einstellungen",
     "portableCreatorAction": "Create Portable Copy…",
     "portableCreatorTitle": "Create Portable Copy",
     "portableCreatorStepContent": "Step 1 of 2 · Choose data",

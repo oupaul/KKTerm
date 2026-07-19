@@ -1875,7 +1875,7 @@
     "resetAllSettings": "Restablecer toda la configuración",
     "resetAllSettingsConfirm": "¿Restablecer todas las páginas de configuración a sus valores predeterminados, cerrar las sesiones abiertas, restablecer los diseños guardados, borrar el idioma guardado y eliminar los secretos de IA/correo guardados?",
     "resetAllSettingsComplete": "Toda la configuración restablecida a sus valores predeterminados.",
-   "settingsDataActions": "Acciones de exportación e importación de configuración",
+    "settingsDataActions": "Acciones de exportación e importación de configuración",
     "portableCreatorAction": "Create Portable Copy…",
     "portableCreatorTitle": "Create Portable Copy",
     "portableCreatorStepContent": "Step 1 of 2 · Choose data",
