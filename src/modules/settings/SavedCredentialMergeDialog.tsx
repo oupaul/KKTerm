@@ -9,6 +9,7 @@ import {
 import { invokeCommand } from "../../lib/tauri";
 import { useWorkspaceStore } from "../../store";
 import type { ConnectionPasswordCredentialEntry } from "../../types";
+import { defaultMergeTargetId, mergeTargetMustHaveSecret } from "./savedCredentialsModel";
 
 export function SavedCredentialMergeDialog({
   selected,
@@ -21,8 +22,9 @@ export function SavedCredentialMergeDialog({
 }) {
   const { t } = useTranslation();
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
-  const [targetId, setTargetId] = useState(selected[0]?.id ?? "");
+  const [targetId, setTargetId] = useState(() => defaultMergeTargetId(selected));
   const [busy, setBusy] = useState(false);
+  const targetMustHaveSecret = mergeTargetMustHaveSecret(selected);
 
   async function merge() {
     const sources = selected
@@ -36,6 +38,7 @@ export function SavedCredentialMergeDialog({
       await invokeCommand("merge_connection_password_credentials", {
         request: { targetCredentialId: targetId, sourceCredentialIds: sources },
       });
+      window.dispatchEvent(new CustomEvent("kkterm:connection-tree-invalidated"));
       showStatusBarNotice(t("settings.savedCredentialMerged"), { tone: "success" });
       await onMerged();
     } catch (error) {
@@ -68,7 +71,7 @@ export function SavedCredentialMergeDialog({
             <label className="settings-credential-usage-row" key={credential.id}>
               <input
                 checked={targetId === credential.id}
-                disabled={busy}
+                disabled={busy || (targetMustHaveSecret && !credential.secretExists)}
                 name="saved-credential-merge-target"
                 type="radio"
                 onChange={() => setTargetId(credential.id)}
@@ -80,6 +83,7 @@ export function SavedCredentialMergeDialog({
                   {credential.host ? ` @ ${credential.host}` : ""}
                   {" · "}
                   {t("settings.savedCredentialUsedBy", { count: credential.usageCount })}
+                  {credential.secretExists ? "" : ` · ${t("settings.credentialMissingSecret")}`}
                 </span>
               </div>
             </label>

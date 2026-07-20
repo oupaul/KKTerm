@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  defaultMergeTargetId,
   filterSavedCredentials,
   isLegacyConnectionPasswordRow,
   mergeEligibility,
+  mergeTargetMustHaveSecret,
   sortSavedCredentials,
 } from "../src/modules/settings/savedCredentialsModel";
 import type {
@@ -78,6 +80,23 @@ test("saved credentials sort by label with stable fallbacks", () => {
     sortSavedCredentials(credentials).map((credential) => credential.id),
     ["a", "c", "b"],
   );
+});
+
+test("merge target must keep a stored password when any selected credential has one", () => {
+  const withSecret = entry({ id: "a" });
+  const withoutSecret = entry({ id: "b", secretExists: false });
+
+  assert.equal(mergeTargetMustHaveSecret([withSecret, withoutSecret]), true);
+  assert.equal(
+    mergeTargetMustHaveSecret([withoutSecret, entry({ id: "c", secretExists: false })]),
+    false,
+  );
+  assert.equal(defaultMergeTargetId([withoutSecret, withSecret]), "a");
+  assert.equal(
+    defaultMergeTargetId([withoutSecret, entry({ id: "c", secretExists: false })]),
+    "b",
+  );
+  assert.equal(defaultMergeTargetId([]), "");
 });
 
 test("merge requires two or more credentials of one Connection type", () => {

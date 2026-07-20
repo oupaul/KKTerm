@@ -2286,19 +2286,36 @@ fn merge_connection_password_credentials(
     secrets: tauri::State<'_, secrets::Secrets>,
     request: MergeConnectionPasswordCredentialsRequest,
 ) -> Result<i64, String> {
+    let target_has_secret = secrets
+        .secret_exists(secrets::SecretReferenceRequest::connection_password(
+            request.target_credential_id.clone(),
+        ))?
+        .exists();
+    if !target_has_secret {
+        for source_id in &request.source_credential_ids {
+            let source_has_secret = secrets
+                .secret_exists(secrets::SecretReferenceRequest::connection_password(
+                    source_id.clone(),
+                ))?
+                .exists();
+            if source_has_secret {
+                return Err(
+                    "the kept credential has no stored password; keep one whose password is stored"
+                        .to_string(),
+                );
+            }
+        }
+    }
     let relinked = storage.merge_connection_password_credentials(
         request.target_credential_id,
         request.source_credential_ids.clone(),
     )?;
+    // Best effort: the merge itself already succeeded, and a failed secret
+    // cleanup must not report it as failed (retrying would hit missing rows).
     for source_id in request.source_credential_ids {
-        let presence = secrets.secret_exists(
-            secrets::SecretReferenceRequest::connection_password(source_id.clone()),
-        )?;
-        if presence.exists() {
-            secrets.delete_secret(secrets::SecretReferenceRequest::connection_password(
-                source_id,
-            ))?;
-        }
+        let _ = secrets.delete_secret(secrets::SecretReferenceRequest::connection_password(
+            source_id,
+        ));
     }
     Ok(relinked)
 }

@@ -72,6 +72,7 @@ export function SavedCredentialUsageDialog({
     setBusy(true);
     try {
       await action();
+      window.dispatchEvent(new CustomEvent("kkterm:connection-tree-invalidated"));
       await load();
       await onChanged();
       showStatusBarNotice(t("settings.savedCredentialUsageUpdated"), { tone: "success" });

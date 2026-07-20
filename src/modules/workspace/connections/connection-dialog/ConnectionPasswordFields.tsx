@@ -115,7 +115,7 @@ export function PasswordCredentialModeFields({
   onSelectedCredentialIdChange: (credentialId: string) => void;
 }) {
   const { t } = useTranslation();
-  const [mode, setMode] = useState<PasswordEntryMode>(defaultMode);
+  const [chosenMode, setChosenMode] = useState<PasswordEntryMode | null>(null);
 
   if (credentials.length === 0) {
     return (
@@ -128,9 +128,18 @@ export function PasswordCredentialModeFields({
     );
   }
 
-  const effectiveSelection = credentials.some(
+  const selectionAvailable = credentials.some(
     (credential) => credential.ownerId === selectedCredentialId,
-  )
+  );
+  // A linked credential that is not offered (e.g. its secret is missing) must
+  // not silently preselect a different credential: an unrelated edit would
+  // then re-link the Connection on save. Fall back to password entry instead.
+  const mode: PasswordEntryMode =
+    chosenMode ??
+    (defaultMode === "saved" && selectedCredentialId && !selectionAvailable
+      ? "new"
+      : defaultMode);
+  const effectiveSelection = selectionAvailable
     ? selectedCredentialId
     : credentials[0].ownerId;
 
@@ -140,14 +149,14 @@ export function PasswordCredentialModeFields({
         <button
           className={mode === "new" ? "active" : ""}
           type="button"
-          onClick={() => setMode("new")}
+          onClick={() => setChosenMode("new")}
         >
           {t("connections.enterNewPassword")}
         </button>
         <button
           className={mode === "saved" ? "active" : ""}
           type="button"
-          onClick={() => setMode("saved")}
+          onClick={() => setChosenMode("saved")}
         >
           {t("connections.useSavedCredential")}
         </button>

@@ -37,6 +37,27 @@ export function sortSavedCredentials(
   );
 }
 
+/**
+ * Merging deletes the source credentials' stored passwords, so whenever any
+ * selected credential still has a stored password the kept credential must
+ * have one too — otherwise every relinked Connection would be left without a
+ * working password.
+ */
+export function mergeTargetMustHaveSecret(
+  selected: ConnectionPasswordCredentialEntry[],
+): boolean {
+  return selected.some((credential) => credential.secretExists);
+}
+
+/** First selected credential that can be kept; prefers one with a stored password. */
+export function defaultMergeTargetId(
+  selected: ConnectionPasswordCredentialEntry[],
+): string {
+  return (
+    (selected.find((credential) => credential.secretExists) ?? selected[0])?.id ?? ""
+  );
+}
+
 /** Merge requires at least two credentials of one Connection type. */
 export function mergeEligibility(
   selected: ConnectionPasswordCredentialEntry[],
