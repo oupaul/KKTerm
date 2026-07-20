@@ -89,9 +89,9 @@ greenfield frontend work plus modest backend additions.
   Explorer/Finder, Rename, Resize selected, Convert selected, and Delete.
   The toolbar keeps icon-only Open folder and Refresh actions; bulk deletion is
   selection-based instead of a destructive Clear all shortcut.
-- Double-click opens a full-size viewer overlay (dialog primitives; zoom-to-fit,
-  prev/next, copy, delete). Reuse the Document Connection image-viewer pieces
-  where practical rather than building a new viewer.
+- Double-click opens one `Sheet`-based viewer/editor with Fit as its safe
+  default, explicit 25–200% zoom, scrolling for enlarged images, previous/next
+  navigation, item actions, and annotation tools.
 - Empty state doubles as onboarding: explains capture buttons, tray items, and
   hotkeys.
 
@@ -188,7 +188,7 @@ New source area `src/modules/screenshots/`:
 - `ScreenshotsPage.tsx` — Module shell (ModuleHeader, capture actions, view
   switcher).
 - `LibraryView.tsx` — thumbnails/details rendering + pagination.
-- `ScreenshotViewer.tsx` — full-size viewer dialog.
+- `ScreenshotEditor.tsx` — unified image viewer/editor dialog.
 - `state.ts` — small Zustand slice or local state: items, view mode, paging,
   capture-in-flight; subscribes to `kkterm://screenshot-captured`.
 - `screenshots.css` — imported through `src/App.css` (cascade-order rule).
@@ -247,9 +247,10 @@ land in the Library with a Status Bar notice; 500-image folder lists smoothly;
 `npm run check`, `npm run build`, `cargo check`, `cargo test` green.
 
 **Phase 2 — Editing & polish (partially shipped)**
-The library now supports sort/group controls, multi-selection, non-destructive
-batch resize and PNG/JPEG conversion, capture delay presets, and a mini editor
-for arrows, rectangles, ellipses, text, and mosaic regions. Crop, highlight,
+The library now supports persisted sort/group controls (defaulting to Date
+descending and Date grouping), multi-selection, non-destructive batch resize
+and PNG/JPEG conversion, capture delay presets, and a unified viewer/editor
+with Fit/zoom plus arrows, rectangles, ellipses, text, and mosaic regions. Crop, highlight,
 after-capture editor automation, per-monitor fullscreen capture, and filename
 patterns remain later work.
 

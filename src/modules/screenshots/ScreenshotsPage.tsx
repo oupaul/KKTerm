@@ -19,6 +19,7 @@ import {
   ModuleHeader,
   ModuleHeaderDivider,
   ModuleHeaderLead,
+  ModuleHeaderSpacer,
   ModuleHeaderTitle,
   ModuleIconTile,
 } from "../../app/ModuleHeader";
@@ -42,7 +43,6 @@ import {
   type ScreenshotSelectionModifiers,
   type ScreenshotsViewMode,
 } from "./LibraryView";
-import { ScreenshotViewer } from "./ScreenshotViewer";
 import {
   ConvertScreenshotsDialog,
   ResizeScreenshotsDialog,
@@ -97,9 +97,9 @@ function readGroupBy(): ScreenshotGroupBy {
       || value === "dateTaken"
       || value === "dimensions"
       ? value
-      : "none";
+      : "date";
   } catch {
-    return "none";
+    return "date";
   }
 }
 
@@ -150,7 +150,6 @@ export function ScreenshotsPage({ active }: { active: boolean }) {
   const [deleteTargets, setDeleteTargets] = useState<StoredScreenshot[]>([]);
   const [resizeTargets, setResizeTargets] = useState<StoredScreenshot[]>([]);
   const [convertTargets, setConvertTargets] = useState<StoredScreenshot[]>([]);
-  const [editorTarget, setEditorTarget] = useState<StoredScreenshot | null>(null);
 
   useEffect(() => {
     if (!active || !isTauriRuntime()) {
@@ -346,7 +345,7 @@ export function ScreenshotsPage({ active }: { active: boolean }) {
             kind: "item" as const,
             label: t("common.edit"),
             iconSvg: nativeMenuIcons.pencil,
-            action: () => setEditorTarget(single),
+            action: () => setViewerId(single.id),
           },
           {
             kind: "item" as const,
@@ -437,7 +436,7 @@ export function ScreenshotsPage({ active }: { active: boolean }) {
             ? t("screenshots.selectedCount", { count: selectedIds.size })
             : t("screenshots.totalCount", { count: total })}
         </span>
-        <div className="screenshots-header-toolbar">
+        <ModuleHeaderSpacer />
         <div
           className="screenshots-segmented"
           role="tablist"
@@ -570,7 +569,6 @@ export function ScreenshotsPage({ active }: { active: boolean }) {
           <Scan size={14} strokeWidth={2} aria-hidden="true" />
           <span className="screenshots-capture-label">{t("screenshots.captureRegion")}</span>
         </button>
-        </div>
       </ModuleHeader>
       <div
         className="screenshots-content"
@@ -619,7 +617,7 @@ export function ScreenshotsPage({ active }: { active: boolean }) {
         )}
       </div>
       {viewerScreenshot ? (
-        <ScreenshotViewer
+        <ScreenshotEditor
           screenshot={viewerScreenshot}
           hasPrevious={viewerIndex > 0}
           hasNext={viewerIndex < screenshots.length - 1}
@@ -633,7 +631,16 @@ export function ScreenshotsPage({ active }: { active: boolean }) {
           onOpenExternal={() => openExternal(viewerScreenshot)}
           onReveal={() => revealScreenshot(viewerScreenshot)}
           onDelete={() => setDeleteTargets([viewerScreenshot])}
+          onError={notifyError}
           onClose={() => setViewerId(null)}
+          onSaved={(created) => {
+            useScreenshotsStore.getState().addMany([created]);
+            setSelectedIds(new Set([created.id]));
+            setViewerId(null);
+            showStatusBarNotice(t("screenshots.captureSaved", { name: created.fileName }), {
+              tone: "success",
+            });
+          }}
         />
       ) : null}
       {renameTarget ? (
@@ -697,21 +704,6 @@ export function ScreenshotsPage({ active }: { active: boolean }) {
           onComplete={finishBatch}
           onError={notifyError}
           onClose={() => setConvertTargets([])}
-        />
-      ) : null}
-      {editorTarget ? (
-        <ScreenshotEditor
-          screenshot={editorTarget}
-          onError={notifyError}
-          onClose={() => setEditorTarget(null)}
-          onSaved={(created) => {
-            useScreenshotsStore.getState().addMany([created]);
-            setSelectedIds(new Set([created.id]));
-            setEditorTarget(null);
-            showStatusBarNotice(t("screenshots.captureSaved", { name: created.fileName }), {
-              tone: "success",
-            });
-          }}
         />
       ) : null}
     </section>

@@ -31,22 +31,19 @@
   white-space: nowrap;
 }
 
-.screenshots-header-toolbar {
-  display: flex;
+.screenshots-module-header > .screenshots-button {
   flex: 0 0 auto;
-  align-items: center;
-  gap: 7px;
-  min-width: 0;
 }
 
-.screenshots-header-toolbar > * {
-  flex-shrink: 0;
-}
-
-.screenshots-header-toolbar button:focus-visible,
-.screenshots-header-toolbar select:focus-visible {
+.screenshots-module-header button:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+.screenshots-toolbar-select:focus-within,
+.screenshots-delay-select:focus-within {
+  border-color: var(--border-strong);
+  box-shadow: inset 0 0 0 1px var(--border-strong);
 }
 
 .screenshots-icon-button {
@@ -184,6 +181,18 @@
   color: var(--text);
   font: inherit;
   cursor: pointer;
+}
+
+.screenshots-toolbar-select select:focus,
+.screenshots-delay-select select:focus {
+  outline: none;
+}
+
+.screenshots-toolbar-select option:checked,
+.screenshots-delay-select option:checked {
+  background: var(--surface);
+  color: var(--text);
+  font-weight: inherit;
 }
 
 .screenshots-toolbar-select select {
@@ -451,97 +460,6 @@
   padding: 1rem 0 0.4rem;
 }
 
-/* Viewer */
-.screenshots-viewer {
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-  width: min(1080px, calc(100vw - 64px));
-  height: min(760px, calc(100vh - 64px));
-  padding: 0.9rem 1rem;
-  border-radius: 12px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
-  outline: none;
-}
-
-.screenshots-viewer__head {
-  display: flex;
-  align-items: baseline;
-  gap: 0.7rem;
-  min-width: 0;
-}
-
-.screenshots-viewer__name {
-  font-size: 13px;
-  font-weight: 600;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.screenshots-viewer__dims {
-  font-size: 11.5px;
-  color: var(--text-muted);
-  white-space: nowrap;
-}
-
-.screenshots-viewer__stage {
-  flex: 1;
-  min-height: 0;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 0.6rem;
-}
-
-.screenshots-viewer__stage img {
-  justify-self: center;
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
-  border-radius: 6px;
-  background: var(--chrome-strong);
-}
-
-.screenshots-viewer__placeholder {
-  opacity: 0.6;
-}
-
-.screenshots-viewer__error {
-  justify-self: center;
-  color: var(--text-muted);
-}
-
-.screenshots-viewer__nav {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 48px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface);
-  color: var(--text);
-  cursor: pointer;
-}
-
-.screenshots-viewer__nav:hover:not(:disabled) {
-  background: var(--surface-muted);
-}
-
-.screenshots-viewer__nav:disabled {
-  opacity: 0.35;
-  cursor: default;
-}
-
-.screenshots-viewer__foot {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-}
-
 /* Batch operation sheets */
 .screenshots-batch-fields {
   display: flex;
@@ -567,7 +485,12 @@
   accent-color: var(--accent);
 }
 
-/* Mini editor */
+/* Unified screenshot viewer/editor */
+.screenshots-editor {
+  max-width: calc(100vw - 40px);
+  max-height: calc(100vh - 40px) !important;
+}
+
 .screenshots-editor .kk-dlg-body {
   padding: 0;
   overflow: hidden;
@@ -587,8 +510,10 @@
   align-items: center;
   gap: 5px;
   padding: 8px 12px;
+  overflow-x: auto;
   border-bottom: 1px solid var(--hairline);
   background: var(--surface-muted);
+  scrollbar-width: thin;
 }
 
 .screenshots-editor__toolbar button {
@@ -603,6 +528,11 @@
   color: var(--text-muted);
   font-size: 11.5px;
   cursor: pointer;
+}
+
+.screenshots-editor__toolbar button:disabled {
+  opacity: 0.38;
+  cursor: default;
 }
 
 .screenshots-editor__toolbar button:hover,
@@ -623,13 +553,72 @@
   margin-left: 4px;
 }
 
+.screenshots-editor__toolbar .kk-inp:focus {
+  border-color: var(--border-strong);
+  outline: none;
+  box-shadow: var(--control-shadow);
+}
+
+.screenshots-editor__nav-group,
+.screenshots-editor__zoom,
+.screenshots-editor__footer-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.screenshots-editor__nav-group {
+  gap: 1px;
+}
+
+.screenshots-editor__meta {
+  flex: 0 0 auto;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.screenshots-editor__divider {
+  flex: 0 0 auto;
+  width: 1px;
+  height: 18px;
+  margin-inline: 3px;
+  background: var(--hairline);
+}
+
+.screenshots-editor__toolbar-spacer {
+  flex: 1 1 auto;
+  min-width: 8px;
+}
+
+.screenshots-editor__zoom {
+  flex: 0 0 auto;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+}
+
+.screenshots-editor__zoom > span {
+  min-width: 42px;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.screenshots-editor__zoom button {
+  width: 24px;
+  height: 22px;
+  justify-content: center;
+  padding: 0;
+}
+
 .screenshots-editor__stage {
-  display: grid;
   flex: 1;
   min-height: 0;
-  place-items: center;
   overflow: auto;
-  padding: 18px;
   background:
     linear-gradient(45deg, var(--chrome-strong) 25%, transparent 25%) 0 0 / 18px 18px,
     linear-gradient(-45deg, var(--chrome-strong) 25%, transparent 25%) 0 9px / 18px 18px,
@@ -638,13 +627,37 @@
     var(--surface-muted);
 }
 
-.screenshots-editor__stage canvas {
+.screenshots-editor__canvas-wrap {
+  display: grid;
+  min-width: 100%;
+  min-height: 100%;
+  place-items: center;
+  padding: 18px;
+}
+
+.screenshots-editor__canvas-wrap.is-fit {
+  width: 100%;
+  height: 100%;
+}
+
+.screenshots-editor__canvas-wrap canvas {
   display: block;
-  max-width: 100%;
-  max-height: 100%;
+  flex: 0 0 auto;
   cursor: crosshair;
   touch-action: none;
   box-shadow: 0 10px 30px var(--shadow);
+}
+
+.screenshots-editor__canvas-wrap canvas.is-fit {
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.screenshots-editor__canvas-wrap canvas.is-scaled {
+  max-width: none;
+  max-height: none;
 }
 
 @media (max-width: 1200px) {
