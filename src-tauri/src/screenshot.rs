@@ -906,8 +906,7 @@ fn capture_linux_portal_region_selection() -> Result<Option<image::RgbaImage>, S
 
     let message = responses
         .next()
-        .ok_or_else(|| "the desktop screenshot portal did not respond".to_string())?
-        .map_err(|error| format!("failed to read the desktop screenshot selection: {error}"))?;
+        .ok_or_else(|| "the desktop screenshot portal did not respond".to_string())?;
     let (response_code, response): (u32, PortalScreenshotResponse) =
         message
             .body()
