@@ -129,6 +129,85 @@ export function ScreenshotsSettings() {
             </select>
           </label>
         </div>
+        {isWindowsPlatform() ? (
+          <div className="settings-toggle-list">
+            <label className="settings-toggle-row">
+              <ToggleSwitch
+                checked={draft?.includeCursor ?? false}
+                onChange={(value) => update({ includeCursor: value })}
+              />
+              <span>
+                <strong>{t("settings.screenshotsIncludeCursor")}</strong>
+                <small>{t("settings.screenshotsIncludeCursorHint")}</small>
+              </span>
+            </label>
+          </div>
+        ) : null}
+      </fieldset>
+
+      <fieldset className="settings-subsection settings-fieldset">
+        <legend>{t("settings.screenshotsBorder")}</legend>
+        <div>
+          <p className="field-hint">{t("settings.screenshotsBorderHint")}</p>
+        </div>
+        <div className="settings-toggle-list">
+          <label className="settings-toggle-row">
+            <ToggleSwitch
+              checked={draft?.borderEnabled ?? true}
+              onChange={(value) => update({ borderEnabled: value })}
+            />
+            <span>
+              <strong>{t("settings.screenshotsBorderEnabled")}</strong>
+              <small>{t("settings.screenshotsBorderEnabledHint")}</small>
+            </span>
+          </label>
+        </div>
+        {draft?.borderEnabled ? (
+          <div className="form-grid two-columns">
+            <label>
+              <span>{t("settings.screenshotsBorderWidth")}</span>
+              <input
+                min={1}
+                max={64}
+                type="number"
+                value={draft?.borderWidth ?? 1}
+                onChange={(event) => {
+                  const parsed = Number.parseInt(event.currentTarget.value, 10);
+                  update({
+                    borderWidth: Number.isFinite(parsed)
+                      ? Math.min(64, Math.max(1, parsed))
+                      : 1,
+                  });
+                }}
+              />
+            </label>
+            <label>
+              <span>{t("settings.screenshotsBorderStyle")}</span>
+              <select
+                value={draft?.borderStyle ?? "solid"}
+                onChange={(event) => {
+                  const value = event.currentTarget.value;
+                  update({
+                    borderStyle:
+                      value === "dashed" || value === "dotted" ? value : "solid",
+                  });
+                }}
+              >
+                <option value="solid">{t("settings.screenshotsBorderStyleSolid")}</option>
+                <option value="dashed">{t("settings.screenshotsBorderStyleDashed")}</option>
+                <option value="dotted">{t("settings.screenshotsBorderStyleDotted")}</option>
+              </select>
+            </label>
+            <label>
+              <span>{t("settings.screenshotsBorderColor")}</span>
+              <input
+                type="color"
+                value={draft?.borderColor ?? "#000000"}
+                onChange={(event) => update({ borderColor: event.currentTarget.value })}
+              />
+            </label>
+          </div>
+        ) : null}
       </fieldset>
 
       <fieldset className="settings-subsection settings-fieldset">

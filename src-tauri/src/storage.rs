@@ -939,6 +939,16 @@ pub struct ScreenshotSettings {
     quality: u8,
     #[serde(default = "default_screenshot_capture_mode")]
     capture_mode: String,
+    #[serde(default = "default_screenshot_border_enabled")]
+    border_enabled: bool,
+    #[serde(default = "default_screenshot_border_width")]
+    border_width: u32,
+    #[serde(default = "default_screenshot_border_style")]
+    border_style: String,
+    #[serde(default = "default_screenshot_border_color")]
+    border_color: String,
+    #[serde(default)]
+    include_cursor: bool,
     #[serde(default = "default_screenshot_region_shortcut")]
     region_shortcut: String,
     #[serde(default = "default_screenshot_shortcut_enabled")]
@@ -968,6 +978,26 @@ impl ScreenshotSettings {
 
     pub(crate) fn capture_mode(&self) -> &str {
         &self.capture_mode
+    }
+
+    pub(crate) fn border_enabled(&self) -> bool {
+        self.border_enabled
+    }
+
+    pub(crate) fn border_width(&self) -> u32 {
+        self.border_width
+    }
+
+    pub(crate) fn border_style(&self) -> &str {
+        &self.border_style
+    }
+
+    pub(crate) fn border_color(&self) -> &str {
+        &self.border_color
+    }
+
+    pub(crate) fn include_cursor(&self) -> bool {
+        self.include_cursor
     }
 
     pub(crate) fn region_shortcut(&self) -> &str {
@@ -5649,6 +5679,11 @@ fn default_screenshot_settings() -> ScreenshotSettings {
         format: default_screenshot_format(),
         quality: default_screenshot_quality(),
         capture_mode: default_screenshot_capture_mode(),
+        border_enabled: default_screenshot_border_enabled(),
+        border_width: default_screenshot_border_width(),
+        border_style: default_screenshot_border_style(),
+        border_color: default_screenshot_border_color(),
+        include_cursor: false,
         region_shortcut: default_screenshot_region_shortcut(),
         region_shortcut_enabled: default_screenshot_shortcut_enabled(),
         window_shortcut: default_screenshot_window_shortcut(),
@@ -5668,6 +5703,22 @@ fn default_screenshot_quality() -> u8 {
 
 fn default_screenshot_capture_mode() -> String {
     "both".to_string()
+}
+
+fn default_screenshot_border_enabled() -> bool {
+    true
+}
+
+fn default_screenshot_border_width() -> u32 {
+    1
+}
+
+fn default_screenshot_border_style() -> String {
+    "solid".to_string()
+}
+
+fn default_screenshot_border_color() -> String {
+    "#000000".to_string()
 }
 
 fn default_screenshot_region_shortcut() -> String {
@@ -6578,6 +6629,23 @@ fn validate_screenshot_settings(
         "clipboard" => "clipboard".to_string(),
         "" | "both" => "both".to_string(),
         _ => return Err("screenshot capture mode must be folder, clipboard, or both".to_string()),
+    };
+    settings.border_width = settings.border_width.clamp(1, 64);
+    settings.border_style = match settings.border_style.trim().to_lowercase().as_str() {
+        "" | "solid" => "solid".to_string(),
+        "dashed" => "dashed".to_string(),
+        "dotted" => "dotted".to_string(),
+        _ => return Err("screenshot border style must be solid, dashed, or dotted".to_string()),
+    };
+    settings.border_color = {
+        let trimmed = settings.border_color.trim().trim_start_matches('#').to_lowercase();
+        if trimmed.is_empty() {
+            default_screenshot_border_color()
+        } else if trimmed.len() == 6 && trimmed.chars().all(|c| c.is_ascii_hexdigit()) {
+            format!("#{trimmed}")
+        } else {
+            return Err("screenshot border color must be a #RRGGBB hex color".to_string());
+        }
     };
     settings.region_shortcut = settings.region_shortcut.trim().to_string();
     settings.window_shortcut = settings.window_shortcut.trim().to_string();

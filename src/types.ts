@@ -1186,12 +1186,18 @@ export interface FtpConnectionOptions {
 
 export type ScreenshotFormat = "png" | "jpeg";
 export type ScreenshotCaptureDelivery = "folder" | "clipboard" | "both";
+export type ScreenshotBorderStyle = "solid" | "dashed" | "dotted";
 
 export interface ScreenshotSettings {
   folderPath: string;
   format: ScreenshotFormat;
   quality: number;
   captureMode: ScreenshotCaptureDelivery;
+  borderEnabled: boolean;
+  borderWidth: number;
+  borderStyle: ScreenshotBorderStyle;
+  borderColor: string;
+  includeCursor: boolean;
   regionShortcut: string;
   regionShortcutEnabled: boolean;
   windowShortcut: string;

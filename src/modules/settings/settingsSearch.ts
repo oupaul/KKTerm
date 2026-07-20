@@ -188,6 +188,9 @@ export const SETTINGS_SEARCH_KEYS: Record<SettingsSectionId, readonly string[]> 
     "settings.screenshotsFormatPng", "settings.screenshotsFormatJpeg",
     "settings.screenshotsQuality", "settings.useDirectxScreenCapture",
     "settings.screenshotsShortcuts", "settings.screenshotsDefaults",
+    "settings.screenshotsBorder", "settings.screenshotsBorderEnabled",
+    "settings.screenshotsBorderWidth", "settings.screenshotsBorderStyle",
+    "settings.screenshotsBorderColor", "settings.screenshotsIncludeCursor",
   ],
   "dont-sleep-settings": ["settings.dontSleepForegroundOnly"],
   "shortcuts-settings": [
