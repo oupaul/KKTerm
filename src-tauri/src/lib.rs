@@ -1149,6 +1149,11 @@ fn update_screenshot_settings(
     screenshot_shortcuts::validate(&request)?;
     let saved = storage.update_screenshot_settings(request)?;
     screenshot_shortcuts::apply(&app, &saved)?;
+    if let Some(tray_state) = app.try_state::<app_tray::TrayState>() {
+        if let Err(error) = app_tray::rebuild_menu(&app, &tray_state) {
+            eprintln!("failed to refresh tray capture shortcuts: {error}");
+        }
+    }
     Ok(saved)
 }
 
@@ -1904,6 +1909,51 @@ async fn delete_screenshot(app: tauri::AppHandle, id: String) -> Result<(), Stri
     run_blocking_screenshot_command("screenshot deletion", move || {
         let settings = app.state::<storage::Storage>().screenshot_settings()?;
         screenshot::delete_library_screenshot(id, settings.folder_path().to_string())
+    })
+    .await
+}
+
+#[tauri::command]
+async fn delete_screenshots(app: tauri::AppHandle, ids: Vec<String>) -> Result<(), String> {
+    run_blocking_screenshot_command("screenshot batch deletion", move || {
+        let settings = app.state::<storage::Storage>().screenshot_settings()?;
+        screenshot::delete_library_screenshots(ids, settings.folder_path().to_string())
+    })
+    .await
+}
+
+#[tauri::command]
+async fn resize_screenshots(
+    app: tauri::AppHandle,
+    request: screenshot::ResizeScreenshotsRequest,
+) -> Result<Vec<screenshot::StoredScreenshot>, String> {
+    run_blocking_screenshot_command("screenshot batch resize", move || {
+        let settings = app.state::<storage::Storage>().screenshot_settings()?;
+        screenshot::resize_library_screenshots(request, settings.folder_path().to_string())
+    })
+    .await
+}
+
+#[tauri::command]
+async fn convert_screenshots(
+    app: tauri::AppHandle,
+    request: screenshot::ConvertScreenshotsRequest,
+) -> Result<Vec<screenshot::StoredScreenshot>, String> {
+    run_blocking_screenshot_command("screenshot batch conversion", move || {
+        let settings = app.state::<storage::Storage>().screenshot_settings()?;
+        screenshot::convert_library_screenshots(request, settings.folder_path().to_string())
+    })
+    .await
+}
+
+#[tauri::command]
+async fn save_edited_screenshot(
+    app: tauri::AppHandle,
+    request: screenshot::SaveEditedScreenshotRequest,
+) -> Result<screenshot::StoredScreenshot, String> {
+    run_blocking_screenshot_command("edited screenshot save", move || {
+        let settings = app.state::<storage::Storage>().screenshot_settings()?;
+        screenshot::save_edited_library_screenshot(request, settings.folder_path().to_string())
     })
     .await
 }
@@ -4353,6 +4403,10 @@ pub fn run() {
             rename_screenshot,
             copy_stored_screenshot_to_clipboard,
             delete_screenshot,
+            delete_screenshots,
+            resize_screenshots,
+            convert_screenshots,
+            save_edited_screenshot,
             clear_screenshots,
             open_screenshots_folder,
             reveal_screenshot,

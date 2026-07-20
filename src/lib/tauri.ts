@@ -779,6 +779,9 @@ export interface StoredScreenshot {
   height: number;
   fileSizeBytes: number;
   capturedAt: number;
+  createdAt: number;
+  modifiedAt: number;
+  takenAt: number | null;
   kind: "region" | "window" | "fullscreen" | "screenshot";
 }
 
@@ -2110,7 +2113,14 @@ type CommandMap = {
     result: ScreenshotCaptureResult;
   };
   list_screenshots: {
-    args: { request: { offset?: number; limit?: number } };
+    args: {
+      request: {
+        offset?: number;
+        limit?: number;
+        sortBy?: "name" | "date" | "type";
+        sortDirection?: "asc" | "desc";
+      };
+    };
     result: ListScreenshotsResponse;
   };
   read_screenshot: {
@@ -2128,6 +2138,35 @@ type CommandMap = {
   delete_screenshot: {
     args: { id: string };
     result: null;
+  };
+  delete_screenshots: {
+    args: { ids: string[] };
+    result: null;
+  };
+  resize_screenshots: {
+    args: {
+      request: {
+        ids: string[];
+        width: number;
+        height: number;
+        preserveAspectRatio: boolean;
+      };
+    };
+    result: StoredScreenshot[];
+  };
+  convert_screenshots: {
+    args: {
+      request: {
+        ids: string[];
+        format: "png" | "jpeg";
+        quality: number;
+      };
+    };
+    result: StoredScreenshot[];
+  };
+  save_edited_screenshot: {
+    args: { request: { id: string; dataUrl: string } };
+    result: StoredScreenshot;
   };
   clear_screenshots: {
     args: undefined;

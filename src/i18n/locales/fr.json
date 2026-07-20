@@ -1710,6 +1710,56 @@
     "loadMore": "Charger plus",
     "emptyTitle": "Aucune capture d'écran pour l'instant",
     "emptyBody": "Capturez une zone, une fenêtre ou le plein écran avec les boutons ci-dessus, le menu de l'icône de la zone de notification ou les raccourcis globaux de capture.",
+    "selectedCount": "{{count}} selected",
+    "delay": {
+      "label": "Capture delay",
+      "instant": "Instant",
+      "seconds": "{{count}} seconds"
+    },
+    "sort": {
+      "label": "Sort by",
+      "date": "Date",
+      "ascending": "Ascending",
+      "descending": "Descending"
+    },
+    "group": {
+      "label": "Group by",
+      "none": "None",
+      "dateCreated": "Date created",
+      "dateModified": "Date modified",
+      "dateTaken": "Date taken"
+    },
+    "batch": {
+      "resize": "Resize {{count}} selected",
+      "convert": "Convert {{count}} selected",
+      "delete": "Delete {{count}} selected",
+      "deleteTitle": "Delete selected screenshots?",
+      "deleteMessage": "{{count}} selected screenshots will be permanently deleted.",
+      "deleted": "Deleted {{count}} screenshots.",
+      "created": "Created {{count}} new image copies."
+    },
+    "resize": {
+      "width": "Width (px)",
+      "height": "Height (px)",
+      "preserveAspect": "Preserve aspect ratio",
+      "hint": "Resized images are saved as new copies. The originals are unchanged."
+    },
+    "convert": {
+      "format": "Output format",
+      "quality": "Quality {{value}}%",
+      "pngLossless": "PNG is lossless",
+      "hint": "Converted images are saved as new copies. The originals are unchanged."
+    },
+    "editor": {
+      "arrow": "Arrow",
+      "rectangle": "Rectangle",
+      "ellipse": "Ellipse",
+      "text": "Text",
+      "mosaic": "Mosaic",
+      "textPlaceholder": "Text to place",
+      "undo": "Undo",
+      "loadError": "Could not load the screenshot editor image."
+    },
     "menu": {
       "openExternal": "Ouvrir dans l'application par défaut",
       "copy": "Copier l'image",
@@ -1723,6 +1773,7 @@
       "screenshot": "Capture d'écran"
     },
     "details": {
+      "type": "Type",
       "name": "Nom",
       "kind": "Type",
       "size": "Taille",

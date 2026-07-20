@@ -1710,6 +1710,56 @@
     "loadMore": "더 보기",
     "emptyTitle": "아직 스크린샷이 없습니다",
     "emptyBody": "위의 버튼, 트레이 아이콘 메뉴 또는 전역 캡처 단축키로 영역, 창, 전체 화면을 캡처하세요.",
+    "selectedCount": "{{count}} selected",
+    "delay": {
+      "label": "Capture delay",
+      "instant": "Instant",
+      "seconds": "{{count}} seconds"
+    },
+    "sort": {
+      "label": "Sort by",
+      "date": "Date",
+      "ascending": "Ascending",
+      "descending": "Descending"
+    },
+    "group": {
+      "label": "Group by",
+      "none": "None",
+      "dateCreated": "Date created",
+      "dateModified": "Date modified",
+      "dateTaken": "Date taken"
+    },
+    "batch": {
+      "resize": "Resize {{count}} selected",
+      "convert": "Convert {{count}} selected",
+      "delete": "Delete {{count}} selected",
+      "deleteTitle": "Delete selected screenshots?",
+      "deleteMessage": "{{count}} selected screenshots will be permanently deleted.",
+      "deleted": "Deleted {{count}} screenshots.",
+      "created": "Created {{count}} new image copies."
+    },
+    "resize": {
+      "width": "Width (px)",
+      "height": "Height (px)",
+      "preserveAspect": "Preserve aspect ratio",
+      "hint": "Resized images are saved as new copies. The originals are unchanged."
+    },
+    "convert": {
+      "format": "Output format",
+      "quality": "Quality {{value}}%",
+      "pngLossless": "PNG is lossless",
+      "hint": "Converted images are saved as new copies. The originals are unchanged."
+    },
+    "editor": {
+      "arrow": "Arrow",
+      "rectangle": "Rectangle",
+      "ellipse": "Ellipse",
+      "text": "Text",
+      "mosaic": "Mosaic",
+      "textPlaceholder": "Text to place",
+      "undo": "Undo",
+      "loadError": "Could not load the screenshot editor image."
+    },
     "menu": {
       "openExternal": "기본 앱에서 열기",
       "copy": "이미지 복사",
@@ -1723,6 +1773,7 @@
       "screenshot": "스크린샷"
     },
     "details": {
+      "type": "Type",
       "name": "이름",
       "kind": "종류",
       "size": "크기",

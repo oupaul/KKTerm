@@ -43,6 +43,9 @@ pub struct StoredScreenshot {
     height: u32,
     file_size_bytes: u64,
     captured_at: u128,
+    created_at: u128,
+    modified_at: u128,
+    taken_at: Option<u128>,
     kind: String,
 }
 
@@ -78,6 +81,32 @@ pub struct LibrarySaveOptions {
 pub struct ListScreenshotsRequest {
     offset: Option<usize>,
     limit: Option<usize>,
+    sort_by: Option<String>,
+    sort_direction: Option<String>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ResizeScreenshotsRequest {
+    ids: Vec<String>,
+    width: u32,
+    height: u32,
+    preserve_aspect_ratio: bool,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ConvertScreenshotsRequest {
+    ids: Vec<String>,
+    format: String,
+    quality: u8,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SaveEditedScreenshotRequest {
+    id: String,
+    data_url: String,
 }
 
 #[derive(Serialize)]
@@ -735,7 +764,21 @@ pub fn list_library_screenshots(
             .unwrap_or(0);
         paths.push((modified, path));
     }
-    paths.sort_by(|a, b| b.0.cmp(&a.0));
+    let sort_by = request.sort_by.as_deref().unwrap_or("date");
+    paths.sort_by(|a, b| {
+        let ordering = match sort_by {
+            "name" => file_name_sort_key(&a.1).cmp(&file_name_sort_key(&b.1)),
+            "type" => file_type_sort_key(&a.1)
+                .cmp(&file_type_sort_key(&b.1))
+                .then_with(|| file_name_sort_key(&a.1).cmp(&file_name_sort_key(&b.1))),
+            _ => a.0.cmp(&b.0),
+        };
+        if request.sort_direction.as_deref() == Some("asc") {
+            ordering
+        } else {
+            ordering.reverse()
+        }
+    });
 
     let total = paths.len();
     let offset = request.offset.unwrap_or(0).min(total);
@@ -860,6 +903,113 @@ pub fn delete_library_screenshot(id: String, folder_path: String) -> Result<(), 
     Ok(())
 }
 
+pub fn delete_library_screenshots(ids: Vec<String>, folder_path: String) -> Result<(), String> {
+    let folder = ensure_screenshots_folder(&folder_path)?;
+    let paths = ids
+        .iter()
+        .map(|id| screenshot_path_from_id(&folder, id).map(|path| (id, path)))
+        .collect::<Result<Vec<_>, _>>()?;
+    for (id, path) in paths {
+        fs::remove_file(&path).map_err(|error| format!("failed to delete screenshot: {error}"))?;
+        remove_thumbnail_for(&folder, id);
+    }
+    Ok(())
+}
+
+pub fn resize_library_screenshots(
+    request: ResizeScreenshotsRequest,
+    folder_path: String,
+) -> Result<Vec<StoredScreenshot>, String> {
+    validate_batch_dimensions(request.width, request.height)?;
+    let folder = ensure_screenshots_folder(&folder_path)?;
+    let paths = request
+        .ids
+        .iter()
+        .map(|id| screenshot_path_from_id(&folder, id))
+        .collect::<Result<Vec<_>, _>>()?;
+    let mut created = Vec::with_capacity(paths.len());
+    for path in paths {
+        let image = image::open(&path)
+            .map_err(|error| format!("failed to read screenshot for resize: {error}"))?;
+        let resized = if request.preserve_aspect_ratio {
+            image.resize(
+                request.width,
+                request.height,
+                image::imageops::FilterType::Lanczos3,
+            )
+        } else {
+            image.resize_exact(
+                request.width,
+                request.height,
+                image::imageops::FilterType::Lanczos3,
+            )
+        };
+        let format = if path
+            .extension()
+            .and_then(|extension| extension.to_str())
+            .is_some_and(|extension| extension.eq_ignore_ascii_case("png"))
+        {
+            "png"
+        } else {
+            "jpeg"
+        };
+        let target = unique_library_output_path(&folder, &path, "resized", format);
+        write_dynamic_image(&resized, &target, format, 90)?;
+        created.push(stored_screenshot_from_path(&folder, target)?);
+    }
+    Ok(created)
+}
+
+pub fn convert_library_screenshots(
+    request: ConvertScreenshotsRequest,
+    folder_path: String,
+) -> Result<Vec<StoredScreenshot>, String> {
+    let format = match request.format.as_str() {
+        "png" => "png",
+        "jpeg" => "jpeg",
+        _ => return Err("screenshot output format must be PNG or JPEG".to_string()),
+    };
+    let folder = ensure_screenshots_folder(&folder_path)?;
+    let paths = request
+        .ids
+        .iter()
+        .map(|id| screenshot_path_from_id(&folder, id))
+        .collect::<Result<Vec<_>, _>>()?;
+    let mut created = Vec::with_capacity(paths.len());
+    for path in paths {
+        let image = image::open(&path)
+            .map_err(|error| format!("failed to read screenshot for conversion: {error}"))?;
+        let target = unique_library_output_path(&folder, &path, "converted", format);
+        write_dynamic_image(&image, &target, format, request.quality)?;
+        created.push(stored_screenshot_from_path(&folder, target)?);
+    }
+    Ok(created)
+}
+
+pub fn save_edited_library_screenshot(
+    request: SaveEditedScreenshotRequest,
+    folder_path: String,
+) -> Result<StoredScreenshot, String> {
+    let folder = ensure_screenshots_folder(&folder_path)?;
+    let source = screenshot_path_from_id(&folder, &request.id)?;
+    let (_, encoded) = request
+        .data_url
+        .split_once(',')
+        .filter(|(header, _)| header.starts_with("data:image/") && header.ends_with(";base64"))
+        .ok_or_else(|| "edited screenshot is not a base64 image data URL".to_string())?;
+    if encoded.len() > 140_000_000 {
+        return Err("edited screenshot exceeds the 100 MB input limit".to_string());
+    }
+    let bytes = STANDARD
+        .decode(encoded)
+        .map_err(|error| format!("failed to decode edited screenshot: {error}"))?;
+    let image = image::load_from_memory(&bytes)
+        .map_err(|error| format!("failed to read edited screenshot: {error}"))?;
+    let target = unique_library_output_path(&folder, &source, "edited", "png");
+    write_dynamic_image(&image, &target, "png", 90)?;
+    stored_screenshot_from_path(&folder, target)
+}
+
 pub fn clear_library_screenshots(folder_path: String) -> Result<(), String> {
     let folder = ensure_screenshots_folder(&folder_path)?;
     for entry in fs::read_dir(&folder)
@@ -980,6 +1130,17 @@ fn stored_screenshot_from_path(
         .ok()
         .and_then(system_time_to_millis)
         .unwrap_or_else(now_millis);
+    let created_at = metadata
+        .created()
+        .ok()
+        .and_then(system_time_to_millis)
+        .unwrap_or(captured_at);
+    let modified_at = metadata
+        .modified()
+        .ok()
+        .and_then(system_time_to_millis)
+        .unwrap_or(captured_at);
+    let taken_at = taken_at_from_file_name(&file_name);
     let canonical_folder = screenshots_folder
         .canonicalize()
         .map_err(|error| format!("failed to resolve screenshots folder: {error}"))?;
@@ -1001,9 +1162,95 @@ fn stored_screenshot_from_path(
         width,
         height,
         file_size_bytes: metadata.len(),
-        captured_at,
+        captured_at: taken_at.unwrap_or(captured_at),
+        created_at,
+        modified_at,
+        taken_at,
         kind,
     })
+}
+
+fn file_name_sort_key(path: &Path) -> String {
+    path.file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or_default()
+        .to_lowercase()
+}
+
+fn file_type_sort_key(path: &Path) -> String {
+    path.extension()
+        .and_then(|extension| extension.to_str())
+        .unwrap_or_default()
+        .to_lowercase()
+}
+
+fn taken_at_from_file_name(file_name: &str) -> Option<u128> {
+    file_name
+        .split(['-', '.'])
+        .find_map(|part| (part.len() >= 10).then(|| part.parse::<u128>().ok()).flatten())
+}
+
+fn validate_batch_dimensions(width: u32, height: u32) -> Result<(), String> {
+    if width == 0 || height == 0 || width > 16_384 || height > 16_384 {
+        return Err("screenshot dimensions must be between 1 and 16,384 pixels".to_string());
+    }
+    if u64::from(width) * u64::from(height) > 100_000_000 {
+        return Err("resized screenshots must not exceed 100 megapixels".to_string());
+    }
+    Ok(())
+}
+
+fn unique_library_output_path(folder: &Path, source: &Path, suffix: &str, format: &str) -> PathBuf {
+    let stem = source
+        .file_stem()
+        .and_then(|stem| stem.to_str())
+        .unwrap_or("Screenshot");
+    let extension = if format == "jpeg" { "jpg" } else { "png" };
+    for index in 0..u32::MAX {
+        let numbered = if index == 0 {
+            format!("{stem}-{suffix}.{extension}")
+        } else {
+            format!("{stem}-{suffix}-{index}.{extension}")
+        };
+        let candidate = folder.join(numbered);
+        if !candidate.exists() {
+            return candidate;
+        }
+    }
+    folder.join(format!("{stem}-{suffix}-{}.{}", now_millis(), extension))
+}
+
+fn write_dynamic_image(
+    image: &image::DynamicImage,
+    path: &Path,
+    format: &str,
+    quality: u8,
+) -> Result<(), String> {
+    use image::{ColorType, ImageEncoder};
+
+    let mut bytes = Vec::new();
+    if format == "jpeg" {
+        let rgb = image.to_rgb8();
+        image::codecs::jpeg::JpegEncoder::new_with_quality(&mut bytes, quality.clamp(1, 100))
+            .write_image(
+                rgb.as_raw(),
+                rgb.width(),
+                rgb.height(),
+                ColorType::Rgb8.into(),
+            )
+            .map_err(|error| format!("failed to encode JPEG screenshot: {error}"))?;
+    } else {
+        let rgba = image.to_rgba8();
+        image::codecs::png::PngEncoder::new(&mut bytes)
+            .write_image(
+                rgba.as_raw(),
+                rgba.width(),
+                rgba.height(),
+                ColorType::Rgba8.into(),
+            )
+            .map_err(|error| format!("failed to encode PNG screenshot: {error}"))?;
+    }
+    fs::write(path, bytes).map_err(|error| format!("failed to save screenshot: {error}"))
 }
 
 /// Returns the cached thumbnail for a library image as a JPEG data URL,
@@ -2618,6 +2865,23 @@ mod tests {
         assert_eq!(app_window_kind("rdp-session-2"), "remoteDesktop");
         assert_eq!(app_window_kind("vnc-1"), "remoteDesktop");
         assert_eq!(app_window_kind("something-else"), "overlay");
+    }
+
+    #[test]
+    fn library_copy_names_preserve_original_capture_time() {
+        assert_eq!(
+            taken_at_from_file_name("KKTerm-region-1723456789012-edited.png"),
+            Some(1_723_456_789_012)
+        );
+        assert_eq!(taken_at_from_file_name("external-image.png"), None);
+    }
+
+    #[test]
+    fn batch_resize_dimensions_are_bounded() {
+        assert!(validate_batch_dimensions(1920, 1080).is_ok());
+        assert!(validate_batch_dimensions(0, 1080).is_err());
+        assert!(validate_batch_dimensions(16_385, 1080).is_err());
+        assert!(validate_batch_dimensions(16_384, 16_384).is_err());
     }
 
     #[cfg(not(target_os = "windows"))]

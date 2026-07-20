@@ -1710,6 +1710,56 @@
     "loadMore": "โหลดเพิ่มเติม",
     "emptyTitle": "ยังไม่มีภาพหน้าจอ",
     "emptyBody": "จับภาพบริเวณ หน้าต่าง หรือเต็มหน้าจอด้วยปุ่มด้านบน เมนูไอคอนในถาดระบบ หรือปุ่มลัดจับภาพส่วนกลาง",
+    "selectedCount": "{{count}} selected",
+    "delay": {
+      "label": "Capture delay",
+      "instant": "Instant",
+      "seconds": "{{count}} seconds"
+    },
+    "sort": {
+      "label": "Sort by",
+      "date": "Date",
+      "ascending": "Ascending",
+      "descending": "Descending"
+    },
+    "group": {
+      "label": "Group by",
+      "none": "None",
+      "dateCreated": "Date created",
+      "dateModified": "Date modified",
+      "dateTaken": "Date taken"
+    },
+    "batch": {
+      "resize": "Resize {{count}} selected",
+      "convert": "Convert {{count}} selected",
+      "delete": "Delete {{count}} selected",
+      "deleteTitle": "Delete selected screenshots?",
+      "deleteMessage": "{{count}} selected screenshots will be permanently deleted.",
+      "deleted": "Deleted {{count}} screenshots.",
+      "created": "Created {{count}} new image copies."
+    },
+    "resize": {
+      "width": "Width (px)",
+      "height": "Height (px)",
+      "preserveAspect": "Preserve aspect ratio",
+      "hint": "Resized images are saved as new copies. The originals are unchanged."
+    },
+    "convert": {
+      "format": "Output format",
+      "quality": "Quality {{value}}%",
+      "pngLossless": "PNG is lossless",
+      "hint": "Converted images are saved as new copies. The originals are unchanged."
+    },
+    "editor": {
+      "arrow": "Arrow",
+      "rectangle": "Rectangle",
+      "ellipse": "Ellipse",
+      "text": "Text",
+      "mosaic": "Mosaic",
+      "textPlaceholder": "Text to place",
+      "undo": "Undo",
+      "loadError": "Could not load the screenshot editor image."
+    },
     "menu": {
       "openExternal": "เปิดด้วยแอปเริ่มต้น",
       "copy": "คัดลอกรูปภาพ",
@@ -1723,6 +1773,7 @@
       "screenshot": "ภาพหน้าจอ"
     },
     "details": {
+      "type": "Type",
       "name": "ชื่อ",
       "kind": "ชนิด",
       "size": "ขนาด",

@@ -1,26 +1,24 @@
-// Screenshots Module page. Library-first: shows captured screenshots from the
-// configured folder (newest first) in thumbnail / list / details views, with
-// capture actions in the Module header. Captures also arrive from the tray
-// menu and the global hotkeys through `captureBridge`; every mutation reports
-// through the Status Bar per the app-wide notification invariant.
-import { useEffect, useState } from "react";
+// Screenshots Module page. Library-first: thumbnail and details views share
+// sorting, grouping, multi-selection, native item menus, and non-destructive
+// batch operations. Capture entry points stay routed through captureBridge.
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   AppWindow,
+  ArrowDown,
+  ArrowUp,
+  Clock,
   FolderOpen,
   LayoutGrid,
-  List as ListIcon,
   Monitor,
   RefreshCw,
   Rows3,
   Scan,
-  Trash2,
 } from "../../lib/reicon";
 import {
   ModuleHeader,
   ModuleHeaderDivider,
   ModuleHeaderLead,
-  ModuleHeaderSpacer,
   ModuleHeaderTitle,
   ModuleIconTile,
 } from "../../app/ModuleHeader";
@@ -39,19 +37,86 @@ import { showNativeContextMenu } from "../../lib/nativeContextMenu";
 import { invokeCommand, isTauriRuntime, type StoredScreenshot } from "../../lib/tauri";
 import { useWorkspaceStore } from "../../store";
 import { performScreenshotCapture, type ScreenshotCaptureMode } from "./captureBridge";
-import { LibraryView, type ScreenshotsViewMode } from "./LibraryView";
+import {
+  LibraryView,
+  type ScreenshotSelectionModifiers,
+  type ScreenshotsViewMode,
+} from "./LibraryView";
 import { ScreenshotViewer } from "./ScreenshotViewer";
-import { useScreenshotsStore } from "./state";
+import {
+  ConvertScreenshotsDialog,
+  ResizeScreenshotsDialog,
+} from "./ScreenshotBatchDialogs";
+import { ScreenshotEditor } from "./ScreenshotEditor";
+import type { ScreenshotGroupBy } from "./libraryModel";
+import {
+  useScreenshotsStore,
+  type ScreenshotSortBy,
+  type ScreenshotSortDirection,
+} from "./state";
 import "./screenshots.css";
 
-const VIEW_MODE_STORAGE_KEY = "kkterm.screenshotsViewMode.v1";
+const VIEW_MODE_STORAGE_KEY = "kkterm.screenshotsViewMode.v2";
+const SORT_STORAGE_KEY = "kkterm.screenshotsSort.v1";
+const GROUP_STORAGE_KEY = "kkterm.screenshotsGroup.v1";
+const DELAY_STORAGE_KEY = "kkterm.screenshotsCaptureDelay.v1";
+const CAPTURE_DELAYS = [0, 3, 5, 15, 30, 60] as const;
 
 function readViewMode(): ScreenshotsViewMode {
   try {
-    const stored = localStorage.getItem(VIEW_MODE_STORAGE_KEY);
-    return stored === "list" || stored === "details" ? stored : "thumbnails";
+    return localStorage.getItem(VIEW_MODE_STORAGE_KEY) === "details" ? "details" : "thumbnails";
   } catch {
     return "thumbnails";
+  }
+}
+
+function readSort(): { by: ScreenshotSortBy; direction: ScreenshotSortDirection } {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(SORT_STORAGE_KEY) ?? "null") as {
+      by?: string;
+      direction?: string;
+    } | null;
+    return {
+      by: parsed?.by === "name" || parsed?.by === "type" ? parsed.by : "date",
+      direction: parsed?.direction === "asc" ? "asc" : "desc",
+    };
+  } catch {
+    return { by: "date", direction: "desc" };
+  }
+}
+
+function readGroupBy(): ScreenshotGroupBy {
+  try {
+    const value = localStorage.getItem(GROUP_STORAGE_KEY);
+    return value === "name"
+      || value === "date"
+      || value === "type"
+      || value === "size"
+      || value === "dateCreated"
+      || value === "dateModified"
+      || value === "dateTaken"
+      || value === "dimensions"
+      ? value
+      : "none";
+  } catch {
+    return "none";
+  }
+}
+
+function readCaptureDelay() {
+  try {
+    const parsed = Number(localStorage.getItem(DELAY_STORAGE_KEY));
+    return CAPTURE_DELAYS.includes(parsed as (typeof CAPTURE_DELAYS)[number]) ? parsed : 0;
+  } catch {
+    return 0;
+  }
+}
+
+function persist(key: string, value: string) {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // Module preferences are best-effort.
   }
 }
 
@@ -67,41 +132,86 @@ export function ScreenshotsPage({ active }: { active: boolean }) {
   const captureInFlight = useScreenshotsStore((state) => state.captureInFlight);
   const refresh = useScreenshotsStore((state) => state.refresh);
   const loadMore = useScreenshotsStore((state) => state.loadMore);
+  const setSortInStore = useScreenshotsStore((state) => state.setSort);
 
+  const initialSort = useRef(readSort());
   const [viewMode, setViewMode] = useState<ScreenshotsViewMode>(readViewMode);
+  const [sortBy, setSortBy] = useState<ScreenshotSortBy>(initialSort.current.by);
+  const [sortDirection, setSortDirection] = useState<ScreenshotSortDirection>(
+    initialSort.current.direction,
+  );
+  const [groupBy, setGroupBy] = useState<ScreenshotGroupBy>(readGroupBy);
+  const [captureDelay, setCaptureDelay] = useState(readCaptureDelay);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const selectionAnchorRef = useRef<string | null>(null);
   const [viewerId, setViewerId] = useState<string | null>(null);
   const [renameTarget, setRenameTarget] = useState<StoredScreenshot | null>(null);
   const [renameValue, setRenameValue] = useState("");
-  const [deleteTarget, setDeleteTarget] = useState<StoredScreenshot | null>(null);
-  const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
+  const [deleteTargets, setDeleteTargets] = useState<StoredScreenshot[]>([]);
+  const [resizeTargets, setResizeTargets] = useState<StoredScreenshot[]>([]);
+  const [convertTargets, setConvertTargets] = useState<StoredScreenshot[]>([]);
+  const [editorTarget, setEditorTarget] = useState<StoredScreenshot | null>(null);
 
-  // Refresh on every activation so captures from other paths and external
-  // folder changes show up; thumbnails are cached so re-listing stays cheap.
   useEffect(() => {
-    if (active && isTauriRuntime()) {
+    if (!active || !isTauriRuntime()) {
+      return;
+    }
+    const store = useScreenshotsStore.getState();
+    if (store.sortBy !== sortBy || store.sortDirection !== sortDirection) {
+      void setSortInStore(sortBy, sortDirection);
+    } else {
       void refresh();
     }
-  }, [active, refresh]);
+  }, [active, refresh, setSortInStore, sortBy, sortDirection]);
 
+  useEffect(() => {
+    const available = new Set(screenshots.map((screenshot) => screenshot.id));
+    setSelectedIds((current) => {
+      const next = new Set(Array.from(current).filter((id) => available.has(id)));
+      return next.size === current.size ? current : next;
+    });
+  }, [screenshots]);
+
+  const selectedScreenshots = useMemo(
+    () => screenshots.filter((screenshot) => selectedIds.has(screenshot.id)),
+    [screenshots, selectedIds],
+  );
   const viewerIndex = viewerId
     ? screenshots.findIndex((screenshot) => screenshot.id === viewerId)
     : -1;
   const viewerScreenshot = viewerIndex >= 0 ? screenshots[viewerIndex] : null;
 
-  function changeViewMode(next: ScreenshotsViewMode) {
-    setViewMode(next);
-    try {
-      localStorage.setItem(VIEW_MODE_STORAGE_KEY, next);
-    } catch {
-      // Persisting the view preference is best-effort.
-    }
-  }
-
-  function notifyError(error: unknown) {
+  const notifyError = useCallback((error: unknown) => {
     showStatusBarNotice(
       error instanceof Error ? error.message : String(error),
       { tone: "error" },
     );
+  }, [showStatusBarNotice]);
+
+  function changeViewMode(next: ScreenshotsViewMode) {
+    setViewMode(next);
+    persist(VIEW_MODE_STORAGE_KEY, next);
+  }
+
+  function changeSortBy(next: ScreenshotSortBy) {
+    setSortBy(next);
+    persist(SORT_STORAGE_KEY, JSON.stringify({ by: next, direction: sortDirection }));
+  }
+
+  function toggleSortDirection() {
+    const next = sortDirection === "asc" ? "desc" : "asc";
+    setSortDirection(next);
+    persist(SORT_STORAGE_KEY, JSON.stringify({ by: sortBy, direction: next }));
+  }
+
+  function changeGroupBy(next: ScreenshotGroupBy) {
+    setGroupBy(next);
+    persist(GROUP_STORAGE_KEY, next);
+  }
+
+  function changeCaptureDelay(next: number) {
+    setCaptureDelay(next);
+    persist(DELAY_STORAGE_KEY, String(next));
   }
 
   async function copyScreenshot(screenshot: StoredScreenshot) {
@@ -136,6 +246,15 @@ export function ScreenshotsPage({ active }: { active: boolean }) {
         newName: renameValue,
       });
       useScreenshotsStore.getState().replace(renameTarget.id, updated);
+      setSelectedIds((current) => {
+        if (!current.has(renameTarget.id)) {
+          return current;
+        }
+        const next = new Set(current);
+        next.delete(renameTarget.id);
+        next.add(updated.id);
+        return next;
+      });
       if (viewerId === renameTarget.id) {
         setViewerId(updated.id);
       }
@@ -147,73 +266,133 @@ export function ScreenshotsPage({ active }: { active: boolean }) {
   }
 
   async function confirmDelete() {
-    if (!deleteTarget) {
+    if (deleteTargets.length === 0) {
       return;
     }
+    const ids = deleteTargets.map((screenshot) => screenshot.id);
     try {
-      await invokeCommand("delete_screenshot", { id: deleteTarget.id });
-      useScreenshotsStore.getState().remove(deleteTarget.id);
-      if (viewerId === deleteTarget.id) {
+      await invokeCommand("delete_screenshots", { ids });
+      ids.forEach((id) => useScreenshotsStore.getState().remove(id));
+      if (viewerId && ids.includes(viewerId)) {
         setViewerId(null);
       }
-      setDeleteTarget(null);
-      showStatusBarNotice(t("screenshots.deleted"), { tone: "success" });
+      setSelectedIds((current) => {
+        const next = new Set(current);
+        ids.forEach((id) => next.delete(id));
+        return next;
+      });
+      setDeleteTargets([]);
+      showStatusBarNotice(
+        ids.length === 1
+          ? t("screenshots.deleted")
+          : t("screenshots.batch.deleted", { count: ids.length }),
+        { tone: "success" },
+      );
     } catch (error) {
-      setDeleteTarget(null);
+      setDeleteTargets([]);
       notifyError(error);
     }
   }
 
-  async function confirmClearAll() {
-    try {
-      await invokeCommand("clear_screenshots", undefined);
-      useScreenshotsStore.getState().clear();
-      setViewerId(null);
-      setClearConfirmOpen(false);
-      showStatusBarNotice(t("screenshots.cleared"), { tone: "success" });
-    } catch (error) {
-      setClearConfirmOpen(false);
-      notifyError(error);
-    }
+  function handleSelect(
+    screenshot: StoredScreenshot,
+    index: number,
+    modifiers: ScreenshotSelectionModifiers,
+  ) {
+    setSelectedIds((current) => {
+      if (modifiers.range && selectionAnchorRef.current) {
+        const anchorIndex = screenshots.findIndex(
+          (candidate) => candidate.id === selectionAnchorRef.current,
+        );
+        if (anchorIndex >= 0) {
+          const next = modifiers.additive ? new Set(current) : new Set<string>();
+          const [start, end] = anchorIndex < index ? [anchorIndex, index] : [index, anchorIndex];
+          screenshots.slice(start, end + 1).forEach((candidate) => next.add(candidate.id));
+          return next;
+        }
+      }
+      selectionAnchorRef.current = screenshot.id;
+      if (modifiers.additive) {
+        const next = new Set(current);
+        if (next.has(screenshot.id)) {
+          next.delete(screenshot.id);
+        } else {
+          next.add(screenshot.id);
+        }
+        return next;
+      }
+      return new Set([screenshot.id]);
+    });
   }
 
   function openItemMenu(screenshot: StoredScreenshot, x: number, y: number) {
+    const targets = selectedIds.has(screenshot.id) && selectedScreenshots.length > 0
+      ? selectedScreenshots
+      : [screenshot];
+    if (!selectedIds.has(screenshot.id)) {
+      setSelectedIds(new Set([screenshot.id]));
+      selectionAnchorRef.current = screenshot.id;
+    }
+    const single = targets.length === 1 ? targets[0] : null;
     void showNativeContextMenu(
       [
+        ...(single ? [
+          {
+            kind: "item" as const,
+            label: t("common.open"),
+            action: () => setViewerId(single.id),
+          },
+          {
+            kind: "item" as const,
+            label: t("common.edit"),
+            iconSvg: nativeMenuIcons.pencil,
+            action: () => setEditorTarget(single),
+          },
+          {
+            kind: "item" as const,
+            label: t("screenshots.menu.openExternal"),
+            action: () => openExternal(single),
+          },
+          {
+            kind: "item" as const,
+            label: t("screenshots.menu.copy"),
+            iconSvg: nativeMenuIcons.copy,
+            action: () => void copyScreenshot(single),
+          },
+          {
+            kind: "item" as const,
+            label: t("screenshots.menu.reveal"),
+            iconSvg: nativeMenuIcons.folderOpen,
+            action: () => revealScreenshot(single),
+          },
+          {
+            kind: "item" as const,
+            label: t("screenshots.menu.rename"),
+            iconSvg: nativeMenuIcons.pencil,
+            action: () => startRename(single),
+          },
+          { kind: "separator" as const },
+        ] : []),
         {
           kind: "item",
-          label: t("common.open"),
-          action: () => setViewerId(screenshot.id),
+          label: t("screenshots.batch.resize", { count: targets.length }),
+          iconSvg: nativeMenuIcons.columns,
+          action: () => setResizeTargets(targets),
         },
         {
           kind: "item",
-          label: t("screenshots.menu.openExternal"),
-          action: () => openExternal(screenshot),
-        },
-        {
-          kind: "item",
-          label: t("screenshots.menu.copy"),
-          iconSvg: nativeMenuIcons.copy,
-          action: () => void copyScreenshot(screenshot),
-        },
-        {
-          kind: "item",
-          label: t("screenshots.menu.reveal"),
-          iconSvg: nativeMenuIcons.folderOpen,
-          action: () => revealScreenshot(screenshot),
+          label: t("screenshots.batch.convert", { count: targets.length }),
+          iconSvg: nativeMenuIcons.save,
+          action: () => setConvertTargets(targets),
         },
         { kind: "separator" },
         {
           kind: "item",
-          label: t("screenshots.menu.rename"),
-          iconSvg: nativeMenuIcons.pencil,
-          action: () => startRename(screenshot),
-        },
-        {
-          kind: "item",
-          label: t("common.delete"),
+          label: targets.length === 1
+            ? t("common.delete")
+            : t("screenshots.batch.delete", { count: targets.length }),
           iconSvg: nativeMenuIcons.trash,
-          action: () => setDeleteTarget(screenshot),
+          action: () => setDeleteTargets(targets),
         },
       ],
       { x, y },
@@ -221,10 +400,23 @@ export function ScreenshotsPage({ active }: { active: boolean }) {
   }
 
   function capture(mode: ScreenshotCaptureMode) {
-    void performScreenshotCapture(mode, t);
+    void performScreenshotCapture(mode, t, captureDelay);
+  }
+
+  function finishBatch(created: StoredScreenshot[]) {
+    useScreenshotsStore.getState().addMany(created);
+    setSelectedIds(new Set(created.map((screenshot) => screenshot.id)));
+    setResizeTargets([]);
+    setConvertTargets([]);
+    showStatusBarNotice(t("screenshots.batch.created", { count: created.length }), {
+      tone: "success",
+    });
   }
 
   const runtimeAvailable = isTauriRuntime();
+  const directionLabel = sortDirection === "asc"
+    ? t("screenshots.sort.ascending")
+    : t("screenshots.sort.descending");
 
   return (
     <section
@@ -241,9 +433,11 @@ export function ScreenshotsPage({ active }: { active: boolean }) {
         </ModuleHeaderLead>
         <ModuleHeaderDivider />
         <span className="screenshots-count">
-          {t("screenshots.totalCount", { count: total })}
+          {selectedIds.size > 0
+            ? t("screenshots.selectedCount", { count: selectedIds.size })
+            : t("screenshots.totalCount", { count: total })}
         </span>
-        <ModuleHeaderSpacer />
+        <div className="screenshots-header-toolbar">
         <div
           className="screenshots-segmented"
           role="tablist"
@@ -261,16 +455,6 @@ export function ScreenshotsPage({ active }: { active: boolean }) {
           </button>
           <button
             type="button"
-            className={viewMode === "list" ? "active" : ""}
-            onClick={() => changeViewMode("list")}
-            title={t("screenshots.view.list")}
-            aria-label={t("screenshots.view.list")}
-            aria-selected={viewMode === "list"}
-          >
-            <ListIcon size={15} strokeWidth={1.9} />
-          </button>
-          <button
-            type="button"
             className={viewMode === "details" ? "active" : ""}
             onClick={() => changeViewMode("details")}
             title={t("screenshots.view.details")}
@@ -280,34 +464,82 @@ export function ScreenshotsPage({ active }: { active: boolean }) {
             <Rows3 size={15} strokeWidth={1.9} />
           </button>
         </div>
+        <label className="screenshots-toolbar-select">
+          <span>{t("screenshots.sort.label")}</span>
+          <select
+            value={sortBy}
+            onChange={(event) => changeSortBy(event.currentTarget.value as ScreenshotSortBy)}
+          >
+            <option value="name">{t("screenshots.details.name")}</option>
+            <option value="date">{t("screenshots.sort.date")}</option>
+            <option value="type">{t("screenshots.details.type")}</option>
+          </select>
+        </label>
         <button
           type="button"
-          className="screenshots-button"
+          className="screenshots-icon-button"
+          title={directionLabel}
+          aria-label={directionLabel}
+          onClick={toggleSortDirection}
+        >
+          {sortDirection === "asc"
+            ? <ArrowUp size={14} aria-hidden="true" />
+            : <ArrowDown size={14} aria-hidden="true" />}
+        </button>
+        <label className="screenshots-toolbar-select">
+          <span>{t("screenshots.group.label")}</span>
+          <select
+            value={groupBy}
+            onChange={(event) => changeGroupBy(event.currentTarget.value as ScreenshotGroupBy)}
+          >
+            <option value="none">{t("screenshots.group.none")}</option>
+            <option value="name">{t("screenshots.details.name")}</option>
+            <option value="date">{t("screenshots.sort.date")}</option>
+            <option value="type">{t("screenshots.details.type")}</option>
+            <option value="size">{t("screenshots.details.size")}</option>
+            <option value="dateCreated">{t("screenshots.group.dateCreated")}</option>
+            <option value="dateModified">{t("screenshots.group.dateModified")}</option>
+            <option value="dateTaken">{t("screenshots.group.dateTaken")}</option>
+            <option value="dimensions">{t("screenshots.details.dimensions")}</option>
+          </select>
+        </label>
+        <button
+          type="button"
+          className="screenshots-icon-button"
+          title={t("common.refresh")}
+          aria-label={t("common.refresh")}
           onClick={() => void refresh()}
           disabled={loading || !runtimeAvailable}
         >
           <RefreshCw size={14} strokeWidth={1.9} aria-hidden="true" />
-          {t("common.refresh")}
         </button>
         <button
           type="button"
-          className="screenshots-button"
+          className="screenshots-icon-button"
+          title={t("screenshots.openFolder")}
+          aria-label={t("screenshots.openFolder")}
           onClick={() => invokeCommand("open_screenshots_folder", undefined).catch(notifyError)}
           disabled={!runtimeAvailable}
         >
           <FolderOpen size={14} strokeWidth={1.9} aria-hidden="true" />
-          {t("screenshots.openFolder")}
         </button>
-        <button
-          type="button"
-          className="screenshots-button"
-          onClick={() => setClearConfirmOpen(true)}
-          disabled={!runtimeAvailable || screenshots.length === 0}
-        >
-          <Trash2 size={14} strokeWidth={1.9} aria-hidden="true" />
-          {t("screenshots.clearAll")}
-        </button>
-        <ModuleHeaderDivider />
+        <label className="screenshots-delay-select" title={t("screenshots.delay.label")}>
+          <Clock size={14} aria-hidden="true" />
+          <select
+            aria-label={t("screenshots.delay.label")}
+            value={captureDelay}
+            disabled={captureInFlight}
+            onChange={(event) => changeCaptureDelay(Number(event.currentTarget.value))}
+          >
+            {CAPTURE_DELAYS.map((delay) => (
+              <option key={delay} value={delay}>
+                {delay === 0
+                  ? t("screenshots.delay.instant")
+                  : t("screenshots.delay.seconds", { count: delay })}
+              </option>
+            ))}
+          </select>
+        </label>
         <button
           type="button"
           className="screenshots-button"
@@ -316,7 +548,7 @@ export function ScreenshotsPage({ active }: { active: boolean }) {
           disabled={captureInFlight || !runtimeAvailable}
         >
           <AppWindow size={14} strokeWidth={1.9} aria-hidden="true" />
-          {t("screenshots.captureWindow")}
+          <span className="screenshots-capture-label">{t("screenshots.captureWindow")}</span>
         </button>
         <button
           type="button"
@@ -326,7 +558,7 @@ export function ScreenshotsPage({ active }: { active: boolean }) {
           disabled={captureInFlight || !runtimeAvailable}
         >
           <Monitor size={14} strokeWidth={1.9} aria-hidden="true" />
-          {t("screenshots.captureFullscreen")}
+          <span className="screenshots-capture-label">{t("screenshots.captureFullscreen")}</span>
         </button>
         <button
           type="button"
@@ -336,10 +568,18 @@ export function ScreenshotsPage({ active }: { active: boolean }) {
           disabled={captureInFlight || !runtimeAvailable}
         >
           <Scan size={14} strokeWidth={2} aria-hidden="true" />
-          {t("screenshots.captureRegion")}
+          <span className="screenshots-capture-label">{t("screenshots.captureRegion")}</span>
         </button>
+        </div>
       </ModuleHeader>
-      <div className="screenshots-content">
+      <div
+        className="screenshots-content"
+        onMouseDown={(event) => {
+          if (event.target === event.currentTarget) {
+            setSelectedIds(new Set());
+          }
+        }}
+      >
         {!runtimeAvailable ? (
           <p className="screenshots-hint">{t("screenshots.requiresRuntime")}</p>
         ) : listError ? (
@@ -357,6 +597,9 @@ export function ScreenshotsPage({ active }: { active: boolean }) {
             <LibraryView
               screenshots={screenshots}
               viewMode={viewMode}
+              groupBy={groupBy}
+              selectedIds={selectedIds}
+              onSelect={handleSelect}
               onOpen={(screenshot) => setViewerId(screenshot.id)}
               onItemMenu={openItemMenu}
             />
@@ -389,7 +632,7 @@ export function ScreenshotsPage({ active }: { active: boolean }) {
           onCopy={() => void copyScreenshot(viewerScreenshot)}
           onOpenExternal={() => openExternal(viewerScreenshot)}
           onReveal={() => revealScreenshot(viewerScreenshot)}
-          onDelete={() => setDeleteTarget(viewerScreenshot)}
+          onDelete={() => setDeleteTargets([viewerScreenshot])}
           onClose={() => setViewerId(null)}
         />
       ) : null}
@@ -401,11 +644,9 @@ export function ScreenshotsPage({ active }: { active: boolean }) {
             ariaLabel={t("screenshots.renameTitle")}
             footer={
               <Actions
-                cancel={
-                  <Btn onClick={() => setRenameTarget(null)}>{t("common.cancel")}</Btn>
-                }
+                cancel={<Btn onClick={() => setRenameTarget(null)}>{t("common.cancel")}</Btn>}
                 primary={
-                  <Btn kind="primary" onClick={() => void submitRename()}>
+                  <Btn kind="primary" icon="pencil" onClick={() => void submitRename()}>
                     {t("screenshots.menu.rename")}
                   </Btn>
                 }
@@ -428,24 +669,49 @@ export function ScreenshotsPage({ active }: { active: boolean }) {
           </Sheet>
         </DialogShell>
       ) : null}
-      {deleteTarget ? (
+      {deleteTargets.length > 0 ? (
         <ConfirmSheet
           tone="danger"
-          title={t("screenshots.deleteTitle")}
-          message={t("screenshots.deleteMessage", { name: deleteTarget.fileName })}
+          title={deleteTargets.length === 1
+            ? t("screenshots.deleteTitle")
+            : t("screenshots.batch.deleteTitle", { count: deleteTargets.length })}
+          message={deleteTargets.length === 1
+            ? t("screenshots.deleteMessage", { name: deleteTargets[0].fileName })
+            : t("screenshots.batch.deleteMessage", { count: deleteTargets.length })}
           confirmLabel={t("common.delete")}
           onConfirm={() => void confirmDelete()}
-          onCancel={() => setDeleteTarget(null)}
+          onCancel={() => setDeleteTargets([])}
         />
       ) : null}
-      {clearConfirmOpen ? (
-        <ConfirmSheet
-          tone="danger"
-          title={t("screenshots.clearAllTitle")}
-          message={t("screenshots.clearAllMessage")}
-          confirmLabel={t("screenshots.clearAllConfirm")}
-          onConfirm={() => void confirmClearAll()}
-          onCancel={() => setClearConfirmOpen(false)}
+      {resizeTargets.length > 0 ? (
+        <ResizeScreenshotsDialog
+          screenshots={resizeTargets}
+          onComplete={finishBatch}
+          onError={notifyError}
+          onClose={() => setResizeTargets([])}
+        />
+      ) : null}
+      {convertTargets.length > 0 ? (
+        <ConvertScreenshotsDialog
+          screenshots={convertTargets}
+          onComplete={finishBatch}
+          onError={notifyError}
+          onClose={() => setConvertTargets([])}
+        />
+      ) : null}
+      {editorTarget ? (
+        <ScreenshotEditor
+          screenshot={editorTarget}
+          onError={notifyError}
+          onClose={() => setEditorTarget(null)}
+          onSaved={(created) => {
+            useScreenshotsStore.getState().addMany([created]);
+            setSelectedIds(new Set([created.id]));
+            setEditorTarget(null);
+            showStatusBarNotice(t("screenshots.captureSaved", { name: created.fileName }), {
+              tone: "success",
+            });
+          }}
         />
       ) : null}
     </section>

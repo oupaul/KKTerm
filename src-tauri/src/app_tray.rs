@@ -217,14 +217,34 @@ fn build_menu<R: tauri::Runtime>(
         ("window", &snapshot.capture_window_label),
         ("fullscreen", &snapshot.capture_fullscreen_label),
     ];
+    let screenshot_settings = app
+        .try_state::<crate::storage::Storage>()
+        .and_then(|storage| storage.screenshot_settings().ok());
+    let capture_shortcuts = [
+        screenshot_settings.as_ref().and_then(|settings| {
+            settings
+                .region_shortcut_enabled()
+                .then_some(settings.region_shortcut())
+        }),
+        screenshot_settings.as_ref().and_then(|settings| {
+            settings
+                .window_shortcut_enabled()
+                .then_some(settings.window_shortcut())
+        }),
+        screenshot_settings.as_ref().and_then(|settings| {
+            settings
+                .fullscreen_shortcut_enabled()
+                .then_some(settings.fullscreen_shortcut())
+        }),
+    ];
     if capture_items.iter().all(|(_, label)| !label.is_empty()) {
-        for (mode, label) in capture_items {
+        for ((mode, label), shortcut) in capture_items.into_iter().zip(capture_shortcuts) {
             let item = MenuItem::with_id(
                 app,
                 format!("{CAPTURE_ITEM_PREFIX}{mode}"),
                 label,
                 true,
-                None::<&str>,
+                shortcut,
             )
             .map_err(|error| error.to_string())?;
             menu.append(&item).map_err(|error| error.to_string())?;

@@ -1,6 +1,6 @@
 # Screenshots Module — Plan
 
-Status: **Phase 1 implemented.** This document was the working plan for the
+Status: **Phase 2 core workflows implemented.** This document was the working plan for the
 top-level **Screenshots** Module (functionality mirroring third-party
 screenshot tools such as ShareX / PicPick / Snipping Tool) and now serves as
 its deep-dive reference. The shipped Phase 1 matches the plan below; the
@@ -70,24 +70,26 @@ greenfield frontend work plus modest backend additions.
   Modules (`showScreenshotsOnRail`), reorderable via `activityRailOrder`.
 - Default view: the **Library** — screenshots from the configured folder,
   sorted by capture date (newest first, the existing list order).
-- `ModuleHeader` layout: identity tile + title on the left; view-mode switcher,
-  sort toggle, and capture actions on the right.
+- The compact `ModuleHeader` owns the identity, library count, view switch,
+  sort/group controls, Refresh, Open folder, delayed capture selector, and
+  capture actions on one row so the library starts immediately below it.
+  Labels collapse responsively before controls are hidden.
 
 ### Library
 
-- Three view modes, persisted in `localStorage`:
+- Two view modes, persisted in `localStorage`:
   - **Thumbnails** (default) — responsive card grid of image previews with
     filename + relative date.
-  - **List** — compact rows: small thumbnail, filename, date.
   - **Details** — table: thumbnail, filename, kind (Region / Window /
     Fullscreen), dimensions, size, date.
 - Uses the existing pagination (`offset`/`limit`, "Load more" or
   infinite scroll) — no new virtualization dependency.
 - Row/card actions (native context menu via `src/lib/nativeContextMenu.ts`):
-  Open (viewer), Copy to clipboard, Open in default app, Reveal in
-  Explorer/Finder, Rename, Delete. Toolbar: Clear all (through `ConfirmSheet`),
-  Open folder, Refresh.
-- Click opens a full-size viewer overlay (dialog primitives; zoom-to-fit,
+  Open (viewer), Edit, Copy to clipboard, Open in default app, Reveal in
+  Explorer/Finder, Rename, Resize selected, Convert selected, and Delete.
+  The toolbar keeps icon-only Open folder and Refresh actions; bulk deletion is
+  selection-based instead of a destructive Clear all shortcut.
+- Double-click opens a full-size viewer overlay (dialog primitives; zoom-to-fit,
   prev/next, copy, delete). Reuse the Document Connection image-viewer pieces
   where practical rather than building a new viewer.
 - Empty state doubles as onboarding: explains capture buttons, tray items, and
@@ -95,7 +97,7 @@ greenfield frontend work plus modest backend additions.
 
 ### Capture actions
 
-Buttons in the Module header (and mirrored in tray + hotkeys):
+Buttons in the Module toolbar (and mirrored in tray + hotkeys):
 
 - **Capture region** — interactive region overlay.
 - **Capture window** — interactive window picker.
@@ -103,8 +105,8 @@ Buttons in the Module header (and mirrored in tray + hotkeys):
 - Each returns the saved `StoredScreenshot`; the Library prepends it,
   flash-highlights it, and a Status Bar notice confirms
   (`showStatusBarNotice`, per the notification invariant).
-- Optional **capture delay** (0/2/5/10 s) as a small dropdown next to the
-  capture buttons (simple `setTimeout` before invoking; ShareX/PicPick parity).
+- Optional **capture delay** (Instant/3/5/15/30/60 s) as a small dropdown next
+  to the capture buttons (a frontend delay before invoking the shared bridge).
 
 ### Tray integration
 
@@ -185,7 +187,7 @@ New source area `src/modules/screenshots/`:
 
 - `ScreenshotsPage.tsx` — Module shell (ModuleHeader, capture actions, view
   switcher).
-- `LibraryView.tsx` — thumbnails/list/details rendering + pagination.
+- `LibraryView.tsx` — thumbnails/details rendering + pagination.
 - `ScreenshotViewer.tsx` — full-size viewer dialog.
 - `state.ts` — small Zustand slice or local state: items, view mode, paging,
   capture-in-flight; subscribes to `kkterm://screenshot-captured`.
@@ -211,10 +213,9 @@ General Settings visibility toggle.
 - **Tutorial**: stable `data-tutorial-id`s, entries in
   `src/app/tutorialNavigationModel.ts`, matching `tutorial_highlight` metadata
   in `src-tauri/src/ai.rs` (`npm run check` validates).
-- **Dialogs/overlays**: viewer + confirm dialogs built from `src/app/ui/dialog`
-  primitives, portal to `document.body`; ConfirmSheet for Clear all; context
-  menus via `nativeContextMenu.ts` (the Module never overlaps RDP/URL native
-  surfaces, but the shared primitives keep it safe anyway).
+- **Dialogs/overlays**: viewer, batch sheets, editor, and confirm dialogs use
+  `src/app/ui/dialog` primitives and portal to `document.body`; deletion uses
+  ConfirmSheet and item commands use `nativeContextMenu.ts`.
 - **Notifications**: only `showStatusBarNotice` / `showStatusBarProgress`.
 - **No SQLite schema change** expected (settings-storage JSON only) — no
   migration audit needed unless that assumption breaks.
@@ -230,8 +231,8 @@ General Settings visibility toggle.
 | Clipboard images | existing DIB clipboard writers | keep (no `arboard` needed) |
 | Thumbnails / PNG encode | `image` crate | already a dep |
 | Reveal in Explorer | `tauri-plugin-opener` | already a dep |
-| Annotation editor (Phase 2) | `konva` | already a dep (Dashboard) |
-| Client-side resize (Phase 2) | `pica` | already a dep |
+| Annotation editor (Phase 2) | browser Canvas 2D | shipped without another rendering dependency |
+| Batch resize/convert (Phase 2) | backend `image` crate | serialized with the screenshot filesystem command family |
 | Folder watching (optional, later) | `notify` crate | deferred; v1 refreshes on focus/capture events |
 
 ## Phases
@@ -245,10 +246,12 @@ Success criteria: capture from button, tray (window hidden), and hotkey all
 land in the Library with a Status Bar notice; 500-image folder lists smoothly;
 `npm run check`, `npm run build`, `cargo check`, `cargo test` green.
 
-**Phase 2 — Editing & polish**
-Konva-based annotate/crop editor (arrows, rects, text, highlight, blur),
-after-capture action pipeline (auto-copy, open editor), capture delay presets,
-per-monitor fullscreen capture, filename pattern setting.
+**Phase 2 — Editing & polish (partially shipped)**
+The library now supports sort/group controls, multi-selection, non-destructive
+batch resize and PNG/JPEG conversion, capture delay presets, and a mini editor
+for arrows, rectangles, ellipses, text, and mosaic regions. Crop, highlight,
+after-capture editor automation, per-monitor fullscreen capture, and filename
+patterns remain later work.
 
 **Phase 3 — Parity stretch (each needs its own design pass)**
 macOS/Linux capture via `xcap`, scrolling capture, OCR, screen recording

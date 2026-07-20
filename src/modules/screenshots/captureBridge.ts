@@ -20,7 +20,11 @@ function isCaptureMode(value: unknown): value is ScreenshotCaptureMode {
   return value === "region" || value === "window" || value === "fullscreen";
 }
 
-export async function performScreenshotCapture(mode: ScreenshotCaptureMode, t: TFunction) {
+export async function performScreenshotCapture(
+  mode: ScreenshotCaptureMode,
+  t: TFunction,
+  delaySeconds = 0,
+) {
   const notify = useWorkspaceStore.getState().showStatusBarNotice;
   if (!isTauriRuntime()) {
     notify(t("screenshots.requiresRuntime"), { tone: "warning" });
@@ -31,6 +35,11 @@ export async function performScreenshotCapture(mode: ScreenshotCaptureMode, t: T
   }
   useScreenshotsStore.getState().setCaptureInFlight(true);
   try {
+    if (delaySeconds > 0) {
+      await new Promise<void>((resolve) => {
+        window.setTimeout(resolve, delaySeconds * 1000);
+      });
+    }
     const result =
       mode === "region"
         ? await invokeCommand("capture_interactive_region_screenshot_to_library", {
