@@ -1751,6 +1751,7 @@
       "hint": "Les images converties sont enregistrées en tant que nouvelles copies. Les originaux sont inchangés."
     },
     "editor": {
+      "pan": "Déplacer",
       "arrow": "Flèche",
       "rectangle": "Rectangle",
       "ellipse": "Ellipse",
@@ -1766,7 +1767,7 @@
       "bold": "Gras",
       "resizeDialog": "Redimensionner l'éditeur de capture",
       "unsavedTitle": "Enregistrer les modifications ?",
-      "unsavedMessage": "Vos annotations seront perdues si vous fermez sans enregistrer.",
+      "unsavedMessage": "Vos annotations seront perdues si vous continuez sans enregistrer.",
       "dontSave": "Ne pas enregistrer"
     },
     "menu": {

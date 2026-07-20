@@ -1751,6 +1751,7 @@
       "hint": "Hình ảnh được chuyển đổi sẽ được lưu dưới dạng bản sao mới. Bản gốc không thay đổi."
     },
     "editor": {
+      "pan": "Di chuyển",
       "arrow": "Mũi tên",
       "rectangle": "Hình chữ nhật",
       "ellipse": "hình elip",
@@ -1766,7 +1767,7 @@
       "bold": "Đậm",
       "resizeDialog": "Đổi kích thước trình sửa ảnh chụp màn hình",
       "unsavedTitle": "Lưu chỉnh sửa ảnh chụp màn hình?",
-      "unsavedMessage": "Chú thích sẽ bị mất nếu bạn đóng mà không lưu.",
+      "unsavedMessage": "Chú thích sẽ bị mất nếu bạn tiếp tục mà không lưu.",
       "dontSave": "Không lưu"
     },
     "menu": {

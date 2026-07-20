@@ -1751,6 +1751,7 @@
       "hint": "Las imágenes convertidas se guardan como copias nuevas. Los originales no han cambiado."
     },
     "editor": {
+      "pan": "Desplazar",
       "arrow": "Flecha",
       "rectangle": "Rectángulo",
       "ellipse": "Elipse",
@@ -1766,7 +1767,7 @@
       "bold": "Negrita",
       "resizeDialog": "Cambiar el tamaño del editor de capturas",
       "unsavedTitle": "¿Guardar los cambios de la captura?",
-      "unsavedMessage": "Las anotaciones se perderán si cierra sin guardar.",
+      "unsavedMessage": "Las anotaciones se perderán si continúa sin guardar.",
       "dontSave": "No guardar"
     },
     "menu": {

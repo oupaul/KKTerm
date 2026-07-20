@@ -1751,6 +1751,7 @@
       "hint": "Konvertierte Bilder werden als neue Kopien gespeichert. Die Originale sind unverändert."
     },
     "editor": {
+      "pan": "Verschieben",
       "arrow": "Pfeil",
       "rectangle": "Rechteck",
       "ellipse": "Ellipse",
@@ -1766,7 +1767,7 @@
       "bold": "Fett",
       "resizeDialog": "Screenshot-Editor skalieren",
       "unsavedTitle": "Screenshot-Änderungen speichern?",
-      "unsavedMessage": "Ihre Anmerkungen gehen verloren, wenn Sie ohne Speichern schließen.",
+      "unsavedMessage": "Ihre Anmerkungen gehen verloren, wenn Sie ohne Speichern fortfahren.",
       "dontSave": "Nicht speichern"
     },
     "menu": {

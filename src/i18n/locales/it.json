@@ -1751,6 +1751,7 @@
       "hint": "Le immagini convertite vengono salvate come nuove copie. Gli originali sono invariati."
     },
     "editor": {
+      "pan": "Sposta",
       "arrow": "Freccia",
       "rectangle": "Rettangolo",
       "ellipse": "Ellisse",
@@ -1766,7 +1767,7 @@
       "bold": "Grassetto",
       "resizeDialog": "Ridimensiona editor screenshot",
       "unsavedTitle": "Salvare le modifiche allo screenshot?",
-      "unsavedMessage": "Le annotazioni andranno perse se chiudi senza salvare.",
+      "unsavedMessage": "Le annotazioni andranno perse se continui senza salvare.",
       "dontSave": "Non salvare"
     },
     "menu": {

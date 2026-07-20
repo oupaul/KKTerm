@@ -75,6 +75,13 @@ test("unified screenshot dialog follows the Sheet contract and bounds image zoom
   assert.match(editor, /screenshots\.editor\.unsavedTitle/);
   assert.match(editor, /zClassName="kk-qc-subdialog"/);
   assert.match(editor, /onClose=\{requestClose\}/);
+  assert.match(editor, /type PendingEditorAction = "close" \| -1 \| 1/);
+  assert.match(editor, /function requestNavigation\(direction: -1 \| 1\)/);
+  assert.doesNotMatch(editor, /disabled=\{!hasPrevious \|\| dirty \|\| saving\}/);
+  assert.doesNotMatch(editor, /disabled=\{!hasNext \|\| dirty \|\| saving\}/);
+  assert.match(editor, /onCancel=\{\(\) => setPendingAction\(null\)\}/);
+  assert.match(page, /setViewerId\(navigationTarget\?\.id \?\? null\)/);
+  assert.match(styles, /screenshots-editor__canvas-wrap \{[\s\S]*?box-sizing: border-box/);
   assert.match(styles, /screenshots-editor__footer-meta[\s\S]*left: 50%/);
 });
 
@@ -94,4 +101,14 @@ test("macOS and Linux screenshot delivery use xcap-backed images and native imag
   assert.match(backend, /"interactive", Value::from\(true\)/);
   assert.match(backend, /arboard::ImageData/);
   assert.match(cargo, /arboard = \{ version = "3\.6\.1"/);
+});
+
+test("Windows native screenshot selection paints dimmed frames atomically", async () => {
+  const backend = await read("src-tauri/src/screenshot.rs");
+
+  assert.match(backend, /BeginBufferedPaint/);
+  assert.match(backend, /EndBufferedPaint/);
+  assert.match(backend, /AlphaBlend/);
+  assert.match(backend, /SourceConstantAlpha: SCREENSHOT_DIM_ALPHA/);
+  assert.match(backend, /if overlay\.hover != next_hover/);
 });

@@ -1751,6 +1751,7 @@
       "hint": "转换后的图像将另存为新副本。原件不变。"
     },
     "editor": {
+      "pan": "平移",
       "arrow": "箭",
       "rectangle": "长方形",
       "ellipse": "椭圆",
@@ -1766,7 +1767,7 @@
       "bold": "粗体",
       "resizeDialog": "调整截图编辑器大小",
       "unsavedTitle": "保存截图编辑内容？",
-      "unsavedMessage": "如果不保存就关闭，注释将会丢失。",
+      "unsavedMessage": "如果继续而不保存，注释将会丢失。",
       "dontSave": "不保存"
     },
     "menu": {

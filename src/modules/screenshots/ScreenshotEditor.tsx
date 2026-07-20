@@ -40,6 +40,7 @@ type EditorTool = "pan" | "arrow" | "rectangle" | "ellipse" | "text" | "mosaic";
 type Point = { x: number; y: number };
 type ZoomLevel = "fit" | number;
 type TextFont = "app" | "sans-serif" | "serif" | "monospace";
+type PendingEditorAction = "close" | -1 | 1;
 
 const ZOOM_STEPS = [25, 50, 75, 100, 125, 150, 200] as const;
 const EDITOR_TOOLS: Array<{
@@ -182,7 +183,7 @@ export function ScreenshotEditor({
   onOpenExternal: () => void;
   onReveal: () => void;
   onDelete: () => void;
-  onSaved: (created: StoredScreenshot) => void;
+  onSaved: (created: StoredScreenshot, navigateDirection?: -1 | 1) => void;
   onError: (error: unknown) => void;
   onClose: () => void;
 }) {
@@ -219,14 +220,14 @@ export function ScreenshotEditor({
   const [dirty, setDirty] = useState(false);
   const [undoCount, setUndoCount] = useState(0);
   const [saving, setSaving] = useState(false);
-  const [confirmingClose, setConfirmingClose] = useState(false);
+  const [pendingAction, setPendingAction] = useState<PendingEditorAction | null>(null);
 
   useEffect(() => {
     let disposed = false;
     setReady(false);
     setDirty(false);
     setSaving(false);
-    setConfirmingClose(false);
+    setPendingAction(null);
     setZoom("fit");
     setUndoCount(0);
     undoRef.current = [];
@@ -372,7 +373,7 @@ export function ScreenshotEditor({
     event.currentTarget.releasePointerCapture(event.pointerId);
   }
 
-  async function save() {
+  async function save(navigateDirection?: -1 | 1) {
     const canvas = canvasRef.current;
     if (!canvas || !ready || !dirty || saving) {
       return;
@@ -382,7 +383,7 @@ export function ScreenshotEditor({
       const created = await invokeCommand("save_edited_screenshot", {
         request: { id: screenshot.id, dataUrl: canvas.toDataURL("image/png") },
       });
-      onSaved(created);
+      onSaved(created, navigateDirection);
     } catch (error) {
       setSaving(false);
       onError(error);
@@ -394,9 +395,30 @@ export function ScreenshotEditor({
       return;
     }
     if (dirty) {
-      setConfirmingClose(true);
+      setPendingAction("close");
     } else {
       onClose();
+    }
+  }
+
+  function requestNavigation(direction: -1 | 1) {
+    if (saving) {
+      return;
+    }
+    if (dirty) {
+      setPendingAction(direction);
+    } else {
+      onNavigate(direction);
+    }
+  }
+
+  function continueWithoutSaving() {
+    const action = pendingAction;
+    setPendingAction(null);
+    if (action === "close") {
+      onClose();
+    } else if (action) {
+      onNavigate(action);
     }
   }
 
@@ -450,18 +472,21 @@ export function ScreenshotEditor({
           className="screenshots-editor__workspace"
           tabIndex={-1}
           onKeyDown={(event) => {
+            const editingText = event.target instanceof HTMLInputElement
+              || event.target instanceof HTMLTextAreaElement
+              || event.target instanceof HTMLSelectElement;
             if (event.key === "Escape" && !saving) {
               event.preventDefault();
               requestClose();
             } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") {
               event.preventDefault();
               undo();
-            } else if (!dirty && event.key === "ArrowLeft" && hasPrevious) {
+            } else if (!editingText && event.key === "ArrowLeft" && hasPrevious) {
               event.preventDefault();
-              onNavigate(-1);
-            } else if (!dirty && event.key === "ArrowRight" && hasNext) {
+              requestNavigation(-1);
+            } else if (!editingText && event.key === "ArrowRight" && hasNext) {
               event.preventDefault();
-              onNavigate(1);
+              requestNavigation(1);
             }
           }}
         >
@@ -471,8 +496,8 @@ export function ScreenshotEditor({
                 type="button"
                 title={t("common.back")}
                 aria-label={t("common.back")}
-                disabled={!hasPrevious || dirty || saving}
-                onClick={() => onNavigate(-1)}
+                disabled={!hasPrevious || saving}
+                onClick={() => requestNavigation(-1)}
               >
                 <ChevronLeft size={15} aria-hidden="true" />
               </button>
@@ -480,8 +505,8 @@ export function ScreenshotEditor({
                 type="button"
                 title={t("common.forward")}
                 aria-label={t("common.forward")}
-                disabled={!hasNext || dirty || saving}
-                onClick={() => onNavigate(1)}
+                disabled={!hasNext || saving}
+                onClick={() => requestNavigation(1)}
               >
                 <ChevronRight size={15} aria-hidden="true" />
               </button>
@@ -717,7 +742,7 @@ export function ScreenshotEditor({
           type="button"
         />
       </Sheet>
-      {confirmingClose ? (
+      {pendingAction !== null ? (
         <ConfirmSheet
           tone="warn"
           title={t("screenshots.editor.unsavedTitle")}
@@ -725,15 +750,16 @@ export function ScreenshotEditor({
           confirmLabel={t("common.save")}
           confirmIcon="check"
           extraLeft={
-            <Btn kind="danger" onClick={onClose}>
+            <Btn kind="danger" onClick={continueWithoutSaving}>
               {t("screenshots.editor.dontSave")}
             </Btn>
           }
           onConfirm={() => {
-            setConfirmingClose(false);
-            void save();
+            const navigateDirection = typeof pendingAction === "number" ? pendingAction : undefined;
+            setPendingAction(null);
+            void save(navigateDirection);
           }}
-          onCancel={() => setConfirmingClose(false)}
+          onCancel={() => setPendingAction(null)}
           zClassName="kk-qc-subdialog"
         />
       ) : null}

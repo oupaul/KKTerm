@@ -1751,6 +1751,7 @@
       "hint": "轉換後的影像會另存為新副本，原始檔案不會變更。"
     },
     "editor": {
+      "pan": "平移",
       "arrow": "箭頭",
       "rectangle": "矩形",
       "ellipse": "橢圓形",
@@ -1766,7 +1767,7 @@
       "bold": "粗體",
       "resizeDialog": "調整螢幕截圖編輯器大小",
       "unsavedTitle": "儲存螢幕截圖編輯內容？",
-      "unsavedMessage": "關閉而不儲存將會失去註解。",
+      "unsavedMessage": "繼續而不儲存將會失去註解。",
       "dontSave": "不儲存"
     },
     "menu": {

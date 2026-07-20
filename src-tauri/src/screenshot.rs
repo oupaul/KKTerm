@@ -2000,29 +2000,38 @@ mod platform {
     use windows_sys::Win32::{
         Foundation::{GlobalFree, HANDLE, HWND, LPARAM, LRESULT, RECT, WPARAM},
         Graphics::Gdi::{
-            BI_RGB, BITMAPINFO, BITMAPINFOHEADER, BeginPaint, BitBlt, CAPTUREBLT,
-            CreateCompatibleBitmap, CreateCompatibleDC, CreateSolidBrush, DIB_RGB_COLORS, DeleteDC,
-            DeleteObject, EndPaint, FillRect, FrameRect, GetDC, GetDIBits, HBITMAP, HBRUSH, HDC,
-            HGDIOBJ, InvalidateRect, PAINTSTRUCT, ReleaseDC, SRCCOPY, SelectObject,
-            SetDIBitsToDevice,
+            AC_SRC_OVER, AlphaBlend, BI_RGB, BITMAPINFO, BITMAPINFOHEADER, BLENDFUNCTION,
+            BeginPaint, BitBlt, CAPTUREBLT, CreateCompatibleBitmap, CreateCompatibleDC,
+            CreateSolidBrush, DIB_RGB_COLORS, DeleteDC, DeleteObject, EndPaint, FillRect,
+            FrameRect, GetDC, GetDIBits, HBITMAP, HBRUSH, HDC, HGDIOBJ, InvalidateRect,
+            PAINTSTRUCT, ReleaseDC, SRCCOPY, SelectObject, SetDIBitsToDevice,
         },
         System::{
             DataExchange::{CloseClipboard, EmptyClipboard, OpenClipboard, SetClipboardData},
             Memory::{GMEM_MOVEABLE, GlobalAlloc, GlobalLock, GlobalUnlock},
             Ole::CF_DIB,
         },
-        UI::WindowsAndMessaging::{
-            CREATESTRUCTW, CS_HREDRAW, CS_VREDRAW, CreateWindowExW, DefWindowProcW, DestroyWindow,
-            DispatchMessageW, EnumWindows, GWLP_USERDATA, GetMessageW, GetSystemMetrics,
-            GetWindowLongPtrW, GetWindowRect, IDC_CROSS, IsWindowVisible, LoadCursorW, MSG,
-            PostQuitMessage, RegisterClassW, SM_CXVIRTUALSCREEN, SM_CYVIRTUALSCREEN,
-            SM_XVIRTUALSCREEN, SM_YVIRTUALSCREEN, SW_SHOW, SetWindowLongPtrW, ShowWindow,
-            TranslateMessage, WM_CREATE, WM_DESTROY, WM_KEYDOWN, WM_LBUTTONDOWN, WM_LBUTTONUP,
-            WM_MOUSEMOVE, WM_NCCREATE, WM_PAINT, WNDCLASSW, WS_EX_TOOLWINDOW, WS_EX_TOPMOST,
-            WS_POPUP,
+        UI::{
+            Controls::{
+                BPBF_COMPATIBLEBITMAP, BeginBufferedPaint, BufferedPaintInit,
+                BufferedPaintUnInit, EndBufferedPaint,
+            },
+            WindowsAndMessaging::{
+                CREATESTRUCTW, CS_HREDRAW, CS_VREDRAW, CreateWindowExW, DefWindowProcW,
+                DestroyWindow, DispatchMessageW, EnumWindows, GWLP_USERDATA, GetMessageW,
+                GetSystemMetrics, GetWindowLongPtrW, GetWindowRect, IDC_CROSS, IsWindowVisible,
+                LoadCursorW, MSG, PostQuitMessage, RegisterClassW, SM_CXVIRTUALSCREEN,
+                SM_CYVIRTUALSCREEN, SM_XVIRTUALSCREEN, SM_YVIRTUALSCREEN, SW_SHOW,
+                SetWindowLongPtrW, ShowWindow, TranslateMessage, WM_CREATE, WM_DESTROY,
+                WM_KEYDOWN, WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MOUSEMOVE, WM_NCCREATE, WM_PAINT,
+                WNDCLASSW, WS_EX_TOOLWINDOW, WS_EX_TOPMOST, WS_POPUP,
+            },
         },
     };
 
+    const SCREENSHOT_DIM_ALPHA: u8 = 112;
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub struct ScreenRect {
         pub x: i32,
         pub y: i32,
@@ -2513,6 +2522,7 @@ mod platform {
                 return Err("failed to create screenshot selection overlay".to_string());
             }
 
+            let buffered_paint_initialized = BufferedPaintInit() >= 0;
             ShowWindow(hwnd, SW_SHOW);
             let _ = InvalidateRect(hwnd, ptr::null(), 1);
 
@@ -2520,6 +2530,9 @@ mod platform {
             while GetMessageW(&mut message, ptr::null_mut(), 0, 0) > 0 {
                 let _ = TranslateMessage(&message);
                 DispatchMessageW(&message);
+            }
+            if buffered_paint_initialized {
+                let _ = BufferedPaintUnInit();
             }
 
             Ok(overlay.result)
@@ -2550,20 +2563,31 @@ mod platform {
                 WM_CREATE => 0,
                 WM_MOUSEMOVE => {
                     let point = message_point(lparam, &overlay.screen);
+                    let mut should_repaint = false;
                     match &overlay.mode {
                         SelectionMode::Window { windows } => {
-                            overlay.hover = windows
+                            let next_hover = windows
                                 .iter()
                                 .find(|rect| rect_contains(rect, point.0, point.1))
                                 .map(copy_rect);
+                            if overlay.hover != next_hover {
+                                overlay.hover = next_hover;
+                                should_repaint = true;
+                            }
                         }
                         SelectionMode::Region => {
                             if overlay.drag_start.is_some() {
-                                overlay.drag_current = Some(point);
+                                let next_point = Some(point);
+                                if overlay.drag_current != next_point {
+                                    overlay.drag_current = next_point;
+                                    should_repaint = true;
+                                }
                             }
                         }
                     }
-                    let _ = InvalidateRect(hwnd, ptr::null(), 0);
+                    if should_repaint {
+                        let _ = InvalidateRect(hwnd, ptr::null(), 0);
+                    }
                     0
                 }
                 WM_LBUTTONDOWN => {
@@ -2579,6 +2603,7 @@ mod platform {
                             overlay.drag_start = Some(point);
                             overlay.drag_current = Some(point);
                             SetCapture(hwnd);
+                            let _ = InvalidateRect(hwnd, ptr::null(), 0);
                         }
                     }
                     0
@@ -2625,12 +2650,32 @@ mod platform {
                 return;
             }
 
+            let paint_bounds = RECT {
+                left: 0,
+                top: 0,
+                right: overlay.screen.width,
+                bottom: overlay.screen.height,
+            };
+            let mut buffered_dc = ptr::null_mut();
+            let paint_buffer = BeginBufferedPaint(
+                hdc,
+                &paint_bounds,
+                BPBF_COMPATIBLEBITMAP,
+                ptr::null(),
+                &mut buffered_dc,
+            );
+            let render_dc = if paint_buffer != 0 && !buffered_dc.is_null() {
+                buffered_dc
+            } else {
+                hdc
+            };
+
             let header_size = mem::size_of::<BITMAPINFOHEADER>();
             if overlay.dib.len() >= header_size {
                 let info = overlay.dib.as_ptr() as *const BITMAPINFO;
                 let bits = overlay.dib.as_ptr().add(header_size) as *const c_void;
                 let _ = SetDIBitsToDevice(
-                    hdc,
+                    render_dc,
                     0,
                     0,
                     overlay.screen.width as u32,
@@ -2655,15 +2700,19 @@ mod platform {
             let selected = selected
                 .as_ref()
                 .map(|rect| clamp_rect_to_screen(rect, &overlay.screen));
-            dim_outside_rect(hdc, &overlay.screen, selected.as_ref());
+            dim_outside_rect(render_dc, &overlay.screen, selected.as_ref());
             if let Some(rect) = selected {
                 frame_rect(
-                    hdc,
+                    render_dc,
                     &screen_to_overlay_rect(&rect, &overlay.screen),
                     0x00ff_ffff,
                 );
                 let inner = inset_rect(&screen_to_overlay_rect(&rect, &overlay.screen), 1);
-                frame_rect(hdc, &inner, 0x0000_78ff);
+                frame_rect(render_dc, &inner, 0x0000_78ff);
+            }
+
+            if paint_buffer != 0 {
+                let _ = EndBufferedPaint(paint_buffer, 1);
             }
 
             EndPaint(hwnd, &paint);
@@ -2672,15 +2721,45 @@ mod platform {
 
     unsafe fn dim_outside_rect(hdc: HDC, screen: &ScreenRect, selected: Option<&ScreenRect>) {
         unsafe {
-            let brush = Brush::new(0x0000_0000);
             let Some(selected) = selected else {
                 return;
             };
 
+            let Ok(dim_dc) = MemoryDc::new(hdc) else {
+                return;
+            };
+            let Ok(dim_bitmap) = Bitmap::new(hdc, 1, 1) else {
+                return;
+            };
+            let previous = SelectObject(dim_dc.0, dim_bitmap.0 as HGDIOBJ);
+            if previous.is_null() {
+                return;
+            }
+            let pixel = RECT {
+                left: 0,
+                top: 0,
+                right: 1,
+                bottom: 1,
+            };
+            let black = Brush::new(0x0000_0000);
+            let _ = FillRect(dim_dc.0, &pixel, black.0);
+            let blend = BLENDFUNCTION {
+                BlendOp: AC_SRC_OVER as u8,
+                BlendFlags: 0,
+                SourceConstantAlpha: SCREENSHOT_DIM_ALPHA,
+                AlphaFormat: 0,
+            };
             let selected = screen_to_overlay_rect(selected, screen);
             for rect in outside_rects(screen.width, screen.height, &selected) {
-                let _ = FillRect(hdc, &rect, brush.0);
+                let width = rect.right - rect.left;
+                let height = rect.bottom - rect.top;
+                if width > 0 && height > 0 {
+                    let _ = AlphaBlend(
+                        hdc, rect.left, rect.top, width, height, dim_dc.0, 0, 0, 1, 1, blend,
+                    );
+                }
             }
+            let _ = SelectObject(dim_dc.0, previous);
         }
     }
 

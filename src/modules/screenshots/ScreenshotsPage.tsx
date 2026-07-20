@@ -633,10 +633,13 @@ export function ScreenshotsPage({ active }: { active: boolean }) {
           onDelete={() => setDeleteTargets([viewerScreenshot])}
           onError={notifyError}
           onClose={() => setViewerId(null)}
-          onSaved={(created) => {
+          onSaved={(created, navigateDirection) => {
+            const navigationTarget = navigateDirection
+              ? screenshots[viewerIndex + navigateDirection]
+              : null;
             useScreenshotsStore.getState().addMany([created]);
-            setSelectedIds(new Set([created.id]));
-            setViewerId(null);
+            setSelectedIds(new Set([navigationTarget?.id ?? created.id]));
+            setViewerId(navigationTarget?.id ?? null);
             showStatusBarNotice(t("screenshots.captureSaved", { name: created.fileName }), {
               tone: "success",
             });

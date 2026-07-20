@@ -1751,6 +1751,7 @@
       "hint": "Converted images are saved as new copies. The originals are unchanged."
     },
     "editor": {
+      "pan": "Pan",
       "arrow": "Arrow",
       "rectangle": "Rectangle",
       "ellipse": "Ellipse",
@@ -1766,7 +1767,7 @@
       "bold": "Bold",
       "resizeDialog": "Resize screenshot editor",
       "unsavedTitle": "Save screenshot edits?",
-      "unsavedMessage": "Your annotations will be lost if you close without saving.",
+      "unsavedMessage": "Your annotations will be lost if you continue without saving.",
       "dontSave": "Don't save"
     },
     "menu": {

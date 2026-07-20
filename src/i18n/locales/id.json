@@ -1751,6 +1751,7 @@
       "hint": "Gambar yang dikonversi disimpan sebagai salinan baru. Dokumen asli tidak berubah."
     },
     "editor": {
+      "pan": "Geser",
       "arrow": "Anak panah",
       "rectangle": "Persegi panjang",
       "ellipse": "Elips",
@@ -1766,7 +1767,7 @@
       "bold": "Tebal",
       "resizeDialog": "Ubah ukuran editor tangkapan layar",
       "unsavedTitle": "Simpan editan tangkapan layar?",
-      "unsavedMessage": "Anotasi akan hilang jika Anda menutup tanpa menyimpan.",
+      "unsavedMessage": "Anotasi akan hilang jika Anda melanjutkan tanpa menyimpan.",
       "dontSave": "Jangan simpan"
     },
     "menu": {

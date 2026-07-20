@@ -721,6 +721,7 @@
 
 .screenshots-editor__canvas-wrap {
   display: grid;
+  box-sizing: border-box;
   min-width: 100%;
   min-height: 100%;
   place-items: center;
