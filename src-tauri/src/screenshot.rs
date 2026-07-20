@@ -74,6 +74,69 @@ pub struct LibrarySaveOptions {
     pub format: String,
     pub quality: u8,
     pub capture_mode: String,
+    pub border_enabled: bool,
+    pub border_width: u32,
+    pub border_style: String,
+    pub border_color: String,
+    pub include_cursor: bool,
+}
+
+/// Parses a `#RRGGBB` border color, falling back to black.
+fn parse_border_color(value: &str) -> (u8, u8, u8) {
+    let hex = value.trim().trim_start_matches('#');
+    if hex.len() == 6 {
+        if let Ok(rgb) = u32::from_str_radix(hex, 16) {
+            return (
+                ((rgb >> 16) & 0xFF) as u8,
+                ((rgb >> 8) & 0xFF) as u8,
+                (rgb & 0xFF) as u8,
+            );
+        }
+    }
+    (0, 0, 0)
+}
+
+/// Draws an inset border into a 4-bytes-per-pixel buffer. `color` is given in
+/// the buffer's own channel order, so the same routine serves RGBA and BGRA.
+fn apply_border_pixels(
+    pixels: &mut [u8],
+    width: u32,
+    height: u32,
+    thickness: u32,
+    style: &str,
+    color: [u8; 4],
+) {
+    if width == 0 || height == 0 || pixels.len() < width as usize * height as usize * 4 {
+        return;
+    }
+    let t = thickness
+        .max(1)
+        .min(width.div_ceil(2))
+        .min(height.div_ceil(2));
+    let (dash_on, dash_off) = match style {
+        "dashed" => ((t * 4).max(8), (t * 2).max(4)),
+        "dotted" => (t.max(2), t.max(2)),
+        _ => (1, 0),
+    };
+    let on = |along: u32| dash_off == 0 || along % (dash_on + dash_off) < dash_on;
+    let mut set = |x: u32, y: u32| {
+        let index = (y as usize * width as usize + x as usize) * 4;
+        pixels[index..index + 4].copy_from_slice(&color);
+    };
+    for y in (0..t.min(height)).chain(height.saturating_sub(t)..height) {
+        for x in 0..width {
+            if on(x) {
+                set(x, y);
+            }
+        }
+    }
+    for y in t.min(height)..height.saturating_sub(t) {
+        for x in (0..t.min(width)).chain(width.saturating_sub(t)..width) {
+            if on(y) {
+                set(x, y);
+            }
+        }
+    }
 }
 
 #[derive(Deserialize)]
@@ -211,13 +274,16 @@ pub fn capture_rect_to_library(
     use_directx: bool,
 ) -> Result<ScreenshotCaptureResult, String> {
     let target = capture_target(app, request)?;
-    let dib = platform::capture_screen_rect_to_dib(
+    let mut dib = platform::capture_screen_rect_to_dib(
         target.x,
         target.y,
         target.width,
         target.height,
         use_directx,
     )?;
+    if options.include_cursor {
+        platform::draw_cursor_on_dib(&mut dib, target.x, target.y);
+    }
     deliver_dib(
         app,
         &dib,
@@ -237,13 +303,16 @@ pub fn capture_fullscreen_to_library(
 ) -> Result<ScreenshotCaptureResult, String> {
     let _guard = MinimizedCaptureWindow::new(app)?;
     let target = platform::virtual_screen_rect();
-    let dib = platform::capture_screen_rect_to_dib(
+    let mut dib = platform::capture_screen_rect_to_dib(
         target.x,
         target.y,
         target.width,
         target.height,
         use_directx,
     )?;
+    if options.include_cursor {
+        platform::draw_cursor_on_dib(&mut dib, target.x, target.y);
+    }
     deliver_dib(
         app,
         &dib,
@@ -263,13 +332,16 @@ pub fn capture_active_window_to_library(
 ) -> Result<ScreenshotCaptureResult, String> {
     let _guard = MinimizedCaptureWindow::new(app)?;
     let screen = platform::virtual_screen_rect();
-    let screen_dib = platform::capture_screen_rect_to_dib(
+    let mut screen_dib = platform::capture_screen_rect_to_dib(
         screen.x,
         screen.y,
         screen.width,
         screen.height,
         use_directx,
     )?;
+    if options.include_cursor {
+        platform::draw_cursor_on_dib(&mut screen_dib, screen.x, screen.y);
+    }
     let windows = platform::enumerate_window_rects(&screen);
     let target = platform::select_window_rect(&screen_dib, &screen, windows)?
         .ok_or_else(|| "screenshot capture canceled".to_string())?;
@@ -293,13 +365,16 @@ pub fn capture_interactive_region_to_library(
 ) -> Result<ScreenshotCaptureResult, String> {
     let _guard = MinimizedCaptureWindow::new(app)?;
     let screen = platform::virtual_screen_rect();
-    let screen_dib = platform::capture_screen_rect_to_dib(
+    let mut screen_dib = platform::capture_screen_rect_to_dib(
         screen.x,
         screen.y,
         screen.width,
         screen.height,
         use_directx,
     )?;
+    if options.include_cursor {
+        platform::draw_cursor_on_dib(&mut screen_dib, screen.x, screen.y);
+    }
     let target = platform::select_region_rect(&screen_dib, &screen)?
         .ok_or_else(|| "screenshot capture canceled".to_string())?;
     let dib = platform::crop_dib(&screen_dib, screen.width, screen.height, &screen, &target)?;
@@ -624,6 +699,23 @@ fn deliver_rgba(
     kind: String,
     options: &LibrarySaveOptions,
 ) -> Result<ScreenshotCaptureResult, String> {
+    let bordered;
+    let rgba = if options.border_enabled {
+        let (r, g, b) = parse_border_color(&options.border_color);
+        let mut copy = rgba.to_vec();
+        apply_border_pixels(
+            &mut copy,
+            width,
+            height,
+            options.border_width,
+            &options.border_style,
+            [r, g, b, 0xFF],
+        );
+        bordered = copy;
+        &bordered[..]
+    } else {
+        rgba
+    };
     let copy_to_clipboard = options.capture_mode != "folder";
     let save_to_folder = options.capture_mode != "clipboard";
 
@@ -1669,6 +1761,22 @@ fn deliver_dib(
     kind: String,
     options: &LibrarySaveOptions,
 ) -> Result<ScreenshotCaptureResult, String> {
+    let bordered;
+    let dib = if options.border_enabled {
+        let mut copy = dib.to_vec();
+        platform::apply_border_to_dib(
+            &mut copy,
+            width,
+            height,
+            options.border_width,
+            &options.border_style,
+            parse_border_color(&options.border_color),
+        );
+        bordered = copy;
+        &bordered[..]
+    } else {
+        dib
+    };
     let copy_to_clipboard = options.capture_mode != "folder";
     let save_to_folder = options.capture_mode != "clipboard";
 
@@ -2104,9 +2212,9 @@ mod platform {
         Graphics::Gdi::{
             AC_SRC_OVER, AlphaBlend, BI_RGB, BITMAPINFO, BITMAPINFOHEADER, BLENDFUNCTION,
             BeginPaint, BitBlt, CAPTUREBLT, CreateCompatibleBitmap, CreateCompatibleDC,
-            CreateSolidBrush, DIB_RGB_COLORS, DeleteDC, DeleteObject, EndPaint, FillRect,
-            FrameRect, GetDC, GetDIBits, HBITMAP, HBRUSH, HDC, HGDIOBJ, InvalidateRect,
-            PAINTSTRUCT, ReleaseDC, SRCCOPY, SelectObject, SetDIBitsToDevice,
+            CreateDIBSection, CreateSolidBrush, DIB_RGB_COLORS, DeleteDC, DeleteObject, EndPaint,
+            FillRect, FrameRect, GdiFlush, GetDC, GetDIBits, HBITMAP, HBRUSH, HDC, HGDIOBJ,
+            InvalidateRect, PAINTSTRUCT, ReleaseDC, SRCCOPY, SelectObject, SetDIBitsToDevice,
         },
         System::{
             DataExchange::{CloseClipboard, EmptyClipboard, OpenClipboard, SetClipboardData},
@@ -2403,6 +2511,127 @@ mod platform {
         }
         Ok(dib)
     }
+
+    /// Draws the configured inset border into a captured DIB's BGRA pixels.
+    pub fn apply_border_to_dib(
+        dib: &mut [u8],
+        width: u32,
+        height: u32,
+        thickness: u32,
+        style: &str,
+        rgb: (u8, u8, u8),
+    ) {
+        let header_size = mem::size_of::<BITMAPINFOHEADER>();
+        if dib.len() < header_size {
+            return;
+        }
+        super::apply_border_pixels(
+            &mut dib[header_size..],
+            width,
+            height,
+            thickness,
+            style,
+            [rgb.2, rgb.1, rgb.0, 0xFF],
+        );
+    }
+
+    /// Draws the current mouse cursor into a captured screen DIB at its
+    /// on-screen position. Best effort: any failure leaves the capture as-is.
+    pub fn draw_cursor_on_dib(dib: &mut [u8], origin_x: i32, origin_y: i32) {
+        use windows_sys::Win32::UI::WindowsAndMessaging::{
+            CURSOR_SHOWING, CURSORINFO, DI_NORMAL, DrawIconEx, GetCursorInfo, GetIconInfo,
+            ICONINFO,
+        };
+
+        let header_size = mem::size_of::<BITMAPINFOHEADER>();
+        if dib.len() < header_size {
+            return;
+        }
+        unsafe {
+            let (width, height) = {
+                let header = dib.as_ptr() as *const BITMAPINFOHEADER;
+                ((*header).biWidth, -(*header).biHeight)
+            };
+            if width <= 0 || height <= 0 {
+                return;
+            }
+            let image_size = width as usize * height as usize * 4;
+            if dib.len() < header_size + image_size {
+                return;
+            }
+
+            let mut cursor: CURSORINFO = mem::zeroed();
+            cursor.cbSize = mem::size_of::<CURSORINFO>() as u32;
+            if GetCursorInfo(&mut cursor) == 0 || (cursor.flags & CURSOR_SHOWING) == 0 {
+                return;
+            }
+            let mut icon: ICONINFO = mem::zeroed();
+            if GetIconInfo(cursor.hCursor, &mut icon) == 0 {
+                return;
+            }
+            let hotspot_x = icon.xHotspot as i32;
+            let hotspot_y = icon.yHotspot as i32;
+            if !icon.hbmMask.is_null() {
+                let _ = DeleteObject(icon.hbmMask as HGDIOBJ);
+            }
+            if !icon.hbmColor.is_null() {
+                let _ = DeleteObject(icon.hbmColor as HGDIOBJ);
+            }
+
+            let Ok(screen_dc) = ScreenDc::new() else {
+                return;
+            };
+            let Ok(memory_dc) = MemoryDc::new(screen_dc.0) else {
+                return;
+            };
+            let mut info: BITMAPINFO = mem::zeroed();
+            info.bmiHeader.biSize = mem::size_of::<BITMAPINFOHEADER>() as u32;
+            info.bmiHeader.biWidth = width;
+            info.bmiHeader.biHeight = -height;
+            info.bmiHeader.biPlanes = 1;
+            info.bmiHeader.biBitCount = 32;
+            info.bmiHeader.biCompression = BI_RGB;
+            let mut bits: *mut c_void = ptr::null_mut();
+            let section = CreateDIBSection(
+                memory_dc.0,
+                &info,
+                DIB_RGB_COLORS,
+                &mut bits,
+                ptr::null_mut(),
+                0,
+            );
+            if section.is_null() || bits.is_null() {
+                if !section.is_null() {
+                    let _ = DeleteObject(section as HGDIOBJ);
+                }
+                return;
+            }
+            let section = Bitmap(section);
+            let previous = SelectObject(memory_dc.0, section.0 as HGDIOBJ);
+            if previous.is_null() {
+                return;
+            }
+            let pixels = std::slice::from_raw_parts_mut(bits as *mut u8, image_size);
+            pixels.copy_from_slice(&dib[header_size..header_size + image_size]);
+            let drawn = DrawIconEx(
+                memory_dc.0,
+                cursor.ptScreenPos.x - hotspot_x - origin_x,
+                cursor.ptScreenPos.y - hotspot_y - origin_y,
+                cursor.hCursor,
+                0,
+                0,
+                0,
+                ptr::null_mut(),
+                DI_NORMAL,
+            );
+            let _ = GdiFlush();
+            if drawn != 0 {
+                dib[header_size..header_size + image_size].copy_from_slice(pixels);
+            }
+            let _ = SelectObject(memory_dc.0, previous);
+        }
+    }
+
     pub struct JpegResult {
         pub data_url: String,
         pub width: u32,
@@ -3153,6 +3382,49 @@ mod tests {
         }
         assert_eq!(gif_speed_for_quality(1), 30);
         assert_eq!(gif_speed_for_quality(100), 1);
+    }
+
+    #[test]
+    fn apply_border_pixels_draws_inset_solid_border() {
+        let (width, height) = (5u32, 4u32);
+        let mut pixels = vec![9u8; (width * height * 4) as usize];
+        apply_border_pixels(&mut pixels, width, height, 1, "solid", [1, 2, 3, 255]);
+
+        let pixel = |x: u32, y: u32| {
+            let index = ((y * width + x) * 4) as usize;
+            &pixels[index..index + 4]
+        };
+        assert_eq!(pixel(0, 0), &[1, 2, 3, 255]);
+        assert_eq!(pixel(4, 0), &[1, 2, 3, 255]);
+        assert_eq!(pixel(0, 3), &[1, 2, 3, 255]);
+        assert_eq!(pixel(4, 3), &[1, 2, 3, 255]);
+        assert_eq!(pixel(2, 0), &[1, 2, 3, 255]);
+        assert_eq!(pixel(0, 2), &[1, 2, 3, 255]);
+        // The interior stays untouched and the image size does not change.
+        assert_eq!(pixel(2, 2), &[9, 9, 9, 9]);
+        assert_eq!(pixels.len(), (width * height * 4) as usize);
+    }
+
+    #[test]
+    fn apply_border_pixels_clamps_thickness_and_skips_gaps_when_dotted() {
+        // A thickness beyond half the image must not panic or over-run.
+        let mut tiny = vec![0u8; 3 * 3 * 4];
+        apply_border_pixels(&mut tiny, 3, 3, 64, "solid", [255, 255, 255, 255]);
+        assert!(tiny.chunks_exact(4).all(|pixel| pixel == [255, 255, 255, 255]));
+
+        // A dotted border leaves gaps along the top edge.
+        let mut dotted = vec![0u8; 16 * 4 * 4];
+        apply_border_pixels(&mut dotted, 16, 4, 1, "dotted", [255, 255, 255, 255]);
+        let top: Vec<u8> = (0..16u32).map(|x| dotted[(x * 4) as usize]).collect();
+        assert!(top.contains(&255));
+        assert!(top.contains(&0));
+    }
+
+    #[test]
+    fn parse_border_color_reads_hex_and_falls_back_to_black() {
+        assert_eq!(parse_border_color("#ff8001"), (255, 128, 1));
+        assert_eq!(parse_border_color("00ff00"), (0, 255, 0));
+        assert_eq!(parse_border_color("not-a-color"), (0, 0, 0));
     }
 
     #[test]

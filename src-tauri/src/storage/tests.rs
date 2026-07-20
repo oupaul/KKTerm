@@ -20,6 +20,11 @@ fn screenshot_settings_upgrade_legacy_jpeg_quality_and_default_to_both() {
 
     assert_eq!(settings.quality(), 74);
     assert_eq!(settings.capture_mode(), "both");
+    assert!(settings.border_enabled());
+    assert_eq!(settings.border_width(), 1);
+    assert_eq!(settings.border_style(), "solid");
+    assert_eq!(settings.border_color(), "#000000");
+    assert!(!settings.include_cursor());
     let serialized = serde_json::to_value(settings).expect("serialize screenshot settings");
     assert_eq!(serialized["quality"], 74);
     assert!(serialized.get("jpegQuality").is_none());

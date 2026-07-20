@@ -39,6 +39,33 @@ test("screenshot settings expose capture delivery and universal quality", async 
   assert.match(backend, /fn default_screenshot_capture_mode\(\)[\s\S]*"both"\.to_string\(\)/);
 });
 
+test("screenshot border and cursor options are wired from settings to capture", async () => {
+  const [settings, draft, backend, capture] = await Promise.all([
+    read("src/modules/settings/ScreenshotsSettings.tsx"),
+    read("src/modules/settings/screenshotSettingsDraft.ts"),
+    read("src-tauri/src/storage.rs"),
+    read("src-tauri/src/screenshot.rs"),
+  ]);
+
+  assert.match(settings, /settings\.screenshotsBorderEnabled/);
+  assert.match(settings, /settings\.screenshotsBorderWidth/);
+  assert.match(settings, /settings\.screenshotsBorderStyle/);
+  assert.match(settings, /type=\"color\"/);
+  assert.match(settings, /settings\.screenshotsIncludeCursor/);
+  assert.match(settings, /isWindowsPlatform\(\) \? \(\s*<div className=\"settings-toggle-list\">/);
+  assert.match(draft, /borderEnabled: true/);
+  assert.match(draft, /borderWidth: 1/);
+  assert.match(draft, /borderStyle: "solid"/);
+  assert.match(draft, /borderColor: "#000000"/);
+  assert.match(draft, /includeCursor: false/);
+  assert.match(backend, /fn default_screenshot_border_enabled\(\)[\s\S]*?true/);
+  assert.match(backend, /border style must be solid, dashed, or dotted/);
+  assert.match(backend, /border color must be a #RRGGBB hex color/);
+  assert.match(capture, /if options\.border_enabled/);
+  assert.match(capture, /if options\.include_cursor/);
+  assert.match(capture, /fn draw_cursor_on_dib/);
+});
+
 test("capture delivery returns optional library data and clipboard state", async () => {
   const [backend, bridge] = await Promise.all([
     read("src-tauri/src/screenshot.rs"),

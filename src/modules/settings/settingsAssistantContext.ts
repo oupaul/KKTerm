@@ -401,6 +401,16 @@ const SETTINGS_SECTIONS: Record<SettingsSectionId, SettingsSectionSummary> = {
         description: "Capture delivery: Screenshots folder, clipboard, or both (default).",
       },
       {
+        key: "settings.screenshotsIncludeCursor",
+        description:
+          "Windows-only toggle that draws the mouse pointer into new captures; off by default.",
+      },
+      {
+        key: "settings.screenshotsBorder",
+        description:
+          "Auto border after capture: on by default, drawn inset with configurable width (1–64 px), solid/dashed/dotted style, and color (default 1 px solid black).",
+      },
+      {
         key: "settings.useDirectxScreenCapture",
         description: "DXGI Desktop Duplication screenshot acceleration toggle.",
         tutorialTargetId: "settings.useDirectxScreenCapture",
