@@ -5,7 +5,15 @@ const VERSION_TAG = /^v(\d+\.\d+\.\d+)$/;
 // these must never replace the public "current" manifest, or updater clients
 // on the platforms that haven't landed yet will find a version bump with no
 // matching platform entry and hard-fail instead of just not updating yet.
-export const REQUIRED_PLATFORMS = ["windows-x64", "windows-arm64", "darwin-aarch64", "darwin-x86_64", "linux-x86_64"];
+export const REQUIRED_PLATFORMS = [
+  "windows-x64",
+  "windows-arm64",
+  "windows-x64-portable",
+  "windows-arm64-portable",
+  "darwin-aarch64",
+  "darwin-x86_64",
+  "linux-x86_64",
+];
 
 export function missingRequiredPlatforms(manifest) {
   return REQUIRED_PLATFORMS.filter((platform) => !manifest.platforms[platform]);
@@ -21,7 +29,7 @@ export function recognizedReleaseAssets(release) {
   const version = versionFromTag(release.tag_name);
   const escaped = version.replaceAll(".", "\\.");
   const pattern = new RegExp(
-    `^kkterm-${escaped}-(?:windows-(?:x64|arm64)-setup\\.exe(?:\\.sha256)?|macos-universal\\.(?:dmg(?:\\.sha256)?|app\\.tar\\.gz(?:\\.sig)?)|linux-x86_64\\.AppImage(?:\\.(?:sha256|sig))?)$`,
+    `^kkterm-${escaped}-(?:windows-(?:x64|arm64)-(?:setup\\.exe|portable\\.zip)(?:\\.sha256)?|macos-universal\\.(?:dmg(?:\\.sha256)?|app\\.tar\\.gz(?:\\.sig)?)|linux-x86_64\\.AppImage(?:\\.(?:sha256|sig))?)$`,
   );
   return (release.assets ?? []).filter((asset) => pattern.test(asset.name ?? ""));
 }
@@ -47,6 +55,15 @@ export function buildReleaseManifest(release, baseUrl) {
       platforms[`windows-${arch}`] = {
         url: assetUrl(installer),
         checksum_url: assetUrl(checksum),
+      };
+    }
+
+    const portable = `kkterm-${version}-windows-${arch}-portable.zip`;
+    const portableChecksum = `${portable}.sha256`;
+    if (completePair(names, portable, portableChecksum)) {
+      platforms[`windows-${arch}-portable`] = {
+        url: assetUrl(portable),
+        checksum_url: assetUrl(portableChecksum),
       };
     }
   }

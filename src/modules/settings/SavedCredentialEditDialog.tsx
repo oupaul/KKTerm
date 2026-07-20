@@ -84,6 +84,7 @@ export function SavedCredentialEditDialog({
             credentialId: credential.id,
             label: draft.label,
             username: draft.username,
+            host: draft.host,
             secret: draft.password || undefined,
           },
         });

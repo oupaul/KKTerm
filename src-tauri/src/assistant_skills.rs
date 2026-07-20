@@ -27,10 +27,7 @@ pub struct AssistantSkillSummary {
 }
 
 pub fn assistant_skills_root(app: &AppHandle) -> Result<PathBuf, String> {
-    let app_data_dir = app
-        .path()
-        .app_data_dir()
-        .map_err(|error| format!("failed to resolve app data folder: {error}"))?;
+    let app_data_dir = crate::app_paths::data_dir(app)?;
     Ok(app_data_dir.join("assistant-skills"))
 }
 

@@ -2,7 +2,7 @@
 
 ## AI grep hints
 
-- Keys: `app.connections`, `app.settings`, `app.aiAssistant`, `app.dontSleep`, `app.dontSleepEnabledTooltip`, `app.dontSleepDisabledTooltip`, `app.trayExit`, `settings.dontSleepForegroundOnly`
+- Keys: `app.connections`, `app.settings`, `app.aiAssistant`, `app.dontSleep`, `app.dontSleepEnabledTooltip`, `app.dontSleepDisabledTooltip`, `app.trayExit`, `settings.dontSleepForegroundOnly`, `settings.portableOnboardingTitle`, `settings.portableOnboardingImport`, `settings.portableOnboardingSetup`
 - Topics: first launch, what KKTerm is, system tray, "Don't Sleep" mode, primary navigation, restoring the last Module
 - Synonyms users may type: "open the app", "left bar icons", "tray icon", "keep awake", "prevent sleep", "why did it open dashboard", "last page", "remember module"
 
@@ -13,6 +13,12 @@ KKTerm is a local-first Windows desktop workspace for terminal, SSH, SFTP, embed
 See `CONTEXT.md` for the canonical domain terms — **Connection**, **Quick Connect**, **Session**, **Tab**, **Pane**, **Dashboard View**, **Widget Instance**.
 
 ## First launch
+
+Windows portable releases are ZIP archives. Extract the complete archive to a writable local folder or removable drive and launch `KKTerm.exe`; network shares and running from inside the ZIP are unsupported. The shipped `kkterm-portable.marker` selects portable mode and must stay beside the executable. KKTerm creates a sibling `data` folder on first launch. If Evergreen WebView2 is missing, startup offers the Microsoft runtime download because a ZIP cannot install that prerequisite.
+
+An installed Windows copy can also create a launch-ready portable folder from **Settings → General → Portable Install** using `settings.portableCreatorAction`. The wizard copies the current executable and bundled resources, then creates a portable database from the selected non-secret categories. The destination must be an empty writable local/removable folder; saved passwords are not copied.
+
+Portable first launch shows the skippable dialog `settings.portableOnboardingTitle`. `settings.portableOnboardingSetup` configures the encrypted SQLite secret store; `settings.portableOnboardingImport` opens the existing backup import flow. Skipping credential setup is safe: KKTerm asks for a master password only when a feature first needs an encrypted secret. See chapters 15 and 17 for mode-specific Settings and data rules.
 
 On first launch KKTerm seeds:
 

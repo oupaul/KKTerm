@@ -37,7 +37,7 @@ test("release script stages Cargo.lock with Rust version files", () => {
   assert.match(script, /"src-tauri\/Cargo\.toml", "src-tauri\/Cargo\.lock"/);
 });
 
-test("release script can also build and publish the ARM64 installer", () => {
+test("release script can also build and publish ARM64 installer and portable assets", () => {
   // Opt-in switch keeps the default x64-only release unchanged.
   assert.match(script, /\[switch\]\$IncludeArm64/);
   // ARM64 build provisions its toolchain via the dedicated packaging script.
@@ -48,10 +48,30 @@ test("release script can also build and publish the ARM64 installer", () => {
   // ARM64 assets follow the windows-arm64 naming convention and are appended
   // to the release asset list only when requested.
   assert.match(script, /kkterm-\$NextVersion-\$Arm64Triple-setup\.exe/);
+  assert.match(script, /kkterm-\$NextVersion-windows-x64-portable\.zip/);
+  assert.match(script, /kkterm-\$NextVersion-windows-arm64-portable\.zip/);
+  assert.match(script, /scripts\/package-portable\.ps1/);
   assert.match(script, /if \(\$IncludeArm64\) \{\s*\$ReleaseAssets \+= /);
   // The GitHub upload args are built from the asset list, not hardcoded, so the
   // ARM64 artifacts ride along when present.
   assert.match(script, /\$GhArgs \+= \$ReleaseAssets/);
+});
+
+test("package scripts expose checksummed Windows portable builds and smoke coverage", async () => {
+  const [packageScript, smokeScript] = await Promise.all([
+    readFile(new URL("../scripts/package-portable.ps1", import.meta.url), "utf8"),
+    readFile(new URL("../scripts/smoke-portable.ps1", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(packageScript, /ValidateSet\("x64", "arm64"\)/);
+  assert.match(packageScript, /kkterm-portable\.marker/);
+  assert.match(packageScript, /must not ship with a data directory/);
+  assert.match(packageScript, /SHA256/);
+  assert.match(smokeScript, /portable-smoke-ready/);
+  assert.match(smokeScript, /SameRootSingleInstance/);
+  assert.match(smokeScript, /RegistryIsolation/);
+  assert.equal(packageJson.scripts["package:portable"].includes("package-portable.ps1"), true);
+  assert.equal(packageJson.scripts["smoke:portable"].includes("smoke-portable.ps1"), true);
 });
 
 test("release script validates source before mutating the version files", () => {

@@ -1277,11 +1277,7 @@ fn unique_terminal_recording_archive_name(
 }
 
 pub(crate) fn terminal_recordings_root(app: &AppHandle) -> Result<PathBuf, String> {
-    Ok(app
-        .path()
-        .app_data_dir()
-        .map_err(|error| format!("failed to resolve app data directory: {error}"))?
-        .join("terminal-recordings"))
+    Ok(crate::app_paths::data_dir(app)?.join("terminal-recordings"))
 }
 
 pub(crate) fn emit_terminal_output(app: &AppHandle, session_id: &str, data: String) {

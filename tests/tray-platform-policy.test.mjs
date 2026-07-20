@@ -40,3 +40,21 @@ test("macOS tray icon uses a template image", async () => {
   assert.match(appTray, /const SIZE: usize = 18/);
   assert.match(appTray, /"011001111000000110"/);
 });
+
+test("tray screenshot commands display their current enabled shortcuts", async () => {
+  const appTray = await readFile(
+    new URL("../src-tauri/src/app_tray.rs", import.meta.url),
+    "utf8",
+  );
+  const commands = await readFile(
+    new URL("../src-tauri/src/lib.rs", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(appTray, /capture_shortcuts/);
+  assert.match(appTray, /region_shortcut_enabled/);
+  assert.match(appTray, /window_shortcut_enabled/);
+  assert.match(appTray, /fullscreen_shortcut_enabled/);
+  assert.match(appTray, /capture_items\.into_iter\(\)\.zip\(capture_shortcuts\)/);
+  assert.match(commands, /app_tray::rebuild_menu\(&app, &tray_state\)/);
+});

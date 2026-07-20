@@ -22,6 +22,7 @@ use tokio::time::{Duration, timeout};
 mod mcp_tool_catalog;
 
 const BRIDGE_INFO_FILENAME: &str = "mcp-bridge.json";
+const PORTABLE_MARKER_FILENAME: &str = "kkterm-portable.marker";
 const BUNDLE_IDENTIFIER: &str = "com.kkterm.app";
 const PROTOCOL_VERSION: &str = "2025-03-26";
 const SERVER_NAME: &str = "kkterm-cli";
@@ -221,7 +222,23 @@ struct BridgeInfo {
 }
 
 fn bridge_info_path() -> Option<PathBuf> {
-    let mut base = app_data_dir()?;
+    let exe_dir = std::env::current_exe()
+        .ok()
+        .and_then(|path| path.parent().map(std::path::Path::to_path_buf));
+    bridge_info_path_for(exe_dir.as_deref(), app_data_dir())
+}
+
+fn bridge_info_path_for(
+    exe_dir: Option<&std::path::Path>,
+    app_data_dir: Option<PathBuf>,
+) -> Option<PathBuf> {
+    if let Some(exe_dir) = exe_dir.as_ref()
+        && exe_dir.join(PORTABLE_MARKER_FILENAME).is_file()
+    {
+        return Some(exe_dir.join("data").join(BRIDGE_INFO_FILENAME));
+    }
+
+    let mut base = app_data_dir?;
     base.push(BUNDLE_IDENTIFIER);
     base.push(BRIDGE_INFO_FILENAME);
     Some(base)
@@ -293,7 +310,10 @@ async fn open_pipe(socket_path: &str) -> Result<PipeStream, String> {
         match tokio::net::UnixStream::connect(socket_path).await {
             Ok(stream) => return Ok(PipeStream(stream)),
             Err(error)
-                if matches!(error.kind(), ErrorKind::NotFound | ErrorKind::ConnectionRefused) =>
+                if matches!(
+                    error.kind(),
+                    ErrorKind::NotFound | ErrorKind::ConnectionRefused
+                ) =>
             {
                 if std::time::Instant::now() >= deadline {
                     return Err(format!("unix socket unavailable: {error}"));
@@ -360,6 +380,38 @@ fn writeln_stderr(message: &str) -> std::io::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn portable_cli_resolves_only_its_sibling_bridge_descriptor() {
+        let portable_root = tempfile::tempdir().expect("portable root");
+        std::fs::write(portable_root.path().join(PORTABLE_MARKER_FILENAME), [])
+            .expect("portable marker");
+        let installed_root = PathBuf::from(r"C:\InstalledState");
+
+        let path = bridge_info_path_for(Some(portable_root.path()), Some(installed_root))
+            .expect("bridge info path");
+
+        assert_eq!(
+            path,
+            portable_root.path().join("data").join(BRIDGE_INFO_FILENAME)
+        );
+    }
+
+    #[test]
+    fn installed_cli_preserves_the_existing_app_data_lookup() {
+        let executable_root = tempfile::tempdir().expect("executable root");
+        let installed_root = PathBuf::from(r"C:\InstalledState");
+
+        let path = bridge_info_path_for(Some(executable_root.path()), Some(installed_root.clone()))
+            .expect("bridge info path");
+
+        assert_eq!(
+            path,
+            installed_root
+                .join(BUNDLE_IDENTIFIER)
+                .join(BRIDGE_INFO_FILENAME)
+        );
+    }
 
     #[tokio::test]
     async fn unknown_notifications_do_not_receive_responses() {

@@ -209,7 +209,9 @@ If any of those *was* a dealbreaker — fair enough, we'll see you in v2.
 
 ## Get KKTerm
 
-**[Download the latest release](https://github.com/ryantsai/KKTerm/releases/latest)** for your platform and run it. Windows installers are currently **unsigned** — release signing is on the roadmap, so until then your antivirus may give you a stern look. That's normal.
+**[Download the latest release](https://github.com/ryantsai/KKTerm/releases/latest)** for your platform and run it. Windows offers the normal setup executable and x64/ARM64 portable ZIPs. For portable use, extract the whole ZIP to a writable local folder or removable drive and run `KKTerm.exe`; do not run it inside the ZIP or from a network share. An installed Windows copy can alternatively create a portable folder with selected non-secret settings from Settings → General → Settings data. The portable folder contains its own `data` directory, but Install Helper tools and managed web apps remain installed on the current computer.
+
+Windows packages are currently **unsigned** — release signing is on the roadmap, so until then your antivirus may give you a stern look. Verify the adjacent `.sha256` file before running either package type.
 
 Want to build from source or contribute? Everything you need is in [`CONTRIBUTING.md`](CONTRIBUTING.md).
 

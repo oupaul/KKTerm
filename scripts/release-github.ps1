@@ -236,20 +236,24 @@ try {
     $TargetTriple = "windows-x64"
     $InstallerExe = Join-Path $ResolvedOutputDir "kkterm-$NextVersion-$TargetTriple-setup.exe"
     $InstallerSha = "$InstallerExe.sha256"
+    $PortableZip = Join-Path $ResolvedOutputDir "kkterm-$NextVersion-windows-x64-portable.zip"
+    $PortableSha = "$PortableZip.sha256"
     $ReleaseNotesPath = Join-Path $ResolvedOutputDir "release-notes-$TagName.md"
     $VersionReleaseNotesPath = Join-Path $RepoRoot "docs\releases\$TagName.md"
     # TODO(updates): Restore updater signature and latest.json release assets
     # when the update mechanism is re-enabled.
     # $InstallerSig = "$InstallerExe.sig"
     # $LatestJson = Join-Path $ResolvedOutputDir "latest.json"
-    $ReleaseAssets = @($InstallerExe, $InstallerSha)
+    $ReleaseAssets = @($InstallerExe, $InstallerSha, $PortableZip, $PortableSha)
 
     # Optional native Windows on Arm (ARM64) installer, published alongside x64.
     $Arm64Triple = "windows-arm64"
     $Arm64InstallerExe = Join-Path $ResolvedOutputDir "kkterm-$NextVersion-$Arm64Triple-setup.exe"
     $Arm64InstallerSha = "$Arm64InstallerExe.sha256"
+    $Arm64PortableZip = Join-Path $ResolvedOutputDir "kkterm-$NextVersion-windows-arm64-portable.zip"
+    $Arm64PortableSha = "$Arm64PortableZip.sha256"
     if ($IncludeArm64) {
-        $ReleaseAssets += @($Arm64InstallerExe, $Arm64InstallerSha)
+        $ReleaseAssets += @($Arm64InstallerExe, $Arm64InstallerSha, $Arm64PortableZip, $Arm64PortableSha)
     }
 
     # Files the release run rewrites and commits. Used both to detect a stale
@@ -367,11 +371,13 @@ artifacts/release-notes-*.md) that were not part of a finished release.
 
         if (-not $SkipBuild) {
             Invoke-Checked -FilePath "npm" -ArgumentList @("run", "package:installer") -Action "Build installer package"
+            Invoke-Checked -FilePath "powershell" -ArgumentList @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "scripts/package-portable.ps1", "-Arch", "x64", "-OutputDir", $OutputDir, "-SkipBuild") -Action "Build x64 portable package"
             if ($IncludeArm64) {
                 # `--` forwards -InstallMissing to the ARM64 packaging script so the
                 # cross-build toolchain (aarch64 Rust target, ARM64 MSVC tools, CMake,
                 # NASM) is provisioned on the runner before building.
                 Invoke-Checked -FilePath "npm" -ArgumentList @("run", "package:installer:arm64", "--", "-InstallMissing") -Action "Build ARM64 installer package"
+                Invoke-Checked -FilePath "powershell" -ArgumentList @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "scripts/package-portable.ps1", "-Arch", "arm64", "-OutputDir", $OutputDir, "-SkipBuild") -Action "Build ARM64 portable package"
             }
         }
 
@@ -406,6 +412,7 @@ artifacts/release-notes-*.md) that were not part of a finished release.
 
         if (-not $SkipSmoke) {
             Invoke-Checked -FilePath "npm" -ArgumentList @("run", "smoke:installer") -Action "Smoke test installer"
+            Invoke-Checked -FilePath "powershell" -ArgumentList @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "scripts/smoke-portable.ps1", "-Artifact", $PortableZip) -Action "Smoke test portable package"
         }
 
         # Optional VirusTotal scan. Runs *before* the commit/tag are pushed so a

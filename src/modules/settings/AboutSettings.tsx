@@ -1,10 +1,25 @@
-import { ExternalLink, PackageOpen } from "../../lib/reicon";
+import { ExternalLink, FolderOpen, PackageOpen } from "../../lib/reicon";
 import { useTranslation } from "react-i18next";
+import { openFilesystemPath } from "../../lib/tauri";
+import { useWorkspaceStore } from "../../store";
 import { ABOUT_PRODUCT } from "./aboutData";
 import { SettingsSectionHeader, SettingsSummary } from "./shared";
 
 export function AboutSettings() {
   const { t } = useTranslation();
+  const appModeInfo = useWorkspaceStore((state) => state.appModeInfo);
+  const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
+  const portable = appModeInfo.mode === "portable";
+
+  async function openPortableDataFolder() {
+    try {
+      await openFilesystemPath(appModeInfo.dataDir);
+    } catch (error) {
+      showStatusBarNotice(error instanceof Error ? error.message : String(error), {
+        tone: "error",
+      });
+    }
+  }
 
   return (
     <section className="settings-card settings-section">
@@ -27,7 +42,12 @@ export function AboutSettings() {
 
       <div className="about-hero">
         <div>
-          <strong>{ABOUT_PRODUCT.name}</strong>
+          <strong>
+            {ABOUT_PRODUCT.name}
+            {portable ? (
+              <span className="settings-mode-badge">{t("settings.portableMode")}</span>
+            ) : null}
+          </strong>
           <span>{t("settings.appSlogan")}</span>
         </div>
         <PackageOpen size={34} />
@@ -41,7 +61,22 @@ export function AboutSettings() {
         <SettingsSummary label={t("settings.version")} value={ABOUT_PRODUCT.version} />
         <SettingsSummary label={t("settings.license")} value={ABOUT_PRODUCT.license} />
         <SettingsSummary label={t("settings.repository")} value={ABOUT_PRODUCT.repositoryUrl} />
+        {portable ? (
+          <SettingsSummary label={t("settings.portableDataFolder")} value={appModeInfo.dataDir} />
+        ) : null}
       </div>
+      {portable ? (
+        <div className="settings-inline-actions">
+          <button
+            className="secondary-button"
+            onClick={() => void openPortableDataFolder()}
+            type="button"
+          >
+            <FolderOpen size={15} />
+            {t("settings.openPortableDataFolder")}
+          </button>
+        </div>
+      ) : null}
     </section>
   );
 }

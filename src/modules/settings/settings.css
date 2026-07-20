@@ -2347,6 +2347,31 @@ input.settings-credential-search {
   font-weight: 450;
 }
 
+.about-hero .settings-mode-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 10px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.02em;
+  vertical-align: middle;
+}
+
+.settings-inline-actions {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.settings-inline-actions .secondary-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .settings-reset-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -3146,6 +3171,28 @@ input.settings-credential-search {
   box-sizing: border-box;
 }
 
+.portable-creator-path-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.kk-dlg-step,
+.kk-dlg-note {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.kk-dlg-step {
+  color: var(--text-faint);
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 @media (max-width: 860px) {
   .settings-backdrop {
     inset: var(--app-titlebar-height, 0px) 0 0;
@@ -3188,4 +3235,45 @@ input.settings-credential-search {
     flex-wrap: wrap;
     justify-content: flex-start;
   }
+}
+
+/* Screenshots settings section */
+.screenshots-folder-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.screenshots-folder-row input {
+  flex: 1;
+  min-width: 0;
+}
+
+.screenshots-shortcut-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.screenshots-shortcut-controls input {
+  width: 170px;
+}
+
+.screenshots-quality-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 3ch;
+  gap: 10px;
+  align-items: center;
+}
+
+.screenshots-quality-row input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.screenshots-quality-row output {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  text-align: end;
 }

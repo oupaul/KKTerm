@@ -132,10 +132,7 @@ impl OpenAiCompatibleProvider {
             },
         };
         let client = ai_http_client(settings.allow_insecure_tls())?;
-        let app_data_dir = app
-            .path()
-            .app_data_dir()
-            .map_err(|error| format!("failed to locate KKTerm app data: {error}"))?;
+        let app_data_dir = crate::app_paths::data_dir(&app)?;
         let model = settings.model().to_string();
         let max_tool_subturns = if settings.tools().itops() {
             ITOPS_MAX_AGENT_TOOL_SUBTURNS

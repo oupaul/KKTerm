@@ -13,6 +13,7 @@ export type SettingsSectionId =
   | "url-settings"
   | "rdp-settings"
   | "vnc-settings"
+  | "screenshots-settings"
   | "shortcuts-settings"
   | "proxy-settings"
   | "about-settings";
@@ -64,13 +65,8 @@ const SETTINGS_SECTIONS: Record<SettingsSectionId, SettingsSectionSummary> = {
       {
         key: "settings.activityRail",
         description:
-          "Visibility and drag-to-reorder controls for Workspace, Dashboard, Install Helper, IT Ops, and Don't Sleep on the Activity Rail.",
+          "Visibility and drag-to-reorder controls for Workspace, Dashboard, Install Helper, Screenshots, IT Ops, and Don't Sleep on the Activity Rail.",
         tutorialTargetId: "settings.activityRail",
-      },
-      {
-        key: "settings.useDirectxScreenCapture",
-        description: "DXGI Desktop Duplication screenshot acceleration toggle.",
-        tutorialTargetId: "settings.useDirectxScreenCapture",
       },
       {
         key: "settings.statusBar",
@@ -385,11 +381,49 @@ const SETTINGS_SECTIONS: Record<SettingsSectionId, SettingsSectionSummary> = {
       },
     ],
   },
+  "screenshots-settings": {
+    labelKey: "settings.sectionScreenshots",
+    fallbackLabel: "Screenshots",
+    controls: [
+      {
+        key: "settings.screenshotsFolder",
+        description: "Library folder path for captured screenshots.",
+        tutorialTargetId: "settings.screenshotsFolder",
+      },
+      {
+        key: "settings.screenshotsFormat",
+        description:
+          "Capture format and shared 1–100 quality control. JPEG uses lossy quality; PNG uses lossless compression effort.",
+        tutorialTargetId: "settings.screenshotsFormat",
+      },
+      {
+        key: "settings.screenshotsCaptureMode",
+        description: "Capture delivery: Screenshots folder, clipboard, or both (default).",
+      },
+      {
+        key: "settings.useDirectxScreenCapture",
+        description: "DXGI Desktop Duplication screenshot acceleration toggle.",
+        tutorialTargetId: "settings.useDirectxScreenCapture",
+      },
+      {
+        key: "settings.screenshotsShortcuts",
+        description:
+          "Global capture hotkeys for region, window, and full-screen captures. Clear a binding to disable it; the same draft also appears in Settings → Shortcuts.",
+        tutorialTargetId: "settings.screenshotsShortcuts",
+      },
+    ],
+  },
   "shortcuts-settings": {
     labelKey: "settings.sectionShortcuts",
     fallbackLabel: "Shortcuts",
     tutorialTargetId: "settings.shortcuts",
     controls: [
+      {
+        key: "settings.screenshotsShortcuts",
+        description:
+          "The same global screenshot capture bindings shown in Screenshots settings; edits stay synchronized across both pages.",
+        tutorialTargetId: "settings.shortcuts",
+      },
       {
         key: "settings.sectionShortcuts",
         description:

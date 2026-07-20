@@ -1,6 +1,30 @@
 use super::*;
 use rusqlite::params;
 
+#[test]
+fn screenshot_settings_upgrade_legacy_jpeg_quality_and_default_to_both() {
+    let settings: ScreenshotSettings = serde_json::from_str(
+        r#"{
+            "folderPath": "C:\\\\Screenshots",
+            "format": "jpeg",
+            "jpegQuality": 74,
+            "regionShortcut": "Ctrl+Alt+R",
+            "regionShortcutEnabled": true,
+            "windowShortcut": "Ctrl+Alt+W",
+            "windowShortcutEnabled": true,
+            "fullscreenShortcut": "Ctrl+Alt+F",
+            "fullscreenShortcutEnabled": true
+        }"#,
+    )
+    .expect("legacy screenshot settings should deserialize");
+
+    assert_eq!(settings.quality(), 74);
+    assert_eq!(settings.capture_mode(), "both");
+    let serialized = serde_json::to_value(settings).expect("serialize screenshot settings");
+    assert_eq!(serialized["quality"], 74);
+    assert!(serialized.get("jpegQuality").is_none());
+}
+
 fn find_folder<'a>(
     folders: &'a [ConnectionFolder],
     folder_id: &str,
@@ -1527,7 +1551,7 @@ fn connection_password_credential_metadata_uses_custom_label_when_given() {
 }
 
 #[test]
-fn update_connection_password_credential_renames_label_and_username() {
+fn update_connection_password_credential_updates_editable_metadata() {
     let storage = Storage::open(temp_db_path("connection-password-credential-update"))
         .expect("storage opens");
     let connection = create_test_ssh_connection(&storage, "Bastion", "bastion.internal", None);
@@ -1540,21 +1564,25 @@ fn update_connection_password_credential_renames_label_and_username() {
             credential.id.clone(),
             Some(" Corp admins ".to_string()),
             Some(" root ".to_string()),
+            Some(" gateway.internal ".to_string()),
         )
         .expect("credential updates");
     assert_eq!(updated.label, "Corp admins");
     assert_eq!(updated.username, "root");
+    assert_eq!(updated.host, "gateway.internal");
     assert!(updated.updated_at >= credential.updated_at);
 
     let untouched = storage
-        .update_connection_password_credential(credential.id.clone(), None, None)
+        .update_connection_password_credential(credential.id.clone(), None, None, None)
         .expect("empty update keeps existing values");
     assert_eq!(untouched.label, "Corp admins");
     assert_eq!(untouched.username, "root");
+    assert_eq!(untouched.host, "gateway.internal");
 
     let error = match storage.update_connection_password_credential(
         credential.id.clone(),
         Some("  ".to_string()),
+        None,
         None,
     ) {
         Ok(_) => panic!("blank label is rejected"),
@@ -1562,8 +1590,12 @@ fn update_connection_password_credential_renames_label_and_username() {
     };
     assert_eq!(error, "credential label is required");
 
-    let error = match storage.update_connection_password_credential("missing".to_string(), None, None)
-    {
+    let error = match storage.update_connection_password_credential(
+        "missing".to_string(),
+        None,
+        None,
+        None,
+    ) {
         Ok(_) => panic!("unknown credential is rejected"),
         Err(error) => error,
     };
@@ -1739,6 +1771,60 @@ fn merge_connection_password_credentials_relinks_and_removes_sources() {
         .merge_connection_password_credentials(target.id.clone(), vec![third_credential.id])
         .expect("merge with unused source succeeds");
     assert_eq!(relinked, 0);
+}
+
+#[test]
+fn merge_connection_password_credentials_rolls_back_relinks_when_delete_fails() {
+    let storage = Storage::open(temp_db_path("connection-password-credential-merge-rollback"))
+        .expect("storage opens");
+    let connection = create_test_ssh_connection(&storage, "One", "one.internal", None);
+    let target = storage
+        .create_standalone_connection_password_credential(
+            "ssh".to_string(),
+            "Target".to_string(),
+            "admin".to_string(),
+            None,
+        )
+        .expect("target credential is created");
+    let source = storage
+        .create_connection_password_credential_metadata(connection.id.clone(), None)
+        .expect("source credential is created");
+    storage
+        .assign_connection_password_credential(connection.id.clone(), source.id.clone())
+        .expect("connection links to source");
+    storage
+        .with_connection(|database| {
+            database
+                .execute_batch(
+                    "CREATE TRIGGER reject_credential_delete
+                     BEFORE DELETE ON connection_password_credentials
+                     BEGIN
+                         SELECT RAISE(ABORT, 'credential delete rejected');
+                     END;",
+                )
+                .map_err(to_storage_error)
+        })
+        .expect("failure trigger is installed");
+
+    let error = storage
+        .merge_connection_password_credentials(target.id.clone(), vec![source.id.clone()])
+        .expect_err("delete failure aborts merge");
+    assert!(error.contains("credential delete rejected"));
+    let unchanged = storage
+        .get_connection(&connection.id)
+        .expect("connection still loads");
+    assert_eq!(
+        unchanged.password_credential_id.as_deref(),
+        Some(source.id.as_str())
+    );
+    let credential_ids = storage
+        .list_connection_password_credentials()
+        .expect("credentials still load")
+        .into_iter()
+        .map(|credential| credential.id)
+        .collect::<Vec<_>>();
+    assert!(credential_ids.contains(&target.id));
+    assert!(credential_ids.contains(&source.id));
 }
 
 #[test]
@@ -2534,10 +2620,18 @@ fn general_settings_round_trip_through_settings_table() {
     assert!(!defaults.separate_split_terminal_backgrounds);
     assert!(defaults.show_installer_on_rail);
     assert!(defaults.show_it_ops);
+    assert!(defaults.show_screenshots_on_rail);
     assert!(defaults.show_dont_sleep_on_rail);
     assert_eq!(
         defaults.activity_rail_order,
-        ["workspace", "dashboard", "installer", "itops", "dontSleep"]
+        [
+            "workspace",
+            "dashboard",
+            "installer",
+            "screenshots",
+            "itops",
+            "dontSleep"
+        ]
     );
     assert_eq!(defaults.installer_check_interval_seconds, 86_400);
     assert!(defaults.pinned_connection_ids.is_empty());
@@ -2568,12 +2662,14 @@ fn general_settings_round_trip_through_settings_table() {
             separate_split_terminal_backgrounds: true,
             show_installer_on_rail: false,
             show_it_ops: false,
+            show_screenshots_on_rail: false,
             show_dont_sleep_on_rail: false,
             activity_rail_order: vec![
                 "dontSleep".to_string(),
                 "workspace".to_string(),
                 "dashboard".to_string(),
                 "installer".to_string(),
+                "screenshots".to_string(),
                 "itops".to_string(),
             ],
             installer_check_interval_seconds: 604_800,
@@ -2968,12 +3064,14 @@ fn database_backup_import_restores_settings_and_connections() {
             separate_split_terminal_backgrounds: true,
             show_installer_on_rail: false,
             show_it_ops: false,
+            show_screenshots_on_rail: false,
             show_dont_sleep_on_rail: false,
             activity_rail_order: vec![
                 "dontSleep".to_string(),
                 "workspace".to_string(),
                 "dashboard".to_string(),
                 "installer".to_string(),
+                "screenshots".to_string(),
                 "itops".to_string(),
             ],
             installer_check_interval_seconds: 86_400,
@@ -3013,6 +3111,7 @@ fn database_backup_import_restores_settings_and_connections() {
             separate_split_terminal_backgrounds: false,
             show_installer_on_rail: true,
             show_it_ops: false,
+            show_screenshots_on_rail: true,
             show_dont_sleep_on_rail: true,
             activity_rail_order: default_activity_rail_order(),
             installer_check_interval_seconds: 86_400,
@@ -4883,6 +4982,45 @@ fn rename_workspace_updates_icon_properties() {
     assert_eq!(persisted.name, "Green Ops");
     assert_eq!(persisted.icon.as_deref(), Some("Folder"));
     assert_eq!(persisted.icon_color.as_deref(), Some("#16a34a"));
+}
+
+#[test]
+fn portable_credential_default_applies_only_until_the_user_saves_a_choice() {
+    let storage = Storage::open(temp_db_path("portable-credential-default"))
+        .expect("storage opens");
+
+    assert_eq!(
+        storage
+            .credential_settings()
+            .expect("installed default loads")
+            .secret_store,
+        default_secret_store()
+    );
+    assert_eq!(
+        storage
+            .credential_settings_with_default(Some("file"))
+            .expect("portable default loads")
+            .secret_store,
+        "file"
+    );
+
+    // Linux offers only the "file" store, so a differing saved choice can only
+    // be exercised where the OS keystore is a valid option.
+    #[cfg(not(target_os = "linux"))]
+    {
+        storage
+            .update_credential_settings(CredentialSettings {
+                secret_store: "os".to_string(),
+            })
+            .expect("explicit choice is saved");
+        assert_eq!(
+            storage
+                .credential_settings_with_default(Some("file"))
+                .expect("saved choice loads")
+                .secret_store,
+            "os"
+        );
+    }
 }
 
 fn temp_db_path(name: &str) -> PathBuf {

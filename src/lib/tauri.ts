@@ -23,6 +23,8 @@ import type {
   AppearanceSettings,
   AiProviderSettings,
   AppBootstrap,
+  AppModeInfo,
+  CreatedPortableCopy,
   AppLauncherLaunchMode,
   AppLauncherSettings,
   ConfigureEncryptedFileSecretStoreRequest,
@@ -634,6 +636,9 @@ export interface TrayMenuSnapshot {
   recentConnections: TrayRecentConnection[];
   dontSleepLabel: string;
   exitLabel: string;
+  captureRegionLabel: string;
+  captureWindowLabel: string;
+  captureFullscreenLabel: string;
 }
 
 export interface CommandProposalPlan {
@@ -770,12 +775,28 @@ export interface StoredScreenshot {
   id: string;
   path: string;
   fileName: string;
+  thumbnailDataUrl: string;
+  width: number;
+  height: number;
+  fileSizeBytes: number;
+  capturedAt: number;
+  createdAt: number;
+  modifiedAt: number;
+  takenAt: number | null;
+  kind: "region" | "window" | "fullscreen" | "screenshot";
+}
+
+export interface ScreenshotCaptureResult {
+  storedScreenshot: StoredScreenshot | null;
+  copiedToClipboard: boolean;
+}
+
+export interface FullScreenshot {
+  id: string;
+  fileName: string;
   dataUrl: string;
   width: number;
   height: number;
-  capturedAt: number;
-  label: string;
-  kind: "region" | "window" | "fullscreen" | "screenshot";
 }
 
 export interface ListScreenshotsResponse {
@@ -1615,6 +1636,18 @@ type CommandMap = {
     args: undefined;
     result: GeneralSettings;
   };
+  get_app_mode: {
+    args: undefined;
+    result: AppModeInfo;
+  };
+  create_portable_copy: {
+    args: { request: { destination: string; segments: string[] } };
+    result: CreatedPortableCopy;
+  };
+  launch_portable_copy: {
+    args: { destination: string };
+    result: void;
+  };
   update_general_settings: {
     args: { request: GeneralSettings };
     result: GeneralSettings;
@@ -2066,30 +2099,90 @@ type CommandMap = {
   };
   capture_screenshot_to_library: {
     args: { request: CaptureScreenshotRequest; kind: StoredScreenshot["kind"] };
-    result: StoredScreenshot;
+    result: ScreenshotCaptureResult;
   };
   capture_fullscreen_screenshot_to_library: {
     args: { kind: StoredScreenshot["kind"] };
-    result: StoredScreenshot;
+    result: ScreenshotCaptureResult;
   };
   capture_active_window_screenshot_to_library: {
     args: { kind: StoredScreenshot["kind"] };
-    result: StoredScreenshot;
+    result: ScreenshotCaptureResult;
   };
   capture_interactive_region_screenshot_to_library: {
     args: { kind: StoredScreenshot["kind"] };
-    result: StoredScreenshot;
+    result: ScreenshotCaptureResult;
   };
   list_screenshots: {
-    args: { request: { offset?: number; limit?: number } };
+    args: {
+      request: {
+        offset?: number;
+        limit?: number;
+        sortBy?: "name" | "date" | "type";
+        sortDirection?: "asc" | "desc";
+      };
+    };
     result: ListScreenshotsResponse;
+  };
+  read_screenshot: {
+    args: { id: string };
+    result: FullScreenshot;
+  };
+  rename_screenshot: {
+    args: { id: string; newName: string };
+    result: StoredScreenshot;
+  };
+  copy_stored_screenshot_to_clipboard: {
+    args: { id: string };
+    result: null;
   };
   delete_screenshot: {
     args: { id: string };
     result: null;
   };
+  delete_screenshots: {
+    args: { ids: string[] };
+    result: null;
+  };
+  resize_screenshots: {
+    args: {
+      request: {
+        ids: string[];
+        width: number;
+        height: number;
+        preserveAspectRatio: boolean;
+      };
+    };
+    result: StoredScreenshot[];
+  };
+  convert_screenshots: {
+    args: {
+      request: {
+        ids: string[];
+        format: "png" | "jpeg";
+        quality: number;
+      };
+    };
+    result: StoredScreenshot[];
+  };
+  save_edited_screenshot: {
+    args: { request: { id: string; dataUrl: string } };
+    result: StoredScreenshot;
+  };
   clear_screenshots: {
     args: undefined;
+    result: null;
+  };
+  open_screenshots_folder: {
+    args: undefined;
+    result: null;
+  };
+  reveal_screenshot: {
+    args: { id: string };
+    result: null;
+  };
+  open_screenshot_file: {
+    args: { id: string };
     result: null;
   };
   ssh_transport_plan: {
@@ -2177,6 +2270,7 @@ type CommandMap = {
         credentialId: string;
         label?: string;
         username?: string;
+        host?: string;
         secret?: string;
       };
     };
@@ -3675,6 +3769,20 @@ export async function selectSelectiveExportFile(options: {
   const selectedPath = await saveDialog({
     defaultPath: options.defaultFilename,
     filters: [{ name: options.filterName, extensions: ["kkbackup"] }],
+    title: options.title,
+  });
+
+  return typeof selectedPath === "string" ? selectedPath : null;
+}
+
+export async function selectPortableDestination(options: { title: string }) {
+  if (!isTauriRuntime()) {
+    return null;
+  }
+
+  const selectedPath = await openDialog({
+    directory: true,
+    multiple: false,
     title: options.title,
   });
 

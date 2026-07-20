@@ -168,9 +168,53 @@ test("app update install strategy keeps Windows installer flow separate from mac
   );
 
   assert.equal(appUpdateInstallStrategy("windows"), "windows-installer");
+  assert.equal(appUpdateInstallStrategy("windows", true), "portable-manual");
   assert.equal(appUpdateInstallStrategy("macos"), "tauri-updater");
   assert.equal(appUpdateInstallStrategy("linux"), "tauri-updater");
   assert.equal(appUpdateInstallStrategy("unknown"), "download-page");
+});
+
+test("portable update selection requires an exact ZIP and checksum pair", async () => {
+  const { selectManifestWindowsPortableZip, selectWindowsPortableAssets } =
+    await importTypeScriptModule(new URL("../src/lib/appUpdatesModel.ts", import.meta.url));
+  const manifest = {
+    version: "0.1.93",
+    platforms: {
+      "windows-x64-portable": {
+        url: "https://kkterm.ryantsai.com/releases/v0.1.93/kkterm-0.1.93-windows-x64-portable.zip",
+        checksum_url:
+          "https://kkterm.ryantsai.com/releases/v0.1.93/kkterm-0.1.93-windows-x64-portable.zip.sha256",
+      },
+    },
+  };
+  assert.deepEqual(selectManifestWindowsPortableZip(manifest, "windows-x64"), {
+    assetName: "kkterm-0.1.93-windows-x64-portable.zip",
+    downloadUrl:
+      "https://kkterm.ryantsai.com/releases/v0.1.93/kkterm-0.1.93-windows-x64-portable.zip",
+    checksumUrl:
+      "https://kkterm.ryantsai.com/releases/v0.1.93/kkterm-0.1.93-windows-x64-portable.zip.sha256",
+  });
+  assert.deepEqual(
+    selectWindowsPortableAssets(
+      [
+        {
+          name: "kkterm-0.1.93-windows-x64-portable.zip",
+          browser_download_url: "https://github.example/portable.zip",
+        },
+        {
+          name: "kkterm-0.1.93-windows-x64-portable.zip.sha256",
+          browser_download_url: "https://github.example/portable.zip.sha256",
+        },
+      ],
+      "windows-x64",
+    ),
+    {
+      assetName: "kkterm-0.1.93-windows-x64-portable.zip",
+      downloadUrl: "https://github.example/portable.zip",
+      checksumUrl: "https://github.example/portable.zip.sha256",
+    },
+  );
+  assert.equal(selectWindowsPortableAssets([], "windows-x64"), null);
 });
 
 test("app update install flow is exposed across the frontend and backend boundary", async () => {

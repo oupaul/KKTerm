@@ -1,16 +1,48 @@
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{LazyLock, Mutex};
 
 use super::detect::DetectedState;
 use super::schema::Catalog;
 use serde_json::json;
 
 const CACHE_SCHEMA_VERSION: u32 = 1;
+static PORTABLE_MODE: AtomicBool = AtomicBool::new(false);
+static PORTABLE_CACHE: LazyLock<Mutex<HashMap<String, DetectedState>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
+
+pub fn set_portable_mode(portable: bool) {
+    PORTABLE_MODE.store(portable, Ordering::Relaxed);
+}
 
 pub fn load_detection_cache(catalog: &Catalog) -> HashMap<String, DetectedState> {
     crate::logging::installer_helper_debug(
         "cache.load.start",
         &json!({ "recipeCount": catalog.recipes.len() }),
     );
+    if PORTABLE_MODE.load(Ordering::Relaxed) {
+        let memory = PORTABLE_CACHE.lock().unwrap();
+        let out = catalog
+            .recipes
+            .iter()
+            .filter_map(|recipe| {
+                memory
+                    .get(&recipe.id)
+                    .cloned()
+                    .map(|state| (recipe.id.clone(), state))
+            })
+            .collect::<HashMap<_, _>>();
+        crate::logging::installer_helper_debug(
+            "cache.load.ok",
+            &json!({
+                "hitCount": out.len(),
+                "recipeCount": catalog.recipes.len(),
+                "storage": "memory",
+            }),
+        );
+        return out;
+    }
+
     let mut out = HashMap::new();
     for recipe in &catalog.recipes {
         if let Some(state) = read_cached_state(&recipe.id) {
@@ -29,7 +61,14 @@ pub fn write_cached_state(tool_id: &str, state: &DetectedState) {
         "cache.write",
         &json!({ "toolId": tool_id, "state": state }),
     );
-    write_cached_state_platform(tool_id, state);
+    if PORTABLE_MODE.load(Ordering::Relaxed) {
+        PORTABLE_CACHE
+            .lock()
+            .unwrap()
+            .insert(tool_id.to_string(), state.clone());
+    } else {
+        write_cached_state_platform(tool_id, state);
+    }
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]

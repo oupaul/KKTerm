@@ -63,6 +63,12 @@ test("Shortcuts settings can reset every override to the catalog defaults", () =
   assert.match(shortcutsSettingsSource, /setDraft\(\{\}\)/);
 });
 
+test("Shortcuts settings renders the shared screenshot shortcut rows", () => {
+  assert.match(shortcutsSettingsSource, /<ScreenshotShortcutRows \/>/);
+  assert.match(shortcutsSettingsSource, /settings\.sectionScreenshots/);
+  assert.match(shortcutsSettingsSource, /saveScreenshotSettings/);
+});
+
 test("workspace shortcuts stay inactive behind both legacy and shared dialogs", () => {
   assert.match(
     workspaceCanvasSource,

@@ -1233,12 +1233,16 @@ export function ConnectionSidebar({
     });
   }
 
-  async function createConnectionPasswordCredential(connectionId: string, password: string) {
+  async function createConnectionPasswordCredential(
+    connectionId: string,
+    password: string,
+    allowReuse = true,
+  ) {
     return invokeCommand("create_connection_password_credential", {
       request: {
         connectionId,
         secret: password,
-        allowReuse: true,
+        allowReuse,
       },
     });
   }
@@ -1441,7 +1445,7 @@ export function ConnectionSidebar({
 
   async function handleConnectionUpdate(
     request: ConnectionDialogRequest,
-    options?: { skipSharedCredentialCheck?: boolean },
+    options?: { allowCredentialReuse?: boolean; skipSharedCredentialCheck?: boolean },
   ) {
     if (!editConnection) {
       return;
@@ -1503,7 +1507,11 @@ export function ConnectionSidebar({
       });
       connection = await saveConnectionIconPresentation(connection, iconDataUrl, iconBackgroundColor, iconColor);
       if (password) {
-        connection = await createConnectionPasswordCredential(connection.id, password);
+        connection = await createConnectionPasswordCredential(
+          connection.id,
+          password,
+          options?.allowCredentialReuse,
+        );
       } else if (passwordCredentialId) {
         connection = await assignConnectionPasswordCredential(connection.id, passwordCredentialId);
       }
@@ -1915,6 +1923,9 @@ export function ConnectionSidebar({
     void pushTrayMenu(recentConnections, {
       dontSleep: t("app.trayDontSleep"),
       exit: t("app.trayExit"),
+      captureRegion: t("screenshots.captureRegion"),
+      captureWindow: t("screenshots.captureWindow"),
+      captureFullscreen: t("screenshots.captureFullscreen"),
     });
     // recentConnections is intentionally read fresh; we only resync when the
     // stable id/name signature or translations change.
@@ -3523,7 +3534,10 @@ export function ConnectionSidebar({
               onClick={() => {
                 const pending = pendingSharedCredentialUpdate;
                 setPendingSharedCredentialUpdate(null);
-                void handleConnectionUpdate(pending.request, { skipSharedCredentialCheck: true });
+                void handleConnectionUpdate(pending.request, {
+                  allowCredentialReuse: false,
+                  skipSharedCredentialCheck: true,
+                });
               }}
             >
               {t("connections.sharedCredentialCreateSeparate")}

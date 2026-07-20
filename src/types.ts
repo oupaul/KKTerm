@@ -49,6 +49,14 @@ export interface ReorderWorkspacesRequest {
   orderedIds: string[];
 }
 export type ConnectionStatus = "connected" | "idle" | "offline";
+export interface AppModeInfo {
+  mode: "installed" | "portable";
+  dataDir: string;
+}
+export interface CreatedPortableCopy {
+  destination: string;
+  executable: string;
+}
 export type SshAuthMethod = "keyFile" | "password" | "agent";
 
 /**
@@ -756,6 +764,7 @@ export interface GeneralSettings {
   separateSplitTerminalBackgrounds: boolean;
   showInstallerOnRail: boolean;
   showItOps: boolean;
+  showScreenshotsOnRail: boolean;
   showDontSleepOnRail: boolean;
   activityRailOrder: ActivityRailItemId[];
   installerCheckIntervalSeconds: number;
@@ -786,6 +795,7 @@ export type ActivityRailItemId =
   | "workspace"
   | "dashboard"
   | "installer"
+  | "screenshots"
   | "itops"
   | "dontSleep";
 
@@ -1174,8 +1184,20 @@ export interface FtpConnectionOptions {
   remotePath?: string;
 }
 
+export type ScreenshotFormat = "png" | "jpeg";
+export type ScreenshotCaptureDelivery = "folder" | "clipboard" | "both";
+
 export interface ScreenshotSettings {
   folderPath: string;
+  format: ScreenshotFormat;
+  quality: number;
+  captureMode: ScreenshotCaptureDelivery;
+  regionShortcut: string;
+  regionShortcutEnabled: boolean;
+  windowShortcut: string;
+  windowShortcutEnabled: boolean;
+  fullscreenShortcut: string;
+  fullscreenShortcutEnabled: boolean;
 }
 
 export type AiProviderKind =

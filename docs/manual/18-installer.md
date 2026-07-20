@@ -12,6 +12,8 @@ The **Install Helper Module** is a built-in Activity Rail destination that insta
 
 The catalog **ships with the KKTerm release**: the JSON list of supported tools is compiled into the binary at build time. Updates to the catalog ride with each release. See `docs/ADR/0008-installer-helper-bundled-catalog.md` for the rationale and what it supersedes.
 
+In portable mode, the persistent caption `installer.portableMachineLocalNotice` states the ownership boundary: Install Helper tools, managed web-app runtimes, databases, uploads, models, logs, and service definitions stay on the current machine. Managed apps continue to use `%LOCALAPPDATA%\KKTerm\installer\apps`; installed and portable KKTerm instances intentionally see the same installations. Removing or moving the portable folder neither stops nor uninstalls them. Portable mode keeps the detection cache in memory instead of writing the KKTerm detection-cache registry key.
+
 **Liveness rule.** Install Helper work must not block KKTerm's UI thread. Catalog load, detection, cache reads, latest-version lookup, SQLite preference updates, install/uninstall, managed web UI launch/status/stop, and NSSM service registration/removal run on background workers or stream progress over `installer://progress`.
 
 ## Module layout

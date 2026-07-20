@@ -96,6 +96,7 @@ export function InstallerPage({ active }: { active: boolean }) {
     (state) => state.showStatusBarNotice,
   );
   const generalSettings = useWorkspaceStore((state) => state.generalSettings);
+  const portableMode = useWorkspaceStore((state) => state.appModeInfo.mode === "portable");
   const catalog = useInstallerStore((s) => s.catalog);
   const detected = useInstallerStore((s) => s.detected);
   const toolState = useInstallerStore((s) => s.toolState);
@@ -589,6 +590,11 @@ export function InstallerPage({ active }: { active: boolean }) {
           collapsed={false}
         />
         <div className="installer-content">
+          {portableMode ? (
+            <div className="installer-portable-notice">
+              {t("installer.portableMachineLocalNotice")}
+            </div>
+          ) : null}
           {!catalog ? (
             <div className="installer-empty">{t("installer.empty.loading")}</div>
           ) : (

@@ -2,16 +2,16 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-test("General hides the Performance subsection when the platform has no options", async () => {
-  const generalSource = await readFile(
-    new URL("../src/modules/settings/GeneralSettings.tsx", import.meta.url),
-    "utf8",
-  );
+test("DirectX screenshot performance controls live in Screenshots, not General", async () => {
+  const [generalSource, screenshotsSource] = await Promise.all([
+    readFile(new URL("../src/modules/settings/GeneralSettings.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/modules/settings/ScreenshotsSettings.tsx", import.meta.url), "utf8"),
+  ]);
 
-  assert.match(generalSource, /const showPerformanceSettings = windowsPlatform;/);
+  assert.doesNotMatch(generalSource, /settings\.useDirectxScreenCapture/);
   assert.match(
-    generalSource,
-    /\{showPerformanceSettings \? \([\s\S]*settings\.performance[\s\S]*settings\.useDirectxScreenCapture[\s\S]*\) : null\}/,
+    screenshotsSource,
+    /isWindowsPlatform\(\)[\s\S]*settings\.performance[\s\S]*settings\.useDirectxScreenCapture/,
   );
 });
 

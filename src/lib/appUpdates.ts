@@ -8,7 +8,9 @@ import {
   fetchUpdateJson,
   parseCloudflareReleaseManifest,
   selectManifestWindowsInstaller,
+  selectManifestWindowsPortableZip,
   selectWindowsInstallerAssets,
+  selectWindowsPortableAssets,
   type AppUpdateAsset,
   type AppUpdateInstallerAssets,
   type AppUpdateInstallStrategy,
@@ -37,6 +39,7 @@ export type AppUpdate = {
   htmlUrl: string;
   installer: AppUpdateInstallerAssets | null;
   installStrategy: AppUpdateInstallStrategy;
+  portableDownloadUrl: string | null;
 };
 
 export type AppUpdateDownloadTask = {
@@ -97,7 +100,11 @@ export async function checkForAppUpdate(): Promise<AppUpdate | null> {
     return null;
   }
 
-  const strategy = appUpdateInstallStrategy(currentPlatform());
+  const appMode = await invokeCommand("get_app_mode");
+  const strategy = appUpdateInstallStrategy(
+    currentPlatform(),
+    appMode.mode === "portable",
+  );
   if (strategy === "tauri-updater") {
     return checkForTauriAppUpdate();
   }
@@ -115,7 +122,14 @@ export async function checkForAppUpdate(): Promise<AppUpdate | null> {
       version: manifest.version,
       body: manifest.notes.trim(),
       htmlUrl: manifest.release_url,
-      installer: selectManifestWindowsInstaller(manifest, targetTriple),
+      installer:
+        strategy === "windows-installer"
+          ? selectManifestWindowsInstaller(manifest, targetTriple)
+          : null,
+      portableDownloadUrl:
+        strategy === "portable-manual"
+          ? selectManifestWindowsPortableZip(manifest, targetTriple)?.downloadUrl ?? null
+          : null,
       installStrategy: strategy,
     };
   } catch {
@@ -143,12 +157,20 @@ export async function checkForAppUpdate(): Promise<AppUpdate | null> {
       strategy === "windows-installer"
         ? selectWindowsInstallerAssets(release.assets, targetTriple)
         : null,
+    portableDownloadUrl:
+      strategy === "portable-manual"
+        ? selectWindowsPortableAssets(release.assets, targetTriple)?.downloadUrl ?? null
+        : null,
     installStrategy: strategy,
   };
 }
 
 export async function openReleaseDownloadPage(update: AppUpdate) {
   await openExternalUrl(update.htmlUrl);
+}
+
+export async function openPortableUpdateDownload(update: AppUpdate) {
+  await openExternalUrl(update.portableDownloadUrl ?? update.htmlUrl);
 }
 
 export async function startAppUpdateDownload(
@@ -202,6 +224,7 @@ async function checkForTauriAppUpdate(): Promise<AppUpdate | null> {
     body: (tauriUpdate.body ?? "").trim(),
     htmlUrl: RELEASES_PAGE_URL,
     installer: null,
+    portableDownloadUrl: null,
     installStrategy: "tauri-updater",
   };
 }

@@ -20,12 +20,14 @@ type Translate = (key: string, language: string) => string;
 export const SETTINGS_SEARCH_KEYS: Record<SettingsSectionId, readonly string[]> = {
   "general-settings": [
     "settings.generalDefaults", "settings.softwareUpdates", "settings.language",
-    "settings.workspaceAccess", "settings.activityRail", "settings.performance",
+    "settings.workspaceAccess", "settings.activityRail",
     "settings.autoStartWithWindows", "settings.minimizeToTray", "settings.autoUpdateChecks",
     "settings.checkForUpdates", "settings.updates", "settings.version",
-    "settings.useDirectxScreenCapture", "settings.statusBar", "settings.statusBarVisible",
+    "settings.statusBar", "settings.statusBarVisible",
     "settings.statusBarMonitor", "settings.statusBarMonitorInterval", "settings.settingsData",
     "settings.exportSettings", "settings.importSettings", "settings.openDatabaseFolder",
+    "settings.portableInstallSection", "settings.portableCreatorAction",
+    "settings.portableCreatorIntro",
     "settings.autoBackup", "settings.lastBackup", "settings.lastCheckedAt",
     "settings.sectionDontSleep", "settings.settingsDataActions", "settings.resetAllSettings",
     "settings.debug", "settings.advancedDebugging",
@@ -75,6 +77,7 @@ export const SETTINGS_SEARCH_KEYS: Record<SettingsSectionId, readonly string[]> 
     "settings.credentialStorage", "settings.credentialStorageBackend",
     "settings.credentialsStored", "settings.savedWebsitePasswords",
     "settings.widgetCredentialsStored", "settings.credentialStorageFile",
+    "settings.credentialStorageFilePortable", "settings.portableCredentialStorageOsWarning",
     "settings.credentialStorageSwitchNote", "settings.credentialsHint",
     "settings.credentialsTitle", "settings.deleteCredential",
     "settings.encryptedSecretStoreSetupAction", "settings.widgetCredentialsHint",
@@ -178,11 +181,20 @@ export const SETTINGS_SEARCH_KEYS: Record<SettingsSectionId, readonly string[]> 
     "settings.vncColor8", "settings.vncColorFull", "settings.vncEncodingRaw",
     "settings.vncEncodingTight", "settings.vncEncodingZrle",
   ],
+  "screenshots-settings": [
+    "settings.screenshotsFolder", "settings.screenshotsCaptureMode",
+    "settings.screenshotsCaptureModeFolder", "settings.screenshotsCaptureModeClipboard",
+    "settings.screenshotsCaptureModeBoth", "settings.screenshotsFormat",
+    "settings.screenshotsFormatPng", "settings.screenshotsFormatJpeg",
+    "settings.screenshotsQuality", "settings.useDirectxScreenCapture",
+    "settings.screenshotsShortcuts", "settings.screenshotsDefaults",
+  ],
   "dont-sleep-settings": ["settings.dontSleepForegroundOnly"],
   "shortcuts-settings": [
     "settings.workspaceTabs", "settings.sectionTerminal", "settings.shortcutPressKeys",
     "settings.shortcutClear", "settings.shortcutReset", "settings.shortcutResetAll",
-    "settings.shortcutsHint",
+    "settings.shortcutsHint", "settings.sectionScreenshots", "settings.screenshotsShortcuts",
+    "screenshots.captureRegion", "screenshots.captureWindow", "screenshots.captureFullscreen",
   ],
   "proxy-settings": [
     "settings.proxyMode", "settings.proxyModeSystem", "settings.proxyModeNone",
@@ -192,7 +204,8 @@ export const SETTINGS_SEARCH_KEYS: Record<SettingsSectionId, readonly string[]> 
   ],
   "about-settings": [
     "settings.version", "settings.developer", "settings.license", "settings.repository",
-    "settings.github", "settings.appSlogan",
+    "settings.github", "settings.appSlogan", "settings.portableMode",
+    "settings.portableDataFolder", "settings.openPortableDataFolder",
   ],
 };
 

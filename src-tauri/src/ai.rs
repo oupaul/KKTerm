@@ -86,7 +86,8 @@ const TUTORIAL_TOOL_KNOWN_TARGETS: &str = concat!(
     "webview.toolbar, webview.address, webview.openExternally, webview.autoRefresh, webview.savePassword, webview.fillCredential, webview.sendToAi, webview.close, webview.surface with navigation page=workspace; ",
     "remoteDesktop.toolbar, remoteDesktop.viewMode, remoteDesktop.sendCtrlAltDel, remoteDesktop.reconnect, remoteDesktop.sendToAi, remoteDesktop.surface with navigation page=workspace; ",
     "installer.updateAll, installer.toolOptions with navigation page=installer; ",
-    "settings.language, settings.activityRail, settings.workspaceAccess, settings.useDirectxScreenCapture, settings.statusBar, settings.settingsData, settings.debug with navigation page=settings settingsSectionId=general-settings; ",
+    "app.activityRailScreenshots, screenshots.captureRegion, screenshots.captureWindow, screenshots.captureFullscreen, screenshots.viewSwitch, screenshots.library with navigation page=screenshots; ",
+    "settings.language, settings.activityRail, settings.workspaceAccess, settings.statusBar, settings.settingsData, settings.debug with navigation page=settings settingsSectionId=general-settings; ",
     "settings.appUiFontFamily, settings.appearance.colorScheme, settings.resetLayout with navigation page=settings settingsSectionId=appearance-settings; ",
     "settings.dashboardDefaultLanding, settings.dashboardUseRandomDynamicBackground, settings.dashboardMaxActiveScriptWidgets with navigation page=settings settingsSectionId=dashboard-settings; ",
     "settings.credentialStorage, settings.credentialsStored, settings.widgetCredentialsStored with navigation page=settings settingsSectionId=credentials-settings; ",
@@ -96,6 +97,7 @@ const TUTORIAL_TOOL_KNOWN_TARGETS: &str = concat!(
     "settings.ignoreCertificateErrors, settings.urlSavedPasswords, settings.urlDataShards with navigation page=settings settingsSectionId=url-settings; ",
     "settings.rdpColorDepth, settings.rdpPerformanceProfile, settings.rdpRemoteResolution with navigation page=settings settingsSectionId=rdp-settings; ",
     "settings.vncViewOnly, settings.vncColorLevel with navigation page=settings settingsSectionId=vnc-settings; ",
+    "settings.screenshotsFolder, settings.screenshotsFormat, settings.screenshotsShortcuts, settings.useDirectxScreenCapture with navigation page=settings settingsSectionId=screenshots-settings; ",
     "settings.workspace with navigation page=settings settingsSectionId=workspace-settings; settings.fileExplorer with navigation page=settings settingsSectionId=file-explorer-settings; settings.dontSleep with navigation page=settings settingsSectionId=dont-sleep-settings; settings.installer with navigation page=settings settingsSectionId=installer-settings; ",
     "settings.shortcuts with navigation page=settings settingsSectionId=shortcuts-settings; ",
     "settings.proxy with navigation page=settings settingsSectionId=proxy-settings; ",
@@ -1679,10 +1681,7 @@ async fn run_copilot_sdk(
     token: &str,
     prompt: &str,
 ) -> Result<String, String> {
-    let app_data_dir = app
-        .path()
-        .app_data_dir()
-        .map_err(|error| format!("failed to locate app data directory: {error}"))?;
+    let app_data_dir = crate::app_paths::data_dir(app)?;
     fs::create_dir_all(&app_data_dir)
         .map_err(|error| format!("failed to create app data directory: {error}"))?;
 
@@ -1760,10 +1759,7 @@ pub async fn list_copilot_models(
     app: &tauri::AppHandle,
     token: &str,
 ) -> Result<Vec<CopilotModelOption>, String> {
-    let app_data_dir = app
-        .path()
-        .app_data_dir()
-        .map_err(|error| format!("failed to locate app data directory: {error}"))?;
+    let app_data_dir = crate::app_paths::data_dir(app)?;
     fs::create_dir_all(&app_data_dir)
         .map_err(|error| format!("failed to create app data directory: {error}"))?;
 

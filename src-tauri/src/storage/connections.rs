@@ -983,10 +983,17 @@ impl Storage {
         credential_id: String,
         label: Option<String>,
         username: Option<String>,
+        host: Option<String>,
     ) -> Result<ConnectionPasswordCredentialSummary, String> {
         let credential_id = required_field("password credential id", credential_id)?;
         self.with_connection(|connection| {
-            update_connection_password_credential(connection, &credential_id, label, username)
+            update_connection_password_credential(
+                connection,
+                &credential_id,
+                label,
+                username,
+                host,
+            )
         })
     }
 
@@ -1026,7 +1033,7 @@ impl Storage {
     ) -> Result<i64, String> {
         let target_credential_id =
             required_field("password credential id", target_credential_id)?;
-        self.with_connection(|connection| {
+        self.with_connection_mut(|connection| {
             merge_connection_password_credentials(
                 connection,
                 &target_credential_id,

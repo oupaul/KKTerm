@@ -533,6 +533,8 @@ pub struct GeneralSettings {
     // migration (see `reveal_it_ops_on_release`).
     #[serde(default = "default_show_it_ops")]
     show_it_ops: bool,
+    #[serde(default = "default_show_screenshots_on_rail")]
+    show_screenshots_on_rail: bool,
     #[serde(default = "default_show_dont_sleep_on_rail")]
     show_dont_sleep_on_rail: bool,
     #[serde(default = "default_activity_rail_order")]
@@ -604,6 +606,10 @@ impl GeneralSettings {
 
     pub(crate) fn auto_start_with_windows(&self) -> bool {
         self.auto_start_with_windows
+    }
+
+    pub(crate) fn set_auto_start_with_windows(&mut self, enabled: bool) {
+        self.auto_start_with_windows = enabled;
     }
 
     pub(crate) fn minimize_to_tray(&self) -> bool {
@@ -931,11 +937,65 @@ pub struct VncSettings {
 #[serde(rename_all = "camelCase")]
 pub struct ScreenshotSettings {
     folder_path: String,
+    #[serde(default = "default_screenshot_format")]
+    format: String,
+    #[serde(default = "default_screenshot_quality", alias = "jpegQuality")]
+    quality: u8,
+    #[serde(default = "default_screenshot_capture_mode")]
+    capture_mode: String,
+    #[serde(default = "default_screenshot_region_shortcut")]
+    region_shortcut: String,
+    #[serde(default = "default_screenshot_shortcut_enabled")]
+    region_shortcut_enabled: bool,
+    #[serde(default = "default_screenshot_window_shortcut")]
+    window_shortcut: String,
+    #[serde(default = "default_screenshot_shortcut_enabled")]
+    window_shortcut_enabled: bool,
+    #[serde(default = "default_screenshot_fullscreen_shortcut")]
+    fullscreen_shortcut: String,
+    #[serde(default = "default_screenshot_shortcut_enabled")]
+    fullscreen_shortcut_enabled: bool,
 }
 
 impl ScreenshotSettings {
     pub(crate) fn folder_path(&self) -> &str {
         &self.folder_path
+    }
+
+    pub(crate) fn format(&self) -> &str {
+        &self.format
+    }
+
+    pub(crate) fn quality(&self) -> u8 {
+        self.quality
+    }
+
+    pub(crate) fn capture_mode(&self) -> &str {
+        &self.capture_mode
+    }
+
+    pub(crate) fn region_shortcut(&self) -> &str {
+        &self.region_shortcut
+    }
+
+    pub(crate) fn region_shortcut_enabled(&self) -> bool {
+        self.region_shortcut_enabled
+    }
+
+    pub(crate) fn window_shortcut(&self) -> &str {
+        &self.window_shortcut
+    }
+
+    pub(crate) fn window_shortcut_enabled(&self) -> bool {
+        self.window_shortcut_enabled
+    }
+
+    pub(crate) fn fullscreen_shortcut(&self) -> &str {
+        &self.fullscreen_shortcut
+    }
+
+    pub(crate) fn fullscreen_shortcut_enabled(&self) -> bool {
+        self.fullscreen_shortcut_enabled
     }
 }
 
@@ -1829,6 +1889,13 @@ impl Storage {
 
     pub(crate) fn db_path(&self) -> PathBuf {
         self.db_path.clone()
+    }
+
+    pub fn checkpoint_wal(&self) -> Result<(), String> {
+        let connection = self.lock()?;
+        connection
+            .execute_batch("PRAGMA wal_checkpoint(TRUNCATE);")
+            .map_err(to_storage_error)
     }
 
     pub fn database_folder(&self) -> Result<String, String> {
@@ -4267,6 +4334,7 @@ fn update_connection_password_credential(
     credential_id: &str,
     label: Option<String>,
     username: Option<String>,
+    host: Option<String>,
 ) -> Result<ConnectionPasswordCredentialSummary, String> {
     let current = get_connection_password_credential_by_id(connection, credential_id)
         .map_err(|_| "password credential was not found".to_string())?;
@@ -4284,12 +4352,16 @@ fn update_connection_password_credential(
         Some(value) => value.trim().to_string(),
         None => current.username,
     };
+    let host = match host {
+        Some(value) => value.trim().to_string(),
+        None => current.host,
+    };
     connection
         .execute(
             "UPDATE connection_password_credentials
-             SET label = ?2, username = ?3, updated_at = CURRENT_TIMESTAMP
+             SET label = ?2, username = ?3, host = ?4, updated_at = CURRENT_TIMESTAMP
              WHERE id = ?1",
-            params![credential_id, label, username],
+            params![credential_id, label, username, host],
         )
         .map_err(to_storage_error)?;
     get_connection_password_credential_by_id(connection, credential_id)
@@ -4367,11 +4439,12 @@ fn find_reusable_connection_password_credentials(
 }
 
 fn merge_connection_password_credentials(
-    connection: &SqliteConnection,
+    connection: &mut SqliteConnection,
     target_credential_id: &str,
     source_credential_ids: &[String],
 ) -> Result<i64, String> {
-    let target = get_connection_password_credential_by_id(connection, target_credential_id)
+    let transaction = connection.transaction().map_err(to_storage_error)?;
+    let target = get_connection_password_credential_by_id(&transaction, target_credential_id)
         .map_err(|_| "password credential was not found".to_string())?;
     if source_credential_ids.is_empty() {
         return Err("at least one credential to merge is required".to_string());
@@ -4380,7 +4453,7 @@ fn merge_connection_password_credentials(
         if source_id == target_credential_id {
             return Err("a credential cannot be merged into itself".to_string());
         }
-        let source = get_connection_password_credential_by_id(connection, source_id)
+        let source = get_connection_password_credential_by_id(&transaction, source_id)
             .map_err(|_| "password credential was not found".to_string())?;
         if source.connection_type != target.connection_type {
             return Err("password credential types must match to merge".to_string());
@@ -4398,7 +4471,7 @@ fn merge_connection_password_credentials(
     for source_id in source_credential_ids {
         params.push(Box::new(source_id.clone()));
     }
-    let relinked = connection
+    let relinked = transaction
         .execute(
             &relink_sql,
             rusqlite::params_from_iter(params.iter().map(|param| param.as_ref())),
@@ -4407,12 +4480,13 @@ fn merge_connection_password_credentials(
     let delete_sql = format!(
         "DELETE FROM connection_password_credentials WHERE id IN ({placeholders})"
     );
-    connection
+    transaction
         .execute(
             &delete_sql,
             rusqlite::params_from_iter(source_credential_ids.iter()),
         )
         .map_err(to_storage_error)?;
+    transaction.commit().map_err(to_storage_error)?;
     Ok(relinked as i64)
 }
 
@@ -5193,6 +5267,7 @@ fn default_general_settings() -> GeneralSettings {
         separate_split_terminal_backgrounds: false,
         show_installer_on_rail: default_show_installer_on_rail(),
         show_it_ops: default_show_it_ops(),
+        show_screenshots_on_rail: default_show_screenshots_on_rail(),
         show_dont_sleep_on_rail: default_show_dont_sleep_on_rail(),
         activity_rail_order: default_activity_rail_order(),
         installer_check_interval_seconds: default_installer_check_interval_seconds(),
@@ -5270,15 +5345,26 @@ fn default_show_it_ops() -> bool {
     true
 }
 
+fn default_show_screenshots_on_rail() -> bool {
+    true
+}
+
 fn default_show_dont_sleep_on_rail() -> bool {
     true
 }
 
 fn default_activity_rail_order() -> Vec<String> {
-    ["workspace", "dashboard", "installer", "itops", "dontSleep"]
-        .into_iter()
-        .map(str::to_string)
-        .collect()
+    [
+        "workspace",
+        "dashboard",
+        "installer",
+        "screenshots",
+        "itops",
+        "dontSleep",
+    ]
+    .into_iter()
+    .map(str::to_string)
+    .collect()
 }
 
 fn default_installer_check_interval_seconds() -> u32 {
@@ -5568,7 +5654,44 @@ fn default_vnc_preferred_encoding() -> String {
 fn default_screenshot_settings() -> ScreenshotSettings {
     ScreenshotSettings {
         folder_path: default_screenshot_folder_path(),
+        format: default_screenshot_format(),
+        quality: default_screenshot_quality(),
+        capture_mode: default_screenshot_capture_mode(),
+        region_shortcut: default_screenshot_region_shortcut(),
+        region_shortcut_enabled: default_screenshot_shortcut_enabled(),
+        window_shortcut: default_screenshot_window_shortcut(),
+        window_shortcut_enabled: default_screenshot_shortcut_enabled(),
+        fullscreen_shortcut: default_screenshot_fullscreen_shortcut(),
+        fullscreen_shortcut_enabled: default_screenshot_shortcut_enabled(),
     }
+}
+
+fn default_screenshot_format() -> String {
+    "png".to_string()
+}
+
+fn default_screenshot_quality() -> u8 {
+    90
+}
+
+fn default_screenshot_capture_mode() -> String {
+    "both".to_string()
+}
+
+fn default_screenshot_region_shortcut() -> String {
+    "Ctrl+Alt+R".to_string()
+}
+
+fn default_screenshot_window_shortcut() -> String {
+    "Ctrl+Alt+W".to_string()
+}
+
+fn default_screenshot_fullscreen_shortcut() -> String {
+    "Ctrl+Alt+F".to_string()
+}
+
+fn default_screenshot_shortcut_enabled() -> bool {
+    true
 }
 
 pub(crate) fn default_screenshot_folder_path() -> String {
@@ -6452,7 +6575,28 @@ fn validate_screenshot_settings(
     let folder = expand_home_path(&settings.folder_path);
     fs::create_dir_all(&folder)
         .map_err(|error| format!("failed to create screenshots folder: {error}"))?;
+    settings.format = match settings.format.trim().to_lowercase().as_str() {
+        "" | "png" => "png".to_string(),
+        "jpeg" | "jpg" => "jpeg".to_string(),
+        _ => return Err("screenshot format must be png or jpeg".to_string()),
+    };
+    settings.quality = settings.quality.clamp(1, 100);
+    settings.capture_mode = match settings.capture_mode.trim().to_lowercase().as_str() {
+        "folder" => "folder".to_string(),
+        "clipboard" => "clipboard".to_string(),
+        "" | "both" => "both".to_string(),
+        _ => return Err("screenshot capture mode must be folder, clipboard, or both".to_string()),
+    };
+    settings.region_shortcut = settings.region_shortcut.trim().to_string();
+    settings.window_shortcut = settings.window_shortcut.trim().to_string();
+    settings.fullscreen_shortcut = settings.fullscreen_shortcut.trim().to_string();
     Ok(settings)
+}
+
+/// Expands the persisted screenshots folder setting (which may keep a
+/// `%USERPROFILE%` prefix) to a concrete path for filesystem operations.
+pub(crate) fn expand_screenshot_folder_path(path: &str) -> PathBuf {
+    expand_home_path(path)
 }
 
 fn expand_home_path(path: &str) -> PathBuf {

@@ -218,10 +218,7 @@ fn run_acp_agent_turn(
     prompt_started: &mut bool,
 ) -> Result<String, String> {
     let spec = acp_command_spec(backend, cli_command, model);
-    let cwd = app
-        .path()
-        .app_data_dir()
-        .map_err(|error| format!("failed to resolve ACP working directory: {error}"))?;
+    let cwd = crate::app_paths::data_dir(app)?;
     fs::create_dir_all(&cwd)
         .map_err(|error| format!("failed to create ACP working directory: {error}"))?;
     let cwd = cwd

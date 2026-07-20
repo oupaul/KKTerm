@@ -33,6 +33,8 @@ test("uploads immutable assets before version and stable manifests", () => {
     assets: [
       { name: "kkterm-0.1.93-windows-x64-setup.exe" },
       { name: "kkterm-0.1.93-windows-x64-setup.exe.sha256" },
+      { name: "kkterm-0.1.93-windows-x64-portable.zip" },
+      { name: "kkterm-0.1.93-windows-x64-portable.zip.sha256" },
     ],
   });
 
@@ -44,6 +46,14 @@ test("uploads immutable assets before version and stable manifests", () => {
     {
       name: "kkterm-0.1.93-windows-x64-setup.exe.sha256",
       key: "releases/v0.1.93/kkterm-0.1.93-windows-x64-setup.exe.sha256",
+    },
+    {
+      name: "kkterm-0.1.93-windows-x64-portable.zip",
+      key: "releases/v0.1.93/kkterm-0.1.93-windows-x64-portable.zip",
+    },
+    {
+      name: "kkterm-0.1.93-windows-x64-portable.zip.sha256",
+      key: "releases/v0.1.93/kkterm-0.1.93-windows-x64-portable.zip.sha256",
     },
     { name: "release-manifest.json", key: "releases/v0.1.93/latest.json" },
     { name: "release-manifest.json", key: "releases/latest.json" },

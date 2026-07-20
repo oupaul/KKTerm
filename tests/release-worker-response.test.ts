@@ -28,6 +28,7 @@ test("uses partial-content status only for an explicit Range request", () => {
 test("assigns metadata and installer response headers", () => {
   assert.equal(contentTypeForKey("releases/latest.json"), "application/json; charset=utf-8");
   assert.equal(contentTypeForKey("releases/v0.1.93/app.exe"), "application/vnd.microsoft.portable-executable");
+  assert.equal(contentTypeForKey("releases/v0.1.93/app.zip"), "application/zip");
   assert.equal(contentTypeForKey("releases/v0.1.93/app.sha256"), "text/plain; charset=utf-8");
   assert.equal(cacheControlForKey("releases/latest.json"), "public, max-age=300, must-revalidate");
   assert.equal(cacheControlForKey("releases/v0.1.93/app.exe"), "public, max-age=31536000, immutable");

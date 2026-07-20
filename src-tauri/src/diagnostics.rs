@@ -5,7 +5,7 @@ use std::{
     path::{Path, PathBuf},
     time::{SystemTime, UNIX_EPOCH},
 };
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -34,10 +34,7 @@ pub fn create_bundle(
     performance: &performance::PerformanceMonitor,
 ) -> Result<DiagnosticsBundle, String> {
     let created_at_unix_seconds = unix_seconds();
-    let bundle_dir = app
-        .path()
-        .app_data_dir()
-        .map_err(|error| format!("failed to resolve app data directory: {error}"))?
+    let bundle_dir = crate::app_paths::data_dir(app)?
         .join("diagnostics")
         .join(format!("kkterm-diagnostics-{created_at_unix_seconds}"));
     fs::create_dir_all(&bundle_dir)
