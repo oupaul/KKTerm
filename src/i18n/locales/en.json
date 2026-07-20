@@ -1758,7 +1758,16 @@
       "mosaic": "Mosaic",
       "textPlaceholder": "Text to place",
       "undo": "Undo",
-      "loadError": "Could not load the screenshot editor image."
+      "loadError": "Could not load the screenshot editor image.",
+      "appFont": "App font",
+      "sansSerif": "Sans serif",
+      "serif": "Serif",
+      "monospace": "Monospace",
+      "bold": "Bold",
+      "resizeDialog": "Resize screenshot editor",
+      "unsavedTitle": "Save screenshot edits?",
+      "unsavedMessage": "Your annotations will be lost if you close without saving.",
+      "dontSave": "Don't save"
     },
     "menu": {
       "openExternal": "Open in default app",
@@ -1962,7 +1971,6 @@
     "screenshotsQualityHint": "JPEG uses lossy image quality. PNG stays lossless and uses this value as compression effort.",
     "screenshotsShortcuts": "Global capture shortcuts",
     "screenshotsShortcutsHint": "These shortcuts work system-wide while KKTerm is running, including while it is hidden in the tray.",
-    "screenshotsShortcutPlaceholder": "e.g. Ctrl+Alt+R",
     "screenshotsSaved": "Screenshot settings saved.",
     "sectionAbout": "About",
     "generalDefaults": "General defaults",

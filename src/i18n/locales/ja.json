@@ -1758,7 +1758,16 @@
       "mosaic": "モザイク",
       "textPlaceholder": "配置するテキスト",
       "undo": "元に戻す",
-      "loadError": "スクリーンショット エディターの画像をロードできませんでした。"
+      "loadError": "スクリーンショット エディターの画像をロードできませんでした。",
+      "appFont": "アプリのフォント",
+      "sansSerif": "ゴシック体",
+      "serif": "明朝体",
+      "monospace": "等幅",
+      "bold": "太字",
+      "resizeDialog": "スクリーンショットエディターのサイズを変更",
+      "unsavedTitle": "スクリーンショットの編集を保存しますか？",
+      "unsavedMessage": "保存せずに閉じると注釈が失われます。",
+      "dontSave": "保存しない"
     },
     "menu": {
       "openExternal": "既定のアプリで開く",
@@ -1921,7 +1930,6 @@
     "screenshotsQualityHint": "JPEG は非可逆画質を使用します。 PNG はロスレスを維持し、この値を圧縮作業として使用します。",
     "screenshotsShortcuts": "グローバルキャプチャショートカット",
     "screenshotsShortcutsHint": "これらのショートカットは、KKTerm の実行中(トレイに隠れている間も)システム全体で機能します。",
-    "screenshotsShortcutPlaceholder": "例: Ctrl+Alt+R",
     "screenshotsSaved": "スクリーンショット設定を保存しました。",
     "sectionAbout": "について",
     "generalDefaults": "ワークスペースのデフォルト",

@@ -1758,7 +1758,16 @@
       "mosaic": "모자이크",
       "textPlaceholder": "배치할 텍스트",
       "undo": "끄르다",
-      "loadError": "스크린샷 편집기 이미지를 로드할 수 없습니다."
+      "loadError": "스크린샷 편집기 이미지를 로드할 수 없습니다.",
+      "appFont": "앱 글꼴",
+      "sansSerif": "산세리프",
+      "serif": "세리프",
+      "monospace": "고정폭",
+      "bold": "굵게",
+      "resizeDialog": "스크린샷 편집기 크기 조절",
+      "unsavedTitle": "스크린샷 편집 내용을 저장할까요?",
+      "unsavedMessage": "저장하지 않고 닫으면 주석이 사라집니다.",
+      "dontSave": "저장 안 함"
     },
     "menu": {
       "openExternal": "기본 앱에서 열기",
@@ -1921,7 +1930,6 @@
     "screenshotsQualityHint": "JPEG는 손실이 있는 이미지 품질을 사용합니다. PNG는 무손실을 유지하며 이 값을 압축 노력으로 사용합니다.",
     "screenshotsShortcuts": "전역 캡처 단축키",
     "screenshotsShortcutsHint": "이 단축키는 KKTerm이 실행 중인 동안(트레이에 숨겨져 있을 때 포함) 시스템 전체에서 작동합니다.",
-    "screenshotsShortcutPlaceholder": "예: Ctrl+Alt+R",
     "screenshotsSaved": "스크린샷 설정을 저장했습니다.",
     "sectionAbout": "정보",
     "generalDefaults": "워크스페이스 기본값",

@@ -1758,7 +1758,16 @@
       "mosaic": "Mosaico",
       "textPlaceholder": "Texto para colocar",
       "undo": "Desfazer",
-      "loadError": "Não foi possível carregar a imagem do editor de captura de tela."
+      "loadError": "Não foi possível carregar a imagem do editor de captura de tela.",
+      "appFont": "Fonte do aplicativo",
+      "sansSerif": "Sem serifa",
+      "serif": "Com serifa",
+      "monospace": "Monoespaçada",
+      "bold": "Negrito",
+      "resizeDialog": "Redimensionar editor de captura",
+      "unsavedTitle": "Salvar edições da captura?",
+      "unsavedMessage": "Suas anotações serão perdidas se você fechar sem salvar.",
+      "dontSave": "Não salvar"
     },
     "menu": {
       "openExternal": "Abrir no aplicativo padrão",
@@ -1921,7 +1930,6 @@
     "screenshotsQualityHint": "JPEG usa qualidade de imagem com perdas. PNG permanece sem perdas e usa esse valor como esforço de compactação.",
     "screenshotsShortcuts": "Atalhos globais de captura",
     "screenshotsShortcutsHint": "Esses atalhos funcionam em todo o sistema enquanto o KKTerm está em execução, inclusive oculto na bandeja.",
-    "screenshotsShortcutPlaceholder": "ex.: Ctrl+Alt+R",
     "screenshotsSaved": "Configurações de captura de tela salvas.",
     "sectionAbout": "Sobre",
     "generalDefaults": "Padrões da área de trabalho",

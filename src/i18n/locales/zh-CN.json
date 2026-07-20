@@ -1758,7 +1758,16 @@
       "mosaic": "马赛克",
       "textPlaceholder": "文本放置",
       "undo": "撤消",
-      "loadError": "无法加载屏幕截图编辑器图像。"
+      "loadError": "无法加载屏幕截图编辑器图像。",
+      "appFont": "应用字体",
+      "sansSerif": "无衬线",
+      "serif": "衬线",
+      "monospace": "等宽",
+      "bold": "粗体",
+      "resizeDialog": "调整截图编辑器大小",
+      "unsavedTitle": "保存截图编辑内容？",
+      "unsavedMessage": "如果不保存就关闭，注释将会丢失。",
+      "dontSave": "不保存"
     },
     "menu": {
       "openExternal": "用默认应用打开",
@@ -1921,7 +1930,6 @@
     "screenshotsQualityHint": "JPEG 使用有损图像质量。 PNG 保持无损并使用该值作为压缩效果。",
     "screenshotsShortcuts": "全局截图快捷键",
     "screenshotsShortcutsHint": "这些快捷键在 KKTerm 运行期间全局有效,包括隐藏到托盘时。",
-    "screenshotsShortcutPlaceholder": "例如 Ctrl+Alt+R",
     "screenshotsSaved": "截图设置已保存。",
     "sectionAbout": "关于",
     "generalDefaults": "工作区默认值",

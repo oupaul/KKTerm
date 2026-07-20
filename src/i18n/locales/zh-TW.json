@@ -1758,7 +1758,16 @@
       "mosaic": "馬賽克",
       "textPlaceholder": "要放置的文字",
       "undo": "復原",
-      "loadError": "無法載入螢幕截圖編輯器影像。"
+      "loadError": "無法載入螢幕截圖編輯器影像。",
+      "appFont": "應用程式字型",
+      "sansSerif": "無襯線",
+      "serif": "襯線",
+      "monospace": "等寬",
+      "bold": "粗體",
+      "resizeDialog": "調整螢幕截圖編輯器大小",
+      "unsavedTitle": "儲存螢幕截圖編輯內容？",
+      "unsavedMessage": "關閉而不儲存將會失去註解。",
+      "dontSave": "不儲存"
     },
     "menu": {
       "openExternal": "以預設應用程式開啟",
@@ -1921,7 +1930,6 @@
     "screenshotsQualityHint": "JPEG 使用有損壓縮。PNG 維持無損，並使用此數值控制壓縮程度。",
     "screenshotsShortcuts": "全域擷取快速鍵",
     "screenshotsShortcutsHint": "這些快速鍵在 KKTerm 執行期間全域有效,包括隱藏到系統匣時。",
-    "screenshotsShortcutPlaceholder": "例如 Ctrl+Alt+R",
     "screenshotsSaved": "已儲存螢幕截圖設定。",
     "sectionAbout": "關於",
     "generalDefaults": "工作區預設值",

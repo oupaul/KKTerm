@@ -1758,7 +1758,16 @@
       "mosaic": "Mosaico",
       "textPlaceholder": "Testo da posizionare",
       "undo": "Disfare",
-      "loadError": "Impossibile caricare l'immagine dell'editor di screenshot."
+      "loadError": "Impossibile caricare l'immagine dell'editor di screenshot.",
+      "appFont": "Carattere dell'app",
+      "sansSerif": "Senza grazie",
+      "serif": "Con grazie",
+      "monospace": "Monospaziato",
+      "bold": "Grassetto",
+      "resizeDialog": "Ridimensiona editor screenshot",
+      "unsavedTitle": "Salvare le modifiche allo screenshot?",
+      "unsavedMessage": "Le annotazioni andranno perse se chiudi senza salvare.",
+      "dontSave": "Non salvare"
     },
     "menu": {
       "openExternal": "Apri nell'app predefinita",
@@ -1921,7 +1930,6 @@
     "screenshotsQualityHint": "JPEG utilizza una qualità dell'immagine con perdita. PNG rimane senza perdite e utilizza questo valore come sforzo di compressione.",
     "screenshotsShortcuts": "Scorciatoie globali di cattura",
     "screenshotsShortcutsHint": "Queste scorciatoie funzionano in tutto il sistema mentre KKTerm è in esecuzione, anche quando è nascosto nell'area di notifica.",
-    "screenshotsShortcutPlaceholder": "es. Ctrl+Alt+R",
     "screenshotsSaved": "Impostazioni degli screenshot salvate.",
     "sectionAbout": "Informazioni",
     "generalDefaults": "Predefiniti spazio di lavoro",

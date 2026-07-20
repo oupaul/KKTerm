@@ -1758,7 +1758,16 @@
       "mosaic": "Mosaik",
       "textPlaceholder": "Teks ke tempat",
       "undo": "Membuka",
-      "loadError": "Tidak dapat memuat gambar editor tangkapan layar."
+      "loadError": "Tidak dapat memuat gambar editor tangkapan layar.",
+      "appFont": "Font aplikasi",
+      "sansSerif": "Sans serif",
+      "serif": "Serif",
+      "monospace": "Monospace",
+      "bold": "Tebal",
+      "resizeDialog": "Ubah ukuran editor tangkapan layar",
+      "unsavedTitle": "Simpan editan tangkapan layar?",
+      "unsavedMessage": "Anotasi akan hilang jika Anda menutup tanpa menyimpan.",
+      "dontSave": "Jangan simpan"
     },
     "menu": {
       "openExternal": "Buka di aplikasi bawaan",
@@ -1921,7 +1930,6 @@
     "screenshotsQualityHint": "JPEG menggunakan kualitas gambar yang lossy. PNG tetap lossless dan menggunakan nilai ini sebagai upaya kompresi.",
     "screenshotsShortcuts": "Pintasan tangkapan global",
     "screenshotsShortcutsHint": "Pintasan ini berfungsi di seluruh sistem selama KKTerm berjalan, termasuk saat tersembunyi di baki sistem.",
-    "screenshotsShortcutPlaceholder": "mis. Ctrl+Alt+R",
     "screenshotsSaved": "Pengaturan tangkapan layar disimpan.",
     "sectionAbout": "Tentang",
     "generalDefaults": "Default ruang kerja",

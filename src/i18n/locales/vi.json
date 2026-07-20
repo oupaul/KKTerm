@@ -1758,7 +1758,16 @@
       "mosaic": "Khảm",
       "textPlaceholder": "Nhắn tin tới địa điểm",
       "undo": "Hoàn tác",
-      "loadError": "Không thể tải hình ảnh trình chỉnh sửa ảnh chụp màn hình."
+      "loadError": "Không thể tải hình ảnh trình chỉnh sửa ảnh chụp màn hình.",
+      "appFont": "Phông chữ ứng dụng",
+      "sansSerif": "Không chân",
+      "serif": "Có chân",
+      "monospace": "Đơn cách",
+      "bold": "Đậm",
+      "resizeDialog": "Đổi kích thước trình sửa ảnh chụp màn hình",
+      "unsavedTitle": "Lưu chỉnh sửa ảnh chụp màn hình?",
+      "unsavedMessage": "Chú thích sẽ bị mất nếu bạn đóng mà không lưu.",
+      "dontSave": "Không lưu"
     },
     "menu": {
       "openExternal": "Mở bằng ứng dụng mặc định",
@@ -1921,7 +1930,6 @@
     "screenshotsQualityHint": "JPEG sử dụng chất lượng hình ảnh bị mất. PNG không mất dữ liệu và sử dụng giá trị này làm nỗ lực nén.",
     "screenshotsShortcuts": "Phím tắt chụp toàn cục",
     "screenshotsShortcutsHint": "Các phím tắt này hoạt động trên toàn hệ thống khi KKTerm đang chạy, kể cả khi ẩn trong khay hệ thống.",
-    "screenshotsShortcutPlaceholder": "ví dụ: Ctrl+Alt+R",
     "screenshotsSaved": "Đã lưu cài đặt ảnh chụp màn hình.",
     "sectionAbout": "About",
     "generalDefaults": "Workspace defaults",

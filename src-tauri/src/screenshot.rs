@@ -319,14 +319,12 @@ struct CaptureTarget {
     height: i32,
 }
 
-#[cfg(target_os = "windows")]
 struct MinimizedCaptureWindow {
     window: tauri::WebviewWindow,
     was_minimized: bool,
     was_visible: bool,
 }
 
-#[cfg(target_os = "windows")]
 impl MinimizedCaptureWindow {
     fn new(app: &tauri::AppHandle) -> Result<Self, String> {
         let window = app
@@ -350,7 +348,6 @@ impl MinimizedCaptureWindow {
     }
 }
 
-#[cfg(target_os = "windows")]
 impl Drop for MinimizedCaptureWindow {
     fn drop(&mut self) {
         if !self.was_visible {
@@ -398,19 +395,48 @@ fn capture_target(
 
 #[cfg(not(target_os = "windows"))]
 pub fn capture_rect_to_clipboard(
-    _app: &tauri::AppHandle,
-    _request: CaptureScreenshotRequest,
+    app: &tauri::AppHandle,
+    request: CaptureScreenshotRequest,
     _use_directx: bool,
 ) -> Result<(), String> {
-    Err("screenshot capture is currently available on Windows".to_string())
+    let window = app
+        .get_webview_window("main")
+        .ok_or_else(|| "main window is not available".to_string())?;
+    let scale = window.scale_factor().unwrap_or(1.0);
+    let (rgba, win_width, win_height) = capture_window_rgba(&window)?;
+    let inner = window
+        .inner_position()
+        .map_err(|error| format!("failed to resolve window position: {error}"))?;
+    let outer = window
+        .outer_position()
+        .map_err(|error| format!("failed to resolve window position: {error}"))?;
+    let off_x = (inner.x - outer.x).max(0) as u32;
+    let off_y = (inner.y - outer.y).max(0) as u32;
+    let x = off_x + (request.x * scale).round().max(0.0) as u32;
+    let y = off_y + (request.y * scale).round().max(0.0) as u32;
+    let width = (request.width * scale).round().max(1.0) as u32;
+    let height = (request.height * scale).round().max(1.0) as u32;
+    let (cropped, width, height) = crop_rgba(&rgba, win_width, win_height, x, y, width, height)?;
+    write_rgba_to_clipboard(&cropped, width, height)
 }
 
 #[cfg(not(target_os = "windows"))]
 pub fn write_data_url_to_clipboard(
     _app: &tauri::AppHandle,
-    _request: ScreenshotDataUrlRequest,
+    request: ScreenshotDataUrlRequest,
 ) -> Result<(), String> {
-    Err("screenshot clipboard is currently available on Windows".to_string())
+    let (_, encoded) = request
+        .data_url
+        .split_once(",")
+        .filter(|(header, _)| header.starts_with("data:image/") && header.ends_with(";base64"))
+        .ok_or_else(|| "screenshot is not a base64 image data URL".to_string())?;
+    let bytes = STANDARD
+        .decode(encoded)
+        .map_err(|error| format!("failed to decode screenshot: {error}"))?;
+    let image = image::load_from_memory(&bytes)
+        .map_err(|error| format!("failed to read screenshot: {error}"))?
+        .to_rgba8();
+    write_rgba_to_clipboard(image.as_raw(), image.width(), image.height())
 }
 
 #[cfg(not(target_os = "windows"))]
@@ -451,43 +477,364 @@ pub fn capture_fullscreen_for_assistant(_use_directx: bool) -> Result<AssistantS
 
 #[cfg(not(target_os = "windows"))]
 pub fn capture_rect_to_library(
-    _app: &tauri::AppHandle,
-    _request: CaptureScreenshotRequest,
-    _kind: String,
-    _options: LibrarySaveOptions,
+    app: &tauri::AppHandle,
+    request: CaptureScreenshotRequest,
+    kind: String,
+    options: LibrarySaveOptions,
     _use_directx: bool,
 ) -> Result<ScreenshotCaptureResult, String> {
-    Err("screenshot capture is currently available on Windows".to_string())
+    let window = app
+        .get_webview_window("main")
+        .ok_or_else(|| "main window is not available".to_string())?;
+    let scale = window.scale_factor().unwrap_or(1.0);
+    let (rgba, win_width, win_height) = capture_window_rgba(&window)?;
+    let inner = window
+        .inner_position()
+        .map_err(|error| format!("failed to resolve window position: {error}"))?;
+    let outer = window
+        .outer_position()
+        .map_err(|error| format!("failed to resolve window position: {error}"))?;
+    let off_x = (inner.x - outer.x).max(0) as u32;
+    let off_y = (inner.y - outer.y).max(0) as u32;
+    let x = off_x + (request.x * scale).round().max(0.0) as u32;
+    let y = off_y + (request.y * scale).round().max(0.0) as u32;
+    let width = (request.width * scale).round().max(1.0) as u32;
+    let height = (request.height * scale).round().max(1.0) as u32;
+    let (cropped, width, height) = crop_rgba(&rgba, win_width, win_height, x, y, width, height)?;
+    deliver_rgba(&cropped, width, height, kind, &options)
 }
 
 #[cfg(not(target_os = "windows"))]
 pub fn capture_fullscreen_to_library(
-    _app: &tauri::AppHandle,
-    _kind: String,
-    _options: LibrarySaveOptions,
+    app: &tauri::AppHandle,
+    kind: String,
+    options: LibrarySaveOptions,
     _use_directx: bool,
 ) -> Result<ScreenshotCaptureResult, String> {
-    Err("screenshot capture is currently available on Windows".to_string())
+    let _guard = MinimizedCaptureWindow::new(app)?;
+    let region = capture_engine::capture_virtual_screen()?;
+    deliver_rgba(&region.rgba, region.width, region.height, kind, &options)
 }
 
 #[cfg(not(target_os = "windows"))]
 pub fn capture_active_window_to_library(
-    _app: &tauri::AppHandle,
-    _kind: String,
-    _options: LibrarySaveOptions,
+    app: &tauri::AppHandle,
+    kind: String,
+    options: LibrarySaveOptions,
     _use_directx: bool,
 ) -> Result<ScreenshotCaptureResult, String> {
-    Err("screenshot capture is currently available on Windows".to_string())
+    let _guard = MinimizedCaptureWindow::new(app)?;
+    #[cfg(target_os = "macos")]
+    let image = capture_macos_selection(true)?;
+    #[cfg(target_os = "linux")]
+    let image = capture_focused_window_image()?;
+    #[cfg(not(any(target_os = "macos", target_os = "linux")))]
+    return Err("window screenshot capture is unavailable on this platform".to_string());
+    deliver_rgba(
+        image.as_raw(),
+        image.width(),
+        image.height(),
+        kind,
+        &options,
+    )
 }
 
 #[cfg(not(target_os = "windows"))]
 pub fn capture_interactive_region_to_library(
-    _app: &tauri::AppHandle,
-    _kind: String,
-    _options: LibrarySaveOptions,
+    app: &tauri::AppHandle,
+    kind: String,
+    options: LibrarySaveOptions,
     _use_directx: bool,
 ) -> Result<ScreenshotCaptureResult, String> {
-    Err("screenshot capture is currently available on Windows".to_string())
+    let _guard = MinimizedCaptureWindow::new(app)?;
+    #[cfg(target_os = "macos")]
+    let image = capture_macos_selection(false)?;
+    #[cfg(target_os = "linux")]
+    let image = capture_linux_region_selection()?;
+    #[cfg(not(any(target_os = "macos", target_os = "linux")))]
+    return Err("region screenshot capture is unavailable on this platform".to_string());
+    deliver_rgba(
+        image.as_raw(),
+        image.width(),
+        image.height(),
+        kind,
+        &options,
+    )
+}
+
+#[cfg(not(target_os = "windows"))]
+fn write_rgba_to_clipboard(rgba: &[u8], width: u32, height: u32) -> Result<(), String> {
+    let expected = width as usize * height as usize * 4;
+    if rgba.len() < expected {
+        return Err("captured screenshot image data is incomplete".to_string());
+    }
+    let mut clipboard = arboard::Clipboard::new()
+        .map_err(|error| format!("failed to open the image clipboard: {error}"))?;
+    clipboard
+        .set_image(arboard::ImageData {
+            width: width as usize,
+            height: height as usize,
+            bytes: std::borrow::Cow::Borrowed(&rgba[..expected]),
+        })
+        .map_err(|error| format!("failed to copy screenshot to the clipboard: {error}"))
+}
+
+#[cfg(not(target_os = "windows"))]
+fn save_rgba_to_library(
+    rgba: &[u8],
+    width: u32,
+    height: u32,
+    kind: String,
+    options: &LibrarySaveOptions,
+) -> Result<StoredScreenshot, String> {
+    let expected = width as usize * height as usize * 4;
+    if rgba.len() < expected {
+        return Err("captured screenshot image data is incomplete".to_string());
+    }
+    let image = image::RgbaImage::from_raw(width, height, rgba[..expected].to_vec())
+        .ok_or_else(|| "failed to build the captured screenshot image".to_string())?;
+    let folder = ensure_screenshots_folder(&options.folder_path)?;
+    let captured_at = now_millis();
+    let normalized_kind = normalize_kind(&kind);
+    let extension = if options.format == "jpeg" {
+        "jpg"
+    } else {
+        "png"
+    };
+    let path = folder.join(format!(
+        "KKTerm-{normalized_kind}-{captured_at}.{extension}"
+    ));
+    write_dynamic_image(
+        &image::DynamicImage::ImageRgba8(image),
+        &path,
+        &options.format,
+        options.quality,
+    )?;
+    stored_screenshot_from_path(&folder, path)
+}
+
+#[cfg(not(target_os = "windows"))]
+fn deliver_rgba(
+    rgba: &[u8],
+    width: u32,
+    height: u32,
+    kind: String,
+    options: &LibrarySaveOptions,
+) -> Result<ScreenshotCaptureResult, String> {
+    let copy_to_clipboard = options.capture_mode != "folder";
+    let save_to_folder = options.capture_mode != "clipboard";
+
+    if copy_to_clipboard {
+        write_rgba_to_clipboard(rgba, width, height)?;
+    }
+    let stored_screenshot = if save_to_folder {
+        Some(save_rgba_to_library(rgba, width, height, kind, options)?)
+    } else {
+        None
+    };
+    Ok(ScreenshotCaptureResult {
+        stored_screenshot,
+        copied_to_clipboard: copy_to_clipboard,
+    })
+}
+
+#[cfg(target_os = "macos")]
+fn capture_macos_selection(window_only: bool) -> Result<image::RgbaImage, String> {
+    let temp = tempfile::tempdir()
+        .map_err(|error| format!("failed to create screenshot workspace: {error}"))?;
+    let path = temp.path().join("selection.png");
+    let mut command = std::process::Command::new("/usr/sbin/screencapture");
+    command.args(["-i", "-x"]);
+    command.arg(if window_only { "-w" } else { "-s" });
+    let status = command
+        .arg(&path)
+        .status()
+        .map_err(|error| format!("failed to start the macOS screenshot selector: {error}"))?;
+    if !status.success() || !path.is_file() {
+        return Err("screenshot capture canceled".to_string());
+    }
+    image::open(&path)
+        .map(|image| image.to_rgba8())
+        .map_err(|error| format!("failed to read selected screenshot: {error}"))
+}
+
+#[cfg(target_os = "linux")]
+fn capture_focused_window_image() -> Result<image::RgbaImage, String> {
+    let own_pid = std::process::id();
+    let windows =
+        xcap::Window::all().map_err(|error| format!("failed to enumerate windows: {error}"))?;
+    let usable = |window: &&xcap::Window| {
+        window.pid().map(|pid| pid != own_pid).unwrap_or(false)
+            && !window.is_minimized().unwrap_or(true)
+            && window.width().unwrap_or(0) > 1
+            && window.height().unwrap_or(0) > 1
+    };
+    let window = windows
+        .iter()
+        .filter(usable)
+        .find(|window| window.is_focused().unwrap_or(false))
+        .or_else(|| windows.iter().filter(usable).next())
+        .ok_or_else(|| "no desktop window is available to capture".to_string())?;
+    window
+        .capture_image()
+        .map_err(|error| format!("failed to capture the selected window: {error}"))
+}
+
+#[cfg(target_os = "linux")]
+fn capture_linux_region_selection() -> Result<image::RgbaImage, String> {
+    use std::io::ErrorKind;
+
+    if let Some(image) = capture_linux_portal_region_selection()? {
+        return Ok(image);
+    }
+
+    let temp = tempfile::tempdir()
+        .map_err(|error| format!("failed to create screenshot workspace: {error}"))?;
+    let path = temp.path().join("selection.png");
+
+    let load_if_selected = |status: std::process::ExitStatus| {
+        if !status.success() || !path.is_file() {
+            return Err("screenshot capture canceled".to_string());
+        }
+        image::open(&path)
+            .map(|image| image.to_rgba8())
+            .map_err(|error| format!("failed to read selected screenshot: {error}"))
+    };
+
+    match std::process::Command::new("gnome-screenshot")
+        .args(["--area", "--file"])
+        .arg(&path)
+        .status()
+    {
+        Ok(status) => return load_if_selected(status),
+        Err(error) if error.kind() == ErrorKind::NotFound => {}
+        Err(error) => return Err(format!("failed to start the region selector: {error}")),
+    }
+
+    match std::process::Command::new("spectacle")
+        .args(["--region", "--background", "--nonotify", "--output"])
+        .arg(&path)
+        .status()
+    {
+        Ok(status) => return load_if_selected(status),
+        Err(error) if error.kind() == ErrorKind::NotFound => {}
+        Err(error) => return Err(format!("failed to start the region selector: {error}")),
+    }
+
+    match std::process::Command::new("slurp").output() {
+        Ok(selection) => {
+            if !selection.status.success() {
+                return Err("screenshot capture canceled".to_string());
+            }
+            let geometry = String::from_utf8(selection.stdout)
+                .map_err(|error| format!("region selector returned invalid geometry: {error}"))?;
+            let status = std::process::Command::new("grim")
+                .args(["--geometry", geometry.trim()])
+                .arg(&path)
+                .status()
+                .map_err(|error| format!("failed to capture the selected region: {error}"))?;
+            return load_if_selected(status);
+        }
+        Err(error) if error.kind() == ErrorKind::NotFound => {}
+        Err(error) => return Err(format!("failed to start the region selector: {error}")),
+    }
+
+    match std::process::Command::new("scrot")
+        .arg("--select")
+        .arg(&path)
+        .status()
+    {
+        Ok(status) => load_if_selected(status),
+        Err(error) if error.kind() == ErrorKind::NotFound => Err(
+            "no supported region selector was found (install gnome-screenshot, Spectacle, grim with slurp, or scrot)"
+                .to_string(),
+        ),
+        Err(error) => Err(format!("failed to start the region selector: {error}")),
+    }
+}
+
+#[cfg(target_os = "linux")]
+#[derive(zbus::zvariant::DeserializeDict, zbus::zvariant::Type, Debug)]
+#[zvariant(signature = "dict")]
+struct PortalScreenshotResponse {
+    uri: String,
+}
+
+#[cfg(target_os = "linux")]
+fn capture_linux_portal_region_selection() -> Result<Option<image::RgbaImage>, String> {
+    use std::collections::HashMap;
+    use zbus::{
+        blocking::{Connection, Proxy},
+        zvariant::Value,
+    };
+
+    let connection = match Connection::session() {
+        Ok(connection) => connection,
+        Err(_) => return Ok(None),
+    };
+    let unique_identifier = match connection.unique_name() {
+        Some(name) => name.trim_start_matches(':').replace('.', "_"),
+        None => return Ok(None),
+    };
+    let handle_token = format!("kkterm_{}", now_millis());
+    let request_path =
+        format!("/org/freedesktop/portal/desktop/request/{unique_identifier}/{handle_token}");
+    let request = match Proxy::new(
+        &connection,
+        "org.freedesktop.portal.Desktop",
+        request_path,
+        "org.freedesktop.portal.Request",
+    ) {
+        Ok(request) => request,
+        Err(_) => return Ok(None),
+    };
+    let mut responses = match request.receive_signal("Response") {
+        Ok(responses) => responses,
+        Err(_) => return Ok(None),
+    };
+    let portal = match Proxy::new(
+        &connection,
+        "org.freedesktop.portal.Desktop",
+        "/org/freedesktop/portal/desktop",
+        "org.freedesktop.portal.Screenshot",
+    ) {
+        Ok(portal) => portal,
+        Err(_) => return Ok(None),
+    };
+    let mut options: HashMap<&str, Value<'_>> = HashMap::new();
+    options.insert("handle_token", Value::from(&handle_token));
+    options.insert("modal", Value::from(true));
+    options.insert("interactive", Value::from(true));
+    if portal.call_method("Screenshot", &("", options)).is_err() {
+        return Ok(None);
+    }
+
+    let message = responses
+        .next()
+        .ok_or_else(|| "the desktop screenshot portal did not respond".to_string())?
+        .map_err(|error| format!("failed to read the desktop screenshot selection: {error}"))?;
+    let (response_code, response): (u32, PortalScreenshotResponse) =
+        message
+            .body()
+            .deserialize()
+            .map_err(|error| format!("failed to read the desktop screenshot response: {error}"))?;
+    if response_code == 1 {
+        return Err("screenshot capture canceled".to_string());
+    }
+    if response_code != 0 {
+        return Ok(None);
+    }
+
+    let url = url::Url::parse(&response.uri)
+        .map_err(|error| format!("desktop screenshot portal returned an invalid URI: {error}"))?;
+    let path = url
+        .to_file_path()
+        .map_err(|_| "desktop screenshot portal returned a non-file URI".to_string())?;
+    let image = image::open(&path)
+        .map(|image| image.to_rgba8())
+        .map_err(|error| format!("failed to read selected screenshot: {error}"))?;
+    let _ = fs::remove_file(path);
+    Ok(Some(image))
 }
 
 // ---------------------------------------------------------------------------
@@ -1145,10 +1492,15 @@ pub fn copy_library_screenshot_to_clipboard(
 #[cfg(not(target_os = "windows"))]
 pub fn copy_library_screenshot_to_clipboard(
     _app: &tauri::AppHandle,
-    _id: String,
-    _folder_path: String,
+    id: String,
+    folder_path: String,
 ) -> Result<(), String> {
-    Err("screenshot clipboard is currently available on Windows".to_string())
+    let folder = ensure_screenshots_folder(&folder_path)?;
+    let path = screenshot_path_from_id(&folder, &id)?;
+    let image = image::open(path)
+        .map_err(|error| format!("failed to read screenshot: {error}"))?
+        .to_rgba8();
+    write_rgba_to_clipboard(image.as_raw(), image.width(), image.height())
 }
 
 pub fn delete_library_screenshot(id: String, folder_path: String) -> Result<(), String> {

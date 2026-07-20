@@ -2,6 +2,7 @@ import {
   useEffect,
   useRef,
   useState,
+  type KeyboardEvent as ReactKeyboardEvent,
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import { useTranslation } from "react-i18next";
@@ -10,9 +11,15 @@ import {
   ChevronLeft,
   ChevronRight,
   Circle,
+  Copy,
+  ExternalLink,
+  FolderOpen,
   Grid2x2,
+  Hand,
   Maximize2,
+  RotateCcw,
   Square,
+  Trash2,
   Type,
   ZoomIn,
   ZoomOut,
@@ -20,16 +27,19 @@ import {
 import {
   Actions,
   Btn,
+  ConfirmSheet,
   DialogShell,
   Sheet,
   TextInput,
 } from "../../app/ui/dialog";
+import { ColorPalettePicker } from "../../app/ui/ColorPalettePicker";
 import { invokeCommand, type FullScreenshot, type StoredScreenshot } from "../../lib/tauri";
 import { formatScreenshotBytes } from "./LibraryView";
 
-type EditorTool = "arrow" | "rectangle" | "ellipse" | "text" | "mosaic";
+type EditorTool = "pan" | "arrow" | "rectangle" | "ellipse" | "text" | "mosaic";
 type Point = { x: number; y: number };
 type ZoomLevel = "fit" | number;
+type TextFont = "app" | "sans-serif" | "serif" | "monospace";
 
 const ZOOM_STEPS = [25, 50, 75, 100, 125, 150, 200] as const;
 const EDITOR_TOOLS: Array<{
@@ -37,6 +47,7 @@ const EDITOR_TOOLS: Array<{
   icon: typeof ArrowRight;
   key: string;
 }> = [
+  { id: "pan", icon: Hand, key: "screenshots.editor.pan" },
   { id: "arrow", icon: ArrowRight, key: "screenshots.editor.arrow" },
   { id: "rectangle", icon: Square, key: "screenshots.editor.rectangle" },
   { id: "ellipse", icon: Circle, key: "screenshots.editor.ellipse" },
@@ -62,9 +73,20 @@ function annotationFontFamily() {
     .trim() || "sans-serif";
 }
 
+function resolvedTextFont(font: TextFont) {
+  return font === "app" ? annotationFontFamily() : font;
+}
+
+function initialEditorSize() {
+  return {
+    width: Math.max(720, Math.round(window.innerWidth * 0.8)),
+    height: Math.max(480, Math.round(window.innerHeight * 0.8)),
+  };
+}
+
 function drawShape(
   context: CanvasRenderingContext2D,
-  tool: Exclude<EditorTool, "text" | "mosaic">,
+  tool: Exclude<EditorTool, "pan" | "text" | "mosaic">,
   start: Point,
   end: Point,
 ) {
@@ -166,26 +188,50 @@ export function ScreenshotEditor({
 }) {
   const { t } = useTranslation();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const stageRef = useRef<HTMLDivElement | null>(null);
   const undoRef = useRef<ImageData[]>([]);
   const drawingRef = useRef<{ start: Point; before: ImageData } | null>(null);
+  const panRef = useRef<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+    scrollLeft: number;
+    scrollTop: number;
+  } | null>(null);
+  const resizeRef = useRef<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+    width: number;
+    height: number;
+  } | null>(null);
   const [tool, setTool] = useState<EditorTool>("arrow");
   const [textValue, setTextValue] = useState("");
+  const [textFont, setTextFont] = useState<TextFont>("app");
+  const [textSize, setTextSize] = useState(32);
+  const [textColor, setTextColor] = useState(annotationColor);
+  const [textBold, setTextBold] = useState(true);
+  const [textFormatOpen, setTextFormatOpen] = useState(false);
   const [canvasSize, setCanvasSize] = useState({ width: screenshot.width, height: screenshot.height });
+  const [editorSize, setEditorSize] = useState(initialEditorSize);
   const [zoom, setZoom] = useState<ZoomLevel>("fit");
   const [ready, setReady] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [undoCount, setUndoCount] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [confirmingClose, setConfirmingClose] = useState(false);
 
   useEffect(() => {
     let disposed = false;
     setReady(false);
     setDirty(false);
     setSaving(false);
+    setConfirmingClose(false);
     setZoom("fit");
     setUndoCount(0);
     undoRef.current = [];
     drawingRef.current = null;
+    panRef.current = null;
     invokeCommand("read_screenshot", { id: screenshot.id })
       .then((full: FullScreenshot) => {
         const image = new Image();
@@ -198,6 +244,7 @@ export function ScreenshotEditor({
           canvas.height = full.height;
           canvas.getContext("2d")?.drawImage(image, 0, 0);
           setCanvasSize({ width: full.width, height: full.height });
+          setTextSize(Math.round(Math.max(22, full.width / 44)));
           setReady(true);
         };
         image.onerror = () => {
@@ -245,6 +292,22 @@ export function ScreenshotEditor({
     if (!context || !ready) {
       return;
     }
+    if (tool === "pan") {
+      const stage = stageRef.current;
+      if (!stage) {
+        return;
+      }
+      event.preventDefault();
+      canvas.setPointerCapture(event.pointerId);
+      panRef.current = {
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startY: event.clientY,
+        scrollLeft: stage.scrollLeft,
+        scrollTop: stage.scrollTop,
+      };
+      return;
+    }
     const start = canvasPoint(canvas, event.clientX, event.clientY);
     const before = context.getImageData(0, 0, canvas.width, canvas.height);
     if (tool === "text") {
@@ -253,8 +316,8 @@ export function ScreenshotEditor({
       }
       pushUndo(before);
       context.save();
-      context.fillStyle = annotationColor();
-      context.font = `600 ${Math.max(22, canvas.width / 44)}px ${annotationFontFamily()}`;
+      context.fillStyle = textColor;
+      context.font = `${textBold ? 700 : 400} ${textSize}px ${resolvedTextFont(textFont)}`;
       context.textBaseline = "top";
       context.fillText(textValue.trim(), start.x, start.y);
       context.restore();
@@ -265,6 +328,15 @@ export function ScreenshotEditor({
   }
 
   function pointerMove(event: ReactPointerEvent<HTMLCanvasElement>) {
+    if (tool === "pan") {
+      const pan = panRef.current;
+      const stage = stageRef.current;
+      if (pan && stage && pan.pointerId === event.pointerId) {
+        stage.scrollLeft = pan.scrollLeft - (event.clientX - pan.startX);
+        stage.scrollTop = pan.scrollTop - (event.clientY - pan.startY);
+      }
+      return;
+    }
     const drawing = drawingRef.current;
     const context = event.currentTarget.getContext("2d");
     if (!drawing || !context || tool === "text" || tool === "mosaic") {
@@ -276,6 +348,13 @@ export function ScreenshotEditor({
   }
 
   function pointerUp(event: ReactPointerEvent<HTMLCanvasElement>) {
+    if (tool === "pan") {
+      if (panRef.current?.pointerId === event.pointerId) {
+        panRef.current = null;
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      }
+      return;
+    }
     const drawing = drawingRef.current;
     const context = event.currentTarget.getContext("2d");
     if (!drawing || !context || tool === "text") {
@@ -310,40 +389,55 @@ export function ScreenshotEditor({
     }
   }
 
+  function requestClose() {
+    if (saving) {
+      return;
+    }
+    if (dirty) {
+      setConfirmingClose(true);
+    } else {
+      onClose();
+    }
+  }
+
+  function clampEditorSize(width: number, height: number) {
+    return {
+      width: Math.min(Math.max(640, Math.round(width)), Math.max(640, window.innerWidth - 24)),
+      height: Math.min(Math.max(420, Math.round(height)), Math.max(420, window.innerHeight - 24)),
+    };
+  }
+
+  function finishResize(event: ReactPointerEvent<HTMLButtonElement>) {
+    if (resizeRef.current?.pointerId !== event.pointerId) {
+      return;
+    }
+    resizeRef.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+  }
+
   const zoomScale = zoom === "fit" ? null : zoom / 100;
   const scaledWidth = zoomScale ? Math.max(1, Math.round(canvasSize.width * zoomScale)) : null;
   const scaledHeight = zoomScale ? Math.max(1, Math.round(canvasSize.height * zoomScale)) : null;
 
   return (
-    <DialogShell onBackdrop={saving ? undefined : onClose}>
+    <DialogShell onBackdrop={saving ? undefined : requestClose}>
       <Sheet
-        width={1180}
-        height={820}
+        width={editorSize.width}
+        height={editorSize.height}
         className="screenshots-editor"
         title={screenshot.fileName}
         ariaLabel={screenshot.fileName}
+        closeAriaLabel={t("common.close")}
+        onClose={requestClose}
         footer={
           <Actions
             extraLeft={
-              <div className="screenshots-editor__footer-actions">
-                <Btn sm icon="refresh" disabled={!undoCount || saving} onClick={undo}>
-                  {t("screenshots.editor.undo")}
-                </Btn>
-                <Btn sm icon="copy" disabled={saving} onClick={onCopy}>
-                  {t("screenshots.menu.copy")}
-                </Btn>
-                <Btn sm disabled={saving} onClick={onOpenExternal}>
-                  {t("screenshots.menu.openExternal")}
-                </Btn>
-                <Btn sm disabled={saving} onClick={onReveal}>
-                  {t("screenshots.menu.reveal")}
-                </Btn>
-                <Btn sm kind="danger" icon="trash" disabled={saving} onClick={onDelete}>
-                  {t("common.delete")}
-                </Btn>
-              </div>
+              <span className="screenshots-editor__footer-meta">
+                {canvasSize.width}×{canvasSize.height} · {formatScreenshotBytes(screenshot.fileSizeBytes)}
+              </span>
             }
-            cancel={<Btn disabled={saving} onClick={onClose}>{t("common.close")}</Btn>}
             primary={
               <Btn kind="primary" icon="check" disabled={!ready || !dirty || saving} onClick={() => void save()}>
                 {t("common.save")}
@@ -358,7 +452,7 @@ export function ScreenshotEditor({
           onKeyDown={(event) => {
             if (event.key === "Escape" && !saving) {
               event.preventDefault();
-              onClose();
+              requestClose();
             } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") {
               event.preventDefault();
               undo();
@@ -375,6 +469,7 @@ export function ScreenshotEditor({
             <div className="screenshots-editor__nav-group">
               <button
                 type="button"
+                title={t("common.back")}
                 aria-label={t("common.back")}
                 disabled={!hasPrevious || dirty || saving}
                 onClick={() => onNavigate(-1)}
@@ -383,6 +478,7 @@ export function ScreenshotEditor({
               </button>
               <button
                 type="button"
+                title={t("common.forward")}
                 aria-label={t("common.forward")}
                 disabled={!hasNext || dirty || saving}
                 onClick={() => onNavigate(1)}
@@ -390,9 +486,55 @@ export function ScreenshotEditor({
                 <ChevronRight size={15} aria-hidden="true" />
               </button>
             </div>
-            <span className="screenshots-editor__meta">
-              {canvasSize.width}×{canvasSize.height} · {formatScreenshotBytes(screenshot.fileSizeBytes)}
-            </span>
+            <span className="screenshots-editor__divider" aria-hidden="true" />
+            <div className="screenshots-editor__action-group">
+              <button
+                type="button"
+                title={t("screenshots.editor.undo")}
+                aria-label={t("screenshots.editor.undo")}
+                disabled={!undoCount || saving}
+                onClick={undo}
+              >
+                <RotateCcw size={15} aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                title={t("screenshots.menu.copy")}
+                aria-label={t("screenshots.menu.copy")}
+                disabled={saving}
+                onClick={onCopy}
+              >
+                <Copy size={15} aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                title={t("screenshots.menu.openExternal")}
+                aria-label={t("screenshots.menu.openExternal")}
+                disabled={saving}
+                onClick={onOpenExternal}
+              >
+                <ExternalLink size={15} aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                title={t("screenshots.menu.reveal")}
+                aria-label={t("screenshots.menu.reveal")}
+                disabled={saving}
+                onClick={onReveal}
+              >
+                <FolderOpen size={15} aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                className="danger"
+                title={t("common.delete")}
+                aria-label={t("common.delete")}
+                disabled={saving}
+                onClick={onDelete}
+              >
+                <Trash2 size={15} aria-hidden="true" />
+              </button>
+            </div>
             <span className="screenshots-editor__divider" aria-hidden="true" />
             {EDITOR_TOOLS.map((item) => {
               const Icon = item.icon;
@@ -402,21 +544,21 @@ export function ScreenshotEditor({
                   type="button"
                   className={tool === item.id ? "active" : ""}
                   aria-pressed={tool === item.id}
-                  onClick={() => setTool(item.id)}
+                  aria-label={t(item.key)}
+                  title={t(item.key)}
+                  onClick={() => {
+                    setTool(item.id);
+                    if (item.id === "text") {
+                      setTextFormatOpen((open) => !open || tool !== "text");
+                    } else {
+                      setTextFormatOpen(false);
+                    }
+                  }}
                 >
                   <Icon size={15} aria-hidden="true" />
-                  {t(item.key)}
                 </button>
               );
             })}
-            <TextInput
-              className="screenshots-editor__text"
-              value={textValue}
-              placeholder={t("screenshots.editor.textPlaceholder")}
-              aria-label={t("screenshots.editor.textPlaceholder")}
-              onFocus={() => setTool("text")}
-              onChange={(event) => setTextValue(event.currentTarget.value)}
-            />
             <span className="screenshots-editor__toolbar-spacer" />
             <div className="screenshots-editor__zoom" aria-label={t("workspace.fileViewer.zoomIn")}>
               <button
@@ -428,7 +570,6 @@ export function ScreenshotEditor({
               >
                 <ZoomOut size={15} aria-hidden="true" />
               </button>
-              <span>{zoom === "fit" ? t("workspace.fileViewer.fit") : `${zoom}%`}</span>
               <button
                 type="button"
                 title={t("workspace.fileViewer.zoomIn")}
@@ -448,8 +589,64 @@ export function ScreenshotEditor({
                 <Maximize2 size={14} aria-hidden="true" />
               </button>
             </div>
+            {tool === "text" && textFormatOpen ? (
+              <div
+                aria-label={t("screenshots.editor.text")}
+                className="screenshots-editor__text-format"
+                role="dialog"
+              >
+                <TextInput
+                  autoFocus
+                  className="screenshots-editor__text"
+                  value={textValue}
+                  placeholder={t("screenshots.editor.textPlaceholder")}
+                  aria-label={t("screenshots.editor.textPlaceholder")}
+                  onChange={(event) => setTextValue(event.currentTarget.value)}
+                />
+                <label>
+                  <span>{t("workspace.fileViewer.font")}</span>
+                  <select
+                    value={textFont}
+                    onChange={(event) => setTextFont(event.currentTarget.value as TextFont)}
+                  >
+                    <option value="app">{t("screenshots.editor.appFont")}</option>
+                    <option value="sans-serif">{t("screenshots.editor.sansSerif")}</option>
+                    <option value="serif">{t("screenshots.editor.serif")}</option>
+                    <option value="monospace">{t("screenshots.editor.monospace")}</option>
+                  </select>
+                </label>
+                <label>
+                  <span>{t("workspace.fileViewer.fontSize")}</span>
+                  <input
+                    min={8}
+                    max={256}
+                    type="number"
+                    value={textSize}
+                    onChange={(event) => {
+                      const next = Number.parseInt(event.currentTarget.value, 10);
+                      if (Number.isFinite(next)) {
+                        setTextSize(Math.min(256, Math.max(8, next)));
+                      }
+                    }}
+                  />
+                </label>
+                <label className="screenshots-editor__text-color">
+                  <span>{t("common.customColor")}</span>
+                  <i style={{ background: textColor }} />
+                  <ColorPalettePicker value={textColor} onChange={setTextColor} />
+                </label>
+                <button
+                  type="button"
+                  className={`screenshots-editor__format-toggle${textBold ? " active" : ""}`}
+                  aria-pressed={textBold}
+                  onClick={() => setTextBold((bold) => !bold)}
+                >
+                  {t("screenshots.editor.bold")}
+                </button>
+              </div>
+            ) : null}
           </div>
-          <div className="screenshots-editor__stage">
+          <div ref={stageRef} className="screenshots-editor__stage">
             <div
               className={`screenshots-editor__canvas-wrap${zoom === "fit" ? " is-fit" : ""}`}
               style={scaledWidth && scaledHeight
@@ -458,7 +655,7 @@ export function ScreenshotEditor({
             >
               <canvas
                 ref={canvasRef}
-                className={zoom === "fit" ? "is-fit" : "is-scaled"}
+                className={`${zoom === "fit" ? "is-fit" : "is-scaled"}${tool === "pan" ? " is-pan" : ""}`}
                 style={scaledWidth && scaledHeight
                   ? { width: scaledWidth, height: scaledHeight }
                   : undefined}
@@ -473,12 +670,73 @@ export function ScreenshotEditor({
                     context.putImageData(drawing.before, 0, 0);
                   }
                   drawingRef.current = null;
+                  panRef.current = null;
                 }}
               />
             </div>
           </div>
         </div>
+        <button
+          aria-label={t("screenshots.editor.resizeDialog")}
+          className="screenshots-editor__resizer"
+          onKeyDown={(event: ReactKeyboardEvent<HTMLButtonElement>) => {
+            if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)) {
+              return;
+            }
+            event.preventDefault();
+            const step = event.shiftKey ? 64 : 24;
+            setEditorSize((current) => clampEditorSize(
+              current.width + (event.key === "ArrowRight" ? step : event.key === "ArrowLeft" ? -step : 0),
+              current.height + (event.key === "ArrowDown" ? step : event.key === "ArrowUp" ? -step : 0),
+            ));
+          }}
+          onPointerCancel={finishResize}
+          onPointerDown={(event) => {
+            event.preventDefault();
+            event.currentTarget.setPointerCapture(event.pointerId);
+            resizeRef.current = {
+              pointerId: event.pointerId,
+              startX: event.clientX,
+              startY: event.clientY,
+              width: editorSize.width,
+              height: editorSize.height,
+            };
+          }}
+          onPointerMove={(event) => {
+            const start = resizeRef.current;
+            if (!start || start.pointerId !== event.pointerId) {
+              return;
+            }
+            setEditorSize(clampEditorSize(
+              start.width + event.clientX - start.startX,
+              start.height + event.clientY - start.startY,
+            ));
+          }}
+          onPointerUp={finishResize}
+          title={t("screenshots.editor.resizeDialog")}
+          type="button"
+        />
       </Sheet>
+      {confirmingClose ? (
+        <ConfirmSheet
+          tone="warn"
+          title={t("screenshots.editor.unsavedTitle")}
+          message={t("screenshots.editor.unsavedMessage")}
+          confirmLabel={t("common.save")}
+          confirmIcon="check"
+          extraLeft={
+            <Btn kind="danger" onClick={onClose}>
+              {t("screenshots.editor.dontSave")}
+            </Btn>
+          }
+          onConfirm={() => {
+            setConfirmingClose(false);
+            void save();
+          }}
+          onCancel={() => setConfirmingClose(false)}
+          zClassName="kk-qc-subdialog"
+        />
+      ) : null}
     </DialogShell>
   );
 }

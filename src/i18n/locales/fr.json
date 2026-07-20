@@ -1758,7 +1758,16 @@
       "mosaic": "Mosaïque",
       "textPlaceholder": "Texte à placer",
       "undo": "Défaire",
-      "loadError": "Impossible de charger l'image de l'éditeur de capture d'écran."
+      "loadError": "Impossible de charger l'image de l'éditeur de capture d'écran.",
+      "appFont": "Police de l'application",
+      "sansSerif": "Sans empattement",
+      "serif": "Avec empattement",
+      "monospace": "Chasse fixe",
+      "bold": "Gras",
+      "resizeDialog": "Redimensionner l'éditeur de capture",
+      "unsavedTitle": "Enregistrer les modifications ?",
+      "unsavedMessage": "Vos annotations seront perdues si vous fermez sans enregistrer.",
+      "dontSave": "Ne pas enregistrer"
     },
     "menu": {
       "openExternal": "Ouvrir dans l'application par défaut",
@@ -1921,7 +1930,6 @@
     "screenshotsQualityHint": "JPEG utilise une qualité d'image avec perte. PNG reste sans perte et utilise cette valeur comme effort de compression.",
     "screenshotsShortcuts": "Raccourcis globaux de capture",
     "screenshotsShortcutsHint": "Ces raccourcis fonctionnent dans tout le système tant que KKTerm est en cours d'exécution, même masqué dans la zone de notification.",
-    "screenshotsShortcutPlaceholder": "ex. Ctrl+Alt+R",
     "screenshotsSaved": "Paramètres des captures d'écran enregistrés.",
     "sectionAbout": "À propos",
     "generalDefaults": "Valeurs par défaut de l'espace de travail",

@@ -3250,13 +3250,7 @@ input.settings-credential-search {
 }
 
 .screenshots-shortcut-controls {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-}
-
-.screenshots-shortcut-controls input {
-  width: 170px;
+  gap: 4px;
 }
 
 .screenshots-quality-row {

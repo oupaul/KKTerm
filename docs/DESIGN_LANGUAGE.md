@@ -144,6 +144,18 @@ the convention from the runtime platform; `DialogConventionProvider` exists
 only for explicit previews and tests. Do not reorder per-dialog or use CSS row
 reversal.
 
+### Shortcut editors
+
+Every Settings shortcut row uses the shared recorder treatment: an action label,
+the `.shortcut-binding-button`, and an icon-only clear action when a binding is
+set. Clicking the binding button puts that row into recording mode; the next
+valid key combination replaces the binding, while Escape or focus loss cancels
+recording. An unbound row shows the translated `settings.shortcutNotSet` state.
+Do not use free-form text inputs, per-row enable switches, or a feature-specific
+shortcut control. When one shortcut setting appears on multiple Settings pages,
+render the same component and shared draft on every surface; screenshot capture
+shortcuts use `ScreenshotShortcutRows` in both Screenshots and Shortcuts.
+
 ### Footer & buttons
 
 Build every dialog footer from the kit — never hand-roll the action row:

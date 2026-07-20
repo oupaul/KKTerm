@@ -1758,7 +1758,16 @@
       "mosaic": "Mosaik",
       "textPlaceholder": "Text zum Platzieren",
       "undo": "Rückgängig machen",
-      "loadError": "Das Bild des Screenshot-Editors konnte nicht geladen werden."
+      "loadError": "Das Bild des Screenshot-Editors konnte nicht geladen werden.",
+      "appFont": "App-Schrift",
+      "sansSerif": "Serifenlos",
+      "serif": "Serifenschrift",
+      "monospace": "Festbreite",
+      "bold": "Fett",
+      "resizeDialog": "Screenshot-Editor skalieren",
+      "unsavedTitle": "Screenshot-Änderungen speichern?",
+      "unsavedMessage": "Ihre Anmerkungen gehen verloren, wenn Sie ohne Speichern schließen.",
+      "dontSave": "Nicht speichern"
     },
     "menu": {
       "openExternal": "In Standard-App öffnen",
@@ -1921,7 +1930,6 @@
     "screenshotsQualityHint": "JPEG verwendet verlustbehaftete Bildqualität. PNG bleibt verlustfrei und nutzt diesen Wert als Komprimierungsaufwand.",
     "screenshotsShortcuts": "Globale Aufnahme-Tastenkürzel",
     "screenshotsShortcutsHint": "Diese Tastenkürzel funktionieren systemweit, solange KKTerm läuft – auch wenn es im Infobereich ausgeblendet ist.",
-    "screenshotsShortcutPlaceholder": "z. B. Ctrl+Alt+R",
     "screenshotsSaved": "Screenshot-Einstellungen gespeichert.",
     "sectionAbout": "Über",
     "generalDefaults": "Arbeitsbereich-Standards",
