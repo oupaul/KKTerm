@@ -1739,6 +1739,9 @@
       "created": "Création de {{count}} nouvelles copies d'images."
     },
     "resize": {
+      "mode": "Mode de redimensionnement",
+      "exact": "Exact",
+      "percentage": "Pourcentage",
       "width": "Largeur (px)",
       "height": "Hauteur (px)",
       "preserveAspect": "Préserver les proportions",
@@ -1751,6 +1754,7 @@
       "hint": "Les images converties sont enregistrées en tant que nouvelles copies. Les originaux sont inchangés."
     },
     "editor": {
+      "saveAs": "Enregistrer sous",
       "pan": "Déplacer",
       "arrow": "Flèche",
       "rectangle": "Rectangle",

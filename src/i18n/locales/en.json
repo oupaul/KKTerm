@@ -1739,6 +1739,9 @@
       "created": "Created {{count}} new image copies."
     },
     "resize": {
+      "mode": "Resize mode",
+      "exact": "Exact",
+      "percentage": "Percentage",
       "width": "Width (px)",
       "height": "Height (px)",
       "preserveAspect": "Preserve aspect ratio",
@@ -1751,6 +1754,7 @@
       "hint": "Converted images are saved as new copies. The originals are unchanged."
     },
     "editor": {
+      "saveAs": "Save as",
       "pan": "Pan",
       "arrow": "Arrow",
       "rectangle": "Rectangle",

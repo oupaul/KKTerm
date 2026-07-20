@@ -343,12 +343,6 @@ export function ScreenshotsPage({ active }: { active: boolean }) {
           },
           {
             kind: "item" as const,
-            label: t("common.edit"),
-            iconSvg: nativeMenuIcons.pencil,
-            action: () => setViewerId(single.id),
-          },
-          {
-            kind: "item" as const,
             label: t("screenshots.menu.openExternal"),
             action: () => openExternal(single),
           },
@@ -633,14 +627,19 @@ export function ScreenshotsPage({ active }: { active: boolean }) {
           onDelete={() => setDeleteTargets([viewerScreenshot])}
           onError={notifyError}
           onClose={() => setViewerId(null)}
-          onSaved={(created, navigateDirection) => {
+          onSaved={(saved, mode, navigateDirection) => {
             const navigationTarget = navigateDirection
               ? screenshots[viewerIndex + navigateDirection]
               : null;
-            useScreenshotsStore.getState().addMany([created]);
-            setSelectedIds(new Set([navigationTarget?.id ?? created.id]));
-            setViewerId(navigationTarget?.id ?? null);
-            showStatusBarNotice(t("screenshots.captureSaved", { name: created.fileName }), {
+            const store = useScreenshotsStore.getState();
+            if (mode === "copy") {
+              store.addMany([saved]);
+            } else {
+              store.replace(viewerScreenshot.id, saved);
+            }
+            setSelectedIds(new Set([navigationTarget?.id ?? saved.id]));
+            setViewerId(navigationTarget?.id ?? saved.id);
+            showStatusBarNotice(t("screenshots.captureSaved", { name: saved.fileName }), {
               tone: "success",
             });
           }}

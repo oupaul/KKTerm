@@ -1739,6 +1739,9 @@
       "created": "Đã tạo {{count}} bản sao hình ảnh mới."
     },
     "resize": {
+      "mode": "Chế độ đổi kích thước",
+      "exact": "Chính xác",
+      "percentage": "Phần trăm",
       "width": "Chiều rộng (px)",
       "height": "Chiều cao (px)",
       "preserveAspect": "Giữ nguyên tỷ lệ khung hình",
@@ -1751,6 +1754,7 @@
       "hint": "Hình ảnh được chuyển đổi sẽ được lưu dưới dạng bản sao mới. Bản gốc không thay đổi."
     },
     "editor": {
+      "saveAs": "Lưu thành",
       "pan": "Di chuyển",
       "arrow": "Mũi tên",
       "rectangle": "Hình chữ nhật",

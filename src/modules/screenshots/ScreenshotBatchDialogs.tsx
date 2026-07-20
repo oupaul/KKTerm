@@ -7,12 +7,16 @@ import {
   Field,
   GRow,
   Group,
+  Segmented,
   Select,
   Sheet,
   Switch,
   TextInput,
 } from "../../app/ui/dialog";
 import { invokeCommand, type StoredScreenshot } from "../../lib/tauri";
+
+type ResizeMode = "exact" | "percentage";
+type ConversionFormat = "png" | "jpeg" | "webp" | "gif";
 
 type BatchDialogProps = {
   screenshots: StoredScreenshot[];
@@ -30,16 +34,20 @@ export function ResizeScreenshotsDialog({
   const { t } = useTranslation();
   const [width, setWidth] = useState(String(screenshots[0]?.width ?? 1920));
   const [height, setHeight] = useState(String(screenshots[0]?.height ?? 1080));
+  const [mode, setMode] = useState<ResizeMode>("exact");
+  const [percentage, setPercentage] = useState("100");
   const [preserveAspectRatio, setPreserveAspectRatio] = useState(true);
   const [busy, setBusy] = useState(false);
-  const parsedWidth = Number(width);
-  const parsedHeight = Number(height);
-  const valid = Number.isInteger(parsedWidth)
-    && Number.isInteger(parsedHeight)
-    && parsedWidth >= 1
-    && parsedWidth <= 16_384
-    && parsedHeight >= 1
-    && parsedHeight <= 16_384;
+  const parsedWidth = parseOptionalDimension(width);
+  const parsedHeight = parseOptionalDimension(height);
+  const parsedPercentage = Number(percentage);
+  const exactValid = parsedWidth !== null
+    && parsedHeight !== null
+    && (parsedWidth !== undefined || parsedHeight !== undefined);
+  const percentageValid = Number.isInteger(parsedPercentage)
+    && parsedPercentage >= 1
+    && parsedPercentage <= 500;
+  const valid = mode === "exact" ? exactValid : percentageValid;
 
   async function submit() {
     if (!valid || busy) {
@@ -50,8 +58,10 @@ export function ResizeScreenshotsDialog({
       const created = await invokeCommand("resize_screenshots", {
         request: {
           ids: screenshots.map((screenshot) => screenshot.id),
-          width: parsedWidth,
-          height: parsedHeight,
+          mode,
+          width: mode === "exact" ? parsedWidth ?? undefined : undefined,
+          height: mode === "exact" ? parsedHeight ?? undefined : undefined,
+          percentage: mode === "percentage" ? parsedPercentage : undefined,
           preserveAspectRatio,
         },
       });
@@ -80,40 +90,65 @@ export function ResizeScreenshotsDialog({
         }
       >
         <div className="screenshots-batch-fields">
-          <div className="screenshots-batch-dimensions">
-            <Field label={t("screenshots.resize.width")}>
-              <TextInput
-                mono
-                type="number"
-                min={1}
-                max={16384}
-                value={width}
-                onChange={(event) => setWidth(event.currentTarget.value)}
-              />
-            </Field>
-            <Field label={t("screenshots.resize.height")}>
-              <TextInput
-                mono
-                type="number"
-                min={1}
-                max={16384}
-                value={height}
-                onChange={(event) => setHeight(event.currentTarget.value)}
-              />
-            </Field>
-          </div>
-          <Group>
-            <GRow
-              label={t("screenshots.resize.preserveAspect")}
-              control={
-                <Switch
-                  on={preserveAspectRatio}
-                  onChange={setPreserveAspectRatio}
-                  ariaLabel={t("screenshots.resize.preserveAspect")}
-                />
-              }
+          <Field label={t("screenshots.resize.mode")}>
+            <Segmented
+              value={mode}
+              onChange={(value) => setMode(value as ResizeMode)}
+              options={[
+                { value: "exact", label: t("screenshots.resize.exact") },
+                { value: "percentage", label: t("screenshots.resize.percentage") },
+              ]}
             />
-          </Group>
+          </Field>
+          {mode === "exact" ? (
+            <>
+              <div className="screenshots-batch-dimensions">
+                <Field label={t("screenshots.resize.width")}>
+                  <TextInput
+                    mono
+                    type="number"
+                    min={1}
+                    max={16384}
+                    value={width}
+                    onChange={(event) => setWidth(event.currentTarget.value)}
+                  />
+                </Field>
+                <Field label={t("screenshots.resize.height")}>
+                  <TextInput
+                    mono
+                    type="number"
+                    min={1}
+                    max={16384}
+                    value={height}
+                    onChange={(event) => setHeight(event.currentTarget.value)}
+                  />
+                </Field>
+              </div>
+              <Group>
+                <GRow
+                  label={t("screenshots.resize.preserveAspect")}
+                  control={
+                    <Switch
+                      on={preserveAspectRatio}
+                      onChange={setPreserveAspectRatio}
+                      ariaLabel={t("screenshots.resize.preserveAspect")}
+                    />
+                  }
+                />
+              </Group>
+            </>
+          ) : (
+            <Field label={t("screenshots.resize.percentage")}>
+              <TextInput
+                mono
+                type="number"
+                min={1}
+                max={500}
+                value={percentage}
+                onChange={(event) => setPercentage(event.currentTarget.value)}
+              />
+            </Field>
+          )}
           <p className="screenshots-batch-hint">
             {t("screenshots.resize.hint")}
           </p>
@@ -123,6 +158,14 @@ export function ResizeScreenshotsDialog({
   );
 }
 
+function parseOptionalDimension(value: string) {
+  if (value.trim() === "") {
+    return undefined;
+  }
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed >= 1 && parsed <= 16_384 ? parsed : null;
+}
+
 export function ConvertScreenshotsDialog({
   screenshots,
   onComplete,
@@ -130,7 +173,7 @@ export function ConvertScreenshotsDialog({
   onClose,
 }: BatchDialogProps) {
   const { t } = useTranslation();
-  const [format, setFormat] = useState<"png" | "jpeg">("png");
+  const [format, setFormat] = useState<ConversionFormat>("png");
   const [quality, setQuality] = useState(90);
   const [busy, setBusy] = useState(false);
 
@@ -175,26 +218,29 @@ export function ConvertScreenshotsDialog({
           <Field label={t("screenshots.convert.format")}>
             <Select
               value={format}
-              onChange={(event) => setFormat(event.currentTarget.value as "png" | "jpeg")}
+              onChange={(event) => setFormat(event.currentTarget.value as ConversionFormat)}
               options={[
                 { value: "png", label: "PNG" },
                 { value: "jpeg", label: "JPEG" },
+                { value: "webp", label: "WebP" },
+                { value: "gif", label: "GIF" },
               ]}
             />
           </Field>
-          <Field
-            label={t("screenshots.convert.quality", { value: quality })}
-            hint={format === "png" ? t("screenshots.convert.pngLossless") : undefined}
-          >
-            <input
-              className="screenshots-quality-range"
-              type="range"
-              min={1}
-              max={100}
-              value={quality}
-              onChange={(event) => setQuality(Number(event.currentTarget.value))}
-            />
-          </Field>
+          {format === "png" ? (
+            <p className="screenshots-batch-hint">{t("screenshots.convert.pngLossless")}</p>
+          ) : (
+            <Field label={t("screenshots.convert.quality", { value: quality })}>
+              <input
+                className="screenshots-quality-range"
+                type="range"
+                min={1}
+                max={100}
+                value={quality}
+                onChange={(event) => setQuality(Number(event.currentTarget.value))}
+              />
+            </Field>
+          )}
           <p className="screenshots-batch-hint">
             {t("screenshots.convert.hint")}
           </p>

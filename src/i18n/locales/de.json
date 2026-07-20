@@ -1739,6 +1739,9 @@
       "created": "{{count}} neue Bildkopien erstellt."
     },
     "resize": {
+      "mode": "Größenänderung",
+      "exact": "Exakt",
+      "percentage": "Prozent",
       "width": "Breite (px)",
       "height": "Höhe (px)",
       "preserveAspect": "Seitenverhältnis beibehalten",
@@ -1751,6 +1754,7 @@
       "hint": "Konvertierte Bilder werden als neue Kopien gespeichert. Die Originale sind unverändert."
     },
     "editor": {
+      "saveAs": "Speichern unter",
       "pan": "Verschieben",
       "arrow": "Pfeil",
       "rectangle": "Rechteck",

@@ -2148,8 +2148,10 @@ type CommandMap = {
     args: {
       request: {
         ids: string[];
-        width: number;
-        height: number;
+        mode: "exact" | "percentage";
+        width?: number;
+        height?: number;
+        percentage?: number;
         preserveAspectRatio: boolean;
       };
     };
@@ -2159,14 +2161,14 @@ type CommandMap = {
     args: {
       request: {
         ids: string[];
-        format: "png" | "jpeg";
+        format: "png" | "jpeg" | "webp" | "gif";
         quality: number;
       };
     };
     result: StoredScreenshot[];
   };
   save_edited_screenshot: {
-    args: { request: { id: string; dataUrl: string } };
+    args: { request: { id: string; dataUrl: string; saveAsCopy: boolean } };
     result: StoredScreenshot;
   };
   clear_screenshots: {

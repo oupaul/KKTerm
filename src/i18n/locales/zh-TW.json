@@ -1739,6 +1739,9 @@
       "created": "已建立 {{count}} 個新的影像副本。"
     },
     "resize": {
+      "mode": "調整尺寸模式",
+      "exact": "精確尺寸",
+      "percentage": "百分比",
       "width": "寬度 (px)",
       "height": "高度 (px)",
       "preserveAspect": "保持長寬比",
@@ -1751,6 +1754,7 @@
       "hint": "轉換後的影像會另存為新副本，原始檔案不會變更。"
     },
     "editor": {
+      "saveAs": "另存新檔",
       "pan": "平移",
       "arrow": "箭頭",
       "rectangle": "矩形",

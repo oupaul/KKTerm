@@ -1739,6 +1739,9 @@
       "created": "Membuat {{count}} salinan gambar baru."
     },
     "resize": {
+      "mode": "Mode ubah ukuran",
+      "exact": "Tepat",
+      "percentage": "Persentase",
       "width": "Lebar (px)",
       "height": "Tinggi (px)",
       "preserveAspect": "Pertahankan rasio aspek",
@@ -1751,6 +1754,7 @@
       "hint": "Gambar yang dikonversi disimpan sebagai salinan baru. Dokumen asli tidak berubah."
     },
     "editor": {
+      "saveAs": "Simpan sebagai",
       "pan": "Geser",
       "arrow": "Anak panah",
       "rectangle": "Persegi panjang",

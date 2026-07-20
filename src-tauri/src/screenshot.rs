@@ -89,8 +89,10 @@ pub struct ListScreenshotsRequest {
 #[serde(rename_all = "camelCase")]
 pub struct ResizeScreenshotsRequest {
     ids: Vec<String>,
-    width: u32,
-    height: u32,
+    mode: String,
+    width: Option<u32>,
+    height: Option<u32>,
+    percentage: Option<u16>,
     preserve_aspect_ratio: bool,
 }
 
@@ -107,6 +109,7 @@ pub struct ConvertScreenshotsRequest {
 pub struct SaveEditedScreenshotRequest {
     id: String,
     data_url: String,
+    save_as_copy: bool,
 }
 
 #[derive(Serialize)]
@@ -1528,7 +1531,6 @@ pub fn resize_library_screenshots(
     request: ResizeScreenshotsRequest,
     folder_path: String,
 ) -> Result<Vec<StoredScreenshot>, String> {
-    validate_batch_dimensions(request.width, request.height)?;
     let folder = ensure_screenshots_folder(&folder_path)?;
     let paths = request
         .ids
@@ -1539,28 +1541,10 @@ pub fn resize_library_screenshots(
     for path in paths {
         let image = image::open(&path)
             .map_err(|error| format!("failed to read screenshot for resize: {error}"))?;
-        let resized = if request.preserve_aspect_ratio {
-            image.resize(
-                request.width,
-                request.height,
-                image::imageops::FilterType::Lanczos3,
-            )
-        } else {
-            image.resize_exact(
-                request.width,
-                request.height,
-                image::imageops::FilterType::Lanczos3,
-            )
-        };
-        let format = if path
-            .extension()
-            .and_then(|extension| extension.to_str())
-            .is_some_and(|extension| extension.eq_ignore_ascii_case("png"))
-        {
-            "png"
-        } else {
-            "jpeg"
-        };
+        let (width, height) = resolve_resize_dimensions(&request, image.width(), image.height())?;
+        let resized = image.resize_exact(width, height, image::imageops::FilterType::Lanczos3);
+        let format = image_format_for_path(&path)
+            .ok_or_else(|| "screenshot format is not supported for resize".to_string())?;
         let target = unique_library_output_path(&folder, &path, "resized", format);
         write_dynamic_image(&resized, &target, format, 90)?;
         created.push(stored_screenshot_from_path(&folder, target)?);
@@ -1575,8 +1559,13 @@ pub fn convert_library_screenshots(
     let format = match request.format.as_str() {
         "png" => "png",
         "jpeg" => "jpeg",
-        _ => return Err("screenshot output format must be PNG or JPEG".to_string()),
+        "webp" => "webp",
+        "gif" => "gif",
+        _ => return Err("screenshot output format must be PNG, JPEG, WebP, or GIF".to_string()),
     };
+    if !(1..=100).contains(&request.quality) {
+        return Err("screenshot output quality must be between 1 and 100".to_string());
+    }
     let folder = ensure_screenshots_folder(&folder_path)?;
     let paths = request
         .ids
@@ -1613,8 +1602,17 @@ pub fn save_edited_library_screenshot(
         .map_err(|error| format!("failed to decode edited screenshot: {error}"))?;
     let image = image::load_from_memory(&bytes)
         .map_err(|error| format!("failed to read edited screenshot: {error}"))?;
-    let target = unique_library_output_path(&folder, &source, "edited", "png");
-    write_dynamic_image(&image, &target, "png", 90)?;
+    let format = image_format_for_path(&source)
+        .ok_or_else(|| "screenshot format is not supported for save".to_string())?;
+    let target = if request.save_as_copy {
+        unique_library_output_path(&folder, &source, "edited", format)
+    } else {
+        source
+    };
+    write_dynamic_image(&image, &target, format, 90)?;
+    if !request.save_as_copy {
+        remove_thumbnail_for(&folder, &request.id);
+    }
     stored_screenshot_from_path(&folder, target)
 }
 
@@ -1808,12 +1806,62 @@ fn validate_batch_dimensions(width: u32, height: u32) -> Result<(), String> {
     Ok(())
 }
 
+fn resolve_resize_dimensions(
+    request: &ResizeScreenshotsRequest,
+    source_width: u32,
+    source_height: u32,
+) -> Result<(u32, u32), String> {
+    if source_width == 0 || source_height == 0 {
+        return Err("source screenshot dimensions are invalid".to_string());
+    }
+    let dimensions = match request.mode.as_str() {
+        "exact" => match (request.width, request.height) {
+            (Some(width), Some(height)) if request.preserve_aspect_ratio => {
+                if u64::from(width) * u64::from(source_height)
+                    <= u64::from(height) * u64::from(source_width)
+                {
+                    (width, scale_dimension(source_height, width, source_width))
+                } else {
+                    (scale_dimension(source_width, height, source_height), height)
+                }
+            }
+            (Some(width), Some(height)) => (width, height),
+            (Some(width), None) => (width, scale_dimension(source_height, width, source_width)),
+            (None, Some(height)) => {
+                (scale_dimension(source_width, height, source_height), height)
+            }
+            (None, None) => {
+                return Err("enter a screenshot width, height, or both".to_string());
+            }
+        },
+        "percentage" => {
+            let percentage = request
+                .percentage
+                .filter(|percentage| (1..=500).contains(percentage))
+                .ok_or_else(|| "screenshot resize percentage must be between 1 and 500".to_string())?;
+            (
+                scale_dimension(source_width, u32::from(percentage), 100),
+                scale_dimension(source_height, u32::from(percentage), 100),
+            )
+        }
+        _ => return Err("screenshot resize mode must be exact or percentage".to_string()),
+    };
+    validate_batch_dimensions(dimensions.0, dimensions.1)?;
+    Ok(dimensions)
+}
+
+fn scale_dimension(value: u32, numerator: u32, denominator: u32) -> u32 {
+    let scaled = (u64::from(value) * u64::from(numerator) + u64::from(denominator) / 2)
+        / u64::from(denominator);
+    scaled.max(1).min(u64::from(u32::MAX)) as u32
+}
+
 fn unique_library_output_path(folder: &Path, source: &Path, suffix: &str, format: &str) -> PathBuf {
     let stem = source
         .file_stem()
         .and_then(|stem| stem.to_str())
         .unwrap_or("Screenshot");
-    let extension = if format == "jpeg" { "jpg" } else { "png" };
+    let extension = output_extension(format);
     for index in 0..u32::MAX {
         let numbered = if index == 0 {
             format!("{stem}-{suffix}.{extension}")
@@ -1837,28 +1885,65 @@ fn write_dynamic_image(
     use image::{ColorType, ImageEncoder};
 
     let mut bytes = Vec::new();
-    if format == "jpeg" {
-        let rgb = image.to_rgb8();
-        image::codecs::jpeg::JpegEncoder::new_with_quality(&mut bytes, quality.clamp(1, 100))
-            .write_image(
-                rgb.as_raw(),
-                rgb.width(),
-                rgb.height(),
-                ColorType::Rgb8.into(),
-            )
-            .map_err(|error| format!("failed to encode JPEG screenshot: {error}"))?;
-    } else {
-        let rgba = image.to_rgba8();
-        image::codecs::png::PngEncoder::new(&mut bytes)
-            .write_image(
-                rgba.as_raw(),
-                rgba.width(),
-                rgba.height(),
-                ColorType::Rgba8.into(),
-            )
-            .map_err(|error| format!("failed to encode PNG screenshot: {error}"))?;
+    match format {
+        "jpeg" => {
+            let rgb = image.to_rgb8();
+            image::codecs::jpeg::JpegEncoder::new_with_quality(&mut bytes, quality.clamp(1, 100))
+                .write_image(
+                    rgb.as_raw(),
+                    rgb.width(),
+                    rgb.height(),
+                    ColorType::Rgb8.into(),
+                )
+                .map_err(|error| format!("failed to encode JPEG screenshot: {error}"))?;
+        }
+        "webp" => {
+            let rgba = image.to_rgba8();
+            let encoded = webp::Encoder::from_rgba(rgba.as_raw(), rgba.width(), rgba.height())
+                .encode(f32::from(quality.clamp(1, 100)));
+            bytes.extend_from_slice(&encoded);
+        }
+        "gif" => {
+            let rgba = image.to_rgba8();
+            let mut encoder = image::codecs::gif::GifEncoder::new_with_speed(
+                &mut bytes,
+                gif_speed_for_quality(quality),
+            );
+            encoder
+                .encode(
+                    rgba.as_raw(),
+                    rgba.width(),
+                    rgba.height(),
+                    ColorType::Rgba8.into(),
+                )
+                .map_err(|error| format!("failed to encode GIF screenshot: {error}"))?;
+        }
+        _ => {
+            let rgba = image.to_rgba8();
+            image::codecs::png::PngEncoder::new(&mut bytes)
+                .write_image(
+                    rgba.as_raw(),
+                    rgba.width(),
+                    rgba.height(),
+                    ColorType::Rgba8.into(),
+                )
+                .map_err(|error| format!("failed to encode PNG screenshot: {error}"))?;
+        }
     }
     fs::write(path, bytes).map_err(|error| format!("failed to save screenshot: {error}"))
+}
+
+fn gif_speed_for_quality(quality: u8) -> i32 {
+    30 - (i32::from(quality.clamp(1, 100)) - 1) * 29 / 99
+}
+
+fn output_extension(format: &str) -> &'static str {
+    match format {
+        "jpeg" => "jpg",
+        "webp" => "webp",
+        "gif" => "gif",
+        _ => "png",
+    }
 }
 
 /// Returns the cached thumbnail for a library image as a JPEG data URL,
@@ -1940,7 +2025,7 @@ fn is_supported_image_path(path: &Path) -> bool {
         .map(|extension| {
             matches!(
                 extension.to_ascii_lowercase().as_str(),
-                "jpg" | "jpeg" | "png"
+                "gif" | "jpg" | "jpeg" | "png" | "webp"
             )
         })
         .unwrap_or(false)
@@ -1954,7 +2039,24 @@ fn mime_type_for_path(path: &Path) -> &'static str {
         .as_deref()
     {
         Some("png") => "image/png",
+        Some("webp") => "image/webp",
+        Some("gif") => "image/gif",
         _ => "image/jpeg",
+    }
+}
+
+fn image_format_for_path(path: &Path) -> Option<&'static str> {
+    match path
+        .extension()
+        .and_then(|extension| extension.to_str())
+        .map(|extension| extension.to_ascii_lowercase())
+        .as_deref()
+    {
+        Some("png") => Some("png"),
+        Some("jpg" | "jpeg") => Some("jpeg"),
+        Some("webp") => Some("webp"),
+        Some("gif") => Some("gif"),
+        _ => None,
     }
 }
 
@@ -3008,6 +3110,101 @@ mod tests {
         assert!(validate_batch_dimensions(0, 1080).is_err());
         assert!(validate_batch_dimensions(16_385, 1080).is_err());
         assert!(validate_batch_dimensions(16_384, 16_384).is_err());
+    }
+
+    #[test]
+    fn batch_resize_resolves_single_dimensions_and_percentages_per_image() {
+        let width_only = ResizeScreenshotsRequest {
+            ids: Vec::new(),
+            mode: "exact".to_string(),
+            width: Some(1024),
+            height: None,
+            percentage: None,
+            preserve_aspect_ratio: false,
+        };
+        assert_eq!(resolve_resize_dimensions(&width_only, 1920, 1080), Ok((1024, 576)));
+
+        let height_only = ResizeScreenshotsRequest {
+            width: None,
+            height: Some(720),
+            ..width_only
+        };
+        assert_eq!(resolve_resize_dimensions(&height_only, 1920, 1080), Ok((1280, 720)));
+
+        let percentage = ResizeScreenshotsRequest {
+            mode: "percentage".to_string(),
+            width: None,
+            height: None,
+            percentage: Some(50),
+            ..height_only
+        };
+        assert_eq!(resolve_resize_dimensions(&percentage, 1920, 1080), Ok((960, 540)));
+        assert_eq!(resolve_resize_dimensions(&percentage, 800, 1200), Ok((400, 600)));
+    }
+
+    #[test]
+    fn batch_conversion_encodes_all_supported_formats() {
+        let folder = tempfile::tempdir().expect("temp folder");
+        let image = image::DynamicImage::new_rgba8(2, 2);
+        for format in ["png", "jpeg", "webp", "gif"] {
+            let path = folder.path().join(format!("output.{}", output_extension(format)));
+            write_dynamic_image(&image, &path, format, 80).expect("encode image");
+            assert_eq!(image::image_dimensions(path).expect("read dimensions"), (2, 2));
+        }
+        assert_eq!(gif_speed_for_quality(1), 30);
+        assert_eq!(gif_speed_for_quality(100), 1);
+    }
+
+    #[test]
+    fn edited_screenshot_save_overwrites_or_creates_a_copy_as_requested() {
+        use image::{ColorType, ImageEncoder};
+
+        fn png_data_url(width: u32, height: u32) -> String {
+            let image = image::RgbaImage::new(width, height);
+            let mut bytes = Vec::new();
+            image::codecs::png::PngEncoder::new(&mut bytes)
+                .write_image(
+                    image.as_raw(),
+                    width,
+                    height,
+                    ColorType::Rgba8.into(),
+                )
+                .expect("encode PNG data URL");
+            format!("data:image/png;base64,{}", STANDARD.encode(bytes))
+        }
+
+        let folder = tempfile::tempdir().expect("temp folder");
+        let source = folder.path().join("source.png");
+        write_dynamic_image(&image::DynamicImage::new_rgba8(2, 2), &source, "png", 90)
+            .expect("write source");
+
+        let copy = save_edited_library_screenshot(
+            SaveEditedScreenshotRequest {
+                id: "source.png".to_string(),
+                data_url: png_data_url(4, 3),
+                save_as_copy: true,
+            },
+            folder.path().to_string_lossy().into_owned(),
+        )
+        .expect("save edited copy");
+        assert_ne!(copy.id, "source.png");
+        assert_eq!(image::image_dimensions(&source).expect("source dimensions"), (2, 2));
+        assert_eq!(
+            image::image_dimensions(folder.path().join(&copy.id)).expect("copy dimensions"),
+            (4, 3),
+        );
+
+        let saved = save_edited_library_screenshot(
+            SaveEditedScreenshotRequest {
+                id: "source.png".to_string(),
+                data_url: png_data_url(5, 2),
+                save_as_copy: false,
+            },
+            folder.path().to_string_lossy().into_owned(),
+        )
+        .expect("overwrite source");
+        assert_eq!(saved.id, "source.png");
+        assert_eq!(image::image_dimensions(source).expect("saved dimensions"), (5, 2));
     }
 
     #[cfg(not(target_os = "windows"))]

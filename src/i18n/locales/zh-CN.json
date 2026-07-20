@@ -1739,6 +1739,9 @@
       "created": "创建了 {{count}} 个新图像副本。"
     },
     "resize": {
+      "mode": "调整大小模式",
+      "exact": "精确尺寸",
+      "percentage": "百分比",
       "width": "宽度（像素）",
       "height": "高度（像素）",
       "preserveAspect": "保持纵横比",
@@ -1751,6 +1754,7 @@
       "hint": "转换后的图像将另存为新副本。原件不变。"
     },
     "editor": {
+      "saveAs": "另存为",
       "pan": "平移",
       "arrow": "箭",
       "rectangle": "长方形",

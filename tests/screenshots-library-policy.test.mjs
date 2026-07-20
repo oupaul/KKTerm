@@ -46,10 +46,11 @@ test("capture delay and selection-based batch actions stay connected", async () 
 });
 
 test("unified screenshot dialog follows the Sheet contract and bounds image zoom", async () => {
-  const [editor, page, styles] = await Promise.all([
+  const [editor, page, styles, backend] = await Promise.all([
     read("src/modules/screenshots/ScreenshotEditor.tsx"),
     read("src/modules/screenshots/ScreenshotsPage.tsx"),
     read("src/modules/screenshots/screenshots.css"),
+    read("src-tauri/src/screenshot.rs"),
   ]);
 
   for (const tool of ["pan", "arrow", "rectangle", "ellipse", "text", "mosaic"]) {
@@ -80,9 +81,18 @@ test("unified screenshot dialog follows the Sheet contract and bounds image zoom
   assert.doesNotMatch(editor, /disabled=\{!hasPrevious \|\| dirty \|\| saving\}/);
   assert.doesNotMatch(editor, /disabled=\{!hasNext \|\| dirty \|\| saving\}/);
   assert.match(editor, /onCancel=\{\(\) => setPendingAction\(null\)\}/);
-  assert.match(page, /setViewerId\(navigationTarget\?\.id \?\? null\)/);
+  assert.match(page, /setViewerId\(navigationTarget\?\.id \?\? saved\.id\)/);
   assert.match(styles, /screenshots-editor__canvas-wrap \{[\s\S]*?box-sizing: border-box/);
   assert.match(styles, /screenshots-editor__footer-meta[\s\S]*left: 50%/);
+  assert.match(editor, /fitImageDimensions/);
+  assert.match(editor, /screenshots-editor__stage\$\{zoom === "fit" \? " is-fit" : ""\}/);
+  assert.match(styles, /screenshots-editor__stage\.is-fit \{[\s\S]*?overflow: hidden/);
+  assert.match(editor, /<Save size=\{15\}/);
+  assert.match(editor, /screenshots\.editor\.saveAs/);
+  assert.match(editor, /save\("overwrite"/);
+  assert.match(editor, /save\("copy"/);
+  assert.match(editor, /saveAsCopy: mode === "copy"/);
+  assert.match(backend, /if request\.save_as_copy/);
 });
 
 test("macOS and Linux screenshot delivery use xcap-backed images and native image clipboard support", async () => {
@@ -111,4 +121,21 @@ test("Windows native screenshot selection paints dimmed frames atomically", asyn
   assert.match(backend, /AlphaBlend/);
   assert.match(backend, /SourceConstantAlpha: SCREENSHOT_DIM_ALPHA/);
   assert.match(backend, /if overlay\.hover != next_hover/);
+});
+
+test("screenshot batch actions use unified open, flexible resize, and four output formats", async () => {
+  const page = await read("src/modules/screenshots/ScreenshotsPage.tsx");
+  const dialogs = await read("src/modules/screenshots/ScreenshotBatchDialogs.tsx");
+  const backend = await read("src-tauri/src/screenshot.rs");
+  const cargo = await read("src-tauri/Cargo.toml");
+
+  assert.doesNotMatch(page, /label: t\("common\.edit"\)/);
+  assert.match(dialogs, /type ResizeMode = "exact" \| "percentage"/);
+  assert.match(dialogs, /parseOptionalDimension/);
+  assert.match(dialogs, /\{ value: "webp", label: "WebP" \}/);
+  assert.match(dialogs, /\{ value: "gif", label: "GIF" \}/);
+  assert.match(backend, /resolve_resize_dimensions/);
+  assert.match(backend, /webp::Encoder::from_rgba/);
+  assert.match(backend, /GifEncoder::new_with_speed/);
+  assert.match(cargo, /webp = \{ version = "=0\.3\.1", default-features = false \}/);
 });

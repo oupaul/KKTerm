@@ -1739,6 +1739,9 @@
       "created": "{{count}}개의 새 이미지 복사본이 생성되었습니다."
     },
     "resize": {
+      "mode": "크기 조절 모드",
+      "exact": "정확한 크기",
+      "percentage": "백분율",
       "width": "너비(픽셀)",
       "height": "높이(px)",
       "preserveAspect": "종횡비 유지",
@@ -1751,6 +1754,7 @@
       "hint": "변환된 이미지는 새 복사본으로 저장됩니다. 원본은 변경되지 않습니다."
     },
     "editor": {
+      "saveAs": "다른 이름으로 저장",
       "pan": "이동",
       "arrow": "화살",
       "rectangle": "구형",

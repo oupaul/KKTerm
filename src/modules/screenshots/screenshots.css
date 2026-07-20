@@ -719,6 +719,10 @@
     var(--surface-muted);
 }
 
+.screenshots-editor__stage.is-fit {
+  overflow: hidden;
+}
+
 .screenshots-editor__canvas-wrap {
   display: grid;
   box-sizing: border-box;

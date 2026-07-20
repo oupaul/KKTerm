@@ -13,11 +13,13 @@ import {
   Circle,
   Copy,
   ExternalLink,
+  FilePlus,
   FolderOpen,
   Grid2x2,
   Hand,
   Maximize2,
   RotateCcw,
+  Save,
   Square,
   Trash2,
   Type,
@@ -35,14 +37,17 @@ import {
 import { ColorPalettePicker } from "../../app/ui/ColorPalettePicker";
 import { invokeCommand, type FullScreenshot, type StoredScreenshot } from "../../lib/tauri";
 import { formatScreenshotBytes } from "./LibraryView";
+import { fitImageDimensions } from "./editorSizing";
 
 type EditorTool = "pan" | "arrow" | "rectangle" | "ellipse" | "text" | "mosaic";
 type Point = { x: number; y: number };
 type ZoomLevel = "fit" | number;
 type TextFont = "app" | "sans-serif" | "serif" | "monospace";
 type PendingEditorAction = "close" | -1 | 1;
+type EditorSaveMode = "overwrite" | "copy";
 
 const ZOOM_STEPS = [25, 50, 75, 100, 125, 150, 200] as const;
+const FIT_PADDING = 18;
 const EDITOR_TOOLS: Array<{
   id: EditorTool;
   icon: typeof ArrowRight;
@@ -183,7 +188,7 @@ export function ScreenshotEditor({
   onOpenExternal: () => void;
   onReveal: () => void;
   onDelete: () => void;
-  onSaved: (created: StoredScreenshot, navigateDirection?: -1 | 1) => void;
+  onSaved: (saved: StoredScreenshot, mode: EditorSaveMode, navigateDirection?: -1 | 1) => void;
   onError: (error: unknown) => void;
   onClose: () => void;
 }) {
@@ -214,6 +219,7 @@ export function ScreenshotEditor({
   const [textBold, setTextBold] = useState(true);
   const [textFormatOpen, setTextFormatOpen] = useState(false);
   const [canvasSize, setCanvasSize] = useState({ width: screenshot.width, height: screenshot.height });
+  const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
   const [editorSize, setEditorSize] = useState(initialEditorSize);
   const [zoom, setZoom] = useState<ZoomLevel>("fit");
   const [ready, setReady] = useState(false);
@@ -260,6 +266,20 @@ export function ScreenshotEditor({
       disposed = true;
     };
   }, [onError, screenshot.id, t]);
+
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) {
+      return;
+    }
+    const measure = () => {
+      setStageSize({ width: stage.clientWidth, height: stage.clientHeight });
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(stage);
+    return () => observer.disconnect();
+  }, []);
 
   function pushUndo(before: ImageData) {
     undoRef.current = [...undoRef.current.slice(-5), before];
@@ -373,17 +393,25 @@ export function ScreenshotEditor({
     event.currentTarget.releasePointerCapture(event.pointerId);
   }
 
-  async function save(navigateDirection?: -1 | 1) {
+  async function save(mode: EditorSaveMode, navigateDirection?: -1 | 1) {
     const canvas = canvasRef.current;
-    if (!canvas || !ready || !dirty || saving) {
+    if (!canvas || !ready || (mode === "overwrite" && !dirty) || saving) {
       return;
     }
     setSaving(true);
     try {
       const created = await invokeCommand("save_edited_screenshot", {
-        request: { id: screenshot.id, dataUrl: canvas.toDataURL("image/png") },
+        request: {
+          id: screenshot.id,
+          dataUrl: canvas.toDataURL("image/png"),
+          saveAsCopy: mode === "copy",
+        },
       });
-      onSaved(created, navigateDirection);
+      undoRef.current = [];
+      setUndoCount(0);
+      setDirty(false);
+      setSaving(false);
+      onSaved(created, mode, navigateDirection);
     } catch (error) {
       setSaving(false);
       onError(error);
@@ -442,6 +470,15 @@ export function ScreenshotEditor({
   const zoomScale = zoom === "fit" ? null : zoom / 100;
   const scaledWidth = zoomScale ? Math.max(1, Math.round(canvasSize.width * zoomScale)) : null;
   const scaledHeight = zoomScale ? Math.max(1, Math.round(canvasSize.height * zoomScale)) : null;
+  const fitSize = zoom === "fit" && stageSize.width > 0 && stageSize.height > 0
+    ? fitImageDimensions(
+        canvasSize.width,
+        canvasSize.height,
+        stageSize.width,
+        stageSize.height,
+        FIT_PADDING,
+      )
+    : null;
 
   return (
     <DialogShell onBackdrop={saving ? undefined : requestClose}>
@@ -459,11 +496,6 @@ export function ScreenshotEditor({
               <span className="screenshots-editor__footer-meta">
                 {canvasSize.width}×{canvasSize.height} · {formatScreenshotBytes(screenshot.fileSizeBytes)}
               </span>
-            }
-            primary={
-              <Btn kind="primary" icon="check" disabled={!ready || !dirty || saving} onClick={() => void save()}>
-                {t("common.save")}
-              </Btn>
             }
           />
         }
@@ -513,6 +545,24 @@ export function ScreenshotEditor({
             </div>
             <span className="screenshots-editor__divider" aria-hidden="true" />
             <div className="screenshots-editor__action-group">
+              <button
+                type="button"
+                title={t("common.save")}
+                aria-label={t("common.save")}
+                disabled={!ready || !dirty || saving}
+                onClick={() => void save("overwrite")}
+              >
+                <Save size={15} aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                title={t("screenshots.editor.saveAs")}
+                aria-label={t("screenshots.editor.saveAs")}
+                disabled={!ready || saving}
+                onClick={() => void save("copy")}
+              >
+                <FilePlus size={15} aria-hidden="true" />
+              </button>
               <button
                 type="button"
                 title={t("screenshots.editor.undo")}
@@ -671,7 +721,10 @@ export function ScreenshotEditor({
               </div>
             ) : null}
           </div>
-          <div ref={stageRef} className="screenshots-editor__stage">
+          <div
+            ref={stageRef}
+            className={`screenshots-editor__stage${zoom === "fit" ? " is-fit" : ""}`}
+          >
             <div
               className={`screenshots-editor__canvas-wrap${zoom === "fit" ? " is-fit" : ""}`}
               style={scaledWidth && scaledHeight
@@ -683,6 +736,8 @@ export function ScreenshotEditor({
                 className={`${zoom === "fit" ? "is-fit" : "is-scaled"}${tool === "pan" ? " is-pan" : ""}`}
                 style={scaledWidth && scaledHeight
                   ? { width: scaledWidth, height: scaledHeight }
+                  : fitSize
+                    ? { width: fitSize.width, height: fitSize.height }
                   : undefined}
                 aria-label={screenshot.fileName}
                 onPointerDown={pointerDown}
@@ -757,7 +812,7 @@ export function ScreenshotEditor({
           onConfirm={() => {
             const navigateDirection = typeof pendingAction === "number" ? pendingAction : undefined;
             setPendingAction(null);
-            void save(navigateDirection);
+            void save("overwrite", navigateDirection);
           }}
           onCancel={() => setPendingAction(null)}
           zClassName="kk-qc-subdialog"
