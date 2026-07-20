@@ -12,7 +12,7 @@
 //! encrypted with an Argon2id-derived AES-256-GCM key (the same envelope the
 //! encrypted SQLite secret store uses), unlocked on import with the passphrase.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::{Read, Write};
 use std::path::Path;
@@ -724,6 +724,7 @@ fn apply_segment(
         let Some(rows) = segment_data.get(table.name).and_then(Value::as_array) else {
             continue;
         };
+        let destination_columns = table_columns(tx, table.name)?;
         for row in rows {
             let Some(row_obj) = row.as_object() else {
                 continue;
@@ -733,6 +734,11 @@ fn apply_segment(
                 continue;
             }
             let mut rewritten = row_obj.clone();
+            // A source database migrated in place may still carry retired
+            // legacy columns (e.g. itops_site_racks region/datacenter/area);
+            // the destination schema no longer has them, so drop them rather
+            // than failing the whole insert.
+            rewritten.retain(|column, _| destination_columns.contains(column));
             rewrite_row(tx, table, &mut rewritten, action, remap)?;
             // On "add", a built-in Task the importer already has (same
             // deterministic id / built_in_key) is kept as-is rather than
@@ -1221,6 +1227,23 @@ fn read_table(conn: &SqliteConnection, table: &str) -> Result<Vec<Value>, String
         .collect::<Result<Vec<_>, _>>()
         .map_err(|error| format!("failed to read {table}: {error}"))?;
     Ok(rows)
+}
+
+/// Column names of `table` in the destination database. `table` always comes
+/// from a static [`TableSpec`], never from bundle data.
+fn table_columns(
+    tx: &rusqlite::Transaction<'_>,
+    table: &str,
+) -> Result<HashSet<String>, String> {
+    let mut stmt = tx
+        .prepare(&format!("SELECT name FROM pragma_table_info('{table}')"))
+        .map_err(|error| format!("failed to inspect {table}: {error}"))?;
+    let columns = stmt
+        .query_map([], |row| row.get::<_, String>(0))
+        .map_err(|error| format!("failed to inspect {table}: {error}"))?
+        .collect::<Result<HashSet<_>, _>>()
+        .map_err(|error| format!("failed to inspect {table}: {error}"))?;
+    Ok(columns)
 }
 
 fn insert_row(
@@ -1974,6 +1997,50 @@ mod tests {
                 .get("secretOwnerId")
                 .is_none()
         );
+    }
+
+    /// A source database migrated in place may still carry retired legacy
+    /// columns (issue seen live: itops_site_racks.area). The destination is a
+    /// fresh CURRENT_SCHEMA database without them, so the import must drop the
+    /// unknown columns instead of failing the whole insert.
+    #[test]
+    fn retired_source_columns_are_dropped_on_import() {
+        let src = SqliteConnection::open_in_memory().unwrap();
+        itops_schema(&src);
+        src.execute_batch(
+            "ALTER TABLE itops_site_racks ADD COLUMN area TEXT NOT NULL DEFAULT '';
+             INSERT INTO itops_sites (id, name, sort_order) VALUES ('s1','HQ',0);
+             INSERT INTO itops_site_racks (id, site_id, name, sort_order, area)
+                 VALUES ('rk1','s1','A12',0,'Zone 3');",
+        )
+        .unwrap();
+        let mut seg = Map::new();
+        for table in ["itops_sites", "itops_site_racks"] {
+            seg.insert(
+                table.to_string(),
+                Value::Array(read_table(&src, table).unwrap()),
+            );
+        }
+
+        let mut dst = SqliteConnection::open_in_memory().unwrap();
+        itops_schema(&dst);
+        let mut remap: HashMap<(String, String), String> = HashMap::new();
+        {
+            let tx = dst.transaction().unwrap();
+            apply_segment(
+                &tx,
+                segment_tables("itops").unwrap(),
+                &seg,
+                "replace",
+                &mut remap,
+            )
+            .expect("legacy area column is dropped, not fatal");
+            tx.commit().unwrap();
+        }
+        let rack_name: String = dst
+            .query_row("SELECT name FROM itops_site_racks", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(rack_name, "A12");
     }
 
     #[test]
