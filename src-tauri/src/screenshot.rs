@@ -416,7 +416,8 @@ pub fn capture_rect_for_assistant(
 
 #[cfg(not(target_os = "windows"))]
 pub fn capture_fullscreen_for_assistant(_use_directx: bool) -> Result<AssistantScreenshot, String> {
-    Err("screenshot capture is currently available on Windows".to_string())
+    let region = capture_engine::capture_virtual_screen()?;
+    rgba_to_jpeg_assistant(&region.rgba, region.width, region.height)
 }
 
 #[cfg(not(target_os = "windows"))]
@@ -458,6 +459,261 @@ pub fn capture_interactive_region_to_library(
     _use_directx: bool,
 ) -> Result<ScreenshotCaptureResult, String> {
     Err("screenshot capture is currently available on Windows".to_string())
+}
+
+// ---------------------------------------------------------------------------
+// Cross-platform screen-region capture engine (xcap).
+//
+// The default capture engine on every platform: Windows Graphics Capture on
+// Windows (xcap's `wgc` feature), ScreenCaptureKit on macOS, and X11/Wayland
+// on Linux. Coordinates are the monitor coordinate space reported by
+// `xcap::Monitor` — physical virtual-desktop pixels on Windows. Requests that
+// span multiple monitors are composed monitor by monitor; Windows keeps its
+// GDI path as the fallback when this engine errors.
+// ---------------------------------------------------------------------------
+
+mod capture_engine {
+    pub struct RegionImage {
+        pub rgba: Vec<u8>,
+        pub width: u32,
+        pub height: u32,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    struct Rect {
+        left: i32,
+        top: i32,
+        right: i32,
+        bottom: i32,
+    }
+
+    impl Rect {
+        fn width(&self) -> u32 {
+            (self.right - self.left) as u32
+        }
+
+        fn height(&self) -> u32 {
+            (self.bottom - self.top) as u32
+        }
+    }
+
+    fn intersect(a: Rect, b: Rect) -> Option<Rect> {
+        let rect = Rect {
+            left: a.left.max(b.left),
+            top: a.top.max(b.top),
+            right: a.right.min(b.right),
+            bottom: a.bottom.min(b.bottom),
+        };
+        (rect.left < rect.right && rect.top < rect.bottom).then_some(rect)
+    }
+
+    #[cfg(any(not(target_os = "windows"), test))]
+    fn union(a: Rect, b: Rect) -> Rect {
+        Rect {
+            left: a.left.min(b.left),
+            top: a.top.min(b.top),
+            right: a.right.max(b.right),
+            bottom: a.bottom.max(b.bottom),
+        }
+    }
+
+    fn monitor_rect(monitor: &xcap::Monitor) -> Result<Rect, String> {
+        let read = |error: xcap::XCapError| format!("failed to read monitor bounds: {error}");
+        let left = monitor.x().map_err(read)?;
+        let top = monitor.y().map_err(read)?;
+        let width = monitor.width().map_err(read)? as i32;
+        let height = monitor.height().map_err(read)? as i32;
+        Ok(Rect {
+            left,
+            top,
+            right: left + width,
+            bottom: top + height,
+        })
+    }
+
+    /// Scale a captured monitor image to the size its monitor rect promised
+    /// when they disagree (e.g. macOS returns physical pixels for logical
+    /// monitor coordinates). No-op on Windows, where both are physical.
+    fn ensure_size(image: image::RgbaImage, width: u32, height: u32) -> image::RgbaImage {
+        if image.width() == width && image.height() == height {
+            image
+        } else {
+            image::imageops::resize(&image, width, height, image::imageops::FilterType::Triangle)
+        }
+    }
+
+    /// Capture an arbitrary screen rect in monitor coordinates via xcap.
+    pub fn capture_region_rgba(
+        x: i32,
+        y: i32,
+        width: i32,
+        height: i32,
+    ) -> Result<RegionImage, String> {
+        if width <= 0 || height <= 0 {
+            return Err("screenshot region must have a positive size".to_string());
+        }
+        let request = Rect {
+            left: x,
+            top: y,
+            right: x
+                .checked_add(width)
+                .ok_or_else(|| "screenshot region is too wide".to_string())?,
+            bottom: y
+                .checked_add(height)
+                .ok_or_else(|| "screenshot region is too tall".to_string())?,
+        };
+        let monitors = xcap::Monitor::all()
+            .map_err(|error| format!("failed to enumerate monitors: {error}"))?;
+
+        // A request that is exactly one whole monitor keeps the monitor's
+        // native capture resolution (full detail on scaled displays).
+        for monitor in &monitors {
+            if monitor_rect(monitor).ok() == Some(request) {
+                let image = monitor
+                    .capture_image()
+                    .map_err(|error| format!("failed to capture monitor: {error}"))?;
+                return Ok(RegionImage {
+                    width: image.width(),
+                    height: image.height(),
+                    rgba: image.into_raw(),
+                });
+            }
+        }
+
+        let canvas_width = request.width() as usize;
+        let canvas_stride = canvas_width * 4;
+        let mut canvas = vec![0u8; canvas_stride * request.height() as usize];
+        let mut covered = false;
+        for monitor in &monitors {
+            let Ok(rect) = monitor_rect(monitor) else {
+                continue;
+            };
+            let Some(overlap) = intersect(rect, request) else {
+                continue;
+            };
+            let image = monitor
+                .capture_region(
+                    (overlap.left - rect.left) as u32,
+                    (overlap.top - rect.top) as u32,
+                    overlap.width(),
+                    overlap.height(),
+                )
+                .map_err(|error| format!("failed to capture monitor region: {error}"))?;
+            let image = ensure_size(image, overlap.width(), overlap.height());
+            let pixels = image.into_raw();
+            let row_bytes = overlap.width() as usize * 4;
+            let dst_x = (overlap.left - request.left) as usize;
+            let dst_y = (overlap.top - request.top) as usize;
+            for row in 0..overlap.height() as usize {
+                let src_start = row * row_bytes;
+                let dst_start = (dst_y + row) * canvas_stride + dst_x * 4;
+                canvas[dst_start..dst_start + row_bytes]
+                    .copy_from_slice(&pixels[src_start..src_start + row_bytes]);
+            }
+            covered = true;
+        }
+        if !covered {
+            return Err("screenshot region does not intersect any display".to_string());
+        }
+        Ok(RegionImage {
+            rgba: canvas,
+            width: request.width(),
+            height: request.height(),
+        })
+    }
+
+    /// Capture the union of all monitors (the virtual screen).
+    #[cfg(not(target_os = "windows"))]
+    pub fn capture_virtual_screen() -> Result<RegionImage, String> {
+        let monitors = xcap::Monitor::all()
+            .map_err(|error| format!("failed to enumerate monitors: {error}"))?;
+        let bounds = monitors
+            .iter()
+            .filter_map(|monitor| monitor_rect(monitor).ok())
+            .reduce(union)
+            .ok_or_else(|| "no display is available to capture".to_string())?;
+        capture_region_rgba(
+            bounds.left,
+            bounds.top,
+            bounds.width() as i32,
+            bounds.height() as i32,
+        )
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+
+        #[test]
+        fn intersect_returns_overlap() {
+            let a = Rect {
+                left: 0,
+                top: 0,
+                right: 100,
+                bottom: 80,
+            };
+            let b = Rect {
+                left: 60,
+                top: 40,
+                right: 200,
+                bottom: 200,
+            };
+
+            assert_eq!(
+                intersect(a, b),
+                Some(Rect {
+                    left: 60,
+                    top: 40,
+                    right: 100,
+                    bottom: 80,
+                })
+            );
+        }
+
+        #[test]
+        fn intersect_rejects_disjoint_rects() {
+            let a = Rect {
+                left: 0,
+                top: 0,
+                right: 100,
+                bottom: 80,
+            };
+            let b = Rect {
+                left: 100,
+                top: 0,
+                right: 200,
+                bottom: 80,
+            };
+
+            assert_eq!(intersect(a, b), None);
+        }
+
+        #[test]
+        fn union_spans_both_rects() {
+            let a = Rect {
+                left: -1920,
+                top: 0,
+                right: 0,
+                bottom: 1080,
+            };
+            let b = Rect {
+                left: 0,
+                top: 0,
+                right: 3840,
+                bottom: 2160,
+            };
+
+            assert_eq!(
+                union(a, b),
+                Rect {
+                    left: -1920,
+                    top: 0,
+                    right: 3840,
+                    bottom: 2160,
+                }
+            );
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1344,10 +1600,10 @@ mod platform {
         use_directx: bool,
     ) -> Result<Vec<u8>, String> {
         if use_directx {
-            match capture_screen_rect_to_dib_dxgi(x, y, width, height) {
+            match capture_screen_rect_to_dib_xcap(x, y, width, height) {
                 Ok(dib) => return Ok(dib),
                 Err(error) => {
-                    eprintln!("DXGI screenshot capture fell back to GDI: {error}");
+                    eprintln!("xcap screen capture fell back to GDI: {error}");
                 }
             }
         }
@@ -1393,17 +1649,24 @@ mod platform {
         }
     }
 
-    fn capture_screen_rect_to_dib_dxgi(
+    fn capture_screen_rect_to_dib_xcap(
         x: i32,
         y: i32,
         width: i32,
         height: i32,
     ) -> Result<Vec<u8>, String> {
-        if width <= 0 || height <= 0 {
-            return Err("screenshot region must have a positive size".to_string());
+        let region = super::capture_engine::capture_region_rgba(x, y, width, height)?;
+        if region.width != width as u32 || region.height != height as u32 {
+            return Err(format!(
+                "xcap returned a {}x{} image for a {}x{} request",
+                region.width, region.height, width, height
+            ));
         }
-
-        directx::capture_screen_rect_to_dib(x, y, width, height)
+        let mut bgra = region.rgba;
+        for pixel in bgra.chunks_exact_mut(4) {
+            pixel.swap(0, 2);
+        }
+        bgra_pixels_to_dib(&bgra, width, height)
     }
 
     fn bgra_pixels_to_dib(pixels: &[u8], width: i32, height: i32) -> Result<Vec<u8>, String> {
@@ -1430,560 +1693,6 @@ mod platform {
         }
         Ok(dib)
     }
-
-    mod directx {
-        use std::slice;
-
-        use windows::{
-            Win32::{
-                Foundation::HMODULE,
-                Graphics::{
-                    Direct3D::{
-                        D3D_DRIVER_TYPE_UNKNOWN, D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_11_1,
-                    },
-                    Direct3D11::{
-                        D3D11_BOX, D3D11_CPU_ACCESS_READ, D3D11_CREATE_DEVICE_FLAG, D3D11_MAP_READ,
-                        D3D11_MAPPED_SUBRESOURCE, D3D11_SDK_VERSION, D3D11_TEXTURE2D_DESC,
-                        D3D11_USAGE_STAGING, D3D11CreateDevice, ID3D11Device, ID3D11DeviceContext,
-                        ID3D11Texture2D,
-                    },
-                    Dxgi::{
-                        Common::{
-                            DXGI_FORMAT_B8G8R8A8_UNORM, DXGI_MODE_ROTATION_IDENTITY,
-                            DXGI_SAMPLE_DESC,
-                        },
-                        CreateDXGIFactory1, DXGI_ERROR_WAIT_TIMEOUT, DXGI_OUTDUPL_FRAME_INFO,
-                        IDXGIAdapter, IDXGIAdapter1, IDXGIFactory1, IDXGIOutput, IDXGIOutput1,
-                        IDXGIResource,
-                    },
-                },
-            },
-            core::Interface,
-        };
-
-        use super::bgra_pixels_to_dib;
-
-        const DXGI_FRAME_ATTEMPTS: usize = 4;
-        const DXGI_FRAME_TIMEOUT_MS: u32 = 80;
-
-        pub fn capture_screen_rect_to_dib(
-            x: i32,
-            y: i32,
-            width: i32,
-            height: i32,
-        ) -> Result<Vec<u8>, String> {
-            unsafe {
-                let factory: IDXGIFactory1 = CreateDXGIFactory1()
-                    .map_err(|error| format!("failed to create DXGI factory: {error}"))?;
-                let output = find_output_for_rect(&factory, x, y, width, height)?;
-                log_dxgi(&format!(
-                    "output rect=({}, {})-({}, {}), rotation={}, request=({}, {}, {}, {})",
-                    output.left,
-                    output.top,
-                    output.right,
-                    output.bottom,
-                    output.rotation,
-                    x,
-                    y,
-                    width,
-                    height
-                ));
-                capture_output_rect(output, x, y, width, height)
-            }
-        }
-
-        struct DxgiOutputTarget {
-            adapter: IDXGIAdapter1,
-            output: IDXGIOutput,
-            left: i32,
-            top: i32,
-            right: i32,
-            bottom: i32,
-            rotation: i32,
-        }
-
-        unsafe fn find_output_for_rect(
-            factory: &IDXGIFactory1,
-            x: i32,
-            y: i32,
-            width: i32,
-            height: i32,
-        ) -> Result<DxgiOutputTarget, String> {
-            unsafe {
-                let right = x
-                    .checked_add(width)
-                    .ok_or_else(|| "screenshot region is too wide".to_string())?;
-                let bottom = y
-                    .checked_add(height)
-                    .ok_or_else(|| "screenshot region is too tall".to_string())?;
-                let mut adapter_index = 0;
-                while let Ok(adapter) = factory.EnumAdapters1(adapter_index) {
-                    let mut output_index = 0;
-                    while let Ok(output) = adapter.EnumOutputs(output_index) {
-                        let desc = output
-                            .GetDesc()
-                            .map_err(|error| format!("failed to read DXGI output: {error}"))?;
-                        let rect = desc.DesktopCoordinates;
-                        if x >= rect.left
-                            && y >= rect.top
-                            && right <= rect.right
-                            && bottom <= rect.bottom
-                        {
-                            return Ok(DxgiOutputTarget {
-                                adapter,
-                                output,
-                                left: rect.left,
-                                top: rect.top,
-                                right: rect.right,
-                                bottom: rect.bottom,
-                                rotation: desc.Rotation.0,
-                            });
-                        }
-                        output_index += 1;
-                    }
-                    adapter_index += 1;
-                }
-
-                Err(
-                    "screenshot region spans multiple outputs or no matching DXGI output was found"
-                        .to_string(),
-                )
-            }
-        }
-
-        unsafe fn capture_output_rect(
-            target: DxgiOutputTarget,
-            x: i32,
-            y: i32,
-            width: i32,
-            height: i32,
-        ) -> Result<Vec<u8>, String> {
-            unsafe {
-                let adapter: IDXGIAdapter = target
-                    .adapter
-                    .cast()
-                    .map_err(|error| format!("failed to use DXGI adapter: {error}"))?;
-                let output1: IDXGIOutput1 = target
-                    .output
-                    .cast()
-                    .map_err(|error| format!("failed to use DXGI output duplication: {error}"))?;
-                let (device, context) = create_device(&adapter)?;
-                let duplication = output1
-                    .DuplicateOutput(&device)
-                    .map_err(|error| format!("failed to duplicate DXGI output: {error}"))?;
-
-                for attempt in 1..=DXGI_FRAME_ATTEMPTS {
-                    let mut frame_info = DXGI_OUTDUPL_FRAME_INFO::default();
-                    let mut resource: Option<IDXGIResource> = None;
-                    match duplication.AcquireNextFrame(
-                        DXGI_FRAME_TIMEOUT_MS,
-                        &mut frame_info,
-                        &mut resource,
-                    ) {
-                        Ok(()) => {}
-                        Err(error) if error.code() == DXGI_ERROR_WAIT_TIMEOUT => {
-                            log_dxgi(&format!(
-                                "frame attempt {attempt}/{DXGI_FRAME_ATTEMPTS}: acquire timed out after {DXGI_FRAME_TIMEOUT_MS}ms"
-                            ));
-                            continue;
-                        }
-                        Err(error) => {
-                            return Err(format!("failed to acquire DXGI frame: {error}"));
-                        }
-                    }
-                    let _frame_guard = FrameGuard {
-                        duplication: duplication.clone(),
-                    };
-                    let frame = DxgiFrameStats::from_frame_info(&frame_info);
-                    log_dxgi(&format!(
-                        "frame attempt {attempt}/{DXGI_FRAME_ATTEMPTS}: last_present={}, last_mouse={}, accumulated={}, metadata={}, protected={}",
-                        frame.last_present_time,
-                        frame.last_mouse_update_time,
-                        frame.accumulated_frames,
-                        frame.total_metadata_buffer_size,
-                        frame.protected_content_masked_out
-                    ));
-
-                    let resource =
-                        resource.ok_or_else(|| "DXGI frame resource is empty".to_string())?;
-                    let desktop_texture: ID3D11Texture2D = resource
-                        .cast()
-                        .map_err(|error| format!("failed to read DXGI frame texture: {error}"))?;
-
-                    // The duplication surface always holds the full current desktop,
-                    // even for pointer-only frames where every frame-info counter is
-                    // zero, so copy unconditionally instead of gating on frame stats.
-                    let pixels = copy_desktop_texture_to_pixels(
-                        &device,
-                        &context,
-                        &desktop_texture,
-                        &target,
-                        x,
-                        y,
-                        width,
-                        height,
-                    )?;
-                    let sample = sample_non_black_pixel(&pixels, width as u32, height as u32);
-                    log_dxgi(&format!("first non-black pixel sample: {:?}", sample));
-                    if sample.is_none() {
-                        // A fresh duplication can hand back an unpopulated all-black
-                        // surface (notably over RDP); retry before falling back.
-                        continue;
-                    }
-                    return bgra_pixels_to_dib(&pixels, width, height);
-                }
-
-                Err(format!(
-                    "DXGI returned only black or timed-out frames after {DXGI_FRAME_ATTEMPTS} attempts"
-                ))
-            }
-        }
-
-        unsafe fn copy_desktop_texture_to_pixels(
-            device: &ID3D11Device,
-            context: &ID3D11DeviceContext,
-            desktop_texture: &ID3D11Texture2D,
-            target: &DxgiOutputTarget,
-            x: i32,
-            y: i32,
-            width: i32,
-            height: i32,
-        ) -> Result<Vec<u8>, String> {
-            unsafe {
-                let mut texture_desc = D3D11_TEXTURE2D_DESC::default();
-                desktop_texture.GetDesc(&mut texture_desc);
-                log_dxgi(&format!(
-                    "texture desc: width={}, height={}, mip_levels={}, array_size={}, format={:?}, usage={:?}, bind_flags={}, cpu_access={}, misc={}",
-                    texture_desc.Width,
-                    texture_desc.Height,
-                    texture_desc.MipLevels,
-                    texture_desc.ArraySize,
-                    texture_desc.Format,
-                    texture_desc.Usage,
-                    texture_desc.BindFlags,
-                    texture_desc.CPUAccessFlags,
-                    texture_desc.MiscFlags
-                ));
-
-                let geometry = DxgiCopyGeometry {
-                    source_left: (x - target.left) as u32,
-                    source_top: (y - target.top) as u32,
-                    source_right: (x - target.left + width) as u32,
-                    source_bottom: (y - target.top + height) as u32,
-                };
-                validate_copy_geometry(
-                    geometry,
-                    texture_desc.Width,
-                    texture_desc.Height,
-                    target.rotation,
-                )?;
-
-                let copy_texture = create_staging_texture(device, width as u32, height as u32)?;
-                let source_box = D3D11_BOX {
-                    left: geometry.source_left,
-                    top: geometry.source_top,
-                    front: 0,
-                    right: geometry.source_right,
-                    bottom: geometry.source_bottom,
-                    back: 1,
-                };
-                context.CopySubresourceRegion(
-                    &copy_texture,
-                    0,
-                    0,
-                    0,
-                    0,
-                    desktop_texture,
-                    0,
-                    Some(&source_box),
-                );
-
-                let mut mapped = D3D11_MAPPED_SUBRESOURCE::default();
-                context
-                    .Map(&copy_texture, 0, D3D11_MAP_READ, 0, Some(&mut mapped))
-                    .map_err(|error| format!("failed to map DXGI screenshot texture: {error}"))?;
-                let _map_guard = MapGuard {
-                    context: context.clone(),
-                    texture: copy_texture.clone(),
-                };
-                log_dxgi(&format!("mapped row pitch: {}", mapped.RowPitch));
-
-                let row_bytes = width as usize * 4;
-                let mut pixels = vec![0u8; row_bytes * height as usize];
-                for row in 0..height as usize {
-                    let source = (mapped.pData as *const u8).add(row * mapped.RowPitch as usize);
-                    let source = slice::from_raw_parts(source, row_bytes);
-                    let target_start = row * row_bytes;
-                    pixels[target_start..target_start + row_bytes].copy_from_slice(source);
-                }
-
-                Ok(pixels)
-            }
-        }
-
-        unsafe fn create_device(
-            adapter: &IDXGIAdapter,
-        ) -> Result<(ID3D11Device, ID3D11DeviceContext), String> {
-            unsafe {
-                let preferred = [D3D_FEATURE_LEVEL_11_1, D3D_FEATURE_LEVEL_11_0];
-                create_device_with_feature_levels(adapter, &preferred).or_else(|_| {
-                    let fallback = [D3D_FEATURE_LEVEL_11_0];
-                    create_device_with_feature_levels(adapter, &fallback)
-                })
-            }
-        }
-
-        unsafe fn create_device_with_feature_levels(
-            adapter: &IDXGIAdapter,
-            feature_levels: &[windows::Win32::Graphics::Direct3D::D3D_FEATURE_LEVEL],
-        ) -> Result<(ID3D11Device, ID3D11DeviceContext), String> {
-            unsafe {
-                let mut device = None;
-                let mut context = None;
-                D3D11CreateDevice(
-                    adapter,
-                    D3D_DRIVER_TYPE_UNKNOWN,
-                    HMODULE::default(),
-                    D3D11_CREATE_DEVICE_FLAG(0),
-                    Some(feature_levels),
-                    D3D11_SDK_VERSION,
-                    Some(&mut device),
-                    None,
-                    Some(&mut context),
-                )
-                .map_err(|error| format!("failed to create D3D11 device: {error}"))?;
-
-                Ok((
-                    device.ok_or_else(|| "D3D11 device is empty".to_string())?,
-                    context.ok_or_else(|| "D3D11 device context is empty".to_string())?,
-                ))
-            }
-        }
-
-        unsafe fn create_staging_texture(
-            device: &ID3D11Device,
-            width: u32,
-            height: u32,
-        ) -> Result<ID3D11Texture2D, String> {
-            unsafe {
-                let desc = D3D11_TEXTURE2D_DESC {
-                    Width: width.max(1),
-                    Height: height.max(1),
-                    MipLevels: 1,
-                    ArraySize: 1,
-                    Format: DXGI_FORMAT_B8G8R8A8_UNORM,
-                    SampleDesc: DXGI_SAMPLE_DESC {
-                        Count: 1,
-                        Quality: 0,
-                    },
-                    Usage: D3D11_USAGE_STAGING,
-                    BindFlags: 0,
-                    CPUAccessFlags: D3D11_CPU_ACCESS_READ.0 as u32,
-                    MiscFlags: 0,
-                };
-                let mut texture = None;
-                device
-                    .CreateTexture2D(&desc, None, Some(&mut texture))
-                    .map_err(|error| format!("failed to create D3D11 staging texture: {error}"))?;
-                texture.ok_or_else(|| "D3D11 staging texture is empty".to_string())
-            }
-        }
-
-        #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-        struct DxgiFrameStats {
-            last_present_time: i64,
-            last_mouse_update_time: i64,
-            accumulated_frames: u32,
-            total_metadata_buffer_size: u32,
-            protected_content_masked_out: bool,
-        }
-
-        impl DxgiFrameStats {
-            fn from_frame_info(frame_info: &DXGI_OUTDUPL_FRAME_INFO) -> Self {
-                Self {
-                    last_present_time: frame_info.LastPresentTime,
-                    last_mouse_update_time: frame_info.LastMouseUpdateTime,
-                    accumulated_frames: frame_info.AccumulatedFrames,
-                    total_metadata_buffer_size: frame_info.TotalMetadataBufferSize,
-                    protected_content_masked_out: frame_info.ProtectedContentMaskedOut.as_bool(),
-                }
-            }
-        }
-
-        #[derive(Clone, Copy, Debug)]
-        struct DxgiCopyGeometry {
-            source_left: u32,
-            source_top: u32,
-            source_right: u32,
-            source_bottom: u32,
-        }
-
-        fn validate_copy_geometry(
-            geometry: DxgiCopyGeometry,
-            texture_width: u32,
-            texture_height: u32,
-            rotation: i32,
-        ) -> Result<(), String> {
-            if rotation != DXGI_MODE_ROTATION_IDENTITY.0 {
-                return Err(format!(
-                    "DXGI output is rotated ({rotation}); falling back to GDI"
-                ));
-            }
-            if geometry.source_left >= geometry.source_right
-                || geometry.source_top >= geometry.source_bottom
-            {
-                return Err("DXGI screenshot source box is empty".to_string());
-            }
-            if geometry.source_right > texture_width || geometry.source_bottom > texture_height {
-                return Err(format!(
-                    "DXGI screenshot source box is outside texture bounds: box=({}, {})-({}, {}), texture={}x{}",
-                    geometry.source_left,
-                    geometry.source_top,
-                    geometry.source_right,
-                    geometry.source_bottom,
-                    texture_width,
-                    texture_height
-                ));
-            }
-            Ok(())
-        }
-
-        #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-        struct DxgiPixelSample {
-            x: u32,
-            y: u32,
-            b: u8,
-            g: u8,
-            r: u8,
-            a: u8,
-        }
-
-        fn sample_non_black_pixel(
-            pixels: &[u8],
-            width: u32,
-            height: u32,
-        ) -> Option<DxgiPixelSample> {
-            let expected_len = width as usize * height as usize * 4;
-            if pixels.len() < expected_len {
-                return None;
-            }
-            pixels[..expected_len]
-                .chunks_exact(4)
-                .enumerate()
-                .find_map(|(index, bgra)| {
-                    if bgra[0] == 0 && bgra[1] == 0 && bgra[2] == 0 {
-                        return None;
-                    }
-                    Some(DxgiPixelSample {
-                        x: (index as u32) % width,
-                        y: (index as u32) / width,
-                        b: bgra[0],
-                        g: bgra[1],
-                        r: bgra[2],
-                        a: bgra[3],
-                    })
-                })
-        }
-
-        #[cfg(debug_assertions)]
-        fn log_dxgi(message: &str) {
-            eprintln!("DXGI screenshot capture: {message}");
-        }
-
-        #[cfg(not(debug_assertions))]
-        fn log_dxgi(_message: &str) {}
-
-        struct FrameGuard {
-            duplication: windows::Win32::Graphics::Dxgi::IDXGIOutputDuplication,
-        }
-
-        impl Drop for FrameGuard {
-            fn drop(&mut self) {
-                unsafe {
-                    let _ = self.duplication.ReleaseFrame();
-                }
-            }
-        }
-
-        struct MapGuard {
-            context: ID3D11DeviceContext,
-            texture: ID3D11Texture2D,
-        }
-
-        impl Drop for MapGuard {
-            fn drop(&mut self) {
-                unsafe {
-                    self.context.Unmap(&self.texture, 0);
-                }
-            }
-        }
-
-        #[cfg(test)]
-        mod tests {
-            use super::*;
-
-            #[test]
-            fn dxgi_rejects_rotated_output_before_copy() {
-                let geometry = DxgiCopyGeometry {
-                    source_left: 0,
-                    source_top: 0,
-                    source_right: 100,
-                    source_bottom: 80,
-                };
-
-                let error = validate_copy_geometry(geometry, 100, 80, 2)
-                    .expect_err("rotation should fall back to GDI");
-
-                assert!(error.contains("rotated"));
-            }
-
-            #[test]
-            fn dxgi_rejects_source_box_outside_texture_before_copy() {
-                let geometry = DxgiCopyGeometry {
-                    source_left: 20,
-                    source_top: 10,
-                    source_right: 140,
-                    source_bottom: 90,
-                };
-
-                let error = validate_copy_geometry(geometry, 100, 80, 1)
-                    .expect_err("invalid source box should fall back to GDI");
-
-                assert!(error.contains("outside"));
-            }
-
-            #[test]
-            fn dxgi_samples_first_non_black_pixel() {
-                let mut pixels = vec![0u8; 4 * 3];
-                pixels[8] = 12;
-                pixels[9] = 34;
-                pixels[10] = 56;
-                pixels[11] = 255;
-
-                let sample = sample_non_black_pixel(&pixels, 3, 1);
-
-                assert_eq!(
-                    sample,
-                    Some(DxgiPixelSample {
-                        x: 2,
-                        y: 0,
-                        b: 12,
-                        g: 34,
-                        r: 56,
-                        a: 255,
-                    })
-                );
-            }
-
-            #[test]
-            fn dxgi_reports_no_non_black_pixel_for_black_frame() {
-                let pixels = vec![0u8; 4 * 3];
-
-                assert_eq!(sample_non_black_pixel(&pixels, 3, 1), None);
-            }
-        }
-    }
-
     pub struct JpegResult {
         pub data_url: String,
         pub width: u32,

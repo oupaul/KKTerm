@@ -1915,7 +1915,7 @@
     "performance": "Performances",
     "performanceHint": "Controls screen capture acceleration.",
     "useDirectxScreenCapture": "Utiliser DirectX pour la capture d’écran",
-    "useDirectxScreenCaptureHint": "Utiliser DXGI Desktop Duplication si disponible, avec repli GDI.",
+    "useDirectxScreenCaptureHint": "Utiliser Windows Graphics Capture si disponible, avec repli GDI.",
     "statusBar": "Barre d’état",
     "statusBarHint": "Contrôle les indicateurs de la barre d’état inférieure.",
     "statusBarVisible": "Afficher la barre d’état",

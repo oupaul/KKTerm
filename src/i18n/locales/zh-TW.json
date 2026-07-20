@@ -1915,7 +1915,7 @@
     "performance": "效能",
     "performanceHint": "Controls screen capture acceleration.",
     "useDirectxScreenCapture": "使用 DirectX 進行螢幕擷取",
-    "useDirectxScreenCaptureHint": "可用時使用 DXGI Desktop Duplication，並以 GDI 作為備援。",
+    "useDirectxScreenCaptureHint": "可用時使用 Windows Graphics Capture，並以 GDI 作為備援。",
     "statusBar": "狀態列",
     "statusBarHint": "控制底部狀態列指示器。",
     "statusBarVisible": "顯示狀態列",

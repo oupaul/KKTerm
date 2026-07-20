@@ -1915,7 +1915,7 @@
     "performance": "パフォーマンス",
     "performanceHint": "Controls screen capture acceleration.",
     "useDirectxScreenCapture": "画面キャプチャに DirectX を使用",
-    "useDirectxScreenCaptureHint": "利用可能な場合は DXGI Desktop Duplication を使用し、GDI にフォールバックします。",
+    "useDirectxScreenCaptureHint": "利用可能な場合は Windows Graphics Capture を使用し、GDI にフォールバックします。",
     "statusBar": "ステータスバー",
     "statusBarHint": "下部ステータスバーのインジケーターを制御します。",
     "statusBarVisible": "ステータスバーを表示",

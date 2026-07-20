@@ -1915,7 +1915,7 @@
     "performance": "Hiệu năng",
     "performanceHint": "Controls screen capture acceleration.",
     "useDirectxScreenCapture": "Dùng DirectX để chụp màn hình",
-    "useDirectxScreenCaptureHint": "Dùng DXGI Desktop Duplication khi có, với GDI làm phương án dự phòng.",
+    "useDirectxScreenCaptureHint": "Dùng Windows Graphics Capture khi có, với GDI làm phương án dự phòng.",
     "statusBar": "Thanh trạng thái",
     "statusBarHint": "Điều khiển các chỉ báo ở Thanh trạng thái dưới cùng.",
     "statusBarVisible": "Hiển thị Thanh trạng thái",

@@ -1915,7 +1915,7 @@
     "performance": "Performa",
     "performanceHint": "Controls screen capture acceleration.",
     "useDirectxScreenCapture": "Gunakan DirectX untuk tangkapan layar",
-    "useDirectxScreenCaptureHint": "Gunakan DXGI Desktop Duplication jika tersedia, dengan fallback GDI.",
+    "useDirectxScreenCaptureHint": "Gunakan Windows Graphics Capture jika tersedia, dengan fallback GDI.",
     "statusBar": "Bilah Status",
     "statusBarHint": "Mengontrol indikator Bilah Status bawah.",
     "statusBarVisible": "Tampilkan Bilah Status",

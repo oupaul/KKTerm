@@ -1915,7 +1915,7 @@
     "performance": "성능",
     "performanceHint": "Controls screen capture acceleration.",
     "useDirectxScreenCapture": "화면 캡처에 DirectX 사용",
-    "useDirectxScreenCaptureHint": "사용 가능한 경우 DXGI Desktop Duplication을 사용하고 GDI로 대체합니다.",
+    "useDirectxScreenCaptureHint": "사용 가능한 경우 Windows Graphics Capture를 사용하고 GDI로 대체합니다.",
     "statusBar": "상태 표시줄",
     "statusBarHint": "하단 상태 표시줄 표시기를 제어합니다.",
     "statusBarVisible": "상태 표시줄 표시",

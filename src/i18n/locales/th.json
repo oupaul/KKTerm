@@ -1915,7 +1915,7 @@
     "performance": "ประสิทธิภาพ",
     "performanceHint": "Controls screen capture acceleration.",
     "useDirectxScreenCapture": "ใช้ DirectX สำหรับการจับภาพหน้าจอ",
-    "useDirectxScreenCaptureHint": "ใช้ DXGI Desktop Duplication เมื่อพร้อมใช้งาน โดยมี GDI เป็นทางสำรอง",
+    "useDirectxScreenCaptureHint": "ใช้ Windows Graphics Capture เมื่อพร้อมใช้งาน โดยมี GDI เป็นทางสำรอง",
     "statusBar": "แถบสถานะ",
     "statusBarHint": "ควบคุมตัวบ่งชี้ในแถบสถานะด้านล่าง",
     "statusBarVisible": "แสดงแถบสถานะ",
