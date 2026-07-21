@@ -29,8 +29,15 @@ mod mcp_tool_catalog;
 mod portable_marker;
 use portable_marker::PORTABLE_MARKER_FILENAME;
 
+// Share the bundle identifier with the app crate so the CLI's installed-mode
+// app-data path can never drift from the folder Tauri actually uses. Included
+// by path for the same thin-forwarder reason as the modules above; it has no
+// dependencies. See bundle_identifier.rs.
+#[path = "../bundle_identifier.rs"]
+mod bundle_identifier;
+use bundle_identifier::BUNDLE_IDENTIFIER;
+
 const BRIDGE_INFO_FILENAME: &str = "mcp-bridge.json";
-const BUNDLE_IDENTIFIER: &str = "com.kkterm.app";
 const PROTOCOL_VERSION: &str = "2025-03-26";
 const SERVER_NAME: &str = "kkterm-cli";
 const SERVER_VERSION: &str = env!("CARGO_PKG_VERSION");

@@ -3982,14 +3982,15 @@ mod tests {
     }
 
     fn default_app_known_hosts_path() -> Option<PathBuf> {
+        use crate::bundle_identifier::BUNDLE_IDENTIFIER;
         if cfg!(target_os = "windows") {
             env::var_os("APPDATA")
                 .map(PathBuf::from)
-                .map(|path| path.join("com.kkterm.app").join("ssh_known_hosts"))
+                .map(|path| path.join(BUNDLE_IDENTIFIER).join("ssh_known_hosts"))
         } else if let Some(data_home) = env::var_os("XDG_DATA_HOME") {
             Some(
                 PathBuf::from(data_home)
-                    .join("com.kkterm.app")
+                    .join(BUNDLE_IDENTIFIER)
                     .join("ssh_known_hosts"),
             )
         } else {
@@ -3997,7 +3998,7 @@ mod tests {
                 PathBuf::from(home)
                     .join(".local")
                     .join("share")
-                    .join("com.kkterm.app")
+                    .join(BUNDLE_IDENTIFIER)
                     .join("ssh_known_hosts")
             })
         }
