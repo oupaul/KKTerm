@@ -50,6 +50,14 @@ export interface ReorderWorkspacesRequest {
   orderedIds: string[];
 }
 export type ConnectionStatus = "connected" | "idle" | "offline";
+export interface AppModeInfo {
+  mode: "installed" | "portable";
+  dataDir: string;
+}
+export interface CreatedPortableCopy {
+  destination: string;
+  executable: string;
+}
 export type SshAuthMethod = "keyFile" | "password" | "agent";
 
 /**
@@ -757,6 +765,7 @@ export interface GeneralSettings {
   separateSplitTerminalBackgrounds: boolean;
   showInstallerOnRail: boolean;
   showItOps: boolean;
+  showScreenshotsOnRail: boolean;
   showDontSleepOnRail: boolean;
   activityRailOrder: ActivityRailItemId[];
   installerCheckIntervalSeconds: number;
@@ -787,6 +796,7 @@ export type ActivityRailItemId =
   | "workspace"
   | "dashboard"
   | "installer"
+  | "screenshots"
   | "itops"
   | "dontSleep";
 
@@ -1105,9 +1115,12 @@ export type RdpDriveSelection =
 
 export interface RdpSettings {
   colorDepth: RdpColorDepth;
+  administrativeSession: boolean;
   redirectClipboard: boolean;
   redirectDrives: boolean;
   driveSelection: RdpDriveSelection;
+  sharedLocalFolders: string[];
+  /** Legacy single-folder setting retained for backward-compatible imports. */
   sharedLocalFolder?: string;
   bitmapCache: boolean;
   performanceProfile: RdpPerformanceProfile;
@@ -1118,9 +1131,12 @@ export interface RdpSettings {
 export interface RdpConnectionOptions {
   inheritDefaults: boolean;
   colorDepth?: RdpColorDepth;
+  administrativeSession?: boolean;
   redirectClipboard?: boolean;
   redirectDrives?: boolean;
   driveSelection?: RdpDriveSelection;
+  sharedLocalFolders?: string[];
+  /** Legacy single-folder setting retained for backward-compatible imports. */
   sharedLocalFolder?: string;
   bitmapCache?: boolean;
   performanceProfile?: RdpPerformanceProfile;
@@ -1170,8 +1186,26 @@ export interface FtpConnectionOptions {
   remotePath?: string;
 }
 
+export type ScreenshotFormat = "png" | "jpeg";
+export type ScreenshotCaptureDelivery = "folder" | "clipboard" | "both";
+export type ScreenshotBorderStyle = "solid" | "dashed" | "dotted";
+
 export interface ScreenshotSettings {
   folderPath: string;
+  format: ScreenshotFormat;
+  quality: number;
+  captureMode: ScreenshotCaptureDelivery;
+  borderEnabled: boolean;
+  borderWidth: number;
+  borderStyle: ScreenshotBorderStyle;
+  borderColor: string;
+  includeCursor: boolean;
+  regionShortcut: string;
+  regionShortcutEnabled: boolean;
+  windowShortcut: string;
+  windowShortcutEnabled: boolean;
+  fullscreenShortcut: string;
+  fullscreenShortcutEnabled: boolean;
 }
 
 export type AiProviderKind =
@@ -1184,6 +1218,7 @@ export type AiProviderKind =
   | "azure-openai"
   | "litellm"
   | "github-copilot"
+  | "cursor"
   | "ollama"
   | "ollama-cloud"
   | "nvidia"
@@ -1237,8 +1272,10 @@ export interface AiProviderSettings {
   builtInMcpAllowAllDangerous: boolean;
   useCodexCli: boolean;
   useClaudeCli: boolean;
+  useCursorCli: boolean;
   claudeCliPath?: string;
   codexCliPath?: string;
+  cursorCliPath?: string;
   disabledSkillNames: string[];
   customSkillsEnabled: boolean;
   tools: AiAssistantToolSettings;
@@ -1471,12 +1508,24 @@ export interface StoredCredentialSummary {
 export interface ConnectionPasswordCredentialSummary {
   id: string;
   connectionType: ConnectionType;
-  host: string;
   username: string;
   label: string;
   createdFromConnectionId?: string | null;
   createdAt: string;
   updatedAt: string;
+  usageCount: number;
+}
+
+export interface ConnectionPasswordCredentialEntry extends ConnectionPasswordCredentialSummary {
+  secretExists: boolean;
+}
+
+export interface ConnectionPasswordCredentialUsage {
+  connectionId: string;
+  name: string;
+  connectionType: ConnectionType;
+  host: string;
+  username: string;
 }
 
 export interface DeleteStoredCredentialRequest {

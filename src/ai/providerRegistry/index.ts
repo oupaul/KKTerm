@@ -1,5 +1,6 @@
 import { anthropicProvider } from "./anthropic";
 import { azureOpenAiProvider } from "./azureOpenAi";
+import { cursorProvider } from "./cursor";
 import { deepSeekProvider } from "./deepseek";
 import { geminiProvider } from "./gemini";
 import { githubCopilotProvider } from "./githubCopilot";
@@ -20,6 +21,7 @@ export { AI_PROVIDER_MODEL_CATALOG } from "./modelCatalog";
 export const AI_PROVIDER_DEFINITIONS: AiProviderDefinition[] = [
   openAiProvider,
   anthropicProvider,
+  cursorProvider,
   openRouterProvider,
   deepSeekProvider,
   geminiProvider,

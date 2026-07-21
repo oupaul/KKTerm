@@ -24,6 +24,16 @@ export const BRAND_ICON_ENTRIES: BrandIconEntry[] = [
     keywords: ["opencode", "ai", "agent", "coding", "cli"],
   },
   {
+    id: "kimi-code-cli",
+    label: "Kimi Code CLI",
+    keywords: ["kimi", "moonshot", "ai", "agent", "coding", "cli"],
+  },
+  {
+    id: "grok-build",
+    label: "Grok Build",
+    keywords: ["grok", "xai", "x.ai", "ai", "agent", "coding", "cli"],
+  },
+  {
     id: "cursor",
     label: "Cursor",
     keywords: ["cursor", "ai", "ide", "editor", "coding"],
@@ -124,6 +134,11 @@ export const BRAND_ICON_ENTRIES: BrandIconEntry[] = [
     keywords: ["7zip", "7 zip", "archive", "compression", "file", "package"],
   },
   {
+    id: "audacity",
+    label: "Audacity",
+    keywords: ["audacity", "audio", "recording", "editor", "media"],
+  },
+  {
     id: "astral",
     label: "Astral",
     keywords: ["astral", "uv", "python", "package", "developer"],
@@ -194,6 +209,21 @@ export const BRAND_ICON_ENTRIES: BrandIconEntry[] = [
     keywords: ["ffmpeg", "video", "audio", "media", "command", "cli"],
   },
   {
+    id: "firefox",
+    label: "Mozilla Firefox",
+    keywords: ["firefox", "mozilla", "browser", "web", "internet"],
+  },
+  {
+    id: "google-chrome",
+    label: "Google Chrome",
+    keywords: ["chrome", "google", "browser", "web", "internet"],
+  },
+  {
+    id: "acrobat-reader",
+    label: "Adobe Acrobat Reader",
+    keywords: ["acrobat", "adobe", "reader", "pdf", "document"],
+  },
+  {
     id: "flowise",
     label: "Flowise",
     keywords: ["flowise", "ai", "assistant", "workflow", "developer"],
@@ -262,6 +292,11 @@ export const BRAND_ICON_ENTRIES: BrandIconEntry[] = [
     id: "obs-studio",
     label: "OBS Studio",
     keywords: ["obs", "obs studio", "video", "recording", "streaming", "multimedia"],
+  },
+  {
+    id: "obsidian",
+    label: "Obsidian",
+    keywords: ["obsidian", "notes", "markdown", "knowledge", "document"],
   },
   {
     id: "ollama",

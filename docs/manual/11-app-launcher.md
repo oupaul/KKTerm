@@ -52,7 +52,7 @@ Details values come from live local file metadata when available:
 
 ## Right-click context menu on an entry
 
-App Launcher actions live in the right-click menu, not the default surface. Icon and list views show the icon and label; Details view also shows type, size, modified time, and the stored local path for comparison.
+App Launcher actions live in a native Tauri right-click menu, not the default surface. The native menu remains visible when the widget sits beside an embedded URL or RDP Connection widget. Icon and list views show the icon and label; Details view also shows type, size, modified time, and the stored local path for comparison.
 
 - Launch: `appLauncher.launchApp`. Variants: `appLauncher.runNormal`, `appLauncher.runAdmin` (UAC elevation), `appLauncher.runAsUser` (run as a different user). `appLauncher.runAdmin` and `appLauncher.runAsUser` map to Windows shell verbs (`runas` / `runasuser`) and only appear on Windows; macOS and Linux show `appLauncher.runNormal` and `appLauncher.openFolder` only. A normal launch opens the entry through the host OS default handler (Windows `explorer.exe`, macOS the platform opener), so non-runnable files and folders never shell out to `explorer.exe` on macOS or Linux. On Linux, entries with an execute permission bit run directly (with any stored arguments and working directory), `.desktop` entries launch the application they describe via `gio launch`, and all other files and folders open through the desktop default handler (`xdg-open`, falling back to `gio open`); launches scrub AppImage-injected environment variables so host applications resolve correctly.
 - `appLauncher.openFolder` — open the containing local folder for files, shortcuts, scripts, and apps; for folder entries, open that folder.

@@ -10,10 +10,20 @@ use serde_json::{Value, json};
 
 static LOG_STATUS: OnceLock<String> = OnceLock::new();
 static LOG_PATH: OnceLock<PathBuf> = OnceLock::new();
+static LOG_DIRECTORY_OVERRIDE: OnceLock<PathBuf> = OnceLock::new();
 static ADVANCED_DEBUGGING_ENABLED: AtomicBool = AtomicBool::new(false);
 
 pub fn init() {
-    let status = match write_startup_line() {
+    init_with_directory(None);
+}
+
+pub fn init_in_directory(log_dir: PathBuf) {
+    let _ = LOG_DIRECTORY_OVERRIDE.set(log_dir.clone());
+    init_with_directory(Some(log_dir));
+}
+
+fn init_with_directory(log_dir: Option<PathBuf>) {
+    let status = match write_startup_line(log_dir.as_deref()) {
         Ok(path) => {
             let status = format!("Local logs: {}", path.display());
             let _ = LOG_PATH.set(path);
@@ -35,6 +45,9 @@ pub fn log_dir() -> Result<PathBuf, String> {
             .parent()
             .map(Path::to_path_buf)
             .ok_or_else(|| "failed to resolve log folder".to_string());
+    }
+    if let Some(log_dir) = LOG_DIRECTORY_OVERRIDE.get() {
+        return Ok(log_dir.clone());
     }
 
     let exe_path = std::env::current_exe().ok();
@@ -188,11 +201,16 @@ pub fn advanced_debugging_enabled() -> bool {
     ADVANCED_DEBUGGING_ENABLED.load(Ordering::Relaxed)
 }
 
-fn write_startup_line() -> std::io::Result<PathBuf> {
-    let exe_path = std::env::current_exe().ok();
-    let local_app_data = std::env::var_os("LOCALAPPDATA").map(PathBuf::from);
-    let log_dir = runtime_log_dir_for(exe_path.as_deref(), local_app_data.as_deref())
-        .ok_or_else(|| std::io::Error::other("failed to resolve log folder"))?;
+fn write_startup_line(override_dir: Option<&Path>) -> std::io::Result<PathBuf> {
+    let log_dir = match override_dir {
+        Some(path) => path.to_path_buf(),
+        None => {
+            let exe_path = std::env::current_exe().ok();
+            let local_app_data = std::env::var_os("LOCALAPPDATA").map(PathBuf::from);
+            runtime_log_dir_for(exe_path.as_deref(), local_app_data.as_deref())
+                .ok_or_else(|| std::io::Error::other("failed to resolve log folder"))?
+        }
+    };
     fs::create_dir_all(&log_dir)?;
 
     let log_path = log_dir.join("kkterm.log");

@@ -1,4 +1,4 @@
-import type { Provider, Recipe } from "./types";
+import type { DetectedState, Provider, Recipe } from "./types";
 
 export function providerSupportsLatestVersion(provider: Provider): boolean {
   switch (provider.kind) {
@@ -26,6 +26,25 @@ export function recipeSupportsLatestVersion(recipe: Recipe): boolean {
     return githubReleasesRepoFromUrl(recipe.releaseNotesUrl) !== null;
   }
   return providerSupportsLatestVersion(recipe.provider);
+}
+
+export function recipeSupportsManagedLatestVersion(
+  recipe: Recipe,
+  detected?: DetectedState | null,
+): boolean {
+  // Receipt-backed uv is the one source-specific exception: the backend checks
+  // Astral's release channel and runs the exact binary's `uv self update`.
+  // Keep every other unmanaged source away from the catalog provider route.
+  const supportsOfficialUvUpdate =
+    recipe.id === "uv" ||
+    (recipe.provider.kind === "bundle" &&
+      recipe.provider.steps.length === 1 &&
+      recipe.provider.steps[0] === "uv");
+  return (
+    (detected?.installSource !== "officialScript" ||
+      supportsOfficialUvUpdate) &&
+    recipeSupportsLatestVersion(recipe)
+  );
 }
 
 export function latestVersionWebUrlForRecipe(recipe: Recipe): string | null {

@@ -48,7 +48,7 @@ import {
   type RackFacingMap,
 } from "./siteTreeState";
 import { rackFloorMetrics } from "./roomFloorPlan";
-import { centerRoomViewport, roomPanFrame } from "./roomViewport";
+import { centerRoomViewport, roomPanFrame, roomScrollCenter } from "./roomViewport";
 import { ItIcon } from "./icons";
 import { RoomObjectPlanArtwork } from "./RoomObjectArtwork";
 import { isRackTopItem } from "./rackPlacement";
@@ -184,7 +184,11 @@ export function ServerRoomFloorPlan({
     { w: sceneW, h: sceneH },
     false,
   );
-  useRoomPan(scrollRef, { left: panFrame.sceneLeft, top: panFrame.sceneTop });
+  const panCenter = roomScrollCenter(
+    viewport ?? { w: sceneW, h: sceneH },
+    { w: panFrame.w, h: panFrame.h },
+  );
+  useRoomPan(scrollRef, panCenter);
   const grid = { cols, rows, cells: layout.cells };
   const armed =
     tool != null || placeRackId != null || cloneRack != null || cloneObject != null;

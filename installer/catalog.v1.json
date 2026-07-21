@@ -860,6 +860,123 @@
       }
     },
     {
+      "id": "cursor-cli",
+      "name": "Cursor Agent CLI",
+      "section": "aiAgents",
+      "descriptionEn": "Cursor's official command-line coding agent, installed with the native Windows PowerShell installer.",
+      "category": "ai-agent",
+      "icon": "Bot",
+      "homepage": "https://cursor.com/cli",
+      "provider": {
+        "kind": "downloadInstaller",
+        "url": "https://cursor.com/install?win32=true",
+        "fileName": "cursor-agent-install.ps1"
+      },
+      "options": [],
+      "descriptionLocales": {
+        "fr": "Agent de codage officiel en ligne de commande de Cursor, installé avec le programme d’installation PowerShell natif pour Windows.",
+        "de": "Offizieller Kommandozeilen-Coding-Agent von Cursor, installiert mit dem nativen Windows-PowerShell-Installationsprogramm.",
+        "it": "Agente di programmazione ufficiale da riga di comando di Cursor, installato con il programma di installazione PowerShell nativo per Windows.",
+        "es-MX": "Agente de programación oficial de línea de comandos de Cursor, instalado con el instalador nativo de PowerShell para Windows.",
+        "es": "Agente de programación oficial de línea de comandos de Cursor, instalado con el instalador nativo de PowerShell para Windows.",
+        "pt-BR": "Agente de programação oficial de linha de comando do Cursor, instalado com o instalador PowerShell nativo para Windows.",
+        "zh-CN": "Cursor 官方命令行编程代理，通过原生 Windows PowerShell 安装程序安装。",
+        "zh-TW": "Cursor 官方命令列程式開發代理，透過原生 Windows PowerShell 安裝程式安裝。",
+        "ja": "Cursor の公式コマンドラインコーディングエージェント。Windows 用のネイティブ PowerShell インストーラーでインストールされます。",
+        "ko": "Cursor의 공식 명령줄 코딩 에이전트로, Windows용 네이티브 PowerShell 설치 프로그램으로 설치됩니다.",
+        "vi": "Tác nhân lập trình dòng lệnh chính thức của Cursor, được cài đặt bằng trình cài đặt PowerShell gốc dành cho Windows.",
+        "id": "Agen pengodean baris perintah resmi Cursor, dipasang dengan penginstal PowerShell native untuk Windows.",
+        "th": "เอเจนต์เขียนโค้ดผ่านบรรทัดคำสั่งอย่างเป็นทางการของ Cursor ซึ่งติดตั้งด้วยโปรแกรมติดตั้ง PowerShell แบบเนทีฟสำหรับ Windows"
+      }
+    },
+    {
+      "id": "kimi-code-cli",
+      "name": "Kimi Code CLI",
+      "section": "aiAgents",
+      "descriptionEn": "Moonshot AI's Kimi Code CLI coding agent. Install with WinGet, the official native script, or npm; Git for Windows is required.",
+      "category": "ai-agent",
+      "icon": "Bot",
+      "needs": [
+        "winget",
+        "git"
+      ],
+      "homepage": "https://moonshotai.github.io/kimi-code/",
+      "releaseNotesUrl": "https://github.com/MoonshotAI/kimi-code/releases",
+      "provider": {
+        "kind": "winget",
+        "id": "MoonshotAI.KimiCodeCLI"
+      },
+      "downloadProvider": {
+        "kind": "downloadInstaller",
+        "url": "https://code.kimi.com/kimi-code/install.ps1",
+        "fileName": "kimi-code-install.ps1"
+      },
+      "npmProvider": {
+        "kind": "npm",
+        "pkg": "@moonshot-ai/kimi-code"
+      },
+      "options": [
+        "provider",
+        "version"
+      ],
+      "descriptionLocales": {
+        "fr": "Agent de codage Kimi Code CLI de Moonshot AI. Installation avec WinGet, le script natif officiel ou npm ; Git pour Windows est requis.",
+        "it": "Agente di programmazione Kimi Code CLI di Moonshot AI. Installabile con WinGet, lo script nativo ufficiale o npm; richiede Git per Windows.",
+        "de": "Kimi Code CLI-Coding-Agent von Moonshot AI. Installation über WinGet, das offizielle native Skript oder npm; Git für Windows ist erforderlich.",
+        "es": "Agente de programación Kimi Code CLI de Moonshot AI. Se instala con WinGet, el script nativo oficial o npm; requiere Git para Windows.",
+        "es-MX": "Agente de programación Kimi Code CLI de Moonshot AI. Se instala con WinGet, el script nativo oficial o npm; requiere Git para Windows.",
+        "pt-BR": "Agente de programação Kimi Code CLI da Moonshot AI. Instale com WinGet, o script nativo oficial ou npm; requer Git para Windows.",
+        "zh-TW": "Moonshot AI 的 Kimi Code CLI 程式開發代理。可透過 WinGet、官方原生指令碼或 npm 安裝；需要 Git for Windows。",
+        "zh-CN": "Moonshot AI 的 Kimi Code CLI 编程代理。可通过 WinGet、官方原生脚本或 npm 安装；需要 Git for Windows。",
+        "ja": "Moonshot AI の Kimi Code CLI コーディングエージェント。WinGet、公式ネイティブスクリプト、または npm でインストールでき、Git for Windows が必要です。",
+        "ko": "Moonshot AI의 Kimi Code CLI 코딩 에이전트입니다. WinGet, 공식 네이티브 스크립트 또는 npm으로 설치할 수 있으며 Git for Windows가 필요합니다.",
+        "th": "เอเจนต์เขียนโค้ด Kimi Code CLI ของ Moonshot AI ติดตั้งได้ด้วย WinGet, สคริปต์เนทีฟอย่างเป็นทางการ หรือ npm และต้องใช้ Git for Windows",
+        "id": "Agen pengodean Kimi Code CLI dari Moonshot AI. Instal dengan WinGet, skrip native resmi, atau npm; memerlukan Git for Windows.",
+        "vi": "Tác nhân lập trình Kimi Code CLI của Moonshot AI. Cài đặt bằng WinGet, tập lệnh gốc chính thức hoặc npm; yêu cầu Git for Windows."
+      }
+    },
+    {
+      "id": "grok-build",
+      "name": "Grok Build",
+      "section": "aiAgents",
+      "descriptionEn": "xAI's Grok Build coding agent for interactive, headless, and ACP workflows. Install with WinGet or the official native script.",
+      "category": "ai-agent",
+      "icon": "Bot",
+      "needs": [
+        "winget"
+      ],
+      "homepage": "https://docs.x.ai/build/overview",
+      "releaseNotesUrl": "https://docs.x.ai/developers/release-notes",
+      "provider": {
+        "kind": "winget",
+        "id": "xAI.GrokBuild"
+      },
+      "downloadProvider": {
+        "kind": "downloadInstaller",
+        "url": "https://x.ai/cli/install.ps1",
+        "fileName": "grok-build-install.ps1"
+      },
+      "options": [
+        "provider",
+        "version"
+      ],
+      "descriptionLocales": {
+        "fr": "Agent de codage Grok Build de xAI pour les flux interactifs, sans interface et ACP. Installation avec WinGet ou le script natif officiel.",
+        "it": "Agente di programmazione Grok Build di xAI per flussi interattivi, headless e ACP. Installabile con WinGet o con lo script nativo ufficiale.",
+        "de": "Grok Build-Coding-Agent von xAI für interaktive, Headless- und ACP-Workflows. Installation über WinGet oder das offizielle native Skript.",
+        "es": "Agente de programación Grok Build de xAI para flujos interactivos, sin interfaz y ACP. Se instala con WinGet o el script nativo oficial.",
+        "es-MX": "Agente de programación Grok Build de xAI para flujos interactivos, sin interfaz y ACP. Se instala con WinGet o el script nativo oficial.",
+        "pt-BR": "Agente de programação Grok Build da xAI para fluxos interativos, headless e ACP. Instale com WinGet ou o script nativo oficial.",
+        "zh-TW": "xAI 的 Grok Build 程式開發代理，支援互動式、無介面及 ACP 工作流程。可透過 WinGet 或官方原生指令碼安裝。",
+        "zh-CN": "xAI 的 Grok Build 编程代理，支持交互式、无界面及 ACP 工作流。可通过 WinGet 或官方原生脚本安装。",
+        "ja": "xAI の Grok Build コーディングエージェント。対話型、ヘッドレス、ACP ワークフローに対応し、WinGet または公式ネイティブスクリプトでインストールできます。",
+        "ko": "대화형, 헤드리스 및 ACP 워크플로를 위한 xAI의 Grok Build 코딩 에이전트입니다. WinGet 또는 공식 네이티브 스크립트로 설치할 수 있습니다.",
+        "th": "เอเจนต์เขียนโค้ด Grok Build ของ xAI สำหรับเวิร์กโฟลว์แบบโต้ตอบ แบบไม่มีส่วนติดต่อ และ ACP ติดตั้งได้ด้วย WinGet หรือสคริปต์เนทีฟอย่างเป็นทางการ",
+        "id": "Agen pengodean Grok Build dari xAI untuk alur kerja interaktif, headless, dan ACP. Instal dengan WinGet atau skrip native resmi.",
+        "vi": "Tác nhân lập trình Grok Build của xAI cho quy trình tương tác, không giao diện và ACP. Cài đặt bằng WinGet hoặc tập lệnh gốc chính thức."
+      }
+    },
+    {
       "id": "ollama",
       "name": "Ollama",
       "section": "aiPlatforms",
@@ -1578,6 +1695,9 @@
       "detection": {
         "displayNames": [
           "Claude"
+        ],
+        "appxPackageFamilyNames": [
+          "Claude_pzs8sxrjxfjjc"
         ]
       },
       "provider": {
@@ -2448,7 +2568,6 @@
       },
       "options": [
         "provider",
-        "scope",
         "version"
       ],
       "descriptionLocales": {
@@ -2498,7 +2617,6 @@
       },
       "options": [
         "provider",
-        "scope",
         "version"
       ],
       "descriptionLocales": {
@@ -2566,6 +2684,54 @@
         "th": "โปรแกรมอ่าน PDF สำหรับดู พิมพ์ ลงนาม และแสดงความคิดเห็นในเอกสาร",
         "id": "Pembaca PDF untuk melihat, mencetak, menandatangani, dan mengomentari dokumen.",
         "vi": "Trình đọc PDF để xem, in, ký và chú thích tài liệu."
+      }
+    },
+    {
+      "id": "obsidian",
+      "name": "Obsidian",
+      "section": "productivity",
+      "descriptionEn": "Markdown knowledge base and note-taking app that stores notes in local files.",
+      "category": "documents",
+      "icon": "NotebookPen",
+      "needs": [
+        "winget"
+      ],
+      "homepage": "https://obsidian.md/",
+      "releaseNotesUrl": "https://obsidian.md/changelog/",
+      "detection": {
+        "displayNames": [
+          "Obsidian"
+        ],
+        "displayNamePrefixes": [
+          "Obsidian "
+        ]
+      },
+      "provider": {
+        "kind": "winget",
+        "id": "Obsidian.Obsidian"
+      },
+      "chocolateyProvider": {
+        "kind": "chocolatey",
+        "id": "obsidian"
+      },
+      "options": [
+        "provider",
+        "version"
+      ],
+      "descriptionLocales": {
+        "de": "Markdown-Wissensdatenbank und Notiz-App, die Notizen in lokalen Dateien speichert.",
+        "es": "Base de conocimientos Markdown y aplicación de notas que guarda las notas en archivos locales.",
+        "es-MX": "Base de conocimientos Markdown y aplicación de notas que guarda las notas en archivos locales.",
+        "fr": "Base de connaissances Markdown et application de prise de notes qui stocke les notes dans des fichiers locaux.",
+        "id": "Basis pengetahuan Markdown dan aplikasi catatan yang menyimpan catatan dalam file lokal.",
+        "it": "Base di conoscenza Markdown e app per appunti che salva le note in file locali.",
+        "ja": "ノートをローカルファイルに保存する Markdown ナレッジベース・ノートアプリ。",
+        "ko": "노트를 로컬 파일에 저장하는 Markdown 지식 베이스 및 노트 앱입니다.",
+        "pt-BR": "Base de conhecimento Markdown e aplicativo de notas que armazena notas em arquivos locais.",
+        "th": "ฐานความรู้ Markdown และแอปจดบันทึกที่เก็บบันทึกไว้ในไฟล์ในเครื่อง",
+        "vi": "Cơ sở tri thức Markdown và ứng dụng ghi chú lưu ghi chú trong tệp cục bộ.",
+        "zh-CN": "以本地文件存储笔记的 Markdown 知识库与笔记应用。",
+        "zh-TW": "以本機檔案儲存筆記的 Markdown 知識庫與筆記應用程式。"
       }
     },
     {
@@ -2992,6 +3158,57 @@
         "vi": "Trình xem ảnh, sắp xếp ảnh và chuyển đổi hàng loạt hỗ trợ nhiều định dạng.",
         "zh-CN": "支持多种格式的图像查看、照片整理和批量转换工具。",
         "zh-TW": "支援多種格式的影像檢視、相片整理與批次轉換工具。"
+      }
+    },
+    {
+      "id": "audacity",
+      "name": "Audacity",
+      "section": "multimedia",
+      "descriptionEn": "Free, open-source multi-track audio editor and recorder.",
+      "category": "multimedia",
+      "icon": "AudioWaveform",
+      "needs": [
+        "winget"
+      ],
+      "homepage": "https://www.audacityteam.org/",
+      "releaseNotesUrl": "https://github.com/audacity/audacity/releases",
+      "detection": {
+        "registryKeys": [
+          "Audacity_is1"
+        ],
+        "displayNames": [
+          "Audacity"
+        ],
+        "displayNamePrefixes": [
+          "Audacity "
+        ]
+      },
+      "provider": {
+        "kind": "winget",
+        "id": "Audacity.Audacity"
+      },
+      "chocolateyProvider": {
+        "kind": "chocolatey",
+        "id": "audacity"
+      },
+      "options": [
+        "provider",
+        "version"
+      ],
+      "descriptionLocales": {
+        "de": "Kostenloser Open-Source-Mehrspur-Audioeditor und -rekorder.",
+        "es": "Editor y grabador de audio multipista gratuito y de código abierto.",
+        "es-MX": "Editor y grabador de audio multipista gratuito y de código abierto.",
+        "fr": "Éditeur et enregistreur audio multipiste gratuit et open source.",
+        "id": "Editor dan perekam audio multitrek gratis dan sumber terbuka.",
+        "it": "Editor e registratore audio multitraccia gratuito e open source.",
+        "ja": "無料でオープンソースのマルチトラック音声編集・録音ソフト。",
+        "ko": "무료 오픈 소스 멀티트랙 오디오 편집 및 녹음 도구입니다.",
+        "pt-BR": "Editor e gravador de áudio multipista gratuito e de código aberto.",
+        "th": "โปรแกรมตัดต่อและบันทึกเสียงแบบหลายแทร็กที่ฟรีและโอเพนซอร์ส",
+        "vi": "Trình chỉnh sửa và ghi âm đa kênh miễn phí, mã nguồn mở.",
+        "zh-CN": "免费开源的多轨音频编辑与录音工具。",
+        "zh-TW": "免費開放原始碼的多軌音訊編輯與錄音工具。"
       }
     },
     {

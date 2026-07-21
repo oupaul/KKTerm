@@ -27,9 +27,10 @@ const HEARTBEAT_INTERVAL_SECS: u64 = 10;
 const RECENT_PROCESS_OUTPUT_LINES: usize = 40;
 const FAILURE_OUTPUT_DETAIL_MAX_CHARS: usize = 500;
 const WINGET_NO_APPLICABLE_UPGRADE_EXIT_CODE: i32 = 0x8A15_002B_u32 as i32;
+const WINGET_NO_INSTALLED_PACKAGE_EXIT_CODE: i32 = 0x8A15_0014_u32 as i32;
 
 use super::detect::{
-    GithubReleaseMarker, InstallScope, detect_chocolatey_package, detect_one,
+    GithubReleaseMarker, InstallScope, detect_chocolatey_package, detect_one, detect_winget,
     github_release_install_dir, github_release_marker_path,
 };
 use super::events::ProgressEvent;
@@ -39,7 +40,7 @@ use super::managed_app::{
 };
 use super::options::InstallOptions;
 use super::proc::{no_window, npm_program};
-use super::schema::{GithubReleaseLayout, Provider, Recipe, RecipeOption};
+use super::schema::{GithubReleaseLayout, PlanStep, Provider, Recipe, RecipeOption};
 
 pub type EventSink = Box<dyn Fn(ProgressEvent) + Send + Sync>;
 
@@ -61,7 +62,18 @@ pub fn install_recipe(
         selected_install_provider(recipe, &effective_install_options(recipe, options)),
         Provider::Chocolatey { .. }
     );
-    let result = if use_selected_provider_directly {
+    let result = if recipe.id == "uv" {
+        let detected = detect_one(recipe);
+        if detected.is_official_script_install() {
+            // The catalog provider is WinGet, but the receipt-backed binary
+            // belongs to Astral. Dispatch through that exact executable so UI,
+            // Update all, and direct command callers cannot update a different
+            // `uv` that happens to appear earlier on PATH.
+            update_astral_standalone_uv(&detected, cancel, emit)
+        } else {
+            install_recipe_by_provider(recipe, options, cancel, emit)
+        }
+    } else if use_selected_provider_directly {
         install_recipe_by_provider(recipe, options, cancel, emit)
     } else if recipe.id == "n8n" || recipe.id == "flowise" || recipe.id == "openclaw" {
         if let Provider::Npm { pkg } = &recipe.provider {
@@ -115,6 +127,53 @@ pub fn install_recipe(
     result
 }
 
+fn update_astral_standalone_uv(
+    detected: &super::detect::DetectedState,
+    cancel: Arc<AtomicBool>,
+    emit: &EventSink,
+) -> Result<Option<String>, String> {
+    ensure_uv_is_not_running()?;
+    let executable = astral_standalone_uv_executable(detected)?;
+    emit(ProgressEvent::Step {
+        tool_id: "uv".into(),
+        message: "uv self update".into(),
+    });
+    run_streamed(
+        &executable.to_string_lossy(),
+        &["self".into(), "update".into()],
+        "uv",
+        cancel,
+        emit,
+    )?;
+    // Detection reads the replaced binary immediately after the terminal
+    // event, so returning None avoids trusting human-oriented command output
+    // as the installed version.
+    Ok(None)
+}
+
+fn astral_standalone_uv_executable(
+    detected: &super::detect::DetectedState,
+) -> Result<PathBuf, String> {
+    if !detected.is_official_script_install() {
+        return Err("uv is not installed through Astral's standalone installer".into());
+    }
+    let bin_dir = detected
+        .install_location
+        .as_deref()
+        .map(PathBuf::from)
+        .ok_or("Astral uv install location is unavailable; refresh detection and try again")?;
+    let executable = bin_dir.join(format!("uv{}", std::env::consts::EXE_SUFFIX));
+    // Revalidate both files at execution time. The detected state may have
+    // come from the registry cache, and a stale path must never fall back to
+    // a package-manager executable when performing an in-place self-update.
+    if !executable.is_file() || !bin_dir.join("uv-receipt.json").is_file() {
+        return Err(
+            "Astral uv executable or receipt is missing; refresh detection and try again".into(),
+        );
+    }
+    Ok(executable)
+}
+
 fn install_recipe_by_provider(
     recipe: &Recipe,
     options: &InstallOptions,
@@ -124,7 +183,7 @@ fn install_recipe_by_provider(
     let options = effective_install_options(recipe, options);
     let provider = selected_install_provider(recipe, &options);
     match provider {
-        Provider::Winget { id } => install_winget(&recipe.id, id, &options, cancel, emit),
+        Provider::Winget { id } => install_winget(recipe, id, &options, cancel, emit),
         Provider::Chocolatey { id } => install_chocolatey(&recipe.id, id, &options, cancel, emit),
         Provider::Npm { pkg } => install_npm(&recipe.id, pkg, &options, cancel, emit),
         Provider::UvPip { package } => install_uv_pip(&recipe.id, package, &options, cancel, emit),
@@ -195,6 +254,11 @@ fn selected_install_provider<'a>(recipe: &'a Recipe, options: &InstallOptions) -
             return provider;
         }
     }
+    if let Some(provider @ Provider::DownloadInstaller { .. }) = recipe.download_provider.as_ref() {
+        if super::detect::detect_official_cli_installer(&recipe.id).is_some() {
+            return provider;
+        }
+    }
     &recipe.provider
 }
 
@@ -219,27 +283,117 @@ fn install_managed_npm_app(
     cancel: Arc<AtomicBool>,
     emit: &EventSink,
 ) -> Result<Option<String>, String> {
+    emit(ProgressEvent::Plan {
+        tool_id: tool_id.into(),
+        steps: vec![
+            PlanStep {
+                id: "resolve-dependency-plan".into(),
+                label_key: "installer.steps.resolveDependencyPlan".into(),
+            },
+            PlanStep {
+                id: "ensure-node-lts".into(),
+                label_key: "installer.steps.ensureNodeLts".into(),
+            },
+            PlanStep {
+                id: "install-managed-npm-app".into(),
+                label_key: "installer.steps.installNamed".into(),
+            },
+        ],
+    });
+
     let install_dir = managed_app_install_dir(tool_id);
     let data_dir = managed_app_data_dir(tool_id);
-    std::fs::create_dir_all(&install_dir).map_err(|e| e.to_string())?;
-    std::fs::create_dir_all(&data_dir).map_err(|e| e.to_string())?;
-    let package_json = install_dir.join("package.json");
-    if !package_json.exists() {
-        std::fs::write(
-            &package_json,
-            "{\n  \"private\": true,\n  \"dependencies\": {}\n}\n",
-        )
-        .map_err(|e| e.to_string())?;
-    }
+    run_install_step(tool_id, "resolve-dependency-plan", emit, || {
+        std::fs::create_dir_all(&install_dir).map_err(|e| e.to_string())?;
+        std::fs::create_dir_all(&data_dir).map_err(|e| e.to_string())?;
+        let package_json = install_dir.join("package.json");
+        if !package_json.exists() {
+            std::fs::write(
+                &package_json,
+                "{\n  \"private\": true,\n  \"dependencies\": {}\n}\n",
+            )
+            .map_err(|e| e.to_string())?;
+        }
+        Ok(())
+    })?;
+
+    run_install_step(tool_id, "ensure-node-lts", emit, || {
+        ensure_node_lts_for_managed_npm(tool_id, cancel.clone(), emit)
+    })?;
+
     let args = managed_npm_install_args(tool_id, &[managed_npm_spec(pkg, options)]);
-    emit(ProgressEvent::Step {
+    run_install_step(tool_id, "install-managed-npm-app", emit, || {
+        emit(ProgressEvent::Step {
+            tool_id: tool_id.into(),
+            message: format!("npm install --prefix {}", install_dir.display()),
+        });
+        run_streamed_with_refreshed_path_public(npm_program(), &args, tool_id, cancel, emit)?;
+        let version = detect_managed_npm_version(pkg, &install_dir);
+        write_managed_app_marker(tool_id, version.clone())?;
+        Ok(version)
+    })
+}
+
+fn run_install_step<T>(
+    tool_id: &str,
+    step_id: &str,
+    emit: &EventSink,
+    action: impl FnOnce() -> Result<T, String>,
+) -> Result<T, String> {
+    emit(ProgressEvent::StepStarted {
         tool_id: tool_id.into(),
-        message: format!("npm install --prefix {}", install_dir.display()),
+        step_id: step_id.into(),
     });
-    run_streamed_with_refreshed_path_public(npm_program(), &args, tool_id, cancel, emit)?;
-    let version = detect_managed_npm_version(pkg, &install_dir);
-    write_managed_app_marker(tool_id, version.clone())?;
-    Ok(version)
+    match action() {
+        Ok(value) => {
+            emit(ProgressEvent::StepFinished {
+                tool_id: tool_id.into(),
+                step_id: step_id.into(),
+                ok: true,
+                error: None,
+            });
+            Ok(value)
+        }
+        Err(error) => {
+            emit(ProgressEvent::StepFinished {
+                tool_id: tool_id.into(),
+                step_id: step_id.into(),
+                ok: false,
+                error: Some(error.clone()),
+            });
+            Err(error)
+        }
+    }
+}
+
+fn ensure_node_lts_for_managed_npm(
+    tool_id: &str,
+    cancel: Arc<AtomicBool>,
+    emit: &EventSink,
+) -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    {
+        for args in [["install", "lts"], ["use", "lts"]] {
+            run_streamed_with_refreshed_path_public(
+                "nvm",
+                &args.into_iter().map(str::to_string).collect::<Vec<_>>(),
+                tool_id,
+                cancel.clone(),
+                emit,
+            )?;
+        }
+        Ok(())
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        run_streamed_with_refreshed_path_public(
+            "node",
+            &["--version".into()],
+            tool_id,
+            cancel,
+            emit,
+        )
+    }
 }
 
 fn install_managed_excalidraw(
@@ -735,6 +889,16 @@ fn downloaded_installer_powershell_script(download_path: &PathBuf, tool_id: &str
         );
     }
 
+    if download_path
+        .extension()
+        .is_some_and(|extension| extension.eq_ignore_ascii_case("ps1"))
+    {
+        return format!(
+            "$ErrorActionPreference = 'Stop'; & {}; if ($LASTEXITCODE) {{ exit $LASTEXITCODE }}; exit 0",
+            powershell_single_quote(&download_path.to_string_lossy())
+        );
+    }
+
     format!(
         "$p = Start-Process -FilePath {} -Wait -PassThru; exit $p.ExitCode",
         powershell_single_quote(&download_path.to_string_lossy())
@@ -804,7 +968,7 @@ fn run_downloaded_installer(
     )
 }
 
-fn powershell_single_quote(value: &str) -> String {
+pub(super) fn powershell_single_quote(value: &str) -> String {
     format!("'{}'", value.replace('\'', "''"))
 }
 
@@ -948,16 +1112,17 @@ fn winget_scope_option_for_detected_scope(scope: Option<InstallScope>) -> String
 // ---- winget ------------------------------------------------------------
 
 fn install_winget(
-    tool_id: &str,
+    recipe: &Recipe,
     winget_id: &str,
     options: &InstallOptions,
     cancel: Arc<AtomicBool>,
     emit: &EventSink,
 ) -> Result<Option<String>, String> {
+    let tool_id = &recipe.id;
     if tool_id == "uv" {
         ensure_uv_is_not_running()?;
     }
-    let already_installed = super::detect::detect_winget_recipe_by_id(winget_id).installed;
+    let already_installed = detect_winget(recipe).installed;
     let verb = if already_installed {
         "upgrade"
     } else {
@@ -968,10 +1133,19 @@ fn install_winget(
         message: format!("winget {verb} --id {winget_id}"),
     });
     let args = winget_command_args(verb, winget_id, options);
-    if winget_should_run_elevated(winget_id, options) {
-        run_streamed_elevated("winget", &args, tool_id, cancel, emit)?;
+    let run_elevated = winget_should_run_elevated(winget_id, options);
+    let result = run_winget_command(&args, run_elevated, tool_id, cancel.clone(), emit);
+    if already_installed && is_winget_no_installed_package_error(result.as_ref().err()) {
+        emit(ProgressEvent::Step {
+            tool_id: tool_id.into(),
+            message: format!(
+                "winget upgrade could not match the installed package; retrying winget install --id {winget_id}"
+            ),
+        });
+        let install_args = winget_command_args("install", winget_id, options);
+        run_winget_command(&install_args, run_elevated, tool_id, cancel, emit)?;
     } else {
-        run_streamed("winget", &args, tool_id, cancel, emit)?;
+        result?;
     }
     if winget_tool_should_add_links_to_path(tool_id) {
         if let Some(dir) = winget_links_dir() {
@@ -982,6 +1156,27 @@ fn install_winget(
     // a subsequent detect_one() reads the local installed-software inventory.
     // Returning None lets the caller decide whether to re-detect.
     Ok(None)
+}
+
+fn run_winget_command(
+    args: &[String],
+    run_elevated: bool,
+    tool_id: &str,
+    cancel: Arc<AtomicBool>,
+    emit: &EventSink,
+) -> Result<(), String> {
+    if run_elevated {
+        run_streamed_elevated("winget", args, tool_id, cancel, emit)
+    } else {
+        run_streamed("winget", args, tool_id, cancel, emit)
+    }
+}
+
+fn is_winget_no_installed_package_error(error: Option<&String>) -> bool {
+    error.is_some_and(|error| {
+        error.contains(&WINGET_NO_INSTALLED_PACKAGE_EXIT_CODE.to_string())
+            || error.contains("No installed package found matching input criteria")
+    })
 }
 
 fn winget_should_run_elevated(winget_id: &str, options: &InstallOptions) -> bool {
@@ -1899,6 +2094,15 @@ pub fn refreshed_path_public() -> Option<String> {
     refreshed_path()
 }
 
+pub fn refreshed_nvm_home_public() -> Option<String> {
+    let environment = refreshed_environment();
+    environment
+        .vars
+        .get("NVM_HOME")
+        .cloned()
+        .or_else(|| std::env::var("NVM_HOME").ok())
+}
+
 /// Run an admin-only command (Chocolatey) **elevated**, raising one UAC prompt
 /// via `Start-Process -Verb RunAs`. An elevated child launched from this
 /// non-elevated process cannot share stdout/stderr pipes across the UAC
@@ -2448,7 +2652,67 @@ fn refreshed_path_extras(vars: &BTreeMap<String, String>) -> Vec<String> {
     {
         extras.push(dir.to_string_lossy().to_string());
     }
+    // Only add directories carrying Astral's receipt. Adding every default
+    // candidate unconditionally could make an unrelated `uv.exe` shadow the
+    // package-manager copy that KKTerm is supposed to manage.
+    for dir in standalone_uv_bin_path_candidates(
+        vars,
+        std::env::var_os("UV_INSTALL_DIR").as_deref(),
+        std::env::var_os("USERPROFILE").as_deref(),
+        std::env::var_os("HOME").as_deref(),
+    )
+    .into_iter()
+    .filter(|dir| is_astral_standalone_uv_bin_dir(dir))
+    {
+        extras.push(dir.to_string_lossy().to_string());
+    }
     extras
+}
+
+fn standalone_uv_bin_path_candidates(
+    vars: &BTreeMap<String, String>,
+    current_uv_install_dir: Option<&std::ffi::OsStr>,
+    user_profile: Option<&std::ffi::OsStr>,
+    home: Option<&std::ffi::OsStr>,
+) -> Vec<PathBuf> {
+    let mut candidates = Vec::new();
+    if let Some(dir) = current_uv_install_dir {
+        candidates.push(PathBuf::from(dir));
+    }
+    if let Some(dir) = vars
+        .get("UV_INSTALL_DIR")
+        .filter(|dir| !dir.trim().is_empty())
+    {
+        let candidate = PathBuf::from(dir);
+        if !candidates.iter().any(|path: &PathBuf| {
+            path.to_string_lossy()
+                .eq_ignore_ascii_case(&candidate.to_string_lossy())
+        }) {
+            candidates.push(candidate);
+        }
+    }
+    for root in [user_profile, home].into_iter().flatten() {
+        let root = PathBuf::from(root);
+        for candidate in [
+            root.join(".local").join("bin"),
+            root.join(".cargo").join("bin"),
+        ] {
+            let candidate_text = candidate.to_string_lossy();
+            if !candidates
+                .iter()
+                .any(|path: &PathBuf| path.to_string_lossy().eq_ignore_ascii_case(&candidate_text))
+            {
+                candidates.push(candidate);
+            }
+        }
+    }
+    candidates
+}
+
+fn is_astral_standalone_uv_bin_dir(dir: &std::path::Path) -> bool {
+    dir.join(format!("uv{}", std::env::consts::EXE_SUFFIX))
+        .is_file()
+        && dir.join("uv-receipt.json").is_file()
 }
 
 fn git_cmd_path_candidates() -> Vec<PathBuf> {
@@ -2922,6 +3186,27 @@ mod tests {
     }
 
     #[test]
+    fn winget_no_installed_package_error_is_retryable() {
+        let numeric = format!(
+            "elevated `winget` exited with status {}: No installed package found matching input criteria.",
+            WINGET_NO_INSTALLED_PACKAGE_EXIT_CODE
+        );
+        assert!(is_winget_no_installed_package_error(Some(&numeric)));
+
+        let localized_status_only = format!(
+            "`winget` exited with status {}",
+            WINGET_NO_INSTALLED_PACKAGE_EXIT_CODE
+        );
+        assert!(is_winget_no_installed_package_error(Some(
+            &localized_status_only
+        )));
+
+        let unrelated = "`winget` exited with status 1".to_string();
+        assert!(!is_winget_no_installed_package_error(Some(&unrelated)));
+        assert!(!is_winget_no_installed_package_error(None));
+    }
+
+    #[test]
     fn glob_middle_star() {
         assert!(glob_match(
             "nssm-*-win.zip",
@@ -3028,6 +3313,18 @@ mod tests {
         assert!(script.contains("Add-AppxPackage -RegisterByFamilyName -MainPackage"));
         assert!(script.contains("Microsoft.DesktopAppInstaller_8wekyb3d8bbwe"));
         assert!(script.contains("Add-AppxPackage -Path"));
+    }
+
+    #[test]
+    fn powershell_installer_downloads_execute_in_process() {
+        let script = downloaded_installer_powershell_script(
+            &PathBuf::from(r"C:\Temp\install.ps1"),
+            "kimi-code-cli",
+        );
+
+        assert!(script.contains("& 'C:\\Temp\\install.ps1'"));
+        assert!(script.contains("$LASTEXITCODE"));
+        assert!(!script.contains("Start-Process -FilePath"));
     }
 
     #[test]
@@ -3192,6 +3489,29 @@ mod tests {
     }
 
     #[test]
+    fn standalone_uv_path_extra_requires_receipt_and_supports_custom_install_dir() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let custom_bin = temp.path().join("custom-uv");
+        std::fs::create_dir(&custom_bin).unwrap();
+        std::fs::write(
+            custom_bin.join(format!("uv{}", std::env::consts::EXE_SUFFIX)),
+            b"test",
+        )
+        .unwrap();
+        let vars = BTreeMap::from([(
+            "UV_INSTALL_DIR".to_string(),
+            custom_bin.to_string_lossy().into_owned(),
+        )]);
+
+        let candidates = standalone_uv_bin_path_candidates(&vars, None, None, None);
+        assert_eq!(candidates, vec![custom_bin.clone()]);
+        assert!(!is_astral_standalone_uv_bin_dir(&custom_bin));
+
+        std::fs::write(custom_bin.join("uv-receipt.json"), b"{}").unwrap();
+        assert!(is_astral_standalone_uv_bin_dir(&custom_bin));
+    }
+
+    #[test]
     fn winget_links_dir_uses_local_app_data() {
         let local_app_data = PathBuf::from("AppData").join("Local");
         let dir = winget_links_dir_from_local_app_data(local_app_data.clone());
@@ -3220,6 +3540,49 @@ mod tests {
         assert!(args.contains(&"--prefix".to_string()));
         assert!(args.contains(&"n8n@1.2.3".to_string()));
         assert!(!args.contains(&"-g".to_string()));
+    }
+
+    #[test]
+    fn structured_install_step_brackets_success_and_failure() {
+        let events = Arc::new(Mutex::new(Vec::new()));
+        let captured = events.clone();
+        let emit: EventSink = Box::new(move |event| captured.lock().unwrap().push(event));
+
+        assert_eq!(
+            run_install_step("n8n", "install-managed-npm-app", &emit, || Ok(7)),
+            Ok(7)
+        );
+        let failure = run_install_step(
+            "n8n",
+            "install-managed-npm-app",
+            &emit,
+            || Err::<(), _>("npm failed".into()),
+        );
+        assert_eq!(failure, Err("npm failed".into()));
+
+        let events = events.lock().unwrap();
+        assert!(matches!(
+            &events[0],
+            ProgressEvent::StepStarted { tool_id, step_id }
+                if tool_id == "n8n" && step_id == "install-managed-npm-app"
+        ));
+        assert!(matches!(
+            &events[1],
+            ProgressEvent::StepFinished { ok: true, error: None, .. }
+        ));
+        assert!(matches!(
+            &events[2],
+            ProgressEvent::StepStarted { tool_id, step_id }
+                if tool_id == "n8n" && step_id == "install-managed-npm-app"
+        ));
+        assert!(matches!(
+            &events[3],
+            ProgressEvent::StepFinished {
+                ok: false,
+                error: Some(error),
+                ..
+            } if error == "npm failed"
+        ));
     }
 
     #[test]
@@ -3332,6 +3695,44 @@ mod tests {
         assert_eq!(args[0], "upgrade");
         assert!(args.contains(&"astral-sh.uv".to_string()));
         assert!(args.contains(&"--verbose-logs".to_string()));
+    }
+
+    #[test]
+    fn standalone_uv_update_uses_the_receipt_backed_executable() {
+        let temp = tempfile::tempdir().unwrap();
+        let executable = temp
+            .path()
+            .join(format!("uv{}", std::env::consts::EXE_SUFFIX));
+        std::fs::write(&executable, b"uv").unwrap();
+        std::fs::write(temp.path().join("uv-receipt.json"), b"{}").unwrap();
+        let detected = super::super::detect::DetectedState::installed(Some("0.1.0".into()))
+            .with_install_location(Some(temp.path().to_string_lossy().into_owned()))
+            .with_install_source(Some("officialScript"));
+
+        assert_eq!(
+            astral_standalone_uv_executable(&detected).unwrap(),
+            executable
+        );
+    }
+
+    #[test]
+    fn standalone_uv_update_revalidates_the_receipt() {
+        let temp = tempfile::tempdir().unwrap();
+        std::fs::write(
+            temp.path()
+                .join(format!("uv{}", std::env::consts::EXE_SUFFIX)),
+            b"uv",
+        )
+        .unwrap();
+        let detected = super::super::detect::DetectedState::installed(Some("0.1.0".into()))
+            .with_install_location(Some(temp.path().to_string_lossy().into_owned()))
+            .with_install_source(Some("officialScript"));
+
+        assert!(
+            astral_standalone_uv_executable(&detected)
+                .unwrap_err()
+                .contains("receipt is missing")
+        );
     }
 
     #[test]

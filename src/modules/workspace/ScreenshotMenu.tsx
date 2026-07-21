@@ -25,6 +25,8 @@ export function ScreenshotMenu({
   targetLabel: _targetLabel,
   onPreCapture,
   onCaptureToClipboard,
+  onCaptureEntirePanelToClipboard,
+  entirePanelLabel,
 }: {
   buttonLabel?: string;
   buttonClassName?: string;
@@ -33,6 +35,8 @@ export function ScreenshotMenu({
   targetLabel?: string;
   onPreCapture?: () => void;
   onCaptureToClipboard?: (rect: ScreenshotRect) => Promise<void>;
+  onCaptureEntirePanelToClipboard?: () => Promise<void>;
+  entirePanelLabel?: string;
 }) {
   const { t } = useTranslation();
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
@@ -57,7 +61,7 @@ export function ScreenshotMenu({
     return () => document.removeEventListener("pointerdown", onPointerDown);
   }, [menuOpen]);
 
-  async function captureRect(rect: ScreenshotRect) {
+  async function runCapture(capture: () => Promise<void>) {
     if (!isTauriRuntime()) {
       showStatusBarNotice(t("workspace.screenshotsRequireRuntime"), { tone: "warning" });
       return;
@@ -65,11 +69,7 @@ export function ScreenshotMenu({
 
     try {
       await waitForScreenshotSurface();
-      if (onCaptureToClipboard) {
-        await onCaptureToClipboard(rect);
-      } else {
-        await invokeCommand("capture_screenshot_to_clipboard", { request: rect });
-      }
+      await capture();
       setCopiedStatus(t("workspace.copied"));
       showStatusBarNotice(t("workspace.copied"), { tone: "success" });
       window.setTimeout(() => setCopiedStatus(""), 1600);
@@ -81,6 +81,12 @@ export function ScreenshotMenu({
         { tone: "error" },
       );
     }
+  }
+
+  async function captureRect(rect: ScreenshotRect) {
+    await runCapture(() => onCaptureToClipboard
+      ? onCaptureToClipboard(rect)
+      : invokeCommand("capture_screenshot_to_clipboard", { request: rect }).then(() => undefined));
   }
 
   function targetBounds() {
@@ -97,6 +103,10 @@ export function ScreenshotMenu({
 
   function handleEntirePanel() {
     setMenuOpen(false);
+    if (onCaptureEntirePanelToClipboard) {
+      void runCapture(onCaptureEntirePanelToClipboard);
+      return;
+    }
     const bounds = targetBounds();
     if (!bounds) {
       return;
@@ -125,7 +135,7 @@ export function ScreenshotMenu({
         },
         {
           kind: "item",
-          label: t("workspace.copyEntirePanel"),
+          label: entirePanelLabel ?? t("workspace.copyEntirePanel"),
           iconSvg: nativeMenuIcons.camera,
           action: handleEntirePanel,
         },
@@ -135,7 +145,7 @@ export function ScreenshotMenu({
         y: bounds.bottom,
       },
     );
-    if (opened) {
+    if (opened || isTauriRuntime()) {
       setMenuOpen(false);
       return;
     }
@@ -257,7 +267,7 @@ export function ScreenshotMenu({
               role="menuitem"
               type="button"
             >
-              {t("workspace.copyEntirePanel")}
+              {entirePanelLabel ?? t("workspace.copyEntirePanel")}
             </button>
           </div>
         ) : null}

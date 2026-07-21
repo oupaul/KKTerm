@@ -72,7 +72,7 @@ import {
 } from "./InstallerSidebar";
 import { INSTALLER_CATEGORY_SECTIONS } from "./sections";
 import { deriveToolStatus } from "./useToolStatus";
-import { recipeSupportsLatestVersion } from "./latestSupport";
+import { recipeSupportsManagedLatestVersion } from "./latestSupport";
 import { resolveInstallerCheckIntervalSeconds } from "./checkInterval";
 import "./installer.css";
 
@@ -96,6 +96,7 @@ export function InstallerPage({ active }: { active: boolean }) {
     (state) => state.showStatusBarNotice,
   );
   const generalSettings = useWorkspaceStore((state) => state.generalSettings);
+  const portableMode = useWorkspaceStore((state) => state.appModeInfo.mode === "portable");
   const catalog = useInstallerStore((s) => s.catalog);
   const detected = useInstallerStore((s) => s.detected);
   const toolState = useInstallerStore((s) => s.toolState);
@@ -151,23 +152,27 @@ export function InstallerPage({ active }: { active: boolean }) {
           if (completedRecipe && isWslFeature(completedRecipe)) {
             markWslJustEnabled();
           }
-          if (
-            completedRecipe &&
-            recipeSupportsLatestVersion(completedRecipe)
-          ) {
-            // Replace stale provider metadata immediately after an install or
-            // update instead of waiting for the next interval-gated sweep.
-            void invokeCommand("installer_check_latest_versions", {
-              toolIds: [toolId],
-            }).catch(() => {
-              // The completed operation remains valid; Refresh can retry this
-              // non-fatal metadata lookup.
-            });
-          }
         }
         void invokeCommand("installer_redetect", { toolId })
           .then((next) => {
             useInstallerStore.getState().setOneDetected(toolId, next);
+            const completedRecipe = useInstallerStore
+              .getState()
+              .catalog?.recipes.find((recipe) => recipe.id === toolId);
+            if (
+              event.payload.kind === "completed" &&
+              completedRecipe &&
+              recipeSupportsManagedLatestVersion(completedRecipe, next)
+            ) {
+              // Re-detect before checking so a newly recognized unmanaged
+              // source cannot inherit a stale catalog-provider latest value.
+              void invokeCommand("installer_check_latest_versions", {
+                toolIds: [toolId],
+              }).catch(() => {
+                // The completed operation remains valid; Refresh can retry
+                // this non-fatal metadata lookup.
+              });
+            }
           })
           .catch(() => {
             // Re-detection failure is non-fatal; user can hit Refresh.
@@ -259,7 +264,9 @@ export function InstallerPage({ active }: { active: boolean }) {
         return;
       }
       const toolIds = catalog.recipes
-        .filter((recipe) => recipeSupportsLatestVersion(recipe))
+        .filter((recipe) =>
+          recipeSupportsManagedLatestVersion(recipe, latest.detected[recipe.id]),
+        )
         .map((r) => r.id);
       if (toolIds.length === 0) return;
       try {
@@ -289,7 +296,9 @@ export function InstallerPage({ active }: { active: boolean }) {
       const states = await invokeCommand("installer_get_state");
       setToolStates(states);
       const toolIds = catalog.recipes
-        .filter((recipe) => recipeSupportsLatestVersion(recipe))
+        .filter((recipe) =>
+          recipeSupportsManagedLatestVersion(recipe, nextDetected[recipe.id]),
+        )
         .map((r) => r.id);
       if (toolIds.length > 0) {
         await invokeCommand("installer_check_latest_versions", {
@@ -581,6 +590,11 @@ export function InstallerPage({ active }: { active: boolean }) {
           collapsed={false}
         />
         <div className="installer-content">
+          {portableMode ? (
+            <div className="installer-portable-notice">
+              {t("installer.portableMachineLocalNotice")}
+            </div>
+          ) : null}
           {!catalog ? (
             <div className="installer-empty">{t("installer.empty.loading")}</div>
           ) : (

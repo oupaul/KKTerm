@@ -292,8 +292,6 @@ h2 {
 }
 
 
-.terminal-context-menu,
-.sftp-context-menu,
 .tree-context-menu {
   position: fixed;
   z-index: 40;
@@ -310,8 +308,6 @@ h2 {
   overflow: visible;
 }
 
-.terminal-context-menu button,
-.sftp-context-menu button,
 .tree-context-menu button {
   display: flex;
   align-items: center;
@@ -329,46 +325,17 @@ h2 {
   font-weight: 800;
 }
 
-.terminal-context-menu button:last-child,
-.sftp-context-menu button:last-child,
 .tree-context-menu button:last-child {
   border-bottom: 0;
 }
 
-.terminal-context-menu button:hover:not(:disabled),
-.sftp-context-menu button:hover:not(:disabled),
 .tree-context-menu button:hover:not(:disabled) {
   background: var(--surface-muted);
 }
 
-.terminal-context-menu button:disabled,
-.sftp-context-menu button:disabled,
 .tree-context-menu button:disabled {
   color: var(--text-faint);
   cursor: default;
-}
-
-.terminal-context-menu {
-  z-index: 60;
-  width: 190px;
-}
-
-.terminal-context-menu button {
-  justify-content: space-between;
-}
-
-.terminal-context-menu .menu-item-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-
-.terminal-context-menu kbd {
-  color: var(--text-muted);
-  font-family: inherit;
-  font-size: 11px;
-  font-weight: 700;
 }
 
 .tree-context-menu button {

@@ -323,6 +323,103 @@ const EXTERNAL_LINK_SHORTCUT_AGENT: &str = r#"
 })();
 "#;
 
+const CONTEXT_MENU_AGENT: &str = r#"
+(() => {
+  const TITLE_CHANNEL = "__KKTERM_URL_CONTEXT_MENU__";
+  const CAPTURE_TITLE_CHANNEL = "__KKTERM_URL_PAGE_CAPTURE__";
+  const MESSAGE_CHANNEL = "__KKTERM_URL_CONTEXT_MENU_MESSAGE__";
+  const BRIDGE_TOKEN = __KKTERM_CONTEXT_MENU_BRIDGE_TOKEN__;
+
+  function publish(payload) {
+    if (window !== window.top) {
+      window.top.postMessage({ channel: MESSAGE_CHANNEL, payload }, "*");
+      return;
+    }
+    const previousTitle = document.title;
+    document.title = `${TITLE_CHANNEL}${JSON.stringify(payload)}`;
+    window.setTimeout(() => {
+      if (document.title.startsWith(TITLE_CHANNEL)) {
+        document.title = previousTitle;
+      }
+    }, 150);
+  }
+
+  function publishCapture(payload) {
+    const previousTitle = document.title;
+    document.title = `${CAPTURE_TITLE_CHANNEL}${JSON.stringify(payload)}`;
+    window.setTimeout(() => {
+      if (document.title.startsWith(CAPTURE_TITLE_CHANNEL)) {
+        document.title = previousTitle;
+      }
+    }, 150);
+  }
+
+  window.addEventListener("message", (event) => {
+    const data = event.data;
+    if (data?.channel !== MESSAGE_CHANNEL || data?.payload?.token !== BRIDGE_TOKEN) return;
+    const childFrame = Array.from(document.querySelectorAll("iframe, frame"))
+      .find((frame) => frame.contentWindow === event.source);
+    if (!childFrame) return;
+    const frameBounds = childFrame.getBoundingClientRect();
+    publish({
+      ...data.payload,
+      x: data.payload.x + frameBounds.left,
+      y: data.payload.y + frameBounds.top,
+    });
+  });
+
+  document.addEventListener("contextmenu", (event) => {
+    if (event.defaultPrevented) return;
+    const anchor = event.target?.closest?.("a[href]");
+    let linkUrl;
+    if (anchor) {
+      try {
+        const url = new URL(anchor.getAttribute("href"), window.location.href);
+        if (url.protocol === "http:" || url.protocol === "https:") {
+          linkUrl = url.href.slice(0, 4096);
+        }
+      } catch (_) {}
+    }
+    const selectionText = String(window.getSelection?.() || "").trim().slice(0, 65536);
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    publish({
+      token: BRIDGE_TOKEN,
+      x: event.clientX,
+      y: event.clientY,
+      linkUrl,
+      selectionText: selectionText || undefined,
+    });
+  }, true);
+
+  window.__KKTERM_URL_PAGE_CAPTURE__ = {
+    report(request) {
+      if (Number.isFinite(request?.x) && Number.isFinite(request?.y)) {
+        window.scrollTo({ left: request.x, top: request.y, behavior: "instant" });
+      }
+      window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
+        window.setTimeout(() => {
+          const root = document.documentElement;
+          const body = document.body;
+          publishCapture({
+            token: BRIDGE_TOKEN,
+            nonce: request?.nonce,
+            x: window.scrollX,
+            y: window.scrollY,
+            pageWidth: Math.max(root?.scrollWidth || 0, body?.scrollWidth || 0, window.innerWidth),
+            pageHeight: Math.max(root?.scrollHeight || 0, body?.scrollHeight || 0, window.innerHeight),
+            viewportWidth: root?.clientWidth || window.innerWidth,
+            viewportHeight: root?.clientHeight || window.innerHeight,
+            captureWidth: window.innerWidth,
+            captureHeight: window.innerHeight,
+          });
+        }, 90);
+      }));
+    },
+  };
+})();
+"#;
+
 pub struct WebviewSessionManager {
     sessions: Mutex<HashMap<String, WebviewSession>>,
     starting_sessions: Mutex<HashSet<String>>,
@@ -400,6 +497,15 @@ pub struct WebviewSimpleRequest {
 pub struct WebviewCaptureCredentialRequest {
     session_id: String,
     nonce: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WebviewPageCaptureStateRequest {
+    session_id: String,
+    nonce: String,
+    x: Option<f64>,
+    y: Option<f64>,
 }
 
 pub(crate) struct WebviewFillCredentialRequest {
@@ -597,8 +703,9 @@ impl WebviewSessionManager {
         };
         let external_link_token = external_link_bridge_token();
         let initialization_script = format!(
-            "{AUTOFILL_AGENT}\n{}",
-            external_link_shortcut_agent(&external_link_token)?
+            "{AUTOFILL_AGENT}\n{}\n{}",
+            external_link_shortcut_agent(&external_link_token)?,
+            context_menu_agent(&external_link_token)?,
         );
 
         let mut builder = WebviewWindowBuilder::new(app, &label, WebviewUrl::External(initial_url))
@@ -715,10 +822,7 @@ impl WebviewSessionManager {
             // Environments sharing one user-data folder must use compatible
             // options. Isolate each effective proxy so direct, HTTP, and SOCKS5
             // URL Sessions can coexist without an argument mismatch.
-            let data_directory = app
-                .path()
-                .app_data_dir()
-                .map_err(|error| format!("failed to resolve URL proxy data directory: {error}"))?
+            let data_directory = crate::app_paths::data_dir(app)?
                 .join("url-webview-profiles")
                 .join(proxy_data_directory_key(proxy_url.as_str()));
             builder = builder.data_directory(data_directory);
@@ -969,6 +1073,29 @@ impl WebviewSessionManager {
             .window
             .eval(format!("window.__KKTERM_URL_AUTOFILL__?.capture({nonce});"))
             .map_err(|error| format!("failed to capture webview credential: {error}"))
+    }
+
+    pub fn request_page_capture_state(
+        &self,
+        request: WebviewPageCaptureStateRequest,
+    ) -> Result<(), String> {
+        let payload = serde_json::json!({
+            "nonce": request.nonce,
+            "x": request.x,
+            "y": request.y,
+        });
+        let payload = serde_json::to_string(&payload)
+            .map_err(|error| format!("failed to prepare URL page-capture request: {error}"))?;
+        let sessions = self.lock()?;
+        let session = sessions
+            .get(&request.session_id)
+            .ok_or_else(|| format!("webview session '{}' was not found", request.session_id))?;
+        session
+            .window
+            .eval(format!(
+                "window.__KKTERM_URL_PAGE_CAPTURE__?.report({payload});"
+            ))
+            .map_err(|error| format!("failed to request URL page-capture state: {error}"))
     }
 
     pub fn close_session(&self, request: WebviewSimpleRequest) -> Result<(), String> {
@@ -2027,6 +2154,12 @@ fn external_link_shortcut_agent(token: &str) -> Result<String, String> {
     let token = serde_json::to_string(token)
         .map_err(|error| format!("failed to prepare URL external-link token: {error}"))?;
     Ok(EXTERNAL_LINK_SHORTCUT_AGENT.replace("__KKTERM_EXTERNAL_LINK_BRIDGE_TOKEN__", &token))
+}
+
+fn context_menu_agent(token: &str) -> Result<String, String> {
+    let token = serde_json::to_string(token)
+        .map_err(|error| format!("failed to prepare URL context-menu token: {error}"))?;
+    Ok(CONTEXT_MENU_AGENT.replace("__KKTERM_CONTEXT_MENU_BRIDGE_TOKEN__", &token))
 }
 
 #[cfg(test)]

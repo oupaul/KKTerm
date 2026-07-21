@@ -91,10 +91,13 @@ test("Spatial room views pan with the left button, zoom on wheel, and expose the
   for (const view of [floorPlan, isoView]) {
     assert.match(view, /useWheelZoom\(scrollRef/);
     assert.match(view, /roomPanFrame\(/);
+    assert.match(view, /roomScrollCenter\([\s\S]*?useRoomPan\(scrollRef, panCenter\)/);
     assert.match(view, /onResetCenter=\{\(\) => centerRoomViewport\(scrollRef\)\}/);
     assert.match(view, /loadRoomZoom\(/);
     assert.match(view, /saveRoomZoom\(/);
   }
+  assert.match(parts, /node\.scrollLeft \+= centerLeft - previous\.left/);
+  assert.match(parts, /node\.scrollTop \+= centerTop - previous\.top/);
   assert.match(floorPlan, /roomPanFrame\([\s\S]*?false,/);
   assert.match(isoView, /isoViewHeightForWidth\(viewW, maxTop\)/);
 });
@@ -315,10 +318,13 @@ test("Server Room elevation blank space opens the shared room background picker"
     sites,
     /serverRoom && \(roomView === "elevation" \|\| roomView === "iso"\)/,
   );
-  assert.match(sites, /floor-toolbar-background/);
+  assert.match(
+    sites,
+    /serverRoom && !rack && \(roomView === "floor" \|\| roomView === "iso"\)[\s\S]*spatial-toolbar-background/,
+  );
   assert.match(
     css,
-    /\.ft-drill-bg\.floor-toolbar-background\.has-bg > \.itops-bg-content \{\s*padding: 0;/,
+    /\.ft-drill-bg\.spatial-toolbar-background\.has-bg > \.itops-bg-content \{\s*padding: 0;/,
   );
 });
 

@@ -8,9 +8,13 @@
 // hook that reads the store and forwards to it.
 
 import { useInstallerStore } from "./state";
-import { recipeSupportsLatestVersion } from "./latestSupport";
+import { recipeSupportsManagedLatestVersion } from "./latestSupport";
 import { isInstallerUpdateAvailable } from "./versionCompare";
-import type { DetectedState, Recipe, ToolState } from "./types";
+import {
+  type DetectedState,
+  type Recipe,
+  type ToolState,
+} from "./types";
 
 export type StatusTone =
   | "installed"
@@ -52,8 +56,16 @@ export function deriveToolStatus(
   const isInstalled = inputs.detected?.installed ?? false;
   const installedVersion = inputs.detected?.installedVersion;
   const partial = inputs.detected?.partialCount;
-  const latestSeen = inputs.toolState?.latestVersionSeen;
-  const supportsLatestVersion = recipeSupportsLatestVersion(recipe);
+  const supportsLatestVersion = recipeSupportsManagedLatestVersion(
+    recipe,
+    inputs.detected,
+  );
+  // Ignore cached WinGet values for an externally managed copy. Otherwise a
+  // previous detection pass can leave a misleading latest/error value visible
+  // even though KKTerm has intentionally disabled that management channel.
+  const latestSeen = supportsLatestVersion
+    ? inputs.toolState?.latestVersionSeen
+    : null;
   const hasUpdate =
     supportsLatestVersion &&
     isInstalled &&
@@ -78,7 +90,7 @@ export function deriveToolStatus(
     installedVersion,
     partial,
     latestSeen,
-    latestError: inputs.latestError,
+    latestError: supportsLatestVersion ? inputs.latestError : null,
     runtimeVersion: inputs.detected?.runtimeVersion,
     supportsLatestVersion,
     hasUpdate,

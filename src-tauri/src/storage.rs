@@ -13,7 +13,7 @@ use std::{
 use time::{OffsetDateTime, format_description::well_known::Rfc3339};
 use zip::{ZipArchive, ZipWriter, write::SimpleFileOptions};
 
-const SCHEMA_USER_VERSION: i32 = 50;
+const SCHEMA_USER_VERSION: i32 = 51;
 
 const DEFAULT_TERMINAL_OPACITY: u8 = 50;
 
@@ -125,16 +125,12 @@ CREATE INDEX IF NOT EXISTS idx_url_credentials_connection
 CREATE TABLE IF NOT EXISTS connection_password_credentials (
     id TEXT PRIMARY KEY,
     connection_type TEXT NOT NULL CHECK (connection_type IN ('ssh', 'telnet', 'rdp', 'vnc', 'ftp')),
-    host TEXT NOT NULL,
     username TEXT NOT NULL,
     label TEXT NOT NULL,
     created_from_connection_id TEXT REFERENCES connections(id) ON DELETE SET NULL,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
-
-CREATE INDEX IF NOT EXISTS idx_connection_password_credentials_type_host
-    ON connection_password_credentials(connection_type, host);
 
 CREATE TABLE IF NOT EXISTS encrypted_secret_store_entries (
     secret_key TEXT PRIMARY KEY,
@@ -533,6 +529,8 @@ pub struct GeneralSettings {
     // migration (see `reveal_it_ops_on_release`).
     #[serde(default = "default_show_it_ops")]
     show_it_ops: bool,
+    #[serde(default = "default_show_screenshots_on_rail")]
+    show_screenshots_on_rail: bool,
     #[serde(default = "default_show_dont_sleep_on_rail")]
     show_dont_sleep_on_rail: bool,
     #[serde(default = "default_activity_rail_order")]
@@ -604,6 +602,10 @@ impl GeneralSettings {
 
     pub(crate) fn auto_start_with_windows(&self) -> bool {
         self.auto_start_with_windows
+    }
+
+    pub(crate) fn set_auto_start_with_windows(&mut self, enabled: bool) {
+        self.auto_start_with_windows = enabled;
     }
 
     pub(crate) fn minimize_to_tray(&self) -> bool {
@@ -890,12 +892,16 @@ impl Default for RdpDriveSelection {
 pub struct RdpSettings {
     #[serde(default = "default_rdp_color_depth")]
     color_depth: u16,
+    #[serde(default)]
+    administrative_session: bool,
     #[serde(default = "default_remote_desktop_true")]
     redirect_clipboard: bool,
     #[serde(default)]
     redirect_drives: bool,
     #[serde(default)]
     drive_selection: RdpDriveSelection,
+    #[serde(default)]
+    shared_local_folders: Vec<String>,
     #[serde(default)]
     shared_local_folder: Option<String>,
     #[serde(default = "default_remote_desktop_true")]
@@ -927,11 +933,95 @@ pub struct VncSettings {
 #[serde(rename_all = "camelCase")]
 pub struct ScreenshotSettings {
     folder_path: String,
+    #[serde(default = "default_screenshot_format")]
+    format: String,
+    #[serde(default = "default_screenshot_quality", alias = "jpegQuality")]
+    quality: u8,
+    #[serde(default = "default_screenshot_capture_mode")]
+    capture_mode: String,
+    #[serde(default = "default_screenshot_border_enabled")]
+    border_enabled: bool,
+    #[serde(default = "default_screenshot_border_width")]
+    border_width: u32,
+    #[serde(default = "default_screenshot_border_style")]
+    border_style: String,
+    #[serde(default = "default_screenshot_border_color")]
+    border_color: String,
+    #[serde(default)]
+    include_cursor: bool,
+    #[serde(default = "default_screenshot_region_shortcut")]
+    region_shortcut: String,
+    #[serde(default = "default_screenshot_shortcut_enabled")]
+    region_shortcut_enabled: bool,
+    #[serde(default = "default_screenshot_window_shortcut")]
+    window_shortcut: String,
+    #[serde(default = "default_screenshot_shortcut_enabled")]
+    window_shortcut_enabled: bool,
+    #[serde(default = "default_screenshot_fullscreen_shortcut")]
+    fullscreen_shortcut: String,
+    #[serde(default = "default_screenshot_shortcut_enabled")]
+    fullscreen_shortcut_enabled: bool,
 }
 
 impl ScreenshotSettings {
     pub(crate) fn folder_path(&self) -> &str {
         &self.folder_path
+    }
+
+    pub(crate) fn format(&self) -> &str {
+        &self.format
+    }
+
+    pub(crate) fn quality(&self) -> u8 {
+        self.quality
+    }
+
+    pub(crate) fn capture_mode(&self) -> &str {
+        &self.capture_mode
+    }
+
+    pub(crate) fn border_enabled(&self) -> bool {
+        self.border_enabled
+    }
+
+    pub(crate) fn border_width(&self) -> u32 {
+        self.border_width
+    }
+
+    pub(crate) fn border_style(&self) -> &str {
+        &self.border_style
+    }
+
+    pub(crate) fn border_color(&self) -> &str {
+        &self.border_color
+    }
+
+    pub(crate) fn include_cursor(&self) -> bool {
+        self.include_cursor
+    }
+
+    pub(crate) fn region_shortcut(&self) -> &str {
+        &self.region_shortcut
+    }
+
+    pub(crate) fn region_shortcut_enabled(&self) -> bool {
+        self.region_shortcut_enabled
+    }
+
+    pub(crate) fn window_shortcut(&self) -> &str {
+        &self.window_shortcut
+    }
+
+    pub(crate) fn window_shortcut_enabled(&self) -> bool {
+        self.window_shortcut_enabled
+    }
+
+    pub(crate) fn fullscreen_shortcut(&self) -> &str {
+        &self.fullscreen_shortcut
+    }
+
+    pub(crate) fn fullscreen_shortcut_enabled(&self) -> bool {
+        self.fullscreen_shortcut_enabled
     }
 }
 
@@ -1086,9 +1176,13 @@ pub struct AiProviderSettings {
     #[serde(default)]
     use_claude_cli: bool,
     #[serde(default)]
+    use_cursor_cli: bool,
+    #[serde(default)]
     claude_cli_path: Option<String>,
     #[serde(default)]
     codex_cli_path: Option<String>,
+    #[serde(default)]
+    cursor_cli_path: Option<String>,
     #[serde(default)]
     disabled_skill_names: Vec<String>,
     #[serde(default = "default_custom_assistant_skills_enabled")]
@@ -1184,12 +1278,20 @@ impl AiProviderSettings {
         self.provider_kind == "anthropic" && self.use_claude_cli
     }
 
+    pub(crate) fn use_cursor_cli(&self) -> bool {
+        self.provider_kind == "cursor" && self.use_cursor_cli
+    }
+
     pub(crate) fn claude_cli_path(&self) -> Option<&str> {
         self.claude_cli_path.as_deref()
     }
 
     pub(crate) fn codex_cli_path(&self) -> Option<&str> {
         self.codex_cli_path.as_deref()
+    }
+
+    pub(crate) fn cursor_cli_path(&self) -> Option<&str> {
+        self.cursor_cli_path.as_deref()
     }
 
     pub(crate) fn disabled_skill_names(&self) -> &[String] {
@@ -1547,11 +1649,15 @@ pub struct RdpConnectionOptions {
     #[serde(default)]
     color_depth: Option<u16>,
     #[serde(default)]
+    administrative_session: Option<bool>,
+    #[serde(default)]
     redirect_clipboard: Option<bool>,
     #[serde(default)]
     redirect_drives: Option<bool>,
     #[serde(default)]
     drive_selection: Option<RdpDriveSelection>,
+    #[serde(default)]
+    shared_local_folders: Option<Vec<String>>,
     #[serde(default)]
     shared_local_folder: Option<String>,
     #[serde(default)]
@@ -1692,12 +1798,22 @@ pub struct StoredCredentialCandidate {
 pub struct ConnectionPasswordCredentialSummary {
     pub(crate) id: String,
     pub(crate) connection_type: String,
-    pub(crate) host: String,
     pub(crate) username: String,
     pub(crate) label: String,
     pub(crate) created_from_connection_id: Option<String>,
     pub(crate) created_at: String,
     pub(crate) updated_at: String,
+    pub(crate) usage_count: i64,
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ConnectionPasswordCredentialUsage {
+    pub(crate) connection_id: String,
+    pub(crate) name: String,
+    pub(crate) connection_type: String,
+    pub(crate) host: String,
+    pub(crate) username: String,
 }
 
 pub(crate) const LEGACY_AI_PROVIDER_SECRET_OWNER_ID: &str = "openai-compatible-provider";
@@ -1800,6 +1916,13 @@ impl Storage {
 
     pub(crate) fn db_path(&self) -> PathBuf {
         self.db_path.clone()
+    }
+
+    pub fn checkpoint_wal(&self) -> Result<(), String> {
+        let connection = self.lock()?;
+        connection
+            .execute_batch("PRAGMA wal_checkpoint(TRUNCATE);")
+            .map_err(to_storage_error)
     }
 
     pub fn database_folder(&self) -> Result<String, String> {
@@ -2695,7 +2818,20 @@ impl Storage {
         if stored_version < 47 {
             reveal_it_ops_on_release(&connection)?;
         }
-        // v50: Mosh connection kind. The connections table's connection_type
+        // v50: Saved Credentials are protocol-neutral username/password bundles;
+        // the owning Connections retain their own host metadata.
+        if stored_version < 50
+            && table_exists(&connection, "connection_password_credentials")?
+            && column_exists(&connection, "connection_password_credentials", "host")?
+        {
+            connection
+                .execute_batch(
+                    "DROP INDEX IF EXISTS idx_connection_password_credentials_type_host;
+                     ALTER TABLE connection_password_credentials DROP COLUMN host;",
+                )
+                .map_err(to_storage_error)?;
+        }
+        // v51: Mosh connection kind. The connections table's connection_type
         // CHECK predates 'mosh', and SQLite cannot alter a CHECK in place, so
         // rebuild the table with a relaxed CHECK. Rather than freeze a column
         // list (the table has gained columns via ensure_column since the last
@@ -2704,7 +2840,7 @@ impl Storage {
         // identical column set/order, so this preserves all columns including
         // any added later. Skipped when the CHECK already lists 'mosh' (fresh
         // installs, whose CURRENT_SCHEMA already includes it).
-        if stored_version < 50 && table_exists(&connection, "connections")? {
+        if stored_version < 51 && table_exists(&connection, "connections")? {
             let create_sql: String = connection
                 .query_row(
                     "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'connections'",
@@ -2720,7 +2856,7 @@ impl Storage {
                 );
                 if relaxed_create == create_sql {
                     return Err(
-                        "v50 migration could not locate the connection_type CHECK to add 'mosh'"
+                        "v51 migration could not locate the connection_type CHECK to add 'mosh'"
                             .to_string(),
                     );
                 }
@@ -2733,10 +2869,10 @@ impl Storage {
                 connection
                     .execute_batch(&format!(
                         "BEGIN;\n\
-                         ALTER TABLE connections RENAME TO connections_pre_v50;\n\
+                         ALTER TABLE connections RENAME TO connections_pre_v51;\n\
                          {relaxed_create};\n\
-                         INSERT INTO connections SELECT * FROM connections_pre_v50;\n\
-                         DROP TABLE connections_pre_v50;\n\
+                         INSERT INTO connections SELECT * FROM connections_pre_v51;\n\
+                         DROP TABLE connections_pre_v51;\n\
                          COMMIT;"
                     ))
                     .map_err(to_storage_error)?;
@@ -2748,7 +2884,7 @@ impl Storage {
                     .map_err(to_storage_error)?;
             }
         }
-        repair_connections_scratch_references(&connection, "connections_pre_v50", "pre_v50")?;
+        repair_connections_scratch_references(&connection, "connections_pre_v51", "pre_v51")?;
         connection
             .execute_batch(&format!("PRAGMA user_version = {SCHEMA_USER_VERSION}"))
             .map_err(to_storage_error)?;
@@ -3157,7 +3293,6 @@ fn repair_connections_scratch_references(
         CREATE TABLE connection_password_credentials (
             id TEXT PRIMARY KEY,
             connection_type TEXT NOT NULL CHECK (connection_type IN ('ssh', 'telnet', 'rdp', 'vnc', 'ftp')),
-            host TEXT NOT NULL,
             username TEXT NOT NULL,
             label TEXT NOT NULL,
             created_from_connection_id TEXT REFERENCES connections(id) ON DELETE SET NULL,
@@ -3165,11 +3300,11 @@ fn repair_connections_scratch_references(
             updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
         );
         INSERT INTO connection_password_credentials (
-            id, connection_type, host, username, label, created_from_connection_id,
+            id, connection_type, username, label, created_from_connection_id,
             created_at, updated_at
         )
         SELECT
-            id, connection_type, host, username, label,
+            id, connection_type, username, label,
             CASE
                 WHEN created_from_connection_id IS NULL THEN NULL
                 WHEN EXISTS (
@@ -3186,9 +3321,6 @@ fn repair_connections_scratch_references(
             ON connection_tags(connection_id, sort_order);
         CREATE INDEX IF NOT EXISTS idx_url_credentials_connection
             ON url_credentials(connection_id);
-        CREATE INDEX IF NOT EXISTS idx_connection_password_credentials_type_host
-            ON connection_password_credentials(connection_type, host);
-
         COMMIT;
         "#,
     );
@@ -3413,12 +3545,9 @@ fn list_connection_password_credential_candidates(
             secret_kind: "connectionPassword".to_string(),
             owner_id: credential.id,
             label: credential.label,
-            detail: Some(format!(
-                "{} - {}",
-                credential.connection_type, credential.host
-            )),
-            connection_type: Some(credential.connection_type),
-            host: Some(credential.host),
+            detail: None,
+            connection_type: None,
+            host: None,
             username: (!credential.username.trim().is_empty()).then_some(credential.username),
             updated_at: Some(credential.updated_at),
             metadata_source: "connectionPasswordCredentials".to_string(),
@@ -3431,10 +3560,12 @@ fn list_connection_password_credentials(
 ) -> Result<Vec<ConnectionPasswordCredentialSummary>, String> {
     let mut statement = connection
         .prepare(
-            "SELECT id, connection_type, host, username, label, created_from_connection_id,
-                    created_at, updated_at
-             FROM connection_password_credentials
-             ORDER BY lower(connection_type), lower(host), lower(username), created_at",
+             "SELECT id, connection_type, username, label, created_from_connection_id,
+                     created_at, updated_at,
+                     (SELECT COUNT(*) FROM connections c
+                      WHERE c.password_credential_id = connection_password_credentials.id)
+              FROM connection_password_credentials
+              ORDER BY lower(label), lower(username), created_at",
         )
         .map_err(to_storage_error)?;
     let rows = statement
@@ -4201,12 +4332,12 @@ fn connection_password_credential_from_row(
     Ok(ConnectionPasswordCredentialSummary {
         id: row.get(0)?,
         connection_type: row.get(1)?,
-        host: row.get(2)?,
-        username: row.get(3)?,
-        label: row.get(4)?,
-        created_from_connection_id: row.get(5)?,
-        created_at: row.get(6)?,
-        updated_at: row.get(7)?,
+        username: row.get(2)?,
+        label: row.get(3)?,
+        created_from_connection_id: row.get(4)?,
+        created_at: row.get(5)?,
+        updated_at: row.get(6)?,
+        usage_count: row.get(7)?,
     })
 }
 
@@ -4216,8 +4347,10 @@ fn get_connection_password_credential_by_id(
 ) -> Result<ConnectionPasswordCredentialSummary, String> {
     connection
         .query_row(
-            "SELECT id, connection_type, host, username, label, created_from_connection_id,
-                    created_at, updated_at
+            "SELECT id, connection_type, username, label, created_from_connection_id,
+                    created_at, updated_at,
+                    (SELECT COUNT(*) FROM connections c
+                     WHERE c.password_credential_id = connection_password_credentials.id)
              FROM connection_password_credentials
              WHERE id = ?1",
             params![credential_id],
@@ -4228,31 +4361,224 @@ fn get_connection_password_credential_by_id(
 
 fn connection_password_credential_existing_count(
     connection: &SqliteConnection,
-    _connection_id: &str,
-    connection_type: &str,
-    host: &str,
+    connection_id: &str,
 ) -> Result<i64, String> {
     connection
         .query_row(
             "SELECT COUNT(*) FROM connection_password_credentials
-             WHERE connection_type = ?1 AND host = ?2",
-            params![connection_type, host],
+             WHERE created_from_connection_id = ?1",
+            params![connection_id],
             |row| row.get(0),
         )
         .map_err(to_storage_error)
 }
 
-fn connection_password_credential_label(username: &str, host: &str, ordinal: i64) -> String {
-    let base = if username.trim().is_empty() {
-        host.to_string()
-    } else {
-        format!("{} @ {}", username.trim(), host)
-    };
+fn connection_password_credential_label(connection_name: &str, ordinal: i64) -> String {
+    let base = connection_name.trim();
     if ordinal <= 1 {
-        base
+        base.to_string()
     } else {
         format!("{base} #{ordinal}")
     }
+}
+
+fn list_connection_password_credential_usage(
+    connection: &SqliteConnection,
+    credential_id: &str,
+) -> Result<Vec<ConnectionPasswordCredentialUsage>, String> {
+    let mut statement = connection
+        .prepare(
+            "SELECT id, name, connection_type, host, username
+             FROM connections
+             WHERE password_credential_id = ?1
+             ORDER BY lower(name)",
+        )
+        .map_err(to_storage_error)?;
+    let rows = statement
+        .query_map(params![credential_id], |row| {
+            Ok(ConnectionPasswordCredentialUsage {
+                connection_id: row.get(0)?,
+                name: row.get(1)?,
+                connection_type: row.get(2)?,
+                host: row.get(3)?,
+                username: row.get(4)?,
+            })
+        })
+        .map_err(to_storage_error)?;
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(to_storage_error)
+}
+
+fn update_connection_password_credential(
+    connection: &SqliteConnection,
+    credential_id: &str,
+    label: Option<String>,
+    username: Option<String>,
+) -> Result<ConnectionPasswordCredentialSummary, String> {
+    let current = get_connection_password_credential_by_id(connection, credential_id)
+        .map_err(|_| "password credential was not found".to_string())?;
+    let label = match label {
+        Some(value) => {
+            let trimmed = value.trim().to_string();
+            if trimmed.is_empty() {
+                return Err("credential label is required".to_string());
+            }
+            trimmed
+        }
+        None => current.label,
+    };
+    let updated_username = username.is_some();
+    let username = match username {
+        Some(value) => value.trim().to_string(),
+        None => current.username,
+    };
+    connection
+        .execute(
+            "UPDATE connection_password_credentials
+             SET label = ?2, username = ?3, updated_at = CURRENT_TIMESTAMP
+             WHERE id = ?1",
+            params![credential_id, label, username],
+        )
+        .map_err(to_storage_error)?;
+    if updated_username && !username.is_empty() {
+        connection
+            .execute(
+                "UPDATE connections SET username = ?2 WHERE password_credential_id = ?1",
+                params![credential_id, username],
+            )
+            .map_err(to_storage_error)?;
+    }
+    get_connection_password_credential_by_id(connection, credential_id)
+}
+
+fn create_standalone_connection_password_credential(
+    connection: &SqliteConnection,
+    label: &str,
+    username: &str,
+) -> Result<ConnectionPasswordCredentialSummary, String> {
+    let label = label.trim().to_string();
+    if label.is_empty() {
+        return Err("credential label is required".to_string());
+    }
+    let username = username.trim().to_string();
+    let id = make_connection_password_credential_id();
+    connection
+        .execute(
+            "INSERT INTO connection_password_credentials
+                (id, connection_type, username, label, created_from_connection_id)
+             VALUES (?1, 'ssh', ?2, ?3, NULL)",
+            // The legacy origin-type column stays populated for database/export
+            // compatibility; it no longer limits where a credential can be used.
+            params![&id, &username, &label],
+        )
+        .map_err(to_storage_error)?;
+    get_connection_password_credential_by_id(connection, &id)
+}
+
+fn find_reusable_connection_password_credentials(
+    connection: &SqliteConnection,
+    connection_id: &str,
+) -> Result<Vec<ConnectionPasswordCredentialSummary>, String> {
+    let (connection_type, username) = connection
+        .query_row(
+            "SELECT connection_type, username FROM connections WHERE id = ?1",
+            params![connection_id],
+            |row| {
+                Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+            },
+        )
+        .optional()
+        .map_err(to_storage_error)?
+        .ok_or_else(|| "connection was not found".to_string())?;
+    ensure_connection_password_type(&connection_type)?;
+    let username = username.trim().to_string();
+    if username.is_empty() {
+        return Ok(Vec::new());
+    }
+    let mut statement = connection
+        .prepare(
+            "SELECT id, connection_type, username, label, created_from_connection_id,
+                    created_at, updated_at,
+                    (SELECT COUNT(*) FROM connections c
+                     WHERE c.password_credential_id = connection_password_credentials.id)
+             FROM connection_password_credentials
+             WHERE username = ?1
+             ORDER BY created_at",
+        )
+        .map_err(to_storage_error)?;
+    let rows = statement
+        .query_map(params![username], connection_password_credential_from_row)
+        .map_err(to_storage_error)?;
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(to_storage_error)
+}
+
+fn merge_connection_password_credentials(
+    connection: &mut SqliteConnection,
+    target_credential_id: &str,
+    source_credential_ids: &[String],
+) -> Result<i64, String> {
+    let transaction = connection.transaction().map_err(to_storage_error)?;
+    let target = get_connection_password_credential_by_id(&transaction, target_credential_id)
+        .map_err(|_| "password credential was not found".to_string())?;
+    if source_credential_ids.is_empty() {
+        return Err("at least one credential to merge is required".to_string());
+    }
+    for source_id in source_credential_ids {
+        if source_id == target_credential_id {
+            return Err("a credential cannot be merged into itself".to_string());
+        }
+        get_connection_password_credential_by_id(&transaction, source_id)
+            .map_err(|_| "password credential was not found".to_string())?;
+    }
+    let placeholders = source_credential_ids
+        .iter()
+        .map(|_| "?")
+        .collect::<Vec<_>>()
+        .join(", ");
+    let relink_sql = format!(
+        "UPDATE connections
+         SET password_credential_id = ?1,
+             username = CASE WHEN ?2 <> '' THEN ?2 ELSE username END
+         WHERE password_credential_id IN ({placeholders})"
+    );
+    let mut params: Vec<Box<dyn rusqlite::ToSql>> = vec![
+        Box::new(target_credential_id.to_string()),
+        Box::new(target.username),
+    ];
+    for source_id in source_credential_ids {
+        params.push(Box::new(source_id.clone()));
+    }
+    let relinked = transaction
+        .execute(
+            &relink_sql,
+            rusqlite::params_from_iter(params.iter().map(|param| param.as_ref())),
+        )
+        .map_err(to_storage_error)?;
+    let delete_sql = format!(
+        "DELETE FROM connection_password_credentials WHERE id IN ({placeholders})"
+    );
+    transaction
+        .execute(
+            &delete_sql,
+            rusqlite::params_from_iter(source_credential_ids.iter()),
+        )
+        .map_err(to_storage_error)?;
+    transaction.commit().map_err(to_storage_error)?;
+    Ok(relinked as i64)
+}
+
+fn unassign_connection_password_credential(
+    connection: &SqliteConnection,
+    connection_id: &str,
+) -> Result<SavedConnection, String> {
+    connection
+        .execute(
+            "UPDATE connections SET password_credential_id = NULL WHERE id = ?1",
+            params![connection_id],
+        )
+        .map_err(to_storage_error)?;
+    get_connection_by_id(connection, connection_id)
 }
 
 fn ensure_connection_password_type(connection_type: &str) -> Result<(), String> {
@@ -4764,9 +5090,11 @@ fn normalize_rdp_connection_options(
         return Ok(Some(RdpConnectionOptions {
             inherit_defaults: true,
             color_depth: None,
+            administrative_session: None,
             redirect_clipboard: None,
             redirect_drives: None,
             drive_selection: None,
+            shared_local_folders: None,
             shared_local_folder: None,
             bitmap_cache: None,
             performance_profile: None,
@@ -4781,7 +5109,11 @@ fn normalize_rdp_connection_options(
     if let Some(selection) = options.drive_selection {
         options.drive_selection = Some(normalize_rdp_drive_selection(selection)?);
     }
-    options.shared_local_folder = normalize_optional_text(options.shared_local_folder);
+    let folders = normalize_rdp_shared_local_folders(
+        options.shared_local_folders.take().unwrap_or_default(),
+        options.shared_local_folder.take(),
+    );
+    options.shared_local_folders = Some(folders);
     if let Some(profile) = options.performance_profile {
         options.performance_profile = Some(validate_remote_desktop_performance_profile(profile)?);
     }
@@ -5024,6 +5356,7 @@ fn default_general_settings() -> GeneralSettings {
         separate_split_terminal_backgrounds: false,
         show_installer_on_rail: default_show_installer_on_rail(),
         show_it_ops: default_show_it_ops(),
+        show_screenshots_on_rail: default_show_screenshots_on_rail(),
         show_dont_sleep_on_rail: default_show_dont_sleep_on_rail(),
         activity_rail_order: default_activity_rail_order(),
         installer_check_interval_seconds: default_installer_check_interval_seconds(),
@@ -5101,15 +5434,26 @@ fn default_show_it_ops() -> bool {
     true
 }
 
+fn default_show_screenshots_on_rail() -> bool {
+    true
+}
+
 fn default_show_dont_sleep_on_rail() -> bool {
     true
 }
 
 fn default_activity_rail_order() -> Vec<String> {
-    ["workspace", "dashboard", "installer", "itops", "dontSleep"]
-        .into_iter()
-        .map(str::to_string)
-        .collect()
+    [
+        "workspace",
+        "dashboard",
+        "installer",
+        "screenshots",
+        "itops",
+        "dontSleep",
+    ]
+    .into_iter()
+    .map(str::to_string)
+    .collect()
 }
 
 fn default_installer_check_interval_seconds() -> u32 {
@@ -5349,9 +5693,11 @@ fn default_url_settings() -> UrlSettings {
 fn default_rdp_settings() -> RdpSettings {
     RdpSettings {
         color_depth: default_rdp_color_depth(),
+        administrative_session: false,
         redirect_clipboard: true,
         redirect_drives: false,
         drive_selection: RdpDriveSelection::All,
+        shared_local_folders: Vec::new(),
         shared_local_folder: None,
         bitmap_cache: true,
         performance_profile: default_remote_desktop_performance_profile(),
@@ -5401,7 +5747,65 @@ fn default_vnc_preferred_encoding() -> String {
 fn default_screenshot_settings() -> ScreenshotSettings {
     ScreenshotSettings {
         folder_path: default_screenshot_folder_path(),
+        format: default_screenshot_format(),
+        quality: default_screenshot_quality(),
+        capture_mode: default_screenshot_capture_mode(),
+        border_enabled: default_screenshot_border_enabled(),
+        border_width: default_screenshot_border_width(),
+        border_style: default_screenshot_border_style(),
+        border_color: default_screenshot_border_color(),
+        include_cursor: false,
+        region_shortcut: default_screenshot_region_shortcut(),
+        region_shortcut_enabled: default_screenshot_shortcut_enabled(),
+        window_shortcut: default_screenshot_window_shortcut(),
+        window_shortcut_enabled: default_screenshot_shortcut_enabled(),
+        fullscreen_shortcut: default_screenshot_fullscreen_shortcut(),
+        fullscreen_shortcut_enabled: default_screenshot_shortcut_enabled(),
     }
+}
+
+fn default_screenshot_format() -> String {
+    "png".to_string()
+}
+
+fn default_screenshot_quality() -> u8 {
+    90
+}
+
+fn default_screenshot_capture_mode() -> String {
+    "both".to_string()
+}
+
+fn default_screenshot_border_enabled() -> bool {
+    true
+}
+
+fn default_screenshot_border_width() -> u32 {
+    1
+}
+
+fn default_screenshot_border_style() -> String {
+    "solid".to_string()
+}
+
+fn default_screenshot_border_color() -> String {
+    "#000000".to_string()
+}
+
+fn default_screenshot_region_shortcut() -> String {
+    "Ctrl+Alt+R".to_string()
+}
+
+fn default_screenshot_window_shortcut() -> String {
+    "Ctrl+Alt+W".to_string()
+}
+
+fn default_screenshot_fullscreen_shortcut() -> String {
+    "Ctrl+Alt+F".to_string()
+}
+
+fn default_screenshot_shortcut_enabled() -> bool {
+    true
 }
 
 pub(crate) fn default_screenshot_folder_path() -> String {
@@ -5492,8 +5896,10 @@ fn default_ai_provider_settings() -> AiProviderSettings {
         built_in_mcp_allow_all_dangerous: false,
         use_codex_cli: false,
         use_claude_cli: false,
+        use_cursor_cli: false,
         claude_cli_path: None,
         codex_cli_path: None,
+        cursor_cli_path: None,
         disabled_skill_names: Vec::new(),
         custom_skills_enabled: default_custom_assistant_skills_enabled(),
         tools: default_ai_assistant_tool_settings(),
@@ -6154,12 +6560,34 @@ pub(crate) fn normalize_url_proxy(value: Option<String>) -> Result<Option<String
 fn validate_rdp_settings(mut settings: RdpSettings) -> Result<RdpSettings, String> {
     settings.color_depth = validate_rdp_color_depth(settings.color_depth)?;
     settings.drive_selection = normalize_rdp_drive_selection(settings.drive_selection)?;
-    settings.shared_local_folder = normalize_optional_text(settings.shared_local_folder);
+    settings.shared_local_folders = normalize_rdp_shared_local_folders(
+        settings.shared_local_folders,
+        settings.shared_local_folder.take(),
+    );
     settings.performance_profile =
         validate_remote_desktop_performance_profile(settings.performance_profile)?;
     settings.remote_resolution = validate_remote_desktop_resolution(settings.remote_resolution)?;
     settings.view_mode = validate_remote_desktop_view_mode(settings.view_mode)?;
     Ok(settings)
+}
+
+fn normalize_rdp_shared_local_folders(
+    folders: Vec<String>,
+    legacy_folder: Option<String>,
+) -> Vec<String> {
+    let values = if folders.is_empty() {
+        legacy_folder.into_iter().collect()
+    } else {
+        folders
+    };
+    let mut normalized = Vec::new();
+    for folder in values {
+        let folder = folder.trim();
+        if !folder.is_empty() && !normalized.iter().any(|value| value == folder) {
+            normalized.push(folder.to_string());
+        }
+    }
+    normalized
 }
 
 fn normalize_rdp_drive_selection(
@@ -6261,7 +6689,45 @@ fn validate_screenshot_settings(
     let folder = expand_home_path(&settings.folder_path);
     fs::create_dir_all(&folder)
         .map_err(|error| format!("failed to create screenshots folder: {error}"))?;
+    settings.format = match settings.format.trim().to_lowercase().as_str() {
+        "" | "png" => "png".to_string(),
+        "jpeg" | "jpg" => "jpeg".to_string(),
+        _ => return Err("screenshot format must be png or jpeg".to_string()),
+    };
+    settings.quality = settings.quality.clamp(1, 100);
+    settings.capture_mode = match settings.capture_mode.trim().to_lowercase().as_str() {
+        "folder" => "folder".to_string(),
+        "clipboard" => "clipboard".to_string(),
+        "" | "both" => "both".to_string(),
+        _ => return Err("screenshot capture mode must be folder, clipboard, or both".to_string()),
+    };
+    settings.border_width = settings.border_width.clamp(1, 64);
+    settings.border_style = match settings.border_style.trim().to_lowercase().as_str() {
+        "" | "solid" => "solid".to_string(),
+        "dashed" => "dashed".to_string(),
+        "dotted" => "dotted".to_string(),
+        _ => return Err("screenshot border style must be solid, dashed, or dotted".to_string()),
+    };
+    settings.border_color = {
+        let trimmed = settings.border_color.trim().trim_start_matches('#').to_lowercase();
+        if trimmed.is_empty() {
+            default_screenshot_border_color()
+        } else if trimmed.len() == 6 && trimmed.chars().all(|c| c.is_ascii_hexdigit()) {
+            format!("#{trimmed}")
+        } else {
+            return Err("screenshot border color must be a #RRGGBB hex color".to_string());
+        }
+    };
+    settings.region_shortcut = settings.region_shortcut.trim().to_string();
+    settings.window_shortcut = settings.window_shortcut.trim().to_string();
+    settings.fullscreen_shortcut = settings.fullscreen_shortcut.trim().to_string();
     Ok(settings)
+}
+
+/// Expands the persisted screenshots folder setting (which may keep a
+/// `%USERPROFILE%` prefix) to a concrete path for filesystem operations.
+pub(crate) fn expand_screenshot_folder_path(path: &str) -> PathBuf {
+    expand_home_path(path)
 }
 
 fn expand_home_path(path: &str) -> PathBuf {
@@ -6291,6 +6757,7 @@ fn validate_ai_provider_settings(
         "ollama-cloud" | "ollama_cloud" | "ollama cloud" => "ollama-cloud".to_string(),
         "nvidia" => "nvidia".to_string(),
         "opencode" | "open-code" | "open_code" | "open code" => "opencode".to_string(),
+        "cursor" => "cursor".to_string(),
         "openai-compatible" | "openai_compatible" | "openai compatible" => {
             "openai-compatible".to_string()
         }
@@ -6354,8 +6821,10 @@ fn validate_ai_provider_settings(
     settings.extra_headers = settings.extra_headers.trim().to_string();
     settings.use_codex_cli = settings.provider_kind == "openai" && settings.use_codex_cli;
     settings.use_claude_cli = settings.provider_kind == "anthropic" && settings.use_claude_cli;
+    settings.use_cursor_cli = settings.provider_kind == "cursor" && settings.use_cursor_cli;
     settings.claude_cli_path = trim_optional(settings.claude_cli_path);
     settings.codex_cli_path = trim_optional(settings.codex_cli_path);
+    settings.cursor_cli_path = trim_optional(settings.cursor_cli_path);
     settings.disabled_skill_names =
         crate::assistant_skills::normalize_skill_names(settings.disabled_skill_names);
 

@@ -86,7 +86,8 @@ const TUTORIAL_TOOL_KNOWN_TARGETS: &str = concat!(
     "webview.toolbar, webview.address, webview.openExternally, webview.autoRefresh, webview.savePassword, webview.fillCredential, webview.sendToAi, webview.close, webview.surface with navigation page=workspace; ",
     "remoteDesktop.toolbar, remoteDesktop.viewMode, remoteDesktop.sendCtrlAltDel, remoteDesktop.reconnect, remoteDesktop.sendToAi, remoteDesktop.surface with navigation page=workspace; ",
     "installer.updateAll, installer.toolOptions with navigation page=installer; ",
-    "settings.language, settings.activityRail, settings.workspaceAccess, settings.useDirectxScreenCapture, settings.statusBar, settings.settingsData, settings.debug with navigation page=settings settingsSectionId=general-settings; ",
+    "app.activityRailScreenshots, screenshots.captureRegion, screenshots.captureWindow, screenshots.captureFullscreen, screenshots.viewSwitch, screenshots.library with navigation page=screenshots; ",
+    "settings.language, settings.activityRail, settings.workspaceAccess, settings.statusBar, settings.settingsData, settings.debug with navigation page=settings settingsSectionId=general-settings; ",
     "settings.appUiFontFamily, settings.appearance.colorScheme, settings.resetLayout with navigation page=settings settingsSectionId=appearance-settings; ",
     "settings.dashboardDefaultLanding, settings.dashboardUseRandomDynamicBackground, settings.dashboardMaxActiveScriptWidgets with navigation page=settings settingsSectionId=dashboard-settings; ",
     "settings.credentialStorage, settings.credentialsStored, settings.widgetCredentialsStored with navigation page=settings settingsSectionId=credentials-settings; ",
@@ -96,6 +97,7 @@ const TUTORIAL_TOOL_KNOWN_TARGETS: &str = concat!(
     "settings.ignoreCertificateErrors, settings.urlSavedPasswords, settings.urlDataShards with navigation page=settings settingsSectionId=url-settings; ",
     "settings.rdpColorDepth, settings.rdpPerformanceProfile, settings.rdpRemoteResolution with navigation page=settings settingsSectionId=rdp-settings; ",
     "settings.vncViewOnly, settings.vncColorLevel with navigation page=settings settingsSectionId=vnc-settings; ",
+    "settings.screenshotsFolder, settings.screenshotsFormat, settings.screenshotsShortcuts, settings.useDirectxScreenCapture with navigation page=settings settingsSectionId=screenshots-settings; ",
     "settings.workspace with navigation page=settings settingsSectionId=workspace-settings; settings.fileExplorer with navigation page=settings settingsSectionId=file-explorer-settings; settings.dontSleep with navigation page=settings settingsSectionId=dont-sleep-settings; settings.installer with navigation page=settings settingsSectionId=installer-settings; ",
     "settings.shortcuts with navigation page=settings settingsSectionId=shortcuts-settings; ",
     "settings.proxy with navigation page=settings settingsSectionId=proxy-settings; ",
@@ -256,6 +258,7 @@ pub type AiProviderModelOption = CopilotModelOption;
 pub enum AiCliBackendKind {
     Codex,
     ClaudeCode,
+    Cursor,
 }
 
 #[derive(Clone, Serialize)]
@@ -1170,6 +1173,11 @@ fn provider_for_settings(settings: &AiProviderSettings) -> Result<AgentProviderA
             settings.claude_cli_path().map(str::to_string),
         )));
     }
+    if settings.use_cursor_cli() {
+        return Ok(AgentProviderAdapter::Cli(CliAgentProvider::cursor(
+            settings.cursor_cli_path().map(str::to_string),
+        )));
+    }
     provider_for(settings.provider_kind())
 }
 
@@ -1208,6 +1216,15 @@ impl CliAgentProvider {
             provider_kind: "anthropic",
             label: "Claude Code CLI",
             command: resolve_cli_backend_command(AiCliBackendKind::ClaudeCode, command),
+        }
+    }
+
+    fn cursor(command: Option<String>) -> Self {
+        Self {
+            backend: AiCliBackendKind::Cursor,
+            provider_kind: "cursor",
+            label: "Cursor Agent CLI",
+            command: resolve_cli_backend_command(AiCliBackendKind::Cursor, command),
         }
     }
 }
@@ -1305,24 +1322,31 @@ impl AgentProvider for CliAgentProvider {
         let app_for_acp = _app.clone();
         let settings_for_acp = settings.clone();
         let output = tauri::async_runtime::spawn_blocking(move || {
-            run_acp_agent_command(backend, &model, &prompt, &app_for_acp, &settings_for_acp)
-                .or_else(|acp_failure| {
-                    if !should_fallback_from_acp_error(&acp_failure) {
-                        return Err(acp_failure.error);
-                    }
-                    ai_interaction_debug!(
-                        "agent.cli_acp_fallback",
-                        json!({
-                            "backend": backend,
-                            "error": acp_failure.error,
-                            "promptStarted": acp_failure.prompt_started,
-                            "model": &model,
-                            "promptBytes": prompt.len(),
-                            "promptChars": prompt.chars().count(),
-                        })
-                    );
-                    run_cli_agent_command(backend, &command, &model, &prompt, None)
-                })
+            run_acp_agent_command(
+                backend,
+                &command,
+                &model,
+                &prompt,
+                &app_for_acp,
+                &settings_for_acp,
+            )
+            .or_else(|acp_failure| {
+                if !should_fallback_from_acp_error(&acp_failure) {
+                    return Err(acp_failure.error);
+                }
+                ai_interaction_debug!(
+                    "agent.cli_acp_fallback",
+                    json!({
+                        "backend": backend,
+                        "error": acp_failure.error,
+                        "promptStarted": acp_failure.prompt_started,
+                        "model": &model,
+                        "promptBytes": prompt.len(),
+                        "promptChars": prompt.chars().count(),
+                    })
+                );
+                run_cli_agent_command(backend, &command, &model, &prompt, None)
+            })
         })
         .await
         .map_err(|error| format!("failed to run {label}: {error}"))??;
@@ -1365,6 +1389,7 @@ impl AgentProvider for CliAgentProvider {
             move || {
                 run_acp_agent_command_streaming(
                     backend,
+                    &command,
                     &model,
                     &prompt,
                     Some(&channel),
@@ -1656,10 +1681,7 @@ async fn run_copilot_sdk(
     token: &str,
     prompt: &str,
 ) -> Result<String, String> {
-    let app_data_dir = app
-        .path()
-        .app_data_dir()
-        .map_err(|error| format!("failed to locate app data directory: {error}"))?;
+    let app_data_dir = crate::app_paths::data_dir(app)?;
     fs::create_dir_all(&app_data_dir)
         .map_err(|error| format!("failed to create app data directory: {error}"))?;
 
@@ -1737,10 +1759,7 @@ pub async fn list_copilot_models(
     app: &tauri::AppHandle,
     token: &str,
 ) -> Result<Vec<CopilotModelOption>, String> {
-    let app_data_dir = app
-        .path()
-        .app_data_dir()
-        .map_err(|error| format!("failed to locate app data directory: {error}"))?;
+    let app_data_dir = crate::app_paths::data_dir(app)?;
     fs::create_dir_all(&app_data_dir)
         .map_err(|error| format!("failed to create app data directory: {error}"))?;
 
@@ -3220,6 +3239,31 @@ fn ai_tool_definitions_with_skills(
     }
     if settings.connections() {
         tools.push(tool_definition(
+            "workspace_list",
+            "List KKTerm Workspaces. A Workspace is a durable container for saved Connections; it is not a live Session or Tab.",
+            json!({"type":"object","properties":{}}),
+        ));
+        tools.push(tool_definition(
+            "workspace_create",
+            "Create one Workspace. importConnectionIds optionally copies saved Connections from any existing Workspace into the new Workspace; the copies are independent durable Connections.",
+            workspace_create_schema(),
+        ));
+        tools.push(tool_definition(
+            "workspace_rename",
+            "Rename or restyle one Workspace by id. Submit the full icon fields you want to retain.",
+            workspace_rename_schema(),
+        ));
+        tools.push(tool_definition(
+            "workspace_reorder",
+            "Reorder Workspaces by supplying every Workspace id in the desired order.",
+            json!({"type":"object","properties":{"orderedIds":{"type":"array","items":{"type":"string"}}},"required":["orderedIds"],"additionalProperties":false}),
+        ));
+        tools.push(tool_definition(
+            "workspace_delete",
+            "Delete one non-default Workspace by id. This also deletes every saved Connection and Connection folder owned by that Workspace; the frontend closes Tabs and live Sessions owned by the removed Workspace when it reloads.",
+            json!({"type":"object","properties":{"id":{"type":"string"}},"required":["id"],"additionalProperties":false}),
+        ));
+        tools.push(tool_definition(
             "connection_list",
             "List all saved KKTerm Connections and folders. Connections are durable saved resources, not live Sessions.",
             json!({"type":"object","properties":{}}),
@@ -3256,8 +3300,8 @@ fn ai_tool_definitions_with_skills(
         ));
         tools.push(tool_definition(
             "connection_folder_create",
-            "Create a Connection folder. Use parentFolderId null for a root folder.",
-            json!({"type":"object","properties":{"name":{"type":"string","minLength":1},"parentFolderId":{"type":["string","null"]}},"required":["name","parentFolderId"],"additionalProperties":false}),
+            "Create a Connection folder. Use parentFolderId null for a root folder and workspaceId to select its owning Workspace.",
+            json!({"type":"object","properties":{"name":{"type":"string","minLength":1},"parentFolderId":{"type":["string","null"]},"workspaceId":{"type":["string","null"]}},"required":["name","parentFolderId"],"additionalProperties":false}),
         ));
         tools.push(tool_definition(
             "connection_folder_rename",
@@ -3679,45 +3723,36 @@ fn assistant_use_skill_tool_definition(
 }
 
 fn connection_request_schema(include_id: bool) -> Value {
-    let mut properties = serde_json::Map::new();
-    if include_id {
-        properties.insert("id".to_string(), json!({"type":"string"}));
-    }
-    properties.extend([
-        ("name".to_string(), json!({"type":"string","minLength":1})),
-        (
-            "type".to_string(),
-            json!({"type":"string","enum":["local","ssh","telnet","serial","url","rdp","vnc","ftp"]}),
-        ),
-        ("folderId".to_string(), json!({"type":["string","null"]})),
-        ("host".to_string(), json!({"type":"string"})),
-        ("user".to_string(), json!({"type":"string"})),
-        ("port".to_string(), json!({"type":["integer","null"],"minimum":1,"maximum":65535})),
-        ("keyPath".to_string(), json!({"type":["string","null"]})),
-        ("proxyJump".to_string(), json!({"type":["string","null"]})),
-        (
-            "authMethod".to_string(),
-            json!({"type":["string","null"],"enum":["keyFile","password","agent",null]}),
-        ),
-        ("localShell".to_string(), json!({"type":["string","null"]})),
-        ("localStartupDirectory".to_string(), json!({"type":["string","null"]})),
-        ("localStartupScript".to_string(), json!({"type":["string","null"]})),
-        ("url".to_string(), json!({"type":["string","null"]})),
-        ("dataPartition".to_string(), json!({"type":["string","null"]})),
-        ("useTmuxSessions".to_string(), json!({"type":["boolean","null"]})),
-        ("usePsmuxSessions".to_string(), json!({"type":["boolean","null"]})),
-        ("serialLine".to_string(), json!({"type":["string","null"]})),
-        ("serialSpeed".to_string(), json!({"type":["integer","null"],"minimum":1})),
-    ]);
-    let mut required = vec![json!("name"), json!("type")];
-    if include_id {
-        required.insert(0, json!("id"));
-    }
+    crate::mcp_tool_catalog::connection_input_schema(include_id.then_some("id"))
+}
+
+fn workspace_create_schema() -> Value {
     json!({
-        "type": "object",
-        "properties": properties,
-        "required": required,
-        "additionalProperties": true
+        "type":"object",
+        "properties":{
+            "name":{"type":"string","minLength":1},
+            "icon":{"type":["string","null"]},
+            "iconColor":{"type":["string","null"]},
+            "iconBackgroundColor":{"type":["string","null"]},
+            "importConnectionIds":{"type":"array","items":{"type":"string"}}
+        },
+        "required":["name"],
+        "additionalProperties":false
+    })
+}
+
+fn workspace_rename_schema() -> Value {
+    json!({
+        "type":"object",
+        "properties":{
+            "id":{"type":"string"},
+            "name":{"type":"string","minLength":1},
+            "icon":{"type":["string","null"]},
+            "iconColor":{"type":["string","null"]},
+            "iconBackgroundColor":{"type":["string","null"]}
+        },
+        "required":["id","name"],
+        "additionalProperties":false
     })
 }
 
@@ -4207,6 +4242,9 @@ async fn run_ai_tool(
         name if tool_settings.itops() && name.starts_with("itops_") => {
             itops_tool(app, name, args).await
         }
+        name if tool_settings.connections() && name.starts_with("workspace_") => {
+            workspace_tool(app, name, args)
+        }
         name if tool_settings.connections() && name.starts_with("connection_") => {
             connection_tool(app, name, args)
         }
@@ -4312,7 +4350,11 @@ fn tool_requires_allow_all(tool_name: &str) -> bool {
                 || tool_name == "itops_test_automation"))
         || matches!(
             tool_name,
-            "connection_create"
+            "workspace_create"
+                | "workspace_rename"
+                | "workspace_reorder"
+                | "workspace_delete"
+                | "connection_create"
                 | "connection_update"
                 | "connection_rename"
                 | "connection_move"
@@ -4436,6 +4478,68 @@ fn tool_permission_required_result(tool_name: &str) -> String {
         "message": "The user did not approve this tool call in chat."
     })
     .to_string()
+}
+
+pub(crate) fn workspace_tool(app: &tauri::AppHandle, name: &str, args: Value) -> String {
+    let storage = app.state::<Storage>();
+    let result: Result<Value, String> = match name {
+        "workspace_list" => storage
+            .list_workspaces()
+            .map(|workspaces| serde_json::to_value(workspaces).unwrap_or(Value::Null)),
+        "workspace_create" => {
+            serde_json::from_value::<crate::storage::CreateWorkspaceRequest>(args)
+                .map_err(|error| format!("invalid workspace_create request: {error}"))
+                .and_then(|request| {
+                    storage
+                        .create_workspace(request)
+                        .map(|workspace| serde_json::to_value(workspace).unwrap_or(Value::Null))
+                })
+        }
+        "workspace_rename" => {
+            serde_json::from_value::<crate::storage::RenameWorkspaceRequest>(args)
+                .map_err(|error| format!("invalid workspace_rename request: {error}"))
+                .and_then(|request| {
+                    storage
+                        .rename_workspace(request)
+                        .map(|workspace| serde_json::to_value(workspace).unwrap_or(Value::Null))
+                })
+        }
+        "workspace_reorder" => {
+            serde_json::from_value::<crate::storage::ReorderWorkspacesRequest>(args)
+                .map_err(|error| format!("invalid workspace_reorder request: {error}"))
+                .and_then(|request| {
+                    storage
+                        .reorder_workspaces(request)
+                        .map(|workspaces| serde_json::to_value(workspaces).unwrap_or(Value::Null))
+                })
+        }
+        "workspace_delete" => {
+            let id = arg_string(&args, "id");
+            if id.is_empty() {
+                Err("workspace_delete requires id".to_string())
+            } else {
+                storage.delete_workspace(id).map(|_| json!({"ok": true}))
+            }
+        }
+        _ => Err("Unknown Workspace tool".to_string()),
+    };
+
+    match result {
+        Ok(value) => {
+            if name != "workspace_list" {
+                let _ = app.emit(
+                    "workspaces-changed",
+                    json!({ "source": "aiTool", "tool": name }),
+                );
+                let _ = app.emit(
+                    "connection-tree-changed",
+                    json!({ "source": "aiTool", "tool": name }),
+                );
+            }
+            value.to_string()
+        }
+        Err(error) => json!({ "ok": false, "error": error }).to_string(),
+    }
 }
 
 pub(crate) fn connection_tool(app: &tauri::AppHandle, name: &str, args: Value) -> String {
@@ -6823,16 +6927,24 @@ struct OpenAiCompatibleChoice {
 
 #[derive(Deserialize)]
 struct OpenAiCompatibleResponseMessage {
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_null_default")]
     content: String,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_null_default")]
     tool_calls: Vec<OpenAiToolCall>,
     #[serde(default)]
     reasoning_content: Option<String>,
     #[serde(default)]
     reasoning: Option<String>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_null_default")]
     reasoning_details: Vec<ReasoningDetail>,
+}
+
+fn deserialize_null_default<'de, D, T>(deserializer: D) -> Result<T, D::Error>
+where
+    D: serde::Deserializer<'de>,
+    T: Deserialize<'de> + Default,
+{
+    Option::<T>::deserialize(deserializer).map(Option::unwrap_or_default)
 }
 
 fn chat_sse_delta_reasoning(delta: &ChatSseDelta) -> Option<String> {

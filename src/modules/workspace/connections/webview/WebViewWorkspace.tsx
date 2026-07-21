@@ -7,8 +7,18 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { FormEvent } from "react";
 import { resolveAppliedColorScheme } from "../../../../app/appShellEffects";
+import { writeToClipboard } from "../../../../lib/clipboard";
 import { technicalInputProps } from "../../../../lib/inputBehavior";
-import { invokeCommand, isTauriRuntime, logUrlConnectionDebug, openExternalUrl } from "../../../../lib/tauri";
+import { showNativeContextMenu } from "../../../../lib/nativeContextMenu";
+import { nativeMenuIcons } from "../../../../lib/nativeMenuIcons";
+import {
+  invokeCommand,
+  isTauriRuntime,
+  logUrlConnectionDebug,
+  openExternalUrl,
+  selectPngSavePath,
+  writeDataUrlFile,
+} from "../../../../lib/tauri";
 import type { AssistantScreenshot, WebviewSessionStarted } from "../../../../lib/tauri";
 import { useWorkspaceStore } from "../../../../store";
 import { urlCredentialSecretOwnerId } from "./urlCredentialKeys";
@@ -181,8 +191,38 @@ type CapturedCredentialPayload = {
   fieldValues?: unknown;
 };
 
+type WebviewContextMenuPayload = {
+  x: number;
+  y: number;
+  linkUrl?: string;
+  selectionText?: string;
+};
+
+type WebviewPageCaptureState = {
+  nonce: string;
+  x: number;
+  y: number;
+  pageWidth: number;
+  pageHeight: number;
+  viewportWidth: number;
+  viewportHeight: number;
+  captureWidth: number;
+  captureHeight: number;
+};
+
+type PendingPageCaptureState = {
+  resolve: (state: WebviewPageCaptureState) => void;
+  reject: (error: Error) => void;
+  timeoutId: number;
+};
+
 const CREDENTIAL_TITLE_PREFIX = "__KKTERM_URL_CREDENTIAL__";
 const EXTERNAL_LINK_TITLE_PREFIX = "__KKTERM_URL_EXTERNAL_LINK__";
+const CONTEXT_MENU_TITLE_PREFIX = "__KKTERM_URL_CONTEXT_MENU__";
+const PAGE_CAPTURE_TITLE_PREFIX = "__KKTERM_URL_PAGE_CAPTURE__";
+const PAGE_CAPTURE_STATE_TIMEOUT_MS = 4000;
+const MAX_FULL_PAGE_CANVAS_DIMENSION = 32_767;
+const MAX_FULL_PAGE_CANVAS_PIXELS = 100_000_000;
 const AUTO_REFRESH_INTERVALS_SECONDS = [0, 5, 15, 30, 60, 120] as const;
 const WEBVIEW_PRE_CAPTURE_INTERVAL_MS = 1200;
 // A speculative pre-capture is only a faithful stand-in for the live surface for a short
@@ -301,6 +341,8 @@ export function WebViewWorkspace({
   const preCaptureLastRef = useRef(0);
   const visibilityRef = useRef({ isActive, suppressed: false });
   const pendingCaptureNonceRef = useRef<string | null>(null);
+  const pendingPageCaptureStatesRef = useRef(new Map<string, PendingPageCaptureState>());
+  const fullPageCaptureInFlightRef = useRef(false);
   const externalLinkTokenRef = useRef<string | null>(null);
   const faviconUpdatedRef = useRef(false);
   const connectionSessionCountedRef = useRef(false);
@@ -646,7 +688,7 @@ export function WebViewWorkspace({
       return;
     }
     const intervalId = window.setInterval(() => {
-      if (!sessionStartedRef.current) {
+      if (!sessionStartedRef.current || fullPageCaptureInFlightRef.current) {
         return;
       }
       void invokeCommand("webview_reload", {
@@ -772,6 +814,7 @@ export function WebViewWorkspace({
 
     let disposed = false;
     const disposers: Array<() => void> = [];
+    const pendingPageCaptureStates = pendingPageCaptureStatesRef.current;
     void Promise.all([
       listen<WebviewNavigationEvent>("webview-navigation", (event) => {
         if (event.payload.sessionId !== sessionIdRef.current) {
@@ -837,6 +880,29 @@ export function WebViewWorkspace({
           }
           return;
         }
+        if (title.startsWith(CONTEXT_MENU_TITLE_PREFIX)) {
+          const payload = webviewContextMenuPayload(
+            title.slice(CONTEXT_MENU_TITLE_PREFIX.length),
+            externalLinkTokenRef.current,
+          );
+          if (payload) {
+            void showWebviewContextMenu(payload);
+          }
+          return;
+        }
+        if (title.startsWith(PAGE_CAPTURE_TITLE_PREFIX)) {
+          const state = webviewPageCaptureState(
+            title.slice(PAGE_CAPTURE_TITLE_PREFIX.length),
+            externalLinkTokenRef.current,
+          );
+          const pending = state ? pendingPageCaptureStates.get(state.nonce) : undefined;
+          if (state && pending) {
+            window.clearTimeout(pending.timeoutId);
+            pendingPageCaptureStates.delete(state.nonce);
+            pending.resolve(state);
+          }
+          return;
+        }
         if (title) {
           updateWebviewTabMetadata(tab.id, { title });
         }
@@ -865,6 +931,11 @@ export function WebViewWorkspace({
     return () => {
       disposed = true;
       disposers.forEach((dispose) => dispose());
+      for (const pending of pendingPageCaptureStates.values()) {
+        window.clearTimeout(pending.timeoutId);
+        pending.reject(new Error("URL page capture was cancelled."));
+      }
+      pendingPageCaptureStates.clear();
     };
     // Re-subscribe only on the listed inputs; the credential/icon handlers are recreated each render and read at event time.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1032,6 +1103,230 @@ export function WebViewWorkspace({
     void openExternalUrl(addressInput).catch((error) => {
       setNavError(error instanceof Error ? error.message : String(error));
     });
+  }
+
+  function requestPageCaptureState(x?: number, y?: number) {
+    const nonce = createCredentialCaptureNonce();
+    return new Promise<WebviewPageCaptureState>((resolve, reject) => {
+      const timeoutId = window.setTimeout(() => {
+        pendingPageCaptureStatesRef.current.delete(nonce);
+        reject(new Error("The URL page did not respond to the screenshot request."));
+      }, PAGE_CAPTURE_STATE_TIMEOUT_MS);
+      pendingPageCaptureStatesRef.current.set(nonce, { resolve, reject, timeoutId });
+      void invokeCommand("request_webview_page_capture_state", {
+        request: { sessionId: sessionIdRef.current, nonce, x, y },
+      }).catch((error) => {
+        window.clearTimeout(timeoutId);
+        pendingPageCaptureStatesRef.current.delete(nonce);
+        reject(error instanceof Error ? error : new Error(String(error)));
+      });
+    });
+  }
+
+  async function captureFullWebviewPage() {
+    if (!isTauriRuntime() || !sessionStartedRef.current || !visibilityRef.current.isActive) {
+      throw new Error(t("webview.fullPageCaptureFailed"));
+    }
+    if (fullPageCaptureInFlightRef.current) {
+      throw new Error(t("webview.fullPageCaptureFailed"));
+    }
+    fullPageCaptureInFlightRef.current = true;
+    let initialState: WebviewPageCaptureState | null = null;
+    let dataUrl: string | null = null;
+    let captureFailed = false;
+    try {
+      initialState = await requestPageCaptureState();
+      const xPositions = pageCaptureTilePositions(initialState.pageWidth, initialState.viewportWidth);
+      const yPositions = pageCaptureTilePositions(initialState.pageHeight, initialState.viewportHeight);
+      let canvas: HTMLCanvasElement | null = null;
+      let context: CanvasRenderingContext2D | null = null;
+      let scaleX = 1;
+      let scaleY = 1;
+
+      for (const y of yPositions) {
+        for (const x of xPositions) {
+          const state = await requestPageCaptureState(x, y);
+          const bounds = computeBounds();
+          if (!bounds) {
+            throw new Error("The URL page moved out of the visible capture area.");
+          }
+          const screenshot = await invokeCommand("capture_screenshot_for_assistant", {
+            request: bounds,
+          });
+          const image = await loadScreenshotImage(screenshot.dataUrl);
+          if (!canvas || !context) {
+            scaleX = screenshot.width / Math.max(1, state.captureWidth);
+            scaleY = screenshot.height / Math.max(1, state.captureHeight);
+            const outputWidth = Math.max(1, Math.ceil(initialState.pageWidth * scaleX));
+            const outputHeight = Math.max(1, Math.ceil(initialState.pageHeight * scaleY));
+            assertFullPageCanvasSize(outputWidth, outputHeight);
+            canvas = document.createElement("canvas");
+            canvas.width = outputWidth;
+            canvas.height = outputHeight;
+            context = canvas.getContext("2d");
+            if (!context) {
+              throw new Error("Could not prepare the full-page screenshot canvas.");
+            }
+          }
+          const sourceWidth = Math.min(
+            image.naturalWidth,
+            Math.ceil(state.viewportWidth * scaleX),
+            Math.ceil((initialState.pageWidth - state.x) * scaleX),
+          );
+          const sourceHeight = Math.min(
+            image.naturalHeight,
+            Math.ceil(state.viewportHeight * scaleY),
+            Math.ceil((initialState.pageHeight - state.y) * scaleY),
+          );
+          context.drawImage(
+            image,
+            0,
+            0,
+            sourceWidth,
+            sourceHeight,
+            Math.round(state.x * scaleX),
+            Math.round(state.y * scaleY),
+            sourceWidth,
+            sourceHeight,
+          );
+        }
+      }
+      if (!canvas) {
+        throw new Error("The URL page did not produce any screenshot tiles.");
+      }
+      dataUrl = canvas.toDataURL("image/png");
+    } catch {
+      captureFailed = true;
+    }
+    try {
+      if (initialState) {
+        await requestPageCaptureState(initialState.x, initialState.y);
+      }
+    } catch {
+      captureFailed = true;
+    } finally {
+      fullPageCaptureInFlightRef.current = false;
+    }
+    if (captureFailed || !dataUrl) {
+      throw new Error(t("webview.fullPageCaptureFailed"));
+    }
+    return dataUrl;
+  }
+
+  async function captureFullWebviewPageToClipboard() {
+    const dataUrl = await captureFullWebviewPage();
+    await invokeCommand("write_screenshot_data_url_to_clipboard", {
+      request: { dataUrl },
+    });
+  }
+
+  async function saveFullWebviewPageAs() {
+    const filename = fullPageScreenshotFilename(tab.title);
+    try {
+      const path = await selectPngSavePath(filename, t("dashboard.qrSaveImage"));
+      if (!path) {
+        return;
+      }
+      const dataUrl = await captureFullWebviewPage();
+      await writeDataUrlFile(path, dataUrl);
+      showStatusBarNotice(t("dashboard.imageConverter.saved", { name: filename }), {
+        tone: "success",
+      });
+    } catch (error) {
+      showStatusBarNotice(
+        t("workspace.screenshotCaptureError", {
+          message: error instanceof Error ? error.message : String(error),
+        }),
+        { tone: "error" },
+      );
+    }
+  }
+
+  async function showWebviewContextMenu(payload: WebviewContextMenuPayload) {
+    const bounds = computeBounds();
+    if (!bounds) {
+      return;
+    }
+    const copyText = (text: string) => {
+      void writeToClipboard(text).then(() => {
+        showStatusBarNotice(t("workspace.copied"), { tone: "success" });
+      });
+    };
+    await showNativeContextMenu(
+      [
+        {
+          kind: "item",
+          label: t("webview.back"),
+          iconSvg: nativeMenuIcons.arrowLeft,
+          action: () => handleSimple("webview_go_back"),
+        },
+        {
+          kind: "item",
+          label: t("webview.forward"),
+          iconSvg: nativeMenuIcons.arrowRight,
+          action: () => handleSimple("webview_go_forward"),
+        },
+        {
+          kind: "item",
+          label: t("webview.reload"),
+          iconSvg: nativeMenuIcons.rotateCcw,
+          action: () => handleSimple("webview_reload"),
+        },
+        { kind: "separator" },
+        ...(payload.linkUrl && tab.connection
+          ? [{
+              kind: "item" as const,
+              label: t("webview.openLinkInNewTab"),
+              iconSvg: nativeMenuIcons.squarePlus,
+              action: () => openUrlInNewTab(tab.connection!, payload.linkUrl!, {
+                subtitle: formatWebviewSubtitle(payload.linkUrl!),
+              }),
+            }]
+          : []),
+        ...(payload.linkUrl
+          ? [
+              {
+                kind: "item" as const,
+                label: t("webview.openExternally"),
+                iconSvg: nativeMenuIcons.arrowUp,
+                action: () => void openExternalUrl(payload.linkUrl!).catch((error) => {
+                  setNavError(error instanceof Error ? error.message : String(error));
+                }),
+              },
+              {
+                kind: "item" as const,
+                label: t("webview.copyLinkAddress"),
+                iconSvg: nativeMenuIcons.copy,
+                action: () => copyText(payload.linkUrl!),
+              },
+            ]
+          : []),
+        ...(payload.selectionText
+          ? [{
+              kind: "item" as const,
+              label: t("webview.copySelectedText"),
+              iconSvg: nativeMenuIcons.copy,
+              action: () => copyText(payload.selectionText!),
+            }]
+          : []),
+        { kind: "separator" },
+        {
+          kind: "item",
+          label: t("dashboard.qrSaveImage"),
+          iconSvg: nativeMenuIcons.save,
+          action: () => void saveFullWebviewPageAs(),
+        },
+        {
+          kind: "item",
+          label: t("workspace.sendEntirePanelToAi"),
+          action: () => void captureWebviewScreenshotForAssistant(),
+        },
+      ],
+      {
+        x: bounds.x + Math.min(bounds.width - 1, Math.max(0, payload.x)),
+        y: bounds.y + Math.min(bounds.height - 1, Math.max(0, payload.y)),
+      },
+    );
   }
 
   function handleAutoRefreshChange(value: string) {
@@ -1219,6 +1514,8 @@ export function WebViewWorkspace({
             <ScreenshotMenu
               buttonClassName="terminal-pane-action"
               dataTutorialId="workspace.screenshotMenu"
+              entirePanelLabel={t("webview.capturePageToClipboard")}
+              onCaptureEntirePanelToClipboard={captureFullWebviewPageToClipboard}
               onPreCapture={triggerPreCapture}
               targetLabel={t("webview.screenshotTarget", { title: tab.title })}
               targetRef={workspaceRef}
@@ -1309,4 +1606,129 @@ function externalWebviewLinkUrl(rawPayload: string, expectedToken: string | null
   } catch {
     return null;
   }
+}
+
+function webviewContextMenuPayload(
+  rawPayload: string,
+  expectedToken: string | null,
+): WebviewContextMenuPayload | null {
+  if (!expectedToken) {
+    return null;
+  }
+  try {
+    const payload = JSON.parse(rawPayload) as Record<string, unknown>;
+    if (
+      payload.token !== expectedToken ||
+      typeof payload.x !== "number" ||
+      !Number.isFinite(payload.x) ||
+      typeof payload.y !== "number" ||
+      !Number.isFinite(payload.y)
+    ) {
+      return null;
+    }
+    let linkUrl: string | undefined;
+    if (typeof payload.linkUrl === "string") {
+      const parsed = new URL(payload.linkUrl);
+      if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+        linkUrl = parsed.href;
+      }
+    }
+    return {
+      x: payload.x,
+      y: payload.y,
+      linkUrl,
+      selectionText: typeof payload.selectionText === "string" && payload.selectionText
+        ? payload.selectionText.slice(0, 65536)
+        : undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function webviewPageCaptureState(
+  rawPayload: string,
+  expectedToken: string | null,
+): WebviewPageCaptureState | null {
+  if (!expectedToken) {
+    return null;
+  }
+  try {
+    const payload = JSON.parse(rawPayload) as Record<string, unknown>;
+    const numericKeys = [
+      "x",
+      "y",
+      "pageWidth",
+      "pageHeight",
+      "viewportWidth",
+      "viewportHeight",
+      "captureWidth",
+      "captureHeight",
+    ] as const;
+    if (
+      payload.token !== expectedToken ||
+      typeof payload.nonce !== "string" ||
+      !payload.nonce ||
+      numericKeys.some((key) => typeof payload[key] !== "number" || !Number.isFinite(payload[key]))
+    ) {
+      return null;
+    }
+    return {
+      nonce: payload.nonce,
+      x: Math.max(0, payload.x as number),
+      y: Math.max(0, payload.y as number),
+      pageWidth: Math.max(1, payload.pageWidth as number),
+      pageHeight: Math.max(1, payload.pageHeight as number),
+      viewportWidth: Math.max(1, payload.viewportWidth as number),
+      viewportHeight: Math.max(1, payload.viewportHeight as number),
+      captureWidth: Math.max(1, payload.captureWidth as number),
+      captureHeight: Math.max(1, payload.captureHeight as number),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function pageCaptureTilePositions(total: number, viewport: number) {
+  const maxScroll = Math.max(0, Math.ceil(total - viewport));
+  if (maxScroll === 0) {
+    return [0];
+  }
+  const positions = [0];
+  for (let position = viewport; position < maxScroll; position += viewport) {
+    positions.push(Math.round(position));
+  }
+  positions.push(maxScroll);
+  return positions;
+}
+
+function fullPageScreenshotFilename(title: string) {
+  const safeTitle = Array.from(title, (character) =>
+    character.charCodeAt(0) < 32 ? "_" : character
+  )
+    .join("")
+    .replace(/[<>:"/\\|?*]/g, "_")
+    .trim()
+    .slice(0, 80) || "url-page";
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+  return `${safeTitle}-${timestamp}.png`;
+}
+
+function assertFullPageCanvasSize(width: number, height: number) {
+  if (
+    width > MAX_FULL_PAGE_CANVAS_DIMENSION ||
+    height > MAX_FULL_PAGE_CANVAS_DIMENSION ||
+    width * height > MAX_FULL_PAGE_CANVAS_PIXELS
+  ) {
+    throw new Error(`The full page is too large to stitch safely (${width} × ${height} pixels).`);
+  }
+}
+
+function loadScreenshotImage(dataUrl: string) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("Could not decode a URL page screenshot tile."));
+    image.src = dataUrl;
+  });
 }

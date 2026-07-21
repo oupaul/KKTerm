@@ -33,6 +33,8 @@ The widget-level permission is opt-in per widget, so no automated network activi
 
 ## Allowlisting guidance
 
-If your AV/EDR flags KKTerm based on heuristic port-scan detection while a user is running an authorized scan, please consider allowlisting the signed installer hash. The application is open about its capabilities and intended use.
+If your AV/EDR flags KKTerm based on heuristic port-scan detection while a user is running an authorized scan, please consider allowlisting the verified release hash. Each installer and portable ZIP has its own published `.sha256` file; verify the exact downloaded artifact rather than allowlisting a folder. The application is open about its capabilities and intended use.
+
+The portable ZIP is not a sandbox. KKTerm-owned state stays in its sibling `data` folder, while explicit actions such as Install Helper installs, managed web apps, OS-keychain use, or external MCP configuration can change the current machine. Extract the ZIP before scanning or launching it; do not remove `kkterm-portable.marker`, which is the mode boundary that prevents installed-path fallback.
 
 For questions, open an issue at the project repository.

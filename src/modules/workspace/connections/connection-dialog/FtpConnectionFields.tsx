@@ -16,7 +16,7 @@ import { useTranslation } from "react-i18next";
 import { technicalInputProps } from "../../../../lib/inputBehavior";
 import type { Connection, SshSettings, StoredCredentialSummary } from "../../../../types";
 import { defaultPortForConnectionType } from "../utils";
-import { PasswordCredentialSelect, PasswordField } from "./ConnectionPasswordFields";
+import { PasswordCredentialModeFields, PasswordField } from "./ConnectionPasswordFields";
 
 export function FtpConnectionFields({
   authMethod,
@@ -178,16 +178,14 @@ export function FtpConnectionFields({
           </>
         ) : ftpProtocol !== "sftp" || authMethod === "password" ? (
           <>
-            <PasswordField
+            <PasswordCredentialModeFields
+              credentials={matchingPasswordCredentials}
+              defaultMode={initialConnection?.passwordCredentialId ? "saved" : "new"}
               hasStoredSecret={isEditMode && hasStoredConnectionPassword}
               label={ftpProtocol === "sftp" ? t("connections.passwordLabel") : t("connections.password")}
-              name="password"
               placeholder={isEditMode ? t("connections.leaveBlankPassword") : t("connections.storedInKeychain")}
-            />
-            <PasswordCredentialSelect
-              credentials={matchingPasswordCredentials}
-              onChange={onSelectedPasswordCredentialIdChange}
               selectedCredentialId={selectedPasswordCredentialId}
+              onSelectedCredentialIdChange={onSelectedPasswordCredentialIdChange}
             />
           </>
         ) : null}

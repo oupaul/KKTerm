@@ -144,6 +144,18 @@ the convention from the runtime platform; `DialogConventionProvider` exists
 only for explicit previews and tests. Do not reorder per-dialog or use CSS row
 reversal.
 
+### Shortcut editors
+
+Every Settings shortcut row uses the shared recorder treatment: an action label,
+the `.shortcut-binding-button`, and an icon-only clear action when a binding is
+set. Clicking the binding button puts that row into recording mode; the next
+valid key combination replaces the binding, while Escape or focus loss cancels
+recording. An unbound row shows the translated `settings.shortcutNotSet` state.
+Do not use free-form text inputs, per-row enable switches, or a feature-specific
+shortcut control. When one shortcut setting appears on multiple Settings pages,
+render the same component and shared draft on every surface; screenshot capture
+shortcuts use `ScreenshotShortcutRows` in both Screenshots and Shortcuts.
+
 ### Footer & buttons
 
 Build every dialog footer from the kit — never hand-roll the action row:
@@ -191,12 +203,16 @@ Invariant: no frontend close hooks).
 `src/modules/workspace/connections/sftp/` is the reference file-manager surface:
 symmetric dual-pane (Local | center transfer-arrow gutter | Remote), per-pane
 breadcrumb with double-click-to-edit path, List + Gallery view switch, sortable
-columns, a collapsible transfer-activity bar, and a styled DOM context menu with
+columns, a collapsible transfer-activity bar, and a native context menu with
 Copy Path / Get Info. Reuse `FilePane` and these patterns for new browser UIs.
 
-> The SFTP context menu is a styled DOM menu — a deliberate, documented exception
-> to the "simple Workspace command menus use native menus" rule, because the
-> design specifies a styled Finder-like menu and the menu pre-dates that rule.
+The SFTP/File Explorer right-click menu is a Tauri native context menu through
+`src/lib/nativeContextMenu.ts`. Native menu styling intentionally wins over a
+custom Finder-like surface because this menu can cross an adjacent URL
+Connection `WebviewWindow` or RDP ActiveX HWND in a split layout. Keep command
+menus native; only forms, sliders, live previews, and similarly interactive
+content justify a DOM popover, which must join the shared native-surface
+intersection registry.
 
 ## Checklist for new UI
 

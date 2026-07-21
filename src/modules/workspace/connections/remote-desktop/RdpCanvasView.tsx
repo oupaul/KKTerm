@@ -112,6 +112,7 @@ export function RdpCanvasView({
     setPasswordPrompt(false);
     resolve?.(password);
   }
+  const sharedLocalFoldersKey = rdpOptions.sharedLocalFolders.join("\u0000");
 
   const focusInput = (reason: string) => {
     const input = inputRef.current;
@@ -246,7 +247,8 @@ export function RdpCanvasView({
           secretOwnerId: connectionPasswordOwnerId(connection),
           password,
           ignoreTlsErrors: connection.rdpOptions?.ignoreTlsErrors ?? false,
-          sharedLocalFolder: rdpOptions.redirectDrives ? rdpOptions.sharedLocalFolder : undefined,
+          administrativeSession: rdpOptions.administrativeSession,
+          sharedLocalFolders: rdpOptions.redirectDrives ? rdpOptions.sharedLocalFolders : undefined,
         },
       });
     })().catch((error) => {
@@ -270,8 +272,9 @@ export function RdpCanvasView({
     connection.host,
     connection.port,
     connection.user,
+    rdpOptions.administrativeSession,
     rdpOptions.redirectDrives,
-    rdpOptions.sharedLocalFolder,
+    sharedLocalFoldersKey,
   ]);
 
   // ── Mouse ──────────────────────────────────────────────────────────────────

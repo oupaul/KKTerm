@@ -1312,6 +1312,7 @@ fn normalize_item_connection(
     }
 }
 
+#[cfg(test)]
 #[allow(clippy::too_many_arguments)]
 pub fn place_rack_item(
     conn: &SqliteConnection,
@@ -1487,6 +1488,7 @@ pub fn update_rack_item_on_face(
 /// the placement against the target rack (excluding this item). `slot` moves a
 /// fractional-width device to another horizontal slot in the same call; None
 /// keeps the stored slot (and is ignored for full-width devices).
+#[cfg(test)]
 pub fn move_rack_item(
     conn: &SqliteConnection,
     id: &str,

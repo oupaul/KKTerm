@@ -20,15 +20,25 @@ limited to small app-identification assets.
 
 ## Sources
 
-- `7zip.svg`, `anthropic.svg`, `blender.svg`, `bun.svg`, `cursor.svg`,
-  `drawio.svg`, `excalidraw.svg`, `ffmpeg.svg`, `git.svg`, `inkscape.svg`,
-  `krita.svg`, `langflow.svg`, `n8n.svg`, `notepadpp.svg`, `ollama.svg`,
-  `obs-studio.svg`, `rust.svg`, `rustdesk.svg`, `sharex.svg`, `tailscale.svg`,
-  `vlc.svg`: Simple Icons CDN
+- `7zip.svg`, `anthropic.svg`, `audacity.svg`, `blender.svg`, `bun.svg`,
+  `cursor.svg`, `drawio.svg`, `excalidraw.svg`, `ffmpeg.svg`, `git.svg`,
+  `inkscape.svg`, `krita.svg`, `langflow.svg`, `n8n.svg`, `notepadpp.svg`,
+  `obsidian.svg`, `ollama.svg`, `obs-studio.svg`, `rust.svg`, `rustdesk.svg`,
+  `sharex.svg`, `tailscale.svg`, `vlc.svg`: Simple Icons CDN
   (`git.svg` uses the official Git brand color `#F05032`; `blender.svg` uses
   the official Blender orange `#E87D0D`; `keepassxc.svg` uses the official
   KeePassXC green `#6CAC4D`).
 - `openai.svg`: Simple Icons npm package.
+- `google-chrome.svg`: Simple Icons CDN (`googlechrome`, official Chrome blue
+  `#4285F4`; trademark notice applies).
+- `firefox.svg`: Simple Icons CDN (`firefoxbrowser`, official Firefox orange
+  `#FF7139`; trademark notice applies).
+- `acrobat-reader.svg`: Simple Icons npm package `simple-icons@5.24.0`
+  (`adobeacrobatreader`, recolored to the Simple Icons Acrobat red `#EC1C24`).
+  Adobe later asked Simple Icons to drop its marks, so current releases no
+  longer ship this icon; keep usage limited to small app-identification tiles
+  and recheck Adobe brand guidance before any larger use (trademark notice
+  applies).
 - `open-webui.png`: `open-webui/open-webui`, `backend/open_webui/static/favicon-96x96.png`.
 - `flowise.png`: `FlowiseAI/Flowise`, `packages/ui/public/favicon-32x32.png`.
 - `vscode.png`: `microsoft/vscode`, `resources/win32/code_70x70.png`.
@@ -41,6 +51,8 @@ limited to small app-identification assets.
 - `opencode.svg`: `sst/opencode`, `packages/console/app/src/asset/brand/opencode-logo-dark-square.svg`.
 - `claude-code.svg`: LobeHub Icons `@lobehub/icons-static-svg`, `claudecode-color.svg`.
 - `codex.svg`: LobeHub Icons `@lobehub/icons-static-svg`, `codex-color.svg`.
+- `kimi.svg`: Simple Icons CDN, `kimi`.
+- `grok.svg`: LobeHub Icons `@lobehub/icons-static-svg`, `grok.svg`.
 - `comfyui.svg`: LobeHub Icons `@lobehub/icons-static-svg`, `comfyui-color.svg`.
 - `lmstudio.svg`: LobeHub Icons `@lobehub/icons-static-svg`, `lmstudio.svg`
   (monochrome mark recolored to the official LM Studio Fuchsia Blue `#6F42C1`).

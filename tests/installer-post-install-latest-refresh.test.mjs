@@ -8,14 +8,17 @@ const source = readFileSync(
 );
 
 test("completed installs immediately refresh the selected provider latest version", () => {
-  const completedBranch = source.slice(
-    source.indexOf('if (event.payload.kind === "completed")'),
-    source.indexOf('void invokeCommand("installer_redetect"'),
+  const redetectStart = source.indexOf(
+    'void invokeCommand("installer_redetect"',
+  );
+  const redetectBranch = source.slice(
+    redetectStart,
+    source.indexOf(".catch(() => {", redetectStart),
   );
 
   assert.match(
-    completedBranch,
-    /invokeCommand\("installer_check_latest_versions",\s*\{\s*toolIds:\s*\[toolId\]/,
-    "a completed update must replace stale latest-version state without waiting for the next interval sweep",
+    redetectBranch,
+    /setOneDetected\(toolId, next\)[\s\S]*event\.payload\.kind === "completed"[\s\S]*recipeSupportsManagedLatestVersion\(completedRecipe, next\)[\s\S]*invokeCommand\("installer_check_latest_versions",\s*\{\s*toolIds:\s*\[toolId\]/,
+    "a completed update must re-detect provenance before replacing stale latest-version state",
   );
 });

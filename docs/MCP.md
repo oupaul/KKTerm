@@ -22,9 +22,9 @@ safety gate applies uniformly:
 
 Namespaces in this build:
 
-- `kkterm.workspace.*` — Workspace Module: saved Connections, live
-  Sessions, remote-desktop capture/interaction, and the SFTP/FTP file
-  browser.
+- `kkterm.workspace.*` — Workspace Module: durable Workspaces, saved
+  Connections, live Sessions, remote-desktop capture/interaction, and the
+  SFTP/FTP file browser.
 - `kkterm.dashboard.*` — Dashboard Module: views, widget instances,
   AI-Created Widgets.
 - `kkterm.itops.*` — IT Ops Module: Sites, Server Rooms, Racks, Rack
@@ -136,13 +136,27 @@ the next KKTerm.exe launch.
 
 ### Workspace Module (`kkterm.workspace.*`)
 
-The Workspace Module owns saved Connections and live Sessions
-(terminals, SFTP browsers, RDP/VNC surfaces, WebView2 panes).
+The Workspace Module owns durable Workspaces, saved Connections, and live
+Sessions (terminals, SFTP browsers, RDP/VNC surfaces, WebView2 panes).
+
+#### Workspaces
+
+| Name | Description |
+|---|---|
+| `kkterm.workspace.workspaces.list` | List durable Workspaces and their ids, names, icon metadata, default flag, and order. |
+| `kkterm.workspace.workspaces.create` | Create a Workspace. Optional `importConnectionIds` copy saved Connections from existing Workspaces into it as independent durable Connections. |
+| `kkterm.workspace.workspaces.rename` | Rename or restyle one Workspace by id with full-value icon fields. |
+| `kkterm.workspace.workspaces.reorder` | Reorder Workspaces by an ordered id list. |
+| `kkterm.workspace.workspaces.dangerous.delete` | Delete a non-default Workspace and all saved Connections and folders it owns. Requires Allow-all. The `workspaces-changed` reload closes Tabs and live Sessions owned by the removed Workspace. |
+
+Workspace mutations use the same storage functions as the Activity Rail and
+emit `workspaces-changed`; the rail reloads without an app restart. Use a
+Workspace id as `workspaceId` when creating a Connection or Connection folder.
 
 | Name | Description |
 |---|---|
 | `kkterm.workspace.connections.list` | List saved Connections (folders + connections) from KKTerm storage. |
-| `kkterm.workspace.connections.create` | Create a saved Connection in KKTerm storage. This is a safe tool: it does not accept passwords or other secrets, and saved credentials still go through KKTerm's normal keychain-backed secret flows. |
+| `kkterm.workspace.connections.create` | Create a saved Connection in KKTerm storage, optionally in `workspaceId`. Supported kinds match the app: local terminal, SSH, Telnet, Serial, URL, RDP, VNC, FTP/FTPS/SFTP, File Explorer (`localFiles`), and Document (`fileView`). This is a safe tool: it does not accept passwords or other secrets, and saved credentials still go through KKTerm's normal keychain-backed secret flows. |
 | `kkterm.workspace.connections.update` | Update one saved Connection by `connectionId`. Submit the full updated Connection fields. This tool does not accept passwords or other secrets. |
 | `kkterm.workspace.connections.rename` | Rename one saved Connection by `connectionId`. |
 | `kkterm.workspace.connections.delete` | Delete one saved Connection by `connectionId`. |
@@ -151,10 +165,9 @@ The Workspace Module owns saved Connections and live Sessions
 | `kkterm.workspace.connection_folders.rename` | Rename one Connection folder by `folderId`. |
 | `kkterm.workspace.connection_folders.delete` | Delete one Connection folder by `folderId`, including contained saved Connections and nested folders. |
 | `kkterm.workspace.connection_folders.move` | Move one Connection folder by `folderId` to `parentFolderId` and `targetIndex`; use `parentFolderId: null` for the root list. |
-| `kkterm.workspace.connections.open` | Open a saved Connection by `connectionId`. Routes through the existing AI assistant `connection_open` path and emits `assistant-open-connection` for the frontend to start the appropriate session (terminal, SSH, URL, RDP, VNC). |
+| `kkterm.workspace.connections.open` | Open a saved Connection by `connectionId`. Routes through the existing AI assistant `connection_open` path and emits `assistant-open-connection` for the frontend to start the appropriate Session or local surface for every supported Connection kind. |
 | `kkterm.workspace.connections.screenshot` | Capture the visible Workspace Canvas for an open Connection by `connectionId`. The app activates the matching Tab before capture and returns a JPEG data URL plus dimensions. |
 | `kkterm.workspace.sessions.list` | List live Sessions (terminal Panes, remote desktop targets, file browsers). Backed by `session_state`. |
-| `kkterm.workspace.sessions.send_input` | Send text/keystrokes to a live terminal Pane. `submit: true` appends a terminal Enter key as carriage return (`\r`) after the text. Backed by `session_terminal_send_text`. |
 | `kkterm.workspace.sessions.read_buffer` | Read a snapshot of the visible terminal buffer for a live Pane. Backed by `session_terminal_read_buffer`. |
 | `kkterm.workspace.quick_commands.list` | List saved Quick Commands for a Connection's Quick Command Bar. Backed by `quick_command_list` through the frontend live-tool bridge because Quick Commands live in workspace storage. |
 | `kkterm.workspace.quick_commands.read` | Read one saved Quick Command for a Connection by Quick Command id. Backed by `quick_command_read`. |
@@ -164,6 +177,7 @@ The Workspace Module owns saved Connections and live Sessions
 | Name | Description |
 |---|---|
 | `kkterm.workspace.dangerous.pointer_click` | Send a mouse click to a live RDP/VNC remote desktop surface. Requires `built_in_mcp_allow_all_dangerous = true`. Backed by `session_remote_desktop_mouse_click`. |
+| `kkterm.workspace.sessions.dangerous.send_input` | Send text/keystrokes to a live terminal Pane. `submit: true` appends a terminal Enter key as carriage return (`\r`). Requires Allow-all because submitted text can execute commands. Backed by `session_terminal_send_text`. |
 
 ### Workspace Module — Quick Commands dangerous (`kkterm.workspace.quick_commands.dangerous.*`)
 
@@ -207,6 +221,7 @@ storage and event path (`dashboard-changed` is emitted on mutations).
 | `kkterm.dashboard.screenshot_view` | Capture an entire Dashboard View by optional `viewId` (defaults to the active View). The app activates the Dashboard View before capture and returns a JPEG data URL plus dimensions. |
 | `kkterm.dashboard.screenshot_widget` | Capture a single Dashboard Widget Instance region by `instanceId`. The app activates the owning Dashboard View before capture and returns a JPEG data URL plus dimensions. |
 | `kkterm.dashboard.read_widget_source` | Fetch the script body of a single AI-Created Widget by id. |
+| `kkterm.dashboard.check_widget_health` | Read one Widget Instance's live runtime health, waiting briefly for the frontend smoke test. Returns `ready`, `error`, `timeout`, `stalled`, or `pending`; read-only and safe. |
 | `kkterm.dashboard.create_view` | Add a new Dashboard view. |
 | `kkterm.dashboard.update_view` | Edit a view (title, gridDensity, sortOrder, background, tabColor). |
 | `kkterm.dashboard.remove_view` | Delete a view and its instances. |
@@ -354,11 +369,12 @@ permission, or capture fails with a clear error.
 All tool inputs use JSON schemas published in `tools/list`. The handler in
 the bridge translates the curated `kkterm.<module>.*` names into the
 existing AI assistant tool functions in `src-tauri/src/ai.rs`, so MCP and
-the in-app assistant share one implementation. Screenshot tools are safe
-tools because they only read the currently rendered KKTerm UI, but they do
-return image data that may include visible terminal, remote desktop, URL,
-file, or widget content. They do not bypass the normal desktop rendering
-path and cannot capture hidden/unmounted content.
+the in-app assistant share one implementation. The element-scoped Workspace
+and Dashboard screenshot tools are safe read tools, but they may return
+sensitive visible content. Universal `kkterm.app.dangerous.capture_window` is
+separately gated because it can target any KKTerm-owned OS window. None of
+these tools bypasses the normal desktop rendering path or captures
+hidden/unmounted content.
 
 ### Adding a new Module
 

@@ -158,10 +158,10 @@ if (normalizeTutorialNavigationTarget({ page: "itops", itopsSiteId: 42 })) {
 const settingsTargets = [
   ["settings.activityRail", "general-settings"],
   ["settings.workspaceAccess", "general-settings"],
-  ["settings.useDirectxScreenCapture", "general-settings"],
   ["settings.statusBar", "general-settings"],
   ["settings.settingsData", "general-settings"],
   ["settings.debug", "general-settings"],
+  ["settings.useDirectxScreenCapture", "screenshots-settings"],
   ["settings.appUiFontFamily", "appearance-settings"],
   ["settings.resetLayout", "appearance-settings"],
   ["settings.dashboardDefaultLanding", "dashboard-settings"],

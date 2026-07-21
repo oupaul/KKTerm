@@ -239,16 +239,28 @@ fn acp_jsonrpc_id_preserves_string_permission_ids() {
 
 #[test]
 fn acp_command_specs_use_registry_adapters() {
-    let codex = acp_command_spec(AiCliBackendKind::Codex);
+    let codex = acp_command_spec(AiCliBackendKind::Codex, "codex", "gpt-5.6");
     assert!(codex.args.iter().any(|arg| arg.contains("codex-acp")));
 
-    let claude = acp_command_spec(AiCliBackendKind::ClaudeCode);
+    let claude = acp_command_spec(AiCliBackendKind::ClaudeCode, "claude", "claude-opus-4.8");
     assert!(
         claude
             .args
             .iter()
             .any(|arg| arg.contains("claude-agent-acp"))
     );
+
+    let cursor = acp_command_spec(
+        AiCliBackendKind::Cursor,
+        "C:\\Tools\\cursor-agent.cmd",
+        "composer-2",
+    );
+    assert_eq!(cursor.program, "C:\\Tools\\cursor-agent.cmd");
+    assert_eq!(cursor.args, vec!["--model", "composer-2", "acp"]);
+    assert_eq!(cursor.label, "Cursor ACP");
+
+    let cursor_auto = acp_command_spec(AiCliBackendKind::Cursor, "cursor-agent", "auto");
+    assert_eq!(cursor_auto.args, vec!["acp"]);
 }
 
 #[test]
@@ -443,6 +455,17 @@ fn claude_auth_status_requires_logged_in_json() {
 }
 
 #[test]
+fn cursor_auth_status_rejects_logged_out_output() {
+    assert!(cursor_auth_status_logged_in(
+        "Authenticated as user@example.com"
+    ));
+    assert!(!cursor_auth_status_logged_in("Not authenticated"));
+    assert!(!cursor_auth_status_logged_in(
+        "Not signed in. Please run agent login."
+    ));
+}
+
+#[test]
 fn cli_capture_honors_timeout() {
     let started = Instant::now();
     #[cfg(target_os = "windows")]
@@ -562,16 +585,20 @@ fn windows_external_terminal_command_line_handles_paths_with_spaces() {
 fn cli_backend_command_names_include_windows_npm_shims() {
     let codex_names = cli_backend_command_names(AiCliBackendKind::Codex);
     let claude_names = cli_backend_command_names(AiCliBackendKind::ClaudeCode);
+    let cursor_names = cli_backend_command_names(AiCliBackendKind::Cursor);
 
     #[cfg(target_os = "windows")]
     {
         assert!(codex_names.contains(&"codex.cmd"));
         assert!(claude_names.contains(&"claude.cmd"));
+        assert!(cursor_names.contains(&"cursor-agent.cmd"));
+        assert!(cursor_names.contains(&"agent.cmd"));
     }
     #[cfg(not(target_os = "windows"))]
     {
         assert_eq!(codex_names, &["codex"]);
         assert_eq!(claude_names, &["claude"]);
+        assert_eq!(cursor_names, &["cursor-agent", "agent"]);
     }
 }
 
@@ -591,6 +618,31 @@ fn claude_cli_agent_prompt_is_sent_over_stdin_not_argv() {
             .args
             .iter()
             .any(|arg| arg == "--no-session-persistence")
+    );
+}
+
+#[test]
+fn cursor_cli_agent_prompt_is_sent_over_stdin_not_argv() {
+    let prompt = "x".repeat(40_000);
+    let invocation = cli_agent_invocation(AiCliBackendKind::Cursor, "sonnet-4", &prompt);
+
+    assert_eq!(invocation.prompt_delivery, "stdin");
+    assert_eq!(invocation.stdin.as_deref(), Some(prompt.as_str()));
+    assert!(invocation.args.iter().any(|arg| arg == "--print"));
+    assert!(invocation.args.iter().any(|arg| arg == "--mode=ask"));
+    assert!(!invocation.args.iter().any(|arg| arg == "--force"));
+    assert!(!invocation.args.iter().any(|arg| arg == "-"));
+    assert!(
+        invocation.args.iter().all(|arg| arg.len() < 1_000),
+        "Cursor fallback argv must stay small enough for Windows CreateProcess"
+    );
+    assert_eq!(
+        invocation
+            .args
+            .windows(2)
+            .find(|pair| pair[0] == "--model")
+            .map(|pair| pair[1].as_str()),
+        Some("sonnet-4")
     );
 }
 
@@ -2180,6 +2232,56 @@ fn chat_response_parser_accepts_reasoning_aliases() {
 }
 
 #[test]
+fn chat_response_parser_treats_null_tool_calls_as_empty() {
+    let completion: OpenAiCompatibleChatResponse = serde_json::from_value(json!({
+        "choices": [
+            {
+                "message": {
+                    "content": "Done",
+                    "tool_calls": null
+                }
+            }
+        ]
+    }))
+    .expect("chat response with null tool_calls deserializes");
+
+    assert!(completion.choices[0].message.tool_calls.is_empty());
+}
+
+#[test]
+fn chat_optional_content_and_array_fields_accept_null() {
+    let completion: OpenAiCompatibleChatResponse = serde_json::from_value(json!({
+        "choices": [
+            {
+                "message": {
+                    "content": null,
+                    "reasoning_details": null
+                }
+            }
+        ]
+    }))
+    .expect("chat response with null optional fields deserializes");
+
+    assert!(completion.choices[0].message.content.is_empty());
+    assert!(completion.choices[0].message.reasoning_details.is_empty());
+
+    let chunk: ChatSseChunk = serde_json::from_value(json!({
+        "choices": [
+            {
+                "delta": {
+                    "reasoning_details": null,
+                    "tool_calls": null
+                }
+            }
+        ]
+    }))
+    .expect("chat SSE chunk with null optional arrays deserializes");
+
+    assert!(chunk.choices[0].delta.reasoning_details.is_empty());
+    assert!(chunk.choices[0].delta.tool_calls.is_empty());
+}
+
+#[test]
 fn streamed_final_answer_requires_visible_content() {
     let provider = provider_for("deepseek").expect("DeepSeek provider is wired");
     let provider = match provider {
@@ -3674,6 +3776,10 @@ fn prompt_permission_mode_blocks_mutating_tools() {
     assert!(tool_requires_allow_all("shell_command"));
     assert!(tool_requires_allow_all("dashboard_create_widget"));
     assert!(tool_requires_allow_all("dashboard_reset"));
+    assert!(tool_requires_allow_all("workspace_create"));
+    assert!(tool_requires_allow_all("workspace_rename"));
+    assert!(tool_requires_allow_all("workspace_reorder"));
+    assert!(tool_requires_allow_all("workspace_delete"));
     assert!(tool_requires_allow_all("connection_create"));
     assert!(tool_requires_allow_all("connection_open"));
     assert!(tool_requires_allow_all("connection_update"));
@@ -3696,6 +3802,7 @@ fn prompt_permission_mode_blocks_mutating_tools() {
     assert!(tool_requires_allow_all("send_email"));
     assert!(!tool_requires_allow_all("dashboard_load_state"));
     assert!(!tool_requires_allow_all("dashboard_read_widget_source"));
+    assert!(!tool_requires_allow_all("workspace_list"));
     assert!(!tool_requires_allow_all("connection_list"));
     assert!(!tool_requires_allow_all("session_state"));
     assert!(!tool_requires_allow_all("session_activate_tab"));
@@ -3889,6 +3996,11 @@ fn tool_definitions_include_connection_management_tools() {
     let tools = ai_tool_definitions(&settings);
     let names: Vec<&str> = tools.iter().map(|tool| tool.function.name).collect();
 
+    assert!(names.contains(&"workspace_list"));
+    assert!(names.contains(&"workspace_create"));
+    assert!(names.contains(&"workspace_rename"));
+    assert!(names.contains(&"workspace_reorder"));
+    assert!(names.contains(&"workspace_delete"));
     assert!(names.contains(&"connection_list"));
     assert!(names.contains(&"connection_create"));
     assert!(names.contains(&"connection_open"));

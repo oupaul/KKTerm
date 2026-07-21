@@ -48,12 +48,13 @@ export function VncSettings() {
             <span>{t("settings.preferredEncoding")}</span>
             <select
               value={draft.preferredEncoding}
-              onChange={(event) =>
+              onChange={(event) => {
+                const preferredEncoding = event.currentTarget.value as VncPreferredEncoding;
                 setDraft((settings) => ({
                   ...settings,
-                  preferredEncoding: event.currentTarget.value as VncPreferredEncoding,
-                }))
-              }
+                  preferredEncoding,
+                }));
+              }}
             >
               <option value="tight">{t("settings.vncEncodingTight")}</option>
               <option value="zrle">{t("settings.vncEncodingZrle")}</option>
@@ -64,12 +65,13 @@ export function VncSettings() {
             <span>{t("settings.colorLevel")}</span>
             <select
               value={draft.colorLevel}
-              onChange={(event) =>
+              onChange={(event) => {
+                const colorLevel = event.currentTarget.value as VncColorLevel;
                 setDraft((settings) => ({
                   ...settings,
-                  colorLevel: event.currentTarget.value as VncColorLevel,
-                }))
-              }
+                  colorLevel,
+                }));
+              }}
             >
               <option value="full">{t("settings.vncColorFull")}</option>
               <option value="256">{t("settings.vncColor256")}</option>
@@ -86,12 +88,13 @@ export function VncSettings() {
             <span>{t("settings.remoteDesktopViewMode")}</span>
             <select
               value={draft.viewMode}
-              onChange={(event) =>
+              onChange={(event) => {
+                const viewMode = event.currentTarget.value as RemoteDesktopViewMode;
                 setDraft((settings) => ({
                   ...settings,
-                  viewMode: event.currentTarget.value as RemoteDesktopViewMode,
-                }))
-              }
+                  viewMode,
+                }));
+              }}
             >
               <option value="fit">{t("settings.remoteDesktopViewModeFit")}</option>
               <option value="stretch">{t("settings.remoteDesktopViewModeStretch")}</option>

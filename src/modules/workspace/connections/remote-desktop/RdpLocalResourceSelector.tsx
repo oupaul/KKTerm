@@ -15,15 +15,15 @@ import "./rdpLocalResources.css";
 export function RdpLocalResourceSelector({
   disabled,
   driveSelection,
-  sharedLocalFolder,
+  sharedLocalFolders,
   onDriveSelectionChange,
-  onSharedLocalFolderChange,
+  onSharedLocalFoldersChange,
 }: {
   disabled?: boolean;
   driveSelection: RdpDriveSelection;
-  sharedLocalFolder?: string;
+  sharedLocalFolders: string[];
   onDriveSelectionChange: (selection: RdpDriveSelection) => void;
-  onSharedLocalFolderChange: (path: string) => void;
+  onSharedLocalFoldersChange: (paths: string[]) => void;
 }) {
   const { t } = useTranslation();
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -34,27 +34,43 @@ export function RdpLocalResourceSelector({
       return null;
     }
     return (
-      <div className="rdp-local-resource-summary">
-        <span className={sharedLocalFolder ? "" : "empty"} title={sharedLocalFolder || undefined}>
-          {sharedLocalFolder || t("settings.rdpNoFolderSelected")}
-        </span>
-        <button
-          className="secondary-button"
-          disabled={disabled}
-          onClick={() => {
-            void selectRdpSharedFolder({
-              defaultPath: sharedLocalFolder,
-              title: t("settings.rdpChooseSharedFolderTitle"),
-            }).then((path) => {
-              if (path) {
-                onSharedLocalFolderChange(path);
-              }
-            }).catch(() => undefined);
-          }}
-          type="button"
-        >
-          {t("settings.rdpChooseFolder")}
-        </button>
+      <div className="rdp-shared-folder-editor">
+        {sharedLocalFolders.length > 0 ? (
+          <div className="rdp-shared-folder-list">
+            {sharedLocalFolders.map((folder) => (
+              <div className="rdp-shared-folder-row" key={folder}>
+                <span title={folder}>{folder}</span>
+                <button
+                  className="secondary-button"
+                  disabled={disabled}
+                  onClick={() => onSharedLocalFoldersChange(sharedLocalFolders.filter((value) => value !== folder))}
+                  type="button"
+                >
+                  {t("common.remove")}
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : <span className="rdp-shared-folder-empty">{t("settings.rdpNoFoldersSelected")}</span>}
+        <div className="rdp-shared-folder-actions">
+          <button
+            className="secondary-button"
+            disabled={disabled}
+            onClick={() => {
+              void selectRdpSharedFolder({
+                defaultPath: sharedLocalFolders[sharedLocalFolders.length - 1],
+                title: t("settings.rdpChooseSharedFolderTitle"),
+              }).then((path) => {
+                if (path && !sharedLocalFolders.includes(path)) {
+                  onSharedLocalFoldersChange([...sharedLocalFolders, path]);
+                }
+              }).catch(() => undefined);
+            }}
+            type="button"
+          >
+            {t("settings.rdpAddFolder")}
+          </button>
+        </div>
       </div>
     );
   }

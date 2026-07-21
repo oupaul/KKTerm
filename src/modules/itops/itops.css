@@ -4206,6 +4206,9 @@
     width 0.18s cubic-bezier(0.2, 0, 0, 1),
     flex-basis 0.18s cubic-bezier(0.2, 0, 0, 1);
 }
+.itops-page .ft-tree.is-resizing {
+  transition: none;
+}
 .itops-page .ft-collapsed .ft-tree {
   border-right: 0;
   overflow: hidden;
@@ -4444,10 +4447,10 @@
 .itops-page .ft-drill > .ft-drill-bg.has-bg > .itops-bg-content {
   padding-top: 0;
 }
-/* Floor Plan keeps its opaque blueprint grid edge-to-edge. The saved room
-   background remains visible behind the shared toolbar only, without the
-   generic wallpaper frame inset around the spatial canvas. */
-.itops-page .ft-drill > .ft-drill-bg.floor-toolbar-background.has-bg > .itops-bg-content {
+/* Floor Plan and 2.5D are full-bleed spatial canvases. Keep the saved room
+   background behind their toolbar/canvas without the generic 14px wallpaper
+   frame reducing and clipping the measured room viewport. */
+.itops-page .ft-drill > .ft-drill-bg.spatial-toolbar-background.has-bg > .itops-bg-content {
   padding: 0;
 }
 /* The empty-state card is the only bare .card child of a zero-padding drill
@@ -5739,6 +5742,11 @@
 @keyframes kkCharge { 0%, 100% { opacity: 0.45; } 50% { opacity: 1; } }
 @keyframes kkScroll { to { transform: translateY(-50%); } }
 @keyframes kkBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+@keyframes rmBlackoutFlash { 0% { opacity: 0; } 6% { opacity: 0.95; } 14% { opacity: 0.1; } 24% { opacity: 0.82; } 36% { opacity: 0.04; } 50% { opacity: 0.48; } 68%, 100% { opacity: 0; } }
+@keyframes rmBlackoutBolt { 0% { opacity: 0; } 5% { opacity: 1; } 12% { opacity: 0.08; } 19% { opacity: 1; } 30% { opacity: 0.18; } 40% { opacity: 0.9; } 52%, 100% { opacity: 0; } }
+@keyframes rmBlackoutFlicker { 0%, 52%, 100% { opacity: 0; } 7% { opacity: 0.55; } 11% { opacity: 0.05; } 19% { opacity: 0.46; } 25% { opacity: 0; } 59% { opacity: 0.5; } 64% { opacity: 0.08; } 72% { opacity: 0; } }
+@keyframes rmBlackoutSmoke { 0% { opacity: 0; transform: translate(-50%, 8px) scale(0.45); } 22% { opacity: 0.58; } 58% { opacity: 0.42; } 100% { opacity: 0; transform: translate(-50%, -82px) scale(1.9); } }
+@keyframes rmBlackoutArc { 0%, 100% { opacity: 0; } 5% { opacity: 0.95; } 10% { opacity: 0.08; } 16% { opacity: 1; } 24%, 56% { opacity: 0; } 64% { opacity: 0.8; } 71% { opacity: 0; } }
 
 @media (prefers-reduced-motion: reduce) {
   .itops-page .rm-object-art * {
@@ -5986,6 +5994,15 @@
   flex: 1 0 auto;
   gap: 8px;
 }
+.itops-page .rm-iso-scroll {
+  transition: filter 0.5s ease;
+}
+.itops-page .rm-iso[data-blackout-phase="dark"] .rm-iso-scroll {
+  filter: brightness(0.12) saturate(0.35) contrast(1.08);
+}
+.itops-page .rm-iso[data-blackout-phase="recovering"] .rm-iso-scroll {
+  transition-duration: 3.4s;
+}
 /* Positioning context for a spatial layout's scroll viewport and its floating
    overlays: the zoom ruler (top right) and the 2.5D angle stepper (top left). */
 .itops-page .rm-view-body {
@@ -5993,6 +6010,120 @@
   display: flex;
   flex: 1 1 0;
   min-height: 0;
+}
+.itops-page .rm-iso-blackout-fx,
+.itops-page .rm-iso-blackout-fx > div,
+.itops-page .rm-iso-blackout-fx > svg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.itops-page .rm-iso-blackout-fx {
+  z-index: 3;
+  overflow: hidden;
+}
+.itops-page .rm-iso-blackout-flash {
+  opacity: 0;
+  background: radial-gradient(
+    circle at 50% 28%,
+    var(--surface),
+    color-mix(in srgb, var(--surface) 70%, var(--accent)) 44%,
+    color-mix(in srgb, var(--accent) 38%, transparent)
+  );
+  mix-blend-mode: screen;
+}
+.itops-page .rm-iso[data-blackout-phase="flash"] .rm-iso-blackout-flash {
+  animation: rmBlackoutFlash 0.82s ease forwards;
+}
+.itops-page .rm-iso-blackout-bolt {
+  fill: none;
+  color: color-mix(in srgb, var(--surface) 76%, var(--accent));
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0;
+  filter: drop-shadow(0 0 7px var(--accent));
+}
+.itops-page .rm-iso-blackout-bolt {
+  stroke-width: 5;
+}
+.itops-page .rm-iso[data-blackout-phase="flash"] .rm-iso-blackout-bolt {
+  animation: rmBlackoutBolt 0.82s steps(70) forwards;
+}
+.itops-page .rm-iso-blackout-flicker {
+  opacity: 0;
+  background: color-mix(in srgb, var(--terminal-2) 72%, transparent);
+}
+.itops-page .rm-iso[data-blackout-phase="dark"] .rm-iso-blackout-flicker {
+  animation: rmBlackoutFlicker 0.52s steps(26) infinite;
+}
+.itops-page .rm-iso-blackout-vignette {
+  opacity: 0;
+  background: radial-gradient(
+    125% 105% at 50% 42%,
+    transparent 34%,
+    color-mix(in srgb, var(--terminal-2) 94%, transparent) 100%
+  );
+  transition: opacity 0.55s ease;
+}
+.itops-page .rm-iso[data-blackout-phase="dark"] .rm-iso-blackout-vignette {
+  opacity: 1;
+}
+.itops-page .rm-iso[data-blackout-phase="recovering"] .rm-iso-blackout-vignette {
+  transition-duration: 3.2s;
+}
+.itops-page .rm-iso-blackout-kuaikuai {
+  position: absolute;
+  display: block;
+  width: 42px;
+  height: 56px;
+  opacity: 0;
+  transform: translate(-50%, -100%);
+  transition: opacity 0.5s ease;
+  transform-style: preserve-3d;
+}
+.itops-page .rm-iso[data-blackout-phase="dark"] .rm-iso-blackout-kuaikuai {
+  opacity: 1;
+}
+.itops-page .rm-iso[data-blackout-phase="recovering"] .rm-iso-blackout-kuaikuai {
+  transition-duration: 3.2s;
+}
+.itops-page .rm-iso-blackout-kuaikuai .rm-ref-kuaikuai-face {
+  filter:
+    brightness(var(--kuaiguai-brightness, 1))
+    grayscale(var(--kuaiguai-grayscale, 0%))
+    saturate(1.4)
+    drop-shadow(0 0 6px var(--green))
+    drop-shadow(0 0 15px var(--green))
+    drop-shadow(0 0 26px var(--green)) !important;
+}
+.itops-page .rm-iso-blackout-smoke i {
+  position: absolute;
+  left: var(--blackout-x);
+  top: 62%;
+  width: 38px;
+  height: 22px;
+  border-radius: 50%;
+  opacity: 0;
+  background: radial-gradient(ellipse, color-mix(in srgb, var(--text-muted) 54%, transparent), transparent 72%);
+  filter: blur(5px);
+}
+.itops-page .rm-iso[data-blackout-phase="dark"] .rm-iso-blackout-smoke i {
+  animation: rmBlackoutSmoke 2.7s ease-out infinite var(--blackout-delay);
+}
+.itops-page .rm-object-art-iso[data-kind="kuaikuai"] .rm-ref-kuaikuai-face {
+  transition: filter 0.6s ease;
+}
+.itops-page .rm-iso[data-blackout-phase="dark"] .rm-object-art-iso[data-kind="kuaikuai"] .rm-ref-kuaikuai-face {
+  filter:
+    brightness(7.5)
+    saturate(1.8)
+    grayscale(var(--kuaiguai-grayscale, 0%))
+    drop-shadow(0 0 6px var(--green))
+    drop-shadow(0 0 18px var(--green));
+}
+.itops-page .rm-iso[data-blackout-phase="recovering"] .rm-object-art-iso[data-kind="kuaikuai"] .rm-ref-kuaikuai-face {
+  transition-duration: 3.2s;
 }
 /* Vertical ruler-style zoom control floating over the room's top-right
    corner: one clickable tick per fixed level, largest on top; the active tick
@@ -6500,6 +6631,35 @@
   border: 0.5px solid rgb(255 255 255 / 14%);
   background: linear-gradient(180deg, #313134, #222225);
   box-shadow: 0 0.5px 1px rgb(0 0 0 / 40%);
+  transition: filter 0.45s ease var(--blackout-recovery-delay, 0s);
+}
+.itops-page .rm-iso-device-arc {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 3;
+  width: 18px;
+  height: 26px;
+  overflow: visible;
+  color: color-mix(in srgb, var(--surface) 78%, var(--accent));
+  fill: currentColor;
+  stroke: var(--surface);
+  stroke-width: 0.7;
+  opacity: 0;
+  filter: drop-shadow(0 0 4px var(--accent));
+  transform: translate(-50%, -78%);
+  pointer-events: none;
+}
+.itops-page .rm-iso-obj-model > .rm-iso-device-arc {
+  top: 100%;
+  transform:
+    translateZ(var(--blackout-arc-lift, 0px))
+    rotateZ(-45deg)
+    rotateX(-55deg)
+    translate(-50%, -110%);
+}
+.itops-page .rm-iso[data-blackout-phase="dark"] .rm-iso-device-arc {
+  animation: rmBlackoutArc 0.62s steps(24) infinite var(--blackout-arc-delay);
 }
 .itops-page .rm-iso-skin-item::after {
   content: "";
@@ -6512,6 +6672,18 @@
   border-radius: 50%;
   background: var(--green);
   box-shadow: 0 0 3px var(--green);
+  transition:
+    opacity 0.45s ease var(--blackout-recovery-delay, 0s),
+    box-shadow 0.45s ease var(--blackout-recovery-delay, 0s);
+}
+.itops-page .rm-iso[data-blackout-phase="dark"] .rm-iso-skin-item {
+  filter: brightness(0.08);
+  transition-delay: 0s;
+}
+.itops-page .rm-iso[data-blackout-phase="dark"] .rm-iso-skin-item::after {
+  opacity: 0.03;
+  box-shadow: none;
+  transition-delay: 0s;
 }
 .itops-page .rm-iso-skin.axis-x .rm-iso-skin-item::after {
   top: auto;
@@ -6540,6 +6712,21 @@
 .itops-page .rm-iso-skin-item[data-kind="blank"]::after,
 .itops-page .rm-iso-skin-item[data-kind="label"]::after {
   content: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .itops-page .rm-iso-scroll,
+  .itops-page .rm-iso-skin-item,
+  .itops-page .rm-iso-skin-item::after,
+  .itops-page .rm-object-art-iso[data-kind="kuaikuai"] .rm-ref-kuaikuai-face {
+    transition: none !important;
+  }
+  .itops-page .rm-iso-blackout-flash,
+  .itops-page .rm-iso-blackout-bolt,
+  .itops-page .rm-iso-blackout-flicker,
+  .itops-page .rm-iso-blackout-smoke,
+  .itops-page .rm-iso-device-arc {
+    display: none;
+  }
 }
 /* Hover detail card shared by both spatial views (RackTipContent). The portal
    escapes both scroll overflow and the 2.5D floor clip; JS flips/clamps the

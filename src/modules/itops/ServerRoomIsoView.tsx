@@ -15,6 +15,7 @@
 // through the shared "grid" store.
 
 import {
+  useCallback,
   useEffect,
   useRef,
   useState,
@@ -83,7 +84,7 @@ import {
   stepRoomZoom,
 } from "./siteTreeState";
 import { ItIcon } from "./icons";
-import { centerRoomViewport, roomPanFrame } from "./roomViewport";
+import { centerRoomViewport, roomPanFrame, roomScrollCenter } from "./roomViewport";
 import {
   OBJECT_ACCENTS,
   RoomRackHoverCard,
@@ -106,6 +107,48 @@ const CELL = 58;
 // an object with z = rack heightU sits flush on the cabinet top.
 const PX_PER_U = 2.1;
 
+type BlackoutPhase = "idle" | "flash" | "dark" | "recovering";
+
+interface BlackoutKuaikuaiMarker {
+  key: string;
+  x: number;
+  bottom: number;
+  facing: Facing;
+  expired: boolean;
+}
+
+export const SERVER_ROOM_BLACKOUT_SEQUENCE = [
+  "arrowup",
+  "arrowup",
+  "arrowdown",
+  "arrowdown",
+  "arrowleft",
+  "arrowright",
+  "arrowleft",
+  "arrowright",
+  "b",
+  "a",
+] as const;
+
+export interface ServerRoomBlackoutKey {
+  key: string;
+  at: number;
+}
+
+export function trackServerRoomBlackoutKey(
+  buffer: ServerRoomBlackoutKey[],
+  key: string,
+  at: number,
+): { buffer: ServerRoomBlackoutKey[]; complete: boolean } {
+  const recent = [...buffer, { key, at }]
+    .filter((entry) => at - entry.at <= 3_000)
+    .slice(-SERVER_ROOM_BLACKOUT_SEQUENCE.length);
+  const complete =
+    recent.length === SERVER_ROOM_BLACKOUT_SEQUENCE.length &&
+    SERVER_ROOM_BLACKOUT_SEQUENCE.every((expected, index) => recent[index]?.key === expected);
+  return { buffer: complete ? [] : recent, complete };
+}
+
 function cabHeight(heightU: number): number {
   return Math.min(124, Math.max(20, Math.max(1, heightU) * PX_PER_U));
 }
@@ -126,6 +169,30 @@ function billboard(z: number, shift: string): string {
 // axonometric projection; only labels/controls need billboard cancellation.
 function surfaceModel(z: number, shift: string): string {
   return `translateZ(${z}px) translate(${shift})`;
+}
+
+function blackoutArcDelay(seed: string): string {
+  let hash = 0;
+  for (const character of seed) hash = (hash * 31 + character.charCodeAt(0)) >>> 0;
+  return `${((hash % 9) * -0.07).toFixed(2)}s`;
+}
+
+function BlackoutDeviceArc({ seed, liftPx }: { seed: string; liftPx?: number }) {
+  return (
+    <svg
+      className="rm-iso-device-arc"
+      viewBox="0 0 24 34"
+      style={
+        {
+          "--blackout-arc-delay": blackoutArcDelay(seed),
+          ...(liftPx == null ? {} : { "--blackout-arc-lift": `${liftPx}px` }),
+        } as React.CSSProperties
+      }
+      aria-hidden="true"
+    >
+      <path d="M14 1 5 16l7 2-9 15 17-18-8-2L22 1l-8 8Z" />
+    </svg>
+  );
 }
 
 function itemStatus(item: RackItem): RackItemStatus {
@@ -214,6 +281,112 @@ export function ServerRoomIsoView({
   onOpenBackground?: () => void;
 }) {
   const { t } = useTranslation();
+  const blackoutRootRef = useRef<HTMLDivElement | null>(null);
+  const blackoutHoveredRef = useRef(false);
+  const blackoutRunningRef = useRef(false);
+  const blackoutKeysRef = useRef<ServerRoomBlackoutKey[]>([]);
+  const blackoutTimersRef = useRef<number[]>([]);
+  const [blackoutPhase, setBlackoutPhase] = useState<BlackoutPhase>("idle");
+  const [blackoutKuaikuaiMarkers, setBlackoutKuaikuaiMarkers] = useState<
+    BlackoutKuaikuaiMarker[]
+  >([]);
+  const startBlackout = useCallback(() => {
+    if (blackoutRunningRef.current || !blackoutRootRef.current) return;
+    const body = blackoutRootRef.current.querySelector<HTMLElement>(".rm-view-body");
+    if (body) {
+      const bodyRect = body.getBoundingClientRect();
+      const kuaikuais = blackoutRootRef.current.querySelectorAll<HTMLElement>(
+        '.rm-iso-obj-model[data-kind="kuaikuai"], .rm-iso-rack-top-kuaiguai[data-kind="kuaikuai"]',
+      );
+      setBlackoutKuaikuaiMarkers(
+        Array.from(kuaikuais).map((kuaikuai, index) => {
+          const faces = Array.from(
+            kuaikuai.querySelectorAll<HTMLElement>(".rm-ref-kuaikuai-face"),
+          );
+          const rects = faces
+            .map((face) => face.getBoundingClientRect())
+            .filter((rect) => rect.width > 0 && rect.height > 0);
+          const fallback = kuaikuai.getBoundingClientRect();
+          const left = rects.length ? Math.min(...rects.map((rect) => rect.left)) : fallback.left;
+          const right = rects.length ? Math.max(...rects.map((rect) => rect.right)) : fallback.right;
+          const bottom = rects.length
+            ? Math.max(...rects.map((rect) => rect.bottom))
+            : fallback.bottom;
+          const artwork = kuaikuai.querySelector<HTMLElement>(
+            '.rm-object-art-iso[data-kind="kuaikuai"]',
+          );
+          const parsedFacing = Number(artwork?.dataset.facing ?? 0);
+          return {
+            key: `kuaikuai-${index}`,
+            x: (left + right) / 2 - bodyRect.left,
+            bottom: bottom - bodyRect.top,
+            facing:
+              parsedFacing === 1 || parsedFacing === 2 || parsedFacing === 3
+                ? parsedFacing
+                : 0,
+            expired: artwork?.dataset.expired === "true",
+          };
+        }),
+      );
+    }
+    blackoutRunningRef.current = true;
+    setBlackoutPhase("flash");
+
+    blackoutTimersRef.current.push(
+      window.setTimeout(() => setBlackoutPhase("dark"), 720),
+      window.setTimeout(() => {
+        const lights = Array.from(
+          blackoutRootRef.current?.querySelectorAll<HTMLElement>("[data-blackout-light]") ?? [],
+        );
+        for (let index = lights.length - 1; index > 0; index -= 1) {
+          const swapIndex = Math.floor(Math.random() * (index + 1));
+          [lights[index], lights[swapIndex]] = [lights[swapIndex], lights[index]];
+        }
+        lights.forEach((light, index) => {
+          const delay = (index / Math.max(1, lights.length)) * 4.6;
+          light.style.setProperty("--blackout-recovery-delay", `${delay.toFixed(2)}s`);
+        });
+        setBlackoutPhase("recovering");
+      }, 5_720),
+      window.setTimeout(() => {
+        blackoutRootRef.current
+          ?.querySelectorAll<HTMLElement>("[data-blackout-light]")
+          .forEach((light) => light.style.removeProperty("--blackout-recovery-delay"));
+        setBlackoutPhase("idle");
+        setBlackoutKuaikuaiMarkers([]);
+        blackoutRunningRef.current = false;
+      }, 10_920),
+    );
+  }, []);
+  useEffect(() => {
+    const tracked = new Set<string>(SERVER_ROOM_BLACKOUT_SEQUENCE);
+    const onKeyDown = (event: KeyboardEvent) => {
+      const root = blackoutRootRef.current;
+      const focused = root?.contains(document.activeElement);
+      if (!root || (!blackoutHoveredRef.current && !focused) || event.repeat) return;
+      const target = event.target;
+      if (
+        target instanceof HTMLElement &&
+        (target.isContentEditable || target.matches("input, textarea, select"))
+      ) {
+        return;
+      }
+      const key = event.key.toLowerCase();
+      if (!tracked.has(key) || event.altKey || event.ctrlKey || event.metaKey) return;
+      const result = trackServerRoomBlackoutKey(blackoutKeysRef.current, key, Date.now());
+      blackoutKeysRef.current = result.buffer;
+      if (result.complete) startBlackout();
+    };
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
+  }, [startBlackout]);
+  useEffect(
+    () => () => {
+      blackoutTimersRef.current.forEach((timer) => window.clearTimeout(timer));
+      blackoutTimersRef.current = [];
+    },
+    [],
+  );
   const layout = resolveIsoLayout(
     racks,
     placement,
@@ -354,7 +527,11 @@ export function ServerRoomIsoView({
     viewport ?? { w: sceneW, h: sceneH },
     { w: sceneW, h: sceneH },
   );
-  useRoomPan(scrollRef, { left: panFrame.sceneLeft, top: panFrame.sceneTop });
+  const panCenter = roomScrollCenter(
+    viewport ?? { w: sceneW, h: sceneH },
+    { w: panFrame.w, h: panFrame.h },
+  );
+  useRoomPan(scrollRef, panCenter);
   const floorDiag = Math.max(viewW - 48, (viewH - Math.ceil(maxTop) - 84) / ISO_TILT_COS);
   const { floorCols, floorRows, offX, offY } = expandIsoFloorFrame(
     gridCols,
@@ -740,7 +917,17 @@ export function ServerRoomIsoView({
     : [];
 
   return (
-    <div className="rm-iso">
+    <div
+      className="rm-iso"
+      data-blackout-phase={blackoutPhase}
+      ref={blackoutRootRef}
+      onPointerEnter={() => {
+        blackoutHoveredRef.current = true;
+      }}
+      onPointerLeave={() => {
+        blackoutHoveredRef.current = false;
+      }}
+    >
       <div className="rm-view-body">
         {/* tabIndex: clicking the room focuses the viewport so arrow keys pan. */}
         <div
@@ -1076,6 +1263,37 @@ export function ServerRoomIsoView({
             boundaryRef={scrollRef}
           />
         </div>
+        <div className="rm-iso-blackout-fx" aria-hidden="true">
+          <div className="rm-iso-blackout-vignette" />
+          <div className="rm-iso-blackout-flicker" />
+          <div className="rm-iso-blackout-smoke">
+            <i style={{ "--blackout-x": "34%", "--blackout-delay": "0s" } as React.CSSProperties} />
+            <i style={{ "--blackout-x": "46%", "--blackout-delay": ".35s" } as React.CSSProperties} />
+            <i style={{ "--blackout-x": "58%", "--blackout-delay": ".7s" } as React.CSSProperties} />
+            <i style={{ "--blackout-x": "68%", "--blackout-delay": ".18s" } as React.CSSProperties} />
+          </div>
+          <div className="rm-iso-blackout-kuaikuais">
+            {blackoutKuaikuaiMarkers.map((marker) => (
+              <span
+                key={marker.key}
+                className="rm-iso-blackout-kuaikuai"
+                style={{ left: marker.x, top: marker.bottom }}
+              >
+                <RoomObjectIsoArtwork
+                  kind="kuaikuai"
+                  facing={marker.facing}
+                  expiry={marker.expired ? "2000-01-01" : undefined}
+                />
+              </span>
+            ))}
+          </div>
+          <svg className="rm-iso-blackout-bolt" viewBox="0 0 1120 580" preserveAspectRatio="none">
+            <path d="M560 -20 L536 120 L588 150 L520 270 L566 300 L470 372" />
+            <path d="M520 270 L470 300 L500 340" />
+            <path d="M588 150 L636 196" />
+          </svg>
+          <div className="rm-iso-blackout-flash" />
+        </div>
         {/* Floating control column over the room's top-right corner. Floor
             finish now belongs to Server Room Properties. */}
         <div className="rm-iso-corner">
@@ -1163,6 +1381,7 @@ function IsoRackSkin({
               <i
                 key={item.id}
                 className="rm-iso-skin-item"
+                data-blackout-light=""
                 data-kind={item.kind}
                 data-status={itemStatus(item)}
                 style={
@@ -1178,7 +1397,9 @@ function IsoRackSkin({
                         ...(cross ? { top: cross.start, height: cross.size } : {}),
                       }
                 }
-              />
+              >
+                <BlackoutDeviceArc seed={item.id} />
+              </i>
             );
           })}
       </span>
@@ -1452,6 +1673,11 @@ function IsoObject({
         }}
       >
         <RoomObjectIsoArtwork kind={object.kind} facing={facing} arms={arms} />
+        {object.kind !== "kuaikuai" &&
+        object.kind !== "wall" &&
+        object.kind !== "fireExtinguisher" ? (
+          <BlackoutDeviceArc seed={object.id} liftPx={h} />
+        ) : null}
       </span>
       {editMode && selected ? (
         <span

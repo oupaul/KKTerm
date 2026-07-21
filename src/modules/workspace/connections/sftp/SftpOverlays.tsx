@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Actions,
@@ -15,7 +15,6 @@ import { formatFileSize, formatRemoteTime } from "./format";
 import type {
   DeleteRequest,
   FilePropertiesState,
-  SftpContextMenuState,
   TransferConflictDecision,
   TransferConflictState,
 } from "./types";
@@ -159,163 +158,6 @@ export function TransferConflictDialog({
         ) : null}
       </Sheet>
     </DialogShell>
-  );
-}
-
-export function SftpContextMenu({
-  menu,
-  onTransfer,
-  onOpen,
-  onRename,
-  onCut,
-  onCopy,
-  onPaste,
-  onDelete,
-  onProperties,
-  onCopyPath,
-  onSelectLeftForCompare,
-  onCompareToLeft,
-  compareLeftLabel = null,
-  canSelectForCompare = false,
-  canCompareToLeft = false,
-  onClose,
-  showTransfer = true,
-}: {
-  menu: SftpContextMenuState;
-  onTransfer: (menu: SftpContextMenuState) => void;
-  onOpen: (menu: SftpContextMenuState) => void;
-  onRename: (menu: SftpContextMenuState) => void;
-  onCut: (menu: SftpContextMenuState) => void;
-  onCopy: (menu: SftpContextMenuState) => void;
-  onPaste: (menu: SftpContextMenuState) => void;
-  onDelete: (menu: SftpContextMenuState) => void;
-  onProperties: (menu: SftpContextMenuState) => void;
-  onCopyPath: (menu: SftpContextMenuState) => void;
-  onSelectLeftForCompare: (menu: SftpContextMenuState) => void;
-  onCompareToLeft: (menu: SftpContextMenuState) => void;
-  /** Display name of the remembered left file, or null when none is selected. */
-  compareLeftLabel?: string | null;
-  /** Whether "Select for Compare" should be enabled (single file, or local folder). */
-  canSelectForCompare?: boolean;
-  /** Whether "Compare to '<left>'" should be enabled (left exists and differs). */
-  canCompareToLeft?: boolean;
-  onClose: () => void;
-  showTransfer?: boolean;
-}) {
-  const { t } = useTranslation();
-  const menuRef = useRef<HTMLDivElement>(null);
-  const isRemote = menu.side === "remote";
-
-  useEffect(() => {
-    const handlePointerDown = () => onClose();
-    const handleKeyDown = (event: globalThis.KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    };
-    window.addEventListener("pointerdown", handlePointerDown);
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      window.removeEventListener("pointerdown", handlePointerDown);
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [onClose]);
-
-  useLayoutEffect(() => {
-    const node = menuRef.current;
-    if (!node) {
-      return;
-    }
-    const margin = 8;
-    const rect = node.getBoundingClientRect();
-    // Clamp against the status bar's top edge rather than the full viewport so the
-    // menu's bottom items are not hidden behind the status bar (which paints above it).
-    const statusBar = document.querySelector(".status-bar");
-    const bottomLimit = statusBar
-      ? statusBar.getBoundingClientRect().top
-      : window.innerHeight;
-    let x = menu.x;
-    let y = menu.y;
-    if (x + rect.width > window.innerWidth - margin) {
-      x = window.innerWidth - rect.width - margin;
-    }
-    if (y + rect.height > bottomLimit - margin) {
-      y = bottomLimit - rect.height - margin;
-    }
-    if (y < margin) {
-      y = margin;
-    }
-    node.style.left = `${x}px`;
-    node.style.top = `${y}px`;
-  }, [menu.x, menu.y]);
-
-  const canRename = menu.mutable && menu.names.length === 1;
-  const canDelete = menu.mutable && menu.names.length > 0;
-  const canCutOrCopy = menu.mutable && menu.names.length > 0;
-  const canOpen = menu.names.length === 1 && menu.openable;
-  const hasSelection = menu.names.length > 0;
-
-  return (
-    <div
-      className="sftp-ctx-menu"
-      onContextMenu={(event) => event.preventDefault()}
-      onPointerDown={(event) => event.stopPropagation()}
-      ref={menuRef}
-      role="menu"
-    >
-      {showTransfer ? (
-        <button disabled={!hasSelection} onClick={() => onTransfer(menu)} role="menuitem" type="button">
-          <DIcon name={isRemote ? "download" : "upload"} size={15} />
-          {isRemote ? t("sftp.download") : t("sftp.upload")}
-        </button>
-      ) : null}
-      <button disabled={!canOpen} onClick={() => onOpen(menu)} role="menuitem" type="button">
-        <DIcon name="folder" size={15} />
-        {t("common.open")}
-      </button>
-      <div className="sftp-ctx-sep" />
-      <button disabled={!canCutOrCopy} onClick={() => onCut(menu)} role="menuitem" type="button">
-        <DIcon name="copy" size={15} />
-        {t("common.cut")}
-      </button>
-      <button disabled={!canCutOrCopy} onClick={() => onCopy(menu)} role="menuitem" type="button">
-        <DIcon name="copy" size={15} />
-        {t("common.copy")}
-      </button>
-      <button disabled={!menu.canPaste} onClick={() => onPaste(menu)} role="menuitem" type="button">
-        <DIcon name="copy" size={15} />
-        {t("common.paste")}
-      </button>
-      <div className="sftp-ctx-sep" />
-      <button disabled={!canRename} onClick={() => onRename(menu)} role="menuitem" type="button">
-        <DIcon name="pencil" size={15} />
-        {t("sftp.renameItem")}
-      </button>
-      <button disabled={!hasSelection} onClick={() => onCopyPath(menu)} role="menuitem" type="button">
-        <DIcon name="copy" size={15} />
-        {t("sftp.copyPath")}
-      </button>
-      <button disabled={!canDelete} onClick={() => onDelete(menu)} role="menuitem" type="button">
-        <DIcon name="trash" size={15} />
-        {t("sftp.deleteLabel")}
-      </button>
-      <div className="sftp-ctx-sep" />
-      <button disabled={!canSelectForCompare} onClick={() => onSelectLeftForCompare(menu)} role="menuitem" type="button">
-        <DIcon name="columns" size={15} />
-        {t("compare.selectLeft")}
-      </button>
-      {compareLeftLabel ? (
-        <button disabled={!canCompareToLeft} onClick={() => onCompareToLeft(menu)} role="menuitem" type="button">
-          <DIcon name="gitcompare" size={15} />
-          {t("compare.compareTo", { name: compareLeftLabel })}
-        </button>
-      ) : null}
-      <div className="sftp-ctx-sep" />
-      <button disabled={!hasSelection} onClick={() => onProperties(menu)} role="menuitem" type="button">
-        <DIcon name="info" size={15} />
-        {t("sftp.getInfo")}
-      </button>
-    </div>
   );
 }
 

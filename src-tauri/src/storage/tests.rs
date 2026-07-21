@@ -1,6 +1,35 @@
 use super::*;
 use rusqlite::params;
 
+#[test]
+fn screenshot_settings_upgrade_legacy_jpeg_quality_and_default_to_both() {
+    let settings: ScreenshotSettings = serde_json::from_str(
+        r#"{
+            "folderPath": "C:\\\\Screenshots",
+            "format": "jpeg",
+            "jpegQuality": 74,
+            "regionShortcut": "Ctrl+Alt+R",
+            "regionShortcutEnabled": true,
+            "windowShortcut": "Ctrl+Alt+W",
+            "windowShortcutEnabled": true,
+            "fullscreenShortcut": "Ctrl+Alt+F",
+            "fullscreenShortcutEnabled": true
+        }"#,
+    )
+    .expect("legacy screenshot settings should deserialize");
+
+    assert_eq!(settings.quality(), 74);
+    assert_eq!(settings.capture_mode(), "both");
+    assert!(settings.border_enabled());
+    assert_eq!(settings.border_width(), 1);
+    assert_eq!(settings.border_style(), "solid");
+    assert_eq!(settings.border_color(), "#000000");
+    assert!(!settings.include_cursor());
+    let serialized = serde_json::to_value(settings).expect("serialize screenshot settings");
+    assert_eq!(serialized["quality"], 74);
+    assert!(serialized.get("jpegQuality").is_none());
+}
+
 fn find_folder<'a>(
     folders: &'a [ConnectionFolder],
     folder_id: &str,
@@ -255,6 +284,68 @@ fn current_schema_fast_path_skips_legacy_data_migrations() {
         )
         .expect("site remains readable");
     assert_eq!(name, "Default Fleet");
+}
+
+#[test]
+fn v50_saved_credential_migration_drops_host_and_current_reopen_keeps_shape() {
+    let db_path = temp_db_path("saved-credential-v50");
+    {
+        let storage = Storage::open(db_path.clone()).expect("current storage opens");
+        storage
+            .create_standalone_connection_password_credential(
+                "Corp admin".to_string(),
+                "admin".to_string(),
+            )
+            .expect("credential is created");
+    }
+    {
+        let connection = rusqlite::Connection::open(&db_path).expect("raw database opens");
+        connection
+            .execute_batch(
+                "ALTER TABLE connection_password_credentials
+                     ADD COLUMN host TEXT NOT NULL DEFAULT '';
+                 UPDATE connection_password_credentials SET host = 'legacy.internal';
+                 CREATE INDEX idx_connection_password_credentials_type_host
+                     ON connection_password_credentials(connection_type, host);
+                 PRAGMA user_version = 49;",
+            )
+            .expect("v49 credential shape is restored");
+    }
+
+    let upgraded = Storage::open(db_path.clone()).expect("v49 storage upgrades");
+    let credentials = upgraded
+        .list_connection_password_credentials()
+        .expect("credential survives migration");
+    assert_eq!(credentials.len(), 1);
+    assert_eq!(credentials[0].label, "Corp admin");
+    assert_eq!(credentials[0].username, "admin");
+    upgraded
+        .with_connection(|connection| {
+            assert!(!column_exists(
+                connection,
+                "connection_password_credentials",
+                "host",
+            )?);
+            let version: i32 = connection
+                .pragma_query_value(None, "user_version", |row| row.get(0))
+                .map_err(to_storage_error)?;
+            assert_eq!(version, SCHEMA_USER_VERSION);
+            Ok(())
+        })
+        .expect("upgraded schema is inspected");
+    drop(upgraded);
+
+    let reopened = Storage::open(db_path).expect("current v50 storage reopens");
+    reopened
+        .with_connection(|connection| {
+            assert!(!column_exists(
+                connection,
+                "connection_password_credentials",
+                "host",
+            )?);
+            Ok(())
+        })
+        .expect("current schema remains host-free");
 }
 
 #[test]
@@ -1482,28 +1573,27 @@ fn stored_credential_candidates_include_connection_url_and_widget_metadata() {
 }
 
 #[test]
-fn connection_password_credentials_use_type_host_metadata_and_suffixes() {
+fn connection_password_credentials_use_origin_type_and_connection_name_labels() {
     let storage =
         Storage::open(temp_db_path("connection-password-credentials")).expect("storage opens");
     let first = create_test_ssh_connection(&storage, "Bastion One", "bastion.internal", None);
     let second = create_test_ssh_connection(&storage, "Bastion Two", "bastion.internal", None);
 
     let first_credential = storage
-        .create_connection_password_credential_metadata(first.id.clone())
+        .create_connection_password_credential_metadata(first.id.clone(), None)
         .expect("first credential metadata is created");
     let second_credential = storage
-        .create_connection_password_credential_metadata(second.id.clone())
+        .create_connection_password_credential_metadata(second.id.clone(), None)
         .expect("second credential metadata is created");
 
     assert_eq!(first_credential.connection_type, "ssh");
-    assert_eq!(first_credential.host, "bastion.internal");
     assert_eq!(first_credential.username, "admin");
-    assert_eq!(first_credential.label, "admin @ bastion.internal");
-    assert_eq!(second_credential.label, "admin @ bastion.internal #2");
+    assert_eq!(first_credential.label, "Bastion One");
+    assert_eq!(second_credential.label, "Bastion Two");
 }
 
 #[test]
-fn assigning_connection_password_credential_requires_matching_type() {
+fn assigning_connection_password_credential_allows_cross_protocol_reuse() {
     let storage = Storage::open(temp_db_path("connection-password-credential-assign"))
         .expect("storage opens");
     let ssh = create_test_ssh_connection(&storage, "SSH", "ssh.internal", None);
@@ -1511,7 +1601,7 @@ fn assigning_connection_password_credential_requires_matching_type() {
         .create_connection(CreateConnectionRequest {
             name: "RDP".to_string(),
             host: "rdp.internal".to_string(),
-            user: "admin".to_string(),
+            user: "rdp-only-user".to_string(),
             connection_type: "rdp".to_string(),
             folder_id: None,
             port: None,
@@ -1544,7 +1634,7 @@ fn assigning_connection_password_credential_requires_matching_type() {
         })
         .expect("RDP connection is created");
     let credential = storage
-        .create_connection_password_credential_metadata(ssh.id.clone())
+        .create_connection_password_credential_metadata(ssh.id.clone(), None)
         .expect("SSH credential metadata is created");
 
     let assigned = storage
@@ -1554,15 +1644,348 @@ fn assigning_connection_password_credential_requires_matching_type() {
         assigned.password_credential_id.as_deref(),
         Some(credential.id.as_str())
     );
+    let assigned = storage
+        .assign_connection_password_credential(rdp.id, credential.id.clone())
+        .expect("the same username and password can be reused for RDP");
+    assert_eq!(
+        assigned.password_credential_id.as_deref(),
+        Some(credential.id.as_str())
+    );
+    assert_eq!(assigned.user, "admin");
+}
 
-    let error = match storage.assign_connection_password_credential(rdp.id, credential.id) {
-        Ok(_) => panic!("mismatched credential is rejected"),
+#[test]
+fn connection_password_credential_metadata_uses_custom_label_when_given() {
+    let storage = Storage::open(temp_db_path("connection-password-credential-label"))
+        .expect("storage opens");
+    let connection = create_test_ssh_connection(&storage, "Bastion", "bastion.internal", None);
+
+    let credential = storage
+        .create_connection_password_credential_metadata(
+            connection.id.clone(),
+            Some("  Corp admin  ".to_string()),
+        )
+        .expect("credential metadata is created");
+    assert_eq!(credential.label, "Corp admin");
+
+    let error = match storage.create_connection_password_credential_metadata(
+        connection.id,
+        Some("   ".to_string()),
+    ) {
+        Ok(_) => panic!("blank custom label is rejected"),
         Err(error) => error,
     };
+    assert_eq!(error, "credential label is required");
+}
+
+#[test]
+fn update_connection_password_credential_updates_editable_metadata() {
+    let storage = Storage::open(temp_db_path("connection-password-credential-update"))
+        .expect("storage opens");
+    let connection = create_test_ssh_connection(&storage, "Bastion", "bastion.internal", None);
+    let credential = storage
+        .create_connection_password_credential_metadata(connection.id.clone(), None)
+        .expect("credential metadata is created");
+    storage
+        .assign_connection_password_credential(connection.id.clone(), credential.id.clone())
+        .expect("connection links to the credential");
+
+    let updated = storage
+        .update_connection_password_credential(
+            credential.id.clone(),
+            Some(" Corp admins ".to_string()),
+            Some(" root ".to_string()),
+        )
+        .expect("credential updates");
+    assert_eq!(updated.label, "Corp admins");
+    assert_eq!(updated.username, "root");
+    assert!(updated.updated_at >= credential.updated_at);
     assert_eq!(
-        error,
-        "password credential type must match the connection type"
+        storage
+            .get_connection(&connection.id)
+            .expect("linked connection loads")
+            .user,
+        "root"
     );
+
+    let untouched = storage
+        .update_connection_password_credential(credential.id.clone(), None, None)
+        .expect("empty update keeps existing values");
+    assert_eq!(untouched.label, "Corp admins");
+    assert_eq!(untouched.username, "root");
+
+    let error = match storage.update_connection_password_credential(
+        credential.id.clone(),
+        Some("  ".to_string()),
+        None,
+    ) {
+        Ok(_) => panic!("blank label is rejected"),
+        Err(error) => error,
+    };
+    assert_eq!(error, "credential label is required");
+
+    let error = match storage.update_connection_password_credential(
+        "missing".to_string(),
+        None,
+        None,
+    ) {
+        Ok(_) => panic!("unknown credential is rejected"),
+        Err(error) => error,
+    };
+    assert_eq!(error, "password credential was not found");
+}
+
+#[test]
+fn connection_password_credential_usage_counts_and_lists_linked_connections() {
+    let storage = Storage::open(temp_db_path("connection-password-credential-usage"))
+        .expect("storage opens");
+    let first = create_test_ssh_connection(&storage, "Alpha", "alpha.internal", None);
+    let second = create_test_ssh_connection(&storage, "Beta", "beta.internal", None);
+    let credential = storage
+        .create_connection_password_credential_metadata(first.id.clone(), None)
+        .expect("credential metadata is created");
+    storage
+        .assign_connection_password_credential(first.id.clone(), credential.id.clone())
+        .expect("first connection links");
+    storage
+        .assign_connection_password_credential(second.id.clone(), credential.id.clone())
+        .expect("second connection links");
+
+    let listed = storage
+        .list_connection_password_credentials()
+        .expect("credentials list");
+    let summary = listed
+        .iter()
+        .find(|entry| entry.id == credential.id)
+        .expect("credential is listed");
+    assert_eq!(summary.usage_count, 2);
+
+    let usage = storage
+        .list_connection_password_credential_usage(credential.id.clone())
+        .expect("usage list");
+    let names: Vec<&str> = usage.iter().map(|entry| entry.name.as_str()).collect();
+    assert_eq!(names, vec!["Alpha", "Beta"]);
+    assert_eq!(usage[0].connection_type, "ssh");
+
+    storage
+        .unassign_connection_password_credential(first.id.clone())
+        .expect("unassign clears the link");
+    let usage = storage
+        .list_connection_password_credential_usage(credential.id.clone())
+        .expect("usage list after unassign");
+    assert_eq!(usage.len(), 1);
+    let remaining = storage
+        .get_connection(&first.id)
+        .expect("connection loads");
+    assert_eq!(remaining.password_credential_id, None);
+}
+
+#[test]
+fn standalone_connection_password_credential_needs_only_label_and_username() {
+    let storage = Storage::open(temp_db_path("connection-password-credential-standalone"))
+        .expect("storage opens");
+
+    let credential = storage
+        .create_standalone_connection_password_credential(
+            " Corp shared ".to_string(),
+            " admin ".to_string(),
+        )
+        .expect("standalone credential is created");
+    assert_eq!(credential.label, "Corp shared");
+    assert_eq!(credential.username, "admin");
+    assert_eq!(credential.created_from_connection_id, None);
+    assert_eq!(credential.usage_count, 0);
+
+    let error = match storage.create_standalone_connection_password_credential(
+        "  ".to_string(),
+        "admin".to_string(),
+    ) {
+        Ok(_) => panic!("blank label is rejected"),
+        Err(error) => error,
+    };
+    assert_eq!(error, "credential label is required");
+
+}
+
+#[test]
+fn merge_connection_password_credentials_relinks_and_removes_sources() {
+    let storage = Storage::open(temp_db_path("connection-password-credential-merge"))
+        .expect("storage opens");
+    let first = create_test_ssh_connection(&storage, "One", "one.internal", None);
+    let second = create_test_ssh_connection(&storage, "Two", "two.internal", None);
+    let third = create_test_ssh_connection(&storage, "Three", "three.internal", None);
+    let target = storage
+        .create_standalone_connection_password_credential(
+            "Corp admin".to_string(),
+            "admin".to_string(),
+        )
+        .expect("target credential is created");
+    let source_a = storage
+        .create_connection_password_credential_metadata(first.id.clone(), None)
+        .expect("source A is created");
+    let source_b = storage
+        .create_connection_password_credential_metadata(second.id.clone(), None)
+        .expect("source B is created");
+    storage
+        .assign_connection_password_credential(first.id.clone(), source_a.id.clone())
+        .expect("first links");
+    storage
+        .assign_connection_password_credential(second.id.clone(), source_b.id.clone())
+        .expect("second links");
+
+    let relinked = storage
+        .merge_connection_password_credentials(
+            target.id.clone(),
+            vec![source_a.id.clone(), source_b.id.clone()],
+        )
+        .expect("merge succeeds");
+    assert_eq!(relinked, 2);
+    for connection_id in [first.id.clone(), second.id.clone()] {
+        let connection = storage.get_connection(&connection_id).expect("connection loads");
+        assert_eq!(
+            connection.password_credential_id.as_deref(),
+            Some(target.id.as_str())
+        );
+    }
+    let listed = storage
+        .list_connection_password_credentials()
+        .expect("credentials list");
+    assert_eq!(listed.len(), 1);
+    assert_eq!(listed[0].id, target.id);
+    assert_eq!(listed[0].usage_count, 2);
+
+    let error = match storage.merge_connection_password_credentials(
+        target.id.clone(),
+        vec![target.id.clone()],
+    ) {
+        Ok(_) => panic!("self-merge is rejected"),
+        Err(error) => error,
+    };
+    assert_eq!(error, "a credential cannot be merged into itself");
+
+    let rdp_credential = storage
+        .create_standalone_connection_password_credential(
+            "RDP admin".to_string(),
+            "admin".to_string(),
+        )
+        .expect("rdp credential is created");
+    storage
+        .with_connection(|database| {
+            database
+                .execute(
+                    "UPDATE connection_password_credentials SET connection_type = 'rdp' WHERE id = ?1",
+                    params![&rdp_credential.id],
+                )
+                .map(|_| ())
+                .map_err(to_storage_error)
+        })
+        .expect("legacy origin metadata is changed to RDP");
+    let relinked = storage
+        .merge_connection_password_credentials(
+            target.id.clone(),
+            vec![rdp_credential.id.clone()],
+        )
+        .expect("credentials created from different protocols can be merged");
+    assert_eq!(relinked, 0);
+
+    let third_credential = storage
+        .create_connection_password_credential_metadata(third.id.clone(), None)
+        .expect("third credential is created");
+    let relinked = storage
+        .merge_connection_password_credentials(target.id.clone(), vec![third_credential.id])
+        .expect("merge with unused source succeeds");
+    assert_eq!(relinked, 0);
+}
+
+#[test]
+fn merge_connection_password_credentials_rolls_back_relinks_when_delete_fails() {
+    let storage = Storage::open(temp_db_path("connection-password-credential-merge-rollback"))
+        .expect("storage opens");
+    let connection = create_test_ssh_connection(&storage, "One", "one.internal", None);
+    let target = storage
+        .create_standalone_connection_password_credential(
+            "Target".to_string(),
+            "admin".to_string(),
+        )
+        .expect("target credential is created");
+    let source = storage
+        .create_connection_password_credential_metadata(connection.id.clone(), None)
+        .expect("source credential is created");
+    storage
+        .assign_connection_password_credential(connection.id.clone(), source.id.clone())
+        .expect("connection links to source");
+    storage
+        .with_connection(|database| {
+            database
+                .execute_batch(
+                    "CREATE TRIGGER reject_credential_delete
+                     BEFORE DELETE ON connection_password_credentials
+                     BEGIN
+                         SELECT RAISE(ABORT, 'credential delete rejected');
+                     END;",
+                )
+                .map_err(to_storage_error)
+        })
+        .expect("failure trigger is installed");
+
+    let error = storage
+        .merge_connection_password_credentials(target.id.clone(), vec![source.id.clone()])
+        .expect_err("delete failure aborts merge");
+    assert!(error.contains("credential delete rejected"));
+    let unchanged = storage
+        .get_connection(&connection.id)
+        .expect("connection still loads");
+    assert_eq!(
+        unchanged.password_credential_id.as_deref(),
+        Some(source.id.as_str())
+    );
+    let credential_ids = storage
+        .list_connection_password_credentials()
+        .expect("credentials still load")
+        .into_iter()
+        .map(|credential| credential.id)
+        .collect::<Vec<_>>();
+    assert!(credential_ids.contains(&target.id));
+    assert!(credential_ids.contains(&source.id));
+}
+
+#[test]
+fn find_reusable_connection_password_credentials_matches_username_across_hosts() {
+    let storage = Storage::open(temp_db_path("connection-password-credential-reuse"))
+        .expect("storage opens");
+    let bastion = create_test_ssh_connection(&storage, "Bastion", "bastion.internal", None);
+    let other = create_test_ssh_connection(&storage, "Other", "other.internal", None);
+    let _different_user = storage
+        .create_standalone_connection_password_credential(
+            "Someone else".to_string(),
+            "root".to_string(),
+        )
+        .expect("other-user credential is created");
+    let same_user_other_host = storage
+        .create_standalone_connection_password_credential(
+            "Admin elsewhere".to_string(),
+            "admin".to_string(),
+        )
+        .expect("same-user credential is created");
+    let same_user_from_connection = storage
+        .create_connection_password_credential_metadata(bastion.id.clone(), None)
+        .expect("connection credential is created");
+
+    let reusable = storage
+        .find_reusable_connection_password_credentials(other.id.clone())
+        .expect("reusable lookup");
+    let ids: Vec<&str> = reusable.iter().map(|entry| entry.id.as_str()).collect();
+    assert_eq!(ids.len(), 2);
+    assert!(ids.contains(&same_user_other_host.id.as_str()));
+    assert!(ids.contains(&same_user_from_connection.id.as_str()));
+
+    let reusable = storage
+        .find_reusable_connection_password_credentials(bastion.id.clone())
+        .expect("reusable lookup ignores host");
+    let ids: Vec<&str> = reusable.iter().map(|entry| entry.id.as_str()).collect();
+    assert_eq!(ids.len(), 2);
+    assert!(ids.contains(&same_user_other_host.id.as_str()));
+    assert!(ids.contains(&same_user_from_connection.id.as_str()));
 }
 
 #[test]
@@ -2307,10 +2730,18 @@ fn general_settings_round_trip_through_settings_table() {
     assert!(!defaults.separate_split_terminal_backgrounds);
     assert!(defaults.show_installer_on_rail);
     assert!(defaults.show_it_ops);
+    assert!(defaults.show_screenshots_on_rail);
     assert!(defaults.show_dont_sleep_on_rail);
     assert_eq!(
         defaults.activity_rail_order,
-        ["workspace", "dashboard", "installer", "itops", "dontSleep"]
+        [
+            "workspace",
+            "dashboard",
+            "installer",
+            "screenshots",
+            "itops",
+            "dontSleep"
+        ]
     );
     assert_eq!(defaults.installer_check_interval_seconds, 86_400);
     assert!(defaults.pinned_connection_ids.is_empty());
@@ -2341,12 +2772,14 @@ fn general_settings_round_trip_through_settings_table() {
             separate_split_terminal_backgrounds: true,
             show_installer_on_rail: false,
             show_it_ops: false,
+            show_screenshots_on_rail: false,
             show_dont_sleep_on_rail: false,
             activity_rail_order: vec![
                 "dontSleep".to_string(),
                 "workspace".to_string(),
                 "dashboard".to_string(),
                 "installer".to_string(),
+                "screenshots".to_string(),
                 "itops".to_string(),
             ],
             installer_check_interval_seconds: 604_800,
@@ -2741,12 +3174,14 @@ fn database_backup_import_restores_settings_and_connections() {
             separate_split_terminal_backgrounds: true,
             show_installer_on_rail: false,
             show_it_ops: false,
+            show_screenshots_on_rail: false,
             show_dont_sleep_on_rail: false,
             activity_rail_order: vec![
                 "dontSleep".to_string(),
                 "workspace".to_string(),
                 "dashboard".to_string(),
                 "installer".to_string(),
+                "screenshots".to_string(),
                 "itops".to_string(),
             ],
             installer_check_interval_seconds: 86_400,
@@ -2786,6 +3221,7 @@ fn database_backup_import_restores_settings_and_connections() {
             separate_split_terminal_backgrounds: false,
             show_installer_on_rail: true,
             show_it_ops: false,
+            show_screenshots_on_rail: true,
             show_dont_sleep_on_rail: true,
             activity_rail_order: default_activity_rail_order(),
             installer_check_interval_seconds: 86_400,
@@ -3226,19 +3662,27 @@ fn rdp_and_vnc_settings_round_trip_through_settings_table() {
 
     let rdp_defaults = storage.rdp_settings().expect("default RDP settings load");
     assert_eq!(rdp_defaults.color_depth, 32);
+    assert!(!rdp_defaults.administrative_session);
     assert!(rdp_defaults.redirect_clipboard);
     assert!(!rdp_defaults.redirect_drives);
     assert_eq!(rdp_defaults.drive_selection, RdpDriveSelection::All);
+    assert!(rdp_defaults.shared_local_folders.is_empty());
 
     storage
         .update_rdp_settings(RdpSettings {
             color_depth: 24,
+            administrative_session: true,
             redirect_clipboard: false,
             redirect_drives: true,
             drive_selection: RdpDriveSelection::Selected {
                 drives: vec!["D:\\".to_string(), "c:".to_string(), "D:".to_string()],
             },
-            shared_local_folder: Some(" /tmp/rdp-share ".to_string()),
+            shared_local_folders: vec![
+                " /tmp/rdp-share ".to_string(),
+                "/tmp/rdp-other".to_string(),
+                "/tmp/rdp-share".to_string(),
+            ],
+            shared_local_folder: None,
             bitmap_cache: true,
             performance_profile: "quality".to_string(),
             remote_resolution: "automatic".to_string(),
@@ -3248,6 +3692,7 @@ fn rdp_and_vnc_settings_round_trip_through_settings_table() {
 
     let rdp_reloaded = storage.rdp_settings().expect("RDP settings reload");
     assert_eq!(rdp_reloaded.color_depth, 24);
+    assert!(rdp_reloaded.administrative_session);
     assert!(!rdp_reloaded.redirect_clipboard);
     assert!(rdp_reloaded.redirect_drives);
     assert_eq!(
@@ -3257,9 +3702,10 @@ fn rdp_and_vnc_settings_round_trip_through_settings_table() {
         }
     );
     assert_eq!(
-        rdp_reloaded.shared_local_folder.as_deref(),
-        Some("/tmp/rdp-share")
+        rdp_reloaded.shared_local_folders,
+        vec!["/tmp/rdp-share".to_string(), "/tmp/rdp-other".to_string()]
     );
+    assert!(rdp_reloaded.shared_local_folder.is_none());
     assert_eq!(rdp_reloaded.performance_profile, "quality");
     assert_eq!(rdp_reloaded.view_mode, "actualSize");
 
@@ -3293,6 +3739,20 @@ fn legacy_rdp_settings_default_drive_selection_to_all() {
     .expect("legacy RDP settings deserialize");
 
     assert_eq!(settings.drive_selection, RdpDriveSelection::All);
+    assert!(!settings.administrative_session);
+    assert!(settings.shared_local_folders.is_empty());
+    assert!(settings.shared_local_folder.is_none());
+}
+
+#[test]
+fn legacy_rdp_single_shared_folder_normalizes_to_folder_list() {
+    let settings: RdpSettings = serde_json::from_str(
+        r#"{"colorDepth":32,"redirectClipboard":true,"redirectDrives":true,"sharedLocalFolder":" /tmp/legacy-share ","bitmapCache":true,"performanceProfile":"balanced","remoteResolution":"automatic","viewMode":"fit"}"#,
+    )
+    .expect("legacy RDP settings deserialize");
+
+    let settings = validate_rdp_settings(settings).expect("legacy RDP settings normalize");
+    assert_eq!(settings.shared_local_folders, vec!["/tmp/legacy-share"]);
     assert!(settings.shared_local_folder.is_none());
 }
 
@@ -3384,9 +3844,14 @@ fn remote_desktop_connection_options_are_optional_protocol_overrides() {
             rdp_options: Some(RdpConnectionOptions {
                 inherit_defaults: false,
                 color_depth: Some(24),
+                administrative_session: Some(true),
                 redirect_clipboard: Some(false),
                 redirect_drives: Some(true),
                 drive_selection: Some(RdpDriveSelection::All),
+                shared_local_folders: Some(vec![
+                    "/tmp/share-a".to_string(),
+                    "/tmp/share-b".to_string(),
+                ]),
                 shared_local_folder: None,
                 bitmap_cache: Some(true),
                 performance_profile: Some("quality".to_string()),
@@ -3444,9 +3909,11 @@ fn remote_desktop_connection_options_are_optional_protocol_overrides() {
             rdp_options: Some(RdpConnectionOptions {
                 inherit_defaults: false,
                 color_depth: Some(24),
+                administrative_session: Some(true),
                 redirect_clipboard: Some(false),
                 redirect_drives: Some(true),
                 drive_selection: Some(RdpDriveSelection::All),
+                shared_local_folders: Some(vec!["/tmp/share-a".to_string()]),
                 shared_local_folder: None,
                 bitmap_cache: Some(true),
                 performance_profile: Some("quality".to_string()),
@@ -3549,8 +4016,10 @@ fn ai_provider_settings_round_trip_through_settings_table() {
             built_in_mcp_allow_all_dangerous: false,
             use_codex_cli: false,
             use_claude_cli: false,
+            use_cursor_cli: false,
             claude_cli_path: Some("  C:\\Tools\\claude.exe  ".to_string()),
             codex_cli_path: Some("  codex  ".to_string()),
+            cursor_cli_path: Some("  cursor-agent  ".to_string()),
             disabled_skill_names: vec!["ssh-helper".to_string(), "bad name".to_string()],
             custom_skills_enabled: true,
             tools: default_ai_assistant_tool_settings(),
@@ -3585,6 +4054,7 @@ fn ai_provider_settings_round_trip_through_settings_table() {
         Some("C:\\Tools\\claude.exe")
     );
     assert_eq!(updated.codex_cli_path.as_deref(), Some("codex"));
+    assert_eq!(updated.cursor_cli_path.as_deref(), Some("cursor-agent"));
     assert_eq!(updated.disabled_skill_names, vec!["ssh-helper".to_string()]);
 
     let reloaded = storage
@@ -3697,8 +4167,10 @@ fn ai_provider_settings_reject_invalid_tool_permission_mode() {
             built_in_mcp_allow_all_dangerous: false,
             use_codex_cli: false,
             use_claude_cli: false,
+            use_cursor_cli: false,
             claude_cli_path: None,
             codex_cli_path: None,
+            cursor_cli_path: None,
             disabled_skill_names: Vec::new(),
             custom_skills_enabled: true,
             tools: default_ai_assistant_tool_settings(),
@@ -3743,8 +4215,10 @@ fn ai_provider_settings_reject_invalid_base_url() {
             built_in_mcp_allow_all_dangerous: false,
             use_codex_cli: false,
             use_claude_cli: false,
+            use_cursor_cli: false,
             claude_cli_path: None,
             codex_cli_path: None,
+            cursor_cli_path: None,
             disabled_skill_names: Vec::new(),
             custom_skills_enabled: true,
             tools: default_ai_assistant_tool_settings(),
@@ -3792,8 +4266,10 @@ fn ai_provider_settings_reject_blank_model() {
             built_in_mcp_allow_all_dangerous: false,
             use_codex_cli: false,
             use_claude_cli: false,
+            use_cursor_cli: false,
             claude_cli_path: None,
             codex_cli_path: None,
+            cursor_cli_path: None,
             disabled_skill_names: Vec::new(),
             custom_skills_enabled: true,
             tools: default_ai_assistant_tool_settings(),
@@ -3839,8 +4315,10 @@ fn ai_provider_settings_trim_and_limit_custom_instructions() {
             built_in_mcp_allow_all_dangerous: false,
             use_codex_cli: false,
             use_claude_cli: false,
+            use_cursor_cli: false,
             claude_cli_path: None,
             codex_cli_path: None,
+            cursor_cli_path: None,
             disabled_skill_names: Vec::new(),
             custom_skills_enabled: true,
             tools: default_ai_assistant_tool_settings(),
@@ -3900,8 +4378,10 @@ fn ai_provider_settings_keep_cli_policy_suggest_only() {
             built_in_mcp_allow_all_dangerous: false,
             use_codex_cli: false,
             use_claude_cli: false,
+            use_cursor_cli: false,
             claude_cli_path: Some("claude".to_string()),
             codex_cli_path: Some("codex".to_string()),
+            cursor_cli_path: Some("cursor-agent".to_string()),
             disabled_skill_names: Vec::new(),
             custom_skills_enabled: true,
             tools: default_ai_assistant_tool_settings(),
@@ -4435,7 +4915,7 @@ fn schema_initialization_repairs_v20_connections_pre_table_foreign_keys() {
     let storage = Storage::open(db_path).expect("storage repairs stale fks");
     let created = create_test_ssh_connection(&storage, "New Host", "new.internal", None);
     storage
-        .create_connection_password_credential_metadata(created.id)
+        .create_connection_password_credential_metadata(created.id.clone(), None)
         .expect("password credential metadata can point at the new connection");
 
     let stale_reference_count: i64 = storage
@@ -4614,6 +5094,45 @@ fn rename_workspace_updates_icon_properties() {
     assert_eq!(persisted.name, "Green Ops");
     assert_eq!(persisted.icon.as_deref(), Some("Folder"));
     assert_eq!(persisted.icon_color.as_deref(), Some("#16a34a"));
+}
+
+#[test]
+fn portable_credential_default_applies_only_until_the_user_saves_a_choice() {
+    let storage = Storage::open(temp_db_path("portable-credential-default"))
+        .expect("storage opens");
+
+    assert_eq!(
+        storage
+            .credential_settings()
+            .expect("installed default loads")
+            .secret_store,
+        default_secret_store()
+    );
+    assert_eq!(
+        storage
+            .credential_settings_with_default(Some("file"))
+            .expect("portable default loads")
+            .secret_store,
+        "file"
+    );
+
+    // Linux offers only the "file" store, so a differing saved choice can only
+    // be exercised where the OS keystore is a valid option.
+    #[cfg(not(target_os = "linux"))]
+    {
+        storage
+            .update_credential_settings(CredentialSettings {
+                secret_store: "os".to_string(),
+            })
+            .expect("explicit choice is saved");
+        assert_eq!(
+            storage
+                .credential_settings_with_default(Some("file"))
+                .expect("saved choice loads")
+                .secret_store,
+            "os"
+        );
+    }
 }
 
 fn temp_db_path(name: &str) -> PathBuf {

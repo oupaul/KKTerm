@@ -2,7 +2,7 @@
 
 ## AI grep hints
 
-- Keys: `settings.exportSettings`, `settings.importSettings`, `settings.importBackupFileHint`, `settings.fullBackupImport`, `settings.includeCredentials`, `settings.includeCredentialsWarning`, `settings.importActionAdd`, `settings.importActionReplace`, `settings.segment_itops`, `settings.segment_assistant`, `settings.resetAllSettings`, `settings.resetAllSettingsConfirm`, `settings.resetAllSettingsComplete`, `settings.sectionCredentials`, `settings.credentialStorage`, `settings.credentialsStored`, `settings.deleteCredential`
+- Keys: `settings.exportSettings`, `settings.importSettings`, `settings.importBackupFileHint`, `settings.fullBackupImport`, `settings.includeCredentials`, `settings.includeCredentialsWarning`, `settings.importActionAdd`, `settings.importActionReplace`, `settings.segment_itops`, `settings.segment_assistant`, `settings.resetAllSettings`, `settings.resetAllSettingsConfirm`, `settings.resetAllSettingsComplete`, `settings.sectionCredentials`, `settings.credentialStorage`, `settings.credentialStorageFilePortable`, `settings.portableCredentialStorageOsWarning`, `settings.credentialsStored`, `settings.deleteCredential`
 - Topics: SQLite store, OS keychain, encrypted SQLite secret store, settings Import/Export `.kkbackup`, startup backup ZIP snapshots, import / restore, reset all, where my data lives
 - Synonyms: "where is my data", "back up settings", "restore", "factory reset", "uninstall", "API key storage", "export connections without passwords", "share connections", "selective backup"
 
@@ -14,6 +14,10 @@ KKTerm is local-first. Two distinct store families:
 2. **Credential backend** — secrets. Holds Connection passwords, URL credentials, AI provider API keys, email API keys / SMTP passwords, widget secrets, MCP server secrets. Windows and macOS default to the OS keystore and may optionally use the encrypted SQLite store. Linux uses the encrypted SQLite store only.
 
 Terminal contents are **not** logged by default. There is no telemetry and no cloud sync.
+
+On Windows, installed mode stores SQLite under `%APPDATA%\com.kkterm.app` and uses Tauri's profile/cache locations. Portable mode stores KKTerm-owned mutable state under `data` beside `KKTerm.exe`, including SQLite, cache, logs, WebView2 data, backgrounds, fonts, diagnostics, recordings, and the live MCP bridge descriptor. The portable folder is therefore the backup unit for KKTerm-owned state. Quit KKTerm using the tray Exit action before copying the folder or removing its drive so SQLite can checkpoint its WAL. Network and cloud-synchronized roots are unsupported.
+
+Portable mode defaults a new database to `settings.credentialStorageFilePortable`, but its first-run setup is skippable. The encrypted rows travel with SQLite; the master password does not. Non-secret Connection metadata, usernames, notes, inventory, and Settings remain plaintext SQLite. Choosing the OS backend is still allowed and shows `settings.portableCredentialStorageOsWarning`, because those secrets remain bound to the current Windows user and machine. Never put `KKTERM_SECRET_STORE_PASSWORD` in a launcher script beside the portable executable.
 
 Do **not** put live session state (open Tabs, focused Pane, in-flight Sessions) into the SQLite Connection model. Live state belongs to the frontend workspace layer.
 
@@ -33,6 +37,8 @@ Automatic backups must **not** run from app-window close.
 
 `settings.importSettings` opens the backup import dialog. A chosen `.kkbackup` is inspected before applying anything; a chosen full `.zip` backup restores the complete settings database and reloads the app.
 
+Installed-to-portable and portable-to-installed migration use this same export/import flow; neither mode reads the other mode's database directly. Extracting a newer portable release over the program folder does not migrate or overwrite data because release ZIPs never contain `data`.
+
 ## Selective export / import
 
 The Settings data Export button is the selective `.kkbackup` flow; the Settings data Import button accepts both selective `.kkbackup` files and full KKTerm settings backup `.zip` snapshots. The old separate whole-database single-file import/export buttons are no longer shown.
@@ -49,7 +55,7 @@ On import, KKTerm lets the user choose an action per segment present: `settings.
 
 Settings → Credentials (`settings.sectionCredentials`) lists every credential KKTerm has stored, grouped by kind:
 
-- `settings.credentialKindConnectionPassword` — SSH / RDP / VNC / Telnet / FTP passwords, including reusable saved-password credentials selected from Add/Edit Connection.
+- `settings.savedCredentials` — reusable SSH / RDP / VNC / Telnet / FTP password bundles that Connections link to. Rows support rename/password Edit, a usage dialog listing and bulk-linking Connections, same-type duplicate Merge, Convert of per-Connection passwords, and Delete (usage-aware confirmation `settings.savedCredentialDeleteUsed`). Legacy single-Connection passwords appear separately under `settings.perConnectionPasswords` with a Convert action that moves them into a Saved Credential.
 - `settings.credentialKindUrlPassword` — saved URL Connection passwords and captured non-secret input data. These records use the same one-row Edit/Delete controls and compact editor as Settings → URL.
 - `settings.credentialKindAiApiKey` — AI provider keys (stored under `AI_PROVIDER_SECRET_OWNER_ID`).
 - `settings.credentialKindEmailApiKey` / `settings.credentialKindEmailSmtpPassword` — Email tool credentials.
@@ -60,6 +66,8 @@ The secret storage selector (`settings.credentialStorage`) controls which backen
 ## Uninstall behaviour
 
 Uninstalling KKTerm removes the executable. The SQLite database and credential backend entries persist unless the user deletes them explicitly. Reinstalling reuses the same SQLite database file from the same user profile location.
+
+Portable mode has no uninstaller. Deleting its folder removes its KKTerm-owned data, but machine-owned effects from explicit integrations remain: OS-keychain entries, external MCP client configuration, Install Helper tools, managed web apps, and Windows services are not removed with the folder.
 
 ## What is _not_ stored
 

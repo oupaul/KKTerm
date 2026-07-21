@@ -130,6 +130,19 @@ test("Chocolatey-installed alternate providers update through choco", () => {
   );
 });
 
+test("WinGet updates use full recipe detection before choosing the command verb", () => {
+  assert.match(
+    installSource,
+    /fn install_winget\([\s\S]*recipe: &Recipe[\s\S]*detect_winget\(recipe\)\.installed[\s\S]*let verb = if already_installed/,
+    "WinGet must retain AppX and other recipe aliases when deciding between install and upgrade.",
+  );
+  assert.doesNotMatch(
+    installSource,
+    /detect_winget_recipe_by_id\(winget_id\)\.installed/,
+    "ID-only detection loses AppX package-family hints such as Claude Desktop's official MSIX identity.",
+  );
+});
+
 test("GitHub-release fallback installs keep using the managed provider", () => {
   assert.match(
     installSource,

@@ -310,6 +310,15 @@ File issues at: <https://github.com/ryantsai/KKTerm/issues/new>
 
 3. **Check `docs/ARCHITECTURE.md`** — before placing new UI or Rust code, verify you're putting it in the right source area.
 
+4. **Respect native-surface layering** — CSS `z-index` cannot place React UI
+   above URL Connection `WebviewWindow`s or Windows RDP ActiveX HWNDs. A
+   right-click menu that can overlap either surface must use
+   `src/lib/nativeContextMenu.ts`. A dialog or advanced DOM popover that may
+   overlap one must portal at the app-window level when full-window and add its
+   narrow visible selector to `src/modules/workspace/nativeOverlay.ts`, which
+   drives URL snapshot/hide and RDP-only snapshot/park. Do not solve this by
+   strategic menu placement or by extending RDP parking to WebView2.
+
 ### Branch naming
 
 ```

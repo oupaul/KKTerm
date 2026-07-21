@@ -1,10 +1,12 @@
 mod ai;
 mod ai_coding_usage;
 mod app_launcher;
+mod app_paths;
 mod app_tray;
 mod app_updates;
 mod assistant_skills;
 mod auto_start;
+mod bundle_identifier;
 mod currency_rates;
 mod dashboard_commands;
 mod dashboard_ids;
@@ -32,10 +34,15 @@ mod net;
 mod pc_info;
 mod performance;
 mod power;
+mod portable_creator;
+mod portable_marker;
+#[cfg(target_os = "windows")]
+mod portable_single_instance;
 mod rdp;
 #[cfg(not(target_os = "windows"))]
 mod rdp_client;
 mod screenshot;
+mod screenshot_shortcuts;
 mod secrets;
 mod selective_export;
 mod serial;
@@ -149,6 +156,8 @@ struct DeleteStoredCredentialRequest {
 struct CreateConnectionPasswordCredentialRequest {
     connection_id: String,
     secret: String,
+    label: Option<String>,
+    allow_reuse: Option<bool>,
 }
 
 #[derive(Deserialize)]
@@ -156,6 +165,58 @@ struct CreateConnectionPasswordCredentialRequest {
 struct AssignConnectionPasswordCredentialRequest {
     connection_id: String,
     credential_id: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct UpdateConnectionPasswordCredentialRequest {
+    credential_id: String,
+    label: Option<String>,
+    username: Option<String>,
+    secret: Option<String>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ConnectionPasswordCredentialUsageRequest {
+    credential_id: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CreateStandaloneConnectionPasswordCredentialRequest {
+    label: String,
+    username: String,
+    secret: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ConvertConnectionPasswordToCredentialRequest {
+    connection_id: String,
+    credential_id: Option<String>,
+    label: Option<String>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct MergeConnectionPasswordCredentialsRequest {
+    target_credential_id: String,
+    source_credential_ids: Vec<String>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct UnassignConnectionPasswordCredentialRequest {
+    connection_id: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ConnectionPasswordCredentialEntry {
+    #[serde(flatten)]
+    summary: storage::ConnectionPasswordCredentialSummary,
+    secret_exists: bool,
 }
 
 #[derive(Deserialize)]
@@ -751,9 +812,16 @@ fn update_general_settings(
     tray_state: tauri::State<'_, app_tray::TrayState>,
     power: tauri::State<'_, power::DontSleepManager>,
     webviews: tauri::State<'_, webview::WebviewSessionManager>,
-    request: storage::GeneralSettings,
+    mut request: storage::GeneralSettings,
 ) -> Result<storage::GeneralSettings, String> {
-    auto_start::sync_auto_start_with_windows(request.auto_start_with_windows())?;
+    if app.state::<app_paths::AppPaths>().is_portable() {
+        // Auto-start is unsupported and hidden in portable mode, but imported
+        // installed-mode backups can still carry the flag; drop it instead of
+        // failing every later settings save.
+        request.set_auto_start_with_windows(false);
+    } else {
+        auto_start::sync_auto_start_with_windows(request.auto_start_with_windows())?;
+    }
     let saved = storage.update_general_settings(request)?;
     net::proxy::set(net::proxy::from_settings(
         saved.proxy_mode(),
@@ -804,9 +872,21 @@ fn update_dashboard_settings(
 
 #[tauri::command]
 fn get_credential_settings(
+    app: tauri::AppHandle,
     storage: tauri::State<'_, storage::Storage>,
 ) -> Result<storage::CredentialSettings, String> {
-    storage.credential_settings()
+    credential_settings_for_mode(&app, &storage)
+}
+
+fn credential_settings_for_mode(
+    app: &tauri::AppHandle,
+    storage: &storage::Storage,
+) -> Result<storage::CredentialSettings, String> {
+    if app.state::<app_paths::AppPaths>().is_portable() {
+        storage.credential_settings_with_default(Some("file"))
+    } else {
+        storage.credential_settings()
+    }
 }
 
 #[tauri::command]
@@ -880,7 +960,7 @@ async fn import_settings_database(
             let storage = worker_app.state::<storage::Storage>();
             let snapshot = storage.import_database_zip(path.into())?;
             let general_settings = storage.general_settings()?;
-            let credential_settings = storage.credential_settings()?;
+            let credential_settings = credential_settings_for_mode(&worker_app, &storage)?;
             Ok((snapshot, general_settings, credential_settings))
         })
         .await?;
@@ -1118,10 +1198,19 @@ fn get_screenshot_settings(
 
 #[tauri::command]
 fn update_screenshot_settings(
+    app: tauri::AppHandle,
     storage: tauri::State<'_, storage::Storage>,
     request: storage::ScreenshotSettings,
 ) -> Result<storage::ScreenshotSettings, String> {
-    storage.update_screenshot_settings(request)
+    screenshot_shortcuts::validate(&request)?;
+    let saved = storage.update_screenshot_settings(request)?;
+    screenshot_shortcuts::apply(&app, &saved)?;
+    if let Some(tray_state) = app.try_state::<app_tray::TrayState>() {
+        if let Err(error) = app_tray::rebuild_menu(&app, &tray_state) {
+            eprintln!("failed to refresh tray capture shortcuts: {error}");
+        }
+    }
+    Ok(saved)
 }
 
 #[tauri::command]
@@ -1399,6 +1488,7 @@ async fn get_ai_cli_backend_status(
     let configured_path = match provider {
         ai::AiCliBackendKind::Codex => settings.codex_cli_path().map(str::to_string),
         ai::AiCliBackendKind::ClaudeCode => settings.claude_cli_path().map(str::to_string),
+        ai::AiCliBackendKind::Cursor => settings.cursor_cli_path().map(str::to_string),
     };
     Ok(ai::ai_cli_backend_status(provider, configured_path).await)
 }
@@ -1412,6 +1502,7 @@ fn open_ai_cli_backend_auth(
     let configured_path = match provider {
         ai::AiCliBackendKind::Codex => settings.codex_cli_path().map(str::to_string),
         ai::AiCliBackendKind::ClaudeCode => settings.claude_cli_path().map(str::to_string),
+        ai::AiCliBackendKind::Cursor => settings.cursor_cli_path().map(str::to_string),
     };
     ai::open_ai_cli_backend_auth(provider, configured_path)
 }
@@ -1756,6 +1847,17 @@ async fn capture_screenshot_to_clipboard(
 }
 
 #[tauri::command]
+async fn write_screenshot_data_url_to_clipboard(
+    app: tauri::AppHandle,
+    request: screenshot::ScreenshotDataUrlRequest,
+) -> Result<(), String> {
+    run_blocking_screenshot_command("stitched screenshot clipboard write", move || {
+        screenshot::write_data_url_to_clipboard(&app, request)
+    })
+    .await
+}
+
+#[tauri::command]
 async fn capture_screenshot_for_assistant(
     app: tauri::AppHandle,
     request: screenshot::CaptureScreenshotRequest,
@@ -1778,23 +1880,39 @@ async fn capture_fullscreen_screenshot_for_assistant(
     .await
 }
 
+/// Resolves the persisted library save options plus the DirectX capture flag
+/// shared by every capture-to-library command.
+fn screenshot_library_context(
+    app: &tauri::AppHandle,
+) -> Result<(screenshot::LibrarySaveOptions, bool), String> {
+    let storage = app.state::<storage::Storage>();
+    let settings = storage.screenshot_settings()?;
+    let general_settings = storage.general_settings()?;
+    Ok((
+        screenshot::LibrarySaveOptions {
+            folder_path: settings.folder_path().to_string(),
+            format: settings.format().to_string(),
+            quality: settings.quality(),
+            capture_mode: settings.capture_mode().to_string(),
+            border_enabled: settings.border_enabled(),
+            border_width: settings.border_width(),
+            border_style: settings.border_style().to_string(),
+            border_color: settings.border_color().to_string(),
+            include_cursor: settings.include_cursor(),
+        },
+        general_settings.use_directx_screen_capture(),
+    ))
+}
+
 #[tauri::command]
 async fn capture_screenshot_to_library(
     app: tauri::AppHandle,
     request: screenshot::CaptureScreenshotRequest,
     kind: String,
-) -> Result<screenshot::StoredScreenshot, String> {
+) -> Result<screenshot::ScreenshotCaptureResult, String> {
     run_blocking_screenshot_command("screenshot library capture", move || {
-        let storage = app.state::<storage::Storage>();
-        let settings = storage.screenshot_settings()?;
-        let general_settings = storage.general_settings()?;
-        screenshot::capture_rect_to_library(
-            &app,
-            request,
-            kind,
-            settings.folder_path().to_string(),
-            general_settings.use_directx_screen_capture(),
-        )
+        let (options, use_directx) = screenshot_library_context(&app)?;
+        screenshot::capture_rect_to_library(&app, request, kind, options, use_directx)
     })
     .await
 }
@@ -1803,17 +1921,10 @@ async fn capture_screenshot_to_library(
 async fn capture_fullscreen_screenshot_to_library(
     app: tauri::AppHandle,
     kind: String,
-) -> Result<screenshot::StoredScreenshot, String> {
+) -> Result<screenshot::ScreenshotCaptureResult, String> {
     run_blocking_screenshot_command("fullscreen screenshot library capture", move || {
-        let storage = app.state::<storage::Storage>();
-        let settings = storage.screenshot_settings()?;
-        let general_settings = storage.general_settings()?;
-        screenshot::capture_fullscreen_to_library(
-            &app,
-            kind,
-            settings.folder_path().to_string(),
-            general_settings.use_directx_screen_capture(),
-        )
+        let (options, use_directx) = screenshot_library_context(&app)?;
+        screenshot::capture_fullscreen_to_library(&app, kind, options, use_directx)
     })
     .await
 }
@@ -1822,17 +1933,10 @@ async fn capture_fullscreen_screenshot_to_library(
 async fn capture_active_window_screenshot_to_library(
     app: tauri::AppHandle,
     kind: String,
-) -> Result<screenshot::StoredScreenshot, String> {
+) -> Result<screenshot::ScreenshotCaptureResult, String> {
     run_blocking_screenshot_command("active-window screenshot library capture", move || {
-        let storage = app.state::<storage::Storage>();
-        let settings = storage.screenshot_settings()?;
-        let general_settings = storage.general_settings()?;
-        screenshot::capture_active_window_to_library(
-            &app,
-            kind,
-            settings.folder_path().to_string(),
-            general_settings.use_directx_screen_capture(),
-        )
+        let (options, use_directx) = screenshot_library_context(&app)?;
+        screenshot::capture_active_window_to_library(&app, kind, options, use_directx)
     })
     .await
 }
@@ -1841,17 +1945,10 @@ async fn capture_active_window_screenshot_to_library(
 async fn capture_interactive_region_screenshot_to_library(
     app: tauri::AppHandle,
     kind: String,
-) -> Result<screenshot::StoredScreenshot, String> {
+) -> Result<screenshot::ScreenshotCaptureResult, String> {
     run_blocking_screenshot_command("interactive screenshot library capture", move || {
-        let storage = app.state::<storage::Storage>();
-        let settings = storage.screenshot_settings()?;
-        let general_settings = storage.general_settings()?;
-        screenshot::capture_interactive_region_to_library(
-            &app,
-            kind,
-            settings.folder_path().to_string(),
-            general_settings.use_directx_screen_capture(),
-        )
+        let (options, use_directx) = screenshot_library_context(&app)?;
+        screenshot::capture_interactive_region_to_library(&app, kind, options, use_directx)
     })
     .await
 }
@@ -1878,12 +1975,147 @@ async fn delete_screenshot(app: tauri::AppHandle, id: String) -> Result<(), Stri
 }
 
 #[tauri::command]
+async fn delete_screenshots(app: tauri::AppHandle, ids: Vec<String>) -> Result<(), String> {
+    run_blocking_screenshot_command("screenshot batch deletion", move || {
+        let settings = app.state::<storage::Storage>().screenshot_settings()?;
+        screenshot::delete_library_screenshots(ids, settings.folder_path().to_string())
+    })
+    .await
+}
+
+#[tauri::command]
+async fn resize_screenshots(
+    app: tauri::AppHandle,
+    request: screenshot::ResizeScreenshotsRequest,
+) -> Result<Vec<screenshot::StoredScreenshot>, String> {
+    run_blocking_screenshot_command("screenshot batch resize", move || {
+        let settings = app.state::<storage::Storage>().screenshot_settings()?;
+        screenshot::resize_library_screenshots(request, settings.folder_path().to_string())
+    })
+    .await
+}
+
+#[tauri::command]
+async fn convert_screenshots(
+    app: tauri::AppHandle,
+    request: screenshot::ConvertScreenshotsRequest,
+) -> Result<Vec<screenshot::StoredScreenshot>, String> {
+    run_blocking_screenshot_command("screenshot batch conversion", move || {
+        let settings = app.state::<storage::Storage>().screenshot_settings()?;
+        screenshot::convert_library_screenshots(request, settings.folder_path().to_string())
+    })
+    .await
+}
+
+#[tauri::command]
+async fn save_edited_screenshot(
+    app: tauri::AppHandle,
+    request: screenshot::SaveEditedScreenshotRequest,
+) -> Result<screenshot::StoredScreenshot, String> {
+    run_blocking_screenshot_command("edited screenshot save", move || {
+        let settings = app.state::<storage::Storage>().screenshot_settings()?;
+        screenshot::save_edited_library_screenshot(request, settings.folder_path().to_string())
+    })
+    .await
+}
+
+#[tauri::command]
 async fn clear_screenshots(app: tauri::AppHandle) -> Result<(), String> {
     run_blocking_screenshot_command("screenshot library clearing", move || {
         let settings = app.state::<storage::Storage>().screenshot_settings()?;
         screenshot::clear_library_screenshots(settings.folder_path().to_string())
     })
     .await
+}
+
+#[tauri::command]
+async fn read_screenshot(
+    app: tauri::AppHandle,
+    id: String,
+) -> Result<screenshot::FullScreenshot, String> {
+    run_blocking_screenshot_command("screenshot loading", move || {
+        let settings = app.state::<storage::Storage>().screenshot_settings()?;
+        screenshot::read_library_screenshot(id, settings.folder_path().to_string())
+    })
+    .await
+}
+
+#[tauri::command]
+async fn rename_screenshot(
+    app: tauri::AppHandle,
+    id: String,
+    new_name: String,
+) -> Result<screenshot::StoredScreenshot, String> {
+    run_blocking_screenshot_command("screenshot renaming", move || {
+        let settings = app.state::<storage::Storage>().screenshot_settings()?;
+        screenshot::rename_library_screenshot(id, new_name, settings.folder_path().to_string())
+    })
+    .await
+}
+
+#[tauri::command]
+async fn copy_stored_screenshot_to_clipboard(
+    app: tauri::AppHandle,
+    id: String,
+) -> Result<(), String> {
+    run_blocking_screenshot_command("screenshot clipboard copy", move || {
+        let settings = app.state::<storage::Storage>().screenshot_settings()?;
+        screenshot::copy_library_screenshot_to_clipboard(
+            &app,
+            id,
+            settings.folder_path().to_string(),
+        )
+    })
+    .await
+}
+
+#[tauri::command]
+fn open_screenshots_folder(
+    app: tauri::AppHandle,
+    storage: tauri::State<'_, storage::Storage>,
+) -> Result<(), String> {
+    let settings = storage.screenshot_settings()?;
+    let folder = storage::expand_screenshot_folder_path(settings.folder_path());
+    fs::create_dir_all(&folder).map_err(|error| {
+        format!(
+            "failed to create screenshots folder {}: {error}",
+            folder.display()
+        )
+    })?;
+    app.opener()
+        .open_path(folder.to_string_lossy(), None::<&str>)
+        .map_err(|error| {
+            format!(
+                "failed to open screenshots folder {}: {error}",
+                folder.display()
+            )
+        })
+}
+
+#[tauri::command]
+fn reveal_screenshot(
+    app: tauri::AppHandle,
+    storage: tauri::State<'_, storage::Storage>,
+    id: String,
+) -> Result<(), String> {
+    let settings = storage.screenshot_settings()?;
+    let path = screenshot::library_screenshot_path(&id, settings.folder_path())?;
+    app.opener()
+        .reveal_item_in_dir(&path)
+        .map_err(|error| format!("failed to reveal screenshot {}: {error}", path.display()))
+}
+
+#[tauri::command]
+fn open_screenshot_file(
+    app: tauri::AppHandle,
+    storage: tauri::State<'_, storage::Storage>,
+    id: String,
+) -> Result<(), String> {
+    let settings = storage.screenshot_settings()?;
+    let path = screenshot::library_screenshot_path(&id, settings.folder_path())?;
+    app.opener()
+        .open_path(path.to_string_lossy(), None::<&str>)
+        .map_err(|error| format!("failed to open screenshot {}: {error}", path.display()))
 }
 
 #[tauri::command]
@@ -2024,20 +2256,21 @@ fn list_stored_credentials(
 fn list_connection_password_credentials(
     storage: tauri::State<'_, storage::Storage>,
     secrets: tauri::State<'_, secrets::Secrets>,
-) -> Result<Vec<storage::ConnectionPasswordCredentialSummary>, String> {
+) -> Result<Vec<ConnectionPasswordCredentialEntry>, String> {
     let credentials = storage.list_connection_password_credentials()?;
-    let mut existing_credentials = Vec::new();
+    let mut entries = Vec::new();
     for credential in credentials {
-        let exists = secrets
+        let secret_exists = secrets
             .secret_exists(secrets::SecretReferenceRequest::connection_password(
                 credential.id.clone(),
             ))?
             .exists();
-        if exists {
-            existing_credentials.push(credential);
-        }
+        entries.push(ConnectionPasswordCredentialEntry {
+            summary: credential,
+            secret_exists,
+        });
     }
-    Ok(existing_credentials)
+    Ok(entries)
 }
 
 #[tauri::command]
@@ -2050,8 +2283,21 @@ fn create_connection_password_credential(
     if secret.is_empty() {
         return Err("secret value is required".to_string());
     }
-    let credential =
-        storage.create_connection_password_credential_metadata(request.connection_id.clone())?;
+    if request.allow_reuse.unwrap_or(false) {
+        let candidates = storage
+            .find_reusable_connection_password_credentials(request.connection_id.clone())?;
+        for candidate in candidates {
+            let existing = secrets.read_connection_password(candidate.id.clone())?;
+            if existing.as_deref() == Some(secret.as_str()) {
+                return storage.assign_connection_password_credential(
+                    request.connection_id,
+                    candidate.id,
+                );
+            }
+        }
+    }
+    let credential = storage
+        .create_connection_password_credential_metadata(request.connection_id.clone(), request.label)?;
     if let Err(error) = secrets.store_secret(secrets::StoreSecretRequest::connection_password(
         credential.id.clone(),
         secret,
@@ -2071,6 +2317,176 @@ fn create_connection_password_credential(
             Err(error)
         }
     }
+}
+
+#[tauri::command]
+fn update_connection_password_credential(
+    storage: tauri::State<'_, storage::Storage>,
+    secrets: tauri::State<'_, secrets::Secrets>,
+    request: UpdateConnectionPasswordCredentialRequest,
+) -> Result<ConnectionPasswordCredentialEntry, String> {
+    let credential = storage.update_connection_password_credential(
+        request.credential_id.clone(),
+        request.label,
+        request.username,
+    )?;
+    if let Some(secret) = request.secret {
+        if !secret.is_empty() {
+            secrets.store_secret(secrets::StoreSecretRequest::connection_password(
+                credential.id.clone(),
+                secret,
+            ))?;
+        }
+    }
+    let secret_exists = secrets
+        .secret_exists(secrets::SecretReferenceRequest::connection_password(
+            credential.id.clone(),
+        ))?
+        .exists();
+    Ok(ConnectionPasswordCredentialEntry {
+        summary: credential,
+        secret_exists,
+    })
+}
+
+#[tauri::command]
+fn list_connection_password_credential_usage(
+    storage: tauri::State<'_, storage::Storage>,
+    request: ConnectionPasswordCredentialUsageRequest,
+) -> Result<Vec<storage::ConnectionPasswordCredentialUsage>, String> {
+    storage.list_connection_password_credential_usage(request.credential_id)
+}
+
+#[tauri::command]
+fn create_standalone_connection_password_credential(
+    storage: tauri::State<'_, storage::Storage>,
+    secrets: tauri::State<'_, secrets::Secrets>,
+    request: CreateStandaloneConnectionPasswordCredentialRequest,
+) -> Result<ConnectionPasswordCredentialEntry, String> {
+    if request.secret.is_empty() {
+        return Err("secret value is required".to_string());
+    }
+    let credential = storage.create_standalone_connection_password_credential(
+        request.label,
+        request.username,
+    )?;
+    if let Err(error) = secrets.store_secret(secrets::StoreSecretRequest::connection_password(
+        credential.id.clone(),
+        request.secret,
+    )) {
+        let _ = storage.delete_connection_password_credential_metadata(credential.id);
+        return Err(error);
+    }
+    Ok(ConnectionPasswordCredentialEntry {
+        summary: credential,
+        secret_exists: true,
+    })
+}
+
+#[tauri::command]
+fn convert_connection_password_to_credential(
+    storage: tauri::State<'_, storage::Storage>,
+    secrets: tauri::State<'_, secrets::Secrets>,
+    request: ConvertConnectionPasswordToCredentialRequest,
+) -> Result<storage::SavedConnection, String> {
+    if let Some(credential_id) = request.credential_id {
+        let presence = secrets.secret_exists(
+            secrets::SecretReferenceRequest::connection_password(credential_id.clone()),
+        )?;
+        if !presence.exists() {
+            return Err("stored password was not found".to_string());
+        }
+        let connection = storage.assign_connection_password_credential(
+            request.connection_id.clone(),
+            credential_id,
+        )?;
+        if secrets
+            .read_connection_password(request.connection_id.clone())?
+            .is_some()
+        {
+            secrets.delete_secret(secrets::SecretReferenceRequest::connection_password(
+                request.connection_id,
+            ))?;
+        }
+        return Ok(connection);
+    }
+    let legacy_secret = secrets
+        .read_connection_password(request.connection_id.clone())?
+        .ok_or_else(|| "no stored password was found for this connection".to_string())?;
+    let credential = storage
+        .create_connection_password_credential_metadata(request.connection_id.clone(), request.label)?;
+    if let Err(error) = secrets.store_secret(secrets::StoreSecretRequest::connection_password(
+        credential.id.clone(),
+        legacy_secret,
+    )) {
+        let _ = storage.delete_connection_password_credential_metadata(credential.id);
+        return Err(error);
+    }
+    match storage
+        .assign_connection_password_credential(request.connection_id.clone(), credential.id.clone())
+    {
+        Ok(connection) => {
+            let _ = secrets.delete_secret(secrets::SecretReferenceRequest::connection_password(
+                request.connection_id,
+            ));
+            Ok(connection)
+        }
+        Err(error) => {
+            let _ = secrets.delete_secret(secrets::SecretReferenceRequest::connection_password(
+                credential.id.clone(),
+            ));
+            let _ = storage.delete_connection_password_credential_metadata(credential.id);
+            Err(error)
+        }
+    }
+}
+
+#[tauri::command]
+fn merge_connection_password_credentials(
+    storage: tauri::State<'_, storage::Storage>,
+    secrets: tauri::State<'_, secrets::Secrets>,
+    request: MergeConnectionPasswordCredentialsRequest,
+) -> Result<i64, String> {
+    let target_has_secret = secrets
+        .secret_exists(secrets::SecretReferenceRequest::connection_password(
+            request.target_credential_id.clone(),
+        ))?
+        .exists();
+    if !target_has_secret {
+        for source_id in &request.source_credential_ids {
+            let source_has_secret = secrets
+                .secret_exists(secrets::SecretReferenceRequest::connection_password(
+                    source_id.clone(),
+                ))?
+                .exists();
+            if source_has_secret {
+                return Err(
+                    "the kept credential has no stored password; keep one whose password is stored"
+                        .to_string(),
+                );
+            }
+        }
+    }
+    let relinked = storage.merge_connection_password_credentials(
+        request.target_credential_id,
+        request.source_credential_ids.clone(),
+    )?;
+    // Best effort: the merge itself already succeeded, and a failed secret
+    // cleanup must not report it as failed (retrying would hit missing rows).
+    for source_id in request.source_credential_ids {
+        let _ = secrets.delete_secret(secrets::SecretReferenceRequest::connection_password(
+            source_id,
+        ));
+    }
+    Ok(relinked)
+}
+
+#[tauri::command]
+fn unassign_connection_password_credential(
+    storage: tauri::State<'_, storage::Storage>,
+    request: UnassignConnectionPasswordCredentialRequest,
+) -> Result<storage::SavedConnection, String> {
+    storage.unassign_connection_password_credential(request.connection_id)
 }
 
 #[tauri::command]
@@ -3360,6 +3776,14 @@ fn capture_webview_credential(
 }
 
 #[tauri::command]
+fn request_webview_page_capture_state(
+    webviews: tauri::State<'_, webview::WebviewSessionManager>,
+    request: webview::WebviewPageCaptureStateRequest,
+) -> Result<(), String> {
+    webviews.request_page_capture_state(request)
+}
+
+#[tauri::command]
 fn close_webview_session(
     webviews: tauri::State<'_, webview::WebviewSessionManager>,
     request: webview::WebviewSimpleRequest,
@@ -3708,24 +4132,91 @@ fn configure_macos_updater<R: tauri::Runtime>(builder: tauri::Builder<R>) -> tau
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    logging::init();
+    let launch_context = match app_paths::LaunchContext::detect() {
+        Ok(context) => context,
+        Err(error) => {
+            app_paths::show_startup_error(&error);
+            return;
+        }
+    };
+    #[cfg(target_os = "windows")]
+    let portable_instance = if let Some(data_root) = launch_context.portable_data_dir() {
+        match portable_single_instance::claim(data_root) {
+            Ok(portable_single_instance::Claim::Primary(guard)) => Some(guard),
+            Ok(portable_single_instance::Claim::Secondary) => return,
+            Err(error) => {
+                app_paths::show_startup_error(&error);
+                return;
+            }
+        }
+    } else {
+        None
+    };
+    #[cfg(target_os = "windows")]
+    if launch_context.is_portable() && !app_paths::webview2_runtime_available() {
+        app_paths::show_webview2_required_error();
+        return;
+    }
+    if let Some(webview_data_dir) = launch_context.portable_webview_data_dir() {
+        // SAFETY: this runs on the process entry thread before Tauri, Wry, or
+        // any worker thread is created. Installed mode does not alter the
+        // environment and therefore retains Tauri's existing WebView2 profile.
+        unsafe {
+            std::env::set_var("WEBVIEW2_USER_DATA_FOLDER", webview_data_dir);
+        }
+    }
+    if let Some(logs_dir) = launch_context.portable_logs_dir() {
+        logging::init_in_directory(logs_dir);
+    } else {
+        logging::init();
+    }
     // The heartbeat is started from `setup` once the main window's AppHandle
     // exists, so the native UI-thread liveness probe has a window to ping.
 
-    configure_macos_updater(configure_single_instance(tauri::Builder::default()))
+    let builder = if launch_context.is_portable() {
+        // Portable mode has an app-owned data-root-scoped instance identity;
+        // the stock Windows plugin uses the static application identifier.
+        tauri::Builder::default()
+    } else {
+        configure_single_instance(tauri::Builder::default())
+    };
+
+    configure_macos_updater(builder)
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
-        .setup(|app| {
-            let app_data_dir = app.path().app_data_dir().map_err(|error| {
-                setup_error(format!("failed to resolve app data directory: {error}"))
-            })?;
-            let db_path = app_data_dir.join("kkterm.sqlite3");
-            let mcp_bridge_dir = app_data_dir.clone();
+        .setup(move |app| {
+            let paths = app_paths::AppPaths::resolve(app.handle(), &launch_context)
+                .map_err(setup_error)?;
+            let portable_mode = paths.is_portable();
+            let db_path = paths.data_dir().join("kkterm.sqlite3");
+            let mcp_bridge_dir = paths.data_dir().to_path_buf();
+            installer::cache::set_portable_mode(portable_mode);
+            if portable_mode {
+                for folder in ["backgrounds", "fonts"] {
+                    let folder = paths.media_dir().join(folder);
+                    fs::create_dir_all(&folder).map_err(|error| {
+                        setup_error(format!(
+                            "failed to create portable media directory {}: {error}",
+                            folder.display()
+                        ))
+                    })?;
+                    app.asset_protocol_scope()
+                        .allow_directory(&folder, true)
+                        .map_err(|error| setup_error(error.to_string()))?;
+                }
+            }
+            app.manage(paths);
             let storage = storage::Storage::open(db_path).map_err(setup_error)?;
             let general_settings = storage.general_settings().map_err(setup_error)?;
-            let credential_settings = storage.credential_settings().map_err(setup_error)?;
+            let credential_settings = if portable_mode {
+                storage.credential_settings_with_default(Some("file"))
+            } else {
+                storage.credential_settings()
+            }
+            .map_err(setup_error)?;
             let ai_provider_settings = storage.ai_provider_settings().map_err(setup_error)?;
             net::proxy::set(net::proxy::from_settings(
                 general_settings.proxy_mode(),
@@ -3790,10 +4281,12 @@ pub fn run() {
             if let Err(error) = storage.backup_if_enabled_for_startup() {
                 eprintln!("failed to create automatic database backup at startup: {error}");
             }
-            if let Err(error) =
-                auto_start::sync_auto_start_with_windows(general_settings.auto_start_with_windows())
-            {
-                eprintln!("{error}");
+            if !app.state::<app_paths::AppPaths>().is_portable() {
+                if let Err(error) = auto_start::sync_auto_start_with_windows(
+                    general_settings.auto_start_with_windows(),
+                ) {
+                    eprintln!("{error}");
+                }
             }
             let webview_additional_browser_args = if apply_webview_stability {
                 #[cfg(target_os = "windows")]
@@ -3830,13 +4323,21 @@ pub fn run() {
                     window_state::restore_main_window(&main_window, main_window_settings);
                 app.manage(window_state::MainWindowState::new(initial_window_settings));
             }
+            #[cfg(target_os = "windows")]
+            if let Some(portable_instance) = portable_instance {
+                portable_instance
+                    .start_activation_listener(app.handle().clone(), restore_main_window);
+                app.manage(portable_instance);
+            }
             if let Err(error) = app_tray::install(app, "KKTerm") {
                 eprintln!("{error}");
             }
             app.manage(app_tray::TrayState::new(
                 general_settings.minimize_to_tray(),
             ));
-            if general_settings.auto_start_with_windows() {
+            if general_settings.auto_start_with_windows()
+                && !app.state::<app_paths::AppPaths>().is_portable()
+            {
                 if let Some(main_webview) = app.get_webview_window(window_state::MAIN_WINDOW_LABEL)
                 {
                     let main_window = main_webview.as_ref().window();
@@ -3866,6 +4367,18 @@ pub fn run() {
                 }
             }
             let secret_db_path = storage.db_path();
+            match storage.screenshot_settings() {
+                Ok(screenshot_settings) => {
+                    if let Err(error) =
+                        screenshot_shortcuts::apply(app.handle(), &screenshot_settings)
+                    {
+                        eprintln!("failed to register screenshot capture shortcuts: {error}");
+                    }
+                }
+                Err(error) => {
+                    eprintln!("failed to load screenshot settings for capture shortcuts: {error}");
+                }
+            }
             app.manage(storage);
             app.manage(performance::PerformanceMonitor::new());
             app.manage(pc_info::PcInfoCache::new());
@@ -3901,6 +4414,8 @@ pub fn run() {
                 ai_provider_settings.built_in_mcp_server_enabled(),
                 ai_provider_settings.built_in_mcp_allow_all_dangerous(),
             );
+            app_paths::start_portable_smoke_test_if_requested(app.handle())
+                .map_err(setup_error)?;
             Ok(())
         })
         .on_window_event(|window, event| {
@@ -3969,6 +4484,9 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             // ── App lifecycle, window, diagnostics & updates
             app_bootstrap,
+            app_paths::get_app_mode,
+            portable_creator::create_portable_copy,
+            portable_creator::launch_portable_copy,
             is_debug_build,
             app_updates::get_app_update_target_triple,
             app_updates::download_app_update,
@@ -4119,6 +4637,7 @@ pub fn run() {
             update_tray_menu,
             // ── Screenshots
             capture_screenshot_to_clipboard,
+            write_screenshot_data_url_to_clipboard,
             capture_screenshot_for_assistant,
             capture_fullscreen_screenshot_for_assistant,
             capture_screenshot_to_library,
@@ -4126,8 +4645,18 @@ pub fn run() {
             capture_active_window_screenshot_to_library,
             capture_interactive_region_screenshot_to_library,
             list_screenshots,
+            read_screenshot,
+            rename_screenshot,
+            copy_stored_screenshot_to_clipboard,
             delete_screenshot,
+            delete_screenshots,
+            resize_screenshots,
+            convert_screenshots,
+            save_edited_screenshot,
             clear_screenshots,
+            open_screenshots_folder,
+            reveal_screenshot,
+            open_screenshot_file,
             // ── SSH transport, config import, bookmarks & host keys
             ssh_transport_plan,
             import_ssh_config,
@@ -4146,6 +4675,12 @@ pub fn run() {
             list_connection_password_credentials,
             create_connection_password_credential,
             assign_connection_password_credential,
+            update_connection_password_credential,
+            list_connection_password_credential_usage,
+            create_standalone_connection_password_credential,
+            convert_connection_password_to_credential,
+            merge_connection_password_credentials,
+            unassign_connection_password_credential,
             delete_stored_credential,
             // ── Terminal sessions & recordings
             start_terminal_session,
@@ -4277,6 +4812,7 @@ pub fn run() {
             webview_go_forward,
             fill_webview_credential,
             capture_webview_credential,
+            request_webview_page_capture_state,
             close_webview_session,
             // ── RDP
             start_rdp_session,
@@ -4402,6 +4938,7 @@ pub fn run() {
             installer::commands::installer_run_web_ui,
             installer::commands::installer_stop_web_ui,
             installer::commands::installer_open_terminal_launcher,
+            installer::commands::installer_launch_app,
             installer::commands::installer_list_quick_launch,
             installer::commands::installer_launch_quick_command,
             installer::commands::installer_open_quick_launch_terminal,
@@ -4442,8 +4979,18 @@ pub fn run() {
         ])
         .build(tauri::generate_context!())
         .expect("error while building KKTerm")
-        .run(|_app, event| {
+        .run(|app, event| {
             if matches!(event, tauri::RunEvent::Exit) {
+                if app
+                    .try_state::<app_paths::AppPaths>()
+                    .is_some_and(|paths| paths.is_portable())
+                {
+                    if let Some(storage) = app.try_state::<storage::Storage>() {
+                        if let Err(error) = storage.checkpoint_wal() {
+                            eprintln!("failed to checkpoint portable database on exit: {error}");
+                        }
+                    }
+                }
                 if let Err(error) = x_server::stop_managed_vcxsrv_on_exit() {
                     eprintln!("failed to stop managed VcXsrv on exit: {error}");
                 }

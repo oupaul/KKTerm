@@ -6,7 +6,7 @@
 
 use std::collections::HashMap;
 use std::net::{SocketAddr, TcpStream};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
@@ -505,9 +505,7 @@ pub async fn installer_run_web_ui(tool_id: String) -> Result<(), String> {
         &json!({ "toolId": &tool_id }),
     );
     tauri::async_runtime::spawn_blocking(move || {
-        let affordance = web_ui_affordance(&tool_id)
-            .ok_or_else(|| format!("tool `{tool_id}` does not expose a managed web UI"))?;
-        spawn_web_ui_affordance(&affordance)
+        start_web_ui_for_tool(&tool_id)
     })
     .await
     .map_err(|error| format!("failed to start managed web UI: {error}"))?
@@ -552,8 +550,9 @@ pub async fn installer_install_service(
         ensure_nssm_installed(&catalog, &tool_id, &emit)?;
         let affordance = web_ui_affordance(&tool_id)
             .ok_or_else(|| format!("tool `{tool_id}` does not expose a managed web UI"))?;
-        let service = service_affordance(&tool_id)
+        let mut service = service_affordance(&tool_id)
             .ok_or_else(|| format!("tool `{tool_id}` does not expose a managed service helper"))?;
+        pin_managed_service_node_runtime(&tool_id, &mut service)?;
         if let Some(port) = port_to_stop_before_service(&affordance) {
             stop_port_listener(port)?;
         }
@@ -719,6 +718,13 @@ struct ManagedServiceAffordance {
     working_dir: String,
 }
 
+#[derive(Debug, Clone)]
+struct ManagedNodeRuntime {
+    version: String,
+    node_path: PathBuf,
+    is_lts: bool,
+}
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ManagedWebUiStatus {
@@ -726,6 +732,9 @@ pub struct ManagedWebUiStatus {
     service_installed: bool,
     service_state: Option<String>,
     startup: Option<String>,
+    node_version: Option<String>,
+    node_runtime_version: Option<String>,
+    node_requirement: Option<String>,
     url: String,
 }
 
@@ -911,7 +920,144 @@ struct TerminalLaunchAffordance {
 }
 
 fn terminal_launch_affordance(tool_id: &str) -> Option<TerminalLaunchAffordance> {
+    /// Plain PATH-resolved CLI tool: no venv activation, no setup lines.
+    fn plain(prefill: &str, hints: &[&str]) -> Option<TerminalLaunchAffordance> {
+        Some(TerminalLaunchAffordance {
+            activate_ps1: None,
+            setup_lines: vec![],
+            prefill: prefill.into(),
+            hints: hints.iter().map(|hint| (*hint).to_string()).collect(),
+        })
+    }
     match tool_id {
+        "git" => plain(
+            "git status",
+            &[
+                "git clone <url>  —  copy a remote repository",
+                "git status  —  show changed files",
+                "git log --oneline -20  —  recent commits",
+            ],
+        ),
+        "winget" => plain(
+            "winget search ",
+            &[
+                "winget search <name>  —  find a package",
+                "winget install <id>  —  install a package",
+                "winget upgrade --all  —  update everything",
+            ],
+        ),
+        "chocolatey" => plain(
+            "choco search ",
+            &[
+                "choco search <name>  —  find a package",
+                "choco install <id>  —  install a package (admin)",
+                "choco upgrade all  —  update everything (admin)",
+            ],
+        ),
+        "node-bundle" => plain(
+            "node --version",
+            &[
+                "node --version  —  check the active Node runtime",
+                "npm install <package>  —  add a package to a project",
+                "nvm list  —  show installed Node versions",
+            ],
+        ),
+        "python-bundle" => plain(
+            "python --version",
+            &[
+                "python --version  —  check the active Python runtime",
+                "uv venv  —  create a virtual environment",
+                "uv pip install <package>  —  install into the environment",
+            ],
+        ),
+        "wsl" => plain(
+            "wsl --list --verbose",
+            &[
+                "wsl  —  open the default Linux distribution",
+                "wsl --list --verbose  —  show installed distributions",
+                "wsl --update  —  update the WSL kernel",
+            ],
+        ),
+        "nssm" => plain(
+            "nssm",
+            &[
+                "nssm install <service>  —  register a service (admin)",
+                "nssm status <service>  —  check a service",
+            ],
+        ),
+        "oh-my-posh" => plain(
+            "oh-my-posh init pwsh | Invoke-Expression",
+            &[
+                "oh-my-posh init pwsh | Invoke-Expression  —  try it in this session",
+                "oh-my-posh font install  —  install a Nerd Font",
+            ],
+        ),
+        "antigravity-cli" => plain("agy", &[]),
+        "claude-code-cli" => plain("claude", &[]),
+        "codex-cli" => plain("codex", &[]),
+        "cursor-cli" => plain("agent", &[]),
+        "kimi-code-cli" => plain("kimi", &[]),
+        "grok-build" => plain("grok", &[]),
+        "opencode" => plain("opencode", &[]),
+        "rustup" => plain(
+            "rustup show",
+            &[
+                "rustup show  —  show the active toolchain",
+                "rustup update  —  update Rust",
+                "cargo new <name>  —  create a project",
+            ],
+        ),
+        "bun" => plain(
+            "bun --version",
+            &[
+                "bun init  —  create a project",
+                "bun install  —  install dependencies",
+                "bun run <script>  —  run a package script",
+            ],
+        ),
+        "ripgrep" => plain(
+            "rg \"TODO\"",
+            &[
+                "rg \"pattern\"  —  search the current directory",
+                "rg -i \"error\" -g \"*.log\"  —  case-insensitive search in .log files",
+                "rg --files  —  list searchable files",
+            ],
+        ),
+        "jq" => plain(
+            "jq . ",
+            &[
+                "jq . data.json  —  pretty-print JSON",
+                "Get-Content data.json | jq \".items[0]\"  —  pick a field from piped JSON",
+            ],
+        ),
+        "fzf" => plain(
+            "fzf",
+            &[
+                "fzf  —  fuzzy-pick a file from the current directory",
+                "Get-ChildItem -Recurse -Name | fzf  —  fuzzy-filter any list",
+            ],
+        ),
+        "ffmpeg" => plain(
+            "ffmpeg",
+            &[
+                "ffmpeg -i input.mp4 output.mp3  —  convert media",
+                "ffprobe input.mp4  —  inspect a media file",
+            ],
+        ),
+        "scrcpy" => plain(
+            "scrcpy",
+            &[
+                "scrcpy  —  mirror a USB-connected Android device",
+                "scrcpy --tcpip=<ip>  —  connect over Wi-Fi",
+            ],
+        ),
+        "psmux" => plain(
+            "psmux",
+            &[
+                "psmux  —  start a terminal multiplexer session",
+                "psmux --help  —  list commands and flags",
+            ],
+        ),
         "hermes-agent" => {
             let activate = managed_app_install_dir("hermes-agent")
                 .join(".venv")
@@ -953,15 +1099,430 @@ fn terminal_launch_affordance(tool_id: &str) -> Option<TerminalLaunchAffordance>
     }
 }
 
+/// `path`, when present, is the working directory to open the terminal in —
+/// used by directory-scoped coding agents whose launcher remembers recent
+/// project folders. It must name an existing absolute directory.
 #[tauri::command]
-pub async fn installer_open_terminal_launcher(tool_id: String) -> Result<(), String> {
+pub async fn installer_open_terminal_launcher(
+    tool_id: String,
+    path: Option<String>,
+    arguments: Option<String>,
+    execute: Option<bool>,
+) -> Result<(), String> {
     tauri::async_runtime::spawn_blocking(move || {
-        let affordance = terminal_launch_affordance(&tool_id)
+        let mut affordance = terminal_launch_affordance(&tool_id)
             .ok_or_else(|| format!("tool `{tool_id}` does not have a terminal launcher"))?;
-        spawn_terminal_launcher(&affordance)
+        let execute = execute.unwrap_or(false);
+        if execute && !coding_agent_terminal_launcher(&tool_id) {
+            return Err(format!(
+                "tool `{tool_id}` does not support direct terminal execution"
+            ));
+        }
+        if let Some(arguments) = validated_launcher_arguments(arguments.as_deref())? {
+            affordance.prefill.push(' ');
+            affordance.prefill.push_str(&arguments);
+        }
+        let working_dir = path.as_deref().map(validated_launch_dir).transpose()?;
+        spawn_terminal_launcher(&affordance, working_dir.as_deref(), execute)
     })
     .await
     .map_err(|error| format!("failed to open terminal launcher: {error}"))?
+}
+
+fn coding_agent_terminal_launcher(tool_id: &str) -> bool {
+    matches!(
+        tool_id,
+        "antigravity-cli"
+            | "claude-code-cli"
+            | "codex-cli"
+            | "cursor-cli"
+            | "kimi-code-cli"
+            | "grok-build"
+            | "opencode"
+    )
+}
+
+fn validated_launcher_arguments(arguments: Option<&str>) -> Result<Option<String>, String> {
+    let Some(arguments) = arguments.map(str::trim).filter(|value| !value.is_empty()) else {
+        return Ok(None);
+    };
+    if arguments.len() > 4096 {
+        return Err("launcher arguments are too long".into());
+    }
+    if arguments.chars().any(|ch| matches!(ch, '\r' | '\n' | '\0')) {
+        return Err("launcher arguments must be a single line".into());
+    }
+    Ok(Some(arguments.to_string()))
+}
+
+/// Validate a launcher working directory: absolute and existing, so a stale
+/// remembered folder fails with a clear message instead of a broken prompt.
+fn validated_launch_dir(path: &str) -> Result<std::path::PathBuf, String> {
+    let trimmed = path.trim();
+    if trimmed.is_empty() {
+        return Err("launch folder is empty".into());
+    }
+    let dir = std::path::PathBuf::from(trimmed);
+    if !dir.is_absolute() {
+        return Err(format!("launch folder `{trimmed}` is not an absolute path"));
+    }
+    if !dir.is_dir() {
+        return Err(format!("launch folder `{trimmed}` no longer exists"));
+    }
+    Ok(dir)
+}
+
+/// One way to locate an installed GUI app's executable. Candidates are tried
+/// in order; the first one that resolves is launched.
+enum GuiLaunchCandidate {
+    /// Bare executable name resolved through the refreshed PATH
+    /// (`Get-Command`) and the Windows `App Paths` registry.
+    Command(&'static str),
+    /// Absolute path with `%VAR%` environment tokens; may contain one `*`
+    /// glob (e.g. versioned Blender install directories). When the glob
+    /// matches several directories the highest-sorting path wins.
+    Path(&'static str),
+    /// MSIX/Store app launched via `shell:AppsFolder` by Appx package name.
+    Appx(&'static str),
+}
+
+/// Curated automatic executable candidates for installed GUI apps that the
+/// tile-level Run button can start directly. An explicitly user-selected,
+/// validated per-tool path may be tried only after this closed list fails.
+fn gui_launch_affordance(tool_id: &str) -> Vec<GuiLaunchCandidate> {
+    use GuiLaunchCandidate::{Appx, Command, Path};
+    match tool_id {
+        "vscode" => vec![
+            Path("%LOCALAPPDATA%\\Programs\\Microsoft VS Code\\Code.exe"),
+            Path("%ProgramFiles%\\Microsoft VS Code\\Code.exe"),
+            Command("code"),
+        ],
+        "cursor" => vec![
+            Path("%LOCALAPPDATA%\\Programs\\cursor\\Cursor.exe"),
+            Command("cursor"),
+        ],
+        "notepadpp" => vec![
+            Command("notepad++.exe"),
+            Path("%ProgramFiles%\\Notepad++\\notepad++.exe"),
+        ],
+        "docker-desktop" => vec![Path("%ProgramFiles%\\Docker\\Docker\\Docker Desktop.exe")],
+        "comfyui" => vec![Path(
+            "%LOCALAPPDATA%\\Programs\\@comfyorgcomfyui-electron\\ComfyUI.exe",
+        )],
+        "lmstudio" => vec![
+            Path("%LOCALAPPDATA%\\Programs\\LM Studio\\LM Studio.exe"),
+            Path("%LOCALAPPDATA%\\Programs\\lm-studio\\LM Studio.exe"),
+            Path("%LOCALAPPDATA%\\LM-Studio\\LM Studio.exe"),
+        ],
+        "bruno" => vec![
+            Path("%LOCALAPPDATA%\\Programs\\Bruno\\Bruno.exe"),
+            Path("%ProgramFiles%\\Bruno\\Bruno.exe"),
+        ],
+        "claude-desktop" => vec![Path("%LOCALAPPDATA%\\AnthropicClaude\\claude.exe")],
+        "codex-desktop" => vec![Appx("OpenAI.Codex")],
+        "powertoys" => vec![
+            Path("%ProgramFiles%\\PowerToys\\PowerToys.exe"),
+            Path("%LOCALAPPDATA%\\PowerToys\\PowerToys.exe"),
+        ],
+        "powershell-7" => vec![
+            Command("pwsh.exe"),
+            Path("%ProgramFiles%\\PowerShell\\7\\pwsh.exe"),
+        ],
+        "everything" => vec![
+            Path("%ProgramFiles%\\Everything\\Everything.exe"),
+            Path("%ProgramFiles(x86)%\\Everything\\Everything.exe"),
+            Command("Everything.exe"),
+        ],
+        "ditto" => vec![
+            Path("%ProgramFiles%\\Ditto\\Ditto.exe"),
+            Path("%ProgramFiles(x86)%\\Ditto\\Ditto.exe"),
+        ],
+        "keepassxc" => vec![
+            Path("%ProgramFiles%\\KeePassXC\\KeePassXC.exe"),
+            Command("keepassxc.exe"),
+        ],
+        "7zip" => vec![Path("%ProgramFiles%\\7-Zip\\7zFM.exe")],
+        "sharex" => vec![
+            Path("%ProgramFiles%\\ShareX\\ShareX.exe"),
+            Command("sharex.exe"),
+        ],
+        "tailscale" => vec![Path("%ProgramFiles%\\Tailscale\\tailscale-ipn.exe")],
+        "rustdesk" => vec![
+            Path("%ProgramFiles%\\RustDesk\\rustdesk.exe"),
+            Command("rustdesk.exe"),
+        ],
+        "google-chrome" => vec![
+            Command("chrome.exe"),
+            Path("%ProgramFiles%\\Google\\Chrome\\Application\\chrome.exe"),
+            Path("%LOCALAPPDATA%\\Google\\Chrome\\Application\\chrome.exe"),
+        ],
+        "firefox" => vec![
+            Command("firefox.exe"),
+            Path("%ProgramFiles%\\Mozilla Firefox\\firefox.exe"),
+            Path("%LOCALAPPDATA%\\Mozilla Firefox\\firefox.exe"),
+        ],
+        "acrobat-reader" => vec![
+            Command("Acrobat.exe"),
+            Path("%ProgramFiles%\\Adobe\\Acrobat DC\\Acrobat\\Acrobat.exe"),
+            Command("AcroRd32.exe"),
+        ],
+        "obsidian" => vec![
+            Path("%LOCALAPPDATA%\\Programs\\Obsidian\\Obsidian.exe"),
+            Path("%LOCALAPPDATA%\\Obsidian\\Obsidian.exe"),
+        ],
+        "drawio" => vec![Path("%ProgramFiles%\\draw.io\\draw.io.exe")],
+        "krita" => vec![
+            Command("krita.exe"),
+            Path("%ProgramFiles%\\Krita (x64)\\bin\\krita.exe"),
+        ],
+        "inkscape" => vec![
+            Command("inkscape.exe"),
+            Path("%ProgramFiles%\\Inkscape\\bin\\inkscape.exe"),
+        ],
+        "blender" => vec![
+            Command("blender-launcher.exe"),
+            Path("%ProgramFiles%\\Blender Foundation\\Blender *\\blender-launcher.exe"),
+            Path("%ProgramFiles%\\Blender Foundation\\Blender *\\blender.exe"),
+        ],
+        "pencil" => vec![
+            Path("%ProgramFiles%\\Pencil\\Pencil.exe"),
+            Path("%LOCALAPPDATA%\\Programs\\Pencil\\Pencil.exe"),
+        ],
+        "vlc" => vec![
+            Path("%ProgramFiles%\\VideoLAN\\VLC\\vlc.exe"),
+            Command("vlc.exe"),
+        ],
+        "obs-studio" => vec![Path("%ProgramFiles%\\obs-studio\\bin\\64bit\\obs64.exe")],
+        "xnview-mp" => vec![Path("%ProgramFiles%\\XnViewMP\\xnviewmp.exe")],
+        "audacity" => vec![Path("%ProgramFiles%\\Audacity\\Audacity.exe")],
+        "vcxsrv" => vec![Path("%ProgramFiles%\\VcXsrv\\xlaunch.exe")],
+        _ => vec![],
+    }
+}
+
+/// Launch an installed GUI app from the tile-level Run button. Resolves the
+/// curated candidate list in order, then an optional user-selected path, and
+/// starts the first hit detached at normal (non-elevated) integrity. Returns
+/// false when nothing resolves so the frontend can offer the native picker.
+#[tauri::command]
+pub async fn installer_launch_app(
+    runtime: State<'_, InstallerRuntime>,
+    tool_id: String,
+    custom_path: Option<String>,
+) -> Result<bool, String> {
+    let catalog = runtime
+        .catalog
+        .lock()
+        .unwrap()
+        .clone()
+        .ok_or("catalog not loaded yet — call installer_load_catalog first")?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let recipe = find_recipe(&catalog, &tool_id)
+            .ok_or_else(|| format!("tool `{tool_id}` is not in the installer catalog"))?;
+        let candidates = gui_launch_affordance(&tool_id);
+        if candidates.is_empty() {
+            return Err(format!("tool `{tool_id}` does not have an app launcher"));
+        }
+        let custom_path = custom_path
+            .as_deref()
+            .map(validated_custom_gui_launcher)
+            .transpose()?;
+        run_gui_launch(recipe, &candidates, custom_path)
+    })
+    .await
+    .map_err(|error| format!("failed to launch app: {error}"))?
+}
+
+/// PowerShell that tries each candidate in order and starts the first hit.
+/// `Start-Process` gets the executable's own directory as the working
+/// directory because some apps (e.g. OBS Studio) refuse to start elsewhere.
+fn build_gui_launch_ps_command(
+    recipe: &Recipe,
+    candidates: &[GuiLaunchCandidate],
+    custom_path: Option<&Path>,
+) -> String {
+    let provider_id = match &recipe.provider {
+        Provider::Winget { id } => id.as_str(),
+        _ => "",
+    };
+    let mut display_names = recipe.detection.display_names.clone();
+    if !display_names
+        .iter()
+        .any(|name| name.eq_ignore_ascii_case(&recipe.name))
+    {
+        display_names.push(recipe.name.clone());
+    }
+    let ps_array = |values: &[String]| {
+        format!(
+            "@({})",
+            values
+                .iter()
+                .map(|value| ps_single_quote(value))
+                .collect::<Vec<_>>()
+                .join(", ")
+        )
+    };
+    let mut allowed_executable_names = candidates
+        .iter()
+        .filter_map(|candidate| match candidate {
+            GuiLaunchCandidate::Command(command) | GuiLaunchCandidate::Path(command) => {
+                command.rsplit('\\').next()
+            }
+            GuiLaunchCandidate::Appx(_) => None,
+        })
+        .flat_map(|name| {
+            let mut names = vec![name.to_string()];
+            if !name.to_ascii_lowercase().ends_with(".exe") {
+                names.push(format!("{name}.exe"));
+            }
+            names
+        })
+        .collect::<Vec<_>>();
+    allowed_executable_names.sort_by_key(|name| name.to_ascii_lowercase());
+    allowed_executable_names.dedup_by(|left, right| left.eq_ignore_ascii_case(right));
+    let mut parts: Vec<String> = vec![
+        "$ErrorActionPreference = 'SilentlyContinue'".into(),
+        "function Start-Hit([string]$exe) { Start-Process -FilePath $exe -WorkingDirectory (Split-Path -Parent $exe); exit 0 }".into(),
+        "function Start-AppId([string]$appId) { Start-Process -FilePath 'explorer.exe' -ArgumentList ('shell:AppsFolder\\' + $appId); exit 0 }".into(),
+        r#"function Get-DisplayIconExe([string]$value) { if (-not $value) { return $null }; $expanded = [Environment]::ExpandEnvironmentVariables($value.Trim()); if ($expanded -match '^\s*"([^"]+?\.exe)"') { return $Matches[1] }; if ($expanded -match '^\s*([^,]+?\.exe)(?:,|$)') { return $Matches[1].Trim() }; return $null }"#.into(),
+        "function Test-AllowedExe([string]$exe) { if (-not $exe) { return $false }; $leaf = [IO.Path]::GetFileName($exe); return ($allowedExeNames | Where-Object { $leaf -ieq $_ }).Count -gt 0 }".into(),
+        "function Test-LaunchableAppId([string]$appId) { if (-not $appId -or $appId -match '^(?i)https?://' -or $appId -match '(?i)\\.(chm|url|html?)$') { return $false }; if ($appId -match '(?i)\\.exe$') { return (Test-AllowedExe $appId) }; return $true }".into(),
+        "function Get-VersionSortKey([string]$value) { $parts = @([regex]::Matches($value, '\\d+') | Select-Object -First 4 | ForEach-Object { try { '{0:D12}' -f [int64]$_.Value } catch { '000000000000' } }); return ($parts -join '.') }".into(),
+        format!(
+            "$allowedExeNames = {}",
+            ps_array(&allowed_executable_names)
+        ),
+        format!("$displayNames = {}", ps_array(&display_names)),
+        format!(
+            "$displayPrefixes = {}",
+            ps_array(&recipe.detection.display_name_prefixes)
+        ),
+        format!(
+            "$registryKeys = {}",
+            ps_array(&recipe.detection.registry_keys)
+        ),
+        format!("$wingetId = {}", ps_single_quote(provider_id)),
+    ];
+
+    for family in &recipe.detection.appx_package_family_names {
+        let escaped = family.replace('\'', "''");
+        parts.push(format!(
+            "$pkg = Get-AppxPackage -ErrorAction SilentlyContinue | Where-Object {{ $_.PackageFamilyName -ieq '{escaped}' }} | Select-Object -First 1; \
+             if ($pkg) {{ $appId = (Get-AppxPackageManifest $pkg).Package.Applications.Application | Select-Object -First 1 -ExpandProperty Id; \
+             if ($appId) {{ Start-AppId ($pkg.PackageFamilyName + '!' + $appId) }} }}"
+        ));
+    }
+
+    parts.push(
+        "$startApps = @(Get-StartApps -ErrorAction SilentlyContinue); $startMatches = @($startApps | Where-Object { $name = $_.Name; (($displayNames | Where-Object { $name -ieq $_ }).Count -gt 0) -and (Test-LaunchableAppId $_.AppID) }); if ($startMatches.Count -eq 1) { Start-AppId $startMatches[0].AppID }; $startMatches = @($startApps | Where-Object { $name = $_.Name; ((($displayNames | Where-Object { $name -ieq $_ }).Count -gt 0) -or (($displayPrefixes | Where-Object { $name -and $name.StartsWith($_, [System.StringComparison]::OrdinalIgnoreCase) }).Count -gt 0)) -and (Test-LaunchableAppId $_.AppID) }); if ($startMatches.Count -eq 1) { Start-AppId $startMatches[0].AppID }".into(),
+    );
+    parts.push(
+        "$uninstallRoots = @('Registry::HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*', 'Registry::HKEY_CURRENT_USER\\Software\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*', 'Registry::HKEY_LOCAL_MACHINE\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*', 'Registry::HKEY_LOCAL_MACHINE\\Software\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*'); $registrations = @(Get-ItemProperty -Path $uninstallRoots -ErrorAction SilentlyContinue | Where-Object { $child = $_.PSChildName; $name = $_.DisplayName; ($registryKeys | Where-Object { $child -ieq $_ }).Count -gt 0 -or ($wingetId -and ($child -ieq $wingetId -or ($child -ilike ($wingetId + '_*Microsoft.Winget.Source*')))) -or ($displayNames | Where-Object { $name -ieq $_ -or $name -ieq ($_ + ' (User)') }).Count -gt 0 -or ($displayPrefixes | Where-Object { $name -and $name.StartsWith($_, [System.StringComparison]::OrdinalIgnoreCase) }).Count -gt 0 } | Sort-Object -Property @{ Expression = { Get-VersionSortKey $_.DisplayVersion }; Descending = $true }); foreach ($registration in $registrations) { $exe = Get-DisplayIconExe $registration.DisplayIcon; if ((Test-AllowedExe $exe) -and (Test-Path -LiteralPath $exe -PathType Leaf)) { Start-Hit $exe }; if ($registration.InstallLocation) { foreach ($name in $allowedExeNames) { $exe = Join-Path ([Environment]::ExpandEnvironmentVariables($registration.InstallLocation)) $name; if (Test-Path -LiteralPath $exe -PathType Leaf) { Start-Hit $exe } } } }".into(),
+    );
+    for candidate in candidates {
+        match candidate {
+            GuiLaunchCandidate::Path(path) => {
+                let escaped = path.replace('\'', "''");
+                parts.push(format!(
+                    "$p = [Environment]::ExpandEnvironmentVariables('{escaped}'); \
+                     $hit = Get-Item -Path $p -ErrorAction SilentlyContinue | \
+                     Sort-Object -Property FullName -Descending | Select-Object -First 1; \
+                     if ($hit) {{ Start-Hit $hit.FullName }}"
+                ));
+            }
+            GuiLaunchCandidate::Command(name) => {
+                let escaped = name.replace('\'', "''");
+                parts.push(format!(
+                    "$cmd = Get-Command '{escaped}' -ErrorAction SilentlyContinue | Select-Object -First 1; \
+                     if ($cmd -and $cmd.Source) {{ Start-Hit $cmd.Source }}"
+                ));
+                parts.push(format!(
+                    "$ap = Get-ItemProperty -Path ('HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\{escaped}'), ('HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\{escaped}') -ErrorAction SilentlyContinue | Select-Object -First 1; \
+                     if ($ap.'(default)') {{ $exe = [Environment]::ExpandEnvironmentVariables($ap.'(default)'.Trim('\"')); if (Test-Path -LiteralPath $exe) {{ Start-Hit $exe }} }}"
+                ));
+            }
+            GuiLaunchCandidate::Appx(package) => {
+                let escaped = package.replace('\'', "''");
+                parts.push(format!(
+                    "$pkg = Get-AppxPackage -Name '{escaped}' -ErrorAction SilentlyContinue | Select-Object -First 1; \
+                     if ($pkg) {{ $appId = (Get-AppxPackageManifest $pkg).Package.Applications.Application | Select-Object -First 1 -ExpandProperty Id; \
+                     if ($appId) {{ Start-Process ('shell:AppsFolder\\' + $pkg.PackageFamilyName + '!' + $appId); exit 0 }} }}"
+                ));
+            }
+        }
+    }
+    if let Some(path) = custom_path {
+        parts.push(format!(
+            "$custom = {}; if (Test-Path -LiteralPath $custom -PathType Leaf) {{ Start-Hit $custom }}",
+            ps_single_quote(&path.to_string_lossy())
+        ));
+    }
+    parts.push("exit 1".into());
+    parts.join("; ")
+}
+
+fn validated_custom_gui_launcher(path: &str) -> Result<&Path, String> {
+    let path = Path::new(path.trim());
+    if !path.is_absolute() {
+        return Err("custom app launcher path must be absolute".into());
+    }
+    if !path.is_file() {
+        return Err("custom app launcher path does not exist or is not a file".into());
+    }
+    if !is_supported_custom_gui_launcher(path) {
+        return Err("custom app launcher must be an executable or .lnk shortcut".into());
+    }
+    Ok(path)
+}
+
+fn is_supported_custom_gui_launcher(path: &Path) -> bool {
+    let extension = path
+        .extension()
+        .and_then(|value| value.to_str())
+        .unwrap_or_default();
+    matches!(
+        extension.to_ascii_lowercase().as_str(),
+        "exe" | "com" | "bat" | "cmd" | "lnk"
+    )
+}
+
+#[cfg(target_os = "windows")]
+fn run_gui_launch(
+    recipe: &Recipe,
+    candidates: &[GuiLaunchCandidate],
+    custom_path: Option<&Path>,
+) -> Result<bool, String> {
+    let ps = build_gui_launch_ps_command(recipe, candidates, custom_path);
+    let mut cmd = Command::new("powershell");
+    cmd.args([
+        "-NoProfile",
+        "-NonInteractive",
+        "-WindowStyle",
+        "Hidden",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-Command",
+        &ps,
+    ]);
+    use std::os::windows::process::CommandExt;
+    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+    cmd.creation_flags(CREATE_NO_WINDOW);
+    if let Some(path) = super::install::refreshed_path_public() {
+        cmd.env("PATH", path);
+    }
+    let output = cmd
+        .output()
+        .map_err(|error| format!("failed to launch `{}`: {error}", recipe.id))?;
+    Ok(output.status.success())
+}
+
+#[cfg(not(target_os = "windows"))]
+fn run_gui_launch(
+    _recipe: &Recipe,
+    _candidates: &[GuiLaunchCandidate],
+    _custom_path: Option<&Path>,
+) -> Result<bool, String> {
+    Err("app launch is only available on Windows".into())
 }
 
 /// One utility exposed in an installed tool suite's mini launcher. Used by
@@ -1279,6 +1840,29 @@ fn quick_launch_affordance(tool_id: &str) -> Vec<QuickLaunchEntry> {
                 "Report the registry space used by a key.",
             ),
         ],
+        "coreutils" => vec![
+            // All command-line: listed for discovery, run from the terminal.
+            cli("ls", "ls", "List directory contents."),
+            cli("cat", "cat", "Print file contents."),
+            cli("cp", "cp", "Copy files and directories."),
+            cli("mv", "mv", "Move or rename files and directories."),
+            cli("rm", "rm", "Delete files and directories."),
+            cli("mkdir", "mkdir", "Create directories."),
+            cli("head", "head", "Show the first lines of a file."),
+            cli("tail", "tail", "Show the last lines of a file."),
+            cli("sort", "sort", "Sort lines of text."),
+            cli("uniq", "uniq", "Filter adjacent duplicate lines."),
+            cli("wc", "wc", "Count lines, words, and bytes."),
+            cli("cut", "cut", "Extract fields or columns from lines."),
+            cli("tr", "tr", "Translate or delete characters."),
+            cli("tee", "tee", "Copy stdin to stdout and a file."),
+            cli("touch", "touch", "Create files or update timestamps."),
+            cli("du", "du", "Report disk usage per directory."),
+            cli("date", "date", "Print or format the current date and time."),
+            cli("seq", "seq", "Print a sequence of numbers."),
+            cli("base64", "base64", "Encode or decode base64 data."),
+            cli("sha256sum", "sha256sum", "Compute SHA-256 file checksums."),
+        ],
         _ => vec![],
     }
 }
@@ -1311,19 +1895,31 @@ pub async fn installer_launch_quick_command(
     .map_err(|error| format!("failed to launch quick command: {error}"))?
 }
 
-/// Open a standard elevated PowerShell prompt so a suite's command-line tools
-/// (e.g. Sysinternals `handle`, `psexec`, `sigcheck`) can be run with their own
-/// arguments. Only available for tools that expose a quick launcher.
+/// Open a PowerShell prompt so a suite's command-line tools can be run with
+/// their own arguments. Sysinternals opens **elevated** because most of its
+/// tools require admin integrity (e.g. `handle`, `psexec`, `sigcheck`);
+/// Coreutils opens a normal prompt with usage hints. Only available for
+/// tools that expose a quick launcher.
 #[tauri::command]
 pub async fn installer_open_quick_launch_terminal(tool_id: String) -> Result<(), String> {
-    tauri::async_runtime::spawn_blocking(move || {
-        if quick_launch_affordance(&tool_id).is_empty() {
-            return Err(format!("tool `{tool_id}` does not have a quick launcher"));
-        }
-        spawn_elevated_powershell()
+    tauri::async_runtime::spawn_blocking(move || match tool_id.as_str() {
+        "sysinternals-suite" => spawn_elevated_powershell(),
+        "coreutils" => spawn_terminal_launcher(
+            &TerminalLaunchAffordance {
+                activate_ps1: None,
+                setup_lines: vec![],
+                prefill: "ls".into(),
+                hints: vec![
+                    "Coreutils commands are on PATH — e.g. ls, cat, head, tail, sort, wc.".into(),
+                ],
+            },
+            None,
+            false,
+        ),
+        _ => Err(format!("tool `{tool_id}` does not have a quick launcher")),
     })
     .await
-    .map_err(|error| format!("failed to open elevated PowerShell: {error}"))?
+    .map_err(|error| format!("failed to open quick-launch terminal: {error}"))?
 }
 
 fn service_affordance(tool_id: &str) -> Option<ManagedServiceAffordance> {
@@ -1505,6 +2101,235 @@ fn flowise_managed_env() -> Vec<(&'static str, String)> {
         ),
         ("STORAGE_TYPE", "local".into()),
     ]
+}
+
+fn managed_npm_package_for_tool(tool_id: &str) -> Option<&'static str> {
+    match tool_id {
+        "n8n" => Some("n8n"),
+        "flowise" => Some("flowise"),
+        _ => None,
+    }
+}
+
+fn read_managed_npm_package_manifest(
+    tool_id: &str,
+) -> Result<Option<(PathBuf, serde_json::Value)>, String> {
+    let Some(package) = managed_npm_package_for_tool(tool_id) else {
+        return Ok(None);
+    };
+    let package_dir = package.split('/').fold(
+        managed_app_install_dir(tool_id).join("node_modules"),
+        |path, part| path.join(part),
+    );
+    let manifest = package_dir.join("package.json");
+    let text = std::fs::read_to_string(&manifest)
+        .map_err(|error| format!("failed to read {}: {error}", manifest.display()))?;
+    let package_json: serde_json::Value = serde_json::from_str(&text)
+        .map_err(|error| format!("failed to parse {}: {error}", manifest.display()))?;
+    Ok(Some((package_dir, package_json)))
+}
+
+fn managed_node_engine_range(tool_id: &str) -> Result<Option<String>, String> {
+    let Some((_, package_json)) = read_managed_npm_package_manifest(tool_id)? else {
+        return Ok(None);
+    };
+    Ok(package_json
+        .get("engines")
+        .and_then(|engines| engines.get("node"))
+        .and_then(serde_json::Value::as_str)
+        .map(str::to_string))
+}
+
+#[cfg(target_os = "windows")]
+fn compatible_managed_node_runtime(tool_id: &str) -> Result<Option<ManagedNodeRuntime>, String> {
+    let Some(engine_range) = managed_node_engine_range(tool_id)? else {
+        return Ok(None);
+    };
+    let Some(nvm_home) = super::install::refreshed_nvm_home_public() else {
+        return Ok(None);
+    };
+    let mut candidates = Vec::new();
+    let entries = std::fs::read_dir(&nvm_home)
+        .map_err(|error| format!("failed to inspect Node runtimes in {nvm_home}: {error}"))?;
+    for entry in entries.flatten() {
+        let version_dir = entry.path();
+        let node_path = version_dir.join("node.exe");
+        if !node_path.is_file() {
+            continue;
+        }
+        let mut probe = Command::new(&node_path);
+        probe.args([
+            "-p",
+            "process.versions.node + '\\t' + (process.release.lts ? 'lts' : '')",
+        ]);
+        let Ok(output) = no_window(&mut probe).output() else {
+            continue;
+        };
+        if !output.status.success() {
+            continue;
+        }
+        let probe_text = String::from_utf8_lossy(&output.stdout);
+        let mut fields = probe_text.trim().split('\t');
+        let Some(version) = fields.next().filter(|value| !value.is_empty()) else {
+            continue;
+        };
+        candidates.push(ManagedNodeRuntime {
+            version: version.to_string(),
+            node_path,
+            is_lts: fields.next() == Some("lts"),
+        });
+    }
+
+    let selected = select_compatible_node_runtime(candidates, |candidate| {
+        node_engine_satisfied(candidate, &engine_range)
+    });
+    selected.map(Some).ok_or_else(|| {
+        format!(
+            "{tool_id} requires Node {engine_range}, but no compatible installed Node LTS was found. Update the Node.js LTS bundle in Install Helper."
+        )
+    })
+}
+
+#[cfg(not(target_os = "windows"))]
+fn compatible_managed_node_runtime(_tool_id: &str) -> Result<Option<ManagedNodeRuntime>, String> {
+    Ok(None)
+}
+
+fn select_compatible_node_runtime(
+    candidates: Vec<ManagedNodeRuntime>,
+    mut satisfies: impl FnMut(&ManagedNodeRuntime) -> bool,
+) -> Option<ManagedNodeRuntime> {
+    let mut selected: Option<ManagedNodeRuntime> = None;
+    for candidate in candidates {
+        if !candidate.is_lts || !satisfies(&candidate) {
+            continue;
+        }
+        let replace = selected.as_ref().is_none_or(|current| {
+            installer_latest_is_newer(&candidate.version, &current.version)
+        });
+        if replace {
+            selected = Some(candidate);
+        }
+    }
+    selected
+}
+
+#[cfg(target_os = "windows")]
+fn node_engine_satisfied(candidate: &ManagedNodeRuntime, engine_range: &str) -> bool {
+    let semver_cli = candidate
+        .node_path
+        .parent()
+        .unwrap_or(Path::new(""))
+        .join("node_modules")
+        .join("npm")
+        .join("node_modules")
+        .join("semver")
+        .join("bin")
+        .join("semver.js");
+    if !semver_cli.is_file() {
+        return false;
+    }
+    let mut command = Command::new(&candidate.node_path);
+    command
+        .arg(&semver_cli)
+        .arg(&candidate.version)
+        .args(["-r", engine_range]);
+    no_window(&mut command)
+        .output()
+        .is_ok_and(|output| output.status.success())
+}
+
+fn current_node_version() -> Option<String> {
+    let mut command = Command::new("node");
+    command.arg("--version");
+    if let Some(path) = super::install::refreshed_path_public() {
+        command.env("PATH", path);
+    }
+    let output = no_window(&mut command).output().ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    let version = String::from_utf8_lossy(&output.stdout)
+        .trim()
+        .trim_start_matches('v')
+        .to_string();
+    (!version.is_empty()).then_some(version)
+}
+
+fn managed_node_package_entrypoint(tool_id: &str) -> Result<PathBuf, String> {
+    let package = managed_npm_package_for_tool(tool_id)
+        .ok_or_else(|| format!("tool `{tool_id}` is not a managed npm app"))?;
+    let Some((package_dir, package_json)) = read_managed_npm_package_manifest(tool_id)? else {
+        return Err(format!("package metadata is unavailable for `{tool_id}`"));
+    };
+    let bin = package_json
+        .get("bin")
+        .ok_or_else(|| format!("package `{package}` does not declare an executable"))?;
+    let relative = match bin {
+        serde_json::Value::String(value) => Some(value.as_str()),
+        serde_json::Value::Object(entries) => entries
+            .get(package)
+            .or_else(|| entries.get(tool_id))
+            .and_then(serde_json::Value::as_str),
+        _ => None,
+    }
+    .ok_or_else(|| format!("package `{package}` does not declare its managed executable"))?;
+    let entrypoint = package_dir.join(relative);
+    if !entrypoint.is_file() {
+        return Err(format!(
+            "managed executable is missing: {}",
+            entrypoint.display()
+        ));
+    }
+    Ok(entrypoint)
+}
+
+fn npm_exec_command_tail(args: &[String]) -> Result<Vec<String>, String> {
+    let separator = args
+        .iter()
+        .position(|arg| arg == "--")
+        .ok_or_else(|| "managed npm launch command is missing `--`".to_string())?;
+    if args.len() <= separator + 1 {
+        return Err("managed npm launch command is missing its executable".to_string());
+    }
+    Ok(args.iter().skip(separator + 2).cloned().collect())
+}
+
+fn managed_npm_direct_launch_args(
+    tool_id: &str,
+    existing_args: &[String],
+) -> Result<Vec<String>, String> {
+    let mut args = vec![
+        managed_node_package_entrypoint(tool_id)?
+            .to_string_lossy()
+            .into_owned(),
+    ];
+    args.extend(npm_exec_command_tail(existing_args)?);
+    Ok(args)
+}
+
+fn pin_managed_service_node_runtime(
+    tool_id: &str,
+    service: &mut ManagedServiceAffordance,
+) -> Result<bool, String> {
+    let Some(runtime) = compatible_managed_node_runtime(tool_id)? else {
+        return Ok(false);
+    };
+    service.args = managed_npm_direct_launch_args(tool_id, &service.args)?;
+    service.program = runtime.node_path.to_string_lossy().into_owned();
+    Ok(true)
+}
+
+fn pin_managed_web_ui_node_runtime(
+    tool_id: &str,
+    affordance: &mut WebUiAffordance,
+) -> Result<bool, String> {
+    let Some(runtime) = compatible_managed_node_runtime(tool_id)? else {
+        return Ok(false);
+    };
+    affordance.args = managed_npm_direct_launch_args(tool_id, &affordance.args)?;
+    affordance.program = runtime.node_path.to_string_lossy().into_owned();
+    Ok(true)
 }
 
 fn ensure_nssm_installed(catalog: &Catalog, tool_id: &str, emit: &EventSink) -> Result<(), String> {
@@ -1702,6 +2527,33 @@ fn service_control_script(service_name: &str, action: &str) -> String {
     .join("\r\n")
 }
 
+fn service_runtime_start_script(service: &ManagedServiceAffordance, action: &str) -> String {
+    let service_name = quote_cmd_always(&service.service_name);
+    let parameters = service
+        .args
+        .iter()
+        .map(|arg| quote_cmd_arg(arg))
+        .collect::<Vec<_>>()
+        .join(" ");
+    [
+        "@echo off".to_string(),
+        "setlocal".to_string(),
+        "where nssm >nul 2>nul".to_string(),
+        "if errorlevel 1 (".to_string(),
+        "  echo NSSM is required. Install NSSM from KKTerm Install Helper first.".to_string(),
+        "  exit /b 2".to_string(),
+        ")".to_string(),
+        format!(
+            "nssm set {} Application {}",
+            service_name,
+            quote_cmd_arg(&service.program)
+        ),
+        format!("nssm set {} AppParameters {}", service_name, parameters),
+        format!("nssm {action} {}", service_name),
+    ]
+    .join("\r\n")
+}
+
 fn web_ui_status(tool_id: &str, affordance: &WebUiAffordance) -> ManagedWebUiStatus {
     let service = service_affordance(tool_id);
     let service_state = service
@@ -1714,15 +2566,55 @@ fn web_ui_status(tool_id: &str, affordance: &WebUiAffordance) -> ManagedWebUiSta
     let startup = service
         .as_ref()
         .and_then(|service| query_service_startup(&service.service_name));
+    let node_requirement = managed_node_engine_range(tool_id).ok().flatten();
+    let (node_version, node_runtime_version) = if node_requirement.is_some() {
+        (
+            current_node_version(),
+            compatible_managed_node_runtime(tool_id)
+                .ok()
+                .flatten()
+                .map(|runtime| runtime.version),
+        )
+    } else {
+        (None, None)
+    };
     ManagedWebUiStatus {
         running,
         service_installed,
         service_state,
         startup,
+        node_version,
+        node_runtime_version,
+        node_requirement,
         url: effective_port
             .map(|port| format!("http://localhost:{port}"))
             .unwrap_or_else(|| affordance.url.to_string()),
     }
+}
+
+fn start_web_ui_for_tool(tool_id: &str) -> Result<(), String> {
+    let mut affordance = web_ui_affordance(tool_id)
+        .ok_or_else(|| format!("tool `{tool_id}` does not expose a managed web UI"))?;
+    if let Some(mut service) = service_affordance(tool_id) {
+        let pinned_runtime = pin_managed_service_node_runtime(tool_id, &mut service)?;
+        match query_service_state(&service.service_name).as_deref() {
+            Some("RUNNING" | "START_PENDING") => return Ok(()),
+            Some(_) => {
+                let script = if pinned_runtime {
+                    service_runtime_start_script(&service, "start")
+                } else {
+                    service_control_script(&service.service_name, "start")
+                };
+                return run_elevated_cmd_script(
+                    &script,
+                    &format!("start service {}", service.service_name),
+                );
+            }
+            None => {}
+        }
+    }
+    pin_managed_web_ui_node_runtime(tool_id, &mut affordance)?;
+    spawn_web_ui_affordance(&affordance)
 }
 
 fn stop_web_ui_for_tool(tool_id: &str) -> Result<(), String> {
@@ -1916,31 +2808,66 @@ fn ps_single_quote(value: &str) -> String {
 }
 
 #[cfg(target_os = "windows")]
-fn spawn_terminal_launcher(affordance: &TerminalLaunchAffordance) -> Result<(), String> {
-    let ps_command = build_terminal_launcher_ps_command(affordance);
-    let mut command = Command::new("powershell");
-    command.args([
-        "-NoExit",
-        "-NoLogo",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-Command",
-        &ps_command,
-    ]);
-    use std::os::windows::process::CommandExt;
-    const CREATE_NEW_CONSOLE: u32 = 0x0000_0010;
-    command.creation_flags(CREATE_NEW_CONSOLE);
-    if let Some(path) = super::install::refreshed_path_public() {
-        command.env("PATH", path);
+fn spawn_terminal_launcher(
+    affordance: &TerminalLaunchAffordance,
+    working_dir: Option<&std::path::Path>,
+    execute: bool,
+) -> Result<(), String> {
+    use std::os::windows::ffi::OsStrExt;
+    use std::ptr::{null, null_mut};
+    use windows_sys::Win32::UI::{Shell::ShellExecuteW, WindowsAndMessaging::SW_SHOWNORMAL};
+
+    // KKTerm's release binary uses the Windows GUI subsystem and therefore has
+    // no interactive standard handles to inherit. `Command::spawn` with
+    // CREATE_NEW_CONSOLE can leave the delegated Windows Terminal tab blank;
+    // ShellExecute creates the console through the Windows shell instead.
+    let parameters = build_terminal_launcher_shell_parameters(
+        affordance,
+        super::install::refreshed_path_public().as_deref(),
+        execute,
+    );
+    let file = "powershell.exe"
+        .encode_utf16()
+        .chain(std::iter::once(0))
+        .collect::<Vec<u16>>();
+    let parameters = parameters
+        .encode_utf16()
+        .chain(std::iter::once(0))
+        .collect::<Vec<u16>>();
+    let working_directory = working_dir.map(|dir| {
+        dir.as_os_str()
+            .encode_wide()
+            .chain(std::iter::once(0))
+            .collect::<Vec<u16>>()
+    });
+    let result = unsafe {
+        ShellExecuteW(
+            null_mut(),
+            null(),
+            file.as_ptr(),
+            parameters.as_ptr(),
+            working_directory
+                .as_ref()
+                .map(|value| value.as_ptr())
+                .unwrap_or(null()),
+            SW_SHOWNORMAL,
+        )
+    } as isize;
+
+    if result <= 32 {
+        return Err(format!(
+            "failed to spawn terminal (ShellExecuteW code {result})"
+        ));
     }
-    command
-        .spawn()
-        .map_err(|e| format!("failed to spawn terminal: {e}"))?;
     Ok(())
 }
 
 #[cfg(not(target_os = "windows"))]
-fn spawn_terminal_launcher(_affordance: &TerminalLaunchAffordance) -> Result<(), String> {
+fn spawn_terminal_launcher(
+    _affordance: &TerminalLaunchAffordance,
+    _working_dir: Option<&std::path::Path>,
+    _execute: bool,
+) -> Result<(), String> {
     Err("terminal launcher is only available on Windows".into())
 }
 
@@ -2035,11 +2962,16 @@ fn spawn_elevated_powershell() -> Result<(), String> {
     Err("elevated PowerShell is only available on Windows".into())
 }
 
-fn build_terminal_launcher_ps_command(affordance: &TerminalLaunchAffordance) -> String {
+fn build_terminal_launcher_ps_command(
+    affordance: &TerminalLaunchAffordance,
+    execute: bool,
+) -> String {
     let mut parts: Vec<String> = vec![
         "$host.UI.RawUI.WindowTitle = 'KKTerm terminal'".into(),
-        "Import-Module PSReadLine -ErrorAction SilentlyContinue".into(),
     ];
+    if !execute {
+        parts.push("Import-Module PSReadLine -ErrorAction SilentlyContinue".into());
+    }
     if let Some(activate) = &affordance.activate_ps1 {
         let escaped = activate.replace('\'', "''");
         parts.push(format!("& '{escaped}'"));
@@ -2051,11 +2983,64 @@ fn build_terminal_launcher_ps_command(affordance: &TerminalLaunchAffordance) -> 
         parts.push(format!("Write-Host '  {escaped}' -ForegroundColor Cyan"));
     }
     parts.push("Write-Host ''".into());
-    let prefill_escaped = affordance.prefill.replace('\'', "''");
-    parts.push(format!(
-        "function global:prompt {{ if (-not $global:__kkt_pf) {{ $global:__kkt_pf = $true; if (Get-Module PSReadLine) {{ [Microsoft.PowerShell.PSConsoleReadLine]::Insert('{prefill_escaped}') }} }}; 'PS ' + (Get-Location) + '> ' }}"
-    ));
+    if execute {
+        let (program, arguments) = affordance
+            .prefill
+            .split_once(' ')
+            .map_or((affordance.prefill.as_str(), None), |(program, arguments)| {
+                (program, Some(arguments))
+            });
+        parts.push("$ErrorActionPreference = 'Stop'".into());
+        let executable_names = [".exe", ".com", ".cmd", ".bat"]
+            .map(|extension| ps_single_quote(&format!("{program}{extension}")))
+            .join(", ");
+        parts.push(format!(
+            "$__kkt_launcher = @({executable_names}) | ForEach-Object {{ Get-Command $_ -ErrorAction SilentlyContinue }} | Select-Object -First 1"
+        ));
+        parts.push(format!(
+            "if (-not $__kkt_launcher) {{ throw {} }}",
+            ps_single_quote(&format!("{program} was not found on PATH"))
+        ));
+        let mut launch = "Start-Process -FilePath $__kkt_launcher.Source".to_string();
+        if let Some(arguments) = arguments {
+            launch.push_str(&format!(
+                " -ArgumentList {}",
+                ps_single_quote(arguments)
+            ));
+        }
+        launch.push_str(" -NoNewWindow -Wait");
+        parts.push(launch);
+    } else {
+        let prefill_escaped = affordance.prefill.replace('\'', "''");
+        parts.push(format!(
+            "$null = Register-EngineEvent -SourceIdentifier PowerShell.OnIdle -MaxTriggerCount 1 -Action {{ if (Get-Module PSReadLine) {{ [Microsoft.PowerShell.PSConsoleReadLine]::Insert('{prefill_escaped}') }} }}"
+        ));
+    }
     parts.join("; ")
+}
+
+fn build_terminal_launcher_shell_parameters(
+    affordance: &TerminalLaunchAffordance,
+    refreshed_path: Option<&str>,
+    execute: bool,
+) -> String {
+    use base64::{Engine as _, engine::general_purpose::STANDARD};
+
+    let mut ps_command = build_terminal_launcher_ps_command(affordance, execute);
+    if let Some(path) = refreshed_path {
+        ps_command = format!(
+            "$__kkt_refreshed_path = {}; $__kkt_path_entries = [System.Collections.Generic.List[string]]::new(); foreach ($__kkt_path_entry in @(($env:PATH -split ';') + ($__kkt_refreshed_path -split ';'))) {{ if ($__kkt_path_entry -and -not ($__kkt_path_entries -contains $__kkt_path_entry)) {{ $__kkt_path_entries.Add($__kkt_path_entry) }} }}; $env:PATH = $__kkt_path_entries -join ';'; Remove-Variable __kkt_refreshed_path, __kkt_path_entries, __kkt_path_entry -ErrorAction SilentlyContinue; {ps_command}",
+            ps_single_quote(path)
+        );
+    }
+    let utf16_le = ps_command
+        .encode_utf16()
+        .flat_map(u16::to_le_bytes)
+        .collect::<Vec<u8>>();
+    format!(
+        "-NoExit -NoLogo -ExecutionPolicy Bypass -EncodedCommand {}",
+        STANDARD.encode(utf16_le)
+    )
 }
 
 #[cfg(target_os = "windows")]
@@ -2396,7 +3381,9 @@ mod tests {
     }
 
     #[test]
-    fn terminal_launcher_prefill_uses_psreadline_type() {
+    fn terminal_launcher_prefill_preserves_profile_prompt() {
+        use base64::{Engine as _, engine::general_purpose::STANDARD};
+
         let affordance = TerminalLaunchAffordance {
             activate_ps1: None,
             setup_lines: vec![],
@@ -2404,11 +3391,56 @@ mod tests {
             hints: vec![],
         };
 
-        let command = build_terminal_launcher_ps_command(&affordance);
+        let command = build_terminal_launcher_ps_command(&affordance, false);
 
         assert!(command.contains("Import-Module PSReadLine"));
         assert!(command.contains("[Microsoft.PowerShell.PSConsoleReadLine]::Insert"));
         assert!(!command.contains("PSReadLine.PSConsoleReadLine"));
+        assert!(command.contains("PowerShell.OnIdle"));
+        assert!(!command.contains("function global:prompt"));
+
+        let parameters =
+            build_terminal_launcher_shell_parameters(
+                &affordance,
+                Some(r"C:\Tools;C:\Windows"),
+                false,
+            );
+        let encoded = parameters
+            .split_whitespace()
+            .last()
+            .expect("encoded command argument");
+        let bytes = STANDARD.decode(encoded).expect("valid base64 command");
+        let words = bytes
+            .chunks_exact(2)
+            .map(|chunk| u16::from_le_bytes([chunk[0], chunk[1]]))
+            .collect::<Vec<_>>();
+        let decoded = String::from_utf16(&words).expect("valid UTF-16LE command");
+
+        assert!(!parameters.contains("-NoProfile"));
+        assert!(parameters.contains("-EncodedCommand"));
+        assert!(decoded.contains("$__kkt_refreshed_path = 'C:\\Tools;C:\\Windows'"));
+        assert!(decoded.contains("$env:PATH -split ';'"));
+        assert!(decoded.contains("$__kkt_refreshed_path -split ';'"));
+        assert!(!decoded.starts_with("$env:PATH ="));
+        assert!(decoded.contains("hermes setup"));
+    }
+
+    #[test]
+    fn terminal_launcher_execute_starts_command_in_current_console() {
+        let affordance = TerminalLaunchAffordance {
+            activate_ps1: None,
+            setup_lines: vec![],
+            prefill: "claude --model 'opus'".into(),
+            hints: vec![],
+        };
+
+        let command = build_terminal_launcher_ps_command(&affordance, true);
+
+        assert!(command.contains("'claude.exe', 'claude.com', 'claude.cmd', 'claude.bat'"));
+        assert!(command.contains("Start-Process -FilePath $__kkt_launcher.Source"));
+        assert!(command.contains("-ArgumentList '--model ''opus'''"));
+        assert!(command.contains("-NoNewWindow -Wait"));
+        assert!(!command.contains("PSConsoleReadLine]::Insert"));
     }
 
     #[test]
@@ -2433,6 +3465,263 @@ mod tests {
                 .iter()
                 .any(|hint| hint.starts_with("openclaw onboard --install-daemon")),
             "OpenClaw launcher should point users to onboarding"
+        );
+    }
+
+    #[test]
+    fn cli_terminal_launchers_cover_curated_command_line_tools() {
+        for tool_id in [
+            "git",
+            "winget",
+            "chocolatey",
+            "node-bundle",
+            "python-bundle",
+            "wsl",
+            "nssm",
+            "oh-my-posh",
+            "antigravity-cli",
+            "claude-code-cli",
+            "codex-cli",
+            "cursor-cli",
+            "kimi-code-cli",
+            "grok-build",
+            "opencode",
+            "rustup",
+            "bun",
+            "ripgrep",
+            "jq",
+            "fzf",
+            "ffmpeg",
+            "scrcpy",
+            "psmux",
+            "hermes-agent",
+            "openclaw",
+        ] {
+            let affordance = terminal_launch_affordance(tool_id)
+                .unwrap_or_else(|| panic!("`{tool_id}` should expose a terminal launcher"));
+            assert!(
+                !affordance.prefill.is_empty(),
+                "`{tool_id}` launcher should prefill a starter command"
+            );
+        }
+        for tool_id in [
+            "antigravity-cli",
+            "claude-code-cli",
+            "codex-cli",
+            "cursor-cli",
+            "kimi-code-cli",
+            "grok-build",
+            "opencode",
+        ] {
+            assert!(
+                terminal_launch_affordance(tool_id)
+                    .expect("coding agent launcher")
+                    .hints
+                    .is_empty(),
+                "coding-agent launchers should use option controls instead of samples"
+            );
+        }
+        assert!(
+            terminal_launch_affordance("vscode").is_none(),
+            "GUI apps launch directly instead of through the terminal launcher"
+        );
+    }
+
+    #[test]
+    fn launch_dir_validation_requires_an_existing_absolute_directory() {
+        assert!(validated_launch_dir("").is_err());
+        assert!(validated_launch_dir("   ").is_err());
+        assert!(validated_launch_dir("relative\\project").is_err());
+
+        let temp = std::env::temp_dir();
+        assert_eq!(
+            validated_launch_dir(temp.to_string_lossy().as_ref()).as_deref(),
+            Ok(temp.as_path())
+        );
+
+        let missing = temp.join("kkterm-launch-dir-that-does-not-exist");
+        assert!(validated_launch_dir(missing.to_string_lossy().as_ref()).is_err());
+    }
+
+    #[test]
+    fn gui_launch_affordance_is_a_closed_allow_list() {
+        // GUI apps expose at least one executable candidate.
+        for tool_id in [
+            "vscode",
+            "google-chrome",
+            "firefox",
+            "acrobat-reader",
+            "blender",
+            "obs-studio",
+            "7zip",
+        ] {
+            assert!(
+                !gui_launch_affordance(tool_id).is_empty(),
+                "`{tool_id}` should expose GUI launch candidates"
+            );
+        }
+
+        // CLI tools and unknown ids resolve to nothing.
+        assert!(gui_launch_affordance("git").is_empty());
+        assert!(gui_launch_affordance("ripgrep").is_empty());
+        assert!(gui_launch_affordance("does-not-exist").is_empty());
+    }
+
+    #[test]
+    fn terminal_launcher_arguments_are_bounded_and_single_line() {
+        assert_eq!(
+            validated_launcher_arguments(Some("  --auto --model test  ")),
+            Ok(Some("--auto --model test".into()))
+        );
+        assert_eq!(validated_launcher_arguments(Some("  ")), Ok(None));
+        assert!(validated_launcher_arguments(Some("--auto\nwhoami")).is_err());
+        assert!(validated_launcher_arguments(Some(&"x".repeat(4097))).is_err());
+    }
+
+    #[test]
+    fn gui_launch_ps_resolves_paths_commands_and_appx() {
+        let catalog = load_bundled_catalog().expect("bundled catalog");
+        let recipe = find_recipe(&catalog, "blender").expect("Blender recipe");
+        let command = build_gui_launch_ps_command(
+            recipe,
+            &[
+                GuiLaunchCandidate::Path(
+                    "%ProgramFiles%\\Blender Foundation\\Blender *\\blender.exe",
+                ),
+                GuiLaunchCandidate::Command("chrome.exe"),
+                GuiLaunchCandidate::Appx("OpenAI.Codex"),
+            ],
+            None,
+        );
+
+        // Env tokens expand at resolve time; globs pick the highest match.
+        assert!(command.contains("[Environment]::ExpandEnvironmentVariables"));
+        assert!(command.contains("Sort-Object -Property FullName -Descending"));
+        // Bare names consult PATH and the App Paths registry.
+        assert!(command.contains("Get-Command 'chrome.exe'"));
+        assert!(command.contains("App Paths\\chrome.exe"));
+        // Prefer authoritative Windows app registrations over fallback paths.
+        assert!(command.contains("Get-StartApps"));
+        assert!(command.contains("DisplayIcon"));
+        assert!(command.contains("Test-AllowedExe"));
+        assert!(command.contains("Test-LaunchableAppId"));
+        assert!(command.contains("Get-VersionSortKey"));
+        // Store apps launch through shell:AppsFolder.
+        assert!(command.contains("Get-AppxPackage -Name 'OpenAI.Codex'"));
+        assert!(command.contains("shell:AppsFolder"));
+        // Apps start from their own directory (OBS refuses to start elsewhere).
+        assert!(command.contains("-WorkingDirectory (Split-Path -Parent $exe)"));
+        // No hit is an error the frontend can surface.
+        assert!(command.ends_with("exit 1"));
+    }
+
+    #[test]
+    fn custom_gui_launchers_accept_windows_executables_and_shortcuts_only() {
+        for path in ["tool.exe", "tool.COM", "tool.bat", "tool.cmd", "tool.lnk"] {
+            assert!(is_supported_custom_gui_launcher(Path::new(path)), "{path}");
+        }
+        for path in ["tool.ps1", "tool.msi", "tool.url", "tool.txt"] {
+            assert!(!is_supported_custom_gui_launcher(Path::new(path)), "{path}");
+        }
+        assert!(validated_custom_gui_launcher("relative.exe").is_err());
+        let existing = std::env::temp_dir().join(format!(
+            "kkterm-custom-launcher-test-{}.exe",
+            std::process::id()
+        ));
+        std::fs::write(&existing, []).expect("create launcher fixture");
+        assert!(validated_custom_gui_launcher(&existing.to_string_lossy()).is_ok());
+        std::fs::remove_file(existing).expect("remove launcher fixture");
+    }
+
+    #[test]
+    fn custom_gui_launcher_is_the_final_resolver_candidate() {
+        let catalog = load_bundled_catalog().expect("bundled catalog");
+        let recipe = find_recipe(&catalog, "obsidian").expect("Obsidian recipe");
+        let command = build_gui_launch_ps_command(
+            recipe,
+            &gui_launch_affordance("obsidian"),
+            Some(Path::new(r"C:\Custom Apps\Obsidian.lnk")),
+        );
+        let custom = command
+            .rfind("C:\\Custom Apps\\Obsidian.lnk")
+            .expect("custom path in script");
+        let automatic = command
+            .rfind("%LOCALAPPDATA%")
+            .expect("automatic candidates in script");
+        assert!(custom > automatic);
+    }
+
+    #[test]
+    #[cfg(target_os = "windows")]
+    fn all_gui_launch_scripts_parse_in_windows_powershell() {
+        let catalog = load_bundled_catalog().expect("bundled catalog");
+        for tool_id in [
+            "vscode",
+            "cursor",
+            "notepadpp",
+            "docker-desktop",
+            "comfyui",
+            "lmstudio",
+            "bruno",
+            "claude-desktop",
+            "codex-desktop",
+            "powertoys",
+            "powershell-7",
+            "everything",
+            "ditto",
+            "keepassxc",
+            "7zip",
+            "sharex",
+            "tailscale",
+            "rustdesk",
+            "google-chrome",
+            "firefox",
+            "acrobat-reader",
+            "obsidian",
+            "drawio",
+            "krita",
+            "inkscape",
+            "blender",
+            "pencil",
+            "vlc",
+            "obs-studio",
+            "xnview-mp",
+            "audacity",
+            "vcxsrv",
+        ] {
+            let recipe = find_recipe(&catalog, tool_id).expect("GUI recipe");
+            let custom_path =
+                (tool_id == "obsidian").then(|| Path::new(r"C:\Custom Apps\Selected Launcher.lnk"));
+            let script =
+                build_gui_launch_ps_command(recipe, &gui_launch_affordance(tool_id), custom_path);
+            let parse_only = format!(
+                "$null = [ScriptBlock]::Create({})",
+                ps_single_quote(&script)
+            );
+            let output = Command::new("powershell")
+                .args(["-NoProfile", "-NonInteractive", "-Command", &parse_only])
+                .output()
+                .expect("Windows PowerShell should be available");
+            assert!(
+                output.status.success(),
+                "{tool_id} launch script should parse: {}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+        }
+    }
+
+    #[test]
+    fn coreutils_quick_launch_lists_cli_utilities() {
+        let entries = quick_launch_affordance("coreutils");
+        assert!(entries.len() >= 15);
+        assert!(
+            entries.iter().all(|entry| entry.cli),
+            "Coreutils utilities are terminal commands, not launchable GUI tools"
+        );
+        assert!(
+            entries
+                .iter()
+                .any(|entry| entry.command.eq_ignore_ascii_case("ls"))
         );
     }
 
@@ -2672,6 +3961,64 @@ mod tests {
             script.contains(r#"nssm start "KKTerm-Test""#),
             "the command handler clears the normal localhost run before registration, so the service can start in the background"
         );
+    }
+
+    #[test]
+    fn managed_node_runtime_prefers_newest_compatible_lts() {
+        let candidate = |version: &str, is_lts| ManagedNodeRuntime {
+            version: version.into(),
+            node_path: PathBuf::from(format!(r"C:\nvm\v{version}\node.exe")),
+            is_lts,
+        };
+        let selected = select_compatible_node_runtime(
+            vec![
+                candidate("22.16.0", true),
+                candidate("24.13.0", true),
+                candidate("26.4.0", false),
+            ],
+            |runtime| runtime.version != "22.16.0",
+        )
+        .expect("a compatible LTS should be selected");
+
+        assert_eq!(selected.version, "24.13.0");
+    }
+
+    #[test]
+    fn managed_npm_launch_bypasses_npm_runtime_shim() {
+        let args = vec![
+            "exec".into(),
+            "--prefix".into(),
+            r"C:\Apps\n8n".into(),
+            "--".into(),
+            "n8n".into(),
+            "start".into(),
+        ];
+
+        assert_eq!(npm_exec_command_tail(&args).unwrap(), vec!["start"]);
+    }
+
+    #[test]
+    fn service_runtime_start_repins_node_before_starting() {
+        let service = ManagedServiceAffordance {
+            service_name: "KKTerm-n8n".into(),
+            display_name: "KKTerm n8n".into(),
+            program: r"C:\nvm\v24.13.0\node.exe".into(),
+            args: vec![
+                r"C:\Apps\n8n\node_modules\n8n\bin\n8n".into(),
+                "start".into(),
+            ],
+            env: vec![],
+            working_dir: r"C:\Apps\n8n".into(),
+        };
+        let script = service_runtime_start_script(&service, "start");
+
+        assert!(script.contains(
+            r#"nssm set "KKTerm-n8n" Application C:\nvm\v24.13.0\node.exe"#
+        ));
+        assert!(script.contains("AppParameters"));
+        assert!(script.contains(r"C:\Apps\n8n\node_modules\n8n\bin\n8n"));
+        assert!(!script.contains("npm-cli.js"));
+        assert!(script.contains(r#"nssm start "KKTerm-n8n""#));
     }
 
     #[test]

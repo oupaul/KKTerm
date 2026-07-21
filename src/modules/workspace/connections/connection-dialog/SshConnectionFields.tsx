@@ -5,7 +5,7 @@ import { Switch } from "../../../../app/ui/dialog";
 import { technicalInputProps } from "../../../../lib/inputBehavior";
 import type { Connection, SshCompressionMode, SshSettings, StoredCredentialSummary } from "../../../../types";
 import { defaultPortForConnectionType } from "../utils";
-import { PasswordCredentialSelect, PasswordField } from "./ConnectionPasswordFields";
+import { PasswordCredentialModeFields, PasswordField } from "./ConnectionPasswordFields";
 import { SshStartupScriptDialog } from "./SshStartupScriptDialog";
 import { readSshApplyStartupToExistingTmux } from "./sshStartupScript";
 
@@ -160,16 +160,14 @@ export function SshConnectionFields({
         </div>
         {authMethod === "password" ? (
           <>
-            <PasswordField
+            <PasswordCredentialModeFields
+              credentials={matchingPasswordCredentials}
+              defaultMode={initialConnection?.passwordCredentialId ? "saved" : "new"}
               hasStoredSecret={isEditMode && hasStoredConnectionPassword}
               label={t("connections.passwordLabel")}
-              name="password"
               placeholder={isEditMode ? t("connections.leaveBlankPassword") : t("connections.passwordOptionalHint")}
-            />
-            <PasswordCredentialSelect
-              credentials={matchingPasswordCredentials}
-              onChange={onSelectedPasswordCredentialIdChange}
               selectedCredentialId={selectedPasswordCredentialId}
+              onSelectedCredentialIdChange={onSelectedPasswordCredentialIdChange}
             />
           </>
         ) : authMethod === "keyFile" ? (

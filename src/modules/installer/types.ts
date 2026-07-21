@@ -12,6 +12,9 @@ export type ProviderKind =
   | "wslDistro"
   | "bundle";
 
+/** Detected provenance that is not itself an install/update provider. */
+export type DetectedInstallSource = "officialScript";
+
 export type GithubReleaseLayout = "zip" | "exeInstaller" | "msi";
 
 export type RecipeOption = "scope" | "version" | "location" | "addToPath" | "provider";
@@ -109,9 +112,19 @@ export interface DetectedState {
   runtimeVersion?: string | null;
   /// Best-effort provider that detected and will manage this installed tool.
   installProvider?: ProviderKind | null;
+  /// Provenance that is not itself a catalog provider. Kept separate from
+  /// installProvider so source-specific actions such as `uv self update` can
+  /// never be mistaken for WinGet update or uninstall ownership.
+  installSource?: DetectedInstallSource | null;
   /// Unix timestamp from the last completed detection pass. Cached Windows
   /// registry snapshots use this so the tile can show how stale it is.
   lastCheckedAt?: number | null;
+}
+
+export function isOfficialScriptInstall(
+  detected?: Pick<DetectedState, "installSource"> | null,
+): boolean {
+  return detected?.installSource === "officialScript";
 }
 
 export interface ToolState {
@@ -126,6 +139,9 @@ export interface ManagedWebUiStatus {
   serviceInstalled: boolean;
   serviceState: string | null;
   startup: string | null;
+  nodeVersion: string | null;
+  nodeRuntimeVersion: string | null;
+  nodeRequirement: string | null;
   url?: string | null;
 }
 

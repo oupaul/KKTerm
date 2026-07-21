@@ -6,6 +6,7 @@ import {
   Palette,
   Scaling,
   Settings2,
+  Shield,
   ShieldOff,
   Zap,
 } from "../../../../lib/reicon";
@@ -21,9 +22,9 @@ import {
   type StoredCredentialSummary,
 } from "../../../../types";
 import { defaultPortForConnectionType } from "../utils";
-import { PasswordCredentialSelect, PasswordField } from "./ConnectionPasswordFields";
+import { PasswordCredentialModeFields } from "./ConnectionPasswordFields";
 import { RdpLocalResourceSelector } from "../remote-desktop/RdpLocalResourceSelector";
-import { normalizeRdpDriveSelection } from "../remote-desktop/rdpLocalResources";
+import { normalizeRdpDriveSelection, normalizeRdpSharedLocalFolders } from "../remote-desktop/rdpLocalResources";
 
 export function RdpConnectionFields({
   hasStoredConnectionPassword,
@@ -92,16 +93,14 @@ export function RdpConnectionFields({
             required
           />
         </label>
-        <PasswordField
+        <PasswordCredentialModeFields
+          credentials={matchingPasswordCredentials}
+          defaultMode={initialConnection?.passwordCredentialId ? "saved" : "new"}
           hasStoredSecret={isEditMode && hasStoredConnectionPassword}
           label={t("connections.password")}
-          name="password"
           placeholder={isEditMode ? t("connections.leaveBlankPassword") : t("connections.storedInKeychain")}
-        />
-        <PasswordCredentialSelect
-          credentials={matchingPasswordCredentials}
-          onChange={onSelectedPasswordCredentialIdChange}
           selectedCredentialId={selectedPasswordCredentialId}
+          onSelectedCredentialIdChange={onSelectedPasswordCredentialIdChange}
         />
       </div>
     </>
@@ -126,16 +125,17 @@ export function RdpConnectionOptions({
   const [driveSelection, setDriveSelection] = useState(() =>
     normalizeRdpDriveSelection(initialConnection?.rdpOptions?.driveSelection ?? rdpSettings.driveSelection),
   );
-  const [sharedLocalFolder, setSharedLocalFolder] = useState(
-    initialConnection?.rdpOptions?.sharedLocalFolder ?? rdpSettings.sharedLocalFolder ?? "",
-  );
+  const [sharedLocalFolders, setSharedLocalFolders] = useState(() => normalizeRdpSharedLocalFolders(
+    initialConnection?.rdpOptions?.sharedLocalFolders ?? rdpSettings.sharedLocalFolders,
+    initialConnection?.rdpOptions?.sharedLocalFolder ?? rdpSettings.sharedLocalFolder,
+  ));
   const effectiveRedirectDrives = rdpInheritsSettingsDefaults ? rdpSettings.redirectDrives : redirectDrives;
   const effectiveDriveSelection = rdpInheritsSettingsDefaults
     ? normalizeRdpDriveSelection(rdpSettings.driveSelection)
     : driveSelection;
-  const effectiveSharedLocalFolder = rdpInheritsSettingsDefaults
-    ? rdpSettings.sharedLocalFolder ?? ""
-    : sharedLocalFolder;
+  const effectiveSharedLocalFolders = rdpInheritsSettingsDefaults
+    ? normalizeRdpSharedLocalFolders(rdpSettings.sharedLocalFolders, rdpSettings.sharedLocalFolder)
+    : sharedLocalFolders;
   const usesWindowsDriveMapping = isWindowsPlatform();
 
   return (
@@ -214,6 +214,18 @@ export function RdpConnectionOptions({
           </div>
           <div className="connection-session-fields">
             <label className="connection-session-toggle">
+              <Shield className="option-glyph" size={17} aria-hidden />
+              <span>{t("settings.rdpAdministrativeSession")}</span>
+              <input
+                disabled={rdpInheritsSettingsDefaults}
+                name="rdpAdministrativeSession"
+                type="checkbox"
+                defaultChecked={
+                  initialConnection?.rdpOptions?.administrativeSession ?? rdpSettings.administrativeSession
+                }
+              />
+            </label>
+            <label className="connection-session-toggle">
               <Clipboard className="option-glyph" size={17} aria-hidden />
               <span>{t("settings.rdpRedirectClipboard")}</span>
               <input
@@ -227,7 +239,7 @@ export function RdpConnectionOptions({
               <label className="connection-session-toggle">
                 <HardDrive className="option-glyph" size={17} aria-hidden />
                 <span>
-                  {t(usesWindowsDriveMapping ? "settings.rdpRedirectDrives" : "settings.rdpShareLocalFolder")}
+                  {t(usesWindowsDriveMapping ? "settings.rdpRedirectDrives" : "settings.rdpShareLocalFolders")}
                 </span>
                 <input
                   checked={effectiveRedirectDrives}
@@ -238,14 +250,14 @@ export function RdpConnectionOptions({
                 />
               </label>
               <input name="rdpDriveSelection" type="hidden" value={JSON.stringify(effectiveDriveSelection)} />
-              <input name="rdpSharedLocalFolder" type="hidden" value={effectiveSharedLocalFolder} />
+              <input name="rdpSharedLocalFolders" type="hidden" value={JSON.stringify(effectiveSharedLocalFolders)} />
               {effectiveRedirectDrives ? (
                 <RdpLocalResourceSelector
                   disabled={rdpInheritsSettingsDefaults}
                   driveSelection={effectiveDriveSelection}
-                  sharedLocalFolder={effectiveSharedLocalFolder}
+                  sharedLocalFolders={effectiveSharedLocalFolders}
                   onDriveSelectionChange={setDriveSelection}
-                  onSharedLocalFolderChange={setSharedLocalFolder}
+                  onSharedLocalFoldersChange={setSharedLocalFolders}
                 />
               ) : null}
             </div>

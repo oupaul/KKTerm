@@ -55,6 +55,17 @@ The script runs the Tauri NSIS bundle target, copies the generated setup executa
 
 The installer uses a current-user install mode by default, creates KKTerm Start Menu entries, and downloads the WebView2 bootstrapper only if the target machine needs WebView2 during install.
 
+## Windows Portable ZIP
+
+Build the Windows x64 portable package with `npm run package:portable`, or ARM64 with `npm run package:portable:arm64`. Each command writes an architecture-specific ZIP and checksum:
+
+- `artifacts/kkterm-<version>-windows-x64-portable.zip` and `.sha256`
+- `artifacts/kkterm-<version>-windows-arm64-portable.zip` and `.sha256`
+
+The ZIP contains the same release executable and Tauri resources as the installer build, `kkterm-cli.exe`, and `kkterm-portable.marker`. It deliberately contains no `data` directory. Portable mode requires an installed Evergreen WebView2 runtime; unlike NSIS, the ZIP cannot bootstrap it during extraction. Run `npm run smoke:portable` after building x64. The smoke test verifies the checksum and archive shape, launches the extracted app in the real Tauri runtime, resolves the bundled manual and Assistant Skills, checks same-root single-instance behavior and clean SQLite exit, and confirms installed storage and KKTerm registry snapshots are unchanged.
+
+Portable update checks use the same trusted metadata but select the exact `windows-<arch>-portable` ZIP/checksum pair. The prompt uses `settings.portableUpdateDownload`; it never downloads or launches NSIS. Users quit KKTerm and extract the new ZIP over the program files. Because releases never include `data`, portable state is retained. Manual rollback is a user-kept copy of the previous program folder.
+
 Startup and manual update checks prefer the Cloudflare release mirror and fall back to GitHub Releases. If the release includes the matching Windows installer asset and its `.sha256` checksum, the update dialog offers `settings.updateDownloadAndInstall` ("Download and Install"). That action shows actual byte progress in the shared Status Bar popup. The installer and checksum downloads try the selected host first, then retry the matching asset on the other trusted host (`kkterm.ryantsai.com` or GitHub Releases) if that fetch fails. Cancelling stops the transfer and deletes the partial installer. After download, KKTerm verifies the SHA-256 checksum, holds the popup at 100% for three seconds, starts a detached handoff helper, and exits before the NSIS installer launches so the installed files can be replaced. The helper waits for a successful installer exit, then deletes only that downloaded installer and removes the update directory when empty; failed or cancelled installers remain available for diagnosis or retry. The fallback `settings.updateOpenDownloadPage` action remains available for manual downloads.
 
 TODO: Restore Windows Authenticode signing and the Tauri updater signing flow before treating self-update as fully signed. The current `settings.updateDownloadAndInstall` flow verifies the release checksum over HTTPS/GitHub Releases but does not yet validate a Tauri updater signature or Windows publisher identity. The Tauri updater signature validates self-update artifacts and is distinct from Windows Authenticode signing, which validates publisher identity to Windows.
@@ -95,7 +106,7 @@ For a local authenticated dry run that performs no R2 writes:
 node scripts/sync-cloudflare-release.mjs --tag v<version> --dry-run
 ```
 
-The script generates release notes, increments the `<major>.<minor>.<build>` version across npm, Tauri, and Cargo metadata, builds the NSIS installer artifact, smoke tests the installer, runs frontend and Rust checks, commits the version bump plus release notes, tags it as `v<version>`, pushes to `origin/main`, and creates a GitHub release with the installer, checksum, and generated notes. Run `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release-github.ps1 -DryRun` to preview the next version, add `-Draft` for a draft release, or add `-SkipBuild` to publish from existing artifacts.
+The script generates release notes, increments the `<major>.<minor>.<build>` version across npm, Tauri, and Cargo metadata, builds the NSIS installer and matching portable ZIP artifacts, smoke tests both x64 packages, runs frontend and Rust checks, commits the version bump plus release notes, tags it as `v<version>`, pushes to `origin/main`, and creates a GitHub release with their checksums and generated notes. Run `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release-github.ps1 -DryRun` to preview the next version, add `-Draft` for a draft release, or add `-SkipBuild` to publish from existing artifacts.
 
 Release notes are generated before the version-bump commit so the summary covers changes since the previous `v*` tag and not the release commit itself. The generator writes:
 
@@ -108,6 +119,8 @@ the exact GitHub release assets for the generated tag:
 
 - `kkterm-<version>-windows-x64-setup.exe`
 - `kkterm-<version>-windows-arm64-setup.exe`
+- `kkterm-<version>-windows-x64-portable.zip`
+- `kkterm-<version>-windows-arm64-portable.zip`
 
 When `OPENAI_API_KEY` is available, `scripts/generate-release-notes.mjs` asks OpenAI to summarize the GitHub-generated notes and commit context using `gpt-5.4-nano` by default. AI-generated notes are written in English first, followed by a Traditional Chinese (Taiwan) version with the same facts, light humor, and tone. If the key is missing or the API call fails, the script falls back to deterministic notes from GitHub generated notes and commit subjects. Local runs may set secrets in the process environment or in an uncommitted `.env.local` file:
 
@@ -116,7 +129,7 @@ $env:OPENAI_API_KEY = "sk-..."
 npm run release:github
 ```
 
-GitHub Actions uses the same scripts through the manual **Release** workflow. The workflow first invokes `scripts/release-github-both-arch.ps1` on Windows so CI/CD increments the version, generates release notes, commits/tags, creates the GitHub Release, and publishes the x64 **and** ARM64 installers together, matching the local `npm run release:github:both-arch` path (and the `Direct Downloads` section, which links both architecture assets). After Windows succeeds, the same workflow runs the macOS release script and then the Linux release script against the newly pushed tag so the complete cross-platform release can be produced from one workflow dispatch. The platform jobs intentionally run in that order to avoid concurrent `latest.json` updates overwriting staggered platform entries. Store the release-notes API key as the repository secret `OPENAI_API_KEY`; the workflow exposes it to the script as the same environment variable. Use the workflow inputs to mark a release as draft/prerelease, skip the Windows installer build or smoke test, disable AI notes, or run a dry preview.
+GitHub Actions uses the same scripts through the manual **Release** workflow. The workflow first invokes `scripts/release-github-both-arch.ps1` on Windows so CI/CD increments the version, generates release notes, commits/tags, creates the GitHub Release, and publishes the x64 and ARM64 installers plus portable ZIPs together, matching the local `npm run release:github:both-arch` path. After Windows succeeds, the same workflow runs the macOS release script and then the Linux release script against the newly pushed tag so the complete cross-platform release can be produced from one workflow dispatch. The platform jobs intentionally run in that order to avoid concurrent `latest.json` updates overwriting staggered platform entries. Store the release-notes API key as the repository secret `OPENAI_API_KEY`; the workflow exposes it to the script as the same environment variable. Use the workflow inputs to mark a release as draft/prerelease, skip the Windows package build or smoke tests, disable AI notes, or run a dry preview.
 
 ## macOS GitHub Release Assets
 

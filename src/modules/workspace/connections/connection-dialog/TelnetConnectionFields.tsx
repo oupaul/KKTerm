@@ -2,7 +2,7 @@ import { useTranslation } from "react-i18next";
 import { technicalInputProps } from "../../../../lib/inputBehavior";
 import type { Connection, SshSettings, StoredCredentialSummary } from "../../../../types";
 import { defaultPortForConnectionType } from "../utils";
-import { PasswordCredentialSelect, PasswordField } from "./ConnectionPasswordFields";
+import { PasswordCredentialModeFields } from "./ConnectionPasswordFields";
 
 export function TelnetConnectionFields({
   hasStoredConnectionPassword,
@@ -71,16 +71,14 @@ export function TelnetConnectionFields({
             required
           />
         </label>
-        <PasswordField
+        <PasswordCredentialModeFields
+          credentials={matchingPasswordCredentials}
+          defaultMode={initialConnection?.passwordCredentialId ? "saved" : "new"}
           hasStoredSecret={isEditMode && hasStoredConnectionPassword}
           label={t("connections.passwordLabel")}
-          name="password"
           placeholder={isEditMode ? t("connections.leaveBlankPassword") : t("connections.passwordOptionalHint")}
-        />
-        <PasswordCredentialSelect
-          credentials={matchingPasswordCredentials}
-          onChange={onSelectedPasswordCredentialIdChange}
           selectedCredentialId={selectedPasswordCredentialId}
+          onSelectedCredentialIdChange={onSelectedPasswordCredentialIdChange}
         />
       </div>
     </>

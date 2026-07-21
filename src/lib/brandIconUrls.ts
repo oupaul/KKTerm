@@ -1,8 +1,10 @@
 import { brandIconIdFromRef, isKnownBrandIconId } from "./brandIcons";
 import defaultIcon from "../assets/installer-icons/default.svg?url";
 import sevenZipIcon from "../assets/installer-icons/7zip.svg?url";
+import acrobatReaderIcon from "../assets/installer-icons/acrobat-reader.svg?url";
 import anthropicIcon from "../assets/installer-icons/anthropic.svg?url";
 import antigravityIcon from "../assets/installer-icons/antigravity.svg?url";
+import audacityIcon from "../assets/installer-icons/audacity.svg?url";
 import astralIcon from "../assets/installer-icons/astral.svg?url";
 import bentoPdfIcon from "../assets/installer-icons/bentopdf.svg?url";
 import blenderIcon from "../assets/installer-icons/blender.svg?url";
@@ -18,13 +20,17 @@ import drawioIcon from "../assets/installer-icons/drawio.svg?url";
 import everythingIcon from "../assets/installer-icons/everything.png?url";
 import excalidrawIcon from "../assets/installer-icons/excalidraw.svg?url";
 import ffmpegIcon from "../assets/installer-icons/ffmpeg.svg?url";
+import firefoxIcon from "../assets/installer-icons/firefox.svg?url";
 import flowiseIcon from "../assets/installer-icons/flowise.png?url";
 import geminiIcon from "../assets/installer-icons/gemini.svg?url";
 import gitIcon from "../assets/installer-icons/git.svg?url";
 import githubIcon from "../assets/installer-icons/github.svg?url";
+import googleChromeIcon from "../assets/installer-icons/google-chrome.svg?url";
+import grokIcon from "../assets/installer-icons/grok.svg?url";
 import hermesAgentIcon from "../assets/installer-icons/hermes-agent.svg?url";
 import inkscapeIcon from "../assets/installer-icons/inkscape.svg?url";
 import keepassxcIcon from "../assets/installer-icons/keepassxc.svg?url";
+import kimiIcon from "../assets/installer-icons/kimi.svg?url";
 import kritaIcon from "../assets/installer-icons/krita.svg?url";
 import langflowIcon from "../assets/installer-icons/langflow.svg?url";
 import linuxIcon from "../assets/installer-icons/linux.svg?url";
@@ -33,6 +39,7 @@ import n8nIcon from "../assets/installer-icons/n8n.svg?url";
 import nodejsIcon from "../assets/installer-icons/nodedotjs.svg?url";
 import notepadppIcon from "../assets/installer-icons/notepadpp.svg?url";
 import obsStudioIcon from "../assets/installer-icons/obs-studio.svg?url";
+import obsidianIcon from "../assets/installer-icons/obsidian.svg?url";
 import ohMyPoshIcon from "../assets/installer-icons/oh-my-posh.svg?url";
 import ollamaIcon from "../assets/installer-icons/ollama.svg?url";
 import openClawIcon from "../assets/installer-icons/openclaw.png?url";
@@ -75,6 +82,7 @@ const brandIconUrlById: Record<string, string> = {
   comfyui: comfyuiIcon,
   opencode: opencodeIcon,
   cursor: cursorIcon,
+  audacity: audacityIcon,
   astral: astralIcon,
   bentopdf: bentoPdfIcon,
   blender: blenderIcon,
@@ -86,13 +94,18 @@ const brandIconUrlById: Record<string, string> = {
   everything: everythingIcon,
   excalidraw: excalidrawIcon,
   ffmpeg: ffmpegIcon,
+  firefox: firefoxIcon,
+  "google-chrome": googleChromeIcon,
+  "acrobat-reader": acrobatReaderIcon,
   flowise: flowiseIcon,
   git: gitIcon,
   "github-cli": githubIcon,
+  "grok-build": grokIcon,
   "hermes-agent": hermesAgentIcon,
   "hermes-desktop": hermesAgentIcon,
   inkscape: inkscapeIcon,
   keepassxc: keepassxcIcon,
+  "kimi-code-cli": kimiIcon,
   krita: kritaIcon,
   langflow: langflowIcon,
   lmstudio: lmstudioIcon,
@@ -100,6 +113,7 @@ const brandIconUrlById: Record<string, string> = {
   nodejs: nodejsIcon,
   notepadpp: notepadppIcon,
   "obs-studio": obsStudioIcon,
+  obsidian: obsidianIcon,
   ollama: ollamaIcon,
   "oh-my-posh": ohMyPoshIcon,
   openflowkit: openFlowKitIcon,

@@ -76,7 +76,7 @@ test("Dashboard catalog dialog suppresses embedded URL Connection WebViews", asy
     "utf8",
   );
 
-  const webviewSelector = source.match(/const WEBVIEW_BLOCKING_OVERLAY_SELECTOR = \[[\s\S]*?\]\.join/)?.[0];
+  const webviewSelector = source.match(/const INTERSECTING_NATIVE_SURFACE_OVERLAY_SELECTOR = \[[\s\S]*?\]\.join/)?.[0];
 
   assert.ok(webviewSelector, "WebView blocking overlay selector should exist");
   assert.match(webviewSelector, /\.dw-catalog-backdrop/);
@@ -88,7 +88,7 @@ test("status notice popup suppresses embedded URL Connection WebViews", async ()
     "utf8",
   );
 
-  const webviewSelector = source.match(/const WEBVIEW_BLOCKING_OVERLAY_SELECTOR = \[[\s\S]*?\]\.join/)?.[0];
+  const webviewSelector = source.match(/const INTERSECTING_NATIVE_SURFACE_OVERLAY_SELECTOR = \[[\s\S]*?\]\.join/)?.[0];
 
   assert.ok(webviewSelector, "WebView blocking overlay selector should exist");
   // The native browser surface otherwise clips the top-anchored status popup, so the
@@ -286,7 +286,7 @@ test("store creates top-level WebView Tabs for URL new-tab launches", async () =
   assert.doesNotMatch(openUrlConnection, /kind: "terminal"/);
 });
 
-test("Dashboard overlays directly suppress embedded URL Connection widgets", async () => {
+test("Dashboard overlays use URL snapshot-and-hide suppression", async () => {
   const page = await readFile(new URL("../src/modules/dashboard/DashboardPage.tsx", import.meta.url), "utf8");
   const canvas = await readFile(new URL("../src/modules/dashboard/view/DashboardCanvas.tsx", import.meta.url), "utf8");
   const frame = await readFile(new URL("../src/modules/dashboard/view/WidgetFrame.tsx", import.meta.url), "utf8");
@@ -296,22 +296,22 @@ test("Dashboard overlays directly suppress embedded URL Connection widgets", asy
     new URL("../src/modules/dashboard/widgets/builtin/connections/ConnectionWidget.tsx", import.meta.url),
     "utf8",
   );
+  const nativeOverlay = await readFile(
+    new URL("../src/modules/workspace/nativeOverlay.ts", import.meta.url),
+    "utf8",
+  );
 
-  assert.match(page, /const suppressNativeWebviews = Boolean\(/);
-  for (const overlayState of [
-    "catalogOpen",
-    "customize",
-    "deleteViewTarget",
-    "deleteWidgetTarget",
-    "tabGradientPicker",
-    "backgroundOpen",
-  ]) {
-    assert.match(page, new RegExp(overlayState));
+  for (const source of [page, canvas, frame, body, registry, connectionWidget]) {
+    assert.doesNotMatch(source, /suppressNativeWebviews/);
   }
-  assert.match(page, /suppressNativeWebviews=\{suppressNativeWebviews\}/);
-  assert.match(canvas, /suppressNativeWebviews: boolean;/);
-  assert.match(frame, /suppressNativeWebviews: boolean;/);
-  assert.match(body, /suppressNativeWebviews: boolean;/);
-  assert.match(registry, /suppressNativeWebviews: boolean;/);
-  assert.match(connectionWidget, /isViewActive && !suppressNativeWebviews/);
+  assert.match(connectionWidget, /<WebViewWorkspace isActive=\{isViewActive\} tab=\{tab\}/);
+  for (const selector of [
+    ".dw-catalog-backdrop",
+    ".dw-customize-dismiss-layer",
+    ".dashboard-tab-gradient-popover",
+    ".dw-bg-popover",
+    ".kk-dlg-backdrop",
+  ]) {
+    assert.match(nativeOverlay, new RegExp(`"${selector.replaceAll(".", "\\.")}"`));
+  }
 });

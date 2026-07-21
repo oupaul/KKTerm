@@ -19,10 +19,14 @@ test("URL and Credentials settings share one website-data manager", () => {
   assert.match(manager, /export function UrlCredentialManager/);
 });
 
-test("saved website data uses compact rows with the same edit and delete controls", () => {
-  assert.match(manager, /className="settings-url-credential-row"/);
+test("saved website data uses a compact grid with name-to-edit and delete", () => {
+  assert.match(manager, /className="settings-url-credential-grid"/);
+  assert.match(manager, /className="settings-url-credential-grid-header"/);
+  assert.match(manager, /className="settings-url-credential-grid-row"/);
   assert.match(manager, /settings-url-credential-address/);
-  assert.match(manager, /<Pencil/);
+  assert.match(manager, /className="settings-credential-name-button"[\s\S]*onClick=\{\(\) => beginEdit\(credential\)\}/);
+  assert.doesNotMatch(manager, /<Pencil/);
+  assert.doesNotMatch(manager, /t\("common\.edit"\)/);
   assert.match(manager, /<Trash2/);
   assert.match(english, /"savedWebsitePasswords": "Saved website password\/input data"/);
 });
@@ -43,7 +47,7 @@ test("website data editor labels every value by exact selector and occurrence", 
 });
 
 test("website data editor masks passwords and persists optional masks for other values", () => {
-  assert.match(manager, /import \{ Eye, EyeOff, Lock, LockOpen, Pencil, Trash2 \}/);
+  assert.match(manager, /import \{ Eye, EyeOff, Lock, LockOpen, Trash2 \}/);
   assert.match(manager, /masked: Boolean\(candidate\.masked\)/);
   assert.match(manager, /editTarget\.passwordSelector/);
   assert.match(manager, /settings\.urlCredentialShowValue/);

@@ -1,4 +1,4 @@
-import { Eye, EyeOff, Lock, LockOpen, Pencil, Trash2 } from "../../lib/reicon";
+import { Eye, EyeOff, Lock, LockOpen, Trash2 } from "../../lib/reicon";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -212,25 +212,41 @@ export function UrlCredentialManager({
       {credentials.length === 0 ? (
         <p className="settings-empty-state">{t("settings.noSavedWebsitePasswords")}</p>
       ) : (
-        <div className="settings-list" aria-label={t("settings.savedWebsitePasswords")}>
+        <div
+          className="settings-url-credential-grid"
+          role="grid"
+          aria-label={t("settings.savedWebsitePasswords")}
+        >
+          <div className="settings-url-credential-grid-header" role="row">
+            <span role="columnheader">{t("connections.connectionName")}</span>
+            <span role="columnheader">{t("settings.urlCredentialUsername")}</span>
+            <span role="columnheader">{t("connections.url")}</span>
+            <span aria-hidden="true" />
+          </div>
           {credentials.map((credential) => {
             const address = credential.pageUrl ?? credential.url ?? t("settings.notSet");
             return (
               <div
-                className="settings-url-credential-row"
+                className="settings-url-credential-grid-row"
                 key={credential.secretOwnerId}
+                role="row"
               >
-                <strong title={credential.connectionName}>{credential.connectionName}</strong>
-                <span className="settings-url-credential-address" title={address}>{address}</span>
-                <div className="settings-url-credential-actions">
+                <div className="settings-url-credential-grid-cell" role="gridcell">
                   <button
-                    className="secondary-button"
+                    className="settings-credential-name-button"
                     type="button"
                     onClick={() => beginEdit(credential)}
                   >
-                    <Pencil size={15} />
-                    {t("common.edit")}
+                    {credential.connectionName}
                   </button>
+                </div>
+                <div className="settings-url-credential-grid-cell" role="gridcell">
+                  <span title={credential.username}>{credential.username || "—"}</span>
+                </div>
+                <div className="settings-url-credential-grid-cell" role="gridcell">
+                  <span className="settings-url-credential-address" title={address}>{address}</span>
+                </div>
+                <div className="settings-url-credential-actions" role="gridcell">
                   <button
                     aria-label={t("settings.deleteCredential")}
                     className="settings-icon-danger-button"
@@ -404,15 +420,16 @@ export function UrlCredentialManager({
                         placeholder={t("settings.urlCredentialPasswordPlaceholder")}
                         type={passwordVisible ? "text" : "password"}
                         value={editDraft.password}
-                        onChange={(event) =>
+                        onChange={(event) => {
+                          const password = event.currentTarget.value;
                           setEditDraft((current) => current
                             ? {
                                 ...current,
-                                password: event.currentTarget.value,
+                                password,
                                 passwordDirty: true,
                               }
-                            : current)
-                        }
+                            : current);
+                        }}
                       />
                       <button
                         aria-label={t(

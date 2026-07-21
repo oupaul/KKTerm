@@ -7,6 +7,7 @@ import { pathToFileURL } from "node:url";
 
 import {
   buildReleaseManifest,
+  missingRequiredPlatforms,
   recognizedReleaseAssets,
   versionFromTag,
 } from "./release-mirror-model.mjs";
@@ -143,6 +144,14 @@ export async function main(argv = process.argv.slice(2)) {
     const assetNames = assets.map((asset) => asset.name);
     await verifyDownloadedChecksums(directory, assetNames);
     const manifest = buildReleaseManifest(release, PUBLIC_BASE_URL);
+    const missing = missingRequiredPlatforms(manifest);
+    if (missing.length > 0) {
+      console.log(
+        `${release.tag_name} is still missing platform assets (${missing.join(", ")}); ` +
+          "leaving the current public manifest untouched until the release finishes staggering in.",
+      );
+      return;
+    }
     await materializeSignatures(manifest, directory);
     const manifestPath = join(directory, "release-manifest.json");
     await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");

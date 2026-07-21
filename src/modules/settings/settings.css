@@ -969,22 +969,50 @@
   min-width: 0;
 }
 
-.settings-url-credential-row {
-  display: grid;
-  grid-template-columns: minmax(120px, 220px) minmax(0, 1fr) auto;
-  gap: 14px;
-  align-items: center;
+.settings-url-credential-grid {
   min-width: 0;
-  min-height: 46px;
-  padding: 9px 0;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+}
+
+.settings-url-credential-grid-header,
+.settings-url-credential-grid-row {
+  display: grid;
+  grid-template-columns: minmax(130px, 0.8fr) minmax(90px, 0.55fr) minmax(180px, 1.35fr) 36px;
+  gap: 10px;
+  align-items: center;
+  min-width: 520px;
+  padding: 0 10px;
+}
+
+.settings-url-credential-grid-header {
+  min-height: 36px;
+  color: var(--text-faint);
+  background: var(--surface-muted);
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.settings-url-credential-grid-row {
+  min-height: 52px;
   border-bottom: 1px solid var(--border);
 }
 
-.settings-url-credential-row:last-child {
+.settings-url-credential-grid-row:last-child {
   border-bottom: 0;
 }
 
-.settings-url-credential-row > strong,
+.settings-url-credential-grid-cell {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+}
+
+.settings-url-credential-grid-cell > span,
 .settings-url-credential-address {
   min-width: 0;
   overflow: hidden;
@@ -992,10 +1020,9 @@
   white-space: nowrap;
 }
 
-.settings-url-credential-row > strong {
-  color: var(--text);
-  font-size: 14px;
-  font-weight: 520;
+.settings-url-credential-grid-cell > span {
+  color: var(--text-muted);
+  font-size: 13px;
 }
 
 .settings-url-credential-address {
@@ -1005,16 +1032,77 @@
 
 .settings-url-credential-actions {
   display: flex;
-  gap: 8px;
   align-items: center;
   justify-content: flex-end;
+  min-width: 0;
 }
 
-.settings-url-credential-actions .secondary-button {
-  display: inline-flex;
-  gap: 6px;
+.settings-secret-credential-grid {
+  min-width: 0;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+}
+
+.settings-secret-credential-grid-header,
+.settings-secret-credential-grid-row {
+  display: grid;
+  grid-template-columns: minmax(140px, 1fr) minmax(130px, 0.9fr) minmax(115px, 0.75fr) 36px;
+  gap: 10px;
   align-items: center;
+  min-width: 500px;
+  padding: 0 10px;
+}
+
+.settings-secret-credential-grid-header {
+  min-height: 36px;
+  color: var(--text-faint);
+  background: var(--surface-muted);
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.settings-secret-credential-grid-row {
+  min-height: 52px;
+  border-bottom: 1px solid var(--border);
+}
+
+.settings-secret-credential-grid-row:last-child {
+  border-bottom: 0;
+}
+
+.settings-secret-credential-grid-cell {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+}
+
+.settings-secret-credential-grid-cell > :is(strong, span) {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.settings-secret-credential-grid-cell strong {
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.settings-secret-credential-grid-cell span {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.settings-secret-credential-grid-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 0;
 }
 
 .settings-url-credential-context {
@@ -1810,6 +1898,198 @@
   text-transform: uppercase;
 }
 
+.settings-credential-manager-header {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.settings-credential-manager-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.settings-credential-manager-actions .secondary-button {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  white-space: nowrap;
+}
+
+input.settings-credential-search {
+  width: 100%;
+  box-sizing: border-box;
+  margin: 8px 0;
+}
+
+.settings-saved-credential-grid {
+  min-width: 0;
+  margin-top: 4px;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+}
+
+.settings-saved-credential-grid-header,
+.settings-saved-credential-grid-row {
+  display: grid;
+  grid-template-columns:
+    30px minmax(150px, 1.2fr) minmax(110px, 0.8fr) 72px 36px;
+  gap: 10px;
+  align-items: center;
+  min-width: 460px;
+  padding: 0 10px;
+}
+
+.settings-saved-credential-grid-header {
+  min-height: 36px;
+  color: var(--text-faint);
+  background: var(--surface-muted);
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.settings-saved-credential-grid-row {
+  min-height: 58px;
+  border-bottom: 1px solid var(--border);
+}
+
+.settings-saved-credential-grid-row:last-child {
+  border-bottom: 0;
+}
+
+.settings-saved-credential-grid-cell {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+}
+
+.settings-saved-credential-grid-cell > :is(strong, span, small) {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-saved-credential-grid-cell strong,
+.settings-credential-name-button {
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.settings-saved-credential-grid-cell span,
+.settings-saved-credential-grid-cell small {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.settings-saved-credential-grid-cell.is-name {
+  display: grid;
+  gap: 2px;
+}
+
+.settings-credential-name-button,
+.settings-credential-count-button {
+  width: max-content;
+  max-width: 100%;
+  padding: 0;
+  overflow: hidden;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.settings-credential-name-button:hover {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.settings-credential-name-button:focus-visible,
+.settings-credential-count-button:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+}
+
+.settings-saved-credential-grid-cell.is-name small {
+  color: var(--red);
+}
+
+.settings-saved-credential-grid-cell.is-select {
+  justify-content: center;
+}
+
+.settings-credential-count-button {
+  min-width: 30px;
+  padding: 4px 8px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 650;
+  text-align: center;
+  background: var(--surface-muted);
+  border-radius: 999px;
+}
+
+.settings-credential-count-button:hover {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.settings-saved-credential-grid-actions {
+  display: flex;
+  gap: 0;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.settings-credential-usage {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.settings-credential-usage h3 {
+  margin: 8px 0 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.settings-credential-usage-list {
+  display: grid;
+  gap: 2px;
+  max-height: 220px;
+  overflow-y: auto;
+  min-width: 0;
+}
+
+.settings-credential-usage-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+  padding: 6px 4px;
+}
+
+.settings-credential-usage-row > .settings-credential-summary {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .settings-dialog-error {
   color: var(--red);
 }
@@ -2266,6 +2546,31 @@
 .about-hero span {
   font-size: 16px;
   font-weight: 450;
+}
+
+.about-hero .settings-mode-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 10px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.02em;
+  vertical-align: middle;
+}
+
+.settings-inline-actions {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.settings-inline-actions .secondary-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .settings-reset-layout {
@@ -3067,6 +3372,28 @@
   box-sizing: border-box;
 }
 
+.portable-creator-path-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.kk-dlg-step,
+.kk-dlg-note {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.kk-dlg-step {
+  color: var(--text-faint);
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 @media (max-width: 860px) {
   .settings-backdrop {
     inset: var(--app-titlebar-height, 0px) 0 0;
@@ -3109,4 +3436,39 @@
     flex-wrap: wrap;
     justify-content: flex-start;
   }
+}
+
+/* Screenshots settings section */
+.screenshots-folder-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.screenshots-folder-row input {
+  flex: 1;
+  min-width: 0;
+}
+
+.screenshots-shortcut-controls {
+  gap: 4px;
+}
+
+.screenshots-quality-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 3ch;
+  gap: 10px;
+  align-items: center;
+}
+
+.screenshots-quality-row input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.screenshots-quality-row output {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  text-align: end;
 }

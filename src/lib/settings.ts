@@ -32,11 +32,13 @@ export function allAiProviderSecretOwnerIds() {
 // time. Bootstrap is best-effort: any single load failure is ignored so the
 // app still renders with the in-memory defaults from `app-defaults`.
 export function useBootstrapSettings() {
+  const [appModeReady, setAppModeReady] = useState(!isTauriRuntime());
   const [generalSettingsReady, setGeneralSettingsReady] = useState(!isTauriRuntime());
   const [credentialSettingsReady, setCredentialSettingsReady] = useState(!isTauriRuntime());
   const setGeneralSettings = useWorkspaceStore(
     (state) => state.setGeneralSettings,
   );
+  const setAppModeInfo = useWorkspaceStore((state) => state.setAppModeInfo);
   const setCredentialSettings = useWorkspaceStore(
     (state) => state.setCredentialSettings,
   );
@@ -70,6 +72,15 @@ export function useBootstrapSettings() {
 
     const swallow = (_error: unknown) => undefined;
     const customFontsPromise = listCustomFontOptions();
+
+    void invokeCommand("get_app_mode")
+      .then((info) => {
+        if (!disposed) setAppModeInfo(info);
+      })
+      .finally(() => {
+        if (!disposed) setAppModeReady(true);
+      })
+      .catch(swallow);
 
     void invokeCommand("get_general_settings")
       .then((settings) => {
@@ -175,6 +186,7 @@ export function useBootstrapSettings() {
     };
   }, [
     setAiProviderHasApiKey,
+    setAppModeInfo,
     setAiProviderSettings,
     setDashboardSettings,
     setCredentialSettings,
@@ -188,5 +200,5 @@ export function useBootstrapSettings() {
     setTerminalSettings,
   ]);
 
-  return { credentialSettingsReady, generalSettingsReady };
+  return { appModeReady, credentialSettingsReady, generalSettingsReady };
 }

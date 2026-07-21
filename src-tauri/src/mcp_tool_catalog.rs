@@ -24,6 +24,36 @@ use serde_json::{Value, json};
 pub fn tool_descriptors() -> Vec<Value> {
     vec![
         json!({
+            "name": "kkterm.workspace.workspaces.list",
+            "description": "List KKTerm Workspaces. A Workspace is a durable container for saved Connections; it is not a live Session or Tab.",
+            "inputSchema": {"type": "object", "properties": {}, "additionalProperties": false},
+        }),
+        json!({
+            "name": "kkterm.workspace.workspaces.create",
+            "description": "Create a Workspace. importConnectionIds optionally copies saved Connections from any existing Workspace into the new Workspace as independent durable Connections.",
+            "inputSchema": workspace_create_input_schema(),
+        }),
+        json!({
+            "name": "kkterm.workspace.workspaces.rename",
+            "description": "Rename or restyle one Workspace by id. Submit the full icon fields you want to retain.",
+            "inputSchema": workspace_rename_input_schema(),
+        }),
+        json!({
+            "name": "kkterm.workspace.workspaces.reorder",
+            "description": "Reorder Workspaces by supplying every Workspace id in the desired order.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {"orderedIds": {"type": "array", "items": {"type": "string"}}},
+                "required": ["orderedIds"],
+                "additionalProperties": false,
+            },
+        }),
+        json!({
+            "name": "kkterm.workspace.workspaces.dangerous.delete",
+            "description": "DANGEROUS: delete one non-default Workspace and all saved Connections and Connection folders it owns. The frontend closes Tabs and live Sessions owned by the removed Workspace when it reloads the Workspace list. Requires built_in_mcp_allow_all_dangerous = true.",
+            "inputSchema": id_input_schema("id"),
+        }),
+        json!({
             "name": "kkterm.workspace.connections.list",
             "description": "List saved Connections (folders + connections) from KKTerm storage.",
             "inputSchema": {"type": "object", "properties": {}, "additionalProperties": false},
@@ -31,12 +61,12 @@ pub fn tool_descriptors() -> Vec<Value> {
         json!({
             "name": "kkterm.workspace.connections.create",
             "description": "Create a saved Connection in KKTerm storage. Does not accept or store passwords or other secrets.",
-            "inputSchema": connection_create_input_schema(),
+            "inputSchema": connection_input_schema(None),
         }),
         json!({
             "name": "kkterm.workspace.connections.update",
             "description": "Update one saved Connection in KKTerm storage. Submit the full updated Connection fields. Does not accept or store passwords or other secrets.",
-            "inputSchema": connection_update_input_schema(),
+            "inputSchema": connection_input_schema(Some("connectionId")),
         }),
         json!({
             "name": "kkterm.workspace.connections.rename",
@@ -99,8 +129,8 @@ pub fn tool_descriptors() -> Vec<Value> {
             "inputSchema": {"type": "object", "properties": {}, "additionalProperties": false},
         }),
         json!({
-            "name": "kkterm.workspace.sessions.send_input",
-            "description": "Send text/keystrokes to a live terminal Pane.",
+            "name": "kkterm.workspace.sessions.dangerous.send_input",
+            "description": "DANGEROUS: send text/keystrokes to a live terminal Pane. Submitted text can execute commands in the live Session. Requires built_in_mcp_allow_all_dangerous = true.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -328,6 +358,16 @@ pub fn tool_descriptors() -> Vec<Value> {
             },
         }),
         json!({
+            "name": "kkterm.dashboard.check_widget_health",
+            "description": "Read the live runtime health of one Dashboard Widget Instance, waiting briefly for its frontend smoke test to report ready, error, timeout, stalled, or pending.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {"instanceId": {"type": "string"}},
+                "required": ["instanceId"],
+                "additionalProperties": false,
+            },
+        }),
+        json!({
             "name": "kkterm.dashboard.create_view",
             "description": "Add a new Dashboard view (tab). `gridDensity` is optional ('compact' | 'default' | 'roomy'); defaults to 'default'.",
             "inputSchema": {
@@ -377,7 +417,7 @@ pub fn tool_descriptors() -> Vec<Value> {
         }),
         json!({
             "name": "kkterm.dashboard.add_instance",
-            "description": "Place a new widget instance on a view. `kind` is 'builtIn' for a stock widget or 'script' for an AI-Created Widget. `sourceId` selects which one: for built-in widgets it is the registry id ('appLauncher', 'connectionPane', 'notes', 'networkTools', 'generatorTools', 'converters', or 'aiCodingUsage'); for 'script' it is the AI-Created Widget's id. `preset`, `accentName`, and `iconName` are required. Grid coordinates are 0-11 columns wide; gridX/Y/W/H are optional and auto-placed when omitted.",
+            "description": "Place a new widget instance on a view. `kind` is 'builtIn' for a stock widget or 'script' for an AI-Created Widget. `sourceId` selects which one: for built-in widgets it is the registry id ('appLauncher', 'connectionPane', 'notes', 'pcInfo', 'networkTools', 'generatorTools', 'converters', or 'aiCodingUsage'); for 'script' it is the AI-Created Widget's id. `preset`, `accentName`, and `iconName` are required. Grid coordinates are 0-11 columns wide; gridX/Y/W/H are optional and auto-placed when omitted.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -398,7 +438,7 @@ pub fn tool_descriptors() -> Vec<Value> {
         }),
         json!({
             "name": "kkterm.dashboard.update_instance",
-            "description": "Change a widget instance's size, position, preset, accent, or icon. Use `patch` with any subset of: gridX, gridY, gridW, gridH, preset, accentName, iconName.",
+            "description": "Change a widget instance's size, position, preset, accent, icon, custom title, or title visibility. Use `patch` with any subset of: gridX, gridY, gridW, gridH, preset, accentName, iconName, customTitle, hideTitle.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -593,6 +633,7 @@ pub fn tool_descriptors() -> Vec<Value> {
                     "label": {"type": "string"},
                     "startU": {"type": "integer", "minimum": 1},
                     "heightU": {"type": "integer", "minimum": 1},
+                    "mountFace": {"type": "string", "enum": ["front", "rear"]},
                     "connectionId": {"type": "string"},
                     "metadata": {"type": "object", "properties": {
                         "expiry": {"type": "string", "description": "ISO date in YYYY-MM-DD form"},
@@ -615,6 +656,7 @@ pub fn tool_descriptors() -> Vec<Value> {
                     "kind": {"type": "string", "enum": ["connection", "server", "storage", "switch", "router", "firewall", "pdu", "ups", "kvm", "patchPanel", "genericDevice", "kuaiguai"]},
                     "label": {"type": "string"},
                     "connectionId": {"type": "string"},
+                    "mountFace": {"type": "string", "enum": ["front", "rear"]},
                     "metadata": {"type": "object", "properties": {
                         "expiry": {"type": "string", "description": "ISO date in YYYY-MM-DD form"},
                         "kuaiguaiStyle": {"type": "string", "enum": ["full", "laidDown"]},
@@ -636,6 +678,7 @@ pub fn tool_descriptors() -> Vec<Value> {
                     "rackId": {"type": "string"},
                     "startU": {"type": "integer", "minimum": 1},
                     "heightU": {"type": "integer", "minimum": 1},
+                    "mountFace": {"type": "string", "enum": ["front", "rear"]},
                 },
                 "required": ["id", "rackId", "startU", "heightU"],
                 "additionalProperties": false,
@@ -1105,7 +1148,7 @@ pub fn tool_descriptors() -> Vec<Value> {
         }),
         json!({
             "name": "kkterm.app.dangerous.tutorial_highlight",
-            "description": "DANGEROUS: navigate the KKTerm UI and show a one-step Tutorial overlay — highlight one app-owned target, dim the rest of the window, and place a short help balloon beside it. This moves the user's UI: navigation may switch the active Module (workspace, dashboard, itops, installer, settings), a Settings section, or an IT Ops Site destination (navigation.itopsSiteId + navigation.itopsDestination: site|serverRooms|hosts|automations|runHistory|taskLibrary). targetId must be a registered tutorial target (see docs/manual chapters) or an IT Ops entity target such as itops.host:<hostId>. The overlay disappears when the user clicks or presses any key. Requires built_in_mcp_allow_all_dangerous = true.",
+            "description": "DANGEROUS: navigate the KKTerm UI and show a one-step Tutorial overlay — highlight one app-owned target, dim the rest of the window, and place a short help balloon beside it. This moves the user's UI: navigation may switch the active Module (workspace, dashboard, itops, installer, screenshots, settings), a Settings section, or an IT Ops Site destination (navigation.itopsSiteId + navigation.itopsDestination: site|serverRooms|hosts|automations|runHistory|taskLibrary). targetId must be a registered tutorial target (see docs/manual chapters) or an IT Ops entity target such as itops.host:<hostId>. The overlay disappears when the user clicks or presses any key. Requires built_in_mcp_allow_all_dangerous = true.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -1115,7 +1158,7 @@ pub fn tool_descriptors() -> Vec<Value> {
                     "navigation": {
                         "type": "object",
                         "properties": {
-                            "page": {"type": "string", "enum": ["workspace", "dashboard", "itops", "installer", "settings"]},
+                            "page": {"type": "string", "enum": ["workspace", "dashboard", "itops", "installer", "screenshots", "settings"]},
                             "settingsSectionId": {"type": "string"},
                             "itopsSiteId": {"type": "string"},
                             "itopsDestination": {"type": "string", "enum": ["site", "serverRooms", "hosts", "automations", "runHistory", "taskLibrary"]},
@@ -1130,44 +1173,105 @@ pub fn tool_descriptors() -> Vec<Value> {
     ]
 }
 
-fn connection_create_input_schema() -> Value {
-    json!({
+pub fn connection_input_schema(id_name: Option<&str>) -> Value {
+    let rdp_options_schema = json!({"type": ["object", "null"], "properties": {
+        "inheritDefaults": {"type": "boolean"},
+        "colorDepth": {"type": ["integer", "null"], "enum": [15, 16, 24, 32, null]},
+        "administrativeSession": {"type": ["boolean", "null"]},
+        "redirectClipboard": {"type": ["boolean", "null"]},
+        "redirectDrives": {"type": ["boolean", "null"]},
+        "driveSelection": {"type": ["object", "null"]},
+        "sharedLocalFolders": {"type": ["array", "null"], "items": {"type": "string"}},
+        "sharedLocalFolder": {"type": ["string", "null"]},
+        "bitmapCache": {"type": ["boolean", "null"]},
+        "performanceProfile": {"type": ["string", "null"], "enum": ["balanced", "quality", "speed", null]},
+        "remoteResolution": {"type": ["string", "null"]},
+        "viewMode": {"type": ["string", "null"], "enum": ["fit", "stretch", "actualSize", "fitWidth", "fitHeight", null]}
+    }});
+    let vnc_options_schema = json!({"type": ["object", "null"], "properties": {
+        "inheritDefaults": {"type": "boolean"},
+        "sharedSession": {"type": ["boolean", "null"]},
+        "viewOnly": {"type": ["boolean", "null"]},
+        "colorLevel": {"type": ["string", "null"], "enum": ["full", "256", "64", "8", null]},
+        "preferredEncoding": {"type": ["string", "null"], "enum": ["tight", "zrle", "raw", null]},
+        "viewMode": {"type": ["string", "null"], "enum": ["fit", "stretch", "actualSize", "fitWidth", "fitHeight", null]}
+    }});
+    let ftp_options_schema = json!({"type": ["object", "null"], "properties": {
+        "protocol": {"type": "string", "enum": ["sftp", "ftp", "ftps"]},
+        "mode": {"type": "string", "enum": ["passive", "active"]},
+        "tlsMode": {"type": ["string", "null"], "enum": ["explicit", "implicit", null]},
+        "transferType": {"type": "string", "enum": ["binary", "ascii"]},
+        "utf8": {"type": "boolean"},
+        "showHidden": {"type": "boolean"},
+        "connectTimeoutSecs": {"type": ["integer", "null"], "minimum": 1},
+        "ignoreCertErrors": {"type": "boolean"},
+        "keepaliveSecs": {"type": ["integer", "null"], "minimum": 1},
+        "localPath": {"type": ["string", "null"]},
+        "remotePath": {"type": ["string", "null"]}
+    }, "required": ["protocol"]});
+    let ssh_port_forwardings_schema = json!({"type": ["array", "null"], "items": {"type": "object", "properties": {
+        "id": {"type": "string"},
+        "mode": {"type": "string", "enum": ["L", "R", "D"]},
+        "enabled": {"type": "boolean"},
+        "bind": {"type": "string"},
+        "listenPort": {"type": "integer", "minimum": 1, "maximum": 65535},
+        "destHost": {"type": ["string", "null"]},
+        "destPort": {"type": ["integer", "null"], "minimum": 1, "maximum": 65535}
+    }, "required": ["id", "mode", "enabled", "bind", "listenPort"]}});
+    let mut schema = json!({
         "type": "object",
         "properties": {
             "name": {"type": "string", "minLength": 1},
-            "type": {"type": "string", "enum": ["local", "ssh", "telnet", "serial", "url", "rdp", "vnc", "ftp"]},
+            "type": {"type": "string", "enum": ["local", "ssh", "telnet", "serial", "url", "rdp", "vnc", "ftp", "localFiles", "fileView"]},
             "folderId": {"type": ["string", "null"]},
+            "workspaceId": {"type": ["string", "null"]},
             "host": {"type": "string"},
             "user": {"type": "string"},
             "port": {"type": ["integer", "null"], "minimum": 1, "maximum": 65535},
             "keyPath": {"type": ["string", "null"]},
             "proxyJump": {"type": ["string", "null"]},
+            "sshSocksProxy": {"type": ["string", "null"]},
+            "sshSocksProxyUsername": {"type": ["string", "null"]},
+            "sshSocksProxyInheritDefaults": {"type": ["boolean", "null"]},
+            "sshCompression": {"type": ["string", "null"], "enum": ["off", "fast", null]},
+            "sshOldProtocols": {"type": ["string", "null"], "enum": ["off", "legacy", null]},
             "authMethod": {"type": ["string", "null"], "enum": ["keyFile", "password", "agent", null]},
             "localShell": {"type": ["string", "null"]},
             "localStartupDirectory": {"type": ["string", "null"]},
             "localStartupScript": {"type": ["string", "null"]},
             "url": {"type": ["string", "null"]},
             "dataPartition": {"type": ["string", "null"]},
+            "urlUserAgent": {"type": ["string", "null"]},
+            "urlProxy": {"type": ["string", "null"]},
+            "urlProxyInheritDefaults": {"type": ["boolean", "null"]},
             "useTmuxSessions": {"type": ["boolean", "null"]},
             "usePsmuxSessions": {"type": ["boolean", "null"]},
             "serialLine": {"type": ["string", "null"]},
             "serialSpeed": {"type": ["integer", "null"], "minimum": 1},
+            "rdpOptions": rdp_options_schema,
+            "vncOptions": vnc_options_schema,
+            "ftpOptions": ftp_options_schema,
+            "sshPortForwardings": ssh_port_forwardings_schema,
+            "fileViewOpenExternal": {"type": "boolean"},
         },
         "required": ["name", "type"],
         "additionalProperties": true,
-    })
-}
-
-fn connection_update_input_schema() -> Value {
-    let mut schema = connection_create_input_schema();
-    if let Some(properties) = schema.get_mut("properties").and_then(Value::as_object_mut) {
+    });
+    if let Some(id_name) = id_name {
+        let properties = schema
+            .get_mut("properties")
+            .and_then(Value::as_object_mut)
+            .expect("Connection schema properties");
+        properties.remove("workspaceId");
         properties.insert(
-            "connectionId".to_string(),
+            id_name.to_string(),
             json!({"type": "string", "description": "The id of the saved Connection to update."}),
         );
-    }
-    if let Some(required) = schema.get_mut("required").and_then(Value::as_array_mut) {
-        required.insert(0, json!("connectionId"));
+        schema
+            .get_mut("required")
+            .and_then(Value::as_array_mut)
+            .expect("Connection schema required fields")
+            .insert(0, json!(id_name));
     }
     schema
 }
@@ -1221,8 +1325,39 @@ fn folder_create_input_schema() -> Value {
         "properties": {
             "name": {"type": "string", "minLength": 1},
             "parentFolderId": {"type": ["string", "null"]},
+            "workspaceId": {"type": ["string", "null"]},
         },
         "required": ["name", "parentFolderId"],
+        "additionalProperties": false,
+    })
+}
+
+fn workspace_create_input_schema() -> Value {
+    json!({
+        "type": "object",
+        "properties": {
+            "name": {"type": "string", "minLength": 1},
+            "icon": {"type": ["string", "null"]},
+            "iconColor": {"type": ["string", "null"]},
+            "iconBackgroundColor": {"type": ["string", "null"]},
+            "importConnectionIds": {"type": "array", "items": {"type": "string"}},
+        },
+        "required": ["name"],
+        "additionalProperties": false,
+    })
+}
+
+fn workspace_rename_input_schema() -> Value {
+    json!({
+        "type": "object",
+        "properties": {
+            "id": {"type": "string"},
+            "name": {"type": "string", "minLength": 1},
+            "icon": {"type": ["string", "null"]},
+            "iconColor": {"type": ["string", "null"]},
+            "iconBackgroundColor": {"type": ["string", "null"]},
+        },
+        "required": ["id", "name"],
         "additionalProperties": false,
     })
 }

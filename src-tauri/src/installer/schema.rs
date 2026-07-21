@@ -836,6 +836,22 @@ mod tests {
                     && file_name == "antigravity-cli-install.cmd"
         ));
 
+        let cursor = catalog
+            .recipes
+            .iter()
+            .find(|recipe| recipe.id == "cursor-cli")
+            .expect("catalog should include Cursor Agent CLI");
+        assert_eq!(cursor.name, "Cursor Agent CLI");
+        assert_eq!(cursor.category.as_deref(), Some("ai-agent"));
+        assert!(cursor.needs.is_empty());
+        assert!(cursor.options.is_empty());
+        assert!(matches!(
+            &cursor.provider,
+            Provider::DownloadInstaller { url, file_name, .. }
+                if url == "https://cursor.com/install?win32=true"
+                    && file_name == "cursor-agent-install.ps1"
+        ));
+
         let opencode = catalog
             .recipes
             .iter()
@@ -843,6 +859,43 @@ mod tests {
             .expect("catalog should include OpenCode CLI");
         assert_eq!(opencode.name, "OpenCode CLI");
         assert_eq!(opencode.category.as_deref(), Some("ai-agent"));
+
+        let kimi = catalog
+            .recipes
+            .iter()
+            .find(|recipe| recipe.id == "kimi-code-cli")
+            .expect("catalog should include Kimi Code CLI");
+        assert!(matches!(
+            &kimi.provider,
+            Provider::Winget { id } if id == "MoonshotAI.KimiCodeCLI"
+        ));
+        assert!(matches!(
+            &kimi.download_provider,
+            Some(Provider::DownloadInstaller { url, file_name, .. })
+                if url == "https://code.kimi.com/kimi-code/install.ps1"
+                    && file_name == "kimi-code-install.ps1"
+        ));
+        assert!(matches!(
+            &kimi.npm_provider,
+            Some(Provider::Npm { pkg }) if pkg == "@moonshot-ai/kimi-code"
+        ));
+        assert!(kimi.needs.contains(&"git".to_string()));
+
+        let grok = catalog
+            .recipes
+            .iter()
+            .find(|recipe| recipe.id == "grok-build")
+            .expect("catalog should include Grok Build");
+        assert!(matches!(
+            &grok.provider,
+            Provider::Winget { id } if id == "xAI.GrokBuild"
+        ));
+        assert!(matches!(
+            &grok.download_provider,
+            Some(Provider::DownloadInstaller { url, file_name, .. })
+                if url == "https://x.ai/cli/install.ps1"
+                    && file_name == "grok-build-install.ps1"
+        ));
     }
 
     #[test]

@@ -12,6 +12,11 @@ import {
   type WorkspaceShortcutOverrides,
 } from "../workspace/keymap";
 import { SettingsSectionHeader, useSettingsSaveRegistration } from "./shared";
+import { ScreenshotShortcutRows } from "./ScreenshotShortcutRows";
+import {
+  screenshotSettingsHaveChanges,
+  useScreenshotSettingsDraft,
+} from "./screenshotSettingsDraft";
 
 function overridesEqual(a: WorkspaceShortcutOverrides, b: WorkspaceShortcutOverrides) {
   const aKeys = Object.keys(a);
@@ -24,6 +29,12 @@ export function ShortcutsSettings() {
   const generalSettings = useWorkspaceStore((state) => state.generalSettings);
   const setGeneralSettings = useWorkspaceStore((state) => state.setGeneralSettings);
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
+  const screenshotSaved = useScreenshotSettingsDraft((state) => state.saved);
+  const screenshotDraft = useScreenshotSettingsDraft((state) => state.draft);
+  const useDirectxSaved = useScreenshotSettingsDraft((state) => state.useDirectxSaved);
+  const useDirectxDraft = useScreenshotSettingsDraft((state) => state.useDirectxDraft);
+  const loadScreenshotSettings = useScreenshotSettingsDraft((state) => state.load);
+  const saveScreenshotSettings = useScreenshotSettingsDraft((state) => state.save);
   const [draft, setDraft] = useState<WorkspaceShortcutOverrides>(
     generalSettings.workspaceShortcuts,
   );
@@ -31,11 +42,26 @@ export function ShortcutsSettings() {
     null,
   );
   const [conflictNotice, setConflictNotice] = useState<string | null>(null);
-  const hasChanges = !overridesEqual(draft, generalSettings.workspaceShortcuts);
+  const workspaceHasChanges = !overridesEqual(draft, generalSettings.workspaceShortcuts);
+  const screenshotHasChanges = screenshotSettingsHaveChanges({
+    saved: screenshotSaved,
+    draft: screenshotDraft,
+    useDirectxSaved,
+    useDirectxDraft,
+  });
+  const hasChanges = workspaceHasChanges || screenshotHasChanges;
 
   useEffect(() => {
     setDraft(generalSettings.workspaceShortcuts);
   }, [generalSettings]);
+
+  useEffect(() => {
+    void loadScreenshotSettings().catch((error) => {
+      showStatusBarNotice(error instanceof Error ? error.message : String(error), {
+        tone: "error",
+      });
+    });
+  }, [loadScreenshotSettings, showStatusBarNotice]);
 
   function effectiveBinding(actionId: WorkspaceShortcutActionId) {
     const action = WORKSPACE_SHORTCUT_ACTIONS.find((entry) => entry.id === actionId);
@@ -86,14 +112,19 @@ export function ShortcutsSettings() {
 
   async function handleSave() {
     try {
-      const currentSettings = useWorkspaceStore.getState().generalSettings;
-      const request = { ...currentSettings, workspaceShortcuts: draft };
-      const saved = isTauriRuntime()
-        ? await invokeCommand("update_general_settings", { request })
-        : request;
-      setGeneralSettings(saved);
-      setDraft(saved.workspaceShortcuts);
-      showStatusBarNotice(t("settings.shortcutsSaved"), { tone: "success" });
+      const savedScreenshotChanges = await saveScreenshotSettings();
+      if (workspaceHasChanges) {
+        const currentSettings = useWorkspaceStore.getState().generalSettings;
+        const request = { ...currentSettings, workspaceShortcuts: draft };
+        const saved = isTauriRuntime()
+          ? await invokeCommand("update_general_settings", { request })
+          : request;
+        setGeneralSettings(saved);
+        setDraft(saved.workspaceShortcuts);
+      }
+      if (workspaceHasChanges || savedScreenshotChanges) {
+        showStatusBarNotice(t("settings.shortcutsSaved"), { tone: "success" });
+      }
     } catch (saveError) {
       showStatusBarNotice(
         saveError instanceof Error ? saveError.message : String(saveError),
@@ -199,6 +230,15 @@ export function ShortcutsSettings() {
       <fieldset className="settings-subsection settings-fieldset">
         <legend>{t("settings.sectionTerminal")}</legend>
         <div className="shortcut-list">{renderRows("terminal")}</div>
+      </fieldset>
+      <fieldset className="settings-subsection settings-fieldset">
+        <legend>{t("settings.sectionScreenshots")}</legend>
+        <div>
+          <p className="field-hint">{t("settings.screenshotsShortcutsHint")}</p>
+        </div>
+        <div className="shortcut-list">
+          <ScreenshotShortcutRows />
+        </div>
       </fieldset>
     </section>
   );

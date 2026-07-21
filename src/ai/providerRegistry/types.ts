@@ -63,6 +63,8 @@ export type AiProviderDefaults = Pick<
   | "cliExecutionPolicy"
   | "useCodexCli"
   | "useClaudeCli"
+  | "useCursorCli"
   | "claudeCliPath"
   | "codexCliPath"
+  | "cursorCliPath"
 >;

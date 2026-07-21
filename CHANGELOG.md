@@ -33,6 +33,174 @@ All notable changes to KKTerm are documented here.
 - Dashboard background SVG previews are sanitized with DOMPurify before rendering.
 
 ## Direct Downloads
+* 💻 [Download for Windows (64-bit)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.127/kkterm-0.1.127-windows-x64-setup.exe)
+* 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.127/kkterm-0.1.127-windows-arm64-setup.exe)
+* 📦 [Portable for Windows (64-bit)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.127/kkterm-0.1.127-windows-x64-portable.zip)
+* 📦 [Portable for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.127/kkterm-0.1.127-windows-arm64-portable.zip)
+
+## Highlights
+- Centralized **Saved Credentials** management (and stopped duplicate credentials) for smoother Connection auth. (`#648`, by @ryantsai; issue reporter: dec04)
+- Windows **portable mode** with a creation wizard. (`#646`, by @ryantsai)
+- Screenshot capture upgrades: **xcap** is now the default capture engine with a fallback path when accelerated capture isn’t available. (`#649`, by @ryantsai)
+- Region capture + library pagination fixes. (`#647`, by @ryantsai)
+
+## New
+- Add Windows portable mode and creation wizard for preparing a portable setup. (`#646`, by @ryantsai)
+
+## Improved
+- **Saved Credentials**: manage them centrally and stop duplicates; Connections can link to the right Saved Credential instead of silently multiplying them. (`#648`, by @ryantsai; issue reporter: dec04)
+
+## Fixed
+- Repair region capture and library pagination in screenshots. (`#647`, by @ryantsai)
+- Portable copy wizard: drop retired legacy columns when creating a portable copy. (`#650`, by @ryantsai)
+
+## Internal
+- Validate all required platforms before publishing release manifest. (`#644`, by @ryantsai)
+- Fix: don’t publish partial Cloudflare manifests during staggered releases. (`e6118f7`)
+
+## Direct Downloads
+* 💻 [Download for Windows (64-bit)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.126/kkterm-0.1.126-windows-x64-setup.exe)
+* 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.126/kkterm-0.1.126-windows-arm64-setup.exe)
+
+## Highlights
+- **Install Helper tiles now have a tile-level _Run_ button** with launch surfaces tailored to the tool type (GUI / CLI / web / coreutils), plus **brand icons** (Chrome/Firefox/Acrobat Reader, etc.)—so running tools feels less like spelunking through menus.  
+- **AI Assistant gains Cursor Agent CLI support** via ACP (agent acp), including install helper entries and Cursor CLI backend wiring.  
+- **Workspace management tools** (list/create/rename/reorder/delete) integrated into the AI assistant + connection handling, with workspace-aware connection creation.
+
+## New
+- **Install Helper**
+  - Add **Cursor Agent CLI** to Install Helper (recipe/catalog + icon assets).
+  - Add **Kimi Code CLI** and **Grok Build** to the installer catalog with official CLI support.
+  - Add install-planning doc for **portable mode** (`docs/PORTABLE.md`).
+  - Add **Obsidian** and **Audacity** to the Install Helper catalog.
+- **AI Assistant**
+  - Add **Cursor Agent CLI backend** for Cursor support (ACP/agent acp).
+- **RDP / Connections**
+  - Add **administrative session option** and **support multiple shared local folders** in RDP settings.
+
+## Improved
+- **Install Helper UI**
+  - Refresh the installer launcher and details access for **terminal launch** (unified access in installed details and tile actions).
+  - Remember coding agent **launch folders** for more consistent terminal starts.
+  - Add enhanced launcher flow for **coding agent options** (common flags + additional arguments + GUI app selection when auto resolution fails).
+  - Refresh “latest version” per tool.
+  - Improve styling/layout consistency for installer components.
+- **AI / Connections**
+  - Update connection descriptions and Cursor CLI prompts across multiple languages.
+
+## Fixed
+- **Install Helper**
+  - Fix **WinGet updates** for **externally installed apps**.
+  - Detect **Astral standalone uv installs** in Install Helper when WinGet ARP misses script installs (**#633**, PR https://github.com/ryantsai/KKTerm/pull/638; reported by @jfphi).
+- **AI**
+  - Fix **AI CLI detection** with refreshed `PATH` (PR https://github.com/ryantsai/KKTerm/pull/642).
+
+## Internal
+- Refactor installer run logic and routing around centralized run action.
+- Update terminal launcher behavior for Windows GUI subsystem (ShellExecute).
+- Handle null values for optional fields in OpenAI responses.
+- Various installer/icon/catalog/localization updates and test adjustments.
+
+---
+
+## 發行重點
+- **安裝助手（Install Helper）的每個磁貼（tile）新增「執行（Run）」按鈕**，並依照工具類型切換對應的啟動方式（GUI / CLI / Web / coreutils），同時也補上多種**品牌圖示**（Chrome/Firefox/Acrobat Reader 等）——讓「要怎麼啟動來著？」少一點、找得到多一點。
+- **AI 助理新增 Cursor Agent CLI 支援**：透過 ACP（agent acp）串接 Cursor 的 CLI 後端，也包含安裝助手的相關條目。
+- **工作區（Workspace）管理工具**（列表/建立/重新命名/調整順序/刪除）整合到 AI 助理與連線處理流程中，並支援在建連線時關聯工作區。
+
+## 新增
+- **安裝助手（Install Helper）**
+  - 將 **Cursor Agent CLI** 加入 Install Helper（recipe/catalog + 圖示資產）。
+  - 將 **Kimi Code CLI** 與 **Grok Build** 加入安裝目錄，並支援官方 CLI 偵測。
+  - 新增 **portable mode 規劃文件**（`docs/PORTABLE.md`）。
+  - 在安裝目錄加入 **Obsidian** 與 **Audacity**。
+- **AI 助理**
+  - 新增 **Cursor Agent CLI 後端**以支援 Cursor（透過 ACP/agent acp）。
+- **RDP / 連線（Connections）**
+  - 新增 **管理員工作階段（administrative session）**選項，並支援 **多個共用的本地資料夾**。
+
+## 改善
+- **安裝助手 UI**
+  - 統一已安裝細節（installed details）與磁貼動作中，終端機（terminal）啟動的入口。
+  - 記住編碼代理（coding agent）的**啟動資料夾**，讓 Session / Terminal 啟動更一致。
+  - 在啟動器流程中加入更完整的**編碼代理選項**（常用旗標 + 其他參數 + 當自動解析失敗時可選 GUI 應用）。
+  - 針對每個工具更新「最新版本」。
+  - 改善安裝助手元件的樣式與視覺一致性。
+- **AI / 連線（Connections）**
+  - 更新多語系的連線描述與 Cursor CLI 提示文字。
+
+## 修正
+- **安裝助手（Install Helper）**
+  - 修正 **WinGet 更新**：避免針對**外部安裝（externally installed）**的應用更新出問題。
+  - 修正 **Astral standalone uv** 在 Install Helper 無法正確偵測的問題（PR https://github.com/ryantsai/KKTerm/pull/638；問題回報者 @jfphi，對應 #633）。
+- **AI**
+  - 修正 **AI CLI 偵測**：透過更新 `PATH` 讓偵測更可靠（PR https://github.com/ryantsai/KKTerm/pull/642）。
+
+## Internal
+- 針對安裝器的 Run 邏輯進行重構，集中化與路由調整。
+- 調整 Windows GUI 子系統的終端機啟動行為（ShellExecute）。
+- 修正 OpenAI 回應中選用欄位的 null 值處理。
+- 其他安裝/圖示/目錄/在地化與測試更新。
+
+## Direct Downloads
+* 💻 [Download for Windows (64-bit)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.125/kkterm-0.1.125-windows-x64-setup.exe)
+* 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.125/kkterm-0.1.125-windows-arm64-setup.exe)
+
+## Highlights
+- **New:** Duplicate a **Connection** with UI + localization (so you don’t have to re-enter everything like it’s 3AM on a terminal).
+- **New Web tools:** Added **webview** context menu actions, including **Open link in new Tab**, **Copy link address**, **Copy selected text**, and **Capture page to Clipboard** (full-page capture supported).
+- **Fixed:** Paste confirmation is now kept **above URL panes** (and the split-URL-pane z-order won’t get tangled).
+
+## New
+- **Installer productivity catalog:** Added **Chrome, Firefox, and Acrobat Reader** to the Install Helper productivity catalog. ([#626](https://github.com/ryantsai/KKTerm/pull/626) by @ryantsai)
+- **Connections:** Added **connection duplication** feature with UI integration and localization. ([#632](https://github.com/ryantsai/KKTerm/pull/632) (not available), commit `2ed47f7`)
+- **WebView workspace:** Enhanced context menu actions for navigating/copying/saving from the webview, plus **full-page capture** support. (commit `119cf96`)
+- **IT Ops:** Added **Server Room blackout** easter egg and related animations. (commit `a747743`)
+
+## Improved
+- **Native command handling:** Offloaded expensive native commands. ([#627](https://github.com/ryantsai/KKTerm/pull/627) by @ryantsai)
+- **SFTP UX:** Refactored the **SFTP** context menu to use the native context menu implementation. (commit `4c51a7c`)
+- **WinGet installer logic:** Updated WinGet installation logic to improve recipe detection and alias handling. (commit `9ac7234`)
+- **Performance + efficiency:** Improved several areas including performance monitoring, panel resizing, and file sorting. (commit `e2decd9`)
+
+## Fixed
+- **Z-order:** Fixed **paste confirmation** z-order over split URL **panes** and ensured paste confirmation stays above URL panes. ([#630](https://github.com/ryantsai/KKTerm/pull/630) by @ryantsai; commit `e665f98`)
+- **Session stability:** Restored lost serialization when commands moved off the main thread (includes serialization via worker-side locks and serialized VcXsrv control). (commit `70eb599`, Co-Authored-By: Claude Fable 5)
+
+## Internal
+- Updated/install-related docs and installer catalog artifacts for detection/managed-service coverage. (commit `77587ca`, `10bebe8`)
+- Performance monitoring and app logic refactors plus tests supporting the improvements. (commit `e2decd9`)
+- Added/regenerated installer and related test coverage for new features. (various commits)
+
+---
+
+## 重點摘要
+- **新增：** 支援在介面中**複製 Connection**（不用再像半夜在終端機一樣，重複手動輸入一遍）。
+- **新增 Web 工具：** 強化 **webview** 內容選單動作：**在新分頁開啟連結**、**複製連結位址**、**複製已選文字**、**截圖並複製頁面到剪貼簿**（支援全頁）。
+- **修正：** **貼上確認視窗**會維持在 **URL 分頁（panes）**之上，避免被層級（z-order）打亂。
+
+## 新增
+- **安裝助手（Install Helper）效率工具目錄：** 將 **Chrome、Firefox、Acrobat Reader** 加入。([#626](https://github.com/ryantsai/KKTerm/pull/626) by @ryantsai)
+- **Connections：** 新增 **Connection 複製**功能（含介面整合與在地化）。([#632](https://github.com/ryantsai/KKTerm/pull/632)（無法取得 PR 連結資訊）, commit `2ed47f7`)
+- **WebView 工作區：** 強化 webview 內容選單（導覽/複製/儲存），並加入**全頁截圖**支援。 (commit `119cf96`)
+- **IT Ops：** 加入 **Server Room blackout** 彩蛋與相關動畫。 (commit `a747743`)
+
+## 改進
+- **原生命令處理：** 將昂貴的原生命令轉移到離線處理（offload）。([#627](https://github.com/ryantsai/KKTerm/pull/627) by @ryantsai)
+- **SFTP 使用體驗：** 將 **SFTP** 的內容選單改為使用原生內容選單實作。 (commit `4c51a7c`)
+- **WinGet 安裝邏輯：** 更新 WinGet 安裝判斷方式，提升 recipe 偵測與別名（alias）處理。 (commit `9ac7234`)
+- **效能/效率：** 多處效能與效率面向改善（包含面板縮放邏輯、檔案排序等）。 (commit `e2decd9`)
+
+## 修正
+- **層級（z-order）：** 修正貼上確認在分割的 URL **panes** 上方顯示層級問題，並確保貼上確認維持在 URL panes 之上。([#630](https://github.com/ryantsai/KKTerm/pull/630) by @ryantsai；commit `e665f98`)
+- **Session 穩定性：** 修復在命令移出主執行緒後造成的序列化遺失（包含 worker 端鎖、以及序列化 VcXsrv 控制）。(commit `70eb599`, Co-Authored-By: Claude Fable 5)
+
+## Internal
+- 更新/調整安裝與偵測相關文件與安裝器目錄檔案。 (commit `77587ca`, `10bebe8`)
+- 支援效能與功能改進的內部重構與測試。 (commit `e2decd9`)
+- 新功能相關的安裝器與測試覆蓋補強。 (各種提交)
+
+## Direct Downloads
 * 💻 [Download for Windows (64-bit)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.124/kkterm-0.1.124-windows-x64-setup.exe)
 * 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.124/kkterm-0.1.124-windows-arm64-setup.exe)
 

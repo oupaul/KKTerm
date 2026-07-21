@@ -23,6 +23,8 @@ import type {
   AppearanceSettings,
   AiProviderSettings,
   AppBootstrap,
+  AppModeInfo,
+  CreatedPortableCopy,
   AppLauncherLaunchMode,
   AppLauncherSettings,
   ConfigureEncryptedFileSecretStoreRequest,
@@ -30,7 +32,8 @@ import type {
   CredentialSettings,
   CredentialSecretStoreStatus,
   Connection,
-  ConnectionPasswordCredentialSummary,
+  ConnectionPasswordCredentialEntry,
+  ConnectionPasswordCredentialUsage,
   ConnectionFolder,
   ConnectionTree,
   CustomFont,
@@ -633,6 +636,9 @@ export interface TrayMenuSnapshot {
   recentConnections: TrayRecentConnection[];
   dontSleepLabel: string;
   exitLabel: string;
+  captureRegionLabel: string;
+  captureWindowLabel: string;
+  captureFullscreenLabel: string;
 }
 
 export interface CommandProposalPlan {
@@ -769,12 +775,28 @@ export interface StoredScreenshot {
   id: string;
   path: string;
   fileName: string;
+  thumbnailDataUrl: string;
+  width: number;
+  height: number;
+  fileSizeBytes: number;
+  capturedAt: number;
+  createdAt: number;
+  modifiedAt: number;
+  takenAt: number | null;
+  kind: "region" | "window" | "fullscreen" | "screenshot";
+}
+
+export interface ScreenshotCaptureResult {
+  storedScreenshot: StoredScreenshot | null;
+  copiedToClipboard: boolean;
+}
+
+export interface FullScreenshot {
+  id: string;
+  fileName: string;
   dataUrl: string;
   width: number;
   height: number;
-  capturedAt: number;
-  label: string;
-  kind: "region" | "window" | "fullscreen" | "screenshot";
 }
 
 export interface ListScreenshotsResponse {
@@ -831,6 +853,12 @@ export interface WebviewSimpleRequest {
 
 export interface WebviewCaptureCredentialRequest extends WebviewSimpleRequest {
   nonce: string;
+}
+
+export interface WebviewPageCaptureStateRequest extends WebviewSimpleRequest {
+  nonce: string;
+  x?: number;
+  y?: number;
 }
 
 export interface FillWebviewCredentialRequest {
@@ -992,6 +1020,9 @@ export interface StartRdpClientSessionRequest {
   desktopWidth?: number;
   desktopHeight?: number;
   ignoreTlsErrors?: boolean;
+  administrativeSession?: boolean;
+  sharedLocalFolders?: string[];
+  /** Legacy single-folder payload accepted by older backends. */
   sharedLocalFolder?: string;
 }
 
@@ -1055,7 +1086,7 @@ export interface AiProviderModelOption {
   supportsImageInput?: boolean | null;
 }
 
-export type AiCliBackendKind = "codex" | "claudeCode";
+export type AiCliBackendKind = "codex" | "claudeCode" | "cursor";
 
 export interface GitHubCopilotCliStatus {
   installed: boolean;
@@ -1606,6 +1637,18 @@ type CommandMap = {
     args: undefined;
     result: GeneralSettings;
   };
+  get_app_mode: {
+    args: undefined;
+    result: AppModeInfo;
+  };
+  create_portable_copy: {
+    args: { request: { destination: string; segments: string[] } };
+    result: CreatedPortableCopy;
+  };
+  launch_portable_copy: {
+    args: { destination: string };
+    result: void;
+  };
   update_general_settings: {
     args: { request: GeneralSettings };
     result: GeneralSettings;
@@ -2035,6 +2078,10 @@ type CommandMap = {
     args: { request: CaptureScreenshotRequest };
     result: null;
   };
+  write_screenshot_data_url_to_clipboard: {
+    args: { request: { dataUrl: string } };
+    result: null;
+  };
   capture_screenshot_for_assistant: {
     args: { request: CaptureScreenshotRequest };
     result: AssistantScreenshot;
@@ -2053,30 +2100,92 @@ type CommandMap = {
   };
   capture_screenshot_to_library: {
     args: { request: CaptureScreenshotRequest; kind: StoredScreenshot["kind"] };
-    result: StoredScreenshot;
+    result: ScreenshotCaptureResult;
   };
   capture_fullscreen_screenshot_to_library: {
     args: { kind: StoredScreenshot["kind"] };
-    result: StoredScreenshot;
+    result: ScreenshotCaptureResult;
   };
   capture_active_window_screenshot_to_library: {
     args: { kind: StoredScreenshot["kind"] };
-    result: StoredScreenshot;
+    result: ScreenshotCaptureResult;
   };
   capture_interactive_region_screenshot_to_library: {
     args: { kind: StoredScreenshot["kind"] };
-    result: StoredScreenshot;
+    result: ScreenshotCaptureResult;
   };
   list_screenshots: {
-    args: { request: { offset?: number; limit?: number } };
+    args: {
+      request: {
+        offset?: number;
+        limit?: number;
+        sortBy?: "name" | "date" | "type";
+        sortDirection?: "asc" | "desc";
+      };
+    };
     result: ListScreenshotsResponse;
+  };
+  read_screenshot: {
+    args: { id: string };
+    result: FullScreenshot;
+  };
+  rename_screenshot: {
+    args: { id: string; newName: string };
+    result: StoredScreenshot;
+  };
+  copy_stored_screenshot_to_clipboard: {
+    args: { id: string };
+    result: null;
   };
   delete_screenshot: {
     args: { id: string };
     result: null;
   };
+  delete_screenshots: {
+    args: { ids: string[] };
+    result: null;
+  };
+  resize_screenshots: {
+    args: {
+      request: {
+        ids: string[];
+        mode: "exact" | "percentage";
+        width?: number;
+        height?: number;
+        percentage?: number;
+        preserveAspectRatio: boolean;
+      };
+    };
+    result: StoredScreenshot[];
+  };
+  convert_screenshots: {
+    args: {
+      request: {
+        ids: string[];
+        format: "png" | "jpeg" | "webp" | "gif";
+        quality: number;
+      };
+    };
+    result: StoredScreenshot[];
+  };
+  save_edited_screenshot: {
+    args: { request: { id: string; dataUrl: string; saveAsCopy: boolean } };
+    result: StoredScreenshot;
+  };
   clear_screenshots: {
     args: undefined;
+    result: null;
+  };
+  open_screenshots_folder: {
+    args: undefined;
+    result: null;
+  };
+  reveal_screenshot: {
+    args: { id: string };
+    result: null;
+  };
+  open_screenshot_file: {
+    args: { id: string };
     result: null;
   };
   ssh_transport_plan: {
@@ -2141,14 +2250,66 @@ type CommandMap = {
   };
   list_connection_password_credentials: {
     args: undefined;
-    result: ConnectionPasswordCredentialSummary[];
+    result: ConnectionPasswordCredentialEntry[];
   };
   create_connection_password_credential: {
-    args: { request: { connectionId: string; secret: string } };
+    args: {
+      request: {
+        connectionId: string;
+        secret: string;
+        label?: string;
+        allowReuse?: boolean;
+      };
+    };
     result: Connection;
   };
   assign_connection_password_credential: {
     args: { request: { connectionId: string; credentialId: string } };
+    result: Connection;
+  };
+  update_connection_password_credential: {
+    args: {
+      request: {
+        credentialId: string;
+        label?: string;
+        username?: string;
+        secret?: string;
+      };
+    };
+    result: ConnectionPasswordCredentialEntry;
+  };
+  list_connection_password_credential_usage: {
+    args: { request: { credentialId: string } };
+    result: ConnectionPasswordCredentialUsage[];
+  };
+  create_standalone_connection_password_credential: {
+    args: {
+      request: {
+        label: string;
+        username: string;
+        secret: string;
+      };
+    };
+    result: ConnectionPasswordCredentialEntry;
+  };
+  convert_connection_password_to_credential: {
+    args: {
+      request: {
+        connectionId: string;
+        credentialId?: string;
+        label?: string;
+      };
+    };
+    result: Connection;
+  };
+  merge_connection_password_credentials: {
+    args: {
+      request: { targetCredentialId: string; sourceCredentialIds: string[] };
+    };
+    result: number;
+  };
+  unassign_connection_password_credential: {
+    args: { request: { connectionId: string } };
     result: Connection;
   };
   delete_stored_credential: {
@@ -2961,6 +3122,10 @@ type CommandMap = {
     args: { request: WebviewCaptureCredentialRequest };
     result: null;
   };
+  request_webview_page_capture_state: {
+    args: { request: WebviewPageCaptureStateRequest };
+    result: null;
+  };
   close_webview_session: {
     args: { request: WebviewSimpleRequest };
     result: null;
@@ -3291,8 +3456,20 @@ type CommandMap = {
     result: void;
   };
   installer_open_terminal_launcher: {
-    args: { toolId: string };
+    // `path` opens the terminal in a remembered/chosen project folder for
+    // directory-scoped coding agents. `execute` immediately runs allow-listed
+    // coding agents; other CLI launchers keep an editable command prefill.
+    args: {
+      toolId: string;
+      path?: string;
+      arguments?: string;
+      execute?: boolean;
+    };
     result: void;
+  };
+  installer_launch_app: {
+    args: { toolId: string; customPath?: string };
+    result: boolean;
   };
   installer_list_quick_launch: {
     args: { toolId: string };
@@ -3454,6 +3631,29 @@ function notifyCredentialUnlockRequired(error: unknown) {
   }
 }
 
+export async function selectInstallerGuiLauncherFile(options: {
+  title: string;
+  filterName: string;
+}) {
+  if (!isTauriRuntime()) {
+    return null;
+  }
+
+  const selectedPath = await openDialog({
+    directory: false,
+    filters: [
+      {
+        name: options.filterName,
+        extensions: ["exe", "com", "bat", "cmd", "lnk"],
+      },
+    ],
+    multiple: false,
+    title: options.title,
+  });
+
+  return typeof selectedPath === "string" ? selectedPath : null;
+}
+
 export async function selectSettingsImportFile(options: {
   title: string;
   filterName: string;
@@ -3575,6 +3775,20 @@ export async function selectSelectiveExportFile(options: {
   return typeof selectedPath === "string" ? selectedPath : null;
 }
 
+export async function selectPortableDestination(options: { title: string }) {
+  if (!isTauriRuntime()) {
+    return null;
+  }
+
+  const selectedPath = await openDialog({
+    directory: true,
+    multiple: false,
+    title: options.title,
+  });
+
+  return typeof selectedPath === "string" ? selectedPath : null;
+}
+
 export async function selectSelectiveImportFile(options: {
   title: string;
   filterName: string;
@@ -3681,6 +3895,22 @@ export async function selectAppLauncherFile(options: {
     directory: false,
     defaultPath,
     filters,
+    multiple: false,
+    title: options.title,
+  });
+
+  return typeof selectedPath === "string" ? selectedPath : null;
+}
+
+export async function selectInstallerLaunchFolder(options: {
+  title: string;
+}) {
+  if (!isTauriRuntime()) {
+    return null;
+  }
+
+  const selectedPath = await openDialog({
+    directory: true,
     multiple: false,
     title: options.title,
   });
@@ -4004,6 +4234,31 @@ export async function pickAndSaveFile(
   if (typeof path !== "string" || !path) return null;
   await writeFile(path, bytes);
   return path;
+}
+
+export async function selectPngSavePath(defaultFilename: string, title: string) {
+  if (!isTauriRuntime()) {
+    return null;
+  }
+  const path = await saveDialog({
+    defaultPath: defaultFilename,
+    filters: [{ name: "PNG", extensions: ["png"] }],
+    title,
+  });
+  return typeof path === "string" && path ? path : null;
+}
+
+export async function writeDataUrlFile(path: string, dataUrl: string) {
+  const encoded = dataUrl.split(",", 2)[1];
+  if (!encoded || !dataUrl.startsWith("data:")) {
+    throw new Error("The generated file data is invalid.");
+  }
+  const binary = window.atob(encoded);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+  await writeFile(path, bytes);
 }
 
 export async function selectScreenshotFolder(options: {

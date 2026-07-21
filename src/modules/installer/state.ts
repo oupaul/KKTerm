@@ -7,15 +7,12 @@
 // by the Rust installer backend.
 //
 // This module owns two parallel transient slices:
-//   * inFlight — the legacy current-step + log view used by tile status
-//     dots and the back-compat path for providers that have not yet been
-//     migrated to the declared-plan stepper protocol.
-//   * stepperState — the n8n-style stepper view: declared plan, per-step
-//     status, per-step logs, per-step durations and errors. Populated from
-//     `plan` / `stepStarted` / `stepFinished` events; stdout/stderr lines
-//     get routed to the active step when they carry a stepId, otherwise to
-//     a synthetic "_general" bucket that the stepper renders as raw output
-//     above the plan rows.
+//   * inFlight — current command text, aggregate log and determinate ratio
+//     used by tile/header presentation.
+//   * stepperState — the staged progress presentation. Every operation starts
+//     with the shared default template; a provider's declared `plan` replaces
+//     it when more precise lifecycle events are available. stdout/stderr lines
+//     are routed to the active stage.
 
 import { create } from "zustand";
 import type {
@@ -29,6 +26,9 @@ import type {
 const MAX_LOG_LINES = 200;
 const MAX_STEP_LOG_LINES = 500;
 const GENERAL_STEP_BUCKET = "_general";
+const DEFAULT_PREPARE_STEP_ID = "prepare";
+const DEFAULT_APPLY_STEP_ID = "apply";
+const DEFAULT_VERIFY_STEP_ID = "verify";
 
 interface InFlight {
   /// "install" or "uninstall"
@@ -38,9 +38,10 @@ interface InFlight {
   log: string[];
 }
 
-type StepStatus = "pending" | "running" | "done" | "failed";
+type StepStatus = "pending" | "running" | "done" | "failed" | "cancelled";
 
 interface StepperState {
+  isDefaultPlan: boolean;
   plan: PlanStep[];
   status: Record<string, StepStatus>;
   startedAt: Record<string, number>;
@@ -55,7 +56,9 @@ interface OpenDialog {
   toolId: string;
   /// "info" — installed/not-installed details. "stepper" — install in
   /// progress or just completed; the dialog body renders the stepper.
-  mode: "info" | "stepper";
+  /// "launcher" — mini launcher for installed command-line tools: sample
+  /// commands plus an open-terminal action.
+  mode: "info" | "stepper" | "launcher";
 }
 
 /// Catalog roll-up published by the Install Helper page so the global app
@@ -118,6 +121,7 @@ interface InstallerStoreState {
   applyProgress: (event: ProgressEvent) => void;
   openInfoDialog: (toolId: string) => void;
   openStepperDialog: (toolId: string) => void;
+  openLauncherDialog: (toolId: string) => void;
   closeDialog: () => void;
   openWslManager: () => void;
   closeWslManager: () => void;
@@ -173,29 +177,20 @@ export const useInstallerStore = create<InstallerStoreState>((set) => ({
       toolState: Object.fromEntries(states.map((s) => [s.toolId, s])),
     }),
   beginInFlight: (toolId, operation) =>
-    set((s) => ({
-      inFlight: {
-        ...s.inFlight,
-        [toolId]: { operation, currentStep: null, ratio: null, log: [] },
-      },
-      stepperState: {
-        ...s.stepperState,
-        // Fresh stepper slate for this install; an immediate `plan` event
-        // will fill it in. Pre-seeded so the stepper UI has something to
-        // render even before the first plan event lands.
-        [toolId]: {
-          plan: [],
-          status: {},
-          startedAt: {},
-          durations: {},
-          errors: {},
-          logs: {},
-          activeStepId: null,
-          startedAtMs: Date.now(),
+    set((s) => {
+      const startedAtMs = Date.now();
+      return {
+        inFlight: {
+          ...s.inFlight,
+          [toolId]: { operation, currentStep: null, ratio: null, log: [] },
         },
-      },
-      lastStatus: { ...s.lastStatus, [toolId]: null },
-    })),
+        stepperState: {
+          ...s.stepperState,
+          [toolId]: defaultStepperState(operation, startedAtMs),
+        },
+        lastStatus: { ...s.lastStatus, [toolId]: null },
+      };
+    }),
   applyProgress: (event) =>
     set((s) => {
       // ---- check-for-updates protocol --------------------------------
@@ -252,6 +247,7 @@ export const useInstallerStore = create<InstallerStoreState>((set) => ({
       // commits, though current code paths set beginInFlight first).
       if (event.kind === "plan") {
         const seeded: StepperState = {
+          isDefaultPlan: false,
           plan: event.steps,
           status: Object.fromEntries(
             event.steps.map((step) => [step.id, "pending" as StepStatus]),
@@ -317,6 +313,9 @@ export const useInstallerStore = create<InstallerStoreState>((set) => ({
 
       if (event.kind === "step") {
         if (!current) return s;
+        const nextStepper = stepperCurrent?.isDefaultPlan
+          ? startDefaultApplyStep(stepperCurrent)
+          : stepperCurrent;
         return {
           inFlight: {
             ...s.inFlight,
@@ -326,12 +325,18 @@ export const useInstallerStore = create<InstallerStoreState>((set) => ({
               log: trimLog([...current.log, `▸ ${event.message}`]),
             },
           },
+          ...(nextStepper
+            ? { stepperState: { ...s.stepperState, [toolId]: nextStepper } }
+            : {}),
         };
       }
       if (event.kind === "stdout" || event.kind === "stderr") {
-        const nextStepper = stepperCurrent
-          ? withStepLog(stepperCurrent, event.stepId, event.line)
+        const activeStepper = stepperCurrent?.isDefaultPlan
+          ? startDefaultApplyStep(stepperCurrent)
           : stepperCurrent;
+        const nextStepper = activeStepper
+          ? withStepLog(activeStepper, event.stepId, event.line)
+          : activeStepper;
         if (!current) {
           return nextStepper
             ? { stepperState: { ...s.stepperState, [toolId]: nextStepper } }
@@ -352,11 +357,17 @@ export const useInstallerStore = create<InstallerStoreState>((set) => ({
       }
       if (event.kind === "progress") {
         if (!current) return s;
+        const nextStepper = stepperCurrent?.isDefaultPlan
+          ? startDefaultApplyStep(stepperCurrent)
+          : stepperCurrent;
         return {
           inFlight: {
             ...s.inFlight,
             [toolId]: { ...current, ratio: event.ratio },
           },
+          ...(nextStepper
+            ? { stepperState: { ...s.stepperState, [toolId]: nextStepper } }
+            : {}),
         };
       }
 
@@ -369,14 +380,27 @@ export const useInstallerStore = create<InstallerStoreState>((set) => ({
           : event.kind === "failed"
             ? { kind: "failed", message: event.message }
             : { kind: "cancelled" };
+      const finishedStepper = stepperCurrent
+        ? finishStepperForTerminalEvent(stepperCurrent, event)
+        : stepperCurrent;
       return {
         inFlight: restInFlight,
         lastStatus: { ...s.lastStatus, [toolId]: lastStatus },
+        ...(finishedStepper
+          ? {
+              stepperState: {
+                ...s.stepperState,
+                [toolId]: finishedStepper,
+              },
+            }
+          : {}),
       };
     }),
   openInfoDialog: (toolId) => set({ openDialog: { toolId, mode: "info" } }),
   openStepperDialog: (toolId) =>
     set({ openDialog: { toolId, mode: "stepper" } }),
+  openLauncherDialog: (toolId) =>
+    set({ openDialog: { toolId, mode: "launcher" } }),
   closeDialog: () => set({ openDialog: null }),
   openWslManager: () => set({ wslManagerOpen: true }),
   closeWslManager: () => set({ wslManagerOpen: false }),
@@ -390,6 +414,7 @@ export const useInstallerStore = create<InstallerStoreState>((set) => ({
 
 function emptyStepperState(): StepperState {
   return {
+    isDefaultPlan: false,
     plan: [],
     status: {},
     startedAt: {},
@@ -398,6 +423,116 @@ function emptyStepperState(): StepperState {
     logs: {},
     activeStepId: null,
     startedAtMs: Date.now(),
+  };
+}
+
+function defaultStepperState(
+  operation: "install" | "uninstall",
+  startedAtMs: number,
+): StepperState {
+  const plan: PlanStep[] = [
+    {
+      id: DEFAULT_PREPARE_STEP_ID,
+      labelKey: "installer.steps.resolveDependencyPlan",
+    },
+    {
+      id: DEFAULT_APPLY_STEP_ID,
+      labelKey:
+        operation === "uninstall"
+          ? "installer.dialog.uninstallingTitle"
+          : "installer.steps.installNamed",
+    },
+    { id: DEFAULT_VERIFY_STEP_ID, labelKey: "installer.steps.verify" },
+  ];
+  return {
+    isDefaultPlan: true,
+    plan,
+    status: {
+      [DEFAULT_PREPARE_STEP_ID]: "running",
+      [DEFAULT_APPLY_STEP_ID]: "pending",
+      [DEFAULT_VERIFY_STEP_ID]: "pending",
+    },
+    startedAt: { [DEFAULT_PREPARE_STEP_ID]: startedAtMs },
+    durations: {},
+    errors: {},
+    logs: {},
+    activeStepId: DEFAULT_PREPARE_STEP_ID,
+    startedAtMs,
+  };
+}
+
+function startDefaultApplyStep(current: StepperState): StepperState {
+  if (
+    !current.isDefaultPlan ||
+    current.status[DEFAULT_APPLY_STEP_ID] !== "pending"
+  ) {
+    return current;
+  }
+  const now = Date.now();
+  const prepareStartedAt =
+    current.startedAt[DEFAULT_PREPARE_STEP_ID] ?? current.startedAtMs;
+  return {
+    ...current,
+    status: {
+      ...current.status,
+      [DEFAULT_PREPARE_STEP_ID]: "done",
+      [DEFAULT_APPLY_STEP_ID]: "running",
+    },
+    startedAt: { ...current.startedAt, [DEFAULT_APPLY_STEP_ID]: now },
+    durations: {
+      ...current.durations,
+      [DEFAULT_PREPARE_STEP_ID]: now - prepareStartedAt,
+    },
+    activeStepId: DEFAULT_APPLY_STEP_ID,
+  };
+}
+
+function finishStepperForTerminalEvent(
+  current: StepperState,
+  event: Extract<
+    ProgressEvent,
+    { kind: "completed" | "failed" | "cancelled" }
+  >,
+): StepperState {
+  const now = Date.now();
+  if (current.isDefaultPlan && event.kind === "completed") {
+    const status = { ...current.status };
+    const durations = { ...current.durations };
+    for (const step of current.plan) {
+      status[step.id] = "done";
+      if (durations[step.id] == null) {
+        durations[step.id] = Math.max(
+          0,
+          now - (current.startedAt[step.id] ?? now),
+        );
+      }
+    }
+    return { ...current, status, durations, activeStepId: null };
+  }
+
+  const activeStepId = current.activeStepId;
+  if (!activeStepId) return current;
+  const terminalStatus: StepStatus =
+    event.kind === "completed"
+      ? "done"
+      : event.kind === "failed"
+        ? "failed"
+        : "cancelled";
+  return {
+    ...current,
+    status: { ...current.status, [activeStepId]: terminalStatus },
+    durations: {
+      ...current.durations,
+      [activeStepId]: Math.max(
+        0,
+        now - (current.startedAt[activeStepId] ?? now),
+      ),
+    },
+    errors:
+      event.kind === "failed"
+        ? { ...current.errors, [activeStepId]: event.message }
+        : current.errors,
+    activeStepId: null,
   };
 }
 

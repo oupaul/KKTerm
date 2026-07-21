@@ -37,6 +37,7 @@ export function ConfirmSheet({
   onConfirm,
   onCancel,
   ariaLabel,
+  zClassName,
 }: {
   tone?: ConfirmTone;
   icon?: DialogIconName;
@@ -52,11 +53,13 @@ export function ConfirmSheet({
   onConfirm: () => void;
   onCancel: () => void;
   ariaLabel?: string;
+  /** Stacked-dialog escape (e.g. "kk-qc-subdialog") when opened above another dialog. */
+  zClassName?: string;
 }) {
   const { t } = useTranslation();
   const glyph = icon ?? TONE_ICON[tone];
   return (
-    <DialogShell onBackdrop={onCancel}>
+    <DialogShell onBackdrop={onCancel} zClassName={zClassName}>
       <Sheet
         width={width}
         ariaLabel={ariaLabel ?? (typeof title === "string" ? title : undefined)}

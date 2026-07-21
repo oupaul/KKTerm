@@ -53,6 +53,20 @@ test("Site tree state persists width, collapse state, and clamps like a panel", 
   assert.match(state, /SITE_TREE_MAX_WIDTH/);
 });
 
+test("Site tree dragging bypasses collapse animation and writes at most once per frame", async () => {
+  const sites = await read("src/modules/itops/SitesTab.tsx");
+  const css = await read("src/modules/itops/itops.css");
+
+  assert.match(sites, /el\.classList\.add\("is-resizing"\)/);
+  assert.match(sites, /pendingClientX = moveEvent\.clientX;[\s\S]*requestAnimationFrame\(flushPendingMove\)/);
+  assert.match(
+    sites,
+    /cancelAnimationFrame\(animationFrame\);[\s\S]*flushPendingMove\(\);[\s\S]*setTreeWidth\(lastWidth\)/,
+  );
+  assert.match(sites, /el\.classList\.remove\("is-resizing"\)/);
+  assert.match(css, /\.itops-page \.ft-tree\.is-resizing \{\s*transition: none;\s*\}/);
+});
+
 test("Site tree add menu opens distinct Site, Server Room, and Rack dialogs", async () => {
   const sites = await read("src/modules/itops/SitesTab.tsx");
   const css = await read("src/modules/itops/itops.css");

@@ -9,7 +9,11 @@ import { defaultWslConnectionName, distroFromWslShell } from "./connection-dialo
 import { LocalFilesConnectionFields } from "./connection-dialog/LocalFilesConnectionFields";
 import { FileViewConnectionFields } from "./connection-dialog/FileViewConnectionFields";
 import { RdpConnectionFields, RdpConnectionOptions } from "./connection-dialog/RdpConnectionFields";
-import { parseRdpDriveSelection } from "./remote-desktop/rdpLocalResources";
+import {
+  normalizeRdpSharedLocalFolders,
+  parseRdpDriveSelection,
+  parseRdpSharedLocalFolders,
+} from "./remote-desktop/rdpLocalResources";
 import {
   resolvePanoramaConnections,
   shouldConfirmPanorama,
@@ -44,6 +48,7 @@ import {
 import { buildFileViewConnectionDraftFromPath } from "./fileViewConnectionDraft";
 import { buildLocalFilesConnectionDraftFromPath } from "./localFilesConnectionDraft";
 import { dragHasConnectionPaths, readConnectionPathsDrag } from "./connectionPathsDrag";
+import { nextConnectionDuplicateName } from "./duplicateConnection";
 import {
   connectionRequestNeedsCredentialStoreUnlock,
   shouldDeleteSshSocksProxySecret,
@@ -52,7 +57,7 @@ import { confirmTrustedSshHostKey, connectionPasswordOwnerId, connectionSshSocks
 import { IMPORT_CONNECTIONS_REQUEST_EVENT, NEW_CONNECTION_REQUEST_EVENT, NEW_CONNECTION_TAB_REQUEST_EVENT, RECENT_CONNECTION_LIMIT, loadCollapsedFolderIds, loadRecentConnectionIds, notifyConnectionTreeInvalidated, saveCollapsedFolderIds, saveRecentConnectionIds, type NewConnectionRequestDetail, type NewConnectionTabRequestDetail } from "./connectionSidebarState";
 import { collectConnectionFolderIds, countConnections, countFolders, filterConnectedConnections, filterConnectionTree, findConnectionInTree, flattenConnections, flattenFolders, visibleFlatConnections as flattenVisibleConnections, withLiveConnectionStatuses } from "./treeUtils";
 import { WorkspaceIcon } from "../workspaceIcons";
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Check, ChevronDown, ChevronRight, CircleDot, Folder, FolderPlus, KeyRound, LayoutDashboard, List, Maximize2, Minimize2, PanelsTopLeft, PanelRight, Pencil, Pin, PinOff, Play, Plus, Radio, RotateCcw, Save, Search, Settings, SquarePlus, Trash2, X } from "../../../lib/reicon";
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Check, ChevronDown, ChevronRight, CircleDot, Copy, Folder, FolderPlus, KeyRound, LayoutDashboard, List, Maximize2, Minimize2, PanelsTopLeft, PanelRight, Pencil, Pin, PinOff, Play, Plus, Radio, RotateCcw, Save, Search, Settings, SquarePlus, Trash2, X } from "../../../lib/reicon";
 import { listen } from "@tauri-apps/api/event";
 import { useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { DragEvent as ReactDragEvent, FormEvent, KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from "react";
@@ -76,7 +81,7 @@ import { confirmNativeDialog, invokeCommand, isCredentialUnlockRequiredError, is
 import { connectionTree } from "../../../app-defaults";
 import { DeleteConfirmationDialog } from "../../../app/DeleteConfirmationDialog";
 import { DialogPortal } from "../../../app/DialogPortal";
-import { ConfirmSheet, LegacyDialogActions } from "../../../app/ui/dialog";
+import { Btn, ConfirmSheet, LegacyDialogActions } from "../../../app/ui/dialog";
 import { pushTrayMenu } from "../../../app/trayMenu";
 import { CHILD_CONNECTION_CLOSED_EVENT, DEFAULT_WORKSPACE_ID, appendTmuxSessionId, forgetConnectionLocalState, useWorkspaceStore } from "../../../store";
 import type { Connection, ConnectionFolder, ConnectionStatus, ConnectionTree, ConnectionType, CreateConnectionRequest, RdpSettings, SplitDirection, SshCompressionMode, SshOldProtocolsMode, SshSettings, StoredCredentialSummary, UpdateConnectionRequest, VncSettings, WorkspaceChildConnection, WorkspaceTab } from "../../../types";
@@ -212,6 +217,10 @@ type EditConnectionState = {
   folderId?: string;
 };
 
+type DuplicateConnectionState = EditConnectionState & {
+  sourceConnectionId: string;
+};
+
 type InlineRenameTarget =
   | { kind: "connection"; id: string }
   | { kind: "folder"; id: string };
@@ -253,6 +262,14 @@ type PendingPanorama = {
   connectionIds: string[];
   title: string;
   newSessionCount: number;
+};
+
+type PendingSharedCredentialUpdate = {
+  credentialId: string;
+  isCredentialRow: boolean;
+  label: string;
+  usageCount: number;
+  request: ConnectionDialogRequest;
 };
 
 const QUICK_CONNECT_RECENT_TOP_LEVEL_LIMIT = 5;
@@ -337,12 +354,15 @@ export function ConnectionSidebar({
   const [childProperties, setChildProperties] = useState<ChildConnectionPropertiesState | null>(null);
   const [folderIconDialog, setFolderIconDialog] = useState<FolderIconDialogState | null>(null);
   const [editConnection, setEditConnection] = useState<EditConnectionState | null>(null);
+  const [duplicateConnection, setDuplicateConnection] = useState<DuplicateConnectionState | null>(null);
   const [transferSshPublicKeyDialog, setTransferSshPublicKeyDialog] =
     useState<TransferSshPublicKeyDialogState | null>(null);
   const [transferSshPublicKeyError, setTransferSshPublicKeyError] = useState("");
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [confirmDeleteTarget, setConfirmDeleteTarget] = useState<DeleteTarget | null>(null);
   const [pendingPanorama, setPendingPanorama] = useState<PendingPanorama | null>(null);
+  const [pendingSharedCredentialUpdate, setPendingSharedCredentialUpdate] =
+    useState<PendingSharedCredentialUpdate | null>(null);
   // Ephemeral filter: only show connections with a live session. Not persisted
   // because "currently connected" is meaningless across restarts.
   const [showConnectedOnly, setShowConnectedOnly] = useState(false);
@@ -1213,11 +1233,16 @@ export function ConnectionSidebar({
     });
   }
 
-  async function createConnectionPasswordCredential(connectionId: string, password: string) {
+  async function createConnectionPasswordCredential(
+    connectionId: string,
+    password: string,
+    allowReuse = true,
+  ) {
     return invokeCommand("create_connection_password_credential", {
       request: {
         connectionId,
         secret: password,
+        allowReuse,
       },
     });
   }
@@ -1418,7 +1443,10 @@ export function ConnectionSidebar({
     }
   }
 
-  async function handleConnectionUpdate(request: ConnectionDialogRequest) {
+  async function handleConnectionUpdate(
+    request: ConnectionDialogRequest,
+    options?: { allowCredentialReuse?: boolean; skipSharedCredentialCheck?: boolean },
+  ) {
     if (!editConnection) {
       return;
     }
@@ -1427,6 +1455,40 @@ export function ConnectionSidebar({
     const currentConnection = findConnectionInTree(treeRef.current, editConnection.connection.id);
     if (!currentConnection) {
       setFormError(t("connections.connectionNotFound"));
+      return;
+    }
+    const linkedCredentialId = currentConnection.connection.passwordCredentialId;
+    if (request.password && linkedCredentialId && !options?.skipSharedCredentialCheck) {
+      // The Connection is linked to a saved credential and the user typed a new
+      // password: ask whether to rotate the shared credential (all linked
+      // Connections pick it up) or create a separate credential for this one.
+      let isCredentialRow = false;
+      let label = linkedCredentialId;
+      try {
+        const entries = await invokeCommand("list_connection_password_credentials", undefined);
+        const entry = entries.find((candidate) => candidate.id === linkedCredentialId);
+        if (entry) {
+          isCredentialRow = true;
+          label = entry.label;
+        }
+      } catch {
+        // Fall back to the raw id; the confirm still works.
+      }
+      if (!isCredentialRow) {
+        label =
+          findConnectionInTree(treeRef.current, linkedCredentialId)?.connection.name ??
+          linkedCredentialId;
+      }
+      const usageCount = flattenConnections(treeRef.current).filter(
+        (connection) => connection.passwordCredentialId === linkedCredentialId,
+      ).length;
+      setPendingSharedCredentialUpdate({
+        credentialId: linkedCredentialId,
+        isCredentialRow,
+        label,
+        usageCount,
+        request,
+      });
       return;
     }
     const { iconColor, iconDataUrl, iconBackgroundColor, password, passwordCredentialId, keyPassphrase, sshSocksProxyPassword, urlCredentialUsername, urlPassword, sshStartupScriptApplyToExistingTmux, ...connectionRequest } = request;
@@ -1445,7 +1507,11 @@ export function ConnectionSidebar({
       });
       connection = await saveConnectionIconPresentation(connection, iconDataUrl, iconBackgroundColor, iconColor);
       if (password) {
-        connection = await createConnectionPasswordCredential(connection.id, password);
+        connection = await createConnectionPasswordCredential(
+          connection.id,
+          password,
+          options?.allowCredentialReuse,
+        );
       } else if (passwordCredentialId) {
         connection = await assignConnectionPasswordCredential(connection.id, passwordCredentialId);
       }
@@ -1475,6 +1541,104 @@ export function ConnectionSidebar({
       await reloadConnectionGroups();
       notifyConnectionTreeInvalidated();
       setEditConnection(null);
+    } catch (error) {
+      showConnectionFormError(error);
+    }
+  }
+
+  async function applyPendingSharedCredentialUpdate(pending: PendingSharedCredentialUpdate) {
+    const password = pending.request.password ?? "";
+    try {
+      if (password && pending.isCredentialRow) {
+        await invokeCommand("update_connection_password_credential", {
+          request: { credentialId: pending.credentialId, secret: password },
+        });
+      } else if (password) {
+        await invokeCommand("store_secret", {
+          request: { kind: "connectionPassword", ownerId: pending.credentialId, secret: password },
+        });
+      }
+      showConnectionSuccessStatus(t("settings.savedCredentialSaved"));
+    } catch (error) {
+      showConnectionFormError(error);
+      return;
+    }
+    await handleConnectionUpdate(
+      { ...pending.request, password: "" },
+      { skipSharedCredentialCheck: true },
+    );
+  }
+
+  async function handleConnectionDuplicate(request: ConnectionDialogRequest) {
+    if (!duplicateConnection) {
+      return;
+    }
+
+    setFormError("");
+    const source = findConnectionInTree(treeRef.current, duplicateConnection.sourceConnectionId);
+    if (!source) {
+      setFormError(t("connections.connectionNotFound"));
+      return;
+    }
+    const {
+      iconColor,
+      iconDataUrl,
+      iconBackgroundColor,
+      password,
+      passwordCredentialId,
+      keyPassphrase,
+      sshSocksProxyPassword,
+      urlCredentialUsername,
+      urlPassword,
+      sshStartupScriptApplyToExistingTmux,
+      ...connectionRequest
+    } = request;
+
+    try {
+      if (!(await ensureCredentialStoreReadyForConnectionRequest(request, source.connection))) {
+        return;
+      }
+      let connection = await invokeCommand("duplicate_connection", {
+        request: {
+          id: source.connection.id,
+          name: connectionRequest.name,
+        },
+      });
+      connection = await invokeCommand("update_connection", {
+        request: {
+          ...connectionRequest,
+          id: connection.id,
+          type: source.connection.type,
+        },
+      });
+      connection = await saveConnectionIconPresentation(
+        connection,
+        iconDataUrl,
+        iconBackgroundColor,
+        iconColor,
+      );
+      if (password) {
+        connection = await createConnectionPasswordCredential(connection.id, password);
+      } else if (passwordCredentialId) {
+        connection = await assignConnectionPasswordCredential(connection.id, passwordCredentialId);
+      }
+      await saveSshSocksProxyPassword(connection, sshSocksProxyPassword);
+      await saveConnectionPassphrase(connection, keyPassphrase);
+      if (connection.type === "url" && urlPassword) {
+        await storeUrlPassword(connection.id, urlPassword);
+      }
+      if (connection.type === "url" && urlCredentialUsername) {
+        await upsertUrlCredential(connection.id, urlCredentialUsername);
+      }
+      if (connection.type === "ssh") {
+        writeSshApplyStartupToExistingTmux(
+          connection.id,
+          Boolean(sshStartupScriptApplyToExistingTmux),
+        );
+      }
+      await reloadConnectionGroups();
+      notifyConnectionTreeInvalidated();
+      setDuplicateConnection(null);
     } catch (error) {
       showConnectionFormError(error);
     }
@@ -1759,6 +1923,9 @@ export function ConnectionSidebar({
     void pushTrayMenu(recentConnections, {
       dontSleep: t("app.trayDontSleep"),
       exit: t("app.trayExit"),
+      captureRegion: t("screenshots.captureRegion"),
+      captureWindow: t("screenshots.captureWindow"),
+      captureFullscreen: t("screenshots.captureFullscreen"),
     });
     // recentConnections is intentionally read fresh; we only resync when the
     // stable id/name signature or translations change.
@@ -2077,6 +2244,16 @@ export function ConnectionSidebar({
         iconSvg: nativeMenuIcons.pencil,
         action: () => void handleTreeMenuRename(menu),
       },
+      ...(menu.kind === "connection"
+        ? [
+            {
+              kind: "item" as const,
+              label: t("connections.duplicate"),
+              iconSvg: nativeMenuIcons.copy,
+              action: () => handleTreeMenuDuplicate(menu),
+            },
+          ]
+        : []),
       {
         kind: "item",
         label: t("connections.delete"),
@@ -2349,6 +2526,27 @@ export function ConnectionSidebar({
       setFormError("");
       setEditConnection(currentConnection ?? { connection: menu.connection, folderId: menu.folderId });
     }
+  }
+
+  function handleTreeMenuDuplicate(menu: TreeContextMenuState) {
+    setTreeContextMenu(null);
+    if (menu.kind !== "connection") {
+      return;
+    }
+    const current = findConnectionInTree(treeRef.current, menu.connection.id) ?? {
+      connection: menu.connection,
+      folderId: menu.folderId,
+    };
+    const name = nextConnectionDuplicateName(
+      current.connection.name,
+      flattenConnections(treeRef.current).map((connection) => connection.name),
+    );
+    setFormError("");
+    setDuplicateConnection({
+      sourceConnectionId: current.connection.id,
+      connection: { ...current.connection, name },
+      folderId: current.folderId,
+    });
   }
 
   function handleTreeMenuCloseConnection(menu: TreeContextMenuState) {
@@ -3227,6 +3425,7 @@ export function ConnectionSidebar({
           onCreateConnection={handleTreeMenuCreateConnection}
           onCreateFolder={handleTreeMenuCreateFolder}
           onDelete={() => void handleTreeMenuDelete(treeContextMenu)}
+          onDuplicate={() => handleTreeMenuDuplicate(treeContextMenu)}
           onChangeIcon={() => {
             if (treeContextMenu.kind === "folder") {
               setFolderIconDialog({ folder: treeContextMenu.folder });
@@ -3318,6 +3517,63 @@ export function ConnectionSidebar({
             setFormError("");
           }}
           onSubmit={handleConnectionUpdate}
+        />
+      ) : null}
+      {pendingSharedCredentialUpdate ? (
+        <ConfirmSheet
+          tone="warn"
+          zClassName="kk-qc-subdialog"
+          title={t("connections.sharedCredentialUpdateTitle")}
+          message={t("connections.sharedCredentialUpdateBody", {
+            label: pendingSharedCredentialUpdate.label,
+            count: pendingSharedCredentialUpdate.usageCount,
+          })}
+          confirmLabel={t("connections.sharedCredentialUpdateShared")}
+          extraLeft={
+            <Btn
+              onClick={() => {
+                const pending = pendingSharedCredentialUpdate;
+                setPendingSharedCredentialUpdate(null);
+                void handleConnectionUpdate(pending.request, {
+                  allowCredentialReuse: false,
+                  skipSharedCredentialCheck: true,
+                });
+              }}
+            >
+              {t("connections.sharedCredentialCreateSeparate")}
+            </Btn>
+          }
+          onCancel={() => setPendingSharedCredentialUpdate(null)}
+          onConfirm={() => {
+            const pending = pendingSharedCredentialUpdate;
+            setPendingSharedCredentialUpdate(null);
+            void applyPendingSharedCredentialUpdate(pending);
+          }}
+        />
+      ) : null}
+      {duplicateConnection ? (
+        <ConnectionDialog
+          error={formError}
+          initialConnection={duplicateConnection.connection}
+          initialFolderId={duplicateConnection.folderId}
+          tree={tree}
+          mode="edit"
+          sshSettings={sshSettings}
+          rdpSettings={rdpSettings}
+          vncSettings={vncSettings}
+          onGeneratedSshKey={(generated) =>
+            showConnectionSuccessStatus(
+              t("settings.sshKeyGenerated", {
+                privateKeyPath: generated.privateKeyPath,
+                publicKeyPath: generated.publicKeyPath,
+              }),
+            )
+          }
+          onCancel={() => {
+            setDuplicateConnection(null);
+            setFormError("");
+          }}
+          onSubmit={handleConnectionDuplicate}
         />
       ) : null}
       {folderIconDialog ? (
@@ -3965,6 +4221,7 @@ function TreeContextMenu({
   onCreateFolder,
   onChangeIcon,
   onDelete,
+  onDuplicate,
   onProperties,
   onRename,
   onAddToPane,
@@ -3983,6 +4240,7 @@ function TreeContextMenu({
   onCreateFolder: () => void;
   onChangeIcon: () => void;
   onDelete: () => void;
+  onDuplicate: () => void;
   onProperties: () => void;
   onRename: () => void;
   onAddToPane: (direction: SplitDirection) => void;
@@ -4065,6 +4323,12 @@ function TreeContextMenu({
             <button onClick={onChangeIcon} role="menuitem" type="button">
               <Pencil className="menu-item-icon" size={15} />
               <span>{t("connections.changeIcon")}</span>
+            </button>
+          ) : null}
+          {menu.kind === "connection" ? (
+            <button onClick={onDuplicate} role="menuitem" type="button">
+              <Copy className="menu-item-icon" size={15} />
+              <span>{t("connections.duplicate")}</span>
             </button>
           ) : null}
           <button onClick={onDelete} role="menuitem" type="button">
@@ -4295,9 +4559,9 @@ function ConnectionDialog({
         (credential) =>
           credential.kind === "connectionPassword" &&
           credential.exists &&
-          credential.connectionType === connectionType,
+          credential.metadataSource === "connectionPasswordCredentials",
       ),
-    [connectionType, passwordCredentials],
+    [passwordCredentials],
   );
   const usesTwoColumnOptions =
     connectionType === "ssh" ||
@@ -4540,9 +4804,9 @@ function ConnectionDialog({
     const rdpDriveSelection = inheritRdpDefaults
       ? rdpSettings.driveSelection
       : parseRdpDriveSelection(form.get("rdpDriveSelection"), rdpSettings.driveSelection);
-    const rdpSharedLocalFolder = inheritRdpDefaults
-      ? rdpSettings.sharedLocalFolder
-      : String(form.get("rdpSharedLocalFolder") ?? "").trim() || undefined;
+    const rdpSharedLocalFolders = inheritRdpDefaults
+      ? normalizeRdpSharedLocalFolders(rdpSettings.sharedLocalFolders, rdpSettings.sharedLocalFolder)
+      : parseRdpSharedLocalFolders(form.get("rdpSharedLocalFolders"), []);
     const redirectsRdpLocalResources = inheritRdpDefaults
       ? rdpSettings.redirectDrives
       : form.get("rdpRedirectDrives") === "on";
@@ -4550,9 +4814,9 @@ function ConnectionDialog({
       connectionType === "rdp"
       && !isWindowsPlatform()
       && redirectsRdpLocalResources
-      && !rdpSharedLocalFolder
+      && rdpSharedLocalFolders.length === 0
     ) {
-      setRdpLocalResourceError(t("settings.rdpSharedFolderRequired"));
+      setRdpLocalResourceError(t("settings.rdpSharedFoldersRequired"));
       return;
     }
     const inheritVncDefaults = form.get("vncInheritDefaults") === "on";
@@ -4641,6 +4905,9 @@ function ConnectionDialog({
               colorDepth: inheritRdpDefaults
                 ? rdpSettings.colorDepth
                 : Number(String(form.get("rdpColorDepth") ?? rdpSettings.colorDepth)) as RdpSettings["colorDepth"],
+              administrativeSession: inheritRdpDefaults
+                ? rdpSettings.administrativeSession
+                : form.get("rdpAdministrativeSession") === "on",
               redirectClipboard: inheritRdpDefaults
                 ? rdpSettings.redirectClipboard
                 : form.get("rdpRedirectClipboard") === "on",
@@ -4648,7 +4915,8 @@ function ConnectionDialog({
                 ? rdpSettings.redirectDrives
                 : form.get("rdpRedirectDrives") === "on",
               driveSelection: rdpDriveSelection,
-              sharedLocalFolder: rdpSharedLocalFolder,
+              sharedLocalFolders: rdpSharedLocalFolders,
+              sharedLocalFolder: undefined,
               bitmapCache: inheritRdpDefaults
                 ? rdpSettings.bitmapCache
                 : form.get("rdpBitmapCache") === "on",

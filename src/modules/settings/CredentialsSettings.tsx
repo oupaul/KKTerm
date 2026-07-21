@@ -25,6 +25,8 @@ import {
   normalizeSecretStoreKind,
 } from "./credentialStorageModel";
 import { groupCredentialsByKind, groupCredentialsForSettings } from "./credentialGroups";
+import { SavedCredentialsManager } from "./SavedCredentialsManager";
+import { isLegacyConnectionPasswordRow } from "./savedCredentialsModel";
 import { SettingsSectionHeader, useSettingsSaveRegistration } from "./shared";
 import { UrlCredentialManager } from "./UrlCredentialManager";
 
@@ -71,6 +73,7 @@ export function CredentialsSettings() {
   const { t } = useTranslation();
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
   const credentialSettings = useWorkspaceStore((state) => state.credentialSettings);
+  const portableMode = useWorkspaceStore((state) => state.appModeInfo.mode === "portable");
   const setCredentialSettings = useWorkspaceStore((state) => state.setCredentialSettings);
   const aiProviderSettings = useWorkspaceStore((state) => state.aiProviderSettings);
   const setAiProviderHasApiKey = useWorkspaceStore((state) => state.setAiProviderHasApiKey);
@@ -90,7 +93,14 @@ export function CredentialsSettings() {
     [credentials],
   );
   const nonUrlStoredCredentials = useMemo(
-    () => storedCredentials.filter((credential) => credential.kind !== "urlPassword"),
+    () =>
+      storedCredentials.filter(
+        (credential) => credential.kind !== "urlPassword" && credential.kind !== "connectionPassword",
+      ),
+    [storedCredentials],
+  );
+  const legacyConnectionPasswords = useMemo(
+    () => storedCredentials.filter(isLegacyConnectionPasswordRow),
     [storedCredentials],
   );
   const storedCredentialGroups = useMemo(
@@ -292,7 +302,7 @@ export function CredentialsSettings() {
             >
               {availableSecretStores.map((store) => (
                 <option key={store} value={store}>
-                  {t(secretStoreLabelKey(store))}
+                  {t(secretStoreLabelKey(store, portableMode))}
                 </option>
               ))}
             </select>
@@ -315,6 +325,9 @@ export function CredentialsSettings() {
           ) : null}
         </div>
         <p className="field-hint settings-security-note">{t(securityReminderKey)}</p>
+        {portableMode && selectedSecretStore === "os" ? (
+          <p className="kk-dlg-warn">{t("settings.portableCredentialStorageOsWarning")}</p>
+        ) : null}
         <p className="field-hint">{t("settings.credentialStorageSwitchNote")}</p>
       </fieldset>
 
@@ -325,6 +338,11 @@ export function CredentialsSettings() {
         <legend>{t("settings.credentialsStored")}</legend>
         <p className="field-hint">{t("settings.credentialsHint")}</p>
         <div className="settings-list" aria-label={t("settings.credentialsStored")}>
+          <SavedCredentialsManager
+            legacyCredentials={legacyConnectionPasswords}
+            onChanged={load}
+            onDeleteLegacy={setDeleteTarget}
+          />
           <div className="settings-credential-group">
             <h3>{t("settings.savedWebsitePasswords")}</h3>
             {loading && urlCredentials.length === 0 ? (
@@ -336,13 +354,11 @@ export function CredentialsSettings() {
           {storedCredentialGroups.map(({ kind, rows }) => (
             <div className="settings-credential-group" key={kind}>
               <h3>{t(credentialKindKey(kind))}</h3>
-              {rows.map((credential) => (
-                <CredentialRow
-                  credential={credential}
-                  key={credential.id}
-                  onDelete={setDeleteTarget}
-                />
-              ))}
+              <CredentialGrid
+                ariaLabel={t(credentialKindKey(kind))}
+                credentials={rows}
+                onDelete={setDeleteTarget}
+              />
             </div>
           ))}
         </div>
@@ -359,15 +375,11 @@ export function CredentialsSettings() {
             {loading ? t("common.loading") : t("settings.widgetCredentialsEmpty")}
           </p>
         ) : (
-          <div className="settings-list" aria-label={t("settings.widgetCredentialsStored")}>
-            {widgetCredentials.map((credential) => (
-              <CredentialRow
-                credential={credential}
-                key={credential.id}
-                onDelete={setDeleteTarget}
-              />
-            ))}
-          </div>
+          <CredentialGrid
+            ariaLabel={t("settings.widgetCredentialsStored")}
+            credentials={widgetCredentials}
+            onDelete={setDeleteTarget}
+          />
         )}
       </fieldset>
 
@@ -399,43 +411,60 @@ export function CredentialsSettings() {
   );
 }
 
-function secretStoreLabelKey(store: SecretStoreKind) {
+function secretStoreLabelKey(store: SecretStoreKind, portableMode = false) {
   switch (store) {
     case "file":
-      return "settings.credentialStorageFile";
+      return portableMode
+        ? "settings.credentialStorageFilePortable"
+        : "settings.credentialStorageFile";
     case "os":
     default:
       return "settings.credentialStorageOs";
   }
 }
 
-function CredentialRow({
-  credential,
+function CredentialGrid({
+  ariaLabel,
+  credentials,
   onDelete,
 }: {
-  credential: StoredCredentialSummary;
+  ariaLabel: string;
+  credentials: StoredCredentialSummary[];
   onDelete: (credential: StoredCredentialSummary) => void;
 }) {
   const { t } = useTranslation();
 
   return (
-    <div className="settings-list-row">
-      <div className="settings-credential-summary">
-        <strong>{credential.label}</strong>
-        <span>
-          {credential.detail
-            ? `${credential.detail} - ${t(credentialDescriptionKey(credential))}`
-            : t(credentialDescriptionKey(credential))}
-        </span>
+    <div className="settings-secret-credential-grid" role="grid" aria-label={ariaLabel}>
+      <div className="settings-secret-credential-grid-header" role="row">
+        <span role="columnheader">{t("settings.credentialColumnName")}</span>
+        <span role="columnheader">{t("settings.credentialColumnDetails")}</span>
+        <span role="columnheader">{t("settings.credentialColumnStatus")}</span>
+        <span aria-hidden="true" />
       </div>
-      <button
-        aria-label={t("settings.deleteCredential")}
-        className="settings-icon-danger-button"
-        type="button"
-        onClick={() => void onDelete(credential)}
-      >
-        <Trash2 size={16} />
-      </button>
+      {credentials.map((credential) => (
+        <div className="settings-secret-credential-grid-row" key={credential.id} role="row">
+          <div className="settings-secret-credential-grid-cell" role="gridcell">
+            <strong title={credential.label}>{credential.label}</strong>
+          </div>
+          <div className="settings-secret-credential-grid-cell" role="gridcell">
+            <span title={credential.detail ?? undefined}>{credential.detail || "—"}</span>
+          </div>
+          <div className="settings-secret-credential-grid-cell" role="gridcell">
+            <span>{t(credentialDescriptionKey(credential))}</span>
+          </div>
+          <div className="settings-secret-credential-grid-actions" role="gridcell">
+            <button
+              aria-label={t("settings.deleteCredential")}
+              className="settings-icon-danger-button"
+              type="button"
+              onClick={() => void onDelete(credential)}
+            >
+              <Trash2 size={16} />
+            </button>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

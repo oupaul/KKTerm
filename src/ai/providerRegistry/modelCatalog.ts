@@ -38,6 +38,13 @@ export const AI_PROVIDER_MODEL_CATALOG: AiProviderModelCatalog = {
       { id: "claude-haiku-4-5-20251001", label: "Claude Haiku 4.5 snapshot", supportsImageInput: true },
     ],
   },
+  // Cursor model ids are account-bound and change independently of KKTerm.
+  // Keep Auto curated and let users enter an id reported by `agent models`.
+  cursor: {
+    defaultModel: "auto",
+    defaultReasoningEffort: "medium",
+    models: [{ id: "auto", label: "Auto", recommended: true }],
+  },
   openrouter: {
     defaultModel: "openai/gpt-5.5",
     defaultReasoningEffort: "medium",
@@ -179,9 +186,10 @@ export const AI_PROVIDER_MODEL_CATALOG: AiProviderModelCatalog = {
     ],
   },
   opencode: {
-    defaultModel: "kimi-k2.6",
+    defaultModel: "kimi-k3",
     defaultReasoningEffort: "medium",
     models: [
+      { id: "kimi-k3", label: "Kimi K3", recommended: true, supportsImageInput: false },
       { id: "kimi-k2.6", label: "Kimi K2.6", recommended: true, supportsImageInput: false },
       { id: "deepseek-v4-flash", label: "DeepSeek V4 Flash", recommended: true, supportsImageInput: false },
       { id: "deepseek-v4-pro", label: "DeepSeek V4 Pro", recommended: true, supportsImageInput: false },

@@ -124,7 +124,23 @@ export function selectManifestWindowsInstaller(
   return { assetName, downloadUrl: platform.url, checksumUrl: platform.checksum_url };
 }
 
-export type AppUpdateInstallStrategy = "windows-installer" | "tauri-updater" | "download-page";
+export function selectManifestWindowsPortableZip(
+  manifest: CloudflareReleaseManifest,
+  targetTriple: string,
+): AppUpdateInstallerAssets | null {
+  const platform = manifest.platforms[`${targetTriple}-portable`];
+  if (!platform?.checksum_url) return null;
+  const pathParts = new URL(platform.url).pathname.split("/");
+  const assetName = pathParts[pathParts.length - 1];
+  if (!assetName?.endsWith(`-${targetTriple}-portable.zip`)) return null;
+  return { assetName, downloadUrl: platform.url, checksumUrl: platform.checksum_url };
+}
+
+export type AppUpdateInstallStrategy =
+  | "windows-installer"
+  | "portable-manual"
+  | "tauri-updater"
+  | "download-page";
 
 export function appUpdateProgressPercent(downloadedBytes: number, totalBytes: number) {
   if (!Number.isFinite(totalBytes) || totalBytes <= 0) {
@@ -134,7 +150,13 @@ export function appUpdateProgressPercent(downloadedBytes: number, totalBytes: nu
   return Math.max(0, Math.min(100, percent));
 }
 
-export function appUpdateInstallStrategy(platform: "windows" | "macos" | "linux" | "unknown"): AppUpdateInstallStrategy {
+export function appUpdateInstallStrategy(
+  platform: "windows" | "macos" | "linux" | "unknown",
+  portable = false,
+): AppUpdateInstallStrategy {
+  if (platform === "windows" && portable) {
+    return "portable-manual";
+  }
   if (platform === "windows") {
     return "windows-installer";
   }
@@ -167,6 +189,31 @@ export function selectWindowsInstallerAssets(
   return {
     assetName: installer.name,
     downloadUrl: installer.browser_download_url,
+    checksumUrl: checksum.browser_download_url,
+  };
+}
+
+export function selectWindowsPortableAssets(
+  assets: AppUpdateAsset[] | undefined,
+  targetTriple: string,
+): AppUpdateInstallerAssets | null {
+  const portableZip = assets?.find((asset) => {
+    const name = asset.name ?? "";
+    return name.endsWith(`-${targetTriple}-portable.zip`) && Boolean(asset.browser_download_url);
+  });
+  if (!portableZip?.name || !portableZip.browser_download_url) {
+    return null;
+  }
+  const checksum = assets?.find(
+    (asset) =>
+      asset.name === `${portableZip.name}.sha256` && Boolean(asset.browser_download_url),
+  );
+  if (!checksum?.browser_download_url) {
+    return null;
+  }
+  return {
+    assetName: portableZip.name,
+    downloadUrl: portableZip.browser_download_url,
     checksumUrl: checksum.browser_download_url,
   };
 }

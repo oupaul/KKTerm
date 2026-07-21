@@ -1,7 +1,7 @@
 {
   "name": "kkterm",
   "private": true,
-  "version": "0.1.124",
+  "version": "0.1.127",
   "license": "MIT",
   "type": "module",
   "scripts": {
@@ -11,6 +11,8 @@
     "check": "npm run lint && node tests/run-all.mjs && tsc --noEmit",
     "package:installer": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-installer.ps1",
     "package:installer:arm64": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-installer-arm64.ps1",
+    "package:portable": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-portable.ps1",
+    "package:portable:arm64": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-portable.ps1 -Arch arm64",
     "package:macos": "zsh scripts/package-macos.sh",
     "package:linux": "bash scripts/package-linux.sh",
     "release:github": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release-github.ps1",
@@ -20,6 +22,7 @@
     "release:mirror": "node scripts/sync-cloudflare-release.mjs",
     "release:notes": "node scripts/generate-release-notes.mjs",
     "smoke:installer": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/smoke-installer.ps1",
+    "smoke:portable": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/smoke-portable.ps1",
     "i18n:check": "node scripts/check-locale-keys.mjs",
     "i18n:normalize": "node scripts/normalize-locale-order.mjs",
     "terminal-colors:sync": "node scripts/sync-terminal-colors-catalog.mjs",

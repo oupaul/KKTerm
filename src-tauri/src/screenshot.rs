@@ -6,7 +6,6 @@ use std::{
 };
 
 use base64::{Engine as _, engine::general_purpose::STANDARD};
-use image::GenericImageView;
 use serde::{Deserialize, Serialize};
 use tauri::Manager;
 
@@ -19,6 +18,12 @@ pub struct CaptureScreenshotRequest {
     height: f64,
 }
 
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ScreenshotDataUrlRequest {
+    data_url: String,
+}
+
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AssistantScreenshot {
@@ -27,18 +32,111 @@ pub struct AssistantScreenshot {
     height: u32,
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StoredScreenshot {
     id: String,
     path: String,
     file_name: String,
+    thumbnail_data_url: String,
+    width: u32,
+    height: u32,
+    file_size_bytes: u64,
+    captured_at: u128,
+    created_at: u128,
+    modified_at: u128,
+    taken_at: Option<u128>,
+    kind: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ScreenshotCaptureResult {
+    stored_screenshot: Option<StoredScreenshot>,
+    copied_to_clipboard: bool,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FullScreenshot {
+    id: String,
+    file_name: String,
     data_url: String,
     width: u32,
     height: u32,
-    captured_at: u128,
-    label: String,
-    kind: String,
+}
+
+/// How captures are written into the library folder. Built from the persisted
+/// `ScreenshotSettings` by the command layer.
+#[derive(Clone)]
+pub struct LibrarySaveOptions {
+    pub folder_path: String,
+    pub format: String,
+    pub quality: u8,
+    pub capture_mode: String,
+    pub border_enabled: bool,
+    pub border_width: u32,
+    pub border_style: String,
+    pub border_color: String,
+    pub include_cursor: bool,
+}
+
+/// Parses a `#RRGGBB` border color, falling back to black.
+fn parse_border_color(value: &str) -> (u8, u8, u8) {
+    let hex = value.trim().trim_start_matches('#');
+    if hex.len() == 6 {
+        if let Ok(rgb) = u32::from_str_radix(hex, 16) {
+            return (
+                ((rgb >> 16) & 0xFF) as u8,
+                ((rgb >> 8) & 0xFF) as u8,
+                (rgb & 0xFF) as u8,
+            );
+        }
+    }
+    (0, 0, 0)
+}
+
+/// Draws an inset border into a 4-bytes-per-pixel buffer. `color` is given in
+/// the buffer's own channel order, so the same routine serves RGBA and BGRA.
+fn apply_border_pixels(
+    pixels: &mut [u8],
+    width: u32,
+    height: u32,
+    thickness: u32,
+    style: &str,
+    color: [u8; 4],
+) {
+    if width == 0 || height == 0 || pixels.len() < width as usize * height as usize * 4 {
+        return;
+    }
+    let t = thickness
+        .max(1)
+        .min(width.div_ceil(2))
+        .min(height.div_ceil(2));
+    let (dash_on, dash_off) = match style {
+        "dashed" => ((t * 4).max(8), (t * 2).max(4)),
+        "dotted" => (t.max(2), t.max(2)),
+        _ => (1, 0),
+    };
+    let on = |along: u32| dash_off == 0 || along % (dash_on + dash_off) < dash_on;
+    let mut set = |x: u32, y: u32| {
+        let index = (y as usize * width as usize + x as usize) * 4;
+        pixels[index..index + 4].copy_from_slice(&color);
+    };
+    for y in (0..t.min(height)).chain(height.saturating_sub(t)..height) {
+        for x in 0..width {
+            if on(x) {
+                set(x, y);
+            }
+        }
+    }
+    for y in t.min(height)..height.saturating_sub(t) {
+        for x in (0..t.min(width)).chain(width.saturating_sub(t)..width) {
+            if on(y) {
+                set(x, y);
+            }
+        }
+    }
 }
 
 #[derive(Deserialize)]
@@ -46,6 +144,35 @@ pub struct StoredScreenshot {
 pub struct ListScreenshotsRequest {
     offset: Option<usize>,
     limit: Option<usize>,
+    sort_by: Option<String>,
+    sort_direction: Option<String>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ResizeScreenshotsRequest {
+    ids: Vec<String>,
+    mode: String,
+    width: Option<u32>,
+    height: Option<u32>,
+    percentage: Option<u16>,
+    preserve_aspect_ratio: bool,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ConvertScreenshotsRequest {
+    ids: Vec<String>,
+    format: String,
+    quality: u8,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SaveEditedScreenshotRequest {
+    id: String,
+    data_url: String,
+    save_as_copy: bool,
 }
 
 #[derive(Serialize)]
@@ -71,6 +198,31 @@ pub fn capture_rect_to_clipboard(
         target.height,
         use_directx,
     )
+}
+
+#[cfg(target_os = "windows")]
+pub fn write_data_url_to_clipboard(
+    app: &tauri::AppHandle,
+    request: ScreenshotDataUrlRequest,
+) -> Result<(), String> {
+    let (_, encoded) = request
+        .data_url
+        .split_once(",")
+        .filter(|(header, _)| header.starts_with("data:image/") && header.ends_with(";base64"))
+        .ok_or_else(|| "stitched screenshot is not a base64 image data URL".to_string())?;
+    let bytes = STANDARD
+        .decode(encoded)
+        .map_err(|error| format!("failed to decode stitched screenshot: {error}"))?;
+    let image = image::load_from_memory(&bytes)
+        .map_err(|error| format!("failed to read stitched screenshot: {error}"))?
+        .to_rgba8();
+    let window = app
+        .get_webview_window("main")
+        .ok_or_else(|| "main window is not available".to_string())?;
+    let hwnd = window
+        .hwnd()
+        .map_err(|error| format!("failed to resolve window handle: {error}"))?;
+    platform::write_rgba_to_clipboard(hwnd.0, image.as_raw(), image.width(), image.height())
 }
 
 #[cfg(target_os = "windows")]
@@ -118,23 +270,27 @@ pub fn capture_rect_to_library(
     app: &tauri::AppHandle,
     request: CaptureScreenshotRequest,
     kind: String,
-    folder_path: String,
+    options: LibrarySaveOptions,
     use_directx: bool,
-) -> Result<StoredScreenshot, String> {
+) -> Result<ScreenshotCaptureResult, String> {
     let target = capture_target(app, request)?;
-    let dib = platform::capture_screen_rect_to_dib(
+    let mut dib = platform::capture_screen_rect_to_dib(
         target.x,
         target.y,
         target.width,
         target.height,
         use_directx,
     )?;
-    save_dib_to_library(
+    if options.include_cursor {
+        platform::draw_cursor_on_dib(&mut dib, target.x, target.y);
+    }
+    deliver_dib(
+        app,
         &dib,
         target.width as u32,
         target.height as u32,
         kind,
-        &folder_path,
+        &options,
     )
 }
 
@@ -142,24 +298,28 @@ pub fn capture_rect_to_library(
 pub fn capture_fullscreen_to_library(
     app: &tauri::AppHandle,
     kind: String,
-    folder_path: String,
+    options: LibrarySaveOptions,
     use_directx: bool,
-) -> Result<StoredScreenshot, String> {
+) -> Result<ScreenshotCaptureResult, String> {
     let _guard = MinimizedCaptureWindow::new(app)?;
     let target = platform::virtual_screen_rect();
-    let dib = platform::capture_screen_rect_to_dib(
+    let mut dib = platform::capture_screen_rect_to_dib(
         target.x,
         target.y,
         target.width,
         target.height,
         use_directx,
     )?;
-    save_dib_to_library(
+    if options.include_cursor {
+        platform::draw_cursor_on_dib(&mut dib, target.x, target.y);
+    }
+    deliver_dib(
+        app,
         &dib,
         target.width as u32,
         target.height as u32,
         kind,
-        &folder_path,
+        &options,
     )
 }
 
@@ -167,28 +327,32 @@ pub fn capture_fullscreen_to_library(
 pub fn capture_active_window_to_library(
     app: &tauri::AppHandle,
     kind: String,
-    folder_path: String,
+    options: LibrarySaveOptions,
     use_directx: bool,
-) -> Result<StoredScreenshot, String> {
+) -> Result<ScreenshotCaptureResult, String> {
     let _guard = MinimizedCaptureWindow::new(app)?;
     let screen = platform::virtual_screen_rect();
-    let screen_dib = platform::capture_screen_rect_to_dib(
+    let mut screen_dib = platform::capture_screen_rect_to_dib(
         screen.x,
         screen.y,
         screen.width,
         screen.height,
         use_directx,
     )?;
+    if options.include_cursor {
+        platform::draw_cursor_on_dib(&mut screen_dib, screen.x, screen.y);
+    }
     let windows = platform::enumerate_window_rects(&screen);
     let target = platform::select_window_rect(&screen_dib, &screen, windows)?
         .ok_or_else(|| "screenshot capture canceled".to_string())?;
     let dib = platform::crop_dib(&screen_dib, screen.width, screen.height, &screen, &target)?;
-    save_dib_to_library(
+    deliver_dib(
+        app,
         &dib,
         target.width as u32,
         target.height as u32,
         kind,
-        &folder_path,
+        &options,
     )
 }
 
@@ -196,27 +360,31 @@ pub fn capture_active_window_to_library(
 pub fn capture_interactive_region_to_library(
     app: &tauri::AppHandle,
     kind: String,
-    folder_path: String,
+    options: LibrarySaveOptions,
     use_directx: bool,
-) -> Result<StoredScreenshot, String> {
+) -> Result<ScreenshotCaptureResult, String> {
     let _guard = MinimizedCaptureWindow::new(app)?;
     let screen = platform::virtual_screen_rect();
-    let screen_dib = platform::capture_screen_rect_to_dib(
+    let mut screen_dib = platform::capture_screen_rect_to_dib(
         screen.x,
         screen.y,
         screen.width,
         screen.height,
         use_directx,
     )?;
+    if options.include_cursor {
+        platform::draw_cursor_on_dib(&mut screen_dib, screen.x, screen.y);
+    }
     let target = platform::select_region_rect(&screen_dib, &screen)?
         .ok_or_else(|| "screenshot capture canceled".to_string())?;
     let dib = platform::crop_dib(&screen_dib, screen.width, screen.height, &screen, &target)?;
-    save_dib_to_library(
+    deliver_dib(
+        app,
         &dib,
         target.width as u32,
         target.height as u32,
         kind,
-        &folder_path,
+        &options,
     )
 }
 
@@ -229,14 +397,12 @@ struct CaptureTarget {
     height: i32,
 }
 
-#[cfg(target_os = "windows")]
 struct MinimizedCaptureWindow {
     window: tauri::WebviewWindow,
     was_minimized: bool,
     was_visible: bool,
 }
 
-#[cfg(target_os = "windows")]
 impl MinimizedCaptureWindow {
     fn new(app: &tauri::AppHandle) -> Result<Self, String> {
         let window = app
@@ -244,10 +410,14 @@ impl MinimizedCaptureWindow {
             .ok_or_else(|| "main window is not available".to_string())?;
         let was_minimized = window.is_minimized().unwrap_or(false);
         let was_visible = window.is_visible().unwrap_or(true);
-        window
-            .minimize()
-            .map_err(|error| format!("failed to minimize window before screenshot: {error}"))?;
-        thread::sleep(std::time::Duration::from_millis(350));
+        // A window already hidden to the tray must stay hidden: skip the
+        // minimize/settle dance entirely so the capture never restores it.
+        if was_visible {
+            window
+                .minimize()
+                .map_err(|error| format!("failed to minimize window before screenshot: {error}"))?;
+            thread::sleep(std::time::Duration::from_millis(350));
+        }
         Ok(Self {
             window,
             was_minimized,
@@ -256,12 +426,12 @@ impl MinimizedCaptureWindow {
     }
 }
 
-#[cfg(target_os = "windows")]
 impl Drop for MinimizedCaptureWindow {
     fn drop(&mut self) {
-        if self.was_visible {
-            let _ = self.window.show();
+        if !self.was_visible {
+            return;
         }
+        let _ = self.window.show();
         if !self.was_minimized {
             let _ = self.window.unminimize();
             let _ = self.window.set_focus();
@@ -303,11 +473,48 @@ fn capture_target(
 
 #[cfg(not(target_os = "windows"))]
 pub fn capture_rect_to_clipboard(
-    _app: &tauri::AppHandle,
-    _request: CaptureScreenshotRequest,
+    app: &tauri::AppHandle,
+    request: CaptureScreenshotRequest,
     _use_directx: bool,
 ) -> Result<(), String> {
-    Err("screenshot capture is currently available on Windows".to_string())
+    let window = app
+        .get_webview_window("main")
+        .ok_or_else(|| "main window is not available".to_string())?;
+    let scale = window.scale_factor().unwrap_or(1.0);
+    let (rgba, win_width, win_height) = capture_window_rgba(&window)?;
+    let inner = window
+        .inner_position()
+        .map_err(|error| format!("failed to resolve window position: {error}"))?;
+    let outer = window
+        .outer_position()
+        .map_err(|error| format!("failed to resolve window position: {error}"))?;
+    let off_x = (inner.x - outer.x).max(0) as u32;
+    let off_y = (inner.y - outer.y).max(0) as u32;
+    let x = off_x + (request.x * scale).round().max(0.0) as u32;
+    let y = off_y + (request.y * scale).round().max(0.0) as u32;
+    let width = (request.width * scale).round().max(1.0) as u32;
+    let height = (request.height * scale).round().max(1.0) as u32;
+    let (cropped, width, height) = crop_rgba(&rgba, win_width, win_height, x, y, width, height)?;
+    write_rgba_to_clipboard(&cropped, width, height)
+}
+
+#[cfg(not(target_os = "windows"))]
+pub fn write_data_url_to_clipboard(
+    _app: &tauri::AppHandle,
+    request: ScreenshotDataUrlRequest,
+) -> Result<(), String> {
+    let (_, encoded) = request
+        .data_url
+        .split_once(",")
+        .filter(|(header, _)| header.starts_with("data:image/") && header.ends_with(";base64"))
+        .ok_or_else(|| "screenshot is not a base64 image data URL".to_string())?;
+    let bytes = STANDARD
+        .decode(encoded)
+        .map_err(|error| format!("failed to decode screenshot: {error}"))?;
+    let image = image::load_from_memory(&bytes)
+        .map_err(|error| format!("failed to read screenshot: {error}"))?
+        .to_rgba8();
+    write_rgba_to_clipboard(image.as_raw(), image.width(), image.height())
 }
 
 #[cfg(not(target_os = "windows"))]
@@ -342,48 +549,641 @@ pub fn capture_rect_for_assistant(
 
 #[cfg(not(target_os = "windows"))]
 pub fn capture_fullscreen_for_assistant(_use_directx: bool) -> Result<AssistantScreenshot, String> {
-    Err("screenshot capture is currently available on Windows".to_string())
+    let region = capture_engine::capture_virtual_screen()?;
+    rgba_to_jpeg_assistant(&region.rgba, region.width, region.height)
 }
 
 #[cfg(not(target_os = "windows"))]
 pub fn capture_rect_to_library(
-    _app: &tauri::AppHandle,
-    _request: CaptureScreenshotRequest,
-    _kind: String,
-    _folder_path: String,
+    app: &tauri::AppHandle,
+    request: CaptureScreenshotRequest,
+    kind: String,
+    options: LibrarySaveOptions,
     _use_directx: bool,
-) -> Result<StoredScreenshot, String> {
-    Err("screenshot capture is currently available on Windows".to_string())
+) -> Result<ScreenshotCaptureResult, String> {
+    let window = app
+        .get_webview_window("main")
+        .ok_or_else(|| "main window is not available".to_string())?;
+    let scale = window.scale_factor().unwrap_or(1.0);
+    let (rgba, win_width, win_height) = capture_window_rgba(&window)?;
+    let inner = window
+        .inner_position()
+        .map_err(|error| format!("failed to resolve window position: {error}"))?;
+    let outer = window
+        .outer_position()
+        .map_err(|error| format!("failed to resolve window position: {error}"))?;
+    let off_x = (inner.x - outer.x).max(0) as u32;
+    let off_y = (inner.y - outer.y).max(0) as u32;
+    let x = off_x + (request.x * scale).round().max(0.0) as u32;
+    let y = off_y + (request.y * scale).round().max(0.0) as u32;
+    let width = (request.width * scale).round().max(1.0) as u32;
+    let height = (request.height * scale).round().max(1.0) as u32;
+    let (cropped, width, height) = crop_rgba(&rgba, win_width, win_height, x, y, width, height)?;
+    deliver_rgba(&cropped, width, height, kind, &options)
 }
 
 #[cfg(not(target_os = "windows"))]
 pub fn capture_fullscreen_to_library(
-    _app: &tauri::AppHandle,
-    _kind: String,
-    _folder_path: String,
+    app: &tauri::AppHandle,
+    kind: String,
+    options: LibrarySaveOptions,
     _use_directx: bool,
-) -> Result<StoredScreenshot, String> {
-    Err("screenshot capture is currently available on Windows".to_string())
+) -> Result<ScreenshotCaptureResult, String> {
+    let _guard = MinimizedCaptureWindow::new(app)?;
+    let region = capture_engine::capture_virtual_screen()?;
+    deliver_rgba(&region.rgba, region.width, region.height, kind, &options)
 }
 
 #[cfg(not(target_os = "windows"))]
 pub fn capture_active_window_to_library(
-    _app: &tauri::AppHandle,
-    _kind: String,
-    _folder_path: String,
+    app: &tauri::AppHandle,
+    kind: String,
+    options: LibrarySaveOptions,
     _use_directx: bool,
-) -> Result<StoredScreenshot, String> {
-    Err("screenshot capture is currently available on Windows".to_string())
+) -> Result<ScreenshotCaptureResult, String> {
+    let _guard = MinimizedCaptureWindow::new(app)?;
+    #[cfg(target_os = "macos")]
+    let image = capture_macos_selection(true)?;
+    #[cfg(target_os = "linux")]
+    let image = capture_focused_window_image()?;
+    #[cfg(not(any(target_os = "macos", target_os = "linux")))]
+    return Err("window screenshot capture is unavailable on this platform".to_string());
+    deliver_rgba(
+        image.as_raw(),
+        image.width(),
+        image.height(),
+        kind,
+        &options,
+    )
 }
 
 #[cfg(not(target_os = "windows"))]
 pub fn capture_interactive_region_to_library(
-    _app: &tauri::AppHandle,
-    _kind: String,
-    _folder_path: String,
+    app: &tauri::AppHandle,
+    kind: String,
+    options: LibrarySaveOptions,
     _use_directx: bool,
+) -> Result<ScreenshotCaptureResult, String> {
+    let _guard = MinimizedCaptureWindow::new(app)?;
+    #[cfg(target_os = "macos")]
+    let image = capture_macos_selection(false)?;
+    #[cfg(target_os = "linux")]
+    let image = capture_linux_region_selection()?;
+    #[cfg(not(any(target_os = "macos", target_os = "linux")))]
+    return Err("region screenshot capture is unavailable on this platform".to_string());
+    deliver_rgba(
+        image.as_raw(),
+        image.width(),
+        image.height(),
+        kind,
+        &options,
+    )
+}
+
+#[cfg(not(target_os = "windows"))]
+fn write_rgba_to_clipboard(rgba: &[u8], width: u32, height: u32) -> Result<(), String> {
+    let expected = width as usize * height as usize * 4;
+    if rgba.len() < expected {
+        return Err("captured screenshot image data is incomplete".to_string());
+    }
+    let mut clipboard = arboard::Clipboard::new()
+        .map_err(|error| format!("failed to open the image clipboard: {error}"))?;
+    clipboard
+        .set_image(arboard::ImageData {
+            width: width as usize,
+            height: height as usize,
+            bytes: std::borrow::Cow::Borrowed(&rgba[..expected]),
+        })
+        .map_err(|error| format!("failed to copy screenshot to the clipboard: {error}"))
+}
+
+#[cfg(not(target_os = "windows"))]
+fn save_rgba_to_library(
+    rgba: &[u8],
+    width: u32,
+    height: u32,
+    kind: String,
+    options: &LibrarySaveOptions,
 ) -> Result<StoredScreenshot, String> {
-    Err("screenshot capture is currently available on Windows".to_string())
+    let expected = width as usize * height as usize * 4;
+    if rgba.len() < expected {
+        return Err("captured screenshot image data is incomplete".to_string());
+    }
+    let image = image::RgbaImage::from_raw(width, height, rgba[..expected].to_vec())
+        .ok_or_else(|| "failed to build the captured screenshot image".to_string())?;
+    let folder = ensure_screenshots_folder(&options.folder_path)?;
+    let captured_at = now_millis();
+    let normalized_kind = normalize_kind(&kind);
+    let extension = if options.format == "jpeg" {
+        "jpg"
+    } else {
+        "png"
+    };
+    let path = folder.join(format!(
+        "KKTerm-{normalized_kind}-{captured_at}.{extension}"
+    ));
+    write_dynamic_image(
+        &image::DynamicImage::ImageRgba8(image),
+        &path,
+        &options.format,
+        options.quality,
+    )?;
+    stored_screenshot_from_path(&folder, path)
+}
+
+#[cfg(not(target_os = "windows"))]
+fn deliver_rgba(
+    rgba: &[u8],
+    width: u32,
+    height: u32,
+    kind: String,
+    options: &LibrarySaveOptions,
+) -> Result<ScreenshotCaptureResult, String> {
+    let bordered;
+    let rgba = if options.border_enabled {
+        let (r, g, b) = parse_border_color(&options.border_color);
+        let mut copy = rgba.to_vec();
+        apply_border_pixels(
+            &mut copy,
+            width,
+            height,
+            options.border_width,
+            &options.border_style,
+            [r, g, b, 0xFF],
+        );
+        bordered = copy;
+        &bordered[..]
+    } else {
+        rgba
+    };
+    let copy_to_clipboard = options.capture_mode != "folder";
+    let save_to_folder = options.capture_mode != "clipboard";
+
+    if copy_to_clipboard {
+        write_rgba_to_clipboard(rgba, width, height)?;
+    }
+    let stored_screenshot = if save_to_folder {
+        Some(save_rgba_to_library(rgba, width, height, kind, options)?)
+    } else {
+        None
+    };
+    Ok(ScreenshotCaptureResult {
+        stored_screenshot,
+        copied_to_clipboard: copy_to_clipboard,
+    })
+}
+
+#[cfg(target_os = "macos")]
+fn capture_macos_selection(window_only: bool) -> Result<image::RgbaImage, String> {
+    let temp = tempfile::tempdir()
+        .map_err(|error| format!("failed to create screenshot workspace: {error}"))?;
+    let path = temp.path().join("selection.png");
+    let mut command = std::process::Command::new("/usr/sbin/screencapture");
+    command.args(["-i", "-x"]);
+    command.arg(if window_only { "-w" } else { "-s" });
+    let status = command
+        .arg(&path)
+        .status()
+        .map_err(|error| format!("failed to start the macOS screenshot selector: {error}"))?;
+    if !status.success() || !path.is_file() {
+        return Err("screenshot capture canceled".to_string());
+    }
+    image::open(&path)
+        .map(|image| image.to_rgba8())
+        .map_err(|error| format!("failed to read selected screenshot: {error}"))
+}
+
+#[cfg(target_os = "linux")]
+fn capture_focused_window_image() -> Result<image::RgbaImage, String> {
+    let own_pid = std::process::id();
+    let windows =
+        xcap::Window::all().map_err(|error| format!("failed to enumerate windows: {error}"))?;
+    let usable = |window: &&xcap::Window| {
+        window.pid().map(|pid| pid != own_pid).unwrap_or(false)
+            && !window.is_minimized().unwrap_or(true)
+            && window.width().unwrap_or(0) > 1
+            && window.height().unwrap_or(0) > 1
+    };
+    let window = windows
+        .iter()
+        .filter(usable)
+        .find(|window| window.is_focused().unwrap_or(false))
+        .or_else(|| windows.iter().filter(usable).next())
+        .ok_or_else(|| "no desktop window is available to capture".to_string())?;
+    window
+        .capture_image()
+        .map_err(|error| format!("failed to capture the selected window: {error}"))
+}
+
+#[cfg(target_os = "linux")]
+fn capture_linux_region_selection() -> Result<image::RgbaImage, String> {
+    use std::io::ErrorKind;
+
+    if let Some(image) = capture_linux_portal_region_selection()? {
+        return Ok(image);
+    }
+
+    let temp = tempfile::tempdir()
+        .map_err(|error| format!("failed to create screenshot workspace: {error}"))?;
+    let path = temp.path().join("selection.png");
+
+    let load_if_selected = |status: std::process::ExitStatus| {
+        if !status.success() || !path.is_file() {
+            return Err("screenshot capture canceled".to_string());
+        }
+        image::open(&path)
+            .map(|image| image.to_rgba8())
+            .map_err(|error| format!("failed to read selected screenshot: {error}"))
+    };
+
+    match std::process::Command::new("gnome-screenshot")
+        .args(["--area", "--file"])
+        .arg(&path)
+        .status()
+    {
+        Ok(status) => return load_if_selected(status),
+        Err(error) if error.kind() == ErrorKind::NotFound => {}
+        Err(error) => return Err(format!("failed to start the region selector: {error}")),
+    }
+
+    match std::process::Command::new("spectacle")
+        .args(["--region", "--background", "--nonotify", "--output"])
+        .arg(&path)
+        .status()
+    {
+        Ok(status) => return load_if_selected(status),
+        Err(error) if error.kind() == ErrorKind::NotFound => {}
+        Err(error) => return Err(format!("failed to start the region selector: {error}")),
+    }
+
+    match std::process::Command::new("slurp").output() {
+        Ok(selection) => {
+            if !selection.status.success() {
+                return Err("screenshot capture canceled".to_string());
+            }
+            let geometry = String::from_utf8(selection.stdout)
+                .map_err(|error| format!("region selector returned invalid geometry: {error}"))?;
+            let status = std::process::Command::new("grim")
+                .args(["--geometry", geometry.trim()])
+                .arg(&path)
+                .status()
+                .map_err(|error| format!("failed to capture the selected region: {error}"))?;
+            return load_if_selected(status);
+        }
+        Err(error) if error.kind() == ErrorKind::NotFound => {}
+        Err(error) => return Err(format!("failed to start the region selector: {error}")),
+    }
+
+    match std::process::Command::new("scrot")
+        .arg("--select")
+        .arg(&path)
+        .status()
+    {
+        Ok(status) => load_if_selected(status),
+        Err(error) if error.kind() == ErrorKind::NotFound => Err(
+            "no supported region selector was found (install gnome-screenshot, Spectacle, grim with slurp, or scrot)"
+                .to_string(),
+        ),
+        Err(error) => Err(format!("failed to start the region selector: {error}")),
+    }
+}
+
+#[cfg(target_os = "linux")]
+#[derive(zbus::zvariant::DeserializeDict, zbus::zvariant::Type, Debug)]
+#[zvariant(signature = "dict")]
+struct PortalScreenshotResponse {
+    uri: String,
+}
+
+#[cfg(target_os = "linux")]
+fn capture_linux_portal_region_selection() -> Result<Option<image::RgbaImage>, String> {
+    use std::collections::HashMap;
+    use zbus::{
+        blocking::{Connection, Proxy},
+        zvariant::Value,
+    };
+
+    let connection = match Connection::session() {
+        Ok(connection) => connection,
+        Err(_) => return Ok(None),
+    };
+    let unique_identifier = match connection.unique_name() {
+        Some(name) => name.trim_start_matches(':').replace('.', "_"),
+        None => return Ok(None),
+    };
+    let handle_token = format!("kkterm_{}", now_millis());
+    let request_path =
+        format!("/org/freedesktop/portal/desktop/request/{unique_identifier}/{handle_token}");
+    let request = match Proxy::new(
+        &connection,
+        "org.freedesktop.portal.Desktop",
+        request_path,
+        "org.freedesktop.portal.Request",
+    ) {
+        Ok(request) => request,
+        Err(_) => return Ok(None),
+    };
+    let mut responses = match request.receive_signal("Response") {
+        Ok(responses) => responses,
+        Err(_) => return Ok(None),
+    };
+    let portal = match Proxy::new(
+        &connection,
+        "org.freedesktop.portal.Desktop",
+        "/org/freedesktop/portal/desktop",
+        "org.freedesktop.portal.Screenshot",
+    ) {
+        Ok(portal) => portal,
+        Err(_) => return Ok(None),
+    };
+    let mut options: HashMap<&str, Value<'_>> = HashMap::new();
+    options.insert("handle_token", Value::from(&handle_token));
+    options.insert("modal", Value::from(true));
+    options.insert("interactive", Value::from(true));
+    if portal.call_method("Screenshot", &("", options)).is_err() {
+        return Ok(None);
+    }
+
+    let message = responses
+        .next()
+        .ok_or_else(|| "the desktop screenshot portal did not respond".to_string())?;
+    let (response_code, response): (u32, PortalScreenshotResponse) =
+        message
+            .body()
+            .deserialize()
+            .map_err(|error| format!("failed to read the desktop screenshot response: {error}"))?;
+    if response_code == 1 {
+        return Err("screenshot capture canceled".to_string());
+    }
+    if response_code != 0 {
+        return Ok(None);
+    }
+
+    let url = url::Url::parse(&response.uri)
+        .map_err(|error| format!("desktop screenshot portal returned an invalid URI: {error}"))?;
+    let path = url
+        .to_file_path()
+        .map_err(|_| "desktop screenshot portal returned a non-file URI".to_string())?;
+    let image = image::open(&path)
+        .map(|image| image.to_rgba8())
+        .map_err(|error| format!("failed to read selected screenshot: {error}"))?;
+    let _ = fs::remove_file(path);
+    Ok(Some(image))
+}
+
+// ---------------------------------------------------------------------------
+// Cross-platform screen-region capture engine (xcap).
+//
+// The default capture engine on every platform: Windows Graphics Capture on
+// Windows (xcap's `wgc` feature), ScreenCaptureKit on macOS, and X11/Wayland
+// on Linux. Coordinates are the monitor coordinate space reported by
+// `xcap::Monitor` — physical virtual-desktop pixels on Windows. Requests that
+// span multiple monitors are composed monitor by monitor; Windows keeps its
+// GDI path as the fallback when this engine errors.
+// ---------------------------------------------------------------------------
+
+mod capture_engine {
+    pub struct RegionImage {
+        pub rgba: Vec<u8>,
+        pub width: u32,
+        pub height: u32,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    struct Rect {
+        left: i32,
+        top: i32,
+        right: i32,
+        bottom: i32,
+    }
+
+    impl Rect {
+        fn width(&self) -> u32 {
+            (self.right - self.left) as u32
+        }
+
+        fn height(&self) -> u32 {
+            (self.bottom - self.top) as u32
+        }
+    }
+
+    fn intersect(a: Rect, b: Rect) -> Option<Rect> {
+        let rect = Rect {
+            left: a.left.max(b.left),
+            top: a.top.max(b.top),
+            right: a.right.min(b.right),
+            bottom: a.bottom.min(b.bottom),
+        };
+        (rect.left < rect.right && rect.top < rect.bottom).then_some(rect)
+    }
+
+    #[cfg(any(not(target_os = "windows"), test))]
+    fn union(a: Rect, b: Rect) -> Rect {
+        Rect {
+            left: a.left.min(b.left),
+            top: a.top.min(b.top),
+            right: a.right.max(b.right),
+            bottom: a.bottom.max(b.bottom),
+        }
+    }
+
+    fn monitor_rect(monitor: &xcap::Monitor) -> Result<Rect, String> {
+        let read = |error: xcap::XCapError| format!("failed to read monitor bounds: {error}");
+        let left = monitor.x().map_err(read)?;
+        let top = monitor.y().map_err(read)?;
+        let width = monitor.width().map_err(read)? as i32;
+        let height = monitor.height().map_err(read)? as i32;
+        Ok(Rect {
+            left,
+            top,
+            right: left + width,
+            bottom: top + height,
+        })
+    }
+
+    /// Scale a captured monitor image to the size its monitor rect promised
+    /// when they disagree (e.g. macOS returns physical pixels for logical
+    /// monitor coordinates). No-op on Windows, where both are physical.
+    fn ensure_size(image: image::RgbaImage, width: u32, height: u32) -> image::RgbaImage {
+        if image.width() == width && image.height() == height {
+            image
+        } else {
+            image::imageops::resize(&image, width, height, image::imageops::FilterType::Triangle)
+        }
+    }
+
+    /// Capture an arbitrary screen rect in monitor coordinates via xcap.
+    pub fn capture_region_rgba(
+        x: i32,
+        y: i32,
+        width: i32,
+        height: i32,
+    ) -> Result<RegionImage, String> {
+        if width <= 0 || height <= 0 {
+            return Err("screenshot region must have a positive size".to_string());
+        }
+        let request = Rect {
+            left: x,
+            top: y,
+            right: x
+                .checked_add(width)
+                .ok_or_else(|| "screenshot region is too wide".to_string())?,
+            bottom: y
+                .checked_add(height)
+                .ok_or_else(|| "screenshot region is too tall".to_string())?,
+        };
+        let monitors = xcap::Monitor::all()
+            .map_err(|error| format!("failed to enumerate monitors: {error}"))?;
+
+        // A request that is exactly one whole monitor keeps the monitor's
+        // native capture resolution (full detail on scaled displays).
+        for monitor in &monitors {
+            if monitor_rect(monitor).ok() == Some(request) {
+                let image = monitor
+                    .capture_image()
+                    .map_err(|error| format!("failed to capture monitor: {error}"))?;
+                return Ok(RegionImage {
+                    width: image.width(),
+                    height: image.height(),
+                    rgba: image.into_raw(),
+                });
+            }
+        }
+
+        let canvas_width = request.width() as usize;
+        let canvas_stride = canvas_width * 4;
+        let mut canvas = vec![0u8; canvas_stride * request.height() as usize];
+        let mut covered = false;
+        for monitor in &monitors {
+            let Ok(rect) = monitor_rect(monitor) else {
+                continue;
+            };
+            let Some(overlap) = intersect(rect, request) else {
+                continue;
+            };
+            let image = monitor
+                .capture_region(
+                    (overlap.left - rect.left) as u32,
+                    (overlap.top - rect.top) as u32,
+                    overlap.width(),
+                    overlap.height(),
+                )
+                .map_err(|error| format!("failed to capture monitor region: {error}"))?;
+            let image = ensure_size(image, overlap.width(), overlap.height());
+            let pixels = image.into_raw();
+            let row_bytes = overlap.width() as usize * 4;
+            let dst_x = (overlap.left - request.left) as usize;
+            let dst_y = (overlap.top - request.top) as usize;
+            for row in 0..overlap.height() as usize {
+                let src_start = row * row_bytes;
+                let dst_start = (dst_y + row) * canvas_stride + dst_x * 4;
+                canvas[dst_start..dst_start + row_bytes]
+                    .copy_from_slice(&pixels[src_start..src_start + row_bytes]);
+            }
+            covered = true;
+        }
+        if !covered {
+            return Err("screenshot region does not intersect any display".to_string());
+        }
+        Ok(RegionImage {
+            rgba: canvas,
+            width: request.width(),
+            height: request.height(),
+        })
+    }
+
+    /// Capture the union of all monitors (the virtual screen).
+    #[cfg(not(target_os = "windows"))]
+    pub fn capture_virtual_screen() -> Result<RegionImage, String> {
+        let monitors = xcap::Monitor::all()
+            .map_err(|error| format!("failed to enumerate monitors: {error}"))?;
+        let bounds = monitors
+            .iter()
+            .filter_map(|monitor| monitor_rect(monitor).ok())
+            .reduce(union)
+            .ok_or_else(|| "no display is available to capture".to_string())?;
+        capture_region_rgba(
+            bounds.left,
+            bounds.top,
+            bounds.width() as i32,
+            bounds.height() as i32,
+        )
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+
+        #[test]
+        fn intersect_returns_overlap() {
+            let a = Rect {
+                left: 0,
+                top: 0,
+                right: 100,
+                bottom: 80,
+            };
+            let b = Rect {
+                left: 60,
+                top: 40,
+                right: 200,
+                bottom: 200,
+            };
+
+            assert_eq!(
+                intersect(a, b),
+                Some(Rect {
+                    left: 60,
+                    top: 40,
+                    right: 100,
+                    bottom: 80,
+                })
+            );
+        }
+
+        #[test]
+        fn intersect_rejects_disjoint_rects() {
+            let a = Rect {
+                left: 0,
+                top: 0,
+                right: 100,
+                bottom: 80,
+            };
+            let b = Rect {
+                left: 100,
+                top: 0,
+                right: 200,
+                bottom: 80,
+            };
+
+            assert_eq!(intersect(a, b), None);
+        }
+
+        #[test]
+        fn union_spans_both_rects() {
+            let a = Rect {
+                left: -1920,
+                top: 0,
+                right: 0,
+                bottom: 1080,
+            };
+            let b = Rect {
+                left: 0,
+                top: 0,
+                right: 3840,
+                bottom: 2160,
+            };
+
+            assert_eq!(
+                union(a, b),
+                Rect {
+                    left: -1920,
+                    top: 0,
+                    right: 3840,
+                    bottom: 2160,
+                }
+            );
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -635,6 +1435,9 @@ fn rgba_to_jpeg_assistant(
     })
 }
 
+const THUMBS_DIR_NAME: &str = ".kkterm-thumbs";
+const THUMB_LONG_EDGE: u32 = 320;
+
 pub fn list_library_screenshots(
     request: ListScreenshotsRequest,
     folder_path: String,
@@ -658,18 +1461,32 @@ pub fn list_library_screenshots(
             .unwrap_or(0);
         paths.push((modified, path));
     }
-    paths.sort_by(|a, b| b.0.cmp(&a.0));
+    let sort_by = request.sort_by.as_deref().unwrap_or("date");
+    paths.sort_by(|a, b| {
+        let ordering = match sort_by {
+            "name" => file_name_sort_key(&a.1).cmp(&file_name_sort_key(&b.1)),
+            "type" => file_type_sort_key(&a.1)
+                .cmp(&file_type_sort_key(&b.1))
+                .then_with(|| file_name_sort_key(&a.1).cmp(&file_name_sort_key(&b.1))),
+            _ => a.0.cmp(&b.0),
+        };
+        if request.sort_direction.as_deref() == Some("asc") {
+            ordering
+        } else {
+            ordering.reverse()
+        }
+    });
 
     let total = paths.len();
     let offset = request.offset.unwrap_or(0).min(total);
     let limit = request.limit.unwrap_or(60).clamp(1, 200);
+    let has_more = offset + limit < total;
     let screenshots = paths
         .into_iter()
         .skip(offset)
         .take(limit)
         .filter_map(|(_, path)| stored_screenshot_from_path(&folder, path).ok())
         .collect::<Vec<_>>();
-    let has_more = offset + screenshots.len() < total;
 
     Ok(ListScreenshotsResponse {
         screenshots,
@@ -678,10 +1495,216 @@ pub fn list_library_screenshots(
     })
 }
 
+/// Resolves a library screenshot id to its canonical on-disk path with the
+/// same traversal guards as every other id-based operation.
+pub fn library_screenshot_path(id: &str, folder_path: &str) -> Result<PathBuf, String> {
+    let folder = ensure_screenshots_folder(folder_path)?;
+    screenshot_path_from_id(&folder, id)
+}
+
+pub fn read_library_screenshot(id: String, folder_path: String) -> Result<FullScreenshot, String> {
+    let folder = ensure_screenshots_folder(&folder_path)?;
+    let path = screenshot_path_from_id(&folder, &id)?;
+    let bytes = fs::read(&path).map_err(|error| format!("failed to load screenshot: {error}"))?;
+    let (width, height) = image::image_dimensions(&path)
+        .map_err(|error| format!("failed to read screenshot: {error}"))?;
+    let mime_type = mime_type_for_path(&path);
+    let file_name = path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .ok_or_else(|| "screenshot file name is not valid UTF-8".to_string())?
+        .to_string();
+    Ok(FullScreenshot {
+        id,
+        file_name,
+        data_url: format!("data:{mime_type};base64,{}", STANDARD.encode(bytes)),
+        width,
+        height,
+    })
+}
+
+pub fn rename_library_screenshot(
+    id: String,
+    new_name: String,
+    folder_path: String,
+) -> Result<StoredScreenshot, String> {
+    let folder = ensure_screenshots_folder(&folder_path)?;
+    let path = screenshot_path_from_id(&folder, &id)?;
+    let extension = path
+        .extension()
+        .and_then(|extension| extension.to_str())
+        .map(|extension| extension.to_ascii_lowercase())
+        .ok_or_else(|| "screenshot has no file extension".to_string())?;
+
+    let trimmed = new_name.trim();
+    if trimmed.is_empty() {
+        return Err("screenshot name must not be empty".to_string());
+    }
+    if trimmed.contains(['/', '\\', ':', '*', '?', '"', '<', '>', '|'])
+        || trimmed.contains("..")
+        || trimmed.starts_with('.')
+    {
+        return Err("screenshot name contains unsupported characters".to_string());
+    }
+    let target_name = if trimmed
+        .to_ascii_lowercase()
+        .ends_with(&format!(".{extension}"))
+    {
+        trimmed.to_string()
+    } else {
+        format!("{trimmed}.{extension}")
+    };
+    let target = folder.join(&target_name);
+    if target.exists() {
+        return Err("a screenshot with that name already exists".to_string());
+    }
+    fs::rename(&path, &target).map_err(|error| format!("failed to rename screenshot: {error}"))?;
+    remove_thumbnail_for(&folder, &id);
+    stored_screenshot_from_path(&folder, target)
+}
+
+#[cfg(target_os = "windows")]
+pub fn copy_library_screenshot_to_clipboard(
+    app: &tauri::AppHandle,
+    id: String,
+    folder_path: String,
+) -> Result<(), String> {
+    let folder = ensure_screenshots_folder(&folder_path)?;
+    let path = screenshot_path_from_id(&folder, &id)?;
+    let image = image::open(&path)
+        .map_err(|error| format!("failed to read screenshot: {error}"))?
+        .to_rgba8();
+    let window = app
+        .get_webview_window("main")
+        .ok_or_else(|| "main window is not available".to_string())?;
+    let hwnd = window
+        .hwnd()
+        .map_err(|error| format!("failed to resolve window handle: {error}"))?;
+    platform::write_rgba_to_clipboard(hwnd.0, image.as_raw(), image.width(), image.height())
+}
+
+#[cfg(not(target_os = "windows"))]
+pub fn copy_library_screenshot_to_clipboard(
+    _app: &tauri::AppHandle,
+    id: String,
+    folder_path: String,
+) -> Result<(), String> {
+    let folder = ensure_screenshots_folder(&folder_path)?;
+    let path = screenshot_path_from_id(&folder, &id)?;
+    let image = image::open(path)
+        .map_err(|error| format!("failed to read screenshot: {error}"))?
+        .to_rgba8();
+    write_rgba_to_clipboard(image.as_raw(), image.width(), image.height())
+}
+
 pub fn delete_library_screenshot(id: String, folder_path: String) -> Result<(), String> {
     let folder = ensure_screenshots_folder(&folder_path)?;
     let path = screenshot_path_from_id(&folder, &id)?;
-    fs::remove_file(&path).map_err(|error| format!("failed to delete screenshot: {error}"))
+    fs::remove_file(&path).map_err(|error| format!("failed to delete screenshot: {error}"))?;
+    remove_thumbnail_for(&folder, &id);
+    Ok(())
+}
+
+pub fn delete_library_screenshots(ids: Vec<String>, folder_path: String) -> Result<(), String> {
+    let folder = ensure_screenshots_folder(&folder_path)?;
+    let paths = ids
+        .iter()
+        .map(|id| screenshot_path_from_id(&folder, id).map(|path| (id, path)))
+        .collect::<Result<Vec<_>, _>>()?;
+    for (id, path) in paths {
+        fs::remove_file(&path).map_err(|error| format!("failed to delete screenshot: {error}"))?;
+        remove_thumbnail_for(&folder, id);
+    }
+    Ok(())
+}
+
+pub fn resize_library_screenshots(
+    request: ResizeScreenshotsRequest,
+    folder_path: String,
+) -> Result<Vec<StoredScreenshot>, String> {
+    let folder = ensure_screenshots_folder(&folder_path)?;
+    let paths = request
+        .ids
+        .iter()
+        .map(|id| screenshot_path_from_id(&folder, id))
+        .collect::<Result<Vec<_>, _>>()?;
+    let mut created = Vec::with_capacity(paths.len());
+    for path in paths {
+        let image = image::open(&path)
+            .map_err(|error| format!("failed to read screenshot for resize: {error}"))?;
+        let (width, height) = resolve_resize_dimensions(&request, image.width(), image.height())?;
+        let resized = image.resize_exact(width, height, image::imageops::FilterType::Lanczos3);
+        let format = image_format_for_path(&path)
+            .ok_or_else(|| "screenshot format is not supported for resize".to_string())?;
+        let target = unique_library_output_path(&folder, &path, "resized", format);
+        write_dynamic_image(&resized, &target, format, 90)?;
+        created.push(stored_screenshot_from_path(&folder, target)?);
+    }
+    Ok(created)
+}
+
+pub fn convert_library_screenshots(
+    request: ConvertScreenshotsRequest,
+    folder_path: String,
+) -> Result<Vec<StoredScreenshot>, String> {
+    let format = match request.format.as_str() {
+        "png" => "png",
+        "jpeg" => "jpeg",
+        "webp" => "webp",
+        "gif" => "gif",
+        _ => return Err("screenshot output format must be PNG, JPEG, WebP, or GIF".to_string()),
+    };
+    if !(1..=100).contains(&request.quality) {
+        return Err("screenshot output quality must be between 1 and 100".to_string());
+    }
+    let folder = ensure_screenshots_folder(&folder_path)?;
+    let paths = request
+        .ids
+        .iter()
+        .map(|id| screenshot_path_from_id(&folder, id))
+        .collect::<Result<Vec<_>, _>>()?;
+    let mut created = Vec::with_capacity(paths.len());
+    for path in paths {
+        let image = image::open(&path)
+            .map_err(|error| format!("failed to read screenshot for conversion: {error}"))?;
+        let target = unique_library_output_path(&folder, &path, "converted", format);
+        write_dynamic_image(&image, &target, format, request.quality)?;
+        created.push(stored_screenshot_from_path(&folder, target)?);
+    }
+    Ok(created)
+}
+
+pub fn save_edited_library_screenshot(
+    request: SaveEditedScreenshotRequest,
+    folder_path: String,
+) -> Result<StoredScreenshot, String> {
+    let folder = ensure_screenshots_folder(&folder_path)?;
+    let source = screenshot_path_from_id(&folder, &request.id)?;
+    let (_, encoded) = request
+        .data_url
+        .split_once(',')
+        .filter(|(header, _)| header.starts_with("data:image/") && header.ends_with(";base64"))
+        .ok_or_else(|| "edited screenshot is not a base64 image data URL".to_string())?;
+    if encoded.len() > 140_000_000 {
+        return Err("edited screenshot exceeds the 100 MB input limit".to_string());
+    }
+    let bytes = STANDARD
+        .decode(encoded)
+        .map_err(|error| format!("failed to decode edited screenshot: {error}"))?;
+    let image = image::load_from_memory(&bytes)
+        .map_err(|error| format!("failed to read edited screenshot: {error}"))?;
+    let format = image_format_for_path(&source)
+        .ok_or_else(|| "screenshot format is not supported for save".to_string())?;
+    let target = if request.save_as_copy {
+        unique_library_output_path(&folder, &source, "edited", format)
+    } else {
+        source
+    };
+    write_dynamic_image(&image, &target, format, 90)?;
+    if !request.save_as_copy {
+        remove_thumbnail_for(&folder, &request.id);
+    }
+    stored_screenshot_from_path(&folder, target)
 }
 
 pub fn clear_library_screenshots(folder_path: String) -> Result<(), String> {
@@ -696,6 +1719,7 @@ pub fn clear_library_screenshots(folder_path: String) -> Result<(), String> {
             let _ = fs::remove_file(path);
         }
     }
+    let _ = fs::remove_dir_all(folder.join(THUMBS_DIR_NAME));
     Ok(())
 }
 
@@ -705,16 +1729,76 @@ fn save_dib_to_library(
     width: u32,
     height: u32,
     kind: String,
-    folder_path: &str,
+    options: &LibrarySaveOptions,
 ) -> Result<StoredScreenshot, String> {
-    let folder = ensure_screenshots_folder(folder_path)?;
-    let jpeg = platform::dib_to_jpeg_bytes(dib, width, height)?;
+    let folder = ensure_screenshots_folder(&options.folder_path)?;
+    let (bytes, extension) = if options.format == "jpeg" {
+        (
+            platform::dib_to_jpeg_bytes_with_quality(dib, width, height, options.quality)?,
+            "jpg",
+        )
+    } else {
+        (
+            platform::dib_to_png_bytes_with_quality(dib, width, height, options.quality)?,
+            "png",
+        )
+    };
     let captured_at = now_millis();
     let normalized_kind = normalize_kind(&kind);
-    let file_name = format!("KKTerm-{normalized_kind}-{captured_at}.jpg");
+    let file_name = format!("KKTerm-{normalized_kind}-{captured_at}.{extension}");
     let path = folder.join(file_name);
-    fs::write(&path, jpeg).map_err(|error| format!("failed to save screenshot: {error}"))?;
+    fs::write(&path, bytes).map_err(|error| format!("failed to save screenshot: {error}"))?;
     stored_screenshot_from_path(&folder, path)
+}
+
+#[cfg(target_os = "windows")]
+fn deliver_dib(
+    app: &tauri::AppHandle,
+    dib: &[u8],
+    width: u32,
+    height: u32,
+    kind: String,
+    options: &LibrarySaveOptions,
+) -> Result<ScreenshotCaptureResult, String> {
+    let bordered;
+    let dib = if options.border_enabled {
+        let mut copy = dib.to_vec();
+        platform::apply_border_to_dib(
+            &mut copy,
+            width,
+            height,
+            options.border_width,
+            &options.border_style,
+            parse_border_color(&options.border_color),
+        );
+        bordered = copy;
+        &bordered[..]
+    } else {
+        dib
+    };
+    let copy_to_clipboard = options.capture_mode != "folder";
+    let save_to_folder = options.capture_mode != "clipboard";
+
+    if copy_to_clipboard {
+        let window = app
+            .get_webview_window("main")
+            .ok_or_else(|| "main window is not available".to_string())?;
+        let hwnd = window
+            .hwnd()
+            .map_err(|error| format!("failed to resolve window handle: {error}"))?;
+        platform::copy_dib_to_clipboard(hwnd.0, dib)?;
+    }
+
+    let stored_screenshot = if save_to_folder {
+        Some(save_dib_to_library(dib, width, height, kind, options)?)
+    } else {
+        None
+    };
+
+    Ok(ScreenshotCaptureResult {
+        stored_screenshot,
+        copied_to_clipboard: copy_to_clipboard,
+    })
 }
 
 fn ensure_screenshots_folder(folder_path: &str) -> Result<PathBuf, String> {
@@ -747,11 +1831,8 @@ fn stored_screenshot_from_path(
         return Err("screenshot path is not a file".to_string());
     }
 
-    let image =
-        image::open(&path).map_err(|error| format!("failed to read screenshot: {error}"))?;
-    let (width, height) = image.dimensions();
-    let bytes = fs::read(&path).map_err(|error| format!("failed to load screenshot: {error}"))?;
-    let mime_type = mime_type_for_path(&path);
+    let (width, height) = image::image_dimensions(&path)
+        .map_err(|error| format!("failed to read screenshot: {error}"))?;
     let file_name = path
         .file_name()
         .and_then(|name| name.to_str())
@@ -762,6 +1843,17 @@ fn stored_screenshot_from_path(
         .ok()
         .and_then(system_time_to_millis)
         .unwrap_or_else(now_millis);
+    let created_at = metadata
+        .created()
+        .ok()
+        .and_then(system_time_to_millis)
+        .unwrap_or(captured_at);
+    let modified_at = metadata
+        .modified()
+        .ok()
+        .and_then(system_time_to_millis)
+        .unwrap_or(captured_at);
+    let taken_at = taken_at_from_file_name(&file_name);
     let canonical_folder = screenshots_folder
         .canonicalize()
         .map_err(|error| format!("failed to resolve screenshots folder: {error}"))?;
@@ -773,18 +1865,248 @@ fn stored_screenshot_from_path(
         .map_err(|_| "screenshot is outside the screenshots folder".to_string())?;
     let id = relative.to_string_lossy().replace('\\', "/");
     let kind = kind_from_file_name(&file_name);
+    let thumbnail_data_url = ensure_thumbnail_data_url(screenshots_folder, &path, &file_name)?;
 
     Ok(StoredScreenshot {
         id,
         path: path.to_string_lossy().to_string(),
         file_name,
-        data_url: format!("data:{mime_type};base64,{}", STANDARD.encode(bytes)),
+        thumbnail_data_url,
         width,
         height,
-        captured_at,
-        label: label_for_kind(&kind).to_string(),
+        file_size_bytes: metadata.len(),
+        captured_at: taken_at.unwrap_or(captured_at),
+        created_at,
+        modified_at,
+        taken_at,
         kind,
     })
+}
+
+fn file_name_sort_key(path: &Path) -> String {
+    path.file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or_default()
+        .to_lowercase()
+}
+
+fn file_type_sort_key(path: &Path) -> String {
+    path.extension()
+        .and_then(|extension| extension.to_str())
+        .unwrap_or_default()
+        .to_lowercase()
+}
+
+fn taken_at_from_file_name(file_name: &str) -> Option<u128> {
+    file_name
+        .split(['-', '.'])
+        .find_map(|part| (part.len() >= 10).then(|| part.parse::<u128>().ok()).flatten())
+}
+
+fn validate_batch_dimensions(width: u32, height: u32) -> Result<(), String> {
+    if width == 0 || height == 0 || width > 16_384 || height > 16_384 {
+        return Err("screenshot dimensions must be between 1 and 16,384 pixels".to_string());
+    }
+    if u64::from(width) * u64::from(height) > 100_000_000 {
+        return Err("resized screenshots must not exceed 100 megapixels".to_string());
+    }
+    Ok(())
+}
+
+fn resolve_resize_dimensions(
+    request: &ResizeScreenshotsRequest,
+    source_width: u32,
+    source_height: u32,
+) -> Result<(u32, u32), String> {
+    if source_width == 0 || source_height == 0 {
+        return Err("source screenshot dimensions are invalid".to_string());
+    }
+    let dimensions = match request.mode.as_str() {
+        "exact" => match (request.width, request.height) {
+            (Some(width), Some(height)) if request.preserve_aspect_ratio => {
+                if u64::from(width) * u64::from(source_height)
+                    <= u64::from(height) * u64::from(source_width)
+                {
+                    (width, scale_dimension(source_height, width, source_width))
+                } else {
+                    (scale_dimension(source_width, height, source_height), height)
+                }
+            }
+            (Some(width), Some(height)) => (width, height),
+            (Some(width), None) => (width, scale_dimension(source_height, width, source_width)),
+            (None, Some(height)) => {
+                (scale_dimension(source_width, height, source_height), height)
+            }
+            (None, None) => {
+                return Err("enter a screenshot width, height, or both".to_string());
+            }
+        },
+        "percentage" => {
+            let percentage = request
+                .percentage
+                .filter(|percentage| (1..=500).contains(percentage))
+                .ok_or_else(|| "screenshot resize percentage must be between 1 and 500".to_string())?;
+            (
+                scale_dimension(source_width, u32::from(percentage), 100),
+                scale_dimension(source_height, u32::from(percentage), 100),
+            )
+        }
+        _ => return Err("screenshot resize mode must be exact or percentage".to_string()),
+    };
+    validate_batch_dimensions(dimensions.0, dimensions.1)?;
+    Ok(dimensions)
+}
+
+fn scale_dimension(value: u32, numerator: u32, denominator: u32) -> u32 {
+    let scaled = (u64::from(value) * u64::from(numerator) + u64::from(denominator) / 2)
+        / u64::from(denominator);
+    scaled.max(1).min(u64::from(u32::MAX)) as u32
+}
+
+fn unique_library_output_path(folder: &Path, source: &Path, suffix: &str, format: &str) -> PathBuf {
+    let stem = source
+        .file_stem()
+        .and_then(|stem| stem.to_str())
+        .unwrap_or("Screenshot");
+    let extension = output_extension(format);
+    for index in 0..u32::MAX {
+        let numbered = if index == 0 {
+            format!("{stem}-{suffix}.{extension}")
+        } else {
+            format!("{stem}-{suffix}-{index}.{extension}")
+        };
+        let candidate = folder.join(numbered);
+        if !candidate.exists() {
+            return candidate;
+        }
+    }
+    folder.join(format!("{stem}-{suffix}-{}.{}", now_millis(), extension))
+}
+
+fn write_dynamic_image(
+    image: &image::DynamicImage,
+    path: &Path,
+    format: &str,
+    quality: u8,
+) -> Result<(), String> {
+    use image::{ColorType, ImageEncoder};
+
+    let mut bytes = Vec::new();
+    match format {
+        "jpeg" => {
+            let rgb = image.to_rgb8();
+            image::codecs::jpeg::JpegEncoder::new_with_quality(&mut bytes, quality.clamp(1, 100))
+                .write_image(
+                    rgb.as_raw(),
+                    rgb.width(),
+                    rgb.height(),
+                    ColorType::Rgb8.into(),
+                )
+                .map_err(|error| format!("failed to encode JPEG screenshot: {error}"))?;
+        }
+        "webp" => {
+            let rgba = image.to_rgba8();
+            let encoded = webp::Encoder::from_rgba(rgba.as_raw(), rgba.width(), rgba.height())
+                .encode(f32::from(quality.clamp(1, 100)));
+            bytes.extend_from_slice(&encoded);
+        }
+        "gif" => {
+            let rgba = image.to_rgba8();
+            let mut encoder = image::codecs::gif::GifEncoder::new_with_speed(
+                &mut bytes,
+                gif_speed_for_quality(quality),
+            );
+            encoder
+                .encode(
+                    rgba.as_raw(),
+                    rgba.width(),
+                    rgba.height(),
+                    ColorType::Rgba8.into(),
+                )
+                .map_err(|error| format!("failed to encode GIF screenshot: {error}"))?;
+        }
+        _ => {
+            let rgba = image.to_rgba8();
+            image::codecs::png::PngEncoder::new(&mut bytes)
+                .write_image(
+                    rgba.as_raw(),
+                    rgba.width(),
+                    rgba.height(),
+                    ColorType::Rgba8.into(),
+                )
+                .map_err(|error| format!("failed to encode PNG screenshot: {error}"))?;
+        }
+    }
+    fs::write(path, bytes).map_err(|error| format!("failed to save screenshot: {error}"))
+}
+
+fn gif_speed_for_quality(quality: u8) -> i32 {
+    30 - (i32::from(quality.clamp(1, 100)) - 1) * 29 / 99
+}
+
+fn output_extension(format: &str) -> &'static str {
+    match format {
+        "jpeg" => "jpg",
+        "webp" => "webp",
+        "gif" => "gif",
+        _ => "png",
+    }
+}
+
+/// Returns the cached thumbnail for a library image as a JPEG data URL,
+/// regenerating it when the source file is newer than the cache entry. The
+/// cache lives in a hidden `.kkterm-thumbs` subfolder so gallery listings do
+/// not decode and base64 every full-size capture.
+fn ensure_thumbnail_data_url(
+    folder: &Path,
+    path: &Path,
+    file_name: &str,
+) -> Result<String, String> {
+    let thumbs_dir = folder.join(THUMBS_DIR_NAME);
+    let thumb_path = thumbs_dir.join(format!("{file_name}.thumb.jpg"));
+    let source_modified = fs::metadata(path).ok().and_then(|meta| meta.modified().ok());
+    let thumb_fresh = match (fs::metadata(&thumb_path), source_modified) {
+        (Ok(thumb_meta), Some(source_modified)) => thumb_meta
+            .modified()
+            .map(|thumb_modified| thumb_modified >= source_modified)
+            .unwrap_or(false),
+        _ => false,
+    };
+
+    if !thumb_fresh {
+        fs::create_dir_all(&thumbs_dir)
+            .map_err(|error| format!("failed to create thumbnail folder: {error}"))?;
+        let image =
+            image::open(path).map_err(|error| format!("failed to read screenshot: {error}"))?;
+        let thumbnail = image.thumbnail(THUMB_LONG_EDGE, THUMB_LONG_EDGE).to_rgb8();
+        let mut jpeg = Vec::new();
+        {
+            use image::{ColorType, ImageEncoder, codecs::jpeg::JpegEncoder};
+            JpegEncoder::new_with_quality(&mut jpeg, 80)
+                .write_image(
+                    thumbnail.as_raw(),
+                    thumbnail.width(),
+                    thumbnail.height(),
+                    ColorType::Rgb8.into(),
+                )
+                .map_err(|error| format!("failed to encode thumbnail: {error}"))?;
+        }
+        fs::write(&thumb_path, &jpeg)
+            .map_err(|error| format!("failed to save thumbnail: {error}"))?;
+        return Ok(format!("data:image/jpeg;base64,{}", STANDARD.encode(jpeg)));
+    }
+
+    let bytes = fs::read(&thumb_path)
+        .map_err(|error| format!("failed to load thumbnail: {error}"))?;
+    Ok(format!("data:image/jpeg;base64,{}", STANDARD.encode(bytes)))
+}
+
+fn remove_thumbnail_for(folder: &Path, id: &str) {
+    let _ = fs::remove_file(
+        folder
+            .join(THUMBS_DIR_NAME)
+            .join(format!("{id}.thumb.jpg")),
+    );
 }
 
 fn screenshot_path_from_id(folder: &Path, id: &str) -> Result<PathBuf, String> {
@@ -810,7 +2132,7 @@ fn is_supported_image_path(path: &Path) -> bool {
         .map(|extension| {
             matches!(
                 extension.to_ascii_lowercase().as_str(),
-                "jpg" | "jpeg" | "png"
+                "gif" | "jpg" | "jpeg" | "png" | "webp"
             )
         })
         .unwrap_or(false)
@@ -824,7 +2146,24 @@ fn mime_type_for_path(path: &Path) -> &'static str {
         .as_deref()
     {
         Some("png") => "image/png",
+        Some("webp") => "image/webp",
+        Some("gif") => "image/gif",
         _ => "image/jpeg",
+    }
+}
+
+fn image_format_for_path(path: &Path) -> Option<&'static str> {
+    match path
+        .extension()
+        .and_then(|extension| extension.to_str())
+        .map(|extension| extension.to_ascii_lowercase())
+        .as_deref()
+    {
+        Some("png") => Some("png"),
+        Some("jpg" | "jpeg") => Some("jpeg"),
+        Some("webp") => Some("webp"),
+        Some("gif") => Some("gif"),
+        _ => None,
     }
 }
 
@@ -850,15 +2189,6 @@ fn kind_from_file_name(file_name: &str) -> String {
     }
 }
 
-fn label_for_kind(kind: &str) -> &'static str {
-    match kind {
-        "region" => "Region screenshot",
-        "fullscreen" => "Fullscreen screenshot",
-        "window" => "Window screenshot",
-        _ => "Screenshot",
-    }
-}
-
 fn now_millis() -> u128 {
     system_time_to_millis(SystemTime::now()).unwrap_or(0)
 }
@@ -879,29 +2209,38 @@ mod platform {
     use windows_sys::Win32::{
         Foundation::{GlobalFree, HANDLE, HWND, LPARAM, LRESULT, RECT, WPARAM},
         Graphics::Gdi::{
-            BI_RGB, BITMAPINFO, BITMAPINFOHEADER, BeginPaint, BitBlt, CAPTUREBLT,
-            CreateCompatibleBitmap, CreateCompatibleDC, CreateSolidBrush, DIB_RGB_COLORS, DeleteDC,
-            DeleteObject, EndPaint, FillRect, FrameRect, GetDC, GetDIBits, HBITMAP, HBRUSH, HDC,
-            HGDIOBJ, InvalidateRect, PAINTSTRUCT, ReleaseDC, SRCCOPY, SelectObject,
-            SetDIBitsToDevice,
+            AC_SRC_OVER, AlphaBlend, BI_RGB, BITMAPINFO, BITMAPINFOHEADER, BLENDFUNCTION,
+            BeginPaint, BitBlt, CAPTUREBLT, CreateCompatibleBitmap, CreateCompatibleDC,
+            CreateDIBSection, CreateSolidBrush, DIB_RGB_COLORS, DeleteDC, DeleteObject, EndPaint,
+            FillRect, FrameRect, GdiFlush, GetDC, GetDIBits, HBITMAP, HBRUSH, HDC, HGDIOBJ,
+            InvalidateRect, PAINTSTRUCT, ReleaseDC, SRCCOPY, SelectObject, SetDIBitsToDevice,
         },
         System::{
             DataExchange::{CloseClipboard, EmptyClipboard, OpenClipboard, SetClipboardData},
             Memory::{GMEM_MOVEABLE, GlobalAlloc, GlobalLock, GlobalUnlock},
             Ole::CF_DIB,
         },
-        UI::WindowsAndMessaging::{
-            CREATESTRUCTW, CS_HREDRAW, CS_VREDRAW, CreateWindowExW, DefWindowProcW, DestroyWindow,
-            DispatchMessageW, EnumWindows, GWLP_USERDATA, GetMessageW, GetSystemMetrics,
-            GetWindowLongPtrW, GetWindowRect, IDC_CROSS, IsWindowVisible, LoadCursorW, MSG,
-            PostQuitMessage, RegisterClassW, SM_CXVIRTUALSCREEN, SM_CYVIRTUALSCREEN,
-            SM_XVIRTUALSCREEN, SM_YVIRTUALSCREEN, SW_SHOW, SetWindowLongPtrW, ShowWindow,
-            TranslateMessage, WM_CREATE, WM_DESTROY, WM_KEYDOWN, WM_LBUTTONDOWN, WM_LBUTTONUP,
-            WM_MOUSEMOVE, WM_NCCREATE, WM_PAINT, WNDCLASSW, WS_EX_TOOLWINDOW, WS_EX_TOPMOST,
-            WS_POPUP,
+        UI::{
+            Controls::{
+                BPBF_COMPATIBLEBITMAP, BeginBufferedPaint, BufferedPaintInit,
+                BufferedPaintUnInit, EndBufferedPaint,
+            },
+            WindowsAndMessaging::{
+                CREATESTRUCTW, CS_HREDRAW, CS_VREDRAW, CreateWindowExW, DefWindowProcW,
+                DestroyWindow, DispatchMessageW, EnumWindows, GWLP_USERDATA, GetMessageW,
+                GetSystemMetrics, GetWindowLongPtrW, GetWindowRect, IDC_CROSS, IsWindowVisible,
+                LoadCursorW, MSG, PostQuitMessage, RegisterClassW, SM_CXVIRTUALSCREEN,
+                SM_CYVIRTUALSCREEN, SM_XVIRTUALSCREEN, SM_YVIRTUALSCREEN, SW_SHOW,
+                SetWindowLongPtrW, ShowWindow, TranslateMessage, WM_CREATE, WM_DESTROY,
+                WM_KEYDOWN, WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MOUSEMOVE, WM_NCCREATE, WM_PAINT,
+                WNDCLASSW, WS_EX_TOOLWINDOW, WS_EX_TOPMOST, WS_POPUP,
+            },
         },
     };
 
+    const SCREENSHOT_DIM_ALPHA: u8 = 112;
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub struct ScreenRect {
         pub x: i32,
         pub y: i32,
@@ -1032,6 +2371,41 @@ mod platform {
         use_directx: bool,
     ) -> Result<(), String> {
         let dib = capture_screen_rect_to_dib(x, y, width, height, use_directx)?;
+        copy_dib_to_clipboard(owner_hwnd, &dib)
+    }
+
+    pub fn copy_dib_to_clipboard(owner_hwnd: HWND, dib: &[u8]) -> Result<(), String> {
+        unsafe { write_dib_to_clipboard(owner_hwnd, dib) }
+    }
+
+    pub fn write_rgba_to_clipboard(
+        owner_hwnd: HWND,
+        rgba: &[u8],
+        width: u32,
+        height: u32,
+    ) -> Result<(), String> {
+        let expected = width as usize * height as usize * 4;
+        if width == 0 || height == 0 || rgba.len() < expected {
+            return Err("stitched screenshot image data is incomplete".to_string());
+        }
+        let header_size = mem::size_of::<BITMAPINFOHEADER>();
+        let mut dib = vec![0u8; header_size + expected];
+        unsafe {
+            let header = dib.as_mut_ptr() as *mut BITMAPINFOHEADER;
+            (*header).biSize = header_size as u32;
+            (*header).biWidth = width as i32;
+            (*header).biHeight = -(height as i32);
+            (*header).biPlanes = 1;
+            (*header).biBitCount = 32;
+            (*header).biCompression = BI_RGB;
+            (*header).biSizeImage = expected as u32;
+        }
+        for (source, target) in rgba[..expected]
+            .chunks_exact(4)
+            .zip(dib[header_size..].chunks_exact_mut(4))
+        {
+            target.copy_from_slice(&[source[2], source[1], source[0], source[3]]);
+        }
         unsafe { write_dib_to_clipboard(owner_hwnd, &dib) }
     }
 
@@ -1043,10 +2417,10 @@ mod platform {
         use_directx: bool,
     ) -> Result<Vec<u8>, String> {
         if use_directx {
-            match capture_screen_rect_to_dib_dxgi(x, y, width, height) {
+            match capture_screen_rect_to_dib_xcap(x, y, width, height) {
                 Ok(dib) => return Ok(dib),
                 Err(error) => {
-                    eprintln!("DXGI screenshot capture fell back to GDI: {error}");
+                    eprintln!("xcap screen capture fell back to GDI: {error}");
                 }
             }
         }
@@ -1092,17 +2466,24 @@ mod platform {
         }
     }
 
-    fn capture_screen_rect_to_dib_dxgi(
+    fn capture_screen_rect_to_dib_xcap(
         x: i32,
         y: i32,
         width: i32,
         height: i32,
     ) -> Result<Vec<u8>, String> {
-        if width <= 0 || height <= 0 {
-            return Err("screenshot region must have a positive size".to_string());
+        let region = super::capture_engine::capture_region_rgba(x, y, width, height)?;
+        if region.width != width as u32 || region.height != height as u32 {
+            return Err(format!(
+                "xcap returned a {}x{} image for a {}x{} request",
+                region.width, region.height, width, height
+            ));
         }
-
-        directx::capture_screen_rect_to_dib(x, y, width, height)
+        let mut bgra = region.rgba;
+        for pixel in bgra.chunks_exact_mut(4) {
+            pixel.swap(0, 2);
+        }
+        bgra_pixels_to_dib(&bgra, width, height)
     }
 
     fn bgra_pixels_to_dib(pixels: &[u8], width: i32, height: i32) -> Result<Vec<u8>, String> {
@@ -1130,570 +2511,123 @@ mod platform {
         Ok(dib)
     }
 
-    mod directx {
-        use std::slice;
+    /// Draws the configured inset border into a captured DIB's BGRA pixels.
+    pub fn apply_border_to_dib(
+        dib: &mut [u8],
+        width: u32,
+        height: u32,
+        thickness: u32,
+        style: &str,
+        rgb: (u8, u8, u8),
+    ) {
+        let header_size = mem::size_of::<BITMAPINFOHEADER>();
+        if dib.len() < header_size {
+            return;
+        }
+        super::apply_border_pixels(
+            &mut dib[header_size..],
+            width,
+            height,
+            thickness,
+            style,
+            [rgb.2, rgb.1, rgb.0, 0xFF],
+        );
+    }
 
-        use windows::{
-            Win32::{
-                Foundation::HMODULE,
-                Graphics::{
-                    Direct3D::{
-                        D3D_DRIVER_TYPE_UNKNOWN, D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_11_1,
-                    },
-                    Direct3D11::{
-                        D3D11_BOX, D3D11_CPU_ACCESS_READ, D3D11_CREATE_DEVICE_FLAG, D3D11_MAP_READ,
-                        D3D11_MAPPED_SUBRESOURCE, D3D11_SDK_VERSION, D3D11_TEXTURE2D_DESC,
-                        D3D11_USAGE_STAGING, D3D11CreateDevice, ID3D11Device, ID3D11DeviceContext,
-                        ID3D11Texture2D,
-                    },
-                    Dxgi::{
-                        Common::{
-                            DXGI_FORMAT_B8G8R8A8_UNORM, DXGI_MODE_ROTATION_IDENTITY,
-                            DXGI_SAMPLE_DESC,
-                        },
-                        CreateDXGIFactory1, DXGI_OUTDUPL_FRAME_INFO, IDXGIAdapter, IDXGIAdapter1,
-                        IDXGIFactory1, IDXGIOutput, IDXGIOutput1, IDXGIResource,
-                    },
-                },
-            },
-            core::Interface,
+    /// Draws the current mouse cursor into a captured screen DIB at its
+    /// on-screen position. Best effort: any failure leaves the capture as-is.
+    pub fn draw_cursor_on_dib(dib: &mut [u8], origin_x: i32, origin_y: i32) {
+        use windows_sys::Win32::UI::WindowsAndMessaging::{
+            CURSOR_SHOWING, CURSORINFO, DI_NORMAL, DrawIconEx, GetCursorInfo, GetIconInfo,
+            ICONINFO,
         };
 
-        use super::bgra_pixels_to_dib;
-
-        const DXGI_FRAME_ATTEMPTS: usize = 4;
-        const DXGI_FRAME_TIMEOUT_MS: u32 = 80;
-
-        pub fn capture_screen_rect_to_dib(
-            x: i32,
-            y: i32,
-            width: i32,
-            height: i32,
-        ) -> Result<Vec<u8>, String> {
-            unsafe {
-                let factory: IDXGIFactory1 = CreateDXGIFactory1()
-                    .map_err(|error| format!("failed to create DXGI factory: {error}"))?;
-                let output = find_output_for_rect(&factory, x, y, width, height)?;
-                log_dxgi(&format!(
-                    "output rect=({}, {})-({}, {}), rotation={}, request=({}, {}, {}, {})",
-                    output.left,
-                    output.top,
-                    output.right,
-                    output.bottom,
-                    output.rotation,
-                    x,
-                    y,
-                    width,
-                    height
-                ));
-                capture_output_rect(output, x, y, width, height)
+        let header_size = mem::size_of::<BITMAPINFOHEADER>();
+        if dib.len() < header_size {
+            return;
+        }
+        unsafe {
+            let (width, height) = {
+                let header = dib.as_ptr() as *const BITMAPINFOHEADER;
+                ((*header).biWidth, -(*header).biHeight)
+            };
+            if width <= 0 || height <= 0 {
+                return;
             }
-        }
+            let image_size = width as usize * height as usize * 4;
+            if dib.len() < header_size + image_size {
+                return;
+            }
 
-        struct DxgiOutputTarget {
-            adapter: IDXGIAdapter1,
-            output: IDXGIOutput,
-            left: i32,
-            top: i32,
-            right: i32,
-            bottom: i32,
-            rotation: i32,
-        }
+            let mut cursor: CURSORINFO = mem::zeroed();
+            cursor.cbSize = mem::size_of::<CURSORINFO>() as u32;
+            if GetCursorInfo(&mut cursor) == 0 || (cursor.flags & CURSOR_SHOWING) == 0 {
+                return;
+            }
+            let mut icon: ICONINFO = mem::zeroed();
+            if GetIconInfo(cursor.hCursor, &mut icon) == 0 {
+                return;
+            }
+            let hotspot_x = icon.xHotspot as i32;
+            let hotspot_y = icon.yHotspot as i32;
+            if !icon.hbmMask.is_null() {
+                let _ = DeleteObject(icon.hbmMask as HGDIOBJ);
+            }
+            if !icon.hbmColor.is_null() {
+                let _ = DeleteObject(icon.hbmColor as HGDIOBJ);
+            }
 
-        unsafe fn find_output_for_rect(
-            factory: &IDXGIFactory1,
-            x: i32,
-            y: i32,
-            width: i32,
-            height: i32,
-        ) -> Result<DxgiOutputTarget, String> {
-            unsafe {
-                let right = x
-                    .checked_add(width)
-                    .ok_or_else(|| "screenshot region is too wide".to_string())?;
-                let bottom = y
-                    .checked_add(height)
-                    .ok_or_else(|| "screenshot region is too tall".to_string())?;
-                let mut adapter_index = 0;
-                while let Ok(adapter) = factory.EnumAdapters1(adapter_index) {
-                    let mut output_index = 0;
-                    while let Ok(output) = adapter.EnumOutputs(output_index) {
-                        let desc = output
-                            .GetDesc()
-                            .map_err(|error| format!("failed to read DXGI output: {error}"))?;
-                        let rect = desc.DesktopCoordinates;
-                        if x >= rect.left
-                            && y >= rect.top
-                            && right <= rect.right
-                            && bottom <= rect.bottom
-                        {
-                            return Ok(DxgiOutputTarget {
-                                adapter,
-                                output,
-                                left: rect.left,
-                                top: rect.top,
-                                right: rect.right,
-                                bottom: rect.bottom,
-                                rotation: desc.Rotation.0,
-                            });
-                        }
-                        output_index += 1;
-                    }
-                    adapter_index += 1;
+            let Ok(screen_dc) = ScreenDc::new() else {
+                return;
+            };
+            let Ok(memory_dc) = MemoryDc::new(screen_dc.0) else {
+                return;
+            };
+            let mut info: BITMAPINFO = mem::zeroed();
+            info.bmiHeader.biSize = mem::size_of::<BITMAPINFOHEADER>() as u32;
+            info.bmiHeader.biWidth = width;
+            info.bmiHeader.biHeight = -height;
+            info.bmiHeader.biPlanes = 1;
+            info.bmiHeader.biBitCount = 32;
+            info.bmiHeader.biCompression = BI_RGB;
+            let mut bits: *mut c_void = ptr::null_mut();
+            let section = CreateDIBSection(
+                memory_dc.0,
+                &info,
+                DIB_RGB_COLORS,
+                &mut bits,
+                ptr::null_mut(),
+                0,
+            );
+            if section.is_null() || bits.is_null() {
+                if !section.is_null() {
+                    let _ = DeleteObject(section as HGDIOBJ);
                 }
-
-                Err(
-                    "screenshot region spans multiple outputs or no matching DXGI output was found"
-                        .to_string(),
-                )
+                return;
             }
-        }
-
-        unsafe fn capture_output_rect(
-            target: DxgiOutputTarget,
-            x: i32,
-            y: i32,
-            width: i32,
-            height: i32,
-        ) -> Result<Vec<u8>, String> {
-            unsafe {
-                let adapter: IDXGIAdapter = target
-                    .adapter
-                    .cast()
-                    .map_err(|error| format!("failed to use DXGI adapter: {error}"))?;
-                let output1: IDXGIOutput1 = target
-                    .output
-                    .cast()
-                    .map_err(|error| format!("failed to use DXGI output duplication: {error}"))?;
-                let (device, context) = create_device(&adapter)?;
-                let duplication = output1
-                    .DuplicateOutput(&device)
-                    .map_err(|error| format!("failed to duplicate DXGI output: {error}"))?;
-
-                for attempt in 1..=DXGI_FRAME_ATTEMPTS {
-                    let mut frame_info = DXGI_OUTDUPL_FRAME_INFO::default();
-                    let mut resource: Option<IDXGIResource> = None;
-                    duplication
-                        .AcquireNextFrame(DXGI_FRAME_TIMEOUT_MS, &mut frame_info, &mut resource)
-                        .map_err(|error| format!("failed to acquire DXGI frame: {error}"))?;
-                    let _frame_guard = FrameGuard {
-                        duplication: duplication.clone(),
-                    };
-                    let frame = DxgiFrameStats::from_frame_info(&frame_info);
-                    log_dxgi(&format!(
-                        "frame attempt {attempt}/{DXGI_FRAME_ATTEMPTS}: last_present={}, last_mouse={}, accumulated={}, metadata={}, protected={}",
-                        frame.last_present_time,
-                        frame.last_mouse_update_time,
-                        frame.accumulated_frames,
-                        frame.total_metadata_buffer_size,
-                        frame.protected_content_masked_out
-                    ));
-                    if !frame_has_desktop_update(&frame) {
-                        continue;
-                    }
-
-                    let resource =
-                        resource.ok_or_else(|| "DXGI frame resource is empty".to_string())?;
-                    let desktop_texture: ID3D11Texture2D = resource
-                        .cast()
-                        .map_err(|error| format!("failed to read DXGI frame texture: {error}"))?;
-
-                    return copy_desktop_texture_to_dib(
-                        &device,
-                        &context,
-                        &desktop_texture,
-                        &target,
-                        x,
-                        y,
-                        width,
-                        height,
-                    );
-                }
-
-                Err(format!(
-                    "DXGI did not acquire a desktop image update after {DXGI_FRAME_ATTEMPTS} attempts"
-                ))
+            let section = Bitmap(section);
+            let previous = SelectObject(memory_dc.0, section.0 as HGDIOBJ);
+            if previous.is_null() {
+                return;
             }
-        }
-
-        unsafe fn copy_desktop_texture_to_dib(
-            device: &ID3D11Device,
-            context: &ID3D11DeviceContext,
-            desktop_texture: &ID3D11Texture2D,
-            target: &DxgiOutputTarget,
-            x: i32,
-            y: i32,
-            width: i32,
-            height: i32,
-        ) -> Result<Vec<u8>, String> {
-            unsafe {
-                let mut texture_desc = D3D11_TEXTURE2D_DESC::default();
-                desktop_texture.GetDesc(&mut texture_desc);
-                log_dxgi(&format!(
-                    "texture desc: width={}, height={}, mip_levels={}, array_size={}, format={:?}, usage={:?}, bind_flags={}, cpu_access={}, misc={}",
-                    texture_desc.Width,
-                    texture_desc.Height,
-                    texture_desc.MipLevels,
-                    texture_desc.ArraySize,
-                    texture_desc.Format,
-                    texture_desc.Usage,
-                    texture_desc.BindFlags,
-                    texture_desc.CPUAccessFlags,
-                    texture_desc.MiscFlags
-                ));
-
-                let geometry = DxgiCopyGeometry {
-                    source_left: (x - target.left) as u32,
-                    source_top: (y - target.top) as u32,
-                    source_right: (x - target.left + width) as u32,
-                    source_bottom: (y - target.top + height) as u32,
-                };
-                validate_copy_geometry(
-                    geometry,
-                    texture_desc.Width,
-                    texture_desc.Height,
-                    target.rotation,
-                )?;
-
-                let copy_texture = create_staging_texture(device, width as u32, height as u32)?;
-                let source_box = D3D11_BOX {
-                    left: geometry.source_left,
-                    top: geometry.source_top,
-                    front: 0,
-                    right: geometry.source_right,
-                    bottom: geometry.source_bottom,
-                    back: 1,
-                };
-                context.CopySubresourceRegion(
-                    &copy_texture,
-                    0,
-                    0,
-                    0,
-                    0,
-                    desktop_texture,
-                    0,
-                    Some(&source_box),
-                );
-
-                let mut mapped = D3D11_MAPPED_SUBRESOURCE::default();
-                context
-                    .Map(&copy_texture, 0, D3D11_MAP_READ, 0, Some(&mut mapped))
-                    .map_err(|error| format!("failed to map DXGI screenshot texture: {error}"))?;
-                let _map_guard = MapGuard {
-                    context: context.clone(),
-                    texture: copy_texture.clone(),
-                };
-                log_dxgi(&format!("mapped row pitch: {}", mapped.RowPitch));
-
-                let row_bytes = width as usize * 4;
-                let mut pixels = vec![0u8; row_bytes * height as usize];
-                for row in 0..height as usize {
-                    let source = (mapped.pData as *const u8).add(row * mapped.RowPitch as usize);
-                    let source = slice::from_raw_parts(source, row_bytes);
-                    let target_start = row * row_bytes;
-                    pixels[target_start..target_start + row_bytes].copy_from_slice(source);
-                }
-                log_dxgi(&format!(
-                    "first non-black pixel sample: {:?}",
-                    sample_non_black_pixel(&pixels, width as u32, height as u32)
-                ));
-
-                bgra_pixels_to_dib(&pixels, width, height)
+            let pixels = std::slice::from_raw_parts_mut(bits as *mut u8, image_size);
+            pixels.copy_from_slice(&dib[header_size..header_size + image_size]);
+            let drawn = DrawIconEx(
+                memory_dc.0,
+                cursor.ptScreenPos.x - hotspot_x - origin_x,
+                cursor.ptScreenPos.y - hotspot_y - origin_y,
+                cursor.hCursor,
+                0,
+                0,
+                0,
+                ptr::null_mut(),
+                DI_NORMAL,
+            );
+            let _ = GdiFlush();
+            if drawn != 0 {
+                dib[header_size..header_size + image_size].copy_from_slice(pixels);
             }
-        }
-
-        unsafe fn create_device(
-            adapter: &IDXGIAdapter,
-        ) -> Result<(ID3D11Device, ID3D11DeviceContext), String> {
-            unsafe {
-                let preferred = [D3D_FEATURE_LEVEL_11_1, D3D_FEATURE_LEVEL_11_0];
-                create_device_with_feature_levels(adapter, &preferred).or_else(|_| {
-                    let fallback = [D3D_FEATURE_LEVEL_11_0];
-                    create_device_with_feature_levels(adapter, &fallback)
-                })
-            }
-        }
-
-        unsafe fn create_device_with_feature_levels(
-            adapter: &IDXGIAdapter,
-            feature_levels: &[windows::Win32::Graphics::Direct3D::D3D_FEATURE_LEVEL],
-        ) -> Result<(ID3D11Device, ID3D11DeviceContext), String> {
-            unsafe {
-                let mut device = None;
-                let mut context = None;
-                D3D11CreateDevice(
-                    adapter,
-                    D3D_DRIVER_TYPE_UNKNOWN,
-                    HMODULE::default(),
-                    D3D11_CREATE_DEVICE_FLAG(0),
-                    Some(feature_levels),
-                    D3D11_SDK_VERSION,
-                    Some(&mut device),
-                    None,
-                    Some(&mut context),
-                )
-                .map_err(|error| format!("failed to create D3D11 device: {error}"))?;
-
-                Ok((
-                    device.ok_or_else(|| "D3D11 device is empty".to_string())?,
-                    context.ok_or_else(|| "D3D11 device context is empty".to_string())?,
-                ))
-            }
-        }
-
-        unsafe fn create_staging_texture(
-            device: &ID3D11Device,
-            width: u32,
-            height: u32,
-        ) -> Result<ID3D11Texture2D, String> {
-            unsafe {
-                let desc = D3D11_TEXTURE2D_DESC {
-                    Width: width.max(1),
-                    Height: height.max(1),
-                    MipLevels: 1,
-                    ArraySize: 1,
-                    Format: DXGI_FORMAT_B8G8R8A8_UNORM,
-                    SampleDesc: DXGI_SAMPLE_DESC {
-                        Count: 1,
-                        Quality: 0,
-                    },
-                    Usage: D3D11_USAGE_STAGING,
-                    BindFlags: 0,
-                    CPUAccessFlags: D3D11_CPU_ACCESS_READ.0 as u32,
-                    MiscFlags: 0,
-                };
-                let mut texture = None;
-                device
-                    .CreateTexture2D(&desc, None, Some(&mut texture))
-                    .map_err(|error| format!("failed to create D3D11 staging texture: {error}"))?;
-                texture.ok_or_else(|| "D3D11 staging texture is empty".to_string())
-            }
-        }
-
-        #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-        struct DxgiFrameStats {
-            last_present_time: i64,
-            last_mouse_update_time: i64,
-            accumulated_frames: u32,
-            total_metadata_buffer_size: u32,
-            protected_content_masked_out: bool,
-        }
-
-        impl DxgiFrameStats {
-            fn from_frame_info(frame_info: &DXGI_OUTDUPL_FRAME_INFO) -> Self {
-                Self {
-                    last_present_time: frame_info.LastPresentTime,
-                    last_mouse_update_time: frame_info.LastMouseUpdateTime,
-                    accumulated_frames: frame_info.AccumulatedFrames,
-                    total_metadata_buffer_size: frame_info.TotalMetadataBufferSize,
-                    protected_content_masked_out: frame_info.ProtectedContentMaskedOut.as_bool(),
-                }
-            }
-        }
-
-        fn frame_has_desktop_update(frame: &DxgiFrameStats) -> bool {
-            frame.last_present_time != 0
-                || frame.accumulated_frames > 0
-                || frame.total_metadata_buffer_size > 0
-        }
-
-        #[derive(Clone, Copy, Debug)]
-        struct DxgiCopyGeometry {
-            source_left: u32,
-            source_top: u32,
-            source_right: u32,
-            source_bottom: u32,
-        }
-
-        fn validate_copy_geometry(
-            geometry: DxgiCopyGeometry,
-            texture_width: u32,
-            texture_height: u32,
-            rotation: i32,
-        ) -> Result<(), String> {
-            if rotation != DXGI_MODE_ROTATION_IDENTITY.0 {
-                return Err(format!(
-                    "DXGI output is rotated ({rotation}); falling back to GDI"
-                ));
-            }
-            if geometry.source_left >= geometry.source_right
-                || geometry.source_top >= geometry.source_bottom
-            {
-                return Err("DXGI screenshot source box is empty".to_string());
-            }
-            if geometry.source_right > texture_width || geometry.source_bottom > texture_height {
-                return Err(format!(
-                    "DXGI screenshot source box is outside texture bounds: box=({}, {})-({}, {}), texture={}x{}",
-                    geometry.source_left,
-                    geometry.source_top,
-                    geometry.source_right,
-                    geometry.source_bottom,
-                    texture_width,
-                    texture_height
-                ));
-            }
-            Ok(())
-        }
-
-        #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-        struct DxgiPixelSample {
-            x: u32,
-            y: u32,
-            b: u8,
-            g: u8,
-            r: u8,
-            a: u8,
-        }
-
-        fn sample_non_black_pixel(
-            pixels: &[u8],
-            width: u32,
-            height: u32,
-        ) -> Option<DxgiPixelSample> {
-            let expected_len = width as usize * height as usize * 4;
-            if pixels.len() < expected_len {
-                return None;
-            }
-            pixels[..expected_len]
-                .chunks_exact(4)
-                .enumerate()
-                .find_map(|(index, bgra)| {
-                    if bgra[0] == 0 && bgra[1] == 0 && bgra[2] == 0 {
-                        return None;
-                    }
-                    Some(DxgiPixelSample {
-                        x: (index as u32) % width,
-                        y: (index as u32) / width,
-                        b: bgra[0],
-                        g: bgra[1],
-                        r: bgra[2],
-                        a: bgra[3],
-                    })
-                })
-        }
-
-        #[cfg(debug_assertions)]
-        fn log_dxgi(message: &str) {
-            eprintln!("DXGI screenshot capture: {message}");
-        }
-
-        #[cfg(not(debug_assertions))]
-        fn log_dxgi(_message: &str) {}
-
-        struct FrameGuard {
-            duplication: windows::Win32::Graphics::Dxgi::IDXGIOutputDuplication,
-        }
-
-        impl Drop for FrameGuard {
-            fn drop(&mut self) {
-                unsafe {
-                    let _ = self.duplication.ReleaseFrame();
-                }
-            }
-        }
-
-        struct MapGuard {
-            context: ID3D11DeviceContext,
-            texture: ID3D11Texture2D,
-        }
-
-        impl Drop for MapGuard {
-            fn drop(&mut self) {
-                unsafe {
-                    self.context.Unmap(&self.texture, 0);
-                }
-            }
-        }
-
-        #[cfg(test)]
-        mod tests {
-            use super::*;
-
-            #[test]
-            fn dxgi_rejects_pointer_only_frame() {
-                let frame = DxgiFrameStats {
-                    last_present_time: 0,
-                    last_mouse_update_time: 12,
-                    accumulated_frames: 0,
-                    total_metadata_buffer_size: 0,
-                    protected_content_masked_out: false,
-                };
-
-                assert!(!frame_has_desktop_update(&frame));
-            }
-
-            #[test]
-            fn dxgi_accepts_desktop_frame() {
-                let frame = DxgiFrameStats {
-                    last_present_time: 15,
-                    last_mouse_update_time: 0,
-                    accumulated_frames: 1,
-                    total_metadata_buffer_size: 16,
-                    protected_content_masked_out: false,
-                };
-
-                assert!(frame_has_desktop_update(&frame));
-            }
-
-            #[test]
-            fn dxgi_rejects_rotated_output_before_copy() {
-                let geometry = DxgiCopyGeometry {
-                    source_left: 0,
-                    source_top: 0,
-                    source_right: 100,
-                    source_bottom: 80,
-                };
-
-                let error = validate_copy_geometry(geometry, 100, 80, 2)
-                    .expect_err("rotation should fall back to GDI");
-
-                assert!(error.contains("rotated"));
-            }
-
-            #[test]
-            fn dxgi_rejects_source_box_outside_texture_before_copy() {
-                let geometry = DxgiCopyGeometry {
-                    source_left: 20,
-                    source_top: 10,
-                    source_right: 140,
-                    source_bottom: 90,
-                };
-
-                let error = validate_copy_geometry(geometry, 100, 80, 1)
-                    .expect_err("invalid source box should fall back to GDI");
-
-                assert!(error.contains("outside"));
-            }
-
-            #[test]
-            fn dxgi_samples_first_non_black_pixel() {
-                let mut pixels = vec![0u8; 4 * 3];
-                pixels[8] = 12;
-                pixels[9] = 34;
-                pixels[10] = 56;
-                pixels[11] = 255;
-
-                let sample = sample_non_black_pixel(&pixels, 3, 1);
-
-                assert_eq!(
-                    sample,
-                    Some(DxgiPixelSample {
-                        x: 2,
-                        y: 0,
-                        b: 12,
-                        g: 34,
-                        r: 56,
-                        a: 255,
-                    })
-                );
-            }
-
-            #[test]
-            fn dxgi_reports_no_non_black_pixel_for_black_frame() {
-                let pixels = vec![0u8; 4 * 3];
-
-                assert_eq!(sample_non_black_pixel(&pixels, 3, 1), None);
-            }
+            let _ = SelectObject(memory_dc.0, previous);
         }
     }
 
@@ -1713,6 +2647,48 @@ mod platform {
     }
 
     pub fn dib_to_jpeg_bytes(dib: &[u8], width: u32, height: u32) -> Result<Vec<u8>, String> {
+        dib_to_jpeg_bytes_with_quality(dib, width, height, 90)
+    }
+
+    pub fn dib_to_jpeg_bytes_with_quality(
+        dib: &[u8],
+        width: u32,
+        height: u32,
+        quality: u8,
+    ) -> Result<Vec<u8>, String> {
+        let rgb = dib_to_rgb(dib, width, height)?;
+        let mut jpeg = Vec::new();
+        JpegEncoder::new_with_quality(&mut jpeg, quality.clamp(1, 100))
+            .write_image(&rgb, width, height, ColorType::Rgb8.into())
+            .map_err(|error| format!("failed to encode JPEG: {error}"))?;
+        Ok(jpeg)
+    }
+
+    pub fn dib_to_png_bytes_with_quality(
+        dib: &[u8],
+        width: u32,
+        height: u32,
+        quality: u8,
+    ) -> Result<Vec<u8>, String> {
+        use image::codecs::png::{CompressionType, FilterType, PngEncoder};
+
+        let rgb = dib_to_rgb(dib, width, height)?;
+        let mut png = Vec::new();
+        let compression_level = 1 + ((quality.clamp(1, 100) as u16 - 1) * 8 / 99) as u8;
+        PngEncoder::new_with_quality(
+            &mut png,
+            CompressionType::Level(compression_level),
+            FilterType::Adaptive,
+        )
+            .write_image(&rgb, width, height, ColorType::Rgb8.into())
+            .map_err(|error| format!("failed to encode PNG: {error}"))?;
+        Ok(png)
+    }
+
+    // GDI/DXGI captures leave the DIB alpha channel undefined (often zero), so
+    // encoders must drop it instead of trusting it — an as-is RGBA encode would
+    // produce a fully transparent PNG.
+    fn dib_to_rgb(dib: &[u8], width: u32, height: u32) -> Result<Vec<u8>, String> {
         let header_size = mem::size_of::<BITMAPINFOHEADER>();
         let expected_len = header_size + width as usize * height as usize * 4;
         if dib.len() < expected_len {
@@ -1726,12 +2702,7 @@ mod platform {
             rgb.push(bgra[1]);
             rgb.push(bgra[0]);
         }
-
-        let mut jpeg = Vec::new();
-        JpegEncoder::new_with_quality(&mut jpeg, 90)
-            .write_image(&rgb, width, height, ColorType::Rgb8.into())
-            .map_err(|error| format!("failed to encode JPEG: {error}"))?;
-        Ok(jpeg)
+        Ok(rgb)
     }
 
     unsafe fn bitmap_to_dib(
@@ -1881,6 +2852,7 @@ mod platform {
                 return Err("failed to create screenshot selection overlay".to_string());
             }
 
+            let buffered_paint_initialized = BufferedPaintInit() >= 0;
             ShowWindow(hwnd, SW_SHOW);
             let _ = InvalidateRect(hwnd, ptr::null(), 1);
 
@@ -1888,6 +2860,9 @@ mod platform {
             while GetMessageW(&mut message, ptr::null_mut(), 0, 0) > 0 {
                 let _ = TranslateMessage(&message);
                 DispatchMessageW(&message);
+            }
+            if buffered_paint_initialized {
+                let _ = BufferedPaintUnInit();
             }
 
             Ok(overlay.result)
@@ -1918,20 +2893,31 @@ mod platform {
                 WM_CREATE => 0,
                 WM_MOUSEMOVE => {
                     let point = message_point(lparam, &overlay.screen);
+                    let mut should_repaint = false;
                     match &overlay.mode {
                         SelectionMode::Window { windows } => {
-                            overlay.hover = windows
+                            let next_hover = windows
                                 .iter()
                                 .find(|rect| rect_contains(rect, point.0, point.1))
                                 .map(copy_rect);
+                            if overlay.hover != next_hover {
+                                overlay.hover = next_hover;
+                                should_repaint = true;
+                            }
                         }
                         SelectionMode::Region => {
                             if overlay.drag_start.is_some() {
-                                overlay.drag_current = Some(point);
+                                let next_point = Some(point);
+                                if overlay.drag_current != next_point {
+                                    overlay.drag_current = next_point;
+                                    should_repaint = true;
+                                }
                             }
                         }
                     }
-                    let _ = InvalidateRect(hwnd, ptr::null(), 0);
+                    if should_repaint {
+                        let _ = InvalidateRect(hwnd, ptr::null(), 0);
+                    }
                     0
                 }
                 WM_LBUTTONDOWN => {
@@ -1947,6 +2933,7 @@ mod platform {
                             overlay.drag_start = Some(point);
                             overlay.drag_current = Some(point);
                             SetCapture(hwnd);
+                            let _ = InvalidateRect(hwnd, ptr::null(), 0);
                         }
                     }
                     0
@@ -1993,12 +2980,32 @@ mod platform {
                 return;
             }
 
+            let paint_bounds = RECT {
+                left: 0,
+                top: 0,
+                right: overlay.screen.width,
+                bottom: overlay.screen.height,
+            };
+            let mut buffered_dc = ptr::null_mut();
+            let paint_buffer = BeginBufferedPaint(
+                hdc,
+                &paint_bounds,
+                BPBF_COMPATIBLEBITMAP,
+                ptr::null(),
+                &mut buffered_dc,
+            );
+            let render_dc = if paint_buffer != 0 && !buffered_dc.is_null() {
+                buffered_dc
+            } else {
+                hdc
+            };
+
             let header_size = mem::size_of::<BITMAPINFOHEADER>();
             if overlay.dib.len() >= header_size {
                 let info = overlay.dib.as_ptr() as *const BITMAPINFO;
                 let bits = overlay.dib.as_ptr().add(header_size) as *const c_void;
                 let _ = SetDIBitsToDevice(
-                    hdc,
+                    render_dc,
                     0,
                     0,
                     overlay.screen.width as u32,
@@ -2023,15 +3030,19 @@ mod platform {
             let selected = selected
                 .as_ref()
                 .map(|rect| clamp_rect_to_screen(rect, &overlay.screen));
-            dim_outside_rect(hdc, &overlay.screen, selected.as_ref());
+            dim_outside_rect(render_dc, &overlay.screen, selected.as_ref());
             if let Some(rect) = selected {
                 frame_rect(
-                    hdc,
+                    render_dc,
                     &screen_to_overlay_rect(&rect, &overlay.screen),
                     0x00ff_ffff,
                 );
                 let inner = inset_rect(&screen_to_overlay_rect(&rect, &overlay.screen), 1);
-                frame_rect(hdc, &inner, 0x0000_78ff);
+                frame_rect(render_dc, &inner, 0x0000_78ff);
+            }
+
+            if paint_buffer != 0 {
+                let _ = EndBufferedPaint(paint_buffer, 1);
             }
 
             EndPaint(hwnd, &paint);
@@ -2040,15 +3051,45 @@ mod platform {
 
     unsafe fn dim_outside_rect(hdc: HDC, screen: &ScreenRect, selected: Option<&ScreenRect>) {
         unsafe {
-            let brush = Brush::new(0x0000_0000);
             let Some(selected) = selected else {
                 return;
             };
 
+            let Ok(dim_dc) = MemoryDc::new(hdc) else {
+                return;
+            };
+            let Ok(dim_bitmap) = Bitmap::new(hdc, 1, 1) else {
+                return;
+            };
+            let previous = SelectObject(dim_dc.0, dim_bitmap.0 as HGDIOBJ);
+            if previous.is_null() {
+                return;
+            }
+            let pixel = RECT {
+                left: 0,
+                top: 0,
+                right: 1,
+                bottom: 1,
+            };
+            let black = Brush::new(0x0000_0000);
+            let _ = FillRect(dim_dc.0, &pixel, black.0);
+            let blend = BLENDFUNCTION {
+                BlendOp: AC_SRC_OVER as u8,
+                BlendFlags: 0,
+                SourceConstantAlpha: SCREENSHOT_DIM_ALPHA,
+                AlphaFormat: 0,
+            };
             let selected = screen_to_overlay_rect(selected, screen);
             for rect in outside_rects(screen.width, screen.height, &selected) {
-                let _ = FillRect(hdc, &rect, brush.0);
+                let width = rect.right - rect.left;
+                let height = rect.bottom - rect.top;
+                if width > 0 && height > 0 {
+                    let _ = AlphaBlend(
+                        hdc, rect.left, rect.top, width, height, dim_dc.0, 0, 0, 1, 1, blend,
+                    );
+                }
             }
+            let _ = SelectObject(dim_dc.0, previous);
         }
     }
 
@@ -2280,6 +3321,161 @@ mod tests {
         assert_eq!(app_window_kind("rdp-session-2"), "remoteDesktop");
         assert_eq!(app_window_kind("vnc-1"), "remoteDesktop");
         assert_eq!(app_window_kind("something-else"), "overlay");
+    }
+
+    #[test]
+    fn library_copy_names_preserve_original_capture_time() {
+        assert_eq!(
+            taken_at_from_file_name("KKTerm-region-1723456789012-edited.png"),
+            Some(1_723_456_789_012)
+        );
+        assert_eq!(taken_at_from_file_name("external-image.png"), None);
+    }
+
+    #[test]
+    fn batch_resize_dimensions_are_bounded() {
+        assert!(validate_batch_dimensions(1920, 1080).is_ok());
+        assert!(validate_batch_dimensions(0, 1080).is_err());
+        assert!(validate_batch_dimensions(16_385, 1080).is_err());
+        assert!(validate_batch_dimensions(16_384, 16_384).is_err());
+    }
+
+    #[test]
+    fn batch_resize_resolves_single_dimensions_and_percentages_per_image() {
+        let width_only = ResizeScreenshotsRequest {
+            ids: Vec::new(),
+            mode: "exact".to_string(),
+            width: Some(1024),
+            height: None,
+            percentage: None,
+            preserve_aspect_ratio: false,
+        };
+        assert_eq!(resolve_resize_dimensions(&width_only, 1920, 1080), Ok((1024, 576)));
+
+        let height_only = ResizeScreenshotsRequest {
+            width: None,
+            height: Some(720),
+            ..width_only
+        };
+        assert_eq!(resolve_resize_dimensions(&height_only, 1920, 1080), Ok((1280, 720)));
+
+        let percentage = ResizeScreenshotsRequest {
+            mode: "percentage".to_string(),
+            width: None,
+            height: None,
+            percentage: Some(50),
+            ..height_only
+        };
+        assert_eq!(resolve_resize_dimensions(&percentage, 1920, 1080), Ok((960, 540)));
+        assert_eq!(resolve_resize_dimensions(&percentage, 800, 1200), Ok((400, 600)));
+    }
+
+    #[test]
+    fn batch_conversion_encodes_all_supported_formats() {
+        let folder = tempfile::tempdir().expect("temp folder");
+        let image = image::DynamicImage::new_rgba8(2, 2);
+        for format in ["png", "jpeg", "webp", "gif"] {
+            let path = folder.path().join(format!("output.{}", output_extension(format)));
+            write_dynamic_image(&image, &path, format, 80).expect("encode image");
+            assert_eq!(image::image_dimensions(path).expect("read dimensions"), (2, 2));
+        }
+        assert_eq!(gif_speed_for_quality(1), 30);
+        assert_eq!(gif_speed_for_quality(100), 1);
+    }
+
+    #[test]
+    fn apply_border_pixels_draws_inset_solid_border() {
+        let (width, height) = (5u32, 4u32);
+        let mut pixels = vec![9u8; (width * height * 4) as usize];
+        apply_border_pixels(&mut pixels, width, height, 1, "solid", [1, 2, 3, 255]);
+
+        let pixel = |x: u32, y: u32| {
+            let index = ((y * width + x) * 4) as usize;
+            &pixels[index..index + 4]
+        };
+        assert_eq!(pixel(0, 0), &[1, 2, 3, 255]);
+        assert_eq!(pixel(4, 0), &[1, 2, 3, 255]);
+        assert_eq!(pixel(0, 3), &[1, 2, 3, 255]);
+        assert_eq!(pixel(4, 3), &[1, 2, 3, 255]);
+        assert_eq!(pixel(2, 0), &[1, 2, 3, 255]);
+        assert_eq!(pixel(0, 2), &[1, 2, 3, 255]);
+        // The interior stays untouched and the image size does not change.
+        assert_eq!(pixel(2, 2), &[9, 9, 9, 9]);
+        assert_eq!(pixels.len(), (width * height * 4) as usize);
+    }
+
+    #[test]
+    fn apply_border_pixels_clamps_thickness_and_skips_gaps_when_dotted() {
+        // A thickness beyond half the image must not panic or over-run.
+        let mut tiny = vec![0u8; 3 * 3 * 4];
+        apply_border_pixels(&mut tiny, 3, 3, 64, "solid", [255, 255, 255, 255]);
+        assert!(tiny.chunks_exact(4).all(|pixel| pixel == [255, 255, 255, 255]));
+
+        // A dotted border leaves gaps along the top edge.
+        let mut dotted = vec![0u8; 16 * 4 * 4];
+        apply_border_pixels(&mut dotted, 16, 4, 1, "dotted", [255, 255, 255, 255]);
+        let top: Vec<u8> = (0..16u32).map(|x| dotted[(x * 4) as usize]).collect();
+        assert!(top.contains(&255));
+        assert!(top.contains(&0));
+    }
+
+    #[test]
+    fn parse_border_color_reads_hex_and_falls_back_to_black() {
+        assert_eq!(parse_border_color("#ff8001"), (255, 128, 1));
+        assert_eq!(parse_border_color("00ff00"), (0, 255, 0));
+        assert_eq!(parse_border_color("not-a-color"), (0, 0, 0));
+    }
+
+    #[test]
+    fn edited_screenshot_save_overwrites_or_creates_a_copy_as_requested() {
+        use image::{ColorType, ImageEncoder};
+
+        fn png_data_url(width: u32, height: u32) -> String {
+            let image = image::RgbaImage::new(width, height);
+            let mut bytes = Vec::new();
+            image::codecs::png::PngEncoder::new(&mut bytes)
+                .write_image(
+                    image.as_raw(),
+                    width,
+                    height,
+                    ColorType::Rgba8.into(),
+                )
+                .expect("encode PNG data URL");
+            format!("data:image/png;base64,{}", STANDARD.encode(bytes))
+        }
+
+        let folder = tempfile::tempdir().expect("temp folder");
+        let source = folder.path().join("source.png");
+        write_dynamic_image(&image::DynamicImage::new_rgba8(2, 2), &source, "png", 90)
+            .expect("write source");
+
+        let copy = save_edited_library_screenshot(
+            SaveEditedScreenshotRequest {
+                id: "source.png".to_string(),
+                data_url: png_data_url(4, 3),
+                save_as_copy: true,
+            },
+            folder.path().to_string_lossy().into_owned(),
+        )
+        .expect("save edited copy");
+        assert_ne!(copy.id, "source.png");
+        assert_eq!(image::image_dimensions(&source).expect("source dimensions"), (2, 2));
+        assert_eq!(
+            image::image_dimensions(folder.path().join(&copy.id)).expect("copy dimensions"),
+            (4, 3),
+        );
+
+        let saved = save_edited_library_screenshot(
+            SaveEditedScreenshotRequest {
+                id: "source.png".to_string(),
+                data_url: png_data_url(5, 2),
+                save_as_copy: false,
+            },
+            folder.path().to_string_lossy().into_owned(),
+        )
+        .expect("overwrite source");
+        assert_eq!(saved.id, "source.png");
+        assert_eq!(image::image_dimensions(source).expect("saved dimensions"), (5, 2));
     }
 
     #[cfg(not(target_os = "windows"))]

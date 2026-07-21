@@ -512,6 +512,16 @@ function providerCliBackend(providerKind: AiProviderKind): {
       patch: (checked) => ({ useClaudeCli: checked }),
     };
   }
+  if (providerKind === "cursor") {
+    return {
+      backend: "cursor",
+      installToolId: "cursor-cli",
+      labelKey: "settings.useCursorCli",
+      hintKey: "settings.useCursorCliHint",
+      enabled: (draft) => draft.useCursorCli,
+      patch: (checked) => ({ useCursorCli: checked }),
+    };
+  }
   return null;
 }
 
@@ -1181,7 +1191,8 @@ export function AiSettings() {
   const aiProviderDefinition = getAiProviderDefinition(draft.providerKind);
   const useCliBackend = Boolean(
     (draft.providerKind === "openai" && draft.useCodexCli) ||
-      (draft.providerKind === "anthropic" && draft.useClaudeCli),
+      (draft.providerKind === "anthropic" && draft.useClaudeCli) ||
+      (draft.providerKind === "cursor" && draft.useCursorCli),
   );
 
   useEffect(() => {
@@ -1587,6 +1598,7 @@ export function AiSettings() {
       extraHeaders: defaults.extraHeaders,
       useCodexCli: defaults.useCodexCli,
       useClaudeCli: defaults.useClaudeCli,
+      useCursorCli: defaults.useCursorCli,
     }));
     setApiKeyDraft("");
     setSelectedProviderHasApiKey(false);

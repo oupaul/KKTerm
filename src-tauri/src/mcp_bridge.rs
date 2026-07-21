@@ -635,7 +635,7 @@ fn redact_bridge_response(response: &Value) -> Value {
 fn redact_tool_arguments(name: &str, arguments: &Value) -> Value {
     let mut redacted = redact_sensitive_debug_value(arguments);
     match name {
-        "kkterm.workspace.sessions.send_input"
+        "kkterm.workspace.sessions.dangerous.send_input"
         | "kkterm.workspace.dangerous.remote_desktop_send_text" => {
             redact_object_key(&mut redacted, "text");
         }
@@ -755,6 +755,21 @@ fn remap_required_id(mut args: Value, source: &str, target: &str) -> Result<Valu
 
 async fn dispatch_tool(app: &AppHandle, name: &str, args: Value) -> Result<Value, String> {
     match name {
+        "kkterm.workspace.workspaces.list" => {
+            parse_tool_json(&crate::ai::workspace_tool(app, "workspace_list", json!({})))
+        }
+        "kkterm.workspace.workspaces.create" => {
+            parse_tool_json(&crate::ai::workspace_tool(app, "workspace_create", args))
+        }
+        "kkterm.workspace.workspaces.rename" => {
+            parse_tool_json(&crate::ai::workspace_tool(app, "workspace_rename", args))
+        }
+        "kkterm.workspace.workspaces.reorder" => {
+            parse_tool_json(&crate::ai::workspace_tool(app, "workspace_reorder", args))
+        }
+        "kkterm.workspace.workspaces.dangerous.delete" => {
+            parse_tool_json(&crate::ai::workspace_tool(app, "workspace_delete", args))
+        }
         "kkterm.workspace.connections.list" => {
             let raw = crate::ai::connection_tool(app, "connection_list", json!({}));
             parse_tool_json(&raw)
@@ -849,7 +864,7 @@ async fn dispatch_tool(app: &AppHandle, name: &str, args: Value) -> Result<Value
             let raw = crate::ai::live_session_tool(app, "session_state", json!({})).await;
             parse_tool_json(&raw)
         }
-        "kkterm.workspace.sessions.send_input" => {
+        "kkterm.workspace.sessions.dangerous.send_input" => {
             let pane_id = args
                 .get("paneId")
                 .and_then(Value::as_str)
@@ -1022,6 +1037,10 @@ async fn dispatch_tool(app: &AppHandle, name: &str, args: Value) -> Result<Value
             let raw =
                 crate::ai::dashboard_tool(app, "dashboard_read_widget_source", json!({"id": id}));
             parse_dashboard_json(&raw)
+        }
+        "kkterm.dashboard.check_widget_health" => {
+            let raw = crate::ai::dashboard_check_widget_health_tool(app, args).await;
+            parse_tool_json(&raw)
         }
         "kkterm.dashboard.create_view" => {
             let title = args
@@ -1556,7 +1575,7 @@ mod tests {
     #[test]
     fn redact_tool_arguments_hides_terminal_input_and_widget_source() {
         let send_input = redact_tool_arguments(
-            "kkterm.workspace.sessions.send_input",
+            "kkterm.workspace.sessions.dangerous.send_input",
             &json!({"paneId": "pane-1", "text": "password", "submit": true}),
         );
         assert_eq!(send_input["text"], "[REDACTED]");
@@ -1602,7 +1621,7 @@ mod tests {
             "id": 1,
             "method": "tools/call",
             "params": {
-                "name": "kkterm.workspace.sessions.send_input",
+                "name": "kkterm.workspace.sessions.dangerous.send_input",
                 "arguments": {"paneId": "pane-1", "text": "secret"}
             }
         });
@@ -1695,7 +1714,12 @@ mod tests {
         assert!(dangerous_tool("kkterm.watchdog.dangerous.create"));
         assert!(dangerous_tool("kkterm.app.dangerous.capture_window"));
         assert!(!dangerous_tool("kkterm.app.list_windows"));
-        assert!(!dangerous_tool("kkterm.workspace.sessions.send_input"));
+        assert!(dangerous_tool(
+            "kkterm.workspace.sessions.dangerous.send_input"
+        ));
+        assert!(dangerous_tool(
+            "kkterm.workspace.workspaces.dangerous.delete"
+        ));
         assert!(!dangerous_tool("kkterm.workspace.file_browser.list"));
         assert!(!dangerous_tool(
             "kkterm.workspace.sessions.remote_desktop_screenshot"
@@ -1716,6 +1740,11 @@ mod tests {
             .iter()
             .filter_map(|tool| tool.get("name").and_then(Value::as_str).map(str::to_string))
             .collect();
+        assert!(names.contains(&"kkterm.workspace.workspaces.list".to_string()));
+        assert!(names.contains(&"kkterm.workspace.workspaces.create".to_string()));
+        assert!(names.contains(&"kkterm.workspace.workspaces.rename".to_string()));
+        assert!(names.contains(&"kkterm.workspace.workspaces.reorder".to_string()));
+        assert!(names.contains(&"kkterm.workspace.workspaces.dangerous.delete".to_string()));
         assert!(names.contains(&"kkterm.workspace.connections.open".to_string()));
         assert!(names.contains(&"kkterm.workspace.connections.create".to_string()));
         assert!(names.contains(&"kkterm.workspace.connections.update".to_string()));
@@ -1727,7 +1756,7 @@ mod tests {
         assert!(names.contains(&"kkterm.workspace.connection_folders.delete".to_string()));
         assert!(names.contains(&"kkterm.workspace.connection_folders.move".to_string()));
         assert!(names.contains(&"kkterm.workspace.connections.screenshot".to_string()));
-        assert!(names.contains(&"kkterm.workspace.sessions.send_input".to_string()));
+        assert!(names.contains(&"kkterm.workspace.sessions.dangerous.send_input".to_string()));
         assert!(names.contains(&"kkterm.workspace.sessions.read_buffer".to_string()));
         assert!(names.contains(&"kkterm.workspace.quick_commands.list".to_string()));
         assert!(names.contains(&"kkterm.workspace.quick_commands.read".to_string()));
@@ -1736,6 +1765,7 @@ mod tests {
         assert!(names.contains(&"kkterm.workspace.dangerous.pointer_click".to_string()));
         // Dashboard surface
         assert!(names.contains(&"kkterm.dashboard.load_state".to_string()));
+        assert!(names.contains(&"kkterm.dashboard.check_widget_health".to_string()));
         assert!(names.contains(&"kkterm.dashboard.screenshot_view".to_string()));
         assert!(names.contains(&"kkterm.dashboard.screenshot_widget".to_string()));
         assert!(names.contains(&"kkterm.dashboard.create_view".to_string()));
@@ -1847,6 +1877,67 @@ mod tests {
         assert_eq!(
             place.pointer("/inputSchema/properties/metadata/properties/expiry/type"),
             Some(&json!("string"))
+        );
+        for name in [
+            "kkterm.itops.rack_items.place",
+            "kkterm.itops.rack_items.update",
+            "kkterm.itops.rack_items.move",
+        ] {
+            let descriptor = tools
+                .iter()
+                .find(|tool| tool.get("name").and_then(Value::as_str) == Some(name))
+                .expect("rack item descriptor exists");
+            assert_eq!(
+                descriptor.pointer("/inputSchema/properties/mountFace/enum"),
+                Some(&json!(["front", "rear"])),
+                "{name} must publish the mounting-face field accepted by itops_tool",
+            );
+        }
+    }
+
+    #[test]
+    fn connection_descriptor_matches_supported_local_surface_types() {
+        let tools = crate::mcp_tool_catalog::tool_descriptors();
+        let create = tools
+            .iter()
+            .find(|tool| {
+                tool.get("name").and_then(Value::as_str)
+                    == Some("kkterm.workspace.connections.create")
+            })
+            .expect("Connection create descriptor exists");
+        let types = create
+            .pointer("/inputSchema/properties/type/enum")
+            .and_then(Value::as_array)
+            .expect("Connection type enum exists");
+
+        assert!(types.contains(&json!("localFiles")));
+        assert!(types.contains(&json!("fileView")));
+        assert_eq!(
+            create.pointer("/inputSchema/properties/workspaceId/type"),
+            Some(&json!(["string", "null"]))
+        );
+        for property in [
+            "sshSocksProxy",
+            "sshCompression",
+            "sshOldProtocols",
+            "urlUserAgent",
+            "urlProxy",
+            "rdpOptions",
+            "vncOptions",
+            "ftpOptions",
+            "sshPortForwardings",
+            "fileViewOpenExternal",
+        ] {
+            assert!(
+                create
+                    .pointer(&format!("/inputSchema/properties/{property}"))
+                    .is_some(),
+                "Connection schema must publish the {property} field accepted by storage",
+            );
+        }
+        assert_eq!(
+            create.pointer("/inputSchema/properties/rdpOptions/properties/sharedLocalFolder/type"),
+            Some(&json!(["string", "null"])),
         );
     }
 

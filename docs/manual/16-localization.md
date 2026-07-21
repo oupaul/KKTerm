@@ -45,6 +45,8 @@ Detailed rules are in `docs/ARCHITECTURE.md` §Internationalization. Summary:
 6. Renames must update every locale file plus the matching `docs/localization_todo/` filename.
 7. Related regional locales must be translated independently. Cross-locale translation bleed is strictly forbidden even when scripts or words overlap: `zh-CN` and `zh-TW`, `es-ES` and `es-MX`, and `pt-PT` and `pt-BR` must use their own script, spelling, and regional terminology.
 
+The `ai.tmuxSessionLabels` array is an intentional creative-label exception to literal translation: it supplies themed names for new tmux sessions, so locales may use a curated thematic set instead of translating each astronomy term one-to-one. Keep the array length stable. A shared themed set across locales is allowed when it is an explicit product choice; do not treat that exception as permission to copy sibling-locale prose or convert ordinary translations mechanically.
+
 ### CRITICAL — zh-TW must never contain Mainland Chinese terminology
 
 `zh-TW.json` targets Traditional Chinese users in **Taiwan**. It must use Taiwan computing terminology and Taiwan phrasing — never Mainland Chinese terms, even when the characters are traditional. This is a hard review gate: any zh-TW string that uses a Mainland term is a bug that blocks the translation pass.

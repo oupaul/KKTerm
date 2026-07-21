@@ -5,7 +5,7 @@ export const opencodeProvider: AiProviderDefinition = {
   kind: "opencode",
   label: "OpenCode",
   baseUrl: "https://opencode.ai/zen/go/v1",
-  defaultModel: "kimi-k2.6",
+  defaultModel: "kimi-k3",
   defaultReasoningEffort: "medium",
   reasoningEfforts: [...STANDARD_REASONING_EFFORTS],
   requiresApiKey: true,
@@ -15,6 +15,7 @@ export const opencodeProvider: AiProviderDefinition = {
   apiKeyUrl: "https://opencode.ai/console",
   modelListStrategy: "openAiCompatible",
   modelOptions: [
+    { id: "kimi-k3", label: "Kimi K3", supportsImageInput: false },
     { id: "kimi-k2.6", label: "Kimi K2.6", supportsImageInput: false },
     { id: "kimi-k2.5", label: "Kimi K2.5", supportsImageInput: false },
     { id: "deepseek-v4-pro", label: "DeepSeek V4 Pro", supportsImageInput: false },

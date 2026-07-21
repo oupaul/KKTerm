@@ -26,6 +26,51 @@
   white-space: nowrap;
 }
 
+.rdp-shared-folder-editor {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 0 12px 10px 46px;
+}
+
+.rdp-shared-folder-list {
+  display: grid;
+  gap: 6px;
+}
+
+.rdp-shared-folder-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.rdp-shared-folder-row > span,
+.rdp-shared-folder-empty {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rdp-shared-folder-empty {
+  color: var(--text-faint);
+}
+
+.rdp-shared-folder-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.rdp-shared-folder-row .secondary-button,
+.rdp-shared-folder-actions .secondary-button {
+  min-height: 28px;
+  padding: 4px 10px;
+  white-space: nowrap;
+}
+
 .rdp-drive-empty {
   margin: 0;
   padding: 10px 12px;
@@ -34,6 +79,12 @@
 }
 
 .connection-specific-options-panel .rdp-local-resource-summary {
+  padding-right: 0;
+  padding-bottom: 8px;
+  padding-left: 30px;
+}
+
+.connection-specific-options-panel .rdp-shared-folder-editor {
   padding-right: 0;
   padding-bottom: 8px;
   padding-left: 30px;

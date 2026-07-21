@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { technicalInputProps } from "../../../../lib/inputBehavior";
 import type { Connection, SshSettings, StoredCredentialSummary, VncSettings } from "../../../../types";
 import { defaultPortForConnectionType } from "../utils";
-import { PasswordCredentialSelect, PasswordField } from "./ConnectionPasswordFields";
+import { PasswordCredentialModeFields } from "./ConnectionPasswordFields";
 
 export function VncConnectionFields({
   hasStoredConnectionPassword,
@@ -72,16 +72,14 @@ export function VncConnectionFields({
           />
           <small className="field-hint">{t("connections.vncUsernameHint")}</small>
         </label>
-        <PasswordField
+        <PasswordCredentialModeFields
+          credentials={matchingPasswordCredentials}
+          defaultMode={initialConnection?.passwordCredentialId ? "saved" : "new"}
           hasStoredSecret={isEditMode && hasStoredConnectionPassword}
           label={t("connections.password")}
-          name="password"
           placeholder={isEditMode ? t("connections.leaveBlankPassword") : t("connections.storedInKeychain")}
-        />
-        <PasswordCredentialSelect
-          credentials={matchingPasswordCredentials}
-          onChange={onSelectedPasswordCredentialIdChange}
           selectedCredentialId={selectedPasswordCredentialId}
+          onSelectedCredentialIdChange={onSelectedPasswordCredentialIdChange}
         />
       </div>
     </>

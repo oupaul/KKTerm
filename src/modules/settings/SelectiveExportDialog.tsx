@@ -17,7 +17,7 @@ import { useWorkspaceStore } from "../../store";
 
 /// Categories offered for selective export, in display order. Each maps to a
 /// backend segment understood by `export_selective_database`.
-const EXPORT_SEGMENTS: { id: string; icon: DialogIconName }[] = [
+export const EXPORT_SEGMENTS: { id: string; icon: DialogIconName }[] = [
   { id: "connections", icon: "server" },
   { id: "workspaces", icon: "package" },
   { id: "dashboards", icon: "dashboard" },

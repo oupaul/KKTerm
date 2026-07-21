@@ -12,7 +12,7 @@
 //! encrypted with an Argon2id-derived AES-256-GCM key (the same envelope the
 //! encrypted SQLite secret store uses), unlocked on import with the passphrase.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::{Read, Write};
 use std::path::Path;
@@ -307,14 +307,7 @@ fn export_selective_database_sync(
 ) -> Result<SelectiveExportInfo, String> {
     let storage = app.state::<Storage>();
     let secrets = app.state::<Secrets>();
-    if segments.is_empty() {
-        return Err("select at least one category to export".to_string());
-    }
-    for segment in &segments {
-        if segment_tables(segment).is_none() {
-            return Err(format!("unknown export category {segment:?}"));
-        }
-    }
+    validate_export_segments(&segments)?;
     if include_credentials {
         if !segments.iter().any(|segment| segment == "connections") {
             return Err("including credentials requires exporting Connections".to_string());
@@ -325,19 +318,7 @@ fn export_selective_database_sync(
     }
 
     // Serialize the chosen segments' rows.
-    let data: Map<String, Value> = storage.with_connection(|conn| {
-        let mut data = Map::new();
-        for segment in &segments {
-            let tables = segment_tables(segment).expect("segment validated above");
-            let mut segment_map = Map::new();
-            for table in tables {
-                let rows = read_table(conn, table.name)?;
-                segment_map.insert(table.name.to_string(), Value::Array(rows));
-            }
-            data.insert(segment.clone(), Value::Object(segment_map));
-        }
-        Ok(data)
-    })?;
+    let data = collect_segment_data(&storage, &segments)?;
 
     // Collect + encrypt connection secrets when requested.
     let encrypted = include_credentials;
@@ -381,6 +362,81 @@ fn export_selective_database_sync(
         segments,
         encrypted,
     })
+}
+
+fn validate_export_segments(segments: &[String]) -> Result<(), String> {
+    if segments.is_empty() {
+        return Err("select at least one category to export".to_string());
+    }
+    for segment in segments {
+        if segment_tables(segment).is_none() {
+            return Err(format!("unknown export category {segment:?}"));
+        }
+    }
+    Ok(())
+}
+
+fn collect_segment_data(
+    storage: &Storage,
+    segments: &[String],
+) -> Result<Map<String, Value>, String> {
+    storage.with_connection(|conn| {
+        let mut data = Map::new();
+        for segment in segments {
+            let tables = segment_tables(segment).expect("segment validated above");
+            let mut segment_map = Map::new();
+            for table in tables {
+                let rows = read_table(conn, table.name)?;
+                segment_map.insert(table.name.to_string(), Value::Array(rows));
+            }
+            data.insert(segment.clone(), Value::Object(segment_map));
+        }
+        Ok(data)
+    })
+}
+
+pub(crate) fn create_portable_database(
+    source: &Storage,
+    target_path: &Path,
+    segments: Vec<String>,
+) -> Result<(), String> {
+    validate_export_segments(&segments)?;
+    if segments.iter().any(|segment| segment == "connections")
+        && !segments.iter().any(|segment| segment == "workspaces")
+    {
+        return Err("portable Connections require Workspaces".to_string());
+    }
+
+    let data = collect_segment_data(source, &segments)?;
+    let target = Storage::open(target_path.to_path_buf())?;
+    let mut remap: HashMap<(String, String), String> = HashMap::new();
+
+    target.with_connection_mut(|conn| {
+        let tx = conn
+            .transaction()
+            .map_err(|error| format!("failed to begin portable copy: {error}"))?;
+        tx.pragma_update(None, "defer_foreign_keys", "ON")
+            .map_err(|error| format!("failed to defer portable copy foreign keys: {error}"))?;
+
+        for segment in SEGMENT_ORDER {
+            if !segments.iter().any(|selected| selected == segment) {
+                continue;
+            }
+            let Some(segment_data) = data.get(*segment).and_then(Value::as_object) else {
+                continue;
+            };
+            let tables = segment_tables(segment).expect("segment validated above");
+            apply_segment(&tx, tables, segment_data, "replace", &mut remap)?;
+        }
+
+        tx.commit()
+            .map_err(|error| format!("failed to commit portable copy: {error}"))?;
+        Ok::<(), String>(())
+    })?;
+
+    target.prepare_for_portable_copy()?;
+    target.checkpoint_wal()?;
+    Ok(())
 }
 
 /// Read every connection-related secret referenced by the exported rows, from
@@ -668,6 +724,7 @@ fn apply_segment(
         let Some(rows) = segment_data.get(table.name).and_then(Value::as_array) else {
             continue;
         };
+        let destination_columns = table_columns(tx, table.name)?;
         for row in rows {
             let Some(row_obj) = row.as_object() else {
                 continue;
@@ -677,6 +734,11 @@ fn apply_segment(
                 continue;
             }
             let mut rewritten = row_obj.clone();
+            // A source database migrated in place may still carry retired
+            // legacy columns (e.g. itops_site_racks region/datacenter/area);
+            // the destination schema no longer has them, so drop them rather
+            // than failing the whole insert.
+            rewritten.retain(|column, _| destination_columns.contains(column));
             rewrite_row(tx, table, &mut rewritten, action, remap)?;
             // On "add", a built-in Task the importer already has (same
             // deterministic id / built_in_key) is kept as-is rather than
@@ -1165,6 +1227,23 @@ fn read_table(conn: &SqliteConnection, table: &str) -> Result<Vec<Value>, String
         .collect::<Result<Vec<_>, _>>()
         .map_err(|error| format!("failed to read {table}: {error}"))?;
     Ok(rows)
+}
+
+/// Column names of `table` in the destination database. `table` always comes
+/// from a static [`TableSpec`], never from bundle data.
+fn table_columns(
+    tx: &rusqlite::Transaction<'_>,
+    table: &str,
+) -> Result<HashSet<String>, String> {
+    let mut stmt = tx
+        .prepare(&format!("SELECT name FROM pragma_table_info('{table}')"))
+        .map_err(|error| format!("failed to inspect {table}: {error}"))?;
+    let columns = stmt
+        .query_map([], |row| row.get::<_, String>(0))
+        .map_err(|error| format!("failed to inspect {table}: {error}"))?
+        .collect::<Result<HashSet<_>, _>>()
+        .map_err(|error| format!("failed to inspect {table}: {error}"))?;
+    Ok(columns)
 }
 
 fn insert_row(
@@ -1920,6 +1999,50 @@ mod tests {
         );
     }
 
+    /// A source database migrated in place may still carry retired legacy
+    /// columns (issue seen live: itops_site_racks.area). The destination is a
+    /// fresh CURRENT_SCHEMA database without them, so the import must drop the
+    /// unknown columns instead of failing the whole insert.
+    #[test]
+    fn retired_source_columns_are_dropped_on_import() {
+        let src = SqliteConnection::open_in_memory().unwrap();
+        itops_schema(&src);
+        src.execute_batch(
+            "ALTER TABLE itops_site_racks ADD COLUMN area TEXT NOT NULL DEFAULT '';
+             INSERT INTO itops_sites (id, name, sort_order) VALUES ('s1','HQ',0);
+             INSERT INTO itops_site_racks (id, site_id, name, sort_order, area)
+                 VALUES ('rk1','s1','A12',0,'Zone 3');",
+        )
+        .unwrap();
+        let mut seg = Map::new();
+        for table in ["itops_sites", "itops_site_racks"] {
+            seg.insert(
+                table.to_string(),
+                Value::Array(read_table(&src, table).unwrap()),
+            );
+        }
+
+        let mut dst = SqliteConnection::open_in_memory().unwrap();
+        itops_schema(&dst);
+        let mut remap: HashMap<(String, String), String> = HashMap::new();
+        {
+            let tx = dst.transaction().unwrap();
+            apply_segment(
+                &tx,
+                segment_tables("itops").unwrap(),
+                &seg,
+                "replace",
+                &mut remap,
+            )
+            .expect("legacy area column is dropped, not fatal");
+            tx.commit().unwrap();
+        }
+        let rack_name: String = dst
+            .query_row("SELECT name FROM itops_site_racks", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(rack_name, "A12");
+    }
+
     #[test]
     fn assistant_memory_scope_follows_imported_connection() {
         let src = SqliteConnection::open_in_memory().unwrap();
@@ -1993,6 +2116,92 @@ mod tests {
         let v2 = vec!["connections".to_string(), "itops".to_string()];
         assert_eq!(required_bundle_version(&v2), 2);
         assert_eq!(required_bundle_version(&["assistant".to_string()]), 2);
+    }
+
+    #[test]
+    fn portable_database_contains_only_selected_data_and_resets_host_bound_settings() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let source = Storage::open(dir.path().join("source.sqlite3")).expect("source opens");
+        let mut general = serde_json::to_value(source.general_settings().unwrap()).unwrap();
+        general["autoStartWithWindows"] = Value::Bool(true);
+        let general = serde_json::to_string(&general).unwrap();
+        source
+            .with_connection_mut(|conn| {
+                conn.execute(
+                    "INSERT INTO settings (key, value) VALUES ('general', ?1)",
+                    rusqlite::params![general],
+                )
+                .map_err(|error| error.to_string())?;
+                conn.execute_batch(
+                    "INSERT INTO settings (key, value)
+                         VALUES ('credentials', '{\"secretStore\":\"os\"}');
+                     INSERT INTO mcp_servers (id, name, url, sort_order)
+                         VALUES ('mcp-portable','Portable MCP','https://example.test/mcp',0);",
+                )
+                .map_err(|error| error.to_string())
+            })
+            .expect("seed source");
+
+        let target_path = dir.path().join("portable.sqlite3");
+        create_portable_database(
+            &source,
+            &target_path,
+            vec!["settings".to_string(), "mcpServers".to_string()],
+        )
+        .expect("create portable database");
+
+        let target = Storage::open(target_path).expect("target opens");
+        assert!(!target.general_settings().unwrap().auto_start_with_windows());
+        assert_eq!(
+            target
+                .credential_settings_with_default(Some("file"))
+                .unwrap()
+                .secret_store(),
+            "file"
+        );
+        let mcp_count: i64 = target
+            .with_connection(|conn| {
+                conn.query_row(
+                    "SELECT COUNT(*) FROM mcp_servers WHERE id = 'mcp-portable'",
+                    [],
+                    |row| row.get(0),
+                )
+                .map_err(|error| error.to_string())
+            })
+            .expect("count MCP rows");
+        assert_eq!(mcp_count, 1);
+        let connection_count: i64 = target
+            .with_connection(|conn| {
+                conn.query_row("SELECT COUNT(*) FROM connections", [], |row| row.get(0))
+                    .map_err(|error| error.to_string())
+            })
+            .expect("count Connections");
+        assert_eq!(connection_count, 0);
+    }
+
+    #[test]
+    fn portable_connections_require_workspaces() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let source = Storage::open(dir.path().join("source.sqlite3")).expect("source opens");
+        let error = create_portable_database(
+            &source,
+            &dir.path().join("portable.sqlite3"),
+            vec!["connections".to_string()],
+        )
+        .unwrap_err();
+        assert!(error.contains("require Workspaces"));
+    }
+
+    #[test]
+    fn portable_database_accepts_the_complete_category_set() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let source = Storage::open(dir.path().join("source.sqlite3")).expect("source opens");
+        let segments = SEGMENT_ORDER
+            .iter()
+            .map(|segment| (*segment).to_string())
+            .collect();
+        create_portable_database(&source, &dir.path().join("portable.sqlite3"), segments)
+            .expect("all portable categories copy");
     }
 
     /// Guard against the export silently falling behind the live schema: every

@@ -27,7 +27,7 @@ import { NewWorkspaceDialog } from "../modules/workspace/NewWorkspaceDialog";
 import { DeleteWorkspaceDialog } from "../modules/workspace/WorkspaceRailDialogs";
 import { WorkspaceIcon } from "../modules/workspace/workspaceIcons";
 import { ItOpsModuleIcon } from "../modules/itops/icons";
-import { InstallHelperModuleIcon } from "./moduleIdentityIcons";
+import { InstallHelperModuleIcon, ScreenshotsModuleIcon } from "./moduleIdentityIcons";
 import { RailTooltip } from "./RailTooltip";
 
 export type ActivePage =
@@ -35,6 +35,7 @@ export type ActivePage =
   | "dashboard"
   | "itops"
   | "installer"
+  | "screenshots"
   | "settings";
 
 type ConnectedRailItem = {
@@ -258,6 +259,15 @@ export function ActivityRail({
       try {
         const list = await invokeCommand("list_workspaces");
         if (!disposed) {
+          const removedWorkspaceIds = useWorkspaceStore
+            .getState()
+            .workspaces.filter(
+              (workspace) => !list.some((item) => item.id === workspace.id),
+            )
+            .map((workspace) => workspace.id);
+          for (const workspaceId of removedWorkspaceIds) {
+            closeWorkspaceTabs(workspaceId);
+          }
           setWorkspaces(list);
         }
       } catch {
@@ -265,10 +275,18 @@ export function ActivityRail({
       }
     }
     void loadWorkspaces();
+    const unlistenPromise = isTauriRuntime()
+      ? listen("workspaces-changed", () => {
+          void loadWorkspaces();
+        })
+      : null;
     return () => {
       disposed = true;
+      if (unlistenPromise) {
+        void unlistenPromise.then((unlisten) => unlisten());
+      }
     };
-  }, [setWorkspaces]);
+  }, [closeWorkspaceTabs, setWorkspaces]);
 
   async function reloadWorkspaces() {
     try {
@@ -772,6 +790,18 @@ export function ActivityRail({
         >
           <InstallHelperModuleIcon size={18} />
           <RailTooltip label={t("installer.railLabel")} />
+        </button>
+      ) : null}
+      {generalSettings.showScreenshotsOnRail ? (
+        <button
+          className={`rail-button rail-button-screenshots ${activePage === "screenshots" ? "active" : ""}`}
+          aria-label={t("screenshots.railLabel")}
+          data-tutorial-id="app.activityRailScreenshots"
+          onClick={() => onNavigate("screenshots")}
+          style={activityRailItemStyle("screenshots")}
+        >
+          <ScreenshotsModuleIcon size={18} />
+          <RailTooltip label={t("screenshots.railLabel")} />
         </button>
       ) : null}
       {connectedRailItems.length > 0 ? (

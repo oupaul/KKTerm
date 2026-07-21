@@ -4,16 +4,10 @@ import {
   AppWindow,
   FilePlus,
   FolderPlus,
-  FolderOpen,
   LayoutGrid,
   LayoutList,
-  Pencil,
-  Play,
   Plus,
-  Shield,
   TableProperties,
-  Trash2,
-  UserRound,
   X,
 } from "../../../../../lib/reicon";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -32,6 +26,8 @@ import { selectAppLauncherFile, selectAppLauncherFolder, isTauriRuntime } from "
 import { isWindowsPlatform } from "../../../../../lib/platform";
 import { useWorkspaceStore } from "../../../../../store";
 import { useDashboardStore } from "../../../state/dashboardStore";
+import { showNativeContextMenu, type NativeContextMenuItem } from "../../../../../lib/nativeContextMenu";
+import { nativeMenuIcons } from "../../../../../lib/nativeMenuIcons";
 import type { DashboardWidgetInstance } from "../../../types";
 import type {
   AppLauncherEntry,
@@ -108,7 +104,6 @@ export function AppLauncherWidget({ instance }: { instance: DashboardWidgetInsta
   );
   const [preparedById, setPreparedById] = useState<Record<string, PreparedAppLauncherEntry>>({});
   const [dialogDraft, setDialogDraft] = useState<EntryDraft | null>(null);
-  const [menuState, setMenuState] = useState<MenuState | null>(null);
   const [addMenuState, setAddMenuState] = useState<AddMenuState | null>(null);
   const [isDropTarget, setIsDropTarget] = useState(false);
   const [draggedEntryId, setDraggedEntryId] = useState<string | null>(null);
@@ -117,7 +112,6 @@ export function AppLauncherWidget({ instance }: { instance: DashboardWidgetInsta
   const pointerReorderRef = useRef<PointerReorderState | null>(null);
   const suppressNextLaunchRef = useRef(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
-  const menuRef = useRef<HTMLDivElement | null>(null);
   const addMenuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -169,30 +163,6 @@ export function AppLauncherWidget({ instance }: { instance: DashboardWidgetInsta
   }, [settings.entries]);
 
   useEffect(() => {
-    if (!menuState) {
-      return;
-    }
-    function closeMenu(event: PointerEvent) {
-      const target = event.target as Node | null;
-      if (target && menuRef.current?.contains(target)) {
-        return;
-      }
-      setMenuState(null);
-    }
-    function closeMenuOnKey(event: globalThis.KeyboardEvent) {
-      if (event.key === "Escape") {
-        setMenuState(null);
-      }
-    }
-    window.addEventListener("pointerdown", closeMenu);
-    window.addEventListener("keydown", closeMenuOnKey);
-    return () => {
-      window.removeEventListener("pointerdown", closeMenu);
-      window.removeEventListener("keydown", closeMenuOnKey);
-    };
-  }, [menuState]);
-
-  useEffect(() => {
     if (!addMenuState) {
       return;
     }
@@ -215,16 +185,6 @@ export function AppLauncherWidget({ instance }: { instance: DashboardWidgetInsta
       window.removeEventListener("keydown", closeMenuOnKey);
     };
   }, [addMenuState]);
-
-  useLayoutEffect(() => {
-    const node = menuRef.current;
-    if (!node || !menuState) {
-      return;
-    }
-    const bounds = node.getBoundingClientRect();
-    node.style.left = `${Math.max(8, Math.min(menuState.x, window.innerWidth - bounds.width - 8))}px`;
-    node.style.top = `${Math.max(8, Math.min(menuState.y, window.innerHeight - bounds.height - 8))}px`;
-  }, [menuState]);
 
   useLayoutEffect(() => {
     const node = addMenuRef.current;
@@ -635,6 +595,58 @@ export function AppLauncherWidget({ instance }: { instance: DashboardWidgetInsta
     }
   }
 
+  function openEntryContextMenu(state: MenuState) {
+    const runnable = state.prepared?.runnable ?? isRunnablePath(state.entry.path);
+    const items: NativeContextMenuItem[] = [
+      {
+        kind: "item",
+        label: t("appLauncher.runNormal"),
+        iconSvg: nativeMenuIcons.play,
+        action: () => void launch(state.entry, "normal"),
+      },
+    ];
+    if (isWindowsPlatform()) {
+      items.push(
+        {
+          kind: "item",
+          label: t("appLauncher.runAdmin"),
+          iconSvg: nativeMenuIcons.shield,
+          disabled: !runnable,
+          action: () => void launch(state.entry, "admin"),
+        },
+        {
+          kind: "item",
+          label: t("appLauncher.runAsUser"),
+          iconSvg: nativeMenuIcons.userRound,
+          disabled: !runnable,
+          action: () => void launch(state.entry, "differentUser"),
+        },
+      );
+    }
+    items.push(
+      {
+        kind: "item",
+        label: t("appLauncher.openFolder"),
+        iconSvg: nativeMenuIcons.folderOpen,
+        action: () => void launch(state.entry, "openFolder"),
+      },
+      { kind: "separator" },
+      {
+        kind: "item",
+        label: t("appLauncher.edit"),
+        iconSvg: nativeMenuIcons.pencil,
+        action: () => editEntry(state.entry),
+      },
+      {
+        kind: "item",
+        label: t("appLauncher.remove"),
+        iconSvg: nativeMenuIcons.trash,
+        action: () => void removeEntry(state.entry),
+      },
+    );
+    void showNativeContextMenu(items, { x: state.x, y: state.y });
+  }
+
   return (
     <div
       className={`dashboard-widget-body app-launcher-widget app-launcher-widget-${settings.viewMode}${isDropTarget ? " is-drop-target" : ""}${editMode && settings.viewMode === "icons" ? " is-managing" : ""}${addMenuState ? " is-adding" : ""}`}
@@ -691,7 +703,7 @@ export function AppLauncherWidget({ instance }: { instance: DashboardWidgetInsta
                   : null
               }
               onLaunch={launch}
-              onMenu={(nextMenu) => setMenuState(nextMenu)}
+              onMenu={openEntryContextMenu}
               onPointerCancelEntry={finishPointerReorder}
               onPointerDownEntry={handleEntryPointerDown}
               onPointerMoveEntry={handleEntryPointerMove}
@@ -717,18 +729,6 @@ export function AppLauncherWidget({ instance }: { instance: DashboardWidgetInsta
               onClose={() => setDialogDraft(null)}
               onSave={saveDraft}
               onUpdate={setDialogDraft}
-            />,
-          )
-        : null}
-      {menuState
-        ? createAppLauncherPortal(
-            <AppLauncherMenu
-              menuRef={menuRef}
-              onClose={() => setMenuState(null)}
-              onEdit={editEntry}
-              onLaunch={launch}
-              onRemove={removeEntry}
-              state={menuState}
             />,
           )
         : null}
@@ -1088,96 +1088,6 @@ function AppLauncherDialog({
   );
 }
 
-function AppLauncherMenu({
-  menuRef,
-  onClose,
-  onEdit,
-  onLaunch,
-  onRemove,
-  state,
-}: {
-  menuRef: RefObject<HTMLDivElement | null>;
-  onClose: () => void;
-  onEdit: (entry: AppLauncherEntry) => void;
-  onLaunch: (entry: AppLauncherEntry, mode: AppLauncherLaunchMode) => Promise<void>;
-  onRemove: (entry: AppLauncherEntry) => Promise<void>;
-  state: MenuState;
-}) {
-  const { t } = useTranslation();
-  const runnable = state.prepared?.runnable ?? isRunnablePath(state.entry.path);
-  // "Run as administrator" (UAC) and "Run as a different user" map to Windows
-  // shell verbs (runas / runasuser) that have no macOS/Linux equivalent, so the
-  // backend rejects them off Windows. Only surface them on Windows.
-  const supportsElevatedLaunch = isWindowsPlatform();
-  return (
-    <div
-      ref={menuRef}
-      className="terminal-menu app-launcher-menu"
-      onContextMenu={(event) => {
-        event.preventDefault();
-        event.stopPropagation();
-      }}
-      role="menu"
-    >
-      <MenuButton
-        icon={<Play size={14} />}
-        label={t("appLauncher.runNormal")}
-        onClick={() => {
-          onClose();
-          void onLaunch(state.entry, "normal");
-        }}
-      />
-      {supportsElevatedLaunch ? (
-        <>
-          <MenuButton
-            disabled={!runnable}
-            icon={<Shield size={14} />}
-            label={t("appLauncher.runAdmin")}
-            onClick={() => {
-              onClose();
-              void onLaunch(state.entry, "admin");
-            }}
-          />
-          <MenuButton
-            disabled={!runnable}
-            icon={<UserRound size={14} />}
-            label={t("appLauncher.runAsUser")}
-            onClick={() => {
-              onClose();
-              void onLaunch(state.entry, "differentUser");
-            }}
-          />
-        </>
-      ) : null}
-      <MenuButton
-        icon={<FolderOpen size={14} />}
-        label={t("appLauncher.openFolder")}
-        onClick={() => {
-          onClose();
-          void onLaunch(state.entry, "openFolder");
-        }}
-      />
-      <MenuButton
-        icon={<Pencil size={14} />}
-        label={t("appLauncher.edit")}
-        onClick={() => {
-          onClose();
-          onEdit(state.entry);
-        }}
-      />
-      <MenuButton
-        danger
-        icon={<Trash2 size={14} />}
-        label={t("appLauncher.remove")}
-        onClick={() => {
-          onClose();
-          void onRemove(state.entry);
-        }}
-      />
-    </div>
-  );
-}
-
 function AppLauncherAddMenu({
   menuRef,
   onAddApp,
@@ -1231,13 +1141,11 @@ function AppLauncherAddMenu({
 }
 
 function MenuButton({
-  danger,
   disabled,
   icon,
   label,
   onClick,
 }: {
-  danger?: boolean;
   disabled?: boolean;
   icon: ReactNode;
   label: string;
@@ -1245,7 +1153,7 @@ function MenuButton({
 }) {
   return (
     <button
-      className={`terminal-menu-item ${danger ? "danger" : ""}`}
+      className="terminal-menu-item"
       disabled={disabled}
       onClick={onClick}
       role="menuitem"

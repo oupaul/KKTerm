@@ -2,18 +2,14 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-test("SFTP file panes expose Open for file double-click and context menu", async () => {
-  const [workspaceSource, filePaneSource, overlaysSource] = await Promise.all([
+test("SFTP file panes expose Open for file double-click and native context menu", async () => {
+  const [workspaceSource, filePaneSource] = await Promise.all([
     readFile(
       new URL("../src/modules/workspace/connections/sftp/SftpWorkspace.tsx", import.meta.url),
       "utf8",
     ),
     readFile(
       new URL("../src/modules/workspace/connections/sftp/SftpFilePane.tsx", import.meta.url),
-      "utf8",
-    ),
-    readFile(
-      new URL("../src/modules/workspace/connections/sftp/SftpOverlays.tsx", import.meta.url),
       "utf8",
     ),
   ]);
@@ -29,13 +25,13 @@ test("SFTP file panes expose Open for file double-click and context menu", async
     "double-clicking folders should navigate while double-clicking files should open",
   );
   assert.match(
-    overlaysSource,
-    /onOpen: \(menu: SftpContextMenuState\) => void;/,
-    "the SFTP context menu should receive an Open action handler",
+    workspaceSource,
+    /showNativeContextMenu\(items, \{ x: event\.clientX, y: event\.clientY \}\)/,
+    "the SFTP context menu should open through the native menu helper",
   );
   assert.match(
-    overlaysSource,
-    /t\("common\.open"\)/,
+    workspaceSource,
+    /label: t\("common\.open"\)[\s\S]*action: \(\) => handleContextOpen\(menu\)/,
     "the SFTP context menu should label Open through the shared localization key",
   );
   assert.match(

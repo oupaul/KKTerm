@@ -15,6 +15,7 @@ import {
 import { SettingsSectionHeader, useSettingsSaveRegistration } from "./shared";
 import { ToggleSwitch } from "./ToggleSwitch";
 import { RdpLocalResourceSelector } from "../workspace/connections/remote-desktop/RdpLocalResourceSelector";
+import { normalizeRdpSharedLocalFolders } from "../workspace/connections/remote-desktop/rdpLocalResources";
 
 export function RdpSettings() {
   const { t } = useTranslation();
@@ -23,23 +24,24 @@ export function RdpSettings() {
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
   const [draft, setDraft] = useState<RdpSettingsModel>(() => normalizeRdpResolutionSettings(rdpSettings));
   const usesWindowsDriveMapping = isWindowsPlatform();
-  const hasChanges = JSON.stringify(draft) !== JSON.stringify(rdpSettings);
+  const hasChanges = JSON.stringify(draft) !== JSON.stringify(normalizeRdpResolutionSettings(rdpSettings));
 
   useEffect(() => {
     setDraft(normalizeRdpResolutionSettings(rdpSettings));
   }, [rdpSettings]);
 
   async function handleSave() {
-    if (!usesWindowsDriveMapping && draft.redirectDrives && !draft.sharedLocalFolder?.trim()) {
-      showStatusBarNotice(t("settings.rdpSharedFolderRequired"), { tone: "error" });
+    if (!usesWindowsDriveMapping && draft.redirectDrives && draft.sharedLocalFolders.length === 0) {
+      showStatusBarNotice(t("settings.rdpSharedFoldersRequired"), { tone: "error" });
       return;
     }
     try {
       const saved = isTauriRuntime()
         ? await invokeCommand("update_rdp_settings", { request: draft })
         : draft;
-      setRdpSettings(saved);
-      setDraft(saved);
+      const normalizedSaved = normalizeRdpResolutionSettings(saved);
+      setRdpSettings(normalizedSaved);
+      setDraft(normalizedSaved);
       showStatusBarNotice(t("settings.rdpSettingsSaved"), { tone: "success" });
     } catch (saveError) {
       showStatusBarNotice(saveError instanceof Error ? saveError.message : String(saveError), { tone: "error" });
@@ -97,12 +99,13 @@ export function RdpSettings() {
             <span>{t("settings.remoteDesktopViewMode")}</span>
             <select
               value={draft.viewMode}
-              onChange={(event) =>
+              onChange={(event) => {
+                const viewMode = event.currentTarget.value as RemoteDesktopViewMode;
                 setDraft((settings) => ({
                   ...settings,
-                  viewMode: event.currentTarget.value as RemoteDesktopViewMode,
-                }))
-              }
+                  viewMode,
+                }));
+              }}
             >
               <option value="fit">{t("settings.remoteDesktopViewModeFit")}</option>
               <option value="stretch">{t("settings.remoteDesktopViewModeStretch")}</option>
@@ -138,6 +141,16 @@ export function RdpSettings() {
         <div className="settings-toggle-list">
           <label className="settings-toggle-row">
             <ToggleSwitch
+              checked={draft.administrativeSession}
+              onChange={(checked) => setDraft((settings) => ({ ...settings, administrativeSession: checked }))}
+            />
+            <span>
+              <strong>{t("settings.rdpAdministrativeSession")}</strong>
+              <small>{t("settings.rdpAdministrativeSessionHint")}</small>
+            </span>
+          </label>
+          <label className="settings-toggle-row">
+            <ToggleSwitch
               checked={draft.redirectClipboard}
               onChange={(checked) => setDraft((settings) => ({ ...settings, redirectClipboard: checked }))}
             />
@@ -154,22 +167,22 @@ export function RdpSettings() {
               />
               <span>
                 <strong>
-                  {t(usesWindowsDriveMapping ? "settings.rdpRedirectDrives" : "settings.rdpShareLocalFolder")}
+                  {t(usesWindowsDriveMapping ? "settings.rdpRedirectDrives" : "settings.rdpShareLocalFolders")}
                 </strong>
                 <small>
-                  {t(usesWindowsDriveMapping ? "settings.rdpRedirectDrivesHint" : "settings.rdpShareLocalFolderHint")}
+                  {t(usesWindowsDriveMapping ? "settings.rdpRedirectDrivesHint" : "settings.rdpShareLocalFoldersHint")}
                 </small>
               </span>
             </label>
             {draft.redirectDrives ? (
               <RdpLocalResourceSelector
                 driveSelection={draft.driveSelection}
-                sharedLocalFolder={draft.sharedLocalFolder}
+                sharedLocalFolders={draft.sharedLocalFolders}
                 onDriveSelectionChange={(driveSelection) =>
                   setDraft((settings) => ({ ...settings, driveSelection }))
                 }
-                onSharedLocalFolderChange={(sharedLocalFolder) =>
-                  setDraft((settings) => ({ ...settings, sharedLocalFolder }))
+                onSharedLocalFoldersChange={(sharedLocalFolders) =>
+                  setDraft((settings) => ({ ...settings, sharedLocalFolders, sharedLocalFolder: undefined }))
                 }
               />
             ) : null}
@@ -191,12 +204,14 @@ export function RdpSettings() {
 }
 
 function normalizeRdpResolutionSettings(settings: RdpSettingsModel): RdpSettingsModel {
-  if (isVisibleRdpRemoteResolution(settings.remoteResolution)) {
-    return settings;
-  }
   return {
     ...settings,
-    remoteResolution: "automatic",
+    administrativeSession: settings.administrativeSession ?? false,
+    sharedLocalFolders: normalizeRdpSharedLocalFolders(settings.sharedLocalFolders, settings.sharedLocalFolder),
+    sharedLocalFolder: undefined,
+    remoteResolution: isVisibleRdpRemoteResolution(settings.remoteResolution)
+      ? settings.remoteResolution
+      : "automatic",
   };
 }
 

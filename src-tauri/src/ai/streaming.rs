@@ -23,9 +23,9 @@ pub(crate) struct ChatSseDelta {
     pub(crate) reasoning_content: Option<String>,
     #[serde(default)]
     pub(crate) reasoning: Option<String>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_null_default")]
     pub(crate) reasoning_details: Vec<ReasoningDetail>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_null_default")]
     pub(crate) tool_calls: Vec<SseToolCallDelta>,
 }
 

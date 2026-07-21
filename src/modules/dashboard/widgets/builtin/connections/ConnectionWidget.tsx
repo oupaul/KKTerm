@@ -135,7 +135,6 @@ function createConnectionWidgetPane(
 export function ConnectionWidgetBody({
   instance,
   isViewActive,
-  suppressNativeWebviews,
 }: BuiltInWidgetBodyProps) {
   const { t } = useTranslation();
   const [config, setConfig] = useWidgetConfig(
@@ -348,7 +347,6 @@ export function ConnectionWidgetBody({
             instanceId={instance.id}
             isViewActive={isViewActive}
             key={sessionConnection.id}
-            suppressNativeWebviews={suppressNativeWebviews}
           />
         ) : null}
       </div>
@@ -360,12 +358,10 @@ function ConnectionWidgetSession({
   connection,
   instanceId,
   isViewActive,
-  suppressNativeWebviews,
 }: {
   connection: Connection;
   instanceId: string;
   isViewActive: boolean;
-  suppressNativeWebviews: boolean;
 }) {
   const [tmuxSession, setTmuxSession] = useState<{ connectionId: string; sessionId: string } | null>(null);
   const usesTmux = connection.type === "ssh" && connection.useTmuxSessions !== false;
@@ -389,7 +385,7 @@ function ConnectionWidgetSession({
   if (connection.type === "url") {
     return (
       <Suspense fallback={null}>
-        <WebViewWorkspace isActive={isViewActive && !suppressNativeWebviews} tab={tab} />
+        <WebViewWorkspace isActive={isViewActive} tab={tab} />
       </Suspense>
     );
   }

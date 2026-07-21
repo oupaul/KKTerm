@@ -15,27 +15,40 @@ const libSource = await readFile(
   "utf8",
 );
 
-test("installed-tool dialog renders a searchable mini launcher", () => {
+test("suite Run dialog renders a searchable launcher outside installation details", () => {
+  const installedInfo = dialogSource.match(
+    /function InstalledInfoBody[\s\S]*?function NotInstalledInfoBody/,
+  )?.[0];
+  const suiteLauncher = dialogSource.match(
+    /function SuiteLauncherBody[\s\S]*?Small shared helpers/,
+  )?.[0];
+  assert.ok(installedInfo, "installed details should exist");
+  assert.ok(suiteLauncher, "suite Run dialog should exist");
+  assert.doesNotMatch(
+    installedInfo,
+    /installer_list_quick_launch|installer-suite-launcher__list/,
+    "installation details should not mix in suite launch controls",
+  );
   assert.match(
-    dialogSource,
+    suiteLauncher,
     /invokeCommand\("installer_list_quick_launch", \{ toolId: recipe\.id \}\)/,
-    "InstalledInfoBody should list quick-launch entries for the tool",
+    "SuiteLauncherBody should list quick-launch entries for the tool",
   );
   // A search box filters the entries by name/command/description.
   assert.match(
     dialogSource,
-    /quickLaunchFiltered = quickLaunchQueryNorm[\s\S]*\.includes\(quickLaunchQueryNorm\)/,
+    /filteredEntries = normalizedQuery[\s\S]*\.includes\(normalizedQuery\)/,
     "The launcher should filter entries by the search query",
   );
   assert.match(
     dialogSource,
-    /installer-tool-dialog__quick-launch-search/,
+    /installer-suite-launcher__search/,
     "The launcher should render a search input",
   );
   // Each entry shows its description; the list maps the filtered entries.
   assert.match(
     dialogSource,
-    /quickLaunchFiltered\.map\(\(entry\)[\s\S]*entry\.description/,
+    /filteredEntries\.map\(\(entry\)[\s\S]*entry\.description/,
     "Each launcher row should render the entry description",
   );
 });
@@ -44,7 +57,7 @@ test("GUI tools launch directly; CLI tools are list-only with a terminal button"
   // GUI tools get a Launch button wired to the launch command.
   assert.match(
     dialogSource,
-    /entry\.cli \?[\s\S]*quick-launch-badge[\s\S]*handleQuickLaunch\(entry\.command\)/,
+    /entry\.cli \?[\s\S]*installer-suite-launcher__badge[\s\S]*handleLaunch\(entry\.command\)/,
     "CLI tools render a badge while GUI tools render a launch action",
   );
   assert.match(
@@ -55,7 +68,7 @@ test("GUI tools launch directly; CLI tools are list-only with a terminal button"
   // A single command-prompt button appears when the suite has CLI tools.
   assert.match(
     dialogSource,
-    /quickLaunchHasCli \?[\s\S]*handleOpenQuickLaunchTerminal\(\)/,
+    /hasCli \?[\s\S]*handleOpenTerminal\(\)/,
     "A command-prompt button should appear when the suite has CLI tools",
   );
   assert.match(

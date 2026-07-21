@@ -233,8 +233,23 @@ test("dialog-kit confirmations suppress an intersecting native RDP surface", asy
   );
   assert.match(
     nativeOverlaySource,
-    /NATIVE_BLOCKING_OVERLAY_SELECTOR[\s\S]*"\.kk-dlg-backdrop"/,
+    /INTERSECTING_NATIVE_SURFACE_OVERLAY_SELECTOR[\s\S]*"\.kk-dlg-backdrop"/,
     "ConfirmSheet's shared backdrop should trigger the existing RDP snapshot-and-park path",
+  );
+});
+
+test("dialog-kit confirmations suppress an intersecting native URL WebView surface", async () => {
+  const nativeOverlaySource = await readFile(
+    new URL("../src/modules/workspace/nativeOverlay.ts", import.meta.url),
+    "utf8",
+  );
+  const webviewSelectors =
+    nativeOverlaySource.match(/const INTERSECTING_NATIVE_SURFACE_OVERLAY_SELECTOR = \[([\s\S]*?)\]\.join/)?.[1] ?? "";
+
+  assert.match(
+    webviewSelectors,
+    /"\.kk-dlg-backdrop"/,
+    "ConfirmSheet's shared backdrop should suppress an intersecting native URL WebView",
   );
 });
 

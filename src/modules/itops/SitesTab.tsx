@@ -298,39 +298,74 @@ export function SitesTab({
   const handleResizeStart = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
     if (treeCollapsed) return;
     event.preventDefault();
-    event.currentTarget.setPointerCapture(event.pointerId);
+    const handle = event.currentTarget;
+    const pointerId = event.pointerId;
+    const treeElement = treeRef.current;
+    if (!treeElement) return;
+    const el: HTMLDivElement = treeElement;
+
+    handle.setPointerCapture(pointerId);
     resizing.current = true;
+    el.classList.add("is-resizing");
     document.body.style.cursor = "col-resize";
 
     const startX = event.clientX;
     const startWidth = treeWidth;
-    const el = treeRef.current;
     let lastWidth = startWidth;
+    let animationFrame: number | null = null;
+    let pendingClientX: number | null = null;
 
-    function onMove(event: PointerEvent) {
-      if (!resizing.current || !el) return;
+    function flushPendingMove() {
+      animationFrame = null;
+      if (pendingClientX === null) return;
       lastWidth = Math.min(
         SITE_TREE_MAX_WIDTH,
-        Math.max(SITE_TREE_MIN_WIDTH, startWidth + event.clientX - startX),
+        Math.max(SITE_TREE_MIN_WIDTH, startWidth + pendingClientX - startX),
       );
+      pendingClientX = null;
       el.style.width = `${lastWidth}px`;
       el.style.flex = `0 0 ${lastWidth}px`;
     }
 
-    function onUp() {
+    function onMove(moveEvent: PointerEvent) {
+      if (!resizing.current || moveEvent.pointerId !== pointerId) return;
+      pendingClientX = moveEvent.clientX;
+      if (animationFrame === null) {
+        animationFrame = window.requestAnimationFrame(flushPendingMove);
+      }
+    }
+
+    function finish() {
       if (!resizing.current) return;
       resizing.current = false;
+      if (animationFrame !== null) {
+        window.cancelAnimationFrame(animationFrame);
+        animationFrame = null;
+      }
+      flushPendingMove();
+      el.classList.remove("is-resizing");
       document.body.style.cursor = "";
       setTreeWidth(lastWidth);
       saveSiteTreeWidth(lastWidth);
       window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerup", onUp);
-      window.removeEventListener("pointercancel", onUp);
+      window.removeEventListener("pointerup", onPointerEnd);
+      window.removeEventListener("pointercancel", onPointerEnd);
+      window.removeEventListener("blur", finish);
+      handle.removeEventListener("lostpointercapture", onPointerEnd);
+      if (handle.hasPointerCapture(pointerId)) {
+        handle.releasePointerCapture(pointerId);
+      }
+    }
+
+    function onPointerEnd(pointerEvent: PointerEvent) {
+      if (pointerEvent.pointerId === pointerId) finish();
     }
 
     window.addEventListener("pointermove", onMove);
-    window.addEventListener("pointerup", onUp);
-    window.addEventListener("pointercancel", onUp);
+    window.addEventListener("pointerup", onPointerEnd);
+    window.addEventListener("pointercancel", onPointerEnd);
+    window.addEventListener("blur", finish);
+    handle.addEventListener("lostpointercapture", onPointerEnd);
   }, [treeCollapsed, treeWidth]);
 
   const activeGroup = useMemo(
@@ -2050,8 +2085,8 @@ function RackDrill({
       <ItOpsBackground
         background={viewBackground}
         className={`ft-drill-bg${
-          serverRoom && !rack && roomView === "floor"
-            ? " floor-toolbar-background"
+          serverRoom && !rack && (roomView === "floor" || roomView === "iso")
+            ? " spatial-toolbar-background"
             : ""
         }`}
         onContextMenu={roomView === "elevation" ? handleElevationContextMenu : undefined}

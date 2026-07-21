@@ -23,6 +23,7 @@ import {
 } from "./modules/workspace/layout";
 import type {
   AppearanceSettings,
+  AppModeInfo,
   AiProviderSettings,
   CredentialSettings,
   AssistantDirectSubmitRequest,
@@ -1239,6 +1240,7 @@ interface WorkspaceState {
   activeWorkspaceId: string;
   activeTabIdsByWorkspace: Record<string, string>;
   workspaces: Workspace[];
+  appModeInfo: AppModeInfo;
   generalSettings: GeneralSettings;
   credentialSettings: CredentialSettings;
   dashboardSettings: DashboardSettings;
@@ -1283,6 +1285,7 @@ interface WorkspaceState {
   quickCommandsByConnection: Record<string, QuickCommand[]>;
   setQuery: (query: string) => void;
   setWorkspaces: (workspaces: Workspace[]) => void;
+  setAppModeInfo: (info: AppModeInfo) => void;
   setActiveWorkspace: (workspaceId: string) => void;
   closeWorkspaceTabs: (workspaceId: string, fallbackWorkspaceId?: string) => void;
   setGeneralSettings: (settings: GeneralSettings) => void;
@@ -1467,6 +1470,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     ? { [tabWorkspaceId(initialTabs[0])]: initialTabs[0].id }
     : {},
   workspaces: [],
+  appModeInfo: { mode: "installed", dataDir: "" },
   generalSettings: defaultGeneralSettings,
   credentialSettings: defaultCredentialSettings,
   dashboardSettings: defaultDashboardSettings,
@@ -1491,6 +1495,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   documentStatusSlot: null,
   quickCommandsByConnection: {},
   setQuery: (query) => set({ query }),
+  setAppModeInfo: (appModeInfo) => set({ appModeInfo }),
   setWorkspaces: (workspaces) => {
     const { activeWorkspaceId } = get();
     // If the active Workspace was deleted elsewhere, fall back to Default.
