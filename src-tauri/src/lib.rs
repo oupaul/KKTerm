@@ -34,6 +34,7 @@ mod pc_info;
 mod performance;
 mod power;
 mod portable_creator;
+mod portable_marker;
 #[cfg(target_os = "windows")]
 mod portable_single_instance;
 mod rdp;

@@ -21,8 +21,15 @@ use tokio::time::{Duration, timeout};
 #[path = "../mcp_tool_catalog.rs"]
 mod mcp_tool_catalog;
 
+// Share the portable-mode marker filename with the in-app launcher so the CLI's
+// sibling-bridge lookup can never drift from `app_paths.rs`. Included by path
+// for the same thin-forwarder reason as the tool catalog above; the module has
+// no dependencies. See portable_marker.rs.
+#[path = "../portable_marker.rs"]
+mod portable_marker;
+use portable_marker::PORTABLE_MARKER_FILENAME;
+
 const BRIDGE_INFO_FILENAME: &str = "mcp-bridge.json";
-const PORTABLE_MARKER_FILENAME: &str = "kkterm-portable.marker";
 const BUNDLE_IDENTIFIER: &str = "com.kkterm.app";
 const PROTOCOL_VERSION: &str = "2025-03-26";
 const SERVER_NAME: &str = "kkterm-cli";
