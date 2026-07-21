@@ -420,15 +420,16 @@ export function UrlCredentialManager({
                         placeholder={t("settings.urlCredentialPasswordPlaceholder")}
                         type={passwordVisible ? "text" : "password"}
                         value={editDraft.password}
-                        onChange={(event) =>
+                        onChange={(event) => {
+                          const password = event.currentTarget.value;
                           setEditDraft((current) => current
                             ? {
                                 ...current,
-                                password: event.currentTarget.value,
+                                password,
                                 passwordDirty: true,
                               }
-                            : current)
-                        }
+                            : current);
+                        }}
                       />
                       <button
                         aria-label={t(

@@ -481,6 +481,8 @@ Workspace chrome layout is global state. Connection-specific live context may ch
 
 `src/App.tsx` is intentionally a small shell now. It composes page routing, Settings routing, global Workspace chrome, the app-wide Status Bar, and startup/bootstrap hooks. Workspace surfaces, Connection UI, Activity Rail internals, and app-shell effects live in feature or app-shell source areas so terminal, SFTP, URL, RDP/VNC, assistant, connection-tree, and Activity Rail work can proceed independently without repeatedly touching the root shell.
 
+React form events are handler-scoped. When an input/select/textarea handler feeds a functional state updater, snapshot `event.currentTarget` / `event.target` fields into local constants before calling `setState((prev) => ...)`; never read event fields inside the updater callback. This keeps updates safe under React scheduling and is guarded by `tests/react-event-functional-updater-policy.test.mjs`.
+
 - `src/App.tsx` — root `App` composition, Workspace/Settings routing, Workspace chrome assembly, app-wide Status Bar placement, settings reset handoff, and startup hook wiring.
 - `src/App.css` — global CSS entrypoint and cascade-order manifest. Keep `@import "tailwindcss"` first, then import shared token/base CSS, then per-feature CSS.
 - `src/styles/colorSchemes.css` — global font faces, `:root` design tokens, and `[data-color-scheme="..."]` CSS custom property blocks consumed by feature CSS files.

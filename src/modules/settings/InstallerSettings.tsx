@@ -65,12 +65,13 @@ export function InstallerSettings() {
               value={resolveInstallerCheckIntervalSeconds(
                 draft.installerCheckIntervalSeconds,
               )}
-              onChange={(event) =>
+              onChange={(event) => {
+                const installerCheckIntervalSeconds = Number(event.currentTarget.value);
                 setDraft((state) => ({
                   ...state,
-                  installerCheckIntervalSeconds: Number(event.currentTarget.value),
-                }))
-              }
+                  installerCheckIntervalSeconds,
+                }));
+              }}
             >
               {INSTALLER_CHECK_INTERVAL_OPTIONS.map((seconds) => (
                 <option key={seconds} value={seconds}>
@@ -88,14 +89,15 @@ export function InstallerSettings() {
             <span>{t("settings.installerDefaultProvider")}</span>
             <select
               value={draft.installerDefaultProvider}
-              onChange={(event) =>
+              onChange={(event) => {
+                const installerDefaultProvider = event.currentTarget.value as
+                  | "winget"
+                  | "chocolatey";
                 setDraft((state) => ({
                   ...state,
-                  installerDefaultProvider: event.currentTarget.value as
-                    | "winget"
-                    | "chocolatey",
-                }))
-              }
+                  installerDefaultProvider,
+                }));
+              }}
             >
               <option value="winget">
                 {t("settings.installerDefaultProviderWinget")}

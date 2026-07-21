@@ -99,12 +99,13 @@ export function RdpSettings() {
             <span>{t("settings.remoteDesktopViewMode")}</span>
             <select
               value={draft.viewMode}
-              onChange={(event) =>
+              onChange={(event) => {
+                const viewMode = event.currentTarget.value as RemoteDesktopViewMode;
                 setDraft((settings) => ({
                   ...settings,
-                  viewMode: event.currentTarget.value as RemoteDesktopViewMode,
-                }))
-              }
+                  viewMode,
+                }));
+              }}
             >
               <option value="fit">{t("settings.remoteDesktopViewModeFit")}</option>
               <option value="stretch">{t("settings.remoteDesktopViewModeStretch")}</option>

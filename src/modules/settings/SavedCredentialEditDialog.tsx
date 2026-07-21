@@ -117,14 +117,20 @@ export function SavedCredentialEditDialog({
           <TextInput
             autoFocus
             value={draft.label}
-            onChange={(event) => setDraft((current) => ({ ...current, label: event.currentTarget.value }))}
+            onChange={(event) => {
+              const label = event.currentTarget.value;
+              setDraft((current) => ({ ...current, label }));
+            }}
             placeholder={t("settings.savedCredentialNamePlaceholder")}
           />
         </Field>
         <Field label={t("settings.savedCredentialUsername")}>
           <TextInput
             value={draft.username}
-            onChange={(event) => setDraft((current) => ({ ...current, username: event.currentTarget.value }))}
+            onChange={(event) => {
+              const username = event.currentTarget.value;
+              setDraft((current) => ({ ...current, username }));
+            }}
           />
         </Field>
         <Field
@@ -136,7 +142,10 @@ export function SavedCredentialEditDialog({
             type="password"
             autoComplete="new-password"
             value={draft.password}
-            onChange={(event) => setDraft((current) => ({ ...current, password: event.currentTarget.value }))}
+            onChange={(event) => {
+              const password = event.currentTarget.value;
+              setDraft((current) => ({ ...current, password }));
+            }}
           />
         </Field>
       </Sheet>

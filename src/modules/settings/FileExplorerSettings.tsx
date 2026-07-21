@@ -75,12 +75,13 @@ export function FileExplorerSettings() {
             <span>{t("settings.fileExplorerOpenMode")}</span>
             <select
               value={draft.fileExplorerOpenMode}
-              onChange={(event) =>
+              onChange={(event) => {
+                const fileExplorerOpenMode = event.target.value as SftpSettings["fileExplorerOpenMode"];
                 setDraft((state) => ({
                   ...state,
-                  fileExplorerOpenMode: event.target.value as SftpSettings["fileExplorerOpenMode"],
-                }))
-              }
+                  fileExplorerOpenMode,
+                }));
+              }}
             >
               <option value="external">{t("settings.fileExplorerOpenModeExternal")}</option>
               <option value="inlineEditor">{t("settings.fileExplorerOpenModeInlineEditor")}</option>
