@@ -129,9 +129,10 @@ export function UrlSettings() {
             <input
               {...technicalInputProps}
               list="url-user-agent-presets"
-              onChange={(event) =>
-                setDraft((settings) => ({ ...settings, defaultUserAgent: event.currentTarget.value }))
-              }
+              onChange={(event) => {
+                const defaultUserAgent = event.currentTarget.value;
+                setDraft((settings) => ({ ...settings, defaultUserAgent }));
+              }}
               placeholder={t("settings.urlUserAgentDefaultPlaceholder")}
               value={draft.defaultUserAgent ?? ""}
             />
@@ -162,9 +163,10 @@ export function UrlSettings() {
             <span>{t("connections.dataPartition")}</span>
             <input
               {...technicalInputProps}
-              onChange={(event) =>
-                setDraft((settings) => ({ ...settings, defaultDataPartition: event.currentTarget.value }))
-              }
+              onChange={(event) => {
+                const defaultDataPartition = event.currentTarget.value;
+                setDraft((settings) => ({ ...settings, defaultDataPartition }));
+              }}
               placeholder={t("connections.default")}
               value={draft.defaultDataPartition ?? ""}
             />

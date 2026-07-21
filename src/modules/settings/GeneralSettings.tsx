@@ -597,12 +597,13 @@ export function GeneralSettings() {
             <select
               disabled={!draft.statusBarEnabled || !draft.statusBarMonitorEnabled}
               value={draft.statusBarMonitorIntervalSeconds}
-              onChange={(event) =>
+              onChange={(event) => {
+                const statusBarMonitorIntervalSeconds = Number(event.currentTarget.value);
                 setDraft((s) => ({
                   ...s,
-                  statusBarMonitorIntervalSeconds: Number(event.currentTarget.value),
-                }))
-              }
+                  statusBarMonitorIntervalSeconds,
+                }));
+              }}
             >
               {STATUS_BAR_MONITOR_INTERVAL_OPTIONS.map((seconds) => (
                 <option key={seconds} value={seconds}>

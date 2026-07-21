@@ -236,9 +236,10 @@ export function SelectiveImportDialog({
                     <Select
                       options={actionOptions}
                       value={actions.credentials ?? "add"}
-                      onChange={(event) =>
-                        setActions((prev) => ({ ...prev, credentials: event.currentTarget.value as SegmentAction }))
-                      }
+                      onChange={(event) => {
+                        const credentials = event.currentTarget.value as SegmentAction;
+                        setActions((prev) => ({ ...prev, credentials }));
+                      }}
                     />
                   }
                 />
