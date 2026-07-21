@@ -4,7 +4,7 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use tauri::{AppHandle, Manager};
 
-pub const PORTABLE_MARKER_FILENAME: &str = "kkterm-portable.marker";
+pub use crate::portable_marker::PORTABLE_MARKER_FILENAME;
 #[cfg(any(debug_assertions, test))]
 const PORTABLE_ENVIRONMENT_VARIABLE: &str = "KKTERM_PORTABLE";
 const PORTABLE_SMOKE_ENVIRONMENT_VARIABLE: &str = "KKTERM_PORTABLE_SMOKE_TEST";
