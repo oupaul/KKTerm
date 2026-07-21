@@ -6,6 +6,7 @@ mod app_tray;
 mod app_updates;
 mod assistant_skills;
 mod auto_start;
+mod bundle_identifier;
 mod currency_rates;
 mod dashboard_commands;
 mod dashboard_ids;
