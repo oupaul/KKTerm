@@ -349,6 +349,53 @@ fn v50_saved_credential_migration_drops_host_and_current_reopen_keeps_shape() {
 }
 
 #[test]
+fn saved_credential_migration_drops_host_even_when_already_stamped_v51() {
+    // Regression: this fork's v50/v51 collision with upstream's v50 left some DBs
+    // stamped at 51 while STILL carrying the legacy NOT NULL `host` column. Two
+    // guards must both be defeated for the fix to reach them: (1) the host-drop
+    // is keyed on the column's presence, not stored_version, and (2)
+    // SCHEMA_USER_VERSION is past 51 so a 51-stamped DB re-enters the migration
+    // chain instead of taking the stored_version == SCHEMA_USER_VERSION fast path.
+    // Otherwise the new host-less credential INSERT fails with a NOT NULL error.
+    let db_path = temp_db_path("saved-credential-stuck-v51");
+    {
+        let storage = Storage::open(db_path.clone()).expect("current storage opens");
+        storage
+            .create_standalone_connection_password_credential(
+                "Existing".to_string(),
+                "admin".to_string(),
+            )
+            .expect("credential is created");
+    }
+    {
+        let connection = rusqlite::Connection::open(&db_path).expect("raw database opens");
+        connection
+            .execute_batch(
+                "ALTER TABLE connection_password_credentials
+                     ADD COLUMN host TEXT NOT NULL DEFAULT '';
+                 UPDATE connection_password_credentials SET host = 'legacy.internal';
+                 PRAGMA user_version = 51;",
+            )
+            .expect("stuck-at-51 credential shape is restored");
+    }
+
+    let upgraded = Storage::open(db_path).expect("stuck-at-51 storage upgrades");
+    upgraded
+        .with_connection(|connection| {
+            assert!(
+                !column_exists(connection, "connection_password_credentials", "host")?,
+                "the stale host column must be dropped even at stored_version 51",
+            );
+            Ok(())
+        })
+        .expect("upgraded schema is inspected");
+    // The exact operation that failed for the user (NOT NULL host) now succeeds.
+    upgraded
+        .create_standalone_connection_password_credential("New".to_string(), "ops".to_string())
+        .expect("a new credential inserts without the dropped host column");
+}
+
+#[test]
 fn create_connection_can_persist_root_ssh_connection() {
     let storage = Storage::open(temp_db_path("create")).expect("storage opens");
 

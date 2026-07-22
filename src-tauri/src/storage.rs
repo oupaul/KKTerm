@@ -13,7 +13,13 @@ use std::{
 use time::{OffsetDateTime, format_description::well_known::Rfc3339};
 use zip::{ZipArchive, ZipWriter, write::SimpleFileOptions};
 
-const SCHEMA_USER_VERSION: i32 = 51;
+// Bumped to 52 (past this fork's v51) specifically so databases already stamped
+// at 51 — which, due to a version-number collision with upstream's v50, may
+// still carry the legacy connection_password_credentials.host column — re-enter
+// the migration chain instead of hitting the stored_version == SCHEMA_USER_VERSION
+// fast path. The host-drop migration is keyed on the column's presence, so it
+// cleans them up on this bump and is a no-op everywhere else.
+const SCHEMA_USER_VERSION: i32 = 52;
 
 const DEFAULT_TERMINAL_OPACITY: u8 = 50;
 
@@ -2819,9 +2825,13 @@ impl Storage {
             reveal_it_ops_on_release(&connection)?;
         }
         // v50: Saved Credentials are protocol-neutral username/password bundles;
-        // the owning Connections retain their own host metadata.
-        if stored_version < 50
-            && table_exists(&connection, "connection_password_credentials")?
+        // the owning Connections retain their own host metadata. Keyed on the
+        // stale column itself, NOT on stored_version: this fork briefly stamped
+        // its own v50 (a Mosh migration) before absorbing upstream's v50 here,
+        // so a `stored_version < 50` guard would skip DBs already at 50 and leave
+        // the NOT NULL `host` column that the new credential INSERT no longer
+        // populates. column_exists makes the drop idempotent (no-op once gone).
+        if table_exists(&connection, "connection_password_credentials")?
             && column_exists(&connection, "connection_password_credentials", "host")?
         {
             connection
